@@ -117,6 +117,9 @@ export declare enum BindingBuiltinPluginName {
   ModulePreloadPolyfillPlugin = 3,
   ManifestPlugin = 4,
   LoadFallbackPlugin = 5
+  ManifestPlugin = 4
+  ManifestPlugin = 4,
+  TransformPlugin = 5
 }
 
 export interface BindingEmittedAsset {
@@ -141,7 +144,7 @@ export interface BindingHookRenderChunkOutput {
   map?: BindingSourcemap
 }
 
-export interface BindingHookResolveIdExtraOptions {
+export interface BindingHookResolveIdExtraArgs {
   custom?: number
   isEntry: boolean
   kind: 'import' | 'dynamic-import' | 'require-call'
@@ -163,6 +166,7 @@ export interface BindingHookTransformOutput {
   code?: string
   sideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
+  moduleType?: string
 }
 
 export interface BindingInputItem {
@@ -245,10 +249,10 @@ export interface BindingPluginContextResolveOptions {
 export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
-  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
-  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
+  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
@@ -287,6 +291,30 @@ export interface BindingResolveOptions {
 
 export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
+}
+
+/**
+ * For String, value is the string content, flag is the `None`
+ * For Regex, value is the regular expression, flag is the `Some()`.
+ * Make sure put a `Some("")` in flag even there is no flag in regexp.
+ */
+export interface BindingStringOrRegex {
+  value: string
+  /**
+   * There is a more compact way to represent this, `Option<u8>` with bitflags, but it will be hard
+   * to use(in js side), since construct a `JsRegex` is not used frequently. Optimize it when it is needed.
+   */
+  flag?: string
+}
+
+export interface BindingTransformHookExtraArgs {
+  moduleType: string
+}
+
+export interface BindingTransformPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxInject?: string
 }
 
 export interface BindingTreeshake {

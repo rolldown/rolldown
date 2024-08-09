@@ -1,4 +1,7 @@
-use std::sync::{Arc, Weak};
+use std::{
+  path::PathBuf,
+  sync::{Arc, Weak},
+};
 
 use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
@@ -116,5 +119,9 @@ impl PluginContext {
     } else {
       None
     }
+  }
+
+  pub fn cwd(&self) -> &PathBuf {
+    self.resolver.cwd()
   }
 }

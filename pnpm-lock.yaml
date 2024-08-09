@@ -229,15 +229,15 @@ importers:
       locate-character:
         specifier: ^3.0.0
         version: 3.0.0
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
       mri:
         specifier: ^1.2.0
         version: 1.2.0
       npm-run-all2:
         specifier: ^6.2.0
         version: 6.2.2
+      remeda:
+        specifier: ^2.10.0
+        version: 2.10.0
       rolldown:
         specifier: workspace:*
         version: 'link:'
@@ -4822,6 +4822,9 @@ packages:
   regjsparser@0.9.1:
     resolution: {integrity: sha512-dQUtn90WanSNl+7mQKcXAgZxvUe7Z0SqXlgzv0za4LwiUhyzBC58yQO3liFoUgu8GiJVInAhJjkj1N0EtQ5nkQ==}
     hasBin: true
+
+  remeda@2.10.0:
+    resolution: {integrity: sha512-2RFz0VWckq8nb0nttzToa8BB5HgLsBHokWUKYiV5C8hnsZOTO1jcx0oXKvfS5khabhS6XkngMOLebQB+pm20IQ==}
 
   repeat-string@1.6.1:
     resolution: {integrity: sha512-PV0dzCYDNfRi1jCDbJzpW7jNNDRuCOG/jI5ctQcGKt/clZD+YcPS3yIlWuTJMmESC8aevCFmWJy5wjAFgNqN6w==}
@@ -9995,6 +9998,10 @@ snapshots:
   regjsparser@0.9.1:
     dependencies:
       jsesc: 0.5.0
+
+  remeda@2.10.0:
+    dependencies:
+      type-fest: 4.23.0
 
   repeat-string@1.6.1: {}
 

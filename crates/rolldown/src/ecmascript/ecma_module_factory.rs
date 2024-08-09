@@ -72,6 +72,7 @@ impl ModuleFactory for EcmaModuleFactory {
       ctx.options,
       &ctx.module_type,
       args.source,
+      ctx.replace_global_define_config.as_ref(),
     )?;
 
     let (mut ast, symbols, scopes) = match parse_result {

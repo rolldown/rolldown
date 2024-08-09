@@ -14,7 +14,6 @@ Object.keys(foo).forEach(function (k) {
     get: function () { return foo[k]; }
   });
 });
-            
 
 require("foo");
 

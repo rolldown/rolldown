@@ -1,12 +1,16 @@
 import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
-// import * as _ from 'lodash-es'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
+import { TupleToUnion } from 'type-fest'
+import * as R from 'remeda'
+import { PluginHookNames } from '../constants/plugin'
+import { AssertNever } from './type-assert'
 
-const unsupportedHooks = new Set([
+const unsupportedHookName = [
   'augmentChunkHash',
   'banner',
+  'footer',
   'generateBundle',
   'moduleParsed',
   'onLog',
@@ -16,24 +20,45 @@ const unsupportedHooks = new Set([
   'renderStart',
   'resolveDynamicImport',
   'writeBundle',
+  // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+  // we have to bailout all plugins with `resolveId` hook.
   'resolveId',
-])
+  'intro',
+  'outro',
+] as const
+const unsupportedHooks: Set<string> = new Set(unsupportedHookName)
+
+type UnsupportedHookNames = TupleToUnion<typeof unsupportedHookName>
+type SupportedHookNames = Exclude<PluginHookNames, UnsupportedHookNames>
+
+function isUnsupportedHooks(
+  hookName: string,
+): hookName is UnsupportedHookNames {
+  return unsupportedHooks.has(hookName)
+}
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
   // Throw errors if we try to merge plugins with unsupported hooks
 
   const names: string[] = []
   const batchedHooks: {
-    [K in keyof Plugin]?: NonNullable<Plugin[K]>[]
+    [K in SupportedHookNames]?: NonNullable<Plugin[K]>[]
   } = {}
 
   plugins.forEach((plugin, index) => {
     const pluginName = plugin.name || `Anonymous(index: ${index})`
     names.push(pluginName)
-    ;(Object.keys(plugin) as (keyof typeof plugin)[]).forEach((pluginProp) => {
+    R.keys(plugin).forEach((pluginProp) => {
+      if (isUnsupportedHooks(pluginProp)) {
+        throw new Error(
+          `Failed to compose js plugins. Plugin ${pluginName} has an unsupported hook: ${pluginProp}`,
+        )
+      }
+
       switch (pluginProp) {
         case 'name':
         case 'api':
+          // Not hooks. Just ignore these properties
           break
         case 'buildStart': {
           const handlers = batchedHooks.buildStart ?? []
@@ -59,14 +84,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
-        case 'resolveId': {
-          const handlers = batchedHooks.resolveId ?? []
-          batchedHooks.resolveId = handlers
-          if (plugin.resolveId) {
-            handlers.push(plugin.resolveId)
-          }
-          break
-        }
+        // case 'resolveId': {
+        //   const handlers = batchedHooks.resolveId ?? []
+        //   batchedHooks.resolveId = handlers
+        //   if (plugin.resolveId) {
+        //     handlers.push(plugin.resolveId)
+        //   }
+        //   break
+        // }
         case 'buildEnd': {
           const handlers = batchedHooks.buildEnd ?? []
           batchedHooks.buildEnd = handlers
@@ -83,28 +108,10 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
-        case 'augmentChunkHash':
-        case 'banner':
-        case 'footer':
-        case 'intro':
-        case 'outro':
-        case 'generateBundle':
-        case 'moduleParsed':
-        case 'onLog':
-        case 'options':
-        case 'outputOptions':
-        case 'renderError':
-        case 'renderStart':
-        case 'resolveDynamicImport':
-        case 'writeBundle': {
-          throw new Error(
-            `Failed to compose js plugins. Plugin ${pluginName} has an unsupported hook: ${pluginProp}`,
-          )
-          break
-        }
         default: {
-          // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
-          const _executiveCheck: never = pluginProp
+          // All known hooks should be handled above.
+          // User-defined custom properties will hit this branch and it's ok. Just ignore them.
+          type _ExecutiveCheck = AssertNever<typeof pluginProp>
         }
       }
     })
@@ -114,148 +121,127 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
     name: `Composed(${names.join(', ')})`,
   }
 
-  ;(Object.keys(batchedHooks) as (keyof typeof batchedHooks)[]).forEach(
-    (hookName) => {
-      switch (hookName) {
-        case 'buildStart': {
-          if (batchedHooks.buildStart) {
-            const batchedHandlers = batchedHooks.buildStart
-            composed.buildStart = async function (options) {
-              await Promise.all(
-                batchedHandlers.map((handler) => {
-                  const [handlerFn, _handlerOptions] = normalizeHook(handler)
-                  return handlerFn.call(this, options)
-                }),
-              )
-            }
-          }
-          break
-        }
-        case 'load': {
-          if (batchedHooks.load) {
-            const batchedHandlers = batchedHooks.load
-            composed.load = async function (id) {
-              for (const handler of batchedHandlers) {
+  R.keys(batchedHooks).forEach((hookName) => {
+    switch (hookName) {
+      case 'buildStart': {
+        if (batchedHooks.buildStart) {
+          const batchedHandlers = batchedHooks.buildStart
+          composed.buildStart = async function (options) {
+            await Promise.all(
+              batchedHandlers.map((handler) => {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
-                const result = await handlerFn.call(this, id)
-                if (!isNullish(result)) {
-                  return result
-                }
+                return handlerFn.call(this, options)
+              }),
+            )
+          }
+        }
+        break
+      }
+      case 'load': {
+        if (batchedHooks.load) {
+          const batchedHandlers = batchedHooks.load
+          composed.load = async function (id) {
+            for (const handler of batchedHandlers) {
+              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const result = await handlerFn.call(this, id)
+              if (!isNullish(result)) {
+                return result
               }
             }
           }
-          break
         }
-        case 'transform': {
-          if (batchedHooks.transform) {
-            const batchedHandlers = batchedHooks.transform
-            composed.transform = async function (initialCode, id) {
-              let code = initialCode
-              let moduleSideEffects: ModuleSideEffects | undefined = undefined
-              // TODO: we should deal with the returned sourcemap too.
-              function updateOutput(
-                newCode: string,
-                newModuleSideEffects?: ModuleSideEffects,
-              ) {
-                code = newCode
-                moduleSideEffects = newModuleSideEffects ?? undefined
-              }
-              for (const handler of batchedHandlers) {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
-                const result = await handlerFn.call(this, code, id)
-                if (!isNullish(result)) {
-                  if (typeof result === 'string') {
-                    updateOutput(result)
-                  } else {
-                    if (result.code) {
-                      updateOutput(result.code, result.moduleSideEffects)
-                    }
+        break
+      }
+      case 'transform': {
+        if (batchedHooks.transform) {
+          const batchedHandlers = batchedHooks.transform
+          composed.transform = async function (initialCode, id, moduleType) {
+            let code = initialCode
+            let moduleSideEffects: ModuleSideEffects | undefined = undefined
+            // TODO: we should deal with the returned sourcemap too.
+            function updateOutput(
+              newCode: string,
+              newModuleSideEffects?: ModuleSideEffects,
+            ) {
+              code = newCode
+              moduleSideEffects = newModuleSideEffects ?? undefined
+            }
+            for (const handler of batchedHandlers) {
+              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const result = await handlerFn.call(this, code, id, moduleType)
+              if (!isNullish(result)) {
+                if (typeof result === 'string') {
+                  updateOutput(result)
+                } else {
+                  if (result.code) {
+                    updateOutput(result.code, result.moduleSideEffects)
                   }
                 }
               }
-              return {
-                code,
-                moduleSideEffects,
-              }
+            }
+            return {
+              code,
+              moduleSideEffects,
             }
           }
-          break
         }
-        case 'resolveId': {
-          if (batchedHooks.resolveId) {
-            const batchedHandlers = batchedHooks.resolveId
-            composed.resolveId = async function (source, importer, options) {
-              for (const handler of batchedHandlers) {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
-                const result = await handlerFn.call(
-                  this,
-                  source,
-                  importer,
-                  options,
-                )
-                if (!isNullish(result)) {
-                  return result
-                }
-              }
-            }
-          }
-          break
-        }
-        case 'buildEnd': {
-          if (batchedHooks.buildEnd) {
-            const batchedHandlers = batchedHooks.buildEnd
-            composed.buildEnd = async function (err) {
-              await Promise.all(
-                batchedHandlers.map((handler) => {
-                  const [handlerFn, _handlerOptions] = normalizeHook(handler)
-                  return handlerFn.call(this, err)
-                }),
-              )
-            }
-          }
-          break
-        }
-        case 'renderChunk': {
-          if (batchedHooks.renderChunk) {
-            const batchedHandlers = batchedHooks.renderChunk
-            composed.renderChunk = async function (code, chunk, options) {
-              for (const handler of batchedHandlers) {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
-                const result = await handlerFn.call(this, code, chunk, options)
-                if (!isNullish(result)) {
-                  return result
-                }
-              }
-            }
-          }
-          break
-        }
-        case 'name':
-        case 'api':
-        case 'augmentChunkHash':
-        case 'banner':
-        case 'footer':
-        case 'intro':
-        case 'outro':
-        case 'generateBundle':
-        case 'moduleParsed':
-        case 'onLog':
-        case 'options':
-        case 'outputOptions':
-        case 'renderError':
-        case 'renderStart':
-        case 'resolveDynamicImport':
-        case 'writeBundle': {
-          throw new Error(`Unsupported prop detected: ${hookName}`)
-          break
-        }
-        default: {
-          // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
-          const _executiveCheck: never = hookName
-        }
+        break
       }
-    },
-  )
+      // case 'resolveId': {
+      //   if (batchedHooks.resolveId) {
+      //     const batchedHandlers = batchedHooks.resolveId
+      //     composed.resolveId = async function (source, importer, options) {
+      //       for (const handler of batchedHandlers) {
+      //         const [handlerFn, _handlerOptions] = normalizeHook(handler)
+      //         const result = await handlerFn.call(
+      //           this,
+      //           source,
+      //           importer,
+      //           options,
+      //         )
+      //         if (!isNullish(result)) {
+      //           return result
+      //         }
+      //       }
+      //     }
+      //   }
+      //   break
+      // }
+      case 'buildEnd': {
+        if (batchedHooks.buildEnd) {
+          const batchedHandlers = batchedHooks.buildEnd
+          composed.buildEnd = async function (err) {
+            await Promise.all(
+              batchedHandlers.map((handler) => {
+                const [handlerFn, _handlerOptions] = normalizeHook(handler)
+                return handlerFn.call(this, err)
+              }),
+            )
+          }
+        }
+        break
+      }
+      case 'renderChunk': {
+        if (batchedHooks.renderChunk) {
+          const batchedHandlers = batchedHooks.renderChunk
+          composed.renderChunk = async function (code, chunk, options) {
+            for (const handler of batchedHandlers) {
+              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const result = await handlerFn.call(this, code, chunk, options)
+              if (!isNullish(result)) {
+                return result
+              }
+            }
+          }
+        }
+        break
+      }
+      default: {
+        // Supported hooks should be handled above, otherwise it should be filtered out in the beginning.
+        type _ExhaustiveCheck = AssertNever<typeof hookName>
+      }
+    }
+  })
 
   return composed
 }
@@ -269,13 +255,7 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if ('resolveId' in plugin) {
-    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-    // we have to bailout all plugins with `resolveId` hook.
-    return false
-  }
-
-  if (Object.keys(plugin).some((k) => unsupportedHooks.has(k))) {
+  if (R.keys(plugin).some((hookName) => isUnsupportedHooks(hookName))) {
     return false
   }
 

@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-var bundle = (function(node_path) {
+(function(node_path) {
 
 "use strict";
 const { join } = node_path;

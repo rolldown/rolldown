@@ -6,7 +6,6 @@ use oxc::minifier::{
 use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
-use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::EcmaAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -20,7 +19,7 @@ pub fn pre_process_ecma_ast(
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
-  bundle_options: &NormalizedBundlerOptions,
+  replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   if !matches!(parse_type, OxcParseType::Js) {
     let trivias = ast.trivias.clone();
@@ -51,16 +50,9 @@ pub fn pre_process_ecma_ast(
   }
 
   ast.program.with_mut(|fields| -> anyhow::Result<()> {
-    if !bundle_options.define.is_empty() {
-      let define_config =
-        ReplaceGlobalDefinesConfig::new(&bundle_options.define).map_err(|errs| {
-          anyhow::format_err!(
-            "Failed to generate defines config from {:?}. Got {:#?}",
-            bundle_options.define,
-            errs
-          )
-        })?;
-      ReplaceGlobalDefines::new(fields.allocator, define_config).build(fields.program);
+    if let Some(replace_global_define_config) = replace_global_define_config {
+      ReplaceGlobalDefines::new(fields.allocator, replace_global_define_config.clone())
+        .build(fields.program);
     }
     let options = CompressOptions::dead_code_elimination();
     Compressor::new(fields.allocator, options).build(fields.program);

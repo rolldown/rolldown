@@ -119,7 +119,7 @@ export function bindingifyGenerateBundle(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, bundle, isWrite) => {
-    handler.call(
+    await handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       outputOptions,
       transformToOutputBundle(bundle),
@@ -140,7 +140,7 @@ export function bindingifyWriteBundle(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, bundle) => {
-    handler.call(
+    await handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       outputOptions,
       transformToOutputBundle(bundle),

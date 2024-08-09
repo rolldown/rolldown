@@ -1,4 +1,4 @@
-import { expect, vi } from 'vitest'
+import { expect } from 'vitest'
 import path from 'node:path'
 import fs from 'node:fs'
 import type { RolldownOutputChunk } from '../../../../src'
@@ -7,7 +7,7 @@ import { defineTest } from '@tests'
 const entry = path.join(__dirname, './main.js')
 const foo = path.join(__dirname, './foo.js')
 
-const writeBundleFn = vi.fn()
+const calls: string[] = []
 
 export default defineTest({
   config: {
@@ -16,8 +16,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        writeBundle: (_options, bundle) => {
-          writeBundleFn()
+        writeBundle: async (_options, bundle) => {
           // Make sure the bundle already write to disk.
           expect(fs.existsSync(path.resolve(__dirname, 'main.js'))).toBe(true)
 
@@ -34,11 +33,23 @@ export default defineTest({
           // The `foo.js` should be include `modules/moduleIds` even it is empty.
           expect(chunk.moduleIds).toStrictEqual([foo, entry])
           expect(Object.keys(chunk.modules).length).toStrictEqual(2)
+
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          calls.push('test-plugin')
+        },
+      },
+      {
+        name: 'test-plugin-2',
+        writeBundle: (options, bundle, isWrite) => {
+          calls.push('test-plugin-2')
         },
       },
     ],
   },
+  beforeTest: () => {
+    calls.length = 0
+  },
   afterTest: () => {
-    expect(writeBundleFn).toHaveBeenCalledTimes(1)
+    expect(calls).toStrictEqual(['test-plugin', 'test-plugin-2'])
   },
 })

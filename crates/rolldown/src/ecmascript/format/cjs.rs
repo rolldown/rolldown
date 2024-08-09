@@ -66,11 +66,10 @@ pub fn render_cjs(
     enumerable: true,
     get: function () { return $NAME[k]; }
   });
-});
-            ".replace("$NAME", binding_ref_name);
-            concat_source.add_source(Box::new(RawSource::new(format!("var {} = require(\"{}\");", binding_ref_name,&importee.stable_id()))));
-                          concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+});".replace("$NAME", binding_ref_name);
 
+          concat_source.add_source(Box::new(RawSource::new(format!("var {} = require(\"{}\");", binding_ref_name,&importee.stable_id()))));
+          concat_source.add_source(Box::new(RawSource::new(import_stmt)));
         });
         Some(export_mode)
       } else {
@@ -78,8 +77,7 @@ pub fn render_cjs(
         None
       }
     } else {
-      // The entry module should always be an ECMAScript module, so it is unreachable.
-      None
+      unreachable!("Entry module should be an ECMAScript module");
     }
   } else {
     // No need for common chunks to determine the export mode.

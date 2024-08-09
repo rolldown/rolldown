@@ -1,3 +1,4 @@
+use memchr::memchr2;
 use std::{borrow::Cow, ffi::OsStr, path::Path};
 
 use sugar_path::SugarPath;
@@ -59,4 +60,13 @@ fn test_representative_file_name() {
 
   let path = cwd.join("vue").join("mod.ts");
   assert_eq!(path.representative_file_name(), "vue_mod");
+}
+
+#[inline]
+pub fn clean_url(v: &str) -> &str {
+  if let Some(index) = memchr2(b'?', b'#', v.as_bytes()) {
+    &v[0..index]
+  } else {
+    v
+  }
 }

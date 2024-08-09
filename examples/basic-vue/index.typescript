@@ -2,3 +2,9 @@
 
 // export default createApp({})
 console.log('test')
+interface Foo {
+
+}
+
+
+export const a = 100;

@@ -1,4 +1,4 @@
-import { ecmaTransformPlugin } from 'rolldown/experimental'
+import { transformPlugin } from 'rolldown/experimental'
 import { defineTest } from '@tests'
 import { expect } from 'vitest'
 
@@ -10,7 +10,7 @@ export default defineTest({
   config: {
     input: './main.ts',
     plugins: [
-      ecmaTransformPlugin({
+      transformPlugin({
         include: ['node_modules/**'],
       }),
       {

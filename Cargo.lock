@@ -2372,6 +2372,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_plugin",
+ "rolldown_utils",
  "sugar_path",
 ]
 
@@ -2464,6 +2465,7 @@ dependencies = [
  "futures",
  "indexmap",
  "infer",
+ "memchr",
  "mime",
  "oxc",
  "phf 0.11.2",

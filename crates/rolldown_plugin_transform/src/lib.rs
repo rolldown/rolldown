@@ -129,24 +129,32 @@ impl TransformPlugin {
     }
     let normalized_path = Path::new(id).relative(ctx.inner.cwd());
     let normalized_id = normalized_path.to_string_lossy();
-    for pattern in &self.exclude {
-      let v = match pattern {
-        StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
-        StringOrRegex::Regex(re) => re.matches(id),
-      };
-      if v {
-        return false;
+    let cleaned_id = rolldown_utils::path_ext::clean_url(&normalized_id);
+    let inner_filter = |id: &str| {
+      for pattern in &self.exclude {
+        let v = match pattern {
+          StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
+          StringOrRegex::Regex(re) => re.matches(id),
+        };
+        if v {
+          return false;
+        }
       }
-    }
-    for pattern in &self.include {
-      let v = match pattern {
-        StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
-        StringOrRegex::Regex(re) => re.matches(id),
-      };
-      if v {
-        return true;
+      for pattern in &self.include {
+        let v = match pattern {
+          StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
+          StringOrRegex::Regex(re) => re.matches(id),
+        };
+        if v {
+          return true;
+        }
       }
+      self.include.is_empty()
+    };
+    if cleaned_id == normalized_id {
+      inner_filter(&normalized_id)
+    } else {
+      inner_filter(&normalized_id) && inner_filter(cleaned_id)
     }
-    self.include.is_empty()
   }
 }

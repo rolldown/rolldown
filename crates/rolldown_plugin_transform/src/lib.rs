@@ -66,7 +66,7 @@ impl Plugin for EcmaTransformPlugin {
       Ok(ecma_ast) => ecma_ast,
       Err(errs) => {
         // TODO: better diagnostics handling
-        return Err(anyhow::format_err!("Error occurered when parsing {}\n: {:?}", args.id, errs));
+        return Err(anyhow::format_err!("Error occurred when parsing {}\n: {:?}", args.id, errs));
       }
     };
     let trivias = ast.trivias.clone();

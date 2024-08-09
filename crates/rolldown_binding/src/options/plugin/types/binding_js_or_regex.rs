@@ -9,6 +9,6 @@ use serde::Deserialize;
 pub struct BindingStringOrRegex {
   pub value: String,
   /// There is a more compact way to represent this, `Option<u8>` with bitflags, but it will be hard
-  /// to use(in js side), since construct a `JsRegex` is not used fruquently. Optimize it when it is needed.
+  /// to use(in js side), since construct a `JsRegex` is not used frequently. Optimize it when it is needed.
   pub flag: Option<String>,
 }

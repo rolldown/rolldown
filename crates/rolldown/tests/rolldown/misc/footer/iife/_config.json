@@ -1,0 +1,7 @@
+{
+  "config": {
+    "format": "iife",
+    "footer": "// Footer\n",
+    "name": "module"
+  }
+}

@@ -107,6 +107,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     experimental: raw_options.experimental.unwrap_or_default(),
     minify: raw_options.minify.unwrap_or(false),
     define,
+    extend: raw_options.extend.unwrap_or(false),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

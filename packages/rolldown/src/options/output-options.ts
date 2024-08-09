@@ -41,6 +41,7 @@ const outputOptionsSchema = z.strictObject({
   footer: z.string().or(addonFunctionSchema).optional(),
   intro: z.string().or(addonFunctionSchema).optional(),
   outro: z.string().or(addonFunctionSchema).optional(),
+  extend: z.boolean().optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
   entryFileNames: z.string().optional(),
   chunkFileNames: z.string().optional(),

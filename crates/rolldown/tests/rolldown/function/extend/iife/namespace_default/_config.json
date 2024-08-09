@@ -1,0 +1,10 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "test.module",
+    "extend": true,
+    "exports": "default",
+    "banner": "import assert from \"node:assert\"\nclass A {\n  constructor() {",
+    "footer": "  }\n}\nlet a = new A();\nassert(a instanceof A);\nassert(a.test.module === \"default\");"
+  }
+}

@@ -190,7 +190,6 @@ export function bindingifyTransform(
       moduleSideEffects: ret.moduleSideEffects || null,
     })
 
-    console.log(`ret.moduleType: `, ret.moduleType)
     return {
       code: ret.code,
       map: bindingifySourcemap(ret.map),

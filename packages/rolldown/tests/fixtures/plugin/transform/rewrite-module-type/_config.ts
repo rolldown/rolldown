@@ -5,13 +5,13 @@ const transformFn = vi.fn()
 
 export default defineTest({
   config: {
-    input: "./main.typescript",
+    input: './main.typescript',
     plugins: [
       {
         name: 'rewrite-module-type',
         transform: function (code, id, meta) {
           return {
-            moduleType: 'ts'
+            moduleType: 'ts',
           }
         },
       },

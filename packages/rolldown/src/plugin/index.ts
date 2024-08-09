@@ -75,7 +75,10 @@ export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
 
-export type TransformResult = NullValue | string | Partial<SourceDescription> & { moduleType?: string }
+export type TransformResult =
+  | NullValue
+  | string
+  | (Partial<SourceDescription> & { moduleType?: string })
 
 export interface FunctionPluginHooks {
   onLog: (
@@ -123,7 +126,7 @@ export interface FunctionPluginHooks {
     code: string,
     id: string,
     meta: BindingTransformHookExtraArgs & { moduleType: ModuleType },
-  ) => TransformResult 
+  ) => TransformResult
 
   moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void
 

@@ -5,7 +5,6 @@ import {
   BindingBuiltinPlugin,
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
-  BindingTransformPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {

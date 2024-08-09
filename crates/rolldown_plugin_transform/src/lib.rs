@@ -1,16 +1,12 @@
 use glob_match::glob_match;
-use oxc::ast::ast::TSModuleDeclarationBody;
-use oxc::codegen::{CodeGenerator, CodegenReturn, Gen};
+use oxc::codegen::{CodeGenerator, CodegenReturn};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_common::js_regex::HybridRegex;
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 
-use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, SharedPluginContext,
-};
+use rolldown_plugin::Plugin;
 use std::borrow::Cow;
 use std::path::Path;
 
@@ -21,7 +17,7 @@ pub enum StringOrRegex {
 }
 
 impl StringOrRegex {
-  pub fn new(value: String, flag: Option<String>) -> anyhow::Result<Self> {
+  pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
     // TODO: support flag
     if flag.is_some() {
       let regex = HybridRegex::new(&value)?;
@@ -48,13 +44,12 @@ impl Plugin for EcmaTransformPlugin {
 
   async fn transform(
     &self,
-    ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    _ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if !self.filter(args.id, args.module_type) {
       return Ok(None);
     }
-    dbg!(&args.module_type);
     let source_type = {
       let mut default_source_type = SourceType::default();
       default_source_type = match args.module_type {
@@ -65,8 +60,6 @@ impl Plugin for EcmaTransformPlugin {
       };
       default_source_type
     };
-    println!("{:?}", source_type);
-    println!("{}", args.code);
     let code = args.code;
     let parse_result = EcmaCompiler::parse(args.id, code, source_type);
     let mut ast = match parse_result {
@@ -113,11 +106,11 @@ impl Plugin for EcmaTransformPlugin {
     } else {
       source_text
     };
-    return Ok(Some(rolldown_plugin::HookTransformOutput {
+    Ok(Some(rolldown_plugin::HookTransformOutput {
       code: Some(code),
       map: source_map,
       ..Default::default()
-    }));
+    }))
   }
 }
 

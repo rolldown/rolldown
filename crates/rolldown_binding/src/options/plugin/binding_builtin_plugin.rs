@@ -101,7 +101,7 @@ impl TryFrom<BindingTransformPluginConfig> for EcmaTransformPlugin {
     let normalized_include = if let Some(include) = value.include {
       let mut ret = Vec::with_capacity(include.len());
       for item in include {
-        ret.push(StringOrRegex::new(item.value, item.flag)?);
+        ret.push(StringOrRegex::new(item.value, &item.flag)?);
       }
       ret
     } else {
@@ -110,7 +110,7 @@ impl TryFrom<BindingTransformPluginConfig> for EcmaTransformPlugin {
     let normalized_exclude = if let Some(exclude) = value.exclude {
       let mut ret = Vec::with_capacity(exclude.len());
       for item in exclude {
-        ret.push(StringOrRegex::new(item.value, item.flag)?);
+        ret.push(StringOrRegex::new(item.value, &item.flag)?);
       }
       ret
     } else {

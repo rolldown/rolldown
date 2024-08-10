@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 export default defineTest({
   config: {
     output: {
-      // change directory structure to test relative path resolution
+      // tweak directory structure to test relative path reference
       entryFileNames: './entries/[name].mjs',
       assetFileNames: './assets/[name]-[hash].[ext]',
     },

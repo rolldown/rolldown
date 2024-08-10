@@ -475,7 +475,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let asset_file_name = self.ctx.file_emitter.get_file_name(reference_id);
         let absolute_asset_file_name = asset_file_name.absolutize_with(&self.ctx.options.dir);
 
-        // compute relative path from chunk to asset (cf. Chunk::import_path_for)
+        // compute relative path from chunk to asset (similar to Chunk::import_path_for)
         let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
           .expect("Normal module should belong to a chunk");
         let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
@@ -489,6 +489,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let relative_asset_path =
           absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
 
+        // relativeUrlMechanisms for esm
         // new URL(<relative_asset_path>, import.meta.url).href
         *expr =
           self.snippet.builder.expression_member(self.snippet.builder.member_expression_static(

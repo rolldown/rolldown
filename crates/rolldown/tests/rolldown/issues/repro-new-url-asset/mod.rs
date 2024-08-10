@@ -63,19 +63,26 @@ impl<'ast, 'a> VisitMut<'ast> for AssetImportMetaUrlVisit<'ast, 'a> {
                   name: Some(lit.value.as_str().to_string()),
                   source: rolldown_common::AssetSource::Buffer(data),
                 });
-                *it.arguments.get_mut(0).unwrap() = self.ast_builder.argument_expression(
-                  self.ast_builder.expression_member(
-                    self.ast_builder.member_expression_static(
-                      SPAN,
-                      self.ast_builder.expression_meta_property(
+                // new URL("./source.txt", import.meta.url)
+                //   ⇓ (plugin transform)
+                // new URL(import.meta.ROLLUP_FILE_URL_referenceId)
+                //   ⇓ (finalize esm output)
+                // new URL(new URL("asset-dir/source-xxx.txt", import.meta.url).href)
+                it.arguments = self.ast_builder.vec1(
+                  self.ast_builder.argument_expression(
+                    self.ast_builder.expression_member(
+                      self.ast_builder.member_expression_static(
                         SPAN,
-                        self.ast_builder.identifier_name(SPAN, "import"),
-                        self.ast_builder.identifier_name(SPAN, "meta"),
+                        self.ast_builder.expression_meta_property(
+                          SPAN,
+                          self.ast_builder.identifier_name(SPAN, "import"),
+                          self.ast_builder.identifier_name(SPAN, "meta"),
+                        ),
+                        self
+                          .ast_builder
+                          .identifier_name(SPAN, format!("ROLLUP_FILE_URL_{reference_id}")),
+                        false,
                       ),
-                      self
-                        .ast_builder
-                        .identifier_name(SPAN, format!("ROLLUP_FILE_URL_{reference_id}")),
-                      false,
                     ),
                   ),
                 );

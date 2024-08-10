@@ -3,7 +3,7 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{self, Expression, SimpleAssignmentTarget},
+    ast::{self, Expression, SimpleAssignmentTarget, TSTypeParameterInstantiation},
     visit::walk_mut,
     VisitMut,
   },
@@ -469,6 +469,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         && member_expr.property.name.starts_with("ROLLUP_FILE_URL_")
       {
         // https://github.com/rollup/rollup/blob/df12edfea6e9c1a71bda1a01bed1ab787b7514d5/src/ast/nodes/MetaProperty.ts#L85-L100
+        // TODO: relativeUrlMechanisms for other output formats
+        // TODO: resolveFileUrl hooks
         let reference_id = &member_expr.property.name["ROLLUP_FILE_URL_".len()..];
         let asset_file_name = self.ctx.file_emitter.get_file_name(reference_id);
         let absolute_asset_file_name = asset_file_name.absolutize_with(&self.ctx.options.dir);
@@ -486,8 +488,40 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           .unwrap();
         let relative_asset_path =
           absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
+
+        // new URL(<relative_asset_path>, import.meta.url).href
         *expr =
-          self.snippet.builder.expression_string_literal(SPAN, format!("./{relative_asset_path}"));
+          self.snippet.builder.expression_member(self.snippet.builder.member_expression_static(
+            SPAN,
+            self.snippet.builder.expression_new(
+              SPAN,
+              self.snippet.builder.expression_identifier_reference(SPAN, "URL"),
+              {
+                let mut items = self.snippet.builder.vec();
+                items.push(self.snippet.builder.argument_expression(
+                  self.snippet.builder.expression_string_literal(SPAN, relative_asset_path),
+                ));
+                items.push(self.snippet.builder.argument_expression(
+                  self.snippet.builder.expression_member(
+                    self.snippet.builder.member_expression_static(
+                      SPAN,
+                      self.snippet.builder.expression_meta_property(
+                        SPAN,
+                        self.snippet.builder.identifier_name(SPAN, "import"),
+                        self.snippet.builder.identifier_name(SPAN, "meta"),
+                      ),
+                      self.snippet.builder.identifier_name(SPAN, "url"),
+                      false,
+                    ),
+                  ),
+                ));
+                items
+              },
+              Option::<TSTypeParameterInstantiation>::None,
+            ),
+            self.snippet.builder.identifier_name(SPAN, "href"),
+            false,
+          ));
       }
     }
 

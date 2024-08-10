@@ -8,8 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-const image = new URL("assets/image-IDgoIqBd.svg", import.meta.url).href;
+const image = new URL("import.meta.ROLLUP_FILE_URL_VRAku6fjghkApIISiBWPzg", import.meta.url).href;
+const imageNotFound = new URL("./image-not-found.svg", import.meta.url).href;
 
 //#endregion
-export { image };
+export { image, imageNotFound };
 ```

@@ -16,6 +16,7 @@ pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
 pub mod mixed_export;
 pub mod parse_error;
+pub mod sourcemap_broken;
 pub mod sourcemap_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;

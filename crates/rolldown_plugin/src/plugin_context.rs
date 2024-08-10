@@ -42,6 +42,7 @@ impl PluginContext {
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
       module_table: self.module_table.as_ref().map(Arc::clone),
+      stats: todo!(),
     })
   }
 

@@ -42,6 +42,7 @@ impl PluginDriver {
             resolver: Arc::clone(resolver),
             file_emitter: Arc::clone(file_emitter),
             module_table: None,
+            stats: Arc::clone(stats),
           }
           .into(),
         );
@@ -69,6 +70,7 @@ impl PluginDriver {
             resolver: Arc::clone(&ctx.resolver),
             file_emitter: Arc::clone(&ctx.file_emitter),
             module_table: Some(Arc::clone(module_table)),
+            stats: Arc::clone(&ctx.stats),
           }
           .into(),
         );

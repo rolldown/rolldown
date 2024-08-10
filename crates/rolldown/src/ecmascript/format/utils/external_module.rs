@@ -1,6 +1,5 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
-use itertools::Itertools;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 

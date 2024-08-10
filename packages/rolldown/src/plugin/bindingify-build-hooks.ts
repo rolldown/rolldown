@@ -212,7 +212,7 @@ export function bindingifyTransform(
         map: bindingifySourcemap(ret.map),
         sideEffects: bindingifySideEffects(ret.moduleSideEffects),
         moduleType: ret.moduleType,
-    }
+      }
     },
     bindingifyPluginHookMeta(meta),
   ]

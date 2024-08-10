@@ -40,7 +40,7 @@ pub struct TransformPlugin {
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
 impl Plugin for TransformPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("module_preload_polyfill")
+    Cow::Borrowed("builtin:transform")
   }
 
   async fn transform(

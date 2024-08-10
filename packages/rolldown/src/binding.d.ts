@@ -245,25 +245,51 @@ export interface BindingPluginContextResolveOptions {
   custom?: number
 }
 
+export interface BindingPluginHookMeta {
+  order?: BindingPluginOrder
+}
+
 export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  buildStartMeta?: BindingPluginHookMeta
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveIdMeta?: BindingPluginHookMeta
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImportMeta?: BindingPluginHookMeta
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  loadMeta?: BindingPluginHookMeta
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
+  transformMeta?: BindingPluginHookMeta
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
+  moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
+  buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderChunkMeta?: BindingPluginHookMeta
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>
+  augmentChunkHashMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext) => void
+  renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: string) => void
+  renderErrorMeta?: BindingPluginHookMeta
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
+  generateBundleMeta?: BindingPluginHookMeta
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
+  writeBundleMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  bannerMeta?: BindingPluginHookMeta
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  footerMeta?: BindingPluginHookMeta
   intro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  introMeta?: BindingPluginHookMeta
   outro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  outroMeta?: BindingPluginHookMeta
+}
+
+export declare enum BindingPluginOrder {
+  Pre = 0,
+  Post = 1
 }
 
 export interface BindingPluginWithIndex {

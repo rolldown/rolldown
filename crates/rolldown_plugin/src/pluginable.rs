@@ -2,6 +2,7 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::SharedPluginContext;
 use crate::{
+  plugin_hook_meta::PluginHookMeta,
   transform_plugin_context::TransformPluginContext,
   types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
   HookBuildEndArgs, HookInjectionArgs, HookInjectionOutputReturn, HookLoadArgs,
@@ -35,11 +36,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   async fn call_build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn;
 
+  fn call_build_start_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_resolve_id(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn;
+
+  fn call_resolve_id_meta(&self) -> Option<PluginHookMeta>;
 
   #[deprecated(
     note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
@@ -50,7 +55,11 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn;
 
+  fn call_resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn;
+
+  fn call_load_meta(&self) -> Option<PluginHookMeta>;
 
   async fn call_transform(
     &self,
@@ -58,11 +67,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _args: &HookTransformArgs,
   ) -> HookTransformReturn;
 
+  fn call_transform_meta(&self) -> Option<PluginHookMeta>;
+
   fn call_transform_ast(
     &self,
     _ctx: &SharedPluginContext,
     args: HookTransformAstArgs,
   ) -> HookTransformAstReturn;
+
+  fn call_transform_ast_meta(&self) -> Option<PluginHookMeta>;
 
   async fn call_module_parsed(
     &self,
@@ -70,15 +83,21 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _module_info: Arc<ModuleInfo>,
   ) -> HookNoopReturn;
 
+  fn call_module_parsed_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_build_end(
     &self,
     _ctx: &SharedPluginContext,
     _args: Option<&HookBuildEndArgs>,
   ) -> HookNoopReturn;
 
+  fn call_build_end_meta(&self) -> Option<PluginHookMeta>;
+
   // --- Generate hooks ---
 
   async fn call_render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn;
+
+  fn call_render_start_meta(&self) -> Option<PluginHookMeta>;
 
   async fn call_banner(
     &self,
@@ -86,11 +105,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _args: &HookInjectionArgs,
   ) -> HookInjectionOutputReturn;
 
+  fn call_banner_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_footer(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookInjectionArgs,
   ) -> HookInjectionOutputReturn;
+
+  fn call_footer_meta(&self) -> Option<PluginHookMeta>;
 
   async fn call_intro(
     &self,
@@ -98,11 +121,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _args: &HookInjectionArgs,
   ) -> HookInjectionOutputReturn;
 
+  fn call_intro_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_outro(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookInjectionArgs,
   ) -> HookInjectionOutputReturn;
+
+  fn call_outro_meta(&self) -> Option<PluginHookMeta>;
 
   async fn call_render_chunk(
     &self,
@@ -110,17 +137,23 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _args: &HookRenderChunkArgs,
   ) -> HookRenderChunkReturn;
 
+  fn call_render_chunk_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_augment_chunk_hash(
     &self,
     _ctx: &SharedPluginContext,
     _chunk: &RollupRenderedChunk,
   ) -> HookAugmentChunkHashReturn;
 
+  fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_render_error(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderErrorArgs,
   ) -> HookNoopReturn;
+
+  fn call_render_error_meta(&self) -> Option<PluginHookMeta>;
 
   async fn call_generate_bundle(
     &self,
@@ -129,11 +162,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     _is_write: bool,
   ) -> HookNoopReturn;
 
+  fn call_generate_bundle_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_write_bundle(
     &self,
     _ctx: &SharedPluginContext,
     _bundle: &mut Vec<Output>,
   ) -> HookNoopReturn;
+
+  fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
 }
 
 #[async_trait::async_trait]
@@ -146,12 +183,20 @@ impl<T: Plugin> Pluginable for T {
     Plugin::build_start(self, ctx).await
   }
 
+  fn call_build_start_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::build_start_meta(self)
+  }
+
   async fn call_resolve_id(
     &self,
     ctx: &SharedPluginContext,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     Plugin::resolve_id(self, ctx, args).await
+  }
+
+  fn call_resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::resolve_id_meta(self)
   }
 
   #[allow(deprecated)]
@@ -163,8 +208,16 @@ impl<T: Plugin> Pluginable for T {
     Plugin::resolve_dynamic_import(self, ctx, args).await
   }
 
+  fn call_resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::resolve_dynamic_import_meta(self)
+  }
+
   async fn call_load(&self, ctx: &SharedPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
     Plugin::load(self, ctx, args).await
+  }
+
+  fn call_load_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::load_meta(self)
   }
 
   async fn call_transform(
@@ -175,12 +228,20 @@ impl<T: Plugin> Pluginable for T {
     Plugin::transform(self, ctx, args).await
   }
 
+  fn call_transform_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::transform_meta(self)
+  }
+
   async fn call_module_parsed(
     &self,
     ctx: &SharedPluginContext,
     module_info: Arc<ModuleInfo>,
   ) -> HookNoopReturn {
     Plugin::module_parsed(self, ctx, module_info).await
+  }
+
+  fn call_module_parsed_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::module_parsed_meta(self)
   }
 
   async fn call_build_end(
@@ -191,8 +252,16 @@ impl<T: Plugin> Pluginable for T {
     Plugin::build_end(self, ctx, args).await
   }
 
+  fn call_build_end_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::build_end_meta(self)
+  }
+
   async fn call_render_start(&self, ctx: &SharedPluginContext) -> HookNoopReturn {
     Plugin::render_start(self, ctx).await
+  }
+
+  fn call_render_start_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::render_start_meta(self)
   }
 
   async fn call_banner(
@@ -203,12 +272,20 @@ impl<T: Plugin> Pluginable for T {
     Plugin::banner(self, ctx, args).await
   }
 
+  fn call_banner_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::banner_meta(self)
+  }
+
   async fn call_footer(
     &self,
     ctx: &SharedPluginContext,
     args: &HookInjectionArgs,
   ) -> HookInjectionOutputReturn {
     Plugin::footer(self, ctx, args).await
+  }
+
+  fn call_footer_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::footer_meta(self)
   }
 
   async fn call_intro(
@@ -219,12 +296,20 @@ impl<T: Plugin> Pluginable for T {
     Plugin::intro(self, ctx, args).await
   }
 
+  fn call_intro_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::intro_meta(self)
+  }
+
   async fn call_outro(
     &self,
     ctx: &SharedPluginContext,
     args: &HookInjectionArgs,
   ) -> HookInjectionOutputReturn {
     Plugin::outro(self, ctx, args).await
+  }
+
+  fn call_outro_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::outro_meta(self)
   }
 
   async fn call_render_chunk(
@@ -235,6 +320,10 @@ impl<T: Plugin> Pluginable for T {
     Plugin::render_chunk(self, ctx, args).await
   }
 
+  fn call_render_chunk_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::render_chunk_meta(self)
+  }
+
   async fn call_augment_chunk_hash(
     &self,
     ctx: &SharedPluginContext,
@@ -243,12 +332,20 @@ impl<T: Plugin> Pluginable for T {
     Plugin::augment_chunk_hash(self, ctx, chunk).await
   }
 
+  fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::augment_chunk_hash_meta(self)
+  }
+
   async fn call_render_error(
     &self,
     ctx: &SharedPluginContext,
     args: &HookRenderErrorArgs,
   ) -> HookNoopReturn {
     Plugin::render_error(self, ctx, args).await
+  }
+
+  fn call_render_error_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::render_error_meta(self)
   }
 
   async fn call_generate_bundle(
@@ -260,6 +357,10 @@ impl<T: Plugin> Pluginable for T {
     Plugin::generate_bundle(self, ctx, bundle, is_write).await
   }
 
+  fn call_generate_bundle_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::generate_bundle_meta(self)
+  }
+
   async fn call_write_bundle(
     &self,
     ctx: &SharedPluginContext,
@@ -268,11 +369,19 @@ impl<T: Plugin> Pluginable for T {
     Plugin::write_bundle(self, ctx, bundle).await
   }
 
+  fn call_write_bundle_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::write_bundle_meta(self)
+  }
+
   fn call_transform_ast(
     &self,
     ctx: &SharedPluginContext,
     args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     Plugin::transform_ast(self, ctx, args)
+  }
+
+  fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::transform_ast_meta(self)
   }
 }

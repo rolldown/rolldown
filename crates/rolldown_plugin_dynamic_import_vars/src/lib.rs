@@ -24,7 +24,7 @@ pub struct DynamicImportVarsPlugin {}
 
 impl Plugin for DynamicImportVarsPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("dynamic_import_vars")
+    Cow::Borrowed("builtin:dynamic_import_vars")
   }
 
   async fn resolve_id(

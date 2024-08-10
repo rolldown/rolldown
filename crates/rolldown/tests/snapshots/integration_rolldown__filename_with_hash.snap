@@ -1910,8 +1910,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.mjs => main-Gb3ISGuP.mjs
-- main-Gb3ISGuP.mjs.map
+- main-!~{000}~.mjs => main-c_fP-LRz.mjs
+- main-c_fP-LRz.mjs.map
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 

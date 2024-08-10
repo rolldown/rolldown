@@ -9,3 +9,4 @@ pub use binding_plugin_options::*;
 pub use js_plugin::*;
 pub use parallel_js_plugin::*;
 mod binding_builtin_plugin;
+mod binding_plugin_hook_meta;

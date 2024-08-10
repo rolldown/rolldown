@@ -1,6 +1,7 @@
 mod plugin;
 mod plugin_context;
 mod plugin_driver;
+mod plugin_hook_meta;
 mod pluginable;
 mod transform_plugin_context;
 mod type_aliases;
@@ -22,6 +23,7 @@ pub use crate::{
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
+  plugin_hook_meta::{PluginHookMeta, PluginOrder},
   transform_plugin_context::TransformPluginContext,
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_injection_args::HookInjectionArgs,

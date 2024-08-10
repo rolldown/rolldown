@@ -34,52 +34,116 @@ export function bindingifyPlugin(
   outputOptions: NormalizedOutputOptions,
   pluginContextData: PluginContextData,
 ): BindingPluginOptions {
+  const [buildStart, buildStartMeta] = bindingifyBuildStart(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [resolveId, resolveIdMeta] = bindingifyResolveId(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [resolveDynamicImport, resolveDynamicImportMeta] =
+    bindingifyResolveDynamicImport(plugin, options, pluginContextData)
+  const [buildEnd, buildEndMeta] = bindingifyBuildEnd(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [transform, transformMeta] = bindingifyTransform(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [moduleParsed, moduleParsedMeta] = bindingifyModuleParsed(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [load, loadMeta] = bindingifyLoad(plugin, options, pluginContextData)
+  const [renderChunk, renderChunkMeta] = bindingifyRenderChunk(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
+  const [augmentChunkHash, augmentChunkHashMeta] = bindingifyAugmentChunkHash(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [renderStart, renderStartMeta] = bindingifyRenderStart(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
+  const [renderError, renderErrorMeta] = bindingifyRenderError(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [generateBundle, generateBundleMeta] = bindingifyGenerateBundle(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
+  const [writeBundle, writeBundleMeta] = bindingifyWriteBundle(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
+  const [banner, bannerMeta] = bindingifyBanner(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [footer, footerMeta] = bindingifyFooter(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const [intro, introMeta] = bindingifyIntro(plugin, options, pluginContextData)
+  const [outro, outroMeta] = bindingifyOutro(plugin, options, pluginContextData)
+
   return {
     name: plugin.name ?? 'unknown',
-    buildStart: bindingifyBuildStart(plugin, options, pluginContextData),
-    resolveId: bindingifyResolveId(plugin, options, pluginContextData),
-    resolveDynamicImport: bindingifyResolveDynamicImport(
-      plugin,
-      options,
-      pluginContextData,
-    ),
-    buildEnd: bindingifyBuildEnd(plugin, options, pluginContextData),
-    transform: bindingifyTransform(plugin, options, pluginContextData),
-    moduleParsed: bindingifyModuleParsed(plugin, options, pluginContextData),
-    load: bindingifyLoad(plugin, options, pluginContextData),
-    renderChunk: bindingifyRenderChunk(
-      plugin,
-      options,
-      outputOptions,
-      pluginContextData,
-    ),
-    augmentChunkHash: bindingifyAugmentChunkHash(
-      plugin,
-      options,
-      pluginContextData,
-    ),
-    renderStart: bindingifyRenderStart(
-      plugin,
-      options,
-      outputOptions,
-      pluginContextData,
-    ),
-    renderError: bindingifyRenderError(plugin, options, pluginContextData),
-    generateBundle: bindingifyGenerateBundle(
-      plugin,
-      options,
-      outputOptions,
-      pluginContextData,
-    ),
-    writeBundle: bindingifyWriteBundle(
-      plugin,
-      options,
-      outputOptions,
-      pluginContextData,
-    ),
-    banner: bindingifyBanner(plugin, options, pluginContextData),
-    footer: bindingifyFooter(plugin, options, pluginContextData),
-    intro: bindingifyIntro(plugin, options, pluginContextData),
-    outro: bindingifyOutro(plugin, options, pluginContextData),
+    buildStart,
+    buildStartMeta,
+    resolveId,
+    resolveIdMeta,
+    resolveDynamicImport,
+    resolveDynamicImportMeta,
+    buildEnd,
+    buildEndMeta,
+    transform,
+    transformMeta,
+    moduleParsed,
+    moduleParsedMeta,
+    load,
+    loadMeta,
+    renderChunk,
+    renderChunkMeta,
+    augmentChunkHash,
+    augmentChunkHashMeta,
+    renderStart,
+    renderStartMeta,
+    renderError,
+    renderErrorMeta,
+    generateBundle,
+    generateBundleMeta,
+    writeBundle,
+    writeBundleMeta,
+    banner,
+    bannerMeta,
+    footer,
+    footerMeta,
+    intro,
+    introMeta,
+    outro,
+    outroMeta,
   }
 }

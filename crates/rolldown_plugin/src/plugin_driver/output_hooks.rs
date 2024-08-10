@@ -7,7 +7,8 @@ use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
   pub async fn render_start(&self) -> HookNoopReturn {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
+    {
       plugin.call_render_start(ctx).await?;
     }
     Ok(())
@@ -18,7 +19,7 @@ impl PluginDriver {
     args: HookInjectionArgs<'_>,
     mut banner: String,
   ) -> Result<Option<String>> {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
       if let Some(r) = plugin.call_banner(ctx, &args).await? {
         banner.push('\n');
         banner.push_str(r.as_str());
@@ -35,7 +36,7 @@ impl PluginDriver {
     args: HookInjectionArgs<'_>,
     mut footer: String,
   ) -> Result<Option<String>> {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
       if let Some(r) = plugin.call_footer(ctx, &args).await? {
         footer.push('\n');
         footer.push_str(r.as_str());
@@ -52,7 +53,7 @@ impl PluginDriver {
     args: HookInjectionArgs<'_>,
     mut intro: String,
   ) -> Result<Option<String>> {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       if let Some(r) = plugin.call_intro(ctx, &args).await? {
         intro.push('\n');
         intro.push_str(r.as_str());
@@ -69,7 +70,7 @@ impl PluginDriver {
     args: HookInjectionArgs<'_>,
     mut outro: String,
   ) -> Result<Option<String>> {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       if let Some(r) = plugin.call_outro(ctx, &args).await? {
         outro.push('\n');
         outro.push_str(r.as_str());
@@ -86,7 +87,8 @@ impl PluginDriver {
     mut args: HookRenderChunkArgs<'_>,
   ) -> Result<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
+    {
       if let Some(r) = plugin.call_render_chunk(ctx, &args).await? {
         args.code = r.code;
         if let Some(map) = r.map {
@@ -102,7 +104,9 @@ impl PluginDriver {
     chunk: &RollupRenderedChunk,
   ) -> HookAugmentChunkHashReturn {
     let mut hash = None;
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_augment_chunk_hash_meta)
+    {
       if let Some(plugin_hash) = plugin.call_augment_chunk_hash(ctx, chunk).await? {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
@@ -111,14 +115,17 @@ impl PluginDriver {
   }
 
   pub async fn render_error(&self, args: &HookRenderErrorArgs) -> HookNoopReturn {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
+    {
       plugin.call_render_error(ctx, args).await?;
     }
     Ok(())
   }
 
   pub async fn generate_bundle(&self, bundle: &mut Vec<Output>, is_write: bool) -> HookNoopReturn {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
+    {
       plugin.call_generate_bundle(ctx, bundle, is_write).await?;
       ctx.file_emitter.add_additional_files(bundle);
     }
@@ -126,7 +133,8 @@ impl PluginDriver {
   }
 
   pub async fn write_bundle(&self, bundle: &mut Vec<Output>) -> HookNoopReturn {
-    for (plugin, ctx) in self.iter_plugin_with_context() {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
+    {
       plugin.call_write_bundle(ctx, bundle).await?;
       ctx.file_emitter.add_additional_files(bundle);
     }

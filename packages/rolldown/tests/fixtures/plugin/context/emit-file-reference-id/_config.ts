@@ -37,8 +37,10 @@ export default defineTest({
   },
   afterTest: async () => {
     const mod = await import('./dist/entries/main.mjs')
-    const assetPath = fileURLToPath(mod.default);
-    expect(path.relative(import.meta.dirname, assetPath)).toBe("dist/assets/main-test.svg")
+    const assetPath = fileURLToPath(mod.default)
+    expect(path.relative(import.meta.dirname, assetPath)).toBe(
+      'dist/assets/main-test.svg',
+    )
     const emitted = fs.readFileSync(assetPath, 'utf-8')
     const original = fs.readFileSync(
       path.join(import.meta.dirname, 'main.svg'),

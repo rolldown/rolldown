@@ -194,6 +194,7 @@ export function bindingifyTransform(
       code: ret.code,
       map: bindingifySourcemap(ret.map),
       sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+      moduleType: ret.moduleType,
     }
   }
 }

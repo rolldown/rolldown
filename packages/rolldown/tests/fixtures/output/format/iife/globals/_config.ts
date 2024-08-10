@@ -6,6 +6,7 @@ export default defineTest({
     external: /node:path/,
     output: {
       format: 'iife',
+      name: 'module',
       globals: {
         'node:path': 'path',
       },
@@ -13,7 +14,7 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(output.output[0].code).toMatchInlineSnapshot(`
-      "(function(node_path) {
+      "var module = (function(node_path) {
 
       "use strict";
       const { join } = node_path;
@@ -23,7 +24,7 @@ export default defineTest({
 
       //#endregion
       return main_default;
-      })(node_path);"
+      })(path);"
     `)
   },
 })

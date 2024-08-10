@@ -10,7 +10,7 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(output.output[0].code).toMatchInlineSnapshot(`
-      "var myModule = (function() {
+      "(function() {
 
 
       })();"

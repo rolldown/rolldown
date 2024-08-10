@@ -10,7 +10,7 @@ use crate::{
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
-use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
+use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
@@ -144,13 +144,14 @@ impl PluginDriver {
     sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
     original_code: &str,
+    module_type: &mut ModuleType,
   ) -> Result<String> {
     let mut code = args.code.to_string();
     for (plugin, ctx) in self.iter_plugin_with_context() {
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
-          &HookTransformArgs { id: args.id, code: &code, module_type: args.module_type },
+          &HookTransformArgs { id: args.id, code: &code, module_type: &*module_type },
         )
         .await?
       {
@@ -170,6 +171,9 @@ impl PluginDriver {
         }
         if let Some(v) = r.code {
           code = v;
+        }
+        if let Some(ty) = r.module_type {
+          *module_type = ty;
         }
       }
     }

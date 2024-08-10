@@ -75,7 +75,10 @@ export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
 
-export type TransformResult = NullValue | string | Partial<SourceDescription>
+export type TransformResult =
+  | NullValue
+  | string
+  | (Partial<SourceDescription> & { moduleType?: ModuleType })
 
 export interface FunctionPluginHooks {
   onLog: (

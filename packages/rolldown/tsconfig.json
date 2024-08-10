@@ -5,7 +5,7 @@
     "tests/**/*.test.ts",
     "tests/**/_config.ts"
   ],
-  "exclude": ["src/*.js", "src/*.mjs", "src/*.cjs", "tests/fixtures/**"],
+  "exclude": ["src/*.js", "src/*.mjs", "src/*.cjs"],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
 

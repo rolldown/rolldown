@@ -2,12 +2,14 @@ use std::path::Path;
 
 use oxc::ast::VisitMut;
 use oxc::minifier::{
-  CompressOptions, Compressor, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
+  CompressOptions, Compressor, InjectGlobalVariables, InjectGlobalVariablesConfig, InjectImport,
+  ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
-use oxc::semantic::{ScopeTree, SymbolTable};
+use oxc::semantic::{ScopeTree, SemanticBuilder, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
-use rolldown_ecmascript::EcmaAst;
+
+use rolldown_ecmascript::{EcmaAst, WithMutFields};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -23,6 +25,19 @@ pub fn pre_process_ecma_ast(
   source_type: SourceType,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
+  // Build initial semantic data and check for semantic errors.
+  let semantic_ret = ast.program.with_mut(|WithMutFields { program, source, .. }| {
+    SemanticBuilder::new(source, source_type).build(program)
+  });
+
+  // TODO:
+  // if !semantic_ret.errors.is_empty() {
+  // return Err(anyhow::anyhow!("Semantic Error: {:#?}", semantic_ret.errors));
+  // }
+
+  let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+
+  // Transform TypeScript and jsx.
   if !matches!(parse_type, OxcParseType::Js) {
     let trivias = ast.trivias.clone();
     let ret = ast.program.with_mut(move |fields| {
@@ -43,21 +58,37 @@ pub fn pre_process_ecma_ast(
         trivias,
         transformer_options,
       )
-      .build(fields.program)
+      .build_with_symbols_and_scopes(symbols, scopes, fields.program)
     });
 
     if !ret.errors.is_empty() {
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
+
+    symbols = ret.symbols;
+    scopes = ret.scopes;
   }
 
-  ast.program.with_mut(|fields| -> anyhow::Result<()> {
+  ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
+    // Use built-in define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
-      ReplaceGlobalDefines::new(fields.allocator, replace_global_define_config.clone())
-        .build(fields.program);
+      ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone()).build(program);
     }
+
+    // Use built-in inject plugin.
+    // <https://www.npmjs.com/package/@rollup/plugin-inject>
+    // TODO: move config to Rolldown options
+    // NOTE: `InjectGlobalVariablesConfig` is `Arc`ed.
+    // let config = InjectGlobalVariablesConfig::new(vec![InjectImport::named_specifier(
+    // "es6-promise",
+    // [> "default" <] None,
+    // "Promise",
+    // )]);
+    // InjectGlobalVariables::new(allocator, config).build(&mut symbols, &mut scopes, program);
+
+    // Perform dead code elimination.
     let options = CompressOptions::dead_code_elimination();
-    Compressor::new(fields.allocator, options).build(fields.program);
+    Compressor::new(allocator, options).build(program);
 
     Ok(())
   })?;

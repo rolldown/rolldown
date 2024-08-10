@@ -34,7 +34,7 @@ impl PluginDriver {
         // `implementation of `std::marker::Send` is not general enough`. It seems to be the problem related to HRTB, async and iterator.
         // I guess we need some rust experts here.
         let mut futures = vec![];
-        for (_, plugin, ctx) in self..iter_sorted_plugin_with_context(|p| p.call_build_start_meta())
+        for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_build_start_meta())
         {
           futures.push(plugin.call_build_start(ctx));
         }

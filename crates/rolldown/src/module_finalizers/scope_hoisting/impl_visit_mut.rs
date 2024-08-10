@@ -11,6 +11,8 @@ use oxc::{
 };
 use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
+use rolldown_utils::path_ext::PathExt;
+use sugar_path::SugarPath;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -461,6 +463,33 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
       _ => {}
     };
+
+    if let Expression::StaticMemberExpression(ref member_expr) = expr {
+      if matches!(&member_expr.object, Expression::MetaProperty(e) if e.meta.name == "import" && e.property.name == "meta")
+        && member_expr.property.name.starts_with("ROLLUP_FILE_URL_")
+      {
+        // https://github.com/rollup/rollup/blob/df12edfea6e9c1a71bda1a01bed1ab787b7514d5/src/ast/nodes/MetaProperty.ts#L85-L100
+        let reference_id = &member_expr.property.name["ROLLUP_FILE_URL_".len()..];
+        let asset_file_name = self.ctx.file_emitter.get_file_name(reference_id);
+        let absolute_asset_file_name = asset_file_name.absolutize_with(&self.ctx.options.dir);
+
+        // compute relative path from chunk to asset (cf. Chunk::import_path_for)
+        let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
+          .expect("Normal module should belong to a chunk");
+        let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
+        let importer_dir = importer_chunk
+          .absolute_preliminary_filename
+          .as_ref()
+          .unwrap()
+          .as_path()
+          .parent()
+          .unwrap();
+        let relative_asset_path =
+          absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
+        *expr =
+          self.snippet.builder.expression_string_literal(SPAN, format!("./{relative_asset_path}"));
+      }
+    }
 
     // iife inline dynamic import
     if matches!(self.ctx.options.format, rolldown_common::OutputFormat::Iife) {

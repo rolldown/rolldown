@@ -145,10 +145,14 @@ impl Bundler {
     self.plugin_driver.render_start().await?;
 
     let mut output = {
-      let bundle_output =
-        GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
-          .generate()
-          .await;
+      let bundle_output = GenerateStage::new(
+        &mut link_stage_output,
+        &self.options,
+        &self.plugin_driver,
+        &self.file_emitter,
+      )
+      .generate()
+      .await;
 
       if let Some(error) = Self::normalize_error(&bundle_output, |ret| &ret.errors) {
         self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;

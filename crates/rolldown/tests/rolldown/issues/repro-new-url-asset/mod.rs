@@ -40,13 +40,29 @@ impl Plugin for AssetImportMetaUrlPlugin {
     Ok(args.ast)
   }
 
-  async fn render_chunk(
-    &self,
-    _ctx: &SharedPluginContext,
-    _args: &rolldown_plugin::HookRenderChunkArgs<'_>,
-  ) -> rolldown_plugin::HookRenderChunkReturn {
-    Ok(None)
-  }
+  // TODO: import.meta.ROLLUP_FILE_URL_xxx convention could be implemented in user plugin?
+  // async fn render_chunk(
+  //   &self,
+  //   ctx: &SharedPluginContext,
+  //   args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  // ) -> rolldown_plugin::HookRenderChunkReturn {
+  //   /*
+
+  //   const output = new MagicString(code);
+  //   const matches = code.matchAll(/import\.meta\.ROLLUP_FILE_URL_(\w+)/dg)
+  //   for (const match of matches) {
+  //     const referenceId = match[1];
+  //     const [start, end] = match.indices[1];
+  //     output.update(start, end, `test_${referenceId}`);
+  //   }
+
+  //    */
+  //   &args.code;
+  //   &args.chunk.filename;
+  //   // args.chunk.
+  //   // ctx.get_file_name(reference_id)
+  //   Ok(None)
+  // }
 }
 
 pub struct AssetImportMetaUrlVisit<'ast, 'a> {
@@ -64,19 +80,32 @@ impl<'ast, 'a> VisitMut<'ast> for AssetImportMetaUrlVisit<'ast, 'a> {
       {
         match it.arguments[0].as_expression() {
           Some(Expression::StringLiteral(lit)) => {
+            // TODO: is it okay to do file io during visitor?
             if let Some(asset_path) = self.path.parent().map(|dir| dir.join(lit.value.as_str())) {
               if let Ok(data) = std::fs::read(asset_path) {
+                // TODO: it's going to be not possible to synchronously emit_file
+                //       if rolldown supports `assetFileNames` js function?
                 let reference_id = self.plugin_context.emit_file(EmittedAsset {
                   file_name: None,
                   name: Some(lit.value.as_str().to_string()),
                   source: rolldown_common::AssetSource::Buffer(data),
                 });
-                *it.arguments.get_mut(0).unwrap() =
-                  self.ast_builder.argument_expression(self.ast_builder.expression_string_literal(
-                    SPAN,
-                    // relative path needs to be resolved after knowing a entry/chunk path
-                    format!("import.meta.ROLLUP_FILE_URL_{reference_id}"),
-                  ));
+                *it.arguments.get_mut(0).unwrap() = self.ast_builder.argument_expression(
+                  self.ast_builder.expression_member(
+                    self.ast_builder.member_expression_static(
+                      SPAN,
+                      self.ast_builder.expression_meta_property(
+                        SPAN,
+                        self.ast_builder.identifier_name(SPAN, "import"),
+                        self.ast_builder.identifier_name(SPAN, "meta"),
+                      ),
+                      self
+                        .ast_builder
+                        .identifier_name(SPAN, format!("ROLLUP_FILE_URL_{reference_id}")),
+                      false,
+                    ),
+                  ),
+                );
               }
             }
           }

@@ -1,4 +1,4 @@
-use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
+use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SharedFileEmitter, SymbolRef};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -24,4 +24,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
+  pub file_emitter: &'me SharedFileEmitter,
 }

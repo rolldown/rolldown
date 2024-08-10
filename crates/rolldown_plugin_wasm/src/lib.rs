@@ -13,7 +13,7 @@ pub struct WasmPlugin {}
 
 impl Plugin for WasmPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("wasm_plugin")
+    Cow::Borrowed("builtin:wasm-plugin")
   }
 
   async fn resolve_id(

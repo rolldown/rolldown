@@ -8,30 +8,4 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-  plugins: [
-    {
-      name: 'post',
-      buildStart: {
-        handler: () => {
-          console.log('post')
-        },
-        order: 'post',
-      },
-    },
-    {
-      name: 'pre',
-      buildStart: {
-        handler: () => {
-          console.log('pre')
-        },
-        order: 'pre',
-      },
-    },
-    {
-      name: 'normal',
-      buildStart: () => {
-        console.log('normal')
-      },
-    },
-  ],
 })

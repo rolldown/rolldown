@@ -94,7 +94,7 @@ impl<'a> GenerateStage<'a> {
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
               options: self.options,
-              file_emitter: &self.file_emitter,
+              file_emitter: self.file_emitter,
             },
             ast,
           );

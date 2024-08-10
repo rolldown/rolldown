@@ -22,7 +22,7 @@ impl PluginDriver {
       {
         block_on_spawn_all(
           self
-            .iter_sorted_plugin_with_context(|p| p.call_build_start_meta())
+            .iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
             .map(|(_, plugin, ctx)| plugin.call_build_start(ctx)),
         )
         .await
@@ -34,8 +34,7 @@ impl PluginDriver {
         // `implementation of `std::marker::Send` is not general enough`. It seems to be the problem related to HRTB, async and iterator.
         // I guess we need some rust experts here.
         let mut futures = vec![];
-        for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_build_start_meta())
-        {
+        for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(&self.order_by_build_start) {
           futures.push(plugin.call_build_start(ctx));
         }
         block_on_spawn_all(futures.into_iter()).await
@@ -76,7 +75,7 @@ impl PluginDriver {
     let skipped_plugins =
       Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
     for (plugin_idx, plugin, ctx) in
-      self.iter_sorted_plugin_with_context(|p| p.call_resolve_id_meta())
+      self.iter_plugin_with_context_by_order(&self.order_by_resolve_id_meta)
     {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
@@ -111,7 +110,7 @@ impl PluginDriver {
     let skipped_plugins =
       Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
     for (plugin_idx, plugin, ctx) in
-      self.iter_sorted_plugin_with_context(|p| p.call_resolve_dynamic_import_meta())
+      self.iter_plugin_with_context_by_order(&self.order_by_resolve_dynamic_import_meta)
     {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
@@ -137,7 +136,7 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_load_meta()) {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_load_meta) {
       if let Some(r) = plugin.call_load(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -154,7 +153,7 @@ impl PluginDriver {
     module_type: &mut ModuleType,
   ) -> Result<String> {
     let mut code = args.code.to_string();
-    for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_transform_meta()) {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
@@ -188,7 +187,9 @@ impl PluginDriver {
   }
 
   pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
-    for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_transform_ast_meta()) {
+    for (_, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
+    {
       args.ast =
         plugin.call_transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
     }
@@ -196,14 +197,16 @@ impl PluginDriver {
   }
 
   pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_module_parsed_meta()) {
+    for (_, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_module_parsed_meta)
+    {
       plugin.call_module_parsed(ctx, Arc::clone(&module_info)).await?;
     }
     Ok(())
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_sorted_plugin_with_context(|p| p.call_build_end_meta()) {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta) {
       plugin.call_build_end(ctx, args).await?;
     }
     Ok(())

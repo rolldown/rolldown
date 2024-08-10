@@ -1,4 +1,7 @@
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, Platform, SourceMapType};
+use oxc::minifier::InjectGlobalVariablesConfig;
+use rolldown_common::{
+  InjectImport, ModuleType, NormalizedBundlerOptions, Platform, SourceMapType,
+};
 use rustc_hash::FxHashMap;
 
 pub struct NormalizeOptionsReturn {
@@ -6,6 +9,7 @@ pub struct NormalizeOptionsReturn {
   pub resolve_options: rolldown_resolver::ResolveOptions,
 }
 
+#[allow(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
 pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOptionsReturn {
   // Take out resolve options
   let platform = raw_options.platform.unwrap_or(Platform::Browser);
@@ -64,6 +68,30 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     raw.into_iter().collect()
   };
 
+  let oxc_inject_global_variables_config = InjectGlobalVariablesConfig::new(
+    raw_options
+      .inject
+      .as_ref()
+      .map(|raw_injects| {
+        raw_injects
+          .iter()
+          .map(|raw| match raw {
+            InjectImport::Named { imported, alias, from } => {
+              oxc::minifier::InjectImport::named_specifier(
+                from,
+                Some(imported),
+                alias.as_deref().unwrap_or(imported),
+              )
+            }
+            InjectImport::Namespace { alias, from } => {
+              oxc::minifier::InjectImport::namespace_specifier(from, alias)
+            }
+          })
+          .collect()
+      })
+      .unwrap_or_default(),
+  );
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -107,6 +135,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     experimental: raw_options.experimental.unwrap_or_default(),
     minify: raw_options.minify.unwrap_or(false),
     define,
+    inject: raw_options.inject.unwrap_or_default(),
+    oxc_inject_global_variables_config,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

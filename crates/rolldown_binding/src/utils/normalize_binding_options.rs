@@ -147,6 +147,7 @@ pub fn normalize_binding_options(
     css_entry_filenames: None,
     css_chunk_filenames: None,
     define: input_options.define.map(FxIndexMap::from_iter),
+    inject: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

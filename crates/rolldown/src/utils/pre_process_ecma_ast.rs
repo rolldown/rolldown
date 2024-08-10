@@ -2,13 +2,14 @@ use std::path::Path;
 
 use oxc::ast::VisitMut;
 use oxc::minifier::{
-  CompressOptions, Compressor, InjectGlobalVariables, InjectGlobalVariablesConfig, InjectImport,
-  ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
+  CompressOptions, Compressor, InjectGlobalVariables, ReplaceGlobalDefines,
+  ReplaceGlobalDefinesConfig,
 };
 use oxc::semantic::{ScopeTree, SemanticBuilder, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 
+use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -24,6 +25,7 @@ pub fn pre_process_ecma_ast(
   path: &Path,
   source_type: SourceType,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
+  bundle_options: &NormalizedBundlerOptions,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   // Build initial semantic data and check for semantic errors.
   let semantic_ret = ast.program.with_mut(|WithMutFields { program, source, .. }| {
@@ -75,16 +77,13 @@ pub fn pre_process_ecma_ast(
       ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone()).build(program);
     }
 
-    // Use built-in inject plugin.
-    // <https://www.npmjs.com/package/@rollup/plugin-inject>
-    // TODO: move config to Rolldown options
-    // NOTE: `InjectGlobalVariablesConfig` is `Arc`ed.
-    // let config = InjectGlobalVariablesConfig::new(vec![InjectImport::named_specifier(
-    // "es6-promise",
-    // [> "default" <] None,
-    // "Promise",
-    // )]);
-    // InjectGlobalVariables::new(allocator, config).build(&mut symbols, &mut scopes, program);
+    if !bundle_options.inject.is_empty() {
+      InjectGlobalVariables::new(
+        allocator,
+        bundle_options.oxc_inject_global_variables_config.clone(),
+      )
+      .build(&mut symbols, &mut scopes, program);
+    }
 
     // Perform dead code elimination.
     let options = CompressOptions::dead_code_elimination();

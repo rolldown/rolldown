@@ -117,7 +117,7 @@ impl EcmaModuleTask {
       // e.g.
       // sass -> recommended npm install `sass` etc
       return Err(anyhow::format_err!(
-        "[{:?}] is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
       ));
     };

@@ -40,7 +40,7 @@ pub struct TransformPlugin {
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
 impl Plugin for TransformPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("transform")
+    Cow::Borrowed("builtin:transform")
   }
 
   async fn transform(

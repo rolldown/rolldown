@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use oxc::ast::VisitMut;
 use oxc::minifier::{
   CompressOptions, Compressor, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
@@ -10,6 +11,7 @@ use rolldown_ecmascript::EcmaAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
 
+use super::ecma_visitors::EnsureSpanUniqueness;
 use super::tweak_ast_for_scanning::tweak_ast_for_scanning;
 
 // #[allow(clippy::match_same_arms)]: `OxcParseType::Tsx` will have special logic to deal with ts compared to `OxcParseType::Jsx`
@@ -61,6 +63,10 @@ pub fn pre_process_ecma_ast(
   })?;
 
   tweak_ast_for_scanning(&mut ast);
+
+  ast.program.with_mut(|fields| {
+    EnsureSpanUniqueness::new().visit_program(fields.program);
+  });
 
   // We have to re-create the symbol table and scope tree after the transformation so far to make sure they are up-to-date.
   let (symbols, scopes) = ast.make_symbol_table_and_scope_tree();

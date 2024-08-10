@@ -10,7 +10,7 @@ export default defineTest({
     output: {
       // tweak directory structure to test relative path reference
       entryFileNames: './entries/[name].mjs',
-      assetFileNames: './assets/[name]-[hash].[ext]',
+      assetFileNames: './assets/[name]-test.[ext]',
     },
     plugins: [
       // example plugin from
@@ -37,9 +37,11 @@ export default defineTest({
   },
   afterTest: async () => {
     const mod = await import('./dist/entries/main.mjs')
-    const emitted = fs.readFileSync(fileURLToPath(mod.default), 'utf-8')
+    const assetPath = fileURLToPath(mod.default);
+    expect(path.relative(import.meta.dirname, assetPath)).toBe("dist/assets/main-test.svg")
+    const emitted = fs.readFileSync(assetPath, 'utf-8')
     const original = fs.readFileSync(
-      path.join(import.meta.dirname, './main.svg'),
+      path.join(import.meta.dirname, 'main.svg'),
       'utf-8',
     )
     expect(emitted).toBe(original)

@@ -15,9 +15,6 @@ use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_con
 // https://github.com/vitejs/vite/blob/b3f5dfef8da92197e0d8eec0507f2c6ef7467418/packages/vite/src/node/plugins/assetImportMetaUrl.ts#L26
 // https://github.com/web-infra-dev/rspack/blob/3867fe0279d0e2950ce8650ae56f3fd12fff1b04/crates/rspack_plugin_javascript/src/parser_plugin/url_plugin.rs#L51
 
-// implement it using import.meta.ROLLUP_FILE_URL_xxx feature?
-// https://github.com/rollup/rollup/blob/df12edfea6e9c1a71bda1a01bed1ab787b7514d5/src/ast/nodes/MetaProperty.ts#L85-L100
-
 #[derive(Debug)]
 struct AssetImportMetaUrlPlugin {}
 
@@ -39,30 +36,6 @@ impl Plugin for AssetImportMetaUrlPlugin {
     });
     Ok(args.ast)
   }
-
-  // TODO: import.meta.ROLLUP_FILE_URL_xxx convention could be implemented in user plugin?
-  // async fn render_chunk(
-  //   &self,
-  //   ctx: &SharedPluginContext,
-  //   args: &rolldown_plugin::HookRenderChunkArgs<'_>,
-  // ) -> rolldown_plugin::HookRenderChunkReturn {
-  //   /*
-
-  //   const output = new MagicString(code);
-  //   const matches = code.matchAll(/import\.meta\.ROLLUP_FILE_URL_(\w+)/dg)
-  //   for (const match of matches) {
-  //     const referenceId = match[1];
-  //     const [start, end] = match.indices[1];
-  //     output.update(start, end, `test_${referenceId}`);
-  //   }
-
-  //    */
-  //   &args.code;
-  //   &args.chunk.filename;
-  //   // args.chunk.
-  //   // ctx.get_file_name(reference_id)
-  //   Ok(None)
-  // }
 }
 
 pub struct AssetImportMetaUrlVisit<'ast, 'a> {

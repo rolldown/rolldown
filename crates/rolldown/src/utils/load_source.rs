@@ -3,6 +3,7 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
+use rolldown_utils::path_ext::clean_url;
 use sugar_path::SugarPath;
 
 pub async fn load_source(
@@ -31,7 +32,9 @@ pub async fn load_source(
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (source, None) => {
-      let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
+      // Considering path with `?/#`
+      let cleaned_id = clean_url(&resolved_id.id);
+      let ext = cleaned_id.as_path().extension().and_then(|ext| ext.to_str());
       let guessed = ext.and_then(|ext| options.module_types.get(ext).cloned());
       match (source, guessed) {
         (None, None) => Ok((
@@ -42,9 +45,9 @@ pub async fn load_source(
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
             StrOrBytes::Bytes({
               source
-                .map(|source| source.into_bytes())
+                .map(String::into_bytes)
                 .ok_or(())
-                .or_else(|_| fs.read(resolved_id.id.as_path()))?
+                .or_else(|()| fs.read(resolved_id.id.as_path()))?
             }),
             guessed,
           )),
@@ -57,15 +60,12 @@ pub async fn load_source(
           | ModuleType::Empty
           | ModuleType::Custom(_) => Ok((
             StrOrBytes::Str(
-              source.ok_or(()).or_else(|_| fs.read_to_string(resolved_id.id.as_path()))?,
+              source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,
             ),
             guessed,
           )),
         },
-        (Some(source), None) => Ok((
-          StrOrBytes::Str(source),
-          ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
-        )),
+        (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
       }
     }
     (None, Some(_)) => unreachable!("Invalid state"),

@@ -1,2 +1,2 @@
-import image from "./main.svg";
+import image from './main.svg'
 export default image

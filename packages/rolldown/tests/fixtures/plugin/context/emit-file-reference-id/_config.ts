@@ -16,29 +16,32 @@ export default defineTest({
       // example plugin from
       // https://rollupjs.org/plugin-development/#file-urls
       {
-        name: "svg-resolver",
+        name: 'svg-resolver',
         resolveId(source, importer) {
-          if (source.endsWith(".svg")) {
-            return path.resolve(path.dirname(importer), source);
+          if (source.endsWith('.svg')) {
+            return path.resolve(path.dirname(importer), source)
           }
         },
         load(id) {
-          if (id.endsWith(".svg")) {
+          if (id.endsWith('.svg')) {
             const referenceId = this.emitFile({
-              type: "asset",
+              type: 'asset',
               name: path.basename(id),
               source: fs.readFileSync(id),
-            });
-            return `export default import.meta.ROLLUP_FILE_URL_${referenceId};`;
+            })
+            return `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
           }
         },
       },
     ],
   },
   afterTest: async () => {
-    const mod = await import("./dist/entries/main.mjs");
-    const emitted = fs.readFileSync(fileURLToPath(mod.default), "utf-8");
-    const original = fs.readFileSync(path.join(import.meta.dirname, "./main.svg"), "utf-8");
+    const mod = await import('./dist/entries/main.mjs')
+    const emitted = fs.readFileSync(fileURLToPath(mod.default), 'utf-8')
+    const original = fs.readFileSync(
+      path.join(import.meta.dirname, './main.svg'),
+      'utf-8',
+    )
     expect(emitted).toBe(original)
   },
 })

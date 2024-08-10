@@ -92,26 +92,44 @@ pub struct ConcatSource {
   inner: Vec<Box<dyn Source + Send>>,
   prepend_source: Vec<Box<dyn Source + Send>>,
   enable_sourcemap: bool,
+  names_len: usize,
+  sources_len: usize,
+  tokens_len: usize,
+  token_chunks_len: usize,
 }
 
 impl ConcatSource {
+  fn add_sourcemap(&mut self, sourcemap: &SourceMap) {
+    self.enable_sourcemap = true;
+    self.names_len += sourcemap.get_names().count();
+    self.sources_len += sourcemap.get_sources().count();
+    self.tokens_len += sourcemap.get_tokens().count();
+    self.token_chunks_len += 1;
+  }
+
   pub fn add_source(&mut self, source: Box<dyn Source + Send>) {
-    if source.sourcemap().is_some() {
-      self.enable_sourcemap = true;
+    if let Some(sourcemap) = source.sourcemap() {
+      self.add_sourcemap(sourcemap);
     }
     self.inner.push(source);
   }
 
   pub fn add_prepend_source(&mut self, source: Box<dyn Source + Send>) {
-    if source.sourcemap().is_some() {
-      self.enable_sourcemap = true;
+    if let Some(sourcemap) = source.sourcemap() {
+      self.add_sourcemap(sourcemap);
     }
     self.prepend_source.push(source);
   }
 
   pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
-    let mut sourcemap_builder = self.enable_sourcemap.then_some(ConcatSourceMapBuilder::default());
+    let mut sourcemap_builder =
+      self.enable_sourcemap.then_some(ConcatSourceMapBuilder::with_capacity(
+        self.names_len,
+        self.sources_len,
+        self.tokens_len,
+        self.token_chunks_len,
+      ));
     let mut line_offset = 0;
     let source_len = self.prepend_source.len() + self.inner.len();
 

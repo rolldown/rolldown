@@ -90,6 +90,14 @@ export interface AliasItem {
 }
 
 export interface ArrowFunctionsBindingOptions {
+  /**
+   * This option enables the following:
+   * * Wrap the generated function in .bind(this) and keeps uses of this inside the function as-is, instead of using a renamed this.
+   * * Add a runtime check to ensure the functions are not instantiated.
+   * * Add names to arrow functions.
+   *
+   * @default false
+   */
   spec?: boolean
 }
 
@@ -107,7 +115,9 @@ export declare enum BindingBuiltinPluginName {
   GlobImportPlugin = 1,
   DynamicImportVarsPlugin = 2,
   ModulePreloadPolyfillPlugin = 3,
-  ManifestPlugin = 4
+  ManifestPlugin = 4,
+  LoadFallbackPlugin = 5,
+  TransformPlugin = 6
 }
 
 export interface BindingEmittedAsset {
@@ -132,7 +142,8 @@ export interface BindingHookRenderChunkOutput {
   map?: BindingSourcemap
 }
 
-export interface BindingHookResolveIdExtraOptions {
+export interface BindingHookResolveIdExtraArgs {
+  custom?: number
   isEntry: boolean
   kind: 'import' | 'dynamic-import' | 'require-call'
 }
@@ -153,6 +164,7 @@ export interface BindingHookTransformOutput {
   code?: string
   sideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
+  moduleType?: string
 }
 
 export interface BindingInputItem {
@@ -172,6 +184,7 @@ export interface BindingInputOptions {
   cwd: string
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>
+  define?: Array<[string, string]>
 }
 
 export interface BindingJsonSourcemap {
@@ -193,6 +206,10 @@ export declare enum BindingLogLevel {
 export interface BindingManifestPluginConfig {
   root: string
   outPath: string
+}
+
+export interface BindingModulePreloadPolyfillPluginConfig {
+  skip?: boolean
 }
 
 export interface BindingOutputOptions {
@@ -223,15 +240,17 @@ export interface BindingPluginContextResolvedId {
 
 export interface BindingPluginContextResolveOptions {
   importKind?: 'import' | 'dynamic-import' | 'require-call'
+  skipSelf?: boolean
+  custom?: number
 }
 
 export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
-  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
-  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
+  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
@@ -272,11 +291,36 @@ export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
 
+/**
+ * For String, value is the string content, flag is the `None`
+ * For Regex, value is the regular expression, flag is the `Some()`.
+ * Make sure put a `Some("")` in flag even there is no flag in regexp.
+ */
+export interface BindingStringOrRegex {
+  value: string
+  /**
+   * There is a more compact way to represent this, `Option<u8>` with bitflags, but it will be hard
+   * to use(in js side), since construct a `JsRegex` is not used frequently. Optimize it when it is needed.
+   */
+  flag?: string
+}
+
+export interface BindingTransformHookExtraArgs {
+  moduleType: string
+}
+
+export interface BindingTransformPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxInject?: string
+}
+
 export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
 export interface Es2015BindingOptions {
+  /** Transform arrow functions into function expressions. */
   arrowFunction?: ArrowFunctionsBindingOptions
 }
 
@@ -288,15 +332,88 @@ export interface IsolatedDeclarationsResult {
   errors: Array<string>
 }
 
+/**
+ * Configure how TSX and JSX are transformed.
+ *
+ * @see [@babel/plugin-transform-react-jsx](https://babeljs.io/docs/babel-plugin-transform-react-jsx#options)
+ */
 export interface ReactBindingOptions {
+  /**
+   * Decides which runtime to use.
+   *
+   * - 'automatic' - auto-import the correct JSX factories
+   * - 'classic' - no auto-import
+   *
+   * @default 'automatic'
+   */
   runtime?: 'classic' | 'automatic'
+  /**
+   * Emit development-specific information, such as `__source` and `__self`.
+   *
+   * @default false
+   *
+   * @see [@babel/plugin-transform-react-jsx-development](https://babeljs.io/docs/babel-plugin-transform-react-jsx-development)
+   */
   development?: boolean
+  /**
+   * Toggles whether or not to throw an error if an XML namespaced tag name
+   * is used.
+   *
+   * Though the JSX spec allows this, it is disabled by default since React's
+   * JSX does not currently have support for it.
+   *
+   * @default true
+   */
   throwIfNamespace?: boolean
+  /**
+   * Enables [@babel/plugin-transform-react-pure-annotations](https://babeljs.io/docs/en/babel-plugin-transform-react-pure-annotations).
+   *
+   * It will mark top-level React method calls as pure for tree shaking.
+   *
+   * @default true
+   */
   pure?: boolean
+  /**
+   * Replaces the import source when importing functions.
+   *
+   * @default 'react'
+   */
   importSource?: string
+  /**
+   * Replace the function used when compiling JSX expressions. It should be a
+   * qualified name (e.g. `React.createElement`) or an identifier (e.g.
+   * `createElement`).
+   *
+   * Only used for `classic` {@link runtime}.
+   *
+   * @default 'React.createElement'
+   */
   pragma?: string
+  /**
+   * Replace the component used when compiling JSX fragments. It should be a
+   * valid JSX tag name.
+   *
+   * Only used for `classic` {@link runtime}.
+   *
+   * @default 'React.Fragment'
+   */
   pragmaFrag?: string
+  /**
+   * When spreading props, use `Object.assign` directly instead of an extend helper.
+   *
+   * Only used for `classic` {@link runtime}.
+   *
+   * @default false
+   */
   useBuiltIns?: boolean
+  /**
+   * When spreading props, use inline object with spread elements directly
+   * instead of an extend helper or Object.assign.
+   *
+   * Only used for `classic` {@link runtime}.
+   *
+   * @default false
+   */
   useSpread?: boolean
 }
 
@@ -315,7 +432,7 @@ export interface RenderedChunk {
   dynamicImports: Array<string>
 }
 
-export interface Sourcemap {
+export interface SourceMap {
   file?: string
   mappings?: string
   sourceRoot?: string
@@ -324,28 +441,93 @@ export interface Sourcemap {
   names?: Array<string>
 }
 
+/**
+ * Transpile a JavaScript or TypeScript into a target ECMAScript version.
+ *
+ * @param filename The name of the file being transformed. If this is a
+ * relative path, consider setting the {@link TransformOptions#cwd} option..
+ * @param sourceText the source code itself
+ * @param options The options for the transformation. See {@link
+ * TransformOptions} for more information.
+ *
+ * @returns an object containing the transformed code, source maps, and any
+ * errors that occurred during parsing or transformation.
+ */
 export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
 
+/**
+ * Options for transforming a JavaScript or TypeScript file.
+ *
+ * @see {@link transform}
+ */
 export interface TransformOptions {
   sourceType?: 'script' | 'module' | 'unambiguous' | undefined
-  /** Force jsx parsing, */
+  /**
+   * The current working directory. Used to resolve relative paths in other
+   * options.
+   */
+  cwd?: string
+  /**
+   * Force jsx parsing,
+   *
+   * @default false
+   */
   jsx?: boolean
+  /** Configure how TypeScript is transformed. */
   typescript?: TypeScriptBindingOptions
+  /** Configure how TSX and JSX are transformed. */
   react?: ReactBindingOptions
+  /** Enable ES2015 transformations. */
   es2015?: Es2015BindingOptions
   /**
-   * Enable Sourcemap
+   * Enable source map generation.
    *
-   * * `true` to generate a sourcemap for the code and include it in the result object.
+   * When `true`, the `sourceMap` field of transform result objects will be populated.
    *
-   * Default: false
+   * @default false
+   *
+   * @see {@link SourceMap}
    */
   sourcemap?: boolean
 }
 
 export interface TransformResult {
+  /**
+   * The transformed code.
+   *
+   * If parsing failed, this will be an empty string.
+   */
   sourceText: string
-  map?: Sourcemap
+  /**
+   * The source map for the transformed code.
+   *
+   * This will be set if {@link TransformOptions#sourcemap} is `true`.
+   */
+  sourceMap?: SourceMap
+  /**
+   * The `.d.ts` declaration file for the transformed code. Declarations are
+   * only generated if `declaration` is set to `true` and a TypeScript file
+   * is provided.
+   *
+   * If parsing failed and `declaration` is set, this will be an empty string.
+   *
+   * @see {@link TypeScriptBindingOptions#declaration}
+   * @see [declaration tsconfig option](https://www.typescriptlang.org/tsconfig/#declaration)
+   */
+  declaration?: string
+  /**
+   * Declaration source map. Only generated if both
+   * {@link TypeScriptBindingOptions#declaration declaration} and
+   * {@link TransformOptions#sourcemap sourcemap} are set to `true`.
+   */
+  declarationMap?: SourceMap
+  /**
+   * Parse and transformation errors.
+   *
+   * Oxc's parser recovers from common syntax errors, meaning that
+   * transformed code may still be available even if there are errors in this
+   * list.
+   */
   errors: Array<string>
 }
 
@@ -355,5 +537,15 @@ export interface TypeScriptBindingOptions {
   onlyRemoveTypeImports?: boolean
   allowNamespaces?: boolean
   allowDeclareFields?: boolean
+  /**
+   * Also generate a `.d.ts` declaration file for TypeScript files.
+   *
+   * The source file must be compliant with all
+   * [`isolatedDeclarations`](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-5.html#isolated-declarations)
+   * requirements.
+   *
+   * @default false
+   */
+  declaration?: boolean
 }
 

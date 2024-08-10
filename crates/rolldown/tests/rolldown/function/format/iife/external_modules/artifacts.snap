@@ -1,6 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:path" in "output.globals" – guessing "node_path".
+
+```
 # Assets
 
 ## main.mjs

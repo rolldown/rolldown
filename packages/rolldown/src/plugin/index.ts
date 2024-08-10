@@ -1,5 +1,6 @@
 import type {
-  BindingHookResolveIdExtraOptions,
+  BindingHookResolveIdExtraArgs,
+  BindingTransformHookExtraArgs,
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
@@ -24,7 +25,21 @@ import { ParallelPlugin } from './parallel-plugin'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
-export type ImportKind = BindingHookResolveIdExtraOptions['kind']
+// ref: https://github.com/microsoft/TypeScript/issues/33471#issuecomment-1376364329
+export type ModuleType =
+  | 'js'
+  | 'jsx'
+  | 'ts'
+  | 'tsx'
+  | 'json'
+  | 'text'
+  | 'base64'
+  | 'dataurl'
+  | 'binary'
+  | 'empty'
+  | (string & {})
+
+export type ImportKind = BindingHookResolveIdExtraArgs['kind']
 
 export interface CustomPluginOptions {
   [plugin: string]: any
@@ -50,11 +65,20 @@ export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
   map?: SourceMapInput
 }
 
+interface ResolveIdExtraOptions {
+  custom?: CustomPluginOptions
+  isEntry: boolean
+  kind: 'import' | 'dynamic-import' | 'require-call'
+}
+
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
 
-export type TransformResult = NullValue | string | Partial<SourceDescription>
+export type TransformResult =
+  | NullValue
+  | string
+  | (Partial<SourceDescription> & { moduleType?: ModuleType })
 
 export interface FunctionPluginHooks {
   onLog: (
@@ -82,7 +106,7 @@ export interface FunctionPluginHooks {
     this: PluginContext,
     source: string,
     importer: string | undefined,
-    extraOptions: BindingHookResolveIdExtraOptions,
+    extraOptions: ResolveIdExtraOptions,
   ) => ResolveIdResult
 
   /**
@@ -101,6 +125,7 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
+    meta: BindingTransformHookExtraArgs & { moduleType: ModuleType },
   ) => TransformResult
 
   moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void

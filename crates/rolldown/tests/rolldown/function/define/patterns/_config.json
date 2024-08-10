@@ -1,0 +1,10 @@
+{
+  "config": {
+    "define": {
+      "Id": "\"ok\"",
+      "Obj.prop": "\"ok\"",
+      // "typeof window": "\"object\"",
+      // "process.env.NODE_ENV": "\"production\""
+    }
+  }
+}

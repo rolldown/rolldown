@@ -60,7 +60,7 @@ impl<'a> GenerateStage<'a> {
     self.compute_cross_chunk_links(&mut chunk_graph);
 
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
-      deconflict_chunk_symbols(chunk, self.link_output);
+      deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
     });
 
     let ast_table_iter = self.link_output.ast_table.iter_mut();
@@ -116,6 +116,7 @@ impl<'a> GenerateStage<'a> {
   // Notices:
   // - Should generate filenames that are stable cross builds and os.
   // #[tracing::instrument(level = "debug", skip_all)]
+  #[allow(clippy::too_many_lines)]
   fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -208,12 +209,23 @@ impl<'a> GenerateStage<'a> {
       used_names.insert(chunk_name.clone());
 
       let filename_template = chunk.filename_template(self.options);
+      let css_filename_template = chunk.css_filename_template(self.options);
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+      let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
 
       let hash_placeholder =
         extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
+      let css_hash_placeholder =
+        extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
       let preliminary = filename_template.render(&FileNameRenderOptions {
+        name: Some(&chunk_name),
+        hash: hash_placeholder.as_deref(),
+        ..Default::default()
+      });
+
+      let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
         ..Default::default()
@@ -222,7 +234,12 @@ impl<'a> GenerateStage<'a> {
       chunk.name = Some(chunk_name);
       chunk.absolute_preliminary_filename =
         Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
+      chunk.css_absolute_preliminary_filename =
+        Some(css_preliminary.absolutize_with(&self.options.dir).expect_into_string());
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
+      chunk.css_preliminary_filename =
+        Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
+
       Ok(())
     })?;
 

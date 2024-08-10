@@ -6,7 +6,7 @@ use futures::future::join_all;
 use rolldown_common::{EntryPoint, ImportKind, ModuleTable, ResolvedId};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 
 use crate::{
@@ -57,7 +57,7 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-    );
+    )?;
 
     let user_entries = match self.resolve_user_defined_entries().await? {
       Ok(entries) => entries,
@@ -111,7 +111,10 @@ impl ScanStage {
         plugin_driver,
         args.specifier,
         None,
-        HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
+        true,
+        ImportKind::Import,
+        None,
+        Arc::default(),
       )
       .await;
 

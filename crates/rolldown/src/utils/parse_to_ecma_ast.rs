@@ -2,6 +2,7 @@ use std::path::Path;
 
 use arcstr::ArcStr;
 use oxc::{
+  minifier::ReplaceGlobalDefinesConfig,
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
 };
@@ -33,6 +34,7 @@ pub fn parse_to_ecma_ast(
   options: &NormalizedBundlerOptions,
   module_type: &ModuleType,
   source: StrOrBytes,
+  replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
 ) -> anyhow::Result<DiagnosableResult<(EcmaAst, SymbolTable, ScopeTree)>> {
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
@@ -95,5 +97,6 @@ pub fn parse_to_ecma_ast(
   ecma_ast =
     plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: ecma_ast })?;
 
-  pre_process_ecma_ast(ecma_ast, &parsed_type, path, oxc_source_type).map(Ok)
+  pre_process_ecma_ast(ecma_ast, &parsed_type, path, oxc_source_type, replace_global_define_config)
+    .map(Ok)
 }

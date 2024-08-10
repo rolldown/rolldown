@@ -1,5 +1,17 @@
+use super::ecma_module_task::{EcmaModuleTask, EcmaModuleTaskOwner};
+use super::runtime_ecma_module_task::RuntimeEcmaModuleTask;
+use super::task_context::TaskContextMeta;
+use super::task_result::NormalModuleTaskResult;
+use super::Msg;
+use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
+use crate::module_loader::task_context::TaskContext;
+use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
+use crate::type_alias::IndexEcmaAst;
+use crate::types::symbols::Symbols;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
+use oxc::minifier::ReplaceGlobalDefinesConfig;
+use oxc::span::Span;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
@@ -11,16 +23,6 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
-
-use super::ecma_module_task::EcmaModuleTask;
-use super::runtime_ecma_module_task::RuntimeEcmaModuleTask;
-use super::task_result::NormalModuleTaskResult;
-use super::Msg;
-use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
-use crate::module_loader::task_context::TaskContext;
-use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
-use crate::type_alias::IndexEcmaAst;
-use crate::types::symbols::Symbols;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -51,7 +53,7 @@ pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<Msg>,
-  visited: FxHashMap<Arc<str>, ModuleIdx>,
+  visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
@@ -75,15 +77,36 @@ impl ModuleLoader {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-  ) -> Self {
+  ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
 
     let tx_to_runtime_module = tx.clone();
 
-    let common_data =
-      Arc::new(TaskContext { options: Arc::clone(&options), tx, resolver, fs, plugin_driver });
+    let meta = TaskContextMeta {
+      replace_global_define_config: if options.define.is_empty() {
+        None
+      } else {
+        Some(ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
+          // TODO: maybe we should give better diagnostics here. since oxc return
+          // `Vec<OxcDiagnostic>`
+          anyhow::format_err!(
+            "Failed to generate defines config from {:?}. Got {:#?}",
+            options.define,
+            errs
+          )
+        })?)
+      },
+    };
+    let common_data = Arc::new(TaskContext {
+      options: Arc::clone(&options),
+      tx,
+      resolver,
+      fs,
+      plugin_driver,
+      meta,
+    });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let mut symbols = Symbols::default();
@@ -103,7 +126,7 @@ impl ModuleLoader {
       handle.spawn(async { task.run() });
     }
 
-    Self {
+    Ok(Self {
       shared_context: common_data,
       rx,
       options,
@@ -113,15 +136,15 @@ impl ModuleLoader {
       remaining: 1,
       intermediate_normal_modules,
       symbols,
-    }
+    })
   }
 
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    is_user_defined_entry: bool,
+    owner: Option<EcmaModuleTaskOwner>,
   ) -> ModuleIdx {
-    match self.visited.entry(Arc::<str>::clone(&resolved_id.id)) {
+    match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if resolved_id.is_external {
@@ -138,7 +161,7 @@ impl ModuleLoader {
             },
           };
           let ext =
-            ExternalModule::new(idx, resolved_id.id.to_string(), external_module_side_effects);
+            ExternalModule::new(idx, ArcStr::clone(&resolved_id.id), external_module_side_effects);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx
         } else {
@@ -146,12 +169,7 @@ impl ModuleLoader {
           not_visited.insert(idx);
           self.remaining += 1;
 
-          let task = EcmaModuleTask::new(
-            Arc::clone(&self.shared_context),
-            idx,
-            resolved_id,
-            is_user_defined_entry,
-          );
+          let task = EcmaModuleTask::new(Arc::clone(&self.shared_context), idx, resolved_id, owner);
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
@@ -191,7 +209,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true),
+        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ None),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -219,24 +237,31 @@ impl ModuleLoader {
           } = task_result;
           all_warnings.extend(warnings);
 
-          let import_records = raw_import_records
-            .into_iter()
-            .zip(resolved_deps)
-            .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(info, false);
-              // Dynamic imported module will be considered as an entry
-              self.intermediate_normal_modules.importers[id].push(ImporterRecord {
-                kind: raw_rec.kind,
-                importer_path: module.id().to_string().into(),
-              });
-              if matches!(raw_rec.kind, ImportKind::DynamicImport)
-                && !user_defined_entry_ids.contains(&id)
-              {
-                dynamic_import_entry_ids.insert(id);
-              }
-              raw_rec.into_import_record(id)
-            })
-            .collect::<IndexVec<ImportRecordIdx, _>>();
+          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ImportRecord> =
+            raw_import_records
+              .into_iter()
+              .zip(resolved_deps)
+              .map(|(raw_rec, info)| {
+                let ecma_module = module.as_ecma().unwrap();
+                let owner = EcmaModuleTaskOwner::new(
+                  ecma_module.source.clone(),
+                  ecma_module.stable_id.as_str().into(),
+                  Span::new(raw_rec.module_request_start, raw_rec.module_request_end()),
+                );
+                let id = self.try_spawn_new_task(info, Some(owner));
+                // Dynamic imported module will be considered as an entry
+                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                  kind: raw_rec.kind,
+                  importer_path: module.id().to_string().into(),
+                });
+                if matches!(raw_rec.kind, ImportKind::DynamicImport)
+                  && !user_defined_entry_ids.contains(&id)
+                {
+                  dynamic_import_entry_ids.insert(id);
+                }
+                raw_rec.into_import_record(id)
+              })
+              .collect::<IndexVec<ImportRecordIdx, _>>();
 
           module.set_import_records(import_records);
           if let Some((ast, ast_symbol)) = ecma_related {

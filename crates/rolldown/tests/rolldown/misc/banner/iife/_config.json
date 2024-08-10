@@ -1,6 +1,7 @@
 {
   "config": {
     "format": "iife",
-    "banner": "// Banner\n"
+    "banner": "// Banner\n",
+    "name": "module"
   }
 }

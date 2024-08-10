@@ -70,11 +70,32 @@
             "null"
           ]
         },
+        "cssChunkFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cssEntryFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "cwd": {
           "type": [
             "string",
             "null"
           ]
+        },
+        "define": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "dir": {
           "type": [

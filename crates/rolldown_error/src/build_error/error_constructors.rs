@@ -1,11 +1,13 @@
 use std::path::{Path, PathBuf};
 
+use super::BuildDiagnostic;
 use arcstr::ArcStr;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
-use super::BuildDiagnostic;
-
+use crate::events::missing_global_name::MissingGlobalName;
+use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
+use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -15,6 +17,7 @@ use crate::events::{
   forbid_const_assign::ForbidConstAssign,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
+  mixed_export::MixedExport,
   parse_error::ParseError,
   sourcemap_error::SourceMapError,
   unresolved_entry::UnresolvedEntry,
@@ -56,6 +59,13 @@ impl BuildDiagnostic {
   pub fn unresolved_import(specifier: impl Into<String>, importer: impl Into<PathBuf>) -> Self {
     Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
   }
+  pub fn unloadable_dependency(
+    resolved: ArcStr,
+    context: Option<UnloadableDependencyContext>,
+    reason: ArcStr,
+  ) -> Self {
+    Self::new_inner(UnloadableDependency { resolved, context, reason })
+  }
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
     Self::new_inner(SourceMapError { error })
@@ -91,6 +101,18 @@ impl BuildDiagnostic {
       imported_specifier,
       imported_specifier_span,
     })
+  }
+
+  pub fn mixed_export(module_name: ArcStr, entry_module: ArcStr, export_keys: Vec<ArcStr>) -> Self {
+    Self::new_inner(MixedExport { module_name, entry_module, export_keys })
+  }
+
+  pub fn missing_global_name(module_name: ArcStr, guessed_name: ArcStr) -> Self {
+    Self::new_inner(MissingGlobalName { module_name, guessed_name })
+  }
+
+  pub fn missing_name_option_for_iife_export() -> Self {
+    Self::new_inner(MissingNameOptionForIifeExport {})
   }
 
   pub fn invalid_export_option(

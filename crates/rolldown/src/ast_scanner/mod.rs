@@ -15,8 +15,9 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, MemberExprRef, ModuleDefFormat,
-  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
+  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier,
+  StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
@@ -40,6 +41,7 @@ pub struct ScanResult {
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
+  pub has_eval: bool,
 }
 
 pub struct AstScanner<'me> {
@@ -96,6 +98,7 @@ impl<'me> AstScanner<'me> {
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
+      has_eval: false,
     };
 
     Self {
@@ -206,7 +209,12 @@ impl<'me> AstScanner<'me> {
     self.scopes.get_root_binding(name).expect("must have")
   }
 
-  fn add_import_record(&mut self, module_request: &str, kind: ImportKind) -> ImportRecordIdx {
+  fn add_import_record(
+    &mut self,
+    module_request: &str,
+    kind: ImportKind,
+    module_request_start: u32,
+  ) -> ImportRecordIdx {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
@@ -219,7 +227,8 @@ impl<'me> AstScanner<'me> {
       ),
     )
       .into();
-    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref);
+    let rec =
+      RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, module_request_start);
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);
@@ -328,7 +337,7 @@ impl<'me> AstScanner<'me> {
       span_imported,
     };
     if name_import.imported.is_default() {
-      self.result.import_records[record_id].contains_import_default = true;
+      self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
     }
     self.result.named_exports.insert(
       export_name.into(),
@@ -353,7 +362,8 @@ impl<'me> AstScanner<'me> {
       imported_as: generated_imported_as_ref,
       record_id,
     };
-    self.result.import_records[record_id].contains_import_star = true;
+
+    self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
     self.result.named_exports.insert(
       export_name.into(),
       LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
@@ -362,7 +372,11 @@ impl<'me> AstScanner<'me> {
   }
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
-    let id = self.add_import_record(decl.source.value.as_str(), ImportKind::Import);
+    let id = self.add_import_record(
+      decl.source.value.as_str(),
+      ImportKind::Import,
+      decl.source.span().start,
+    );
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
@@ -375,7 +389,8 @@ impl<'me> AstScanner<'me> {
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
     if let Some(source) = &decl.source {
-      let record_id = self.add_import_record(source.value.as_str(), ImportKind::Import);
+      let record_id =
+        self.add_import_record(source.value.as_str(), ImportKind::Import, source.span().start);
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(
           spec.exported.name().as_str(),
@@ -386,7 +401,9 @@ impl<'me> AstScanner<'me> {
       });
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
-      self.result.import_records[record_id].is_plain_import = decl.specifiers.is_empty();
+      if decl.specifiers.is_empty() {
+        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+      }
     } else {
       decl.specifiers.iter().for_each(|spec| {
         self.add_local_export(
@@ -457,11 +474,16 @@ impl<'me> AstScanner<'me> {
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
-    let rec_id = self.add_import_record(decl.source.value.as_str(), ImportKind::Import);
+    let rec_id = self.add_import_record(
+      decl.source.value.as_str(),
+      ImportKind::Import,
+      decl.source.span().start,
+    );
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
-    self.result.import_records[rec_id].is_plain_import =
-      decl.specifiers.as_ref().map_or(true, |s| s.is_empty());
+    if decl.specifiers.as_ref().map_or(true, |s| s.is_empty()) {
+      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+    }
 
     let Some(specifiers) = &decl.specifiers else { return };
     specifiers.iter().for_each(|spec| match spec {
@@ -470,16 +492,16 @@ impl<'me> AstScanner<'me> {
         let imported = spec.imported.name();
         self.add_named_import(sym, imported.as_str(), rec_id, spec.imported.span());
         if imported == "default" {
-          self.result.import_records[rec_id].contains_import_default = true;
+          self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
         }
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
         self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id, spec.span);
-        self.result.import_records[rec_id].contains_import_default = true;
+        self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         self.add_star_import(spec.local.expect_symbol_id(), rec_id, spec.span);
-        self.result.import_records[rec_id].contains_import_star = true;
+        self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
       }
     });
   }
@@ -568,6 +590,9 @@ impl<'me> AstScanner<'me> {
           self.cjs_exports_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
         }
         if ident.name == "eval" {
+          // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
+          // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
+          self.result.has_eval = true;
           self.result.warnings.push(
             BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), ident.span)
               .with_severity_warning(),

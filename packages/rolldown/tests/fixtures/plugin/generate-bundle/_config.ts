@@ -1,12 +1,12 @@
 import { defineTest } from '@tests'
-import { expect, vi } from 'vitest'
+import { expect } from 'vitest'
 import path from 'node:path'
 import type { RolldownOutputChunk } from '../../../../src'
 import { getOutputChunk } from '@tests/utils'
 
 const entry = path.join(__dirname, './main.js')
 
-const generateBundleFn = vi.fn()
+const calls: string[] = []
 
 export default defineTest({
   config: {
@@ -14,8 +14,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        generateBundle: (options, bundle, isWrite) => {
-          generateBundleFn()
+        generateBundle: async (options, bundle, isWrite) => {
           const chunk = bundle['main.js'] as RolldownOutputChunk
           expect(chunk.code.indexOf('console.log') > -1).toBe(true)
           expect(chunk.type).toBe('chunk')
@@ -24,7 +23,7 @@ export default defineTest({
           expect(chunk.isDynamicEntry).toBe(false)
           expect(chunk.facadeModuleId).toBe(entry)
           expect(chunk.exports.length).toBe(0)
-          expect(chunk.imports).length(0)
+          expect(chunk.imports).toStrictEqual(['share.js'])
           expect(chunk.moduleIds).toStrictEqual([entry])
           expect(Object.keys(chunk.modules).length).toBe(1)
           // called bundle.generate()
@@ -33,12 +32,29 @@ export default defineTest({
           chunk.code = 'console.error()'
           // Delete chunk
           delete bundle['index.js']
+          delete bundle['share.js']
+
+          await new Promise((resolve) => setTimeout(resolve, 100))
+
+          calls.push('test-plugin')
+        },
+      },
+      {
+        name: 'test-plugin-2',
+        generateBundle: (options, bundle, isWrite) => {
+          calls.push('test-plugin-2')
         },
       },
     ],
+    output: {
+      chunkFileNames: '[name].js',
+    },
+  },
+  beforeTest: () => {
+    calls.length = 0
   },
   afterTest: (output) => {
-    expect(generateBundleFn).toHaveBeenCalledTimes(1)
+    expect(calls).toStrictEqual(['test-plugin', 'test-plugin-2'])
     const chunks = getOutputChunk(output)
     expect(chunks.length).toBe(1)
     expect(chunks[0].code).toBe('console.error()')

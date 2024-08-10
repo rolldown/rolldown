@@ -5,6 +5,9 @@ pub enum EventKind {
   UnresolvedEntry,
   UnresolvedImport,
   AmbiguousExternalNamespace,
+  MixedExport,
+  MissingGlobalName,
+  MissingNameOptionForIifeExport,
   ParseError,
 
   Eval,
@@ -14,6 +17,7 @@ pub enum EventKind {
   InvalidExportOption,
   // --- These kinds are rolldown specific
   IllegalReassignment,
+  UnloadableDependency,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // TODO remove following kinds
@@ -27,6 +31,7 @@ impl Display for EventKind {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       // --- Copied from rollup
+      EventKind::UnloadableDependency => write!(f, "UNLOADABLE_DEPENDENCY"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::AmbiguousExternalNamespace => write!(f, "AMBIGUOUS_EXTERNAL_NAMESPACES"),
@@ -34,6 +39,9 @@ impl Display for EventKind {
       EventKind::IllegalReassignment => write!(f, "ILLEGAL_REASSIGNMENT"),
       EventKind::Eval => write!(f, "EVAL"),
       EventKind::SourcemapError => write!(f, "SOURCEMAP_ERROR"),
+      EventKind::MixedExport => write!(f, "MIXED_EXPORT"),
+      EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
+      EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::MissingExport => write!(f, "MISSING_EXPORT"),
       EventKind::InvalidExportOption => write!(f, "INVALID_EXPORT_OPTION"),

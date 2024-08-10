@@ -1,8 +1,6 @@
-use std::{
-  path::{Path, PathBuf},
-  sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
+use arcstr::ArcStr;
 use rolldown_utils::path_ext::PathExt;
 use sugar_path::SugarPath;
 
@@ -10,10 +8,10 @@ use sugar_path::SugarPath;
 /// - It will be used to identify the module in the whole bundle.
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ModuleId(Arc<str>);
+pub struct ModuleId(ArcStr);
 
 impl ModuleId {
-  pub fn new(value: impl Into<Arc<str>>) -> Self {
+  pub fn new(value: impl Into<ArcStr>) -> Self {
     Self(value.into())
   }
 
@@ -46,8 +44,8 @@ impl From<String> for ModuleId {
   }
 }
 
-impl From<Arc<str>> for ModuleId {
-  fn from(value: Arc<str>) -> Self {
+impl From<ArcStr> for ModuleId {
+  fn from(value: ArcStr) -> Self {
     Self(value)
   }
 }

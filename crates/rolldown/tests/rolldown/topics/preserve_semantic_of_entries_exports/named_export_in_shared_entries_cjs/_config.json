@@ -11,6 +11,7 @@
       }
     ],
     "format": "cjs",
-    "esModule": "never"
+    "esModule": "never",
+    "exports": "named"
   }
 }

@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use futures::future::join_all;
 use oxc::index::IndexVec;
+use oxc::minifier::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
-  side_effects::HookSideEffects, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx, ModuleType,
-  RawImportRecord, ResolvedId, StrOrBytes,
+  side_effects::HookSideEffects, ImportKind, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx,
+  ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
-use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 use rolldown_sourcemap::SourceMap;
 
@@ -25,6 +26,7 @@ pub struct CreateModuleContext<'a> {
   pub warnings: &'a mut Vec<BuildDiagnostic>,
   pub resolver: &'a SharedResolver,
   pub is_user_defined_entry: bool,
+  pub replace_global_define_config: Option<ReplaceGlobalDefinesConfig>,
 }
 
 impl<'a> CreateModuleContext<'a> {
@@ -34,7 +36,7 @@ impl<'a> CreateModuleContext<'a> {
     plugin_driver: &SharedPluginDriver,
     importer: &str,
     specifier: &str,
-    options: HookResolveIdExtraOptions,
+    kind: ImportKind,
   ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
     // Check external with unresolved path
     if let Some(is_external) = bundle_options.external.as_ref() {
@@ -62,8 +64,17 @@ impl<'a> CreateModuleContext<'a> {
       }));
     }
 
-    let resolved_id =
-      resolve_id::resolve_id(resolver, plugin_driver, specifier, Some(importer), options).await?;
+    let resolved_id = resolve_id::resolve_id(
+      resolver,
+      plugin_driver,
+      specifier,
+      Some(importer),
+      false,
+      kind,
+      None,
+      Arc::default(),
+    )
+    .await?;
 
     match resolved_id {
       Ok(mut resolved_id) => {
@@ -92,16 +103,9 @@ impl<'a> CreateModuleContext<'a> {
       let importer = &self.resolved_id.id;
       let kind = item.kind;
       async move {
-        Self::resolve_id(
-          &bundle_options,
-          &resolver,
-          &plugin_driver,
-          importer,
-          &specifier,
-          HookResolveIdExtraOptions { is_entry: false, kind },
-        )
-        .await
-        .map(|id| (specifier, idx, id))
+        Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
+          .await
+          .map(|id| (specifier, idx, id))
       }
     });
 

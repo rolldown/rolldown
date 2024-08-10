@@ -24,8 +24,11 @@ static COMPILED_SCHEMA: LazyLock<JSONSchema> = LazyLock::new(|| {
 });
 
 pub fn read_test_config(config_path: &std::path::Path) -> TestConfig {
-  let config_str = fs::read_to_string(config_path)
+  let mut config_str = fs::read_to_string(config_path)
     .unwrap_or_else(|e| panic!("Failed to read config file in {config_path:?}. Got {e:?}"));
+
+  json_strip_comments::strip(&mut config_str)
+    .unwrap_or_else(|e| panic!("Failed to strip comments of {config_path:?}. Got {e:?}"));
 
   let config_json: serde_json::Value =
     serde_json::from_str(&config_str).expect("Failed to parse test config file");

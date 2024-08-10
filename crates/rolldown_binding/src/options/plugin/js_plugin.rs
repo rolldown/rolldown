@@ -2,10 +2,27 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use rolldown_plugin::{Plugin, __inner::SharedPluginable};
-use std::{borrow::Cow, ops::Deref, sync::Arc};
+use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
+use rolldown_utils::unique_arc::UniqueArc;
+use std::{
+  borrow::Cow,
+  mem,
+  ops::Deref,
+  sync::{Arc, Mutex},
+};
 
-use super::{binding_transform_context::BindingTransformPluginContext, BindingPluginOptions};
+use super::{
+  binding_transform_context::BindingTransformPluginContext,
+  types::binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
+  types::binding_plugin_transform_extra_args::BindingTransformHookExtraArgs, BindingPluginOptions,
+};
+
+#[derive(Hash, Debug, PartialEq, Eq)]
+pub(crate) struct JsPluginContextResolveCustomArgId;
+
+impl TypedMapKey for JsPluginContextResolveCustomArgId {
+  type Value = u32;
+}
 
 #[derive(Debug)]
 pub struct JsPlugin {
@@ -54,12 +71,20 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id {
+      let custom = args
+        .custom
+        .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
+        .map(|v| *v);
       Ok(
         cb.await_call((
           Arc::clone(ctx).into(),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
-          args.options.clone().into(),
+          BindingHookResolveIdExtraArgs {
+            is_entry: args.is_entry,
+            kind: args.kind.to_string(),
+            custom,
+          },
         ))
         .await?
         .map(Into::into),
@@ -72,13 +97,13 @@ impl Plugin for JsPlugin {
   async fn resolve_dynamic_import(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookResolveDynamicImportArgs<'_>,
+    args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_dynamic_import {
       Ok(
         cb.await_call((
           Arc::clone(ctx).into(),
-          args.source.to_string(),
+          args.specifier.to_string(),
           args.importer.map(str::to_string),
         ))
         .await?
@@ -117,6 +142,7 @@ impl Plugin for JsPlugin {
           BindingTransformPluginContext::new(unsafe { std::mem::transmute(ctx) }),
           args.code.to_string(),
           args.id.to_string(),
+          BindingTransformHookExtraArgs { module_type: args.module_type.to_string() },
         ))
         .await?
         .map(TryInto::try_into)
@@ -276,12 +302,10 @@ impl Plugin for JsPlugin {
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
-      cb.await_call((
-        Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
-        is_write,
-      ))
-      .await?;
+      let old_bundle = UniqueArc::new(Mutex::new(mem::take(bundle)));
+      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(old_bundle.weak_ref()), is_write))
+        .await?;
+      *bundle = old_bundle.into_inner().into_inner()?;
     }
     Ok(())
   }
@@ -292,11 +316,9 @@ impl Plugin for JsPlugin {
     bundle: &mut Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
-      cb.await_call((
-        Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
-      ))
-      .await?;
+      let old_bundle = UniqueArc::new(Mutex::new(mem::take(bundle)));
+      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(old_bundle.weak_ref()))).await?;
+      *bundle = old_bundle.into_inner().into_inner()?;
     }
     Ok(())
   }

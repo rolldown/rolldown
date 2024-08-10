@@ -9,11 +9,13 @@ import {
   bindingifyBuiltInPlugin,
   BuiltinPlugin,
 } from '../plugin/builtin-plugin'
+import { PluginContextData } from '../plugin/plugin-context-data'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
 ): BindingInputOptions {
+  const pluginContextData = new PluginContextData()
   return {
     input: bindingifyInput(options.input),
     plugins: options.plugins.map((plugin) => {
@@ -23,7 +25,7 @@ export function bindingifyInputOptions(
       if (plugin instanceof BuiltinPlugin) {
         return bindingifyBuiltInPlugin(plugin)
       }
-      return bindingifyPlugin(plugin, options, outputOptions)
+      return bindingifyPlugin(plugin, options, outputOptions, pluginContextData)
     }),
     cwd: options.cwd ?? process.cwd(),
     external: options.external
@@ -70,6 +72,7 @@ export function bindingifyInputOptions(
     },
     treeshake: options.treeshake,
     moduleTypes: options.moduleTypes,
+    define: options.define ? Object.entries(options.define) : undefined,
   }
 }
 

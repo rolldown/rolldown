@@ -3,6 +3,7 @@ mod plugin_context;
 mod plugin_driver;
 mod pluginable;
 mod transform_plugin_context;
+mod type_aliases;
 mod types;
 mod utils;
 
@@ -29,12 +30,12 @@ pub use crate::{
   types::hook_render_chunk_args::HookRenderChunkArgs,
   types::hook_render_chunk_output::HookRenderChunkOutput,
   types::hook_render_error::HookRenderErrorArgs,
-  types::hook_resolve_dynamic_import_args::HookResolveDynamicImportArgs,
   types::hook_resolve_id_args::HookResolveIdArgs,
-  types::hook_resolve_id_extra_options::HookResolveIdExtraOptions,
   types::hook_resolve_id_output::HookResolveIdOutput,
   types::hook_transform_args::HookTransformArgs,
   types::hook_transform_ast_args::HookTransformAstArgs,
   types::hook_transform_output::HookTransformOutput,
   types::plugin_context_resolve_options::PluginContextResolveOptions,
 };
+
+pub use typedmap;

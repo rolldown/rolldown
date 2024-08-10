@@ -58,7 +58,9 @@ pub use crate::{
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,
-  types::import_record::{ImportKind, ImportRecord, ImportRecordIdx, RawImportRecord},
+  types::import_record::{
+    ImportKind, ImportRecord, ImportRecordIdx, ImportRecordMeta, RawImportRecord,
+  },
   types::importer_record::ImporterRecord,
   types::js_regex,
   types::member_expr_ref::MemberExprRef,

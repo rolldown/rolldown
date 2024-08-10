@@ -69,7 +69,13 @@ export function bindingifyResolveId(
       new PluginContext(options, ctx, plugin, pluginContextData),
       specifier,
       importer ?? undefined,
-      extraOptions,
+      {
+        ...extraOptions,
+        custom:
+          typeof extraOptions.custom === 'number'
+            ? pluginContextData.getResolveCustom(extraOptions.custom)
+            : undefined,
+      },
     )
     if (ret == false || ret == null) {
       return
@@ -155,7 +161,7 @@ export function bindingifyTransform(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (ctx, code, id) => {
+  return async (ctx, code, id, meta) => {
     const ret = await handler.call(
       new TransformPluginContext(
         options,
@@ -168,6 +174,7 @@ export function bindingifyTransform(
       ),
       code,
       id,
+      meta,
     )
 
     if (ret == null) {
@@ -187,6 +194,7 @@ export function bindingifyTransform(
       code: ret.code,
       map: bindingifySourcemap(ret.map),
       sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+      moduleType: ret.moduleType,
     }
   }
 }

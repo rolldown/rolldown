@@ -56,9 +56,9 @@ pub enum EsModuleFlag {
 impl From<String> for EsModuleFlag {
   fn from(value: String) -> Self {
     match value.as_str() {
-      "always" => EsModuleFlag::Always,
-      "never" => EsModuleFlag::Never,
-      "if-default-prop" => EsModuleFlag::IfDefaultProp,
+      "always" => Self::Always,
+      "never" => Self::Never,
+      "if-default-prop" => Self::IfDefaultProp,
       _ => unreachable!("unknown es module type"),
     }
   }

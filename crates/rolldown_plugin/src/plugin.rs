@@ -8,8 +8,7 @@ use crate::{
     hook_transform_output::HookTransformOutput,
   },
   HookBuildEndArgs, HookInjectionArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
-  HookRenderChunkOutput, HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs,
+  HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
@@ -52,7 +51,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn resolve_dynamic_import(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookResolveDynamicImportArgs<'_>,
+    _args: &HookResolveIdArgs<'_>,
   ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
     async { Ok(None) }
   }

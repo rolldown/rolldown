@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+//#region main.js
+const exports$1 = "exports";
+
+//#endregion
+Object.defineProperty(exports, 'exports', {
+  enumerable: true,
+  get: function () {
+    return exports$1;
+  }
+});
+```

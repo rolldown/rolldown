@@ -17,3 +17,4 @@ pub mod rustc_hash;
 pub mod sanitize_file_name;
 pub mod xxhash;
 pub use bitset::BitSet;
+pub mod unique_arc;

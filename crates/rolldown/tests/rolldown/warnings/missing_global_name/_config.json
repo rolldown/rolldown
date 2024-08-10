@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "bundle",
+    "external": ["node:path"]
+  },
+  "expectExecuted": false
+}

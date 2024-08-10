@@ -19,6 +19,7 @@ workspace = true
 anyhow                  = { workspace = true }
 dunce                   = { workspace = true }
 insta                   = { workspace = true }
+json-strip-comments     = { workspace = true }
 jsonschema              = { workspace = true }
 regex                   = { workspace = true }
 rolldown                = { workspace = true }

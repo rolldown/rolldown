@@ -1,8 +1,11 @@
+use arcstr::ArcStr;
+use oxc::span::Span;
+use rolldown_rstr::Rstr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
-use rolldown_error::BuildDiagnostic;
+use rolldown_common::{Module, ModuleIdx, ModuleType, ResolvedId, StrOrBytes};
+use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -13,10 +16,24 @@ use crate::{
   },
   utils::{load_source::load_source, transform_source::transform_source},
 };
+
+pub struct EcmaModuleTaskOwner {
+  source: ArcStr,
+  importer_id: Rstr,
+  importee_span: Span,
+}
+
+impl EcmaModuleTaskOwner {
+  pub fn new(source: ArcStr, importer_id: Rstr, importee_span: Span) -> Self {
+    EcmaModuleTaskOwner { source, importer_id, importee_span }
+  }
+}
+
 pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
+  owner: Option<EcmaModuleTaskOwner>,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
 }
@@ -26,9 +43,10 @@ impl EcmaModuleTask {
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
-    is_user_defined_entry: bool,
+    owner: Option<EcmaModuleTaskOwner>,
   ) -> Self {
-    Self { ctx, module_idx: idx, resolved_id, errors: vec![], is_user_defined_entry }
+    let is_user_defined_entry = owner.is_none();
+    Self { ctx, module_idx: idx, resolved_id, owner, errors: vec![], is_user_defined_entry }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
@@ -51,7 +69,7 @@ impl EcmaModuleTask {
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let (source, module_type) = load_source(
+    let (source, mut module_type) = match load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
       &self.ctx.fs,
@@ -59,7 +77,22 @@ impl EcmaModuleTask {
       &mut hook_side_effects,
       &self.ctx.options,
     )
-    .await?;
+    .await
+    {
+      Ok(ret) => ret,
+      Err(err) => {
+        self.errors.push(BuildDiagnostic::unloadable_dependency(
+          self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
+          self.owner.as_ref().map(|owner| UnloadableDependencyContext {
+            importer_id: owner.importer_id.as_str().into(),
+            importee_span: owner.importee_span,
+            source: owner.source.clone(),
+          }),
+          err.to_string().into(),
+        ));
+        return Ok(());
+      }
+    };
 
     let source = match source {
       StrOrBytes::Str(source) => {
@@ -70,6 +103,7 @@ impl EcmaModuleTask {
           source,
           &mut sourcemap_chain,
           &mut hook_side_effects,
+          &mut module_type,
         )
         .await?;
         source.into()
@@ -77,9 +111,13 @@ impl EcmaModuleTask {
       StrOrBytes::Bytes(_) => source,
     };
 
-    let Some(module_type) = module_type else {
+    // TODO: module type should be able to updated by transform hook, for now we don't impl it.
+    if let ModuleType::Custom(_) = module_type {
+      // TODO: should provide some diagnostics for user how they should handle the module type.
+      // e.g.
+      // sass -> recommended npm install `sass` etc
       return Err(anyhow::format_err!(
-        "[{:?}] is not specified module type, rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        "[{:?}] is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
       ));
     };
@@ -94,6 +132,7 @@ impl EcmaModuleTask {
         module_type: module_type.clone(),
         resolver: &self.ctx.resolver,
         is_user_defined_entry: self.is_user_defined_entry,
+        replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
       CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
     )

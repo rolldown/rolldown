@@ -3,7 +3,10 @@ import { BindingTransformPluginConfig } from '../binding'
 
 type TransformPattern = string | RegExp | RegExp[] | string[]
 // A temp config type for giving better user experience
-export type TransformPluginConfig = BindingTransformPluginConfig & {
+export type TransformPluginConfig = Omit<
+  BindingTransformPluginConfig,
+  'include' | 'exclude'
+> & {
   include?: TransformPattern
   exclude?: TransformPattern
 }

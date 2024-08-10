@@ -6,8 +6,8 @@ const outroText = '/* outro test */\n'
 
 export default defineTest({
   config: {
-    format: 'iife',
     output: {
+      format: 'iife',
       outro: outroText,
     },
   },

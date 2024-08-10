@@ -101,24 +101,28 @@ export default defineTest({
         banner: {
           handler: () => {
             bannerCalls.push(postName)
+            return ''
           },
           order: 'post',
         },
         footer: {
           handler: () => {
             footerCalls.push(postName)
+            return ''
           },
           order: 'post',
         },
         intro: {
           handler: () => {
             introCalls.push(postName)
+            return ''
           },
           order: 'post',
         },
         outro: {
           handler: () => {
             outroCalls.push(postName)
+            return ''
           },
           order: 'post',
         },
@@ -194,24 +198,28 @@ export default defineTest({
         banner: {
           handler: () => {
             bannerCalls.push(preName)
+            return ''
           },
           order: 'pre',
         },
         footer: {
           handler: () => {
             footerCalls.push(preName)
+            return ''
           },
           order: 'pre',
         },
         intro: {
           handler: () => {
             introCalls.push(preName)
+            return ''
           },
           order: 'pre',
         },
         outro: {
           handler: () => {
             outroCalls.push(preName)
+            return ''
           },
           order: 'pre',
         },
@@ -253,15 +261,19 @@ export default defineTest({
         },
         banner: () => {
           bannerCalls.push(normalName)
+          return ''
         },
         footer: () => {
           footerCalls.push(normalName)
+          return ''
         },
         intro: () => {
           introCalls.push(normalName)
+          return ''
         },
         outro: () => {
           outroCalls.push(normalName)
+          return ''
         },
       },
     ],

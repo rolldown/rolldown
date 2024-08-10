@@ -178,10 +178,8 @@ impl PluginDriver {
 
   pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
     for (plugin, ctx) in self.iter_plugin_with_context() {
-      args.ast = plugin.call_transform_ast(
-        ctx,
-        HookTransformAstArgs { path: args.path, cwd: args.cwd, ast: args.ast },
-      )?;
+      args.ast =
+        plugin.call_transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
     }
     Ok(args.ast)
   }

@@ -1,1 +1,1 @@
-const a = <react/>
+const a = <react />

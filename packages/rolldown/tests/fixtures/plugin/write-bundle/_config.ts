@@ -40,7 +40,7 @@ export default defineTest({
       },
       {
         name: 'test-plugin-2',
-        writeBundle: (options, bundle, isWrite) => {
+        writeBundle: () => {
           calls.push('test-plugin-2')
         },
       },

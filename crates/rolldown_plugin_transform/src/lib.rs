@@ -8,6 +8,7 @@ use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 
 use rolldown_plugin::Plugin;
+use rolldown_sourcemap::SourceMapOrMissing;
 use rolldown_utils::pattern_filter::{self, StringOrRegex};
 use std::borrow::Cow;
 use std::path::Path;
@@ -98,7 +99,7 @@ impl Plugin for TransformPlugin {
     };
     Ok(Some(rolldown_plugin::HookTransformOutput {
       code: Some(code),
-      map: source_map,
+      map: source_map.map(SourceMapOrMissing::SourceMap),
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))

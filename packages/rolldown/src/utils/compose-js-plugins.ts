@@ -255,7 +255,32 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if (R.keys(plugin).some((hookName) => isUnsupportedHooks(hookName))) {
+  // Check if the plugin has patterns that aren't composable
+  const hasNotComposablePattern = R.keys(plugin).some((hookName) => {
+    const OK_TO_COMPOSE = false
+    switch (hookName) {
+      // These props don't affect the composition
+      case 'name':
+      case 'api':
+        return OK_TO_COMPOSE
+    }
+
+    if (isUnsupportedHooks(hookName)) {
+      return !OK_TO_COMPOSE
+    }
+
+    if (plugin[hookName]) {
+      const { meta } = normalizeHook(plugin[hookName])
+      // if `order` is specified with `pre` or `post`, it's unsafe to compose this plugin
+      if (meta.order === 'pre' || meta.order === 'post') {
+        return !OK_TO_COMPOSE
+      }
+    }
+
+    return OK_TO_COMPOSE
+  })
+
+  if (hasNotComposablePattern) {
     return false
   }
 

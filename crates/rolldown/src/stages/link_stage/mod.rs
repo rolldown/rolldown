@@ -291,8 +291,6 @@ impl<'a> LinkStage<'a> {
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__reExport").into());
                     }
-                    stmt_info.side_effect =
-                      importee.side_effects.has_side_effects() || is_reexport_all;
                   }
                   _ => {}
                 }

@@ -81,6 +81,7 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_id_meta)
     {
+      let _guard = ctx.stats.hook_metric[usize::from(plugin_idx)].guard(MetricType::ResolveId);
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
@@ -140,7 +141,8 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_load_meta) {
+    for (i, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_load_meta) {
+      let _guard = ctx.stats.hook_metric[usize::from(i)].guard(MetricType::Load);
       if let Some(r) = plugin.call_load(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -157,7 +159,8 @@ impl PluginDriver {
     module_type: &mut ModuleType,
   ) -> Result<String> {
     let mut code = args.code.to_string();
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
+    for (i, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
+      let _guard = ctx.stats.hook_metric[usize::from(i)].guard(MetricType::Transform);
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
@@ -191,9 +194,10 @@ impl PluginDriver {
   }
 
   pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
-    for (_, plugin, ctx) in
+    for (i, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
+      let _guard = ctx.stats.hook_metric[usize::from(i)].guard(MetricType::TransformAst);
       args.ast =
         plugin.call_transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
     }

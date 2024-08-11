@@ -28,7 +28,7 @@ impl HookMetric {
   pub fn guard(&self, ty: MetricType) -> Guard {
     let counter = match ty {
       MetricType::Transform => Arc::clone(&self.transform),
-      MetricType::Resolve => Arc::clone(&self.resolve),
+      MetricType::ResolveId => Arc::clone(&self.resolve),
       MetricType::Load => Arc::clone(&self.load),
       MetricType::TransformAst => Arc::clone(&self.transform_ast),
     };
@@ -92,7 +92,7 @@ impl TaggedMsMetric {
 pub enum MetricType {
   Transform,
   TransformAst,
-  Resolve,
+  ResolveId,
   Load,
 }
 

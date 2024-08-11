@@ -76,7 +76,6 @@ impl EcmaModuleTask {
       &mut sourcemap_chain,
       &mut hook_side_effects,
       &self.ctx.options,
-      &mut warnings,
     )
     .await
     {

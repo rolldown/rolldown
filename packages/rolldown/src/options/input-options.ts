@@ -8,7 +8,7 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
-import { TreeshakingOptionsSchema, TreeshakingOptions } from '../treeshake'
+import { TreeshakingOptions } from '../treeshake'
 
 const inputOptionSchema = z
   .string()
@@ -50,7 +50,8 @@ const inputOptionsSchema = z.strictObject({
     .or(z.literal('neutral'))
     .optional(),
   shimMissingExports: z.boolean().optional(),
-  treeshake: z.boolean().or(TreeshakingOptionsSchema).optional(),
+  // FIXME: should use a more specific schema
+  treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
   logLevel: LogLevelOptionSchema.optional(),
   onLog: z
     .function()
@@ -97,11 +98,38 @@ const inputOptionsSchema = z.strictObject({
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
 })
 
-export type InputOption = z.infer<typeof inputOptionSchema>
-export type ExternalOption = z.infer<typeof externalSchema>
-export type InputOptions = Omit<
-  z.infer<typeof inputOptionsSchema>,
-  'treeshake'
-> & {
-  treeshake?: boolean | TreeshakingOptions
+type RawInputOptions = z.infer<typeof inputOptionsSchema>
+interface OverwriteInputOptionsWithDoc {
+  /**
+   * Inject import statements on demand.
+   *
+   * ## Supported patterns
+   * ```js
+   * {
+   *   // import { Promise } from 'es6-promise'
+   *   Promise: ['es6-promise', 'Promise'],
+   *
+   *   // import { Promise as P } from 'es6-promise'
+   *   P: ['es6-promise', 'Promise'],
+   *
+   *   // import $ from 'jquery'
+   *   $: 'jquery',
+   *
+   *   // import * as fs from 'node:fs'
+   *   fs: ['node:fs', '*'],
+   *
+   *   // Inject shims for property access pattern
+   *   'Object.assign': path.resolve( 'src/helpers/object-assign.js' ),
+   * }
+   * ```
+   */
+  inject?: RawInputOptions['inject']
 }
+
+export type InputOption = z.infer<typeof inputOptionSchema>
+export type InputOptions = Omit<
+  RawInputOptions,
+  keyof OverwriteInputOptionsWithDoc
+> &
+  OverwriteInputOptionsWithDoc
+export type ExternalOption = z.infer<typeof externalSchema>

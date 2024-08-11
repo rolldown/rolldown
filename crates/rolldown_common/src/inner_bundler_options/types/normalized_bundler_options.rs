@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use oxc::minifier::InjectGlobalVariablesConfig;
 use rustc_hash::FxHashMap;
 
 use super::experimental_options::ExperimentalOptions;
@@ -13,7 +14,7 @@ use super::{
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{EsModuleFlag, InputItem, ModuleType};
+use crate::{EsModuleFlag, InjectImport, InputItem, ModuleType};
 
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
@@ -50,4 +51,6 @@ pub struct NormalizedBundlerOptions {
   pub minify: bool,
   // pub stats: bool,
   pub define: Vec<(/* Target to be replaced */ String, /* Replacement */ String)>,
+  pub inject: Vec<InjectImport>,
+  pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
 }

@@ -65,6 +65,10 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
+  fn build_start_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.build_start_meta.as_ref().map(Into::into)
+  }
+
   async fn resolve_id(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -94,6 +98,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.resolve_id_meta.as_ref().map(Into::into)
+  }
+
   async fn resolve_dynamic_import(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -114,6 +122,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn resolve_dynamic_import_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.resolve_dynamic_import_meta.as_ref().map(Into::into)
+  }
+
   async fn load(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -129,6 +141,10 @@ impl Plugin for JsPlugin {
     } else {
       Ok(None)
     }
+  }
+
+  fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.load_meta.as_ref().map(Into::into)
   }
 
   async fn transform(
@@ -153,6 +169,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn transform_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.transform_meta.as_ref().map(Into::into)
+  }
+
   async fn module_parsed(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -162,6 +182,10 @@ impl Plugin for JsPlugin {
       cb.await_call((Arc::clone(ctx).into(), BindingModuleInfo::new(module_info))).await?;
     }
     Ok(())
+  }
+
+  fn module_parsed_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.module_parsed_meta.as_ref().map(Into::into)
   }
 
   async fn build_end(
@@ -175,6 +199,10 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
+  fn build_end_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.build_end_meta.as_ref().map(Into::into)
+  }
+
   // --- Generate hooks ---
 
   async fn render_start(
@@ -185,6 +213,10 @@ impl Plugin for JsPlugin {
       cb.await_call(Arc::clone(ctx).into()).await?;
     }
     Ok(())
+  }
+
+  fn render_start_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.render_start_meta.as_ref().map(Into::into)
   }
 
   async fn banner(
@@ -204,6 +236,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn banner_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.banner_meta.as_ref().map(Into::into)
+  }
+
   async fn intro(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -219,6 +255,10 @@ impl Plugin for JsPlugin {
     } else {
       Ok(None)
     }
+  }
+
+  fn intro_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.intro_meta.as_ref().map(Into::into)
   }
 
   async fn outro(
@@ -238,6 +278,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn outro_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.outro_meta.as_ref().map(Into::into)
+  }
+
   async fn footer(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -253,6 +297,10 @@ impl Plugin for JsPlugin {
     } else {
       Ok(None)
     }
+  }
+
+  fn footer_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.footer_meta.as_ref().map(Into::into)
   }
 
   async fn render_chunk(
@@ -272,6 +320,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.render_chunk_meta.as_ref().map(Into::into)
+  }
+
   async fn augment_chunk_hash(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -284,6 +336,10 @@ impl Plugin for JsPlugin {
     }
   }
 
+  fn augment_chunk_hash_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.augment_chunk_hash_meta.as_ref().map(Into::into)
+  }
+
   async fn render_error(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -293,6 +349,10 @@ impl Plugin for JsPlugin {
       cb.await_call((Arc::clone(ctx).into(), args.error.to_string())).await?;
     }
     Ok(())
+  }
+
+  fn render_error_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.render_error_meta.as_ref().map(Into::into)
   }
 
   async fn generate_bundle(
@@ -310,6 +370,10 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
+  fn generate_bundle_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.generate_bundle_meta.as_ref().map(Into::into)
+  }
+
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -321,5 +385,9 @@ impl Plugin for JsPlugin {
       *bundle = old_bundle.into_inner().into_inner()?;
     }
     Ok(())
+  }
+
+  fn write_bundle_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.write_bundle_meta.as_ref().map(Into::into)
   }
 }

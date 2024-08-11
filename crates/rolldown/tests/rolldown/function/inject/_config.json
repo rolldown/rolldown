@@ -1,0 +1,39 @@
+{
+  "config": {
+    "inject": [
+      // import { Promise } from 'es6-promise'
+      {
+        "type": "named",
+        "imported": "Promise",
+        "from": "./promise-shim"
+      },
+      // import { Promise as P } from 'es6-promise'
+      {
+        "type": "named",
+        "imported": "Promise",
+        "alias": "P",
+        "from": "./promise-shim"
+      },
+      // import $ from 'jquery'
+      {
+        "type": "named",
+        "imported": "default",
+        "alias": "$",
+        "from": "./jquery"
+      },
+      // import * as fs from 'node:fs'
+      {
+        "type": "namespace",
+        "alias": "fs",
+        "from": "./node-fs"
+      },
+      // `Object.assign`
+      {
+        "type": "named",
+        "imported": "default",
+        "alias": "Object.assign",
+        "from": "./object-assign-shim"
+      }
+    ]
+  }
+}

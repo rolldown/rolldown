@@ -232,10 +232,14 @@ impl<'a> GenerateStage<'a> {
       });
 
       chunk.name = Some(chunk_name);
-      chunk.absolute_preliminary_filename =
-        Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
-      chunk.css_absolute_preliminary_filename =
-        Some(css_preliminary.absolutize_with(&self.options.dir).expect_into_string());
+      chunk.absolute_preliminary_filename = Some(
+        preliminary.absolutize_with(self.options.cwd.join(&self.options.dir)).expect_into_string(),
+      );
+      chunk.css_absolute_preliminary_filename = Some(
+        css_preliminary
+          .absolutize_with(self.options.cwd.join(&self.options.dir))
+          .expect_into_string(),
+      );
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
       chunk.css_preliminary_filename =
         Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));

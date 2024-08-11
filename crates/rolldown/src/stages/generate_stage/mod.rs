@@ -5,7 +5,7 @@ use arcstr::ArcStr;
 use indexmap::IndexSet;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
 use rolldown_plugin::SharedPluginDriver;
@@ -206,9 +206,9 @@ impl<'a> GenerateStage<'a> {
           }
           Entry::Vacant(vac) => vac.key().clone(),
         };
-        used_name_map.insert(chunk_name.clone(), 1);
         chunk_name
       };
+      used_name_map.insert(chunk_name.clone(), 1);
 
       let filename_template = chunk.filename_template(self.options);
       let css_filename_template = chunk.css_filename_template(self.options);

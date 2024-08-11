@@ -10,7 +10,12 @@ use serde::Deserialize;
 /// - `import $ from 'jquery'` => `InjectImport::default("$", "jquery")`
 /// - `import * as fs from 'node:fs'` => `InjectImport::namespace("fs", "node:fs")`
 ///
-/// - `InjectImport::named("Object.assign", None, "es6-object-assign")` is a special form to inject shims to the following code:
+/// ---
+///
+/// - `InjectImport::named("default", Some("Object.assign"), "es6-object-assign")`
+/// - `InjectImport::default("Object.assign", "es6-object-assign")`
+///
+/// are special forms to inject shims to the following code:
 /// ```js
 /// console.log(Object.assign({ a: 1 }, { b: 2 }));
 /// ```

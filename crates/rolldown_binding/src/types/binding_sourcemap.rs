@@ -3,7 +3,7 @@ use napi::Either;
 use rolldown_sourcemap::{JSONSourceMap, MissingSourceMap, SourceMap, SourceMapOrMissing};
 use serde::Deserialize;
 
-#[napi_derive::napi(object, object_to_js = false)]
+#[napi_derive::napi(object)]
 #[derive(Deserialize, Debug, Derivative)]
 pub struct BindingSourcemap {
   #[serde(skip_deserializing, default = "default_sourcemap")]

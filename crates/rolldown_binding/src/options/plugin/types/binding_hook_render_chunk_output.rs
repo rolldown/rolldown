@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::types::binding_sourcemap::BindingSourcemap;
 
-#[napi_derive::napi(object, object_to_js = false)]
+#[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]

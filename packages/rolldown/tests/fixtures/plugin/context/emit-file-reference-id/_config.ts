@@ -36,7 +36,7 @@ export default defineTest({
     ],
   },
   afterTest: async () => {
-    const mod = await import('./dist/entries/main.mjs')
+    const mod = await import('./dist/entries/main.mjs' as string)
     const assetPath = fileURLToPath(mod.default)
     expect(
       path.relative(import.meta.dirname, assetPath).replace(/\\/g, '/'),

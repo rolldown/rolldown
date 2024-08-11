@@ -1,16 +1,5 @@
 import { Plugin } from '../plugin'
 
-/**
- * Names of all properties in a `Plugin` object. Includes `name` and `api`.
- */
-export type PluginProps = keyof Plugin
-
-/**
- * Names of all hooks in a `Plugin` object. Does not include `name` and `api`, since they are not hooks.
- */
-export type PluginHookNames = Exclude<PluginProps, 'name' | 'api'>
-
-// TODO: we need to make sure the defined hooks is the same as the actual hooks
 export const ENUMERATED_PLUGIN_HOOK_NAMES = [
   // build hooks
   'options',
@@ -37,8 +26,59 @@ export const ENUMERATED_PLUGIN_HOOK_NAMES = [
 ] as const
 
 /**
- * Use `isPluginHookName` rather than `PLUGIN_HOOK_NAMES_SET.has` to have a type-friendly check for a plugin hook name.
+ * Names of all properties in a `Plugin` object. Includes `name` and `api`.
  */
-export const PLUGIN_HOOK_NAMES_SET = new Set(
-  ENUMERATED_PLUGIN_HOOK_NAMES as readonly string[],
-)
+export type PluginProps = keyof Plugin
+
+type EnumeratedPluginHookNames = typeof ENUMERATED_PLUGIN_HOOK_NAMES
+/**
+ * Names of all hooks in a `Plugin` object. Does not include `name` and `api`, since they are not hooks.
+ */
+export type PluginHookNames = EnumeratedPluginHookNames[number]
+
+/**
+ * Names of all defined hooks. It's like
+ * ```ts
+ * type DefinedHookNames = {
+ *   options: 'options',
+ *   buildStart: 'buildStart',
+ *   ...
+ * }
+ * ```
+ */
+export type DefinedHookNames = {
+  readonly [K in PluginHookNames]: K
+}
+
+/**
+ * Names of all defined hooks. It's like
+ * ```js
+ * const DEFINED_HOOK_NAMES ={
+ *   options: 'options',
+ *   buildStart: 'buildStart',
+ *   ...
+ * }
+ * ```
+ */
+export const DEFINED_HOOK_NAMES: DefinedHookNames = {
+  [ENUMERATED_PLUGIN_HOOK_NAMES[0]]: ENUMERATED_PLUGIN_HOOK_NAMES[0],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[1]]: ENUMERATED_PLUGIN_HOOK_NAMES[1],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[2]]: ENUMERATED_PLUGIN_HOOK_NAMES[2],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[3]]: ENUMERATED_PLUGIN_HOOK_NAMES[3],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[4]]: ENUMERATED_PLUGIN_HOOK_NAMES[4],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[5]]: ENUMERATED_PLUGIN_HOOK_NAMES[5],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[6]]: ENUMERATED_PLUGIN_HOOK_NAMES[6],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[7]]: ENUMERATED_PLUGIN_HOOK_NAMES[7],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[8]]: ENUMERATED_PLUGIN_HOOK_NAMES[8],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[9]]: ENUMERATED_PLUGIN_HOOK_NAMES[9],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[10]]: ENUMERATED_PLUGIN_HOOK_NAMES[10],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[11]]: ENUMERATED_PLUGIN_HOOK_NAMES[11],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[12]]: ENUMERATED_PLUGIN_HOOK_NAMES[12],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[13]]: ENUMERATED_PLUGIN_HOOK_NAMES[13],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[14]]: ENUMERATED_PLUGIN_HOOK_NAMES[14],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[15]]: ENUMERATED_PLUGIN_HOOK_NAMES[15],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[16]]: ENUMERATED_PLUGIN_HOOK_NAMES[16],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[17]]: ENUMERATED_PLUGIN_HOOK_NAMES[17],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[18]]: ENUMERATED_PLUGIN_HOOK_NAMES[18],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[19]]: ENUMERATED_PLUGIN_HOOK_NAMES[19],
+} as const

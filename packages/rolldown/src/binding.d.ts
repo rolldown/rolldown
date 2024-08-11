@@ -194,6 +194,8 @@ export interface BindingJsonSourcemap {
   sources?: Array<string | undefined | null>
   sourcesContent?: Array<string | undefined | null>
   names?: Array<string>
+  missing?: boolean
+  pluginName?: string
 }
 
 export declare enum BindingLogLevel {

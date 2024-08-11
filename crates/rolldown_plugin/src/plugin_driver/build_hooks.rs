@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
+use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
@@ -153,6 +154,7 @@ impl PluginDriver {
     side_effects: &mut Option<HookSideEffects>,
     original_code: &str,
     module_type: &mut ModuleType,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> Result<String> {
     let mut code = args.code.to_string();
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
@@ -163,16 +165,23 @@ impl PluginDriver {
         )
         .await?
       {
-        if let Some(mut map) = r.map {
-          // If sourcemap  hasn't `sources`, using original id to fill it.
-          if map.get_source(0).map_or(true, str::is_empty) {
-            map.set_sources(vec![args.id]);
-          }
-          // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-          if map.get_source_content(0).map_or(true, str::is_empty) {
-            map.set_source_contents(vec![&code]);
-          }
-          sourcemap_chain.push(map);
+        if let Some(map) = r.map {
+          match map {
+            rolldown_sourcemap::SourceMapOrMissing::Missing(source_map) => {
+              warnings.push(BuildDiagnostic::sourcemap_broken(source_map.plugin_name));
+            }
+            rolldown_sourcemap::SourceMapOrMissing::SourceMap(mut source_map) => {
+              // If sourcemap  hasn't `sources`, using original id to fill it.
+              if source_map.get_source(0).map_or(true, str::is_empty) {
+                source_map.set_sources(vec![args.id]);
+              }
+              // If sourcemap hasn't `sourcesContent`, using original code to fill it.
+              if source_map.get_source_content(0).map_or(true, str::is_empty) {
+                source_map.set_source_contents(vec![&code]);
+              }
+              sourcemap_chain.push(source_map);
+            }
+          };
         }
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);

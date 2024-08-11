@@ -1,6 +1,7 @@
 use rolldown_common::{
   side_effects::HookSideEffects, ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes,
 };
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::path_ext::clean_url;
@@ -13,11 +14,21 @@ pub async fn load_source(
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?
   {
-    sourcemap_chain.extend(load_hook_output.map);
+    if let Some(map) = load_hook_output.map {
+      match map {
+        rolldown_sourcemap::SourceMapOrMissing::Missing(source_map) => {
+          warnings.push(BuildDiagnostic::sourcemap_broken(source_map.plugin_name));
+        }
+        rolldown_sourcemap::SourceMapOrMissing::SourceMap(source_map) => {
+          sourcemap_chain.push(source_map);
+        }
+      };
+    }
     if let Some(v) = load_hook_output.side_effects {
       *side_effects = Some(v);
     }

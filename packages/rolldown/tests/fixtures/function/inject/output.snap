@@ -1,0 +1,26 @@
+import { default as assert } from "node:assert";
+
+//#region promise-shim.js
+const Promise = "promise-shim";
+
+//#endregion
+//#region jquery.js
+var jquery_default = "jquery";
+
+//#endregion
+//#region node-fs.js
+var node_fs_default = "node-fs";
+
+//#endregion
+//#region object-assign-shim.js
+var object_assign_shim_default = "object-assign-shim";
+
+//#endregion
+//#region main.js
+assert.strictEqual(Promise, "promise-shim");
+assert.strictEqual(Promise, "promise-shim");
+assert.strictEqual(jquery_default, "jquery");
+assert.strictEqual(node_fs_default, "node-fs");
+assert.strictEqual(object_assign_shim_default, "object-assign-shim");
+
+//#endregion

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use crate::types::{binding_log::BindingLog, binding_log_level::BindingLogLevel};
+use binding_inject_import::BindingInjectImport;
 use derivative::Derivative;
 use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
@@ -12,6 +13,7 @@ use self::{binding_input_item::BindingInputItem, binding_resolve_options::Bindin
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 
+pub mod binding_inject_import;
 mod binding_input_item;
 mod binding_resolve_options;
 mod treeshake;
@@ -75,6 +77,9 @@ pub struct BindingInputOptions {
 
   pub module_types: Option<HashMap<String, String>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
+  pub inject: Option<Vec<BindingInjectImport>>,
 }
 
 pub type BindingOnLog =

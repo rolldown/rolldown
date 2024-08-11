@@ -94,6 +94,7 @@ const inputOptionsSchema = z.strictObject({
     })
     .optional(),
   define: z.record(z.string()).optional(),
+  inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
 })
 
 export type InputOption = z.infer<typeof inputOptionSchema>

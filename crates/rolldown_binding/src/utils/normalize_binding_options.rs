@@ -1,3 +1,4 @@
+use crate::options::binding_inject_import::normalize_binding_inject_import;
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
@@ -147,7 +148,9 @@ pub fn normalize_binding_options(
     css_entry_filenames: None,
     css_chunk_filenames: None,
     define: input_options.define.map(FxIndexMap::from_iter),
-    inject: None,
+    inject: input_options
+      .inject
+      .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
   };
 
   #[cfg(not(target_family = "wasm"))]

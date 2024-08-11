@@ -271,7 +271,7 @@ impl<'a> LinkStage<'a> {
             match &self.module_table.modules[rec.resolved_module] {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
-                let is_reexport_all = match rec.kind {
+                match rec.kind {
                   ImportKind::Import => {
                     if matches!(self.options.format, OutputFormat::Cjs)
                       && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
@@ -280,6 +280,7 @@ impl<'a> LinkStage<'a> {
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
                     }
+
                     let is_reexport_all = importer.star_exports.contains(rec_id);
                     if is_reexport_all {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
@@ -290,11 +291,11 @@ impl<'a> LinkStage<'a> {
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__reExport").into());
                     }
-                    is_reexport_all
+                    stmt_info.side_effect =
+                      importee.side_effects.has_side_effects() || is_reexport_all;
                   }
-                  _ => false,
-                };
-                stmt_info.side_effect = importee.side_effects.has_side_effects() || is_reexport_all;
+                  _ => {}
+                }
               }
               Module::Ecma(importee) => {
                 let importee_linking_info = &self.metas[importee.idx];

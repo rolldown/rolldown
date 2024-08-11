@@ -2203,8 +2203,6 @@ dependencies = [
  "rolldown_plugin_alias",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_import_glob",
- "rolldown_plugin_glob_import",
- "rolldown_plugin_glob_import",
  "rolldown_plugin_json",
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",

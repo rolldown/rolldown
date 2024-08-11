@@ -128,7 +128,8 @@ export declare enum BindingBuiltinPluginName {
   LoadFallbackPlugin = 5,
   TransformPlugin = 6,
   WasmFallbackPlugin = 7,
-  AliasPlugin = 8
+  AliasPlugin = 8,
+  JsonPlugin = 9
 }
 
 export interface BindingEmittedAsset {
@@ -211,6 +212,11 @@ export interface BindingInputOptions {
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
+}
+
+export interface BindingJsonPluginConfig {
+  stringify?: boolean
+  isBuild?: boolean
 }
 
 export interface BindingJsonSourcemap {

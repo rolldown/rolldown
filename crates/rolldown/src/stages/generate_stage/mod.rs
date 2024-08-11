@@ -1,9 +1,11 @@
+use std::collections::hash_map::Entry;
+
 use anyhow::Result;
 use arcstr::ArcStr;
 use indexmap::IndexSet;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
 use rolldown_plugin::SharedPluginDriver;
@@ -179,7 +181,7 @@ impl<'a> GenerateStage<'a> {
       .collect::<IndexSet<_>>();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
-    let mut used_names: FxHashSet<ArcStr> = FxHashSet::default();
+    let mut used_name_map: FxHashMap<ArcStr, u32> = FxHashMap::default();
 
     chunk_ids.into_iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
       let chunk = &mut chunk_graph.chunks[chunk_id];
@@ -191,22 +193,22 @@ impl<'a> GenerateStage<'a> {
       let chunk_name_info = &mut index_pre_generated_names[chunk_id];
 
       let chunk_name = if chunk_name_info.explicit {
-        if used_names.contains(&chunk_name_info.name) {
+        if used_name_map.contains_key(&chunk_name_info.name) {
           return Err(anyhow::anyhow!("Chunk name `{}` is already used", chunk_name_info.name));
         }
         chunk_name_info.name.clone()
       } else {
-        let mut chunk_name = chunk_name_info.name.clone();
-        let mut next_count = 1;
-        // TODO: use `FxHashMap<ArcStr, u32>` to find conflict-less name in one go.
-        while used_names.contains(&chunk_name) {
-          chunk_name = ArcStr::from(format!("{chunk_name}~{next_count}"));
-          next_count += 1;
-        }
+        let chunk_name = match used_name_map.entry(chunk_name_info.name.clone()) {
+          Entry::Occupied(mut occ) => {
+            let next_count = *occ.get();
+            occ.insert(next_count + 1);
+            ArcStr::from(format!("{}~{next_count}", occ.key()))
+          }
+          Entry::Vacant(vac) => vac.key().clone(),
+        };
+        used_name_map.insert(chunk_name.clone(), 1);
         chunk_name
       };
-
-      used_names.insert(chunk_name.clone());
 
       let filename_template = chunk.filename_template(self.options);
       let css_filename_template = chunk.css_filename_template(self.options);

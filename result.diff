@@ -1,0 +1,27 @@
+diff --git a/crates/rolldown/src/stages/generate_stage/mod.rs b/crates/rolldown/src/stages/generate_stage/mod.rs
+index bab41c93..a734865e 100644
+--- a/crates/rolldown/src/stages/generate_stage/mod.rs
++++ b/crates/rolldown/src/stages/generate_stage/mod.rs
+@@ -190,21 +190,7 @@ impl<'a> GenerateStage<'a> {
+ 
+       let chunk_name_info = &mut index_pre_generated_names[chunk_id];
+ 
+-      let chunk_name = if chunk_name_info.explicit {
+-        if used_names.contains(&chunk_name_info.name) {
+-          return Err(anyhow::anyhow!("Chunk name `{}` is already used", chunk_name_info.name));
+-        }
+-        chunk_name_info.name.clone()
+-      } else {
+-        let mut chunk_name = chunk_name_info.name.clone();
+-        let mut next_count = 1;
+-        // TODO: use `FxHashMap<ArcStr, u32>` to find conflict-less name in one go.
+-        while used_names.contains(&chunk_name) {
+-          chunk_name = ArcStr::from(format!("{chunk_name}~{next_count}"));
+-          next_count += 1;
+-        }
+-        chunk_name
+-      };
++      let chunk_name = { chunk_name_info.name.clone() };
+ 
+       used_names.insert(chunk_name.clone());
+ 

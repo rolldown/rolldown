@@ -198,9 +198,9 @@ export function bindingifyTransform(
         return undefined
       }
 
-      if (typeof ret === 'string' || ret.map === undefined) {
+      if (typeof ret === 'string') {
         return {
-          code: typeof ret === 'string' ? ret : ret.code,
+          code: ret,
           map: { inner: { missing: true, pluginName: plugin.name } },
         }
       }
@@ -212,7 +212,10 @@ export function bindingifyTransform(
 
       return {
         code: ret.code,
-        map: bindingifySourcemap(ret.map),
+        map:
+          ret.map === undefined
+            ? { inner: { missing: true, pluginName: plugin.name } }
+            : bindingifySourcemap(ret.map),
         sideEffects: bindingifySideEffects(ret.moduleSideEffects),
         moduleType: ret.moduleType,
       }

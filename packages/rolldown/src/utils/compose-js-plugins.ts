@@ -1,4 +1,9 @@
-import { ModuleSideEffects, Plugin, RolldownPlugin, RolldownPluginRec } from '../plugin'
+import {
+  ModuleSideEffects,
+  Plugin,
+  RolldownPlugin,
+  RolldownPluginRec,
+} from '../plugin'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'

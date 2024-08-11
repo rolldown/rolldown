@@ -18,7 +18,7 @@ export function bindingifyInputOptions(
   const pluginContextData = new PluginContextData()
   return {
     input: bindingifyInput(options.input),
-    plugins: options.plugins.flat().map((plugin) => {
+    plugins: options.plugins.map((plugin) => {
       if ('_parallel' in plugin) {
         return undefined
       }

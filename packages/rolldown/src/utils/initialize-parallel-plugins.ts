@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads'
 import { availableParallelism } from 'node:os'
-import type { RolldownPlugin } from '../plugin'
+import type { RolldownPluginRec } from '../plugin'
 import { ParallelJsPluginRegistry } from '../binding'
 
 export type WorkerData = {
@@ -15,7 +15,7 @@ type ParallelPluginInfo = {
   options: unknown
 }
 
-export async function initializeParallelPlugins(plugins: RolldownPlugin[]) {
+export async function initializeParallelPlugins(plugins: RolldownPluginRec[]) {
   const pluginInfos: ParallelPluginInfo[] = []
   for (const [index, plugin] of plugins.entries()) {
     if ('_parallel' in plugin) {

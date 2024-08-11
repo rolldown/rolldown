@@ -1,4 +1,4 @@
-import type { RolldownPlugin } from '../plugin'
+import type { RolldownPluginRec } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import {
@@ -27,7 +27,7 @@ const externalSchema = zodExt
 
 const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
-  plugins: zodExt.phantom<RolldownPlugin>().array().optional(),
+  plugins: zodExt.phantom<RolldownPluginRec>().array().optional(),
   external: externalSchema.optional(),
   resolve: z
     .strictObject({

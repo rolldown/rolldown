@@ -255,4 +255,5 @@ export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
   api?: A
 }
 
-export type RolldownPlugin<A = any> = Plugin<A> | ParallelPlugin | BuiltinPlugin
+export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin | ParallelPlugin
+export type RolldownPluginRec<A = any> = RolldownPlugin<A>  | RolldownPlugin<A>[]

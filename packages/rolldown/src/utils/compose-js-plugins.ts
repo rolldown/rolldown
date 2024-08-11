@@ -1,4 +1,4 @@
-import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
+import { ModuleSideEffects, Plugin, RolldownPlugin, RolldownPluginRec } from '../plugin'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
@@ -246,7 +246,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
   return composed
 }
 
-function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
+function isComposablePlugin(plugin: RolldownPluginRec): plugin is Plugin {
   if (plugin instanceof BuiltinPlugin) {
     return false
   }

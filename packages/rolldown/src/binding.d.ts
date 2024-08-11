@@ -167,6 +167,19 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingInjectImportNamed {
+  tagNamed: true
+  imported: string
+  alias?: string
+  from: string
+}
+
+export interface BindingInjectImportNamespace {
+  tagNamespace: true
+  alias: string
+  from: string
+}
+
 export interface BindingInputItem {
   name?: string
   import: string
@@ -185,6 +198,7 @@ export interface BindingInputOptions {
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
+  inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
 }
 
 export interface BindingJsonSourcemap {

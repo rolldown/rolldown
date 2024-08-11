@@ -25,14 +25,14 @@ impl Plugin for JsonPlugin {
     }
     let code = strim_bom(&args.code);
     if self.stringify {
-      let (normalized_code, map) = if self.is_build {
+      let normalized_code = if self.is_build {
         let value = serde_json::from_str::<Value>(code)?;
         let str = serde_json::to_string(&value)?;
         // TODO: perf: find better way than https://github.com/rolldown/vite/blob/3bf86e3f715c952a032b476b60c8c869e9c50f3f/packages/vite/src/node/plugins/json.ts#L55-L57
         let str = serde_json::to_string(&str)?;
-        (format!("export default JSON.parse({str})"), None)
+        format!("export default JSON.parse({str})")
       } else {
-        (format!("export default JSON.parse({})", serde_json::to_string(code)?), None)
+        format!("export default JSON.parse({})", serde_json::to_string(code)?)
       };
       return Ok(Some(HookTransformOutput {
         code: Some(normalized_code),
@@ -92,6 +92,7 @@ fn is_special_query(ext: &str) -> bool {
   false
 }
 
+#[cfg(test)]
 mod test {
   use crate::{is_json_ext, is_special_query};
 

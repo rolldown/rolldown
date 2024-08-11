@@ -1,3 +1,3 @@
-import { createApp } from 'vue'
+import json from './package.json'
 
-export default createApp({})
+console.log(`json.version: `, json.name)

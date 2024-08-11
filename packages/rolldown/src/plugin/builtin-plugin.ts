@@ -13,6 +13,7 @@ import {
   BindingBuiltinPlugin,
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
+  BindingJsonPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -81,6 +82,12 @@ export class TransformPlugin extends BuiltinPlugin {
   }
 }
 
+export class JsonPlugin extends BuiltinPlugin {
+  constructor(config?: BindingJsonPluginConfig) {
+    super(BindingBuiltinPluginName.JsonPlugin, config)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -117,6 +124,11 @@ export function loadFallbackPlugin() {
 
 export function aliasPlugin(config: AliasPluginConfig) {
   return new AliasPlugin(config)
+}
+
+
+export function jsonPlugin(config?: BindingJsonPluginConfig) {
+  return new JsonPlugin(config)
 }
 
 export function bindingifyBuiltInPlugin(

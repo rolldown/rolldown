@@ -1,6 +1,5 @@
-use rolldown_plugin::{
-  HookTransformOutput, Plugin,
-};
+use rolldown_common::ModuleType;
+use rolldown_plugin::{HookTransformOutput, Plugin};
 use serde_json::Value;
 use std::borrow::Cow;
 
@@ -26,14 +25,20 @@ impl Plugin for JsonPlugin {
     }
     let code = strim_bom(&args.code);
     if self.stringify {
-      let normalized_code = if self.is_build {
+      let (normalized_code, map) = if self.is_build {
         let value = serde_json::from_str::<Value>(code)?;
         let str = serde_json::to_string(&value)?;
-        format!("export default JSON.parse({str})")
+        // TODO: perf: find better way than https://github.com/rolldown/vite/blob/3bf86e3f715c952a032b476b60c8c869e9c50f3f/packages/vite/src/node/plugins/json.ts#L55-L57
+        let str = serde_json::to_string(&str)?;
+        (format!("export default JSON.parse({str})"), None)
       } else {
-        format!("export default JSON.parse({})", serde_json::to_string(code)?)
+        (format!("export default JSON.parse({})", serde_json::to_string(code)?), None)
       };
-      return Ok(Some(HookTransformOutput { code: Some(normalized_code), ..Default::default() }));
+      return Ok(Some(HookTransformOutput {
+        code: Some(normalized_code),
+        module_type: Some(ModuleType::Js),
+        ..Default::default()
+      }));
     }
     // let default json handler to transform json
     Ok(None)

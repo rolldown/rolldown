@@ -30,7 +30,8 @@
       // `Object.assign`
       {
         "type": "named",
-        "imported": "Object.assign",
+        "imported": "default",
+        "alias": "Object.assign",
         "from": "./object-assign-shim"
       }
     ]

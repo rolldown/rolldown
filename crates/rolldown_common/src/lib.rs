@@ -14,6 +14,7 @@ pub mod bundler_options {
     types::{
       es_module_flag::EsModuleFlag,
       filename_template::{FileNameRenderOptions, FilenameTemplate},
+      inject_import::InjectImport,
       input_item::InputItem,
       is_external::IsExternal,
       module_type::ModuleType,

@@ -1,12 +1,13 @@
 use rolldown_utils::indexmap::FxIndexMap;
-#[cfg(feature = "deserialize_bundler_options")]
-use serde_json::Value;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
+use types::inject_import::InjectImport;
 
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
+#[cfg(feature = "deserialize_bundler_options")]
+use serde_json::Value;
 use types::experimental_options::ExperimentalOptions;
 
 use self::types::treeshake::TreeshakeOptions;
@@ -105,6 +106,7 @@ pub struct BundlerOptions {
   )]
   pub define: Option<FxIndexMap<String, String>>,
   pub extend: Option<bool>,
+  pub inject: Option<Vec<InjectImport>>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

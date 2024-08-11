@@ -19,7 +19,7 @@ export default defineTest({
         name: 'svg-resolver',
         resolveId(source, importer) {
           if (source.endsWith('.svg')) {
-            return path.resolve(path.dirname(importer), source)
+            return path.resolve(path.dirname(importer!), source)
           }
         },
         load(id) {

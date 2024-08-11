@@ -1621,7 +1621,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/inject
 
-- main-!~{000}~.mjs => main-7LIxqMuJ.mjs
+- main-!~{000}~.mjs => main-dKJg0iPO.mjs
 
 # tests/rolldown/function/intro/cjs
 

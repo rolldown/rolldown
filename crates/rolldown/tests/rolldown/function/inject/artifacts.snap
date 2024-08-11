@@ -20,11 +20,16 @@ var jquery_default = "jquery";
 var node_fs_default = "node-fs";
 
 //#endregion
+//#region object-assign-shim.js
+var object_assign_shim_default = "object-assign-shim";
+
+//#endregion
 //#region main.js
 assert.strictEqual(Promise, "promise-shim");
 assert.strictEqual(Promise, "promise-shim");
 assert.strictEqual(jquery_default, "jquery");
 assert.strictEqual(node_fs_default, "node-fs");
+assert.strictEqual(object_assign_shim_default, "object-assign-shim");
 
 //#endregion
 ```

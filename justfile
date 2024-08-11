@@ -99,6 +99,7 @@ fmt-repo:
 lint:
     just lint-rust
     just lint-node
+    just lint-repo
 
 lint-rust:
     cargo fmt --all -- --check

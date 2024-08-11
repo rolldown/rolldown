@@ -11,8 +11,7 @@ export async function normalizeInputOptions(
   config: InputOptions,
 ): Promise<NormalizedInputOptions> {
   const { input, ...rest } = config
-  let plugins = await normalizePluginOption(config.plugins)
-  plugins = plugins.flat()
+  let plugins = (await normalizePluginOption(config.plugins)).flat()
   if (rest.experimental?.enableComposingJsPlugins ?? false) {
     plugins = composeJsPlugins(plugins)
   }

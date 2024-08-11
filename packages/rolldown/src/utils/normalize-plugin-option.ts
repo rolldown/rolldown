@@ -1,7 +1,7 @@
 import type { OutputOptions, OutputPlugin } from '../rollup-types'
 import type { InputOptions } from '../options/input-options'
 import { asyncFlatten } from './async-flatten'
-import type { RolldownPlugin, RolldownPluginRec } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 
 export const normalizePluginOption: {
   (plugins: InputOptions['plugins']): Promise<RolldownPlugin[]>

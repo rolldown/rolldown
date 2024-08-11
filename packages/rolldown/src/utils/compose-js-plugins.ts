@@ -129,7 +129,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           composed.buildStart = async function (options) {
             await Promise.all(
               batchedHandlers.map((handler) => {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
+                const { handler: handlerFn } = normalizeHook(handler)
                 return handlerFn.call(this, options)
               }),
             )
@@ -142,7 +142,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const batchedHandlers = batchedHooks.load
           composed.load = async function (id) {
             for (const handler of batchedHandlers) {
-              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(this, id)
               if (!isNullish(result)) {
                 return result
@@ -167,7 +167,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               moduleSideEffects = newModuleSideEffects ?? undefined
             }
             for (const handler of batchedHandlers) {
-              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(this, code, id, moduleType)
               if (!isNullish(result)) {
                 if (typeof result === 'string') {
@@ -213,7 +213,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           composed.buildEnd = async function (err) {
             await Promise.all(
               batchedHandlers.map((handler) => {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
+                const { handler: handlerFn } = normalizeHook(handler)
                 return handlerFn.call(this, err)
               }),
             )
@@ -226,7 +226,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const batchedHandlers = batchedHooks.renderChunk
           composed.renderChunk = async function (code, chunk, options) {
             for (const handler of batchedHandlers) {
-              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(this, code, chunk, options)
               if (!isNullish(result)) {
                 return result

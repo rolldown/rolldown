@@ -28,7 +28,7 @@ export function bindingifyBuildStart(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx) => {
@@ -50,7 +50,7 @@ export function bindingifyBuildEnd(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, err) => {
@@ -72,7 +72,7 @@ export function bindingifyResolveId(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, specifier, importer, extraOptions) => {
@@ -127,7 +127,7 @@ export function bindingifyResolveDynamicImport(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, specifier, importer) => {
@@ -175,7 +175,7 @@ export function bindingifyTransform(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, code, id, meta) => {
@@ -227,7 +227,7 @@ export function bindingifyLoad(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, id) => {
@@ -292,7 +292,7 @@ export function bindingifyModuleParsed(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, moduleInfo) => {

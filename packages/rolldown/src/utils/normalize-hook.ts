@@ -1,22 +1,35 @@
-import type { ObjectHook } from '../plugin'
+import { AnyFn } from '../types/utils'
+import type { ObjectHook, ObjectHookMeta } from '../plugin'
+import { unreachable } from './misc'
 
-export function normalizeHook<T extends ObjectHook<Function | string>>(
-  hook: T,
-): T extends ObjectHook<infer A, infer B>
-  ? T extends Function | string
-    ? [A, {}]
-    : [A, Omit<B, 'handler'>]
-  : never {
-  if (typeof hook === 'function') {
-    // @ts-ignore
-    return [hook, {}]
+export function normalizeHook<Hook extends ObjectHook<AnyFn | string>>(
+  hook: Hook,
+) {
+  type Return =
+    Hook extends ObjectHook<infer RawHook, infer CustomOptions>
+      ? {
+          handler: RawHook
+          options: CustomOptions
+          meta: ObjectHookMeta
+        }
+      : never
+
+  if (typeof hook === 'function' || typeof hook === 'string') {
+    return {
+      handler: hook,
+      options: {},
+      meta: {},
+    } as Return
+  } else if (typeof hook === 'object' && hook !== null) {
+    const { handler, order, ...options } = hook
+    return {
+      handler,
+      options,
+      meta: {
+        order,
+      },
+    } as Return
   }
 
-  if (typeof hook === 'object' && hook !== null) {
-    const { handler, ...options } = hook
-    // @ts-ignore
-    return [handler, options]
-  }
-  // @ts-ignore
-  return [hook, {}]
+  unreachable('Invalid hook type')
 }

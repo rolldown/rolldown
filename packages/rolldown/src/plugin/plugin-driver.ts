@@ -25,7 +25,7 @@ export class PluginDriver {
       const name = plugin.name || 'unknown'
       const options = plugin.options
       if (options) {
-        const [handler, _optionsIgnoredSofar] = normalizeHook(options)
+        const { handler } = normalizeHook(options)
         const result = await handler.call(
           {
             debug: getLogHandler(
@@ -74,7 +74,7 @@ export class PluginDriver {
     for (const plugin of plugins) {
       const options = plugin.outputOptions
       if (options) {
-        const [handler, _optionsIgnoredSofar] = normalizeHook(options)
+        const { handler } = normalizeHook(options)
         const result = handler.call(null, outputOptions)
 
         if (result) {

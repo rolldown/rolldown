@@ -22,7 +22,7 @@ export function bindingifyRenderStart(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx) => {
@@ -46,7 +46,7 @@ export function bindingifyRenderChunk(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, code, chunk) => {
@@ -87,7 +87,7 @@ export function bindingifyAugmentChunkHash(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, chunk) => {
@@ -109,7 +109,7 @@ export function bindingifyRenderError(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, err) => {
@@ -132,7 +132,7 @@ export function bindingifyGenerateBundle(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, bundle, isWrite) => {
@@ -156,7 +156,7 @@ export function bindingifyWriteBundle(
   if (!hook) {
     return [undefined, undefined]
   }
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, bundle) => {
@@ -180,7 +180,7 @@ export function bindingifyBanner(
     return [undefined, undefined]
   }
 
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
   return [
     async (ctx, chunk) => {
       if (typeof handler === 'string') {
@@ -206,7 +206,7 @@ export function bindingifyFooter(
     return [undefined, undefined]
   }
 
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, chunk) => {
@@ -233,7 +233,7 @@ export function bindingifyIntro(
     return [undefined, undefined]
   }
 
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, chunk) => {
@@ -260,7 +260,7 @@ export function bindingifyOutro(
     return [undefined, undefined]
   }
 
-  const [handler, meta] = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook)
 
   return [
     async (ctx, chunk) => {

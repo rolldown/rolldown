@@ -21,7 +21,7 @@ pub struct ModulePreloadPolyfillPlugin {
 
 impl Plugin for ModulePreloadPolyfillPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("module_preload_polyfill")
+    Cow::Borrowed("builtin:module-preload-polyfill")
   }
 
   async fn resolve_id(

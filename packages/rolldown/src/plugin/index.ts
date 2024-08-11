@@ -171,9 +171,11 @@ export interface FunctionPluginHooks {
   ) => void
 }
 
-export type ObjectHook<T, O = {}> =
-  | T
-  | ({ handler: T /* TODO order?: 'pre' | 'post' | null  */ } & O)
+export type PluginOrder = 'pre' | 'post' | null
+
+export type ObjectHookMeta<O = {}> = { order?: PluginOrder } & O
+
+export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta<O>)
 
 export type SyncPluginHooks = 'augmentChunkHash' | 'onLog' | 'outputOptions'
 // | 'renderDynamicImport'

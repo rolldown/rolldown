@@ -3,6 +3,7 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
+use rolldown_utils::path_ext::clean_url;
 use sugar_path::SugarPath;
 
 pub async fn load_source(
@@ -30,21 +31,26 @@ pub async fn load_source(
 
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
-    (Some(source), None) => {
-      // The `load` hook returns content without specifying the module type, we consider it as `Js` by default.
-      // - This makes the behavior consistent with Rollup.
-      // - It's also not friendly to make users have to specify the module type in the `load` hook.
-      // - Why don't we jump into the guessing logic? Because guessing by extension is not reliable in the rollup's ecosystem.
-      Ok((source.into(), ModuleType::Js))
-    }
-    (None, None) => {
-      let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
+    (source, None) => {
+      // Considering path with `?/#`
+      let cleaned_id = clean_url(&resolved_id.id);
+      let ext = cleaned_id.as_path().extension().and_then(|ext| ext.to_str());
       let guessed = ext.and_then(|ext| options.module_types.get(ext).cloned());
-      if let Some(guessed) = guessed {
-        match &guessed {
-          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => {
-            Ok((StrOrBytes::Bytes(fs.read(resolved_id.id.as_path())?), guessed))
-          }
+      match (source, guessed) {
+        (None, None) => Ok((
+          StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?),
+          ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
+        )),
+        (source, Some(guessed)) => match &guessed {
+          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
+            StrOrBytes::Bytes({
+              source
+                .map(String::into_bytes)
+                .ok_or(())
+                .or_else(|()| fs.read(resolved_id.id.as_path()))?
+            }),
+            guessed,
+          )),
           ModuleType::Js
           | ModuleType::Jsx
           | ModuleType::Ts
@@ -52,16 +58,14 @@ pub async fn load_source(
           | ModuleType::Json
           | ModuleType::Text
           | ModuleType::Empty
-          | ModuleType::Custom(_) => {
-            Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), guessed))
-          }
-        }
-      } else {
-        Ok((
-          StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?),
-          ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
-        ))
-        // Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could not load this asset correctly. Please use the load hook to load the resource", resolved_id.debug_id(options.cwd.as_path())))
+          | ModuleType::Custom(_) => Ok((
+            StrOrBytes::Str(
+              source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,
+            ),
+            guessed,
+          )),
+        },
+        (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
       }
     }
     (None, Some(_)) => unreachable!("Invalid state"),

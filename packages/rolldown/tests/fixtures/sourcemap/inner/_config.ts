@@ -21,10 +21,13 @@ export default defineTest({
     expect(output.output[0].code).contains('//# sourceMappingURL=main.js.map')
     expect(output.output[0].sourcemapFileName).toBe('main.js.map')
     expect(output.output[0].map).toBeDefined()
-    const map = JSON.parse(output.output[1].source)
-    expect(map.file).toMatchInlineSnapshot(`"main.js"`)
-    expect(map.mappings).toMatchInlineSnapshot(
-      `";;AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`,
-    )
+
+    if (output.output[1].type === 'asset') {
+      const map = JSON.parse(output.output[1].source.toString())
+      expect(map.file).toMatchInlineSnapshot(`"main.js"`)
+      expect(map.mappings).toMatchInlineSnapshot(
+        `";;AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`,
+      )
+    }
   },
 })

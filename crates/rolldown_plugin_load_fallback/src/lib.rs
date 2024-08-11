@@ -7,7 +7,7 @@ pub struct LoadFallbackPlugin {}
 
 impl Plugin for LoadFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("load-fallback")
+    Cow::Borrowed("builtin:load-fallback")
   }
 
   async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {

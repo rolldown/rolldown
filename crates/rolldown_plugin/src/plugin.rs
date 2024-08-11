@@ -2,6 +2,7 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::SharedPluginContext;
 use crate::{
+  plugin_hook_meta::PluginHookMeta,
   transform_plugin_context::TransformPluginContext,
   types::{
     hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
@@ -37,12 +38,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(()) }
   }
 
+  fn build_start_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn resolve_id(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveIdArgs<'_>,
   ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
     async { Ok(None) }
+  }
+
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   #[deprecated(
@@ -56,12 +65,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(None) }
   }
 
+  fn resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn load(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookLoadArgs<'_>,
   ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
     async { Ok(None) }
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   fn transform(
@@ -72,6 +89,10 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(None) }
   }
 
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn module_parsed(
     &self,
     _ctx: &SharedPluginContext,
@@ -80,12 +101,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(()) }
   }
 
+  fn module_parsed_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn build_end(
     &self,
     _ctx: &SharedPluginContext,
     _args: Option<&HookBuildEndArgs>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
+  }
+
+  fn build_end_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   // --- Generate hooks ---
@@ -97,12 +126,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(()) }
   }
 
+  fn render_start_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn banner(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookInjectionArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
+  }
+
+  fn banner_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   fn footer(
@@ -113,12 +150,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(None) }
   }
 
+  fn footer_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn intro(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookInjectionArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
+  }
+
+  fn intro_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   fn outro(
@@ -129,12 +174,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(None) }
   }
 
+  fn outro_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn render_chunk(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderChunkArgs<'_>,
   ) -> impl std::future::Future<Output = HookRenderChunkReturn> + Send {
     async { Ok(None) }
+  }
+
+  fn render_chunk_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   fn augment_chunk_hash(
@@ -145,12 +198,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(None) }
   }
 
+  fn augment_chunk_hash_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn render_error(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderErrorArgs,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
+  }
+
+  fn render_error_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   fn generate_bundle(
@@ -162,12 +223,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     async { Ok(()) }
   }
 
+  fn generate_bundle_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn write_bundle(
     &self,
     _ctx: &SharedPluginContext,
     _bundle: &mut Vec<Output>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
+  }
+
+  fn write_bundle_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 
   // --- experimental hooks ---
@@ -178,5 +247,9 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     Ok(args.ast)
+  }
+
+  fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
+    None
   }
 }

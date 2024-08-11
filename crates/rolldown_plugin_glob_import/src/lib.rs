@@ -35,7 +35,7 @@ pub struct GlobImportPluginConfig {
 
 impl Plugin for GlobImportPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("glob_import_plugin")
+    Cow::Borrowed("builtin:glob-import-plugin")
   }
 
   fn transform_ast(

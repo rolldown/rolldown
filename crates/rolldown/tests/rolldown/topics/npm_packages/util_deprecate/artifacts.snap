@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.cjs
+
+```js
+
+const { default: assert } = __toESM(require("node:assert"));
+const { deprecate } = __toESM(require("node:util"));
+
+//#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
+var require_node = __commonJSMin((exports, module) => {
+	module.exports = require("node:util").deprecate;
+});
+
+//#endregion
+//#region main.js
+const exports$1 = require_node();
+assert.strictEqual(deprecate, exports$1);
+
+//#endregion
+```

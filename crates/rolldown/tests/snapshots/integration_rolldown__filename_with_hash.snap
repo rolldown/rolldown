@@ -2013,6 +2013,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.cjs => main-uhoDhOaQ.cjs
 - shared-!~{003}~.cjs => shared-R7vFlqQk.cjs
 
+# tests/rolldown/topics/npm_packages/util_deprecate
+
+- main-!~{000}~.cjs => main-tghke2_c.cjs
+
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 
 - main-!~{000}~.mjs => main--h98FdGL.mjs

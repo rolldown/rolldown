@@ -48,6 +48,12 @@ importers:
         specifier: ^5.4.5
         version: 5.5.4
 
+  crates/rolldown/tests/rolldown/topics/npm_packages:
+    dependencies:
+      util-deprecate:
+        specifier: 1.0.2
+        version: 1.0.2
+
   docs:
     devDependencies:
       vitepress:

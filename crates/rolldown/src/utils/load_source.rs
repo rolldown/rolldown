@@ -22,7 +22,9 @@ pub async fn load_source(
     if let Some(map) = load_hook_output.map {
       match map {
         rolldown_sourcemap::SourceMapOrMissing::Missing(source_map) => {
-          warnings.push(BuildDiagnostic::sourcemap_broken(source_map.plugin_name));
+          warnings.push(
+            BuildDiagnostic::sourcemap_broken(source_map.plugin_name).with_severity_warning(),
+          );
         }
         rolldown_sourcemap::SourceMapOrMissing::SourceMap(source_map) => {
           sourcemap_chain.push(source_map);

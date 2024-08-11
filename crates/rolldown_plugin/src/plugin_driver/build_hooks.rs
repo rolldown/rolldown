@@ -168,7 +168,9 @@ impl PluginDriver {
         if let Some(map) = r.map {
           match map {
             rolldown_sourcemap::SourceMapOrMissing::Missing(source_map) => {
-              warnings.push(BuildDiagnostic::sourcemap_broken(source_map.plugin_name));
+              warnings.push(
+                BuildDiagnostic::sourcemap_broken(source_map.plugin_name).with_severity_warning(),
+              );
             }
             rolldown_sourcemap::SourceMapOrMissing::SourceMap(mut source_map) => {
               // If sourcemap  hasn't `sources`, using original id to fill it.

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## SOURCEMAP_BROKEN
 
 ```text
-[SOURCEMAP_BROKEN] Error: Sourcemap is likely to be incorrect: a plugin (sourcemap-broken-render-chunk) was used to transform files, but didn't generate a sourcemap for the transformation. Consult the plugin documentation for help
+[SOURCEMAP_BROKEN] Warning: Sourcemap is likely to be incorrect: a plugin (sourcemap-broken-render-chunk) was used to transform files, but didn't generate a sourcemap for the transformation. Consult the plugin documentation for help
 
 ```
 # Assets

@@ -1,7 +1,15 @@
-import { PLUGIN_HOOK_NAMES_SET, PluginHookNames } from '../../constants/plugin'
+import {
+  ENUMERATED_PLUGIN_HOOK_NAMES,
+  PluginHookNames,
+} from '../../constants/plugin'
 
-export function isPluginHookName(
-  hookName: string,
-): hookName is PluginHookNames {
-  return PLUGIN_HOOK_NAMES_SET.has(hookName)
-}
+export const isPluginHookName = (function () {
+  const PLUGIN_HOOK_NAMES_SET = new Set(
+    ENUMERATED_PLUGIN_HOOK_NAMES as readonly string[],
+  )
+  return function isPluginHookName(
+    hookName: string,
+  ): hookName is PluginHookNames {
+    return PLUGIN_HOOK_NAMES_SET.has(hookName)
+  }
+})()

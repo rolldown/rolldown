@@ -7,7 +7,6 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Derivative)]
 pub struct BindingSourcemap {
   #[serde(skip_deserializing, default = "default_sourcemap")]
-  #[napi(ts_type = "string | BindingJsonSourcemap ")]
   pub inner: Either<String, BindingJsonSourcemap>,
 }
 

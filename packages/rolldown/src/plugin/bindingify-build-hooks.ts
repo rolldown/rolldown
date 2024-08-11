@@ -199,10 +199,7 @@ export function bindingifyTransform(
       }
 
       if (typeof ret === 'string') {
-        return {
-          code: ret,
-          map: { inner: { missing: true, pluginName: plugin.name } },
-        }
+        return { code: ret }
       }
 
       pluginContextData.updateModuleOption(id, {
@@ -246,15 +243,15 @@ export function bindingifyLoad(
         return
       }
 
-      if (typeof ret === 'string' || ret.map === undefined) {
-        return {
-          code: typeof ret === 'string' ? ret : ret.code,
-          map: { inner: { missing: true, pluginName: plugin.name } },
-        }
+      if (typeof ret === 'string' || ret.map === null) {
+        return { code: typeof ret === 'string' ? ret : ret.code }
       }
 
       if (!ret.map) {
-        return { code: ret.code }
+        return {
+          code: ret.code,
+          map: { inner: { missing: true, pluginName: plugin.name } },
+        }
       }
 
       let map =

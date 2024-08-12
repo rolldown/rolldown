@@ -53,7 +53,9 @@ describe('cli options for bundling', () => {
 
   it('should handle single array options', async () => {
     const cwd = cliFixturesDir('cli-option-array')
-    const status = await $({ cwd })`rolldown index.ts --external node:path,node:url -d dist`
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --external node:path,node:url -d dist`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)
@@ -61,7 +63,9 @@ describe('cli options for bundling', () => {
 
   it('should handle single object options', async () => {
     const cwd = cliFixturesDir('cli-option-object')
-    const status = await $({ cwd })`rolldown index.ts --moduleTypes .123=text,.json5=json -d dist`
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --moduleTypes .123=text,.json5=json -d dist`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)

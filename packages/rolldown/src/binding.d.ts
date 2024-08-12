@@ -112,7 +112,7 @@ export interface BindingBuiltinPlugin {
 
 export declare enum BindingBuiltinPluginName {
   WasmPlugin = 0,
-  GlobImportPlugin = 1,
+  ImportGlobPlugin = 1,
   DynamicImportVarsPlugin = 2,
   ModulePreloadPolyfillPlugin = 3,
   ManifestPlugin = 4,

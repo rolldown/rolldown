@@ -1,4 +1,4 @@
-import { globImportPlugin } from 'rolldown/experimental'
+import { importGlobPlugin } from 'rolldown/experimental'
 import { RolldownOutput } from 'rolldown'
 import { defineTest } from '@tests'
 import { expect } from 'vitest'
@@ -8,7 +8,7 @@ import * as path from 'path'
 export default defineTest({
   config: {
     plugins: [
-      globImportPlugin({}),
+      importGlobPlugin({}),
       {
         name: 'load-file-with-query',
         load(id: string) {

@@ -4,7 +4,7 @@ use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
-use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
+use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
@@ -39,7 +39,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 #[napi]
 pub enum BindingBuiltinPluginName {
   WasmPlugin,
-  GlobImportPlugin,
+  ImportGlobPlugin,
   DynamicImportVarsPlugin,
   ModulePreloadPolyfillPlugin,
   ManifestPlugin,
@@ -55,9 +55,9 @@ pub struct BindingGlobImportPluginConfig {
   pub restore_query_extension: Option<bool>,
 }
 
-impl From<BindingGlobImportPluginConfig> for GlobImportPluginConfig {
+impl From<BindingGlobImportPluginConfig> for ImportGlobPluginConfig {
   fn from(value: BindingGlobImportPluginConfig) -> Self {
-    GlobImportPluginConfig {
+    ImportGlobPluginConfig {
       root: value.root,
       restore_query_extension: value.restore_query_extension.unwrap_or_default(),
     }
@@ -132,13 +132,13 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
-      BindingBuiltinPluginName::GlobImportPlugin => {
+      BindingBuiltinPluginName::ImportGlobPlugin => {
         let config = if let Some(options) = plugin.options {
           BindingGlobImportPluginConfig::from_unknown(options)?.into()
         } else {
-          GlobImportPluginConfig::default()
+          ImportGlobPluginConfig::default()
         };
-        Arc::new(GlobImportPlugin { config })
+        Arc::new(ImportGlobPlugin { config })
       }
       BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
       BindingBuiltinPluginName::ModulePreloadPolyfillPlugin => {

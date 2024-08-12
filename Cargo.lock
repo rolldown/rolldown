@@ -2202,7 +2202,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_dynamic_import_vars",
- "rolldown_plugin_glob_import",
+ "rolldown_plugin_import_glob",
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
@@ -2334,7 +2334,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_glob_import"
+name = "rolldown_plugin_import_glob"
 version = "0.1.0"
 dependencies = [
  "glob",

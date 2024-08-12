@@ -7,7 +7,7 @@ export {
   modulePreloadPolyfillPlugin,
   dynamicImportVarsPlugin,
   wasmPlugin,
-  globImportPlugin,
+  importGlobPlugin,
   manifestPlugin,
   loadFallbackPlugin,
   transformPlugin,

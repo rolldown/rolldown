@@ -92,9 +92,6 @@ jobs:
       - name: Lint
         run: just lint-rust
 
-      - name: Check unused dependencies
-        run: cargo shear
-
   cargo-test:
     needs: changes
     strategy:

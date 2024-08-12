@@ -7,7 +7,7 @@ _default:
 setup:
   # Rust related setup
   cargo install cargo-binstall
-  cargo binstall taplo-cli cargo-insta cargo-deny -y
+  cargo binstall taplo-cli cargo-insta cargo-deny cargo-shear -y
   # Node.js related setup
   corepack enable
   pnpm install
@@ -90,6 +90,7 @@ fmt:
 fmt-rust:
     cargo fmt --all -- --emit=files
     taplo fmt
+    cargo shear --fix
 
 fmt-repo:
     pnpm lint-prettier:fix
@@ -104,6 +105,7 @@ lint:
 lint-rust:
     cargo fmt --all -- --check
     cargo clippy --workspace --all-targets -- --deny warnings
+    cargo shear
 
 lint-node:
     pnpm lint-code

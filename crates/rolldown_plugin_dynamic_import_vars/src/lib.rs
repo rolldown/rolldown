@@ -9,7 +9,7 @@ use oxc::{
 use parse_pattern::{parse_pattern, DynamicImportPattern, DynamicImportRequest};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin, SharedPluginContext,
+  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext,
 };
 use std::borrow::Cow;
 use to_glob::to_glob_pattern;
@@ -29,7 +29,7 @@ impl Plugin for DynamicImportVarsPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == DYNAMIC_IMPORT_HELPER {
@@ -39,7 +39,7 @@ impl Plugin for DynamicImportVarsPlugin {
     }
   }
 
-  async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id == DYNAMIC_IMPORT_HELPER {
       Ok(Some(HookLoadOutput {
         code: include_str!("dynamic_import_helper.js").to_string(),
@@ -52,7 +52,7 @@ impl Plugin for DynamicImportVarsPlugin {
 
   fn transform_ast(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     mut args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"

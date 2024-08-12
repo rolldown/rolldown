@@ -1,7 +1,7 @@
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, SharedPluginContext,
+  HookResolveIdReturn, Plugin, PluginContext,
 };
 use std::borrow::Cow;
 
@@ -26,7 +26,7 @@ impl Plugin for ModulePreloadPolyfillPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     Ok((args.specifier == MODULE_PRELOAD_POLYFILL).then(|| HookResolveIdOutput {
@@ -35,7 +35,7 @@ impl Plugin for ModulePreloadPolyfillPlugin {
     }))
   }
 
-  async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if self.skip {
       return Ok(Some(HookLoadOutput::default()));
     }

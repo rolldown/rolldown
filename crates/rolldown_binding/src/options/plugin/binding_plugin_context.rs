@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use napi_derive::napi;
 
-use rolldown_plugin::SharedPluginContext;
+use rolldown_plugin::PluginContext;
 
 use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
 
@@ -14,7 +14,7 @@ use super::types::{
 #[napi]
 pub struct BindingPluginContext {
   #[allow(dead_code)]
-  inner: SharedPluginContext,
+  inner: PluginContext,
 }
 
 #[napi]
@@ -63,8 +63,8 @@ impl BindingPluginContext {
   }
 }
 
-impl From<SharedPluginContext> for BindingPluginContext {
-  fn from(inner: SharedPluginContext) -> Self {
+impl From<PluginContext> for BindingPluginContext {
+  fn from(inner: PluginContext) -> Self {
     Self { inner }
   }
 }

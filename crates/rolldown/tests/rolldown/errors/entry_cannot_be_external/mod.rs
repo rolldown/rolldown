@@ -2,7 +2,7 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
-  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, SharedPluginContext,
+  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
 };
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 
@@ -16,7 +16,7 @@ impl Plugin for TestPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == "ext" {

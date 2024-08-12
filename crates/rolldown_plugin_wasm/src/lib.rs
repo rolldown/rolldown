@@ -3,7 +3,7 @@ use std::{borrow::Cow, fs, path::Path};
 use rolldown_common::{AssetSource, EmittedAsset};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, SharedPluginContext,
+  HookResolveIdReturn, Plugin, PluginContext,
 };
 
 const WASM_RUNTIME: &str = "\0rolldown_wasm_runtime.js";
@@ -18,7 +18,7 @@ impl Plugin for WasmPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == WASM_RUNTIME {
@@ -28,7 +28,7 @@ impl Plugin for WasmPlugin {
     }
   }
 
-  async fn load(&self, ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id == WASM_RUNTIME {
       return Ok(Some(HookLoadOutput {
         code: include_str!("wasm_runtime.js").to_string(),

@@ -84,14 +84,15 @@ impl PluginDriver {
       }
       if let Some(r) = plugin
         .call_resolve_id(
-          &skipped_resolve_calls
-            .map(|skipped_resolve_calls| {
+          &skipped_resolve_calls.map_or_else(
+            || ctx.clone(),
+            |skipped_resolve_calls| {
               PluginContext::new_shared_with_skipped_resolve_calls(
                 ctx,
                 skipped_resolve_calls.clone(),
               )
-            })
-            .unwrap_or(Arc::clone(ctx)),
+            },
+          ),
           args,
         )
         .await?
@@ -119,14 +120,15 @@ impl PluginDriver {
       }
       if let Some(r) = plugin
         .call_resolve_dynamic_import(
-          &skipped_resolve_calls
-            .map(|skipped_resolve_calls| {
+          &skipped_resolve_calls.map_or_else(
+            || ctx.clone(),
+            |skipped_resolve_calls| {
               PluginContext::new_shared_with_skipped_resolve_calls(
                 ctx,
                 skipped_resolve_calls.clone(),
               )
-            })
-            .unwrap_or(Arc::clone(ctx)),
+            },
+          ),
           args,
         )
         .await?
@@ -158,7 +160,7 @@ impl PluginDriver {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
       if let Some(r) = plugin
         .call_transform(
-          &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
+          &TransformPluginContext::new(ctx.clone(), sourcemap_chain, original_code, args.id),
           &HookTransformArgs { id: args.id, code: &code, module_type: &*module_type },
         )
         .await?

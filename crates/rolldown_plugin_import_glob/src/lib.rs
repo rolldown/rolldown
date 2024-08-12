@@ -12,7 +12,7 @@ use oxc::{
   },
   span::{Span, SPAN},
 };
-use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, SharedPluginContext};
+use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext};
 use rustc_hash::FxHashMap;
 use std::{
   borrow::Cow,
@@ -40,7 +40,7 @@ impl Plugin for ImportGlobPlugin {
 
   fn transform_ast(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     mut args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {

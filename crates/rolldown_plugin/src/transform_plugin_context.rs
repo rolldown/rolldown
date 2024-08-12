@@ -1,10 +1,10 @@
-use crate::SharedPluginContext;
+use crate::PluginContext;
 use rolldown_sourcemap::SourceMap;
 
 #[allow(unused)]
 #[derive(Debug)]
 pub struct TransformPluginContext<'a> {
-  pub inner: SharedPluginContext,
+  pub inner: PluginContext,
   sourcemap_chain: &'a Vec<SourceMap>,
   original_code: &'a str,
   id: &'a str,
@@ -12,7 +12,7 @@ pub struct TransformPluginContext<'a> {
 
 impl<'a> TransformPluginContext<'a> {
   pub fn new(
-    inner: SharedPluginContext,
+    inner: PluginContext,
     sourcemap_chain: &'a Vec<SourceMap>,
     original_code: &'a str,
     id: &'a str,

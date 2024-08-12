@@ -25,7 +25,7 @@ const externalSchema = zodExt
       .returns(zodExt.voidNullableWith(z.boolean())),
   )
 
-const inputOptionsSchema = z.strictObject({
+export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
   plugins: zodExt.phantom<RolldownPluginRec>().array().optional(),
   external: externalSchema.optional(),
@@ -96,6 +96,18 @@ const inputOptionsSchema = z.strictObject({
     .optional(),
   define: z.record(z.string()).optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
+})
+
+export const inputCliOptionsSchema = inputOptionsSchema.extend({
+  input: z.array(z.string()).optional(),
+  external: z.array(z.string()).optional(),
+  onLog: z.string().optional(), // command
+  onwarn: z.string().optional(),
+  inject: z.record(z.string()).optional(),
+  // Doesn't support treeshake options as it is ambiguous
+  treeshake: z.undefined().optional(),
+  // Doesn't support plugin yet.
+  plugins: z.undefined().optional(),
 })
 
 type RawInputOptions = z.infer<typeof inputOptionsSchema>

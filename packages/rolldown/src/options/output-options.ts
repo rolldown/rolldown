@@ -51,6 +51,22 @@ const outputOptionsSchema = z.strictObject({
   globals: z.record(z.string()).optional(),
 })
 
+export const outputCliOptionsSchema = outputOptionsSchema.extend({
+  // Reject all functions in CLI
+  banner: z.string().optional(),
+  footer: z.string().optional(),
+  intro: z.string().optional(),
+  outro: z.string().optional(),
+  // It is hard to handle the union type in json schema, so use this first.
+  esModule: z
+    .literal('if-default-prop')
+    .or(z.literal('always'))
+    .or(z.literal('never'))
+    .optional(),
+  sourcemapIgnoreList: z.boolean().optional(),
+  sourcemapPathTransform: z.undefined().optional(),
+})
+
 export type OutputOptions = z.infer<typeof outputOptionsSchema>
 
 export type SourcemapIgnoreListOption = (

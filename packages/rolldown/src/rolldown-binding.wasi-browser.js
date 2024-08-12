@@ -58,16 +58,6 @@ const {
 })
 
 function __napi_rs_initialize_modules(__napiInstance) {
-  __napiInstance.exports['__napi_register__TypeScriptBindingOptions_struct_0']?.()
-  __napiInstance.exports['__napi_register__ReactBindingOptions_struct_1']?.()
-  __napiInstance.exports['__napi_register__ArrowFunctionsBindingOptions_struct_2']?.()
-  __napiInstance.exports['__napi_register__ES2015BindingOptions_struct_3']?.()
-  __napiInstance.exports['__napi_register__TransformOptions_struct_4']?.()
-  __napiInstance.exports['__napi_register__SourceMap_struct_5']?.()
-  __napiInstance.exports['__napi_register__IsolatedDeclarationsResult_struct_6']?.()
-  __napiInstance.exports['__napi_register__isolated_declaration_7']?.()
-  __napiInstance.exports['__napi_register__TransformResult_struct_8']?.()
-  __napiInstance.exports['__napi_register__transform_9']?.()
   __napiInstance.exports['__napi_register__Bundler_struct_0']?.()
   __napiInstance.exports['__napi_register__Bundler_impl_5']?.()
   __napiInstance.exports['__napi_register__BindingInjectImportNamed_struct_6']?.()
@@ -138,6 +128,4 @@ export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPlugi
 export const BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
-export const isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 export const registerPlugins = __napiModule.exports.registerPlugins
-export const transform = __napiModule.exports.transform

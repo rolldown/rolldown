@@ -15,8 +15,7 @@ use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
-  HookBuildEndArgs, HookRenderErrorArgs, PluginDriver, SharedPluginDriver,
-  __inner::SharedPluginable,
+  HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
 use tracing_chrome::FlushGuard;
 
@@ -136,11 +135,13 @@ impl Bundler {
       Err(errors) => return Ok(BundleOutput { assets: vec![], warnings: vec![], errors }),
     };
 
-    // The plugin_driver is wrapped by `Arc`, make it mutable is difficult, so here replace it to a new one.
-    self.plugin_driver = PluginDriver::new_shared_with_module_table(
-      &self.plugin_driver,
-      &Arc::new(unsafe { std::mem::transmute(&mut link_stage_output.module_table) }),
-    );
+    self.plugin_driver.set_module_table(unsafe {
+      // Can't ensure the safety here. It's only a temporary solution.
+      // - We won't mutate the `module_table` in the generate stage.
+      // - We transmute the stacked reference to a static lifetime and it haven't met errors due to we happen
+      // to only need to access the `module_table` during this function call.
+      std::mem::transmute(&link_stage_output.module_table)
+    });
 
     self.plugin_driver.render_start().await?;
 

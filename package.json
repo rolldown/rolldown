@@ -36,7 +36,7 @@
     "husky": "^9.0.11",
     "lint-staged": "^15.2.5",
     "npm-rolldown": "npm:rolldown@0.12.2",
-    "oxlint": "0.7.0",
+    "oxlint": "0.7.1",
     "prettier": "^3.3.1",
     "rolldown": "workspace:*",
     "typescript": "^5.4.5"

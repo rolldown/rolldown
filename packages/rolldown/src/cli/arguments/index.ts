@@ -26,10 +26,7 @@ const options = Object.fromEntries(
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
-    return [
-      key,
-      result,
-    ]
+    return [key, result]
   }),
 )
 
@@ -38,7 +35,7 @@ export function parseCliArguments() {
     options,
     tokens: true,
     allowPositionals: true,
-    allowNegative: true
+    allowNegative: true,
   })
 
   tokens

@@ -2,8 +2,14 @@
  * @description This file is used for normalize the options.
  * In CLI, the input options and output options are mixed together. We need to tell them apart.
  */
-import { inputCliOptionsSchema, InputOptions } from '../../options/input-options'
-import { outputCliOptionsSchema, OutputOptions } from '../../options/output-options'
+import {
+  inputCliOptionsSchema,
+  InputOptions,
+} from '../../options/input-options'
+import {
+  outputCliOptionsSchema,
+  OutputOptions,
+} from '../../options/output-options'
 import type { CliOptions } from './schema'
 
 export interface NormalizedCliOptions {
@@ -18,7 +24,12 @@ export function normalizeCliOptions(options: CliOptions): NormalizedCliOptions {
     input: {},
     output: {},
     help: options.help ?? false,
-    config: typeof options.config === 'boolean' ? (options.config ? 'rolldown.config.js' : '') : (options.config ?? ''),
+    config:
+      typeof options.config === 'boolean'
+        ? options.config
+          ? 'rolldown.config.js'
+          : ''
+        : (options.config ?? ''),
   } as NormalizedCliOptions
   const keysOfInput = inputCliOptionsSchema.keyof()._def.values as string[]
   const keysOfOutput = outputCliOptionsSchema.keyof()._def.values as string[]

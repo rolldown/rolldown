@@ -6,7 +6,10 @@ import { ensureConfig, logger } from '../utils'
 import * as colors from '../colors'
 import { NormalizedCliOptions } from '../arguments/normalize'
 
-export async function bundleWithConfig(configPath: string, cliOptions: NormalizedCliOptions) {
+export async function bundleWithConfig(
+  configPath: string,
+  cliOptions: NormalizedCliOptions,
+) {
   const config = await ensureConfig(configPath)
 
   if (!config) {
@@ -25,11 +28,17 @@ export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
   await bundleInner({}, cliOptions)
 }
 
-async function bundleInner(options: RolldownOptions, cliOptions: NormalizedCliOptions) {
+async function bundleInner(
+  options: RolldownOptions,
+  cliOptions: NormalizedCliOptions,
+) {
   const startTime = performance.now()
 
   const build = await rolldown({ ...options, ...cliOptions.input })
-  const bundleOutput = await build.write({ ...options?.output, ...cliOptions.output })
+  const bundleOutput = await build.write({
+    ...options?.output,
+    ...cliOptions.output,
+  })
 
   const endTime = performance.now()
 

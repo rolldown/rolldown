@@ -1,6 +1,6 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
+use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
-use crate::{HookInjectionArgs, PluginDriver};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk};
 use rolldown_sourcemap::SourceMap;
@@ -16,7 +16,7 @@ impl PluginDriver {
 
   pub async fn banner(
     &self,
-    args: HookInjectionArgs<'_>,
+    args: HookAddonArgs<'_>,
     mut banner: String,
   ) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
@@ -33,7 +33,7 @@ impl PluginDriver {
 
   pub async fn footer(
     &self,
-    args: HookInjectionArgs<'_>,
+    args: HookAddonArgs<'_>,
     mut footer: String,
   ) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
@@ -48,11 +48,7 @@ impl PluginDriver {
     Ok(Some(footer))
   }
 
-  pub async fn intro(
-    &self,
-    args: HookInjectionArgs<'_>,
-    mut intro: String,
-  ) -> Result<Option<String>> {
+  pub async fn intro(&self, args: HookAddonArgs<'_>, mut intro: String) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       if let Some(r) = plugin.call_intro(ctx, &args).await? {
         intro.push('\n');
@@ -65,11 +61,7 @@ impl PluginDriver {
     Ok(Some(intro))
   }
 
-  pub async fn outro(
-    &self,
-    args: HookInjectionArgs<'_>,
-    mut outro: String,
-  ) -> Result<Option<String>> {
+  pub async fn outro(&self, args: HookAddonArgs<'_>, mut outro: String) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       if let Some(r) = plugin.call_outro(ctx, &args).await? {
         outro.push('\n');

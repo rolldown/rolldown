@@ -1,5 +1,5 @@
+pub mod hook_addon_args;
 pub mod hook_build_end_args;
-pub mod hook_injection_args;
 pub mod hook_load_args;
 pub mod hook_load_output;
 pub mod hook_render_chunk_args;

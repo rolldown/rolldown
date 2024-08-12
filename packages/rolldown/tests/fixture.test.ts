@@ -22,8 +22,14 @@ function main() {
         const output = await compileFixture(
           nodePath.join(import.meta.dirname, dirPath),
           testConfig,
-        )
-        if (testConfig.afterTest) {
+        ).catch(async (err) => {
+          if (testConfig.catchError) {
+            await testConfig.catchError(err)
+            return
+          }
+          throw err
+        })
+        if (testConfig.afterTest && output) {
           await testConfig.afterTest(output)
         }
       } catch (err) {
@@ -50,8 +56,14 @@ function main() {
           const output = await compileFixture(
             nodePath.join(import.meta.dirname, dirPath),
             testConfig,
-          )
-          if (testConfig.afterTest) {
+          ).catch(async (err) => {
+            if (testConfig.catchError) {
+              await testConfig.catchError(err)
+              return
+            }
+            throw err
+          })
+          if (testConfig.afterTest && output) {
             await testConfig.afterTest(output)
           }
         } catch (err) {

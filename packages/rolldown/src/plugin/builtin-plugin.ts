@@ -50,6 +50,12 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
+export class WasmFallbackPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.WasmFallbackPlugin)
+  }
+}
+
 export class LoadFallbackPlugin extends BuiltinPlugin {
   constructor() {
     super(BindingBuiltinPluginName.LoadFallbackPlugin)
@@ -83,6 +89,10 @@ export function manifestPlugin(config?: BindingManifestPluginConfig) {
 
 export function wasmPlugin() {
   return new WasmPlugin()
+}
+
+export function wasmFallbackPlugin() {
+  return new WasmFallbackPlugin()
 }
 
 export function transformPlugin(config?: TransformPluginConfig) {

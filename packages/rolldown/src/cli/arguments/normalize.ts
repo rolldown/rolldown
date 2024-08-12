@@ -17,6 +17,7 @@ export interface NormalizedCliOptions {
   output: OutputOptions
   help: boolean
   config: string
+  version: boolean
 }
 
 export function normalizeCliOptions(options: CliOptions): NormalizedCliOptions {
@@ -24,6 +25,7 @@ export function normalizeCliOptions(options: CliOptions): NormalizedCliOptions {
     input: {},
     output: {},
     help: options.help ?? false,
+    version: options.version ?? false,
     config:
       typeof options.config === 'boolean'
         ? options.config

@@ -21,10 +21,13 @@ const options = Object.fromEntries(
       type: 'boolean' | 'string'
       multiple: boolean
       short?: string
+      default?: boolean | string | string[]
     }
-    // @ts-ignore
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
+    }
+    if (config && config?.default) {
+      result.default = config.default
     }
     return [key, result]
   }),
@@ -36,6 +39,7 @@ export function parseCliArguments() {
     tokens: true,
     allowPositionals: true,
     allowNegative: true,
+    strict: false
   })
 
   tokens
@@ -53,12 +57,12 @@ export function parseCliArguments() {
           values[option.name] = Object.fromEntries(mappings)
         }
       } else if (type === 'array') {
-        values[option.name] = option.value?.split(',')
+        (values[option.name] as string[]) = option.value?.split(',') ?? []
       }
     })
 
-  if (!values.config) {
-    values.input = positionals
+  if (!values.config && positionals.length !== 0) {
+    (values.input as string[]) = positionals as string[]
   }
 
   return normalizeCliOptions(values)

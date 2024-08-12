@@ -6,16 +6,14 @@ import { z } from 'zod'
 
 export const cliOptionsSchema = z
   .strictObject({
-    config: z.boolean().optional(),
+    config: z.string().or(z.boolean()).optional(),
     help: z.boolean().optional(),
+    version: z.boolean().optional()
   })
   .merge(inputCliOptionsSchema)
   .merge(outputCliOptionsSchema)
 
-export type CliOptions = z.infer<typeof cliOptionsSchema> & {
-  help?: boolean | string
-  config?: boolean | string
-}
+export type CliOptions = z.infer<typeof cliOptionsSchema>
 
 export const schema = zodToJsonSchema(
   cliOptionsSchema,

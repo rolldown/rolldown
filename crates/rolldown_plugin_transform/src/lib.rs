@@ -19,9 +19,8 @@ pub enum StringOrRegex {
 
 impl StringOrRegex {
   pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
-    // TODO: support flag
-    if flag.is_some() {
-      let regex = HybridRegex::new(&value)?;
+    if let Some(flag) = flag {
+      let regex = HybridRegex::with_flags(&value, flag)?;
       Ok(Self::Regex(regex))
     } else {
       Ok(Self::String(value))

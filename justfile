@@ -13,7 +13,7 @@ setup:
   pnpm install
   just setup-submodule
   just setup-bench
-  echo "✅✅✅ Setup complete!"
+  @echo "✅✅✅ Setup complete!"
 
 setup-submodule:
   git submodule update --init

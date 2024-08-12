@@ -1,6 +1,6 @@
 use std::{
   ops::Deref,
-  sync::{Arc, Weak},
+  sync::{Arc, OnceLock, Weak},
   vec,
 };
 
@@ -45,7 +45,7 @@ impl PluginDriver {
             plugin_driver: Weak::clone(plugin_driver),
             resolver: Arc::clone(resolver),
             file_emitter: Arc::clone(file_emitter),
-            module_table: None,
+            module_table: OnceLock::default(),
           }
           .into(),
         );
@@ -59,35 +59,10 @@ impl PluginDriver {
     })
   }
 
-  pub fn new_shared_with_module_table(
-    &self,
-    module_table: &Arc<&'static mut ModuleTable>,
-  ) -> SharedPluginDriver {
-    Arc::new_cyclic(|plugin_driver| {
-      let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
-      let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
-
-      self.plugins.iter().zip(self.contexts.iter()).for_each(|(plugin, ctx)| {
-        let plugin_idx = index_plugins.push(Arc::clone(plugin));
-        index_contexts.push(
-          PluginContextImpl {
-            skipped_resolve_calls: vec![],
-            plugin_idx,
-            plugin_driver: Weak::clone(plugin_driver),
-            resolver: Arc::clone(&ctx.resolver),
-            file_emitter: Arc::clone(&ctx.file_emitter),
-            module_table: Some(Arc::clone(module_table)),
-          }
-          .into(),
-        );
-      });
-
-      Self {
-        plugins: index_plugins,
-        contexts: index_contexts,
-        order_indicates: self.order_indicates.clone(),
-      }
-    })
+  pub fn set_module_table(&self, module_table: &'static ModuleTable) {
+    self.contexts.iter().for_each(|ctx| {
+      ctx.module_table.set(module_table).expect("module_table is already set before");
+    });
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(

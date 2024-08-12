@@ -1,7 +1,7 @@
 use std::{
   ops::Deref,
   path::PathBuf,
-  sync::{Arc, Weak},
+  sync::{Arc, OnceLock, Weak},
 };
 
 use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
@@ -31,7 +31,7 @@ impl PluginContext {
       plugin_driver: Weak::clone(&self.plugin_driver),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
-      module_table: self.module_table.as_ref().map(Arc::clone),
+      module_table: self.module_table.clone(),
     }))
   }
 }
@@ -52,7 +52,7 @@ pub struct PluginContextImpl {
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
   #[allow(clippy::redundant_allocation)]
-  pub(crate) module_table: Option<Arc<&'static mut ModuleTable>>,
+  pub(crate) module_table: OnceLock<&'static ModuleTable>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -114,7 +114,7 @@ impl PluginContextImpl {
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
-    self.module_table.as_ref().and_then(|module_table| {
+    self.module_table.get().as_ref().and_then(|module_table| {
       for normal_module in &module_table.modules {
         if let Some(ecma_module) = normal_module.as_ecma() {
           if ecma_module.id.as_str() == module_id {
@@ -128,7 +128,7 @@ impl PluginContextImpl {
   }
 
   pub fn get_module_ids(&self) -> Option<Vec<String>> {
-    if let Some(module_table) = self.module_table.as_ref() {
+    if let Some(module_table) = self.module_table.get() {
       let mut ids = Vec::with_capacity(module_table.modules.len());
       for normal_module in &module_table.modules {
         ids.push(normal_module.id().to_string());

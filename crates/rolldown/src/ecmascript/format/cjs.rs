@@ -157,13 +157,17 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let mut s = String::new();
 
   // render imports from other chunks
-  ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, _items)| {
+  ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunks[*exporter_id];
-    s.push_str(&format!(
-      "const {} = require('{}');\n",
-      ctx.chunk.require_binding_names_for_other_chunks[exporter_id],
-      ctx.chunk.import_path_for(importee_chunk)
-    ));
+    let require_path_str = format!("require('{}');\n", ctx.chunk.import_path_for(importee_chunk));
+    if items.is_empty() {
+      s.push_str(&require_path_str);
+    } else {
+      s.push_str(&format!(
+        "const {} = {require_path_str}",
+        ctx.chunk.require_binding_names_for_other_chunks[exporter_id],
+      ));
+    }
   });
 
   render_import_stmts.iter().for_each(|stmt| {

@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry1",
+        "import": "./main.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./main.js"
+      }
+    ],
+    "format": "cjs"
+  },
+  "expectExecuted": false,
+  "hiddenRuntimeModule": false
+}

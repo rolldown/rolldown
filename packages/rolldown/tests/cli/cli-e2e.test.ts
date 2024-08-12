@@ -65,7 +65,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-object')
     const status = await $({
       cwd,
-    })`rolldown index.ts --moduleTypes .123=text,.json5=json -d dist`
+    })`rolldown index.ts --moduleTypes .123=text,.notjson=json,.b64=base64 -d dist`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)

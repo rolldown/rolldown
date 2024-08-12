@@ -39,7 +39,7 @@ export function parseCliArguments() {
     tokens: true,
     allowPositionals: true,
     allowNegative: true,
-    strict: false
+    strict: false,
   })
 
   tokens
@@ -57,12 +57,12 @@ export function parseCliArguments() {
           values[option.name] = Object.fromEntries(mappings)
         }
       } else if (type === 'array') {
-        (values[option.name] as string[]) = option.value?.split(',') ?? []
+        ;(values[option.name] as string[]) = option.value?.split(',') ?? []
       }
     })
 
   if (!values.config && positionals.length !== 0) {
-    (values.input as string[]) = positionals as string[]
+    ;(values.input as string[]) = positionals as string[]
   }
 
   return normalizeCliOptions(values)

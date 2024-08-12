@@ -8,7 +8,7 @@ export const cliOptionsSchema = z
   .strictObject({
     config: z.string().or(z.boolean()).optional(),
     help: z.boolean().optional(),
-    version: z.boolean().optional()
+    version: z.boolean().optional(),
   })
   .merge(inputCliOptionsSchema)
   .merge(outputCliOptionsSchema)

@@ -15,7 +15,7 @@ describe('should not hang after running', () => {
   })
 })
 
-describe('args', () => {
+describe('basic arguments', () => {
   it('should render help message for empty args', async () => {
     const stdout = execSync('rolldown', {
       cwd: projectDir(),
@@ -23,6 +23,48 @@ describe('args', () => {
     })
     // FIXME: `citty` emit nothing
     expect(stdout).toMatchSnapshot(`""`)
+  })
+})
+
+describe('cli options for bundling', () => {
+  it('should handle single boolean option', async () => {
+    const cwd = cliFixturesDir('cli-option-boolean')
+    const status = await $({ cwd })`rolldown --minify -d dist`
+    expect(status.exitCode).toBe(0)
+    // FIXME: emit nothing, so use `dist` first.
+    expect(status.stdout).toMatchSnapshot(`""`)
+  })
+
+  it('should handle single boolean short options', async () => {
+    const cwd = cliFixturesDir('cli-option-short-boolean')
+    const status = await $({ cwd })`rolldown index.ts -m -d dist`
+    expect(status.exitCode).toBe(0)
+    // FIXME: emit nothing, so use `dist` first.
+    expect(status.stdout).toMatchSnapshot(`""`)
+  })
+
+  it('should handle single string options', async () => {
+    const cwd = cliFixturesDir('cli-option-string')
+    const status = await $({ cwd })`rolldown index.ts --format cjs -d dist`
+    expect(status.exitCode).toBe(0)
+    // FIXME: emit nothing, so use `dist` first.
+    expect(status.stdout).toMatchSnapshot(`""`)
+  })
+
+  it('should handle single array options', async () => {
+    const cwd = cliFixturesDir('cli-option-array')
+    const status = await $({ cwd })`rolldown index.ts --external node:path,node:url -d dist`
+    expect(status.exitCode).toBe(0)
+    // FIXME: emit nothing, so use `dist` first.
+    expect(status.stdout).toMatchSnapshot(`""`)
+  })
+
+  it('should handle single object options', async () => {
+    const cwd = cliFixturesDir('cli-option-object')
+    const status = await $({ cwd })`rolldown index.ts --moduleTypes .123=text,.json5=json -d dist`
+    expect(status.exitCode).toBe(0)
+    // FIXME: emit nothing, so use `dist` first.
+    expect(status.stdout).toMatchSnapshot(`""`)
   })
 })
 

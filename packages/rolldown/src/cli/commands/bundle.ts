@@ -25,7 +25,22 @@ export async function bundleWithConfig(
 }
 
 export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
-  await bundleInner({}, cliOptions)
+  // TODO when supports `output.file`, we should modify it here.
+  if (cliOptions.output.dir) {
+    await bundleInner({}, cliOptions)
+  } else {
+    const build = await rolldown(cliOptions.input)
+    const { output } = await build.generate(cliOptions.output)
+    if (output.length > 1) {
+      logger.error('Multiple chunks are not supported to display in stdout')
+      process.exit(1)
+    } else if (output.length === 0) {
+      logger.error('No output generated')
+      process.exit(1)
+    } else {
+      logger.log(output[0].code)
+    }
+  }
 }
 
 async function bundleInner(

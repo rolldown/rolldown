@@ -51,23 +51,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   let globals: FxHashMap<String, String> =
     raw_options.globals.map(|globals| globals.into_iter().collect()).unwrap_or_default();
 
-  let define = {
-    let mut raw = raw_options.define.unwrap_or_default();
-    match platform {
-      // - https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/pkg/api/api_impl.go#L637-L642
-      // Esbuild only has this behavior for browser platform. I don't see any particular reason why we shouldn't do this for node platform.
-      Platform::Node | Platform::Browser => {
-        if !raw.contains_key("process.env.NODE_ENV") {
-          if let Ok(node_env) = std::env::var("NODE_ENV") {
-            raw.insert("process.env.NODE_ENV".to_string(), format!("\"{node_env}\""));
-          }
-        }
-      }
-      Platform::Neutral => {}
-    }
-    raw.into_iter().collect()
-  };
-
   let oxc_inject_global_variables_config = InjectGlobalVariablesConfig::new(
     raw_options
       .inject
@@ -99,7 +82,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
     treeshake: raw_options.treeshake,
-    platform: raw_options.platform.unwrap_or(Platform::Browser),
+    platform,
     name: raw_options.name,
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string()).into(),
     chunk_filenames: raw_options
@@ -134,7 +117,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     module_types: loaders,
     experimental: raw_options.experimental.unwrap_or_default(),
     minify: raw_options.minify.unwrap_or(false),
-    define,
+    define: raw_options.define.map(|inner| inner.into_iter().collect()).unwrap_or_default(),
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
   };

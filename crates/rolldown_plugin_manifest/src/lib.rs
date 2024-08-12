@@ -1,5 +1,5 @@
 use rolldown_common::{EmittedAsset, ModuleId, Output, OutputAsset, OutputChunk};
-use rolldown_plugin::{HookNoopReturn, Plugin, SharedPluginContext};
+use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 use std::{borrow::Cow, collections::BTreeMap, path::Path, rc::Rc, sync::LazyLock};
@@ -33,7 +33,7 @@ impl Plugin for ManifestPlugin {
   #[allow(clippy::case_sensitive_file_extension_comparisons)]
   async fn generate_bundle(
     &self,
-    ctx: &SharedPluginContext,
+    ctx: &PluginContext,
     bundle: &mut Vec<Output>,
     _is_write: bool,
   ) -> HookNoopReturn {

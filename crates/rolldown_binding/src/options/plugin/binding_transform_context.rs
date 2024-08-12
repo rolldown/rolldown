@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use napi_derive::napi;
 
 use rolldown_plugin::TransformPluginContext;
@@ -26,6 +24,6 @@ impl BindingTransformPluginContext {
 
   #[napi]
   pub fn inner(&self) -> BindingPluginContext {
-    Arc::clone(&self.inner.inner).into()
+    self.inner.inner.clone().into()
   }
 }

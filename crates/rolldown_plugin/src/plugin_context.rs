@@ -1,4 +1,5 @@
 use std::{
+  ops::Deref,
   path::PathBuf,
   sync::{Arc, Weak},
 };
@@ -15,10 +16,36 @@ use crate::{
   PluginDriver,
 };
 
-pub type SharedPluginContext = std::sync::Arc<PluginContext>;
+#[derive(Debug, Clone)]
+pub struct PluginContext(std::sync::Arc<PluginContextImpl>);
+
+impl PluginContext {
+  #[must_use]
+  pub fn new_shared_with_skipped_resolve_calls(
+    &self,
+    skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
+  ) -> Self {
+    Self(Arc::new(PluginContextImpl {
+      skipped_resolve_calls,
+      plugin_idx: self.plugin_idx,
+      plugin_driver: Weak::clone(&self.plugin_driver),
+      resolver: Arc::clone(&self.resolver),
+      file_emitter: Arc::clone(&self.file_emitter),
+      module_table: self.module_table.as_ref().map(Arc::clone),
+    }))
+  }
+}
+
+impl Deref for PluginContext {
+  type Target = PluginContextImpl;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
 
 #[derive(Debug)]
-pub struct PluginContext {
+pub struct PluginContextImpl {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   pub(crate) plugin_idx: PluginIdx,
   pub(crate) resolver: Arc<Resolver>,
@@ -28,21 +55,13 @@ pub struct PluginContext {
   pub(crate) module_table: Option<Arc<&'static mut ModuleTable>>,
 }
 
-impl PluginContext {
-  pub fn new_shared_with_skipped_resolve_calls(
-    &self,
-    skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
-  ) -> SharedPluginContext {
-    Arc::new(PluginContext {
-      skipped_resolve_calls,
-      plugin_idx: self.plugin_idx,
-      plugin_driver: Weak::clone(&self.plugin_driver),
-      resolver: Arc::clone(&self.resolver),
-      file_emitter: Arc::clone(&self.file_emitter),
-      module_table: self.module_table.as_ref().map(Arc::clone),
-    })
+impl From<PluginContextImpl> for PluginContext {
+  fn from(ctx: PluginContextImpl) -> Self {
+    Self(Arc::new(ctx))
   }
+}
 
+impl PluginContextImpl {
   pub async fn resolve(
     &self,
     specifier: &str,

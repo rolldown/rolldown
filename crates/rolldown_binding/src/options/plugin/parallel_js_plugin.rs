@@ -75,7 +75,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn build_start(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.first_plugin().build_start.is_some() {
       self.run_all(|plugin| plugin.call_build_start(ctx)).await?;
@@ -85,7 +85,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn resolve_id(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if self.first_plugin().resolve_id.is_some() {
@@ -97,7 +97,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn load(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if self.first_plugin().load.is_some() {
@@ -121,7 +121,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn build_end(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     args: Option<&rolldown_plugin::HookBuildEndArgs>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.first_plugin().build_end.is_some() {
@@ -132,7 +132,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn render_chunk(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if self.first_plugin().render_chunk.is_some() {
@@ -146,7 +146,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn generate_bundle(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     bundle: &mut Vec<rolldown_common::Output>,
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
@@ -159,7 +159,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn write_bundle(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     bundle: &mut Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.first_plugin().write_bundle.is_some() {

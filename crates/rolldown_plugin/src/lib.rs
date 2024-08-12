@@ -21,7 +21,7 @@ pub use crate::{
     HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
     Plugin,
   },
-  plugin_context::{PluginContext, SharedPluginContext},
+  plugin_context::PluginContext,
   plugin_driver::{PluginDriver, SharedPluginDriver},
   plugin_hook_meta::{PluginHookMeta, PluginOrder},
   transform_plugin_context::TransformPluginContext,

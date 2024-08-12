@@ -3,8 +3,8 @@ use std::{borrow::Cow, sync::Arc};
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   typedmap::{TypedDashMap, TypedMapKey},
-  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContextResolveOptions,
-  SharedPluginContext,
+  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
+  PluginContextResolveOptions,
 };
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 #[derive(Debug)]
@@ -26,7 +26,7 @@ impl Plugin for TestPluginCaller {
 
   async fn resolve_id(
     &self,
-    ctx: &SharedPluginContext,
+    ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == "foo" {
@@ -65,7 +65,7 @@ impl Plugin for TestPluginReceiver {
 
   async fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if let Some(value) = args.custom.get::<MyArg>(&MyArg { id: 0 }) {

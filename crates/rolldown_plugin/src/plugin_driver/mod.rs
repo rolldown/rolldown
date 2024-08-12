@@ -9,9 +9,10 @@ use rolldown_resolver::Resolver;
 
 use crate::{
   __inner::SharedPluginable,
+  plugin_context::PluginContextImpl,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
-  PluginContext, PluginHookMeta, PluginOrder, SharedPluginContext,
+  PluginContext, PluginHookMeta, PluginOrder,
 };
 
 mod build_hooks;
@@ -38,7 +39,7 @@ impl PluginDriver {
       plugins.into_iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
         index_contexts.push(
-          PluginContext {
+          PluginContextImpl {
             skipped_resolve_calls: vec![],
             plugin_idx,
             plugin_driver: Weak::clone(plugin_driver),
@@ -69,7 +70,7 @@ impl PluginDriver {
       self.plugins.iter().zip(self.contexts.iter()).for_each(|(plugin, ctx)| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
         index_contexts.push(
-          PluginContext {
+          PluginContextImpl {
             skipped_resolve_calls: vec![],
             plugin_idx,
             plugin_driver: Weak::clone(plugin_driver),
@@ -92,7 +93,7 @@ impl PluginDriver {
   pub fn iter_plugin_with_context_by_order<'me>(
     &'me self,
     ordered_plugins: &'me [PluginIdx],
-  ) -> impl Iterator<Item = (PluginIdx, &SharedPluginable, &SharedPluginContext)> + 'me {
+  ) -> impl Iterator<Item = (PluginIdx, &SharedPluginable, &PluginContext)> + 'me {
     ordered_plugins.iter().copied().map(move |idx| {
       let plugin = &self.plugins[idx];
       let context = &self.contexts[idx];

@@ -1,6 +1,6 @@
 use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
-use super::plugin_context::SharedPluginContext;
+use super::plugin_context::PluginContext;
 use crate::{
   plugin_hook_meta::PluginHookMeta,
   transform_plugin_context::TransformPluginContext,
@@ -33,7 +33,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn build_start(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }
@@ -44,7 +44,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookResolveIdArgs<'_>,
   ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
     async { Ok(None) }
@@ -59,7 +59,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   )]
   fn resolve_dynamic_import(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookResolveIdArgs<'_>,
   ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
     async { Ok(None) }
@@ -71,7 +71,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn load(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookLoadArgs<'_>,
   ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
     async { Ok(None) }
@@ -95,7 +95,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn module_parsed(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _module_info: Arc<ModuleInfo>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
@@ -107,7 +107,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn build_end(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: Option<&HookBuildEndArgs>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
@@ -121,7 +121,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn render_start(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }
@@ -132,7 +132,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn banner(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookInjectionArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
@@ -144,7 +144,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn footer(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookInjectionArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
@@ -156,7 +156,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn intro(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookInjectionArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
@@ -168,7 +168,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn outro(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookInjectionArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
@@ -180,7 +180,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn render_chunk(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookRenderChunkArgs<'_>,
   ) -> impl std::future::Future<Output = HookRenderChunkReturn> + Send {
     async { Ok(None) }
@@ -192,7 +192,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn augment_chunk_hash(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _chunk: &RollupRenderedChunk,
   ) -> impl std::future::Future<Output = HookAugmentChunkHashReturn> + Send {
     async { Ok(None) }
@@ -204,7 +204,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn render_error(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _args: &HookRenderErrorArgs,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
@@ -216,7 +216,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn generate_bundle(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _bundle: &mut Vec<Output>,
     _is_write: bool,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
@@ -229,7 +229,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn write_bundle(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     _bundle: &mut Vec<Output>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
@@ -243,7 +243,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn transform_ast(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     Ok(args.ast)

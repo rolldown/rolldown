@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use rolldown_plugin::{HookLoadArgs, HookLoadReturn, Plugin, SharedPluginContext};
+use rolldown_plugin::{HookLoadArgs, HookLoadReturn, Plugin, PluginContext};
 
 #[derive(Debug)]
 pub struct WasmFallbackPlugin {}
@@ -11,7 +11,7 @@ impl Plugin for WasmFallbackPlugin {
   }
 
   #[allow(clippy::case_sensitive_file_extension_comparisons)]
-  async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id.ends_with(".wasm") {
       // TODO: Replace the link here after rolldown's document is ready
       Err(anyhow::anyhow!(

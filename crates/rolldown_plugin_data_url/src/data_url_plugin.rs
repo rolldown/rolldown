@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, SharedPluginContext,
+  HookResolveIdReturn, Plugin, PluginContext,
 };
 use rustc_hash::FxBuildHasher;
 
@@ -28,7 +28,7 @@ impl Plugin for DataUrlPlugin {
 
   fn resolve_id(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> impl std::future::Future<Output = HookResolveIdReturn> {
     async {
@@ -66,7 +66,7 @@ impl Plugin for DataUrlPlugin {
 
   fn load(
     &self,
-    _ctx: &SharedPluginContext,
+    _ctx: &PluginContext,
     args: &HookLoadArgs<'_>,
   ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
     async {

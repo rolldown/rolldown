@@ -1,4 +1,4 @@
-use crate::{AssetSource, FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset};
+use crate::{AssetSource, FileNameRenderOptions, NormalizedBundlerOptions, Output};
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
@@ -16,7 +16,7 @@ pub struct EmittedAsset {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  files: DashMap<String, Arc<EmittedAsset>>,
+  files: DashMap<String, Box<EmittedAsset>>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
@@ -36,7 +36,7 @@ impl FileEmitter {
   pub fn emit_file(&self, mut file: EmittedAsset) -> String {
     let reference_id = self.assign_reference_id(file.filename.clone());
     self.generate_file_name(&mut file);
-    self.files.insert(reference_id.clone(), Arc::new(file));
+    self.files.insert(reference_id.clone(), Box::new(file));
     reference_id
   }
 
@@ -78,12 +78,14 @@ impl FileEmitter {
 
   pub fn add_additional_files(&self, bundle: &mut Vec<Output>) {
     for file in &self.files {
-      let (key, value) = file.pair();
-      if self.emitted_files.contains(key) {
-        continue;
+      if let Some((key, value)) = self.files.remove(file.key()) {
+        if self.emitted_files.contains(&key) {
+          continue;
+        }
+
+        self.emitted_files.insert(key);
+        bundle.push(Output::Asset(value));
       }
-      self.emitted_files.insert(key.clone());
-      bundle.push(Output::Asset(Arc::<OutputAsset>::clone(value)));
     }
   }
 }

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{EmittedAsset, OutputChunk};
 
 pub type OutputAsset = EmittedAsset;
@@ -13,7 +11,7 @@ impl OutputAsset {
 #[derive(Debug)]
 pub enum Output {
   Chunk(Box<OutputChunk>),
-  Asset(Arc<OutputAsset>),
+  Asset(Box<OutputAsset>),
 }
 
 impl Output {

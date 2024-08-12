@@ -121,8 +121,8 @@ pub fn normalize_binding_options(
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
     es_module: output_options.es_module.map(|es_module| match es_module {
-      Either::A(a) => a.into(),
-      Either::B(b) => b.into(),
+      Either::A(es_module_bool) => es_module_bool.into(),
+      Either::B(es_module_string) => es_module_string.into(),
     }),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),

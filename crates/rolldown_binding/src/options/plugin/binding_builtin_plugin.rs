@@ -10,6 +10,7 @@ use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_transform::{StringOrRegex, TransformPlugin};
 use rolldown_plugin_wasm::WasmPlugin;
+use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -45,6 +46,7 @@ pub enum BindingBuiltinPluginName {
   ManifestPlugin,
   LoadFallbackPlugin,
   TransformPlugin,
+  WasmFallbackPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -132,6 +134,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
+      BindingBuiltinPluginName::WasmFallbackPlugin => Arc::new(WasmFallbackPlugin {}),
       BindingBuiltinPluginName::ImportGlobPlugin => {
         let config = if let Some(options) = plugin.options {
           BindingGlobImportPluginConfig::from_unknown(options)?.into()

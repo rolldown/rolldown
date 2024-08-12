@@ -6,4 +6,5 @@ export interface TestConfig {
   config?: RolldownOptions
   beforeTest?: () => Promise<void> | void
   afterTest?: (output: RolldownOutput) => Promise<void> | void
+  catchError?: (err: unknown) => Promise<void> | void
 }

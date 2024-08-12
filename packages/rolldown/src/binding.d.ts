@@ -117,7 +117,8 @@ export declare enum BindingBuiltinPluginName {
   ModulePreloadPolyfillPlugin = 3,
   ManifestPlugin = 4,
   LoadFallbackPlugin = 5,
-  TransformPlugin = 6
+  TransformPlugin = 6,
+  WasmFallbackPlugin = 7
 }
 
 export interface BindingEmittedAsset {

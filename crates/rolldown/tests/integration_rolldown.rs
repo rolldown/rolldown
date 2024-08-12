@@ -48,7 +48,7 @@ async fn filename_with_hash() {
 
     assets.assets.iter().for_each(|asset| match asset {
       Output::Asset(asset) => {
-        snapshot_output.push_str(&format!("- {}\n", asset.filename));
+        snapshot_output.push_str(&format!("- {}\n", asset.filename()));
       }
       Output::Chunk(chunk) => {
         snapshot_output.push_str(&format!(

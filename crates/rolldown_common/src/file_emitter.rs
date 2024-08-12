@@ -10,13 +10,13 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct EmittedAsset {
   pub name: Option<String>,
-  pub file_name: Option<String>,
+  pub filename: Option<String>,
   pub source: AssetSource,
 }
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  files: DashMap<String, EmittedAsset>,
+  files: DashMap<String, Arc<EmittedAsset>>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
@@ -34,9 +34,9 @@ impl FileEmitter {
   }
 
   pub fn emit_file(&self, mut file: EmittedAsset) -> String {
-    let reference_id = self.assign_reference_id(file.file_name.clone());
+    let reference_id = self.assign_reference_id(file.filename.clone());
     self.generate_file_name(&mut file);
-    self.files.insert(reference_id.clone(), file);
+    self.files.insert(reference_id.clone(), Arc::new(file));
     reference_id
   }
 
@@ -45,7 +45,7 @@ impl FileEmitter {
       .files
       .get(reference_id)
       .ok_or(format!("Unable to get file name for unknown file: {reference_id}"))?;
-    file.file_name.clone().ok_or(format!("{reference_id} should have file name"))
+    file.filename.clone().ok_or(format!("{reference_id} should have file name"))
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> String {
@@ -61,7 +61,7 @@ impl FileEmitter {
   }
 
   pub fn generate_file_name(&self, file: &mut EmittedAsset) {
-    if file.file_name.is_none() {
+    if file.filename.is_none() {
       let path = file.name.as_deref().map(Path::new);
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
       let name = path
@@ -72,7 +72,7 @@ impl FileEmitter {
         hash: Some(&xxhash_base64_url(file.source.as_bytes()).as_str()[..8]),
         ext: extension,
       });
-      file.file_name = Some(file_name);
+      file.filename = Some(file_name);
     }
   }
 
@@ -83,12 +83,7 @@ impl FileEmitter {
         continue;
       }
       self.emitted_files.insert(key.clone());
-      // TODO avoid clone asset
-      bundle.push(Output::Asset(Box::new(OutputAsset {
-        filename: value.file_name.clone().expect("should have file name"),
-        source: value.source.clone(),
-        name: value.name.clone(),
-      })));
+      bundle.push(Output::Asset(Arc::<OutputAsset>::clone(value)));
     }
   }
 }

@@ -62,7 +62,7 @@ impl Plugin for ManifestPlugin {
         }
         Output::Asset(asset) => {
           if let Some(name) = &asset.name {
-            let asset_meta = file_name_to_asset_meta.remove(&asset.filename);
+            let asset_meta = file_name_to_asset_meta.remove(asset.filename());
             let src = asset_meta.map_or(name, |m| &m.original_name);
             let asset_manifest = Rc::new(Self::create_asset(
               asset,
@@ -81,7 +81,7 @@ impl Plugin for ManifestPlugin {
             }
 
             manifest.insert(src.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
-            file_name_to_asset.insert(asset.filename.clone(), asset_manifest);
+            file_name_to_asset.insert(asset.filename().to_string(), asset_manifest);
           }
         }
       }
@@ -108,7 +108,7 @@ impl Plugin for ManifestPlugin {
     // let outputLength = Array.isArray(output) ? output.length : 1
     // if output_count >= outputLength {
     ctx.emit_file(EmittedAsset {
-      file_name: Some(self.config.out_path.clone()),
+      filename: Some(self.config.out_path.clone()),
       name: None,
       source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
     });
@@ -176,7 +176,7 @@ impl ManifestPlugin {
   }
   fn create_asset(asset: &OutputAsset, src: String, is_entry: bool) -> ManifestChunk {
     ManifestChunk {
-      file: asset.filename.to_string(),
+      file: asset.filename().to_string(),
       src: Some(src),
       is_entry,
       ..Default::default()

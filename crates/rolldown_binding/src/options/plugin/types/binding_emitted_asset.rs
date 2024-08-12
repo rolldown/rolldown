@@ -14,6 +14,6 @@ pub struct BindingEmittedAsset {
 
 impl From<BindingEmittedAsset> for rolldown_common::EmittedAsset {
   fn from(value: BindingEmittedAsset) -> Self {
-    Self { name: value.name, file_name: value.file_name, source: value.source.into() }
+    Self { name: value.name, filename: value.file_name, source: value.source.into() }
   }
 }

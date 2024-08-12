@@ -42,7 +42,7 @@ impl Plugin for WasmPlugin {
       let reference_id = ctx.emit_file(EmittedAsset {
         name: file_path.file_name().map(|x| x.to_string_lossy().to_string()),
         source: AssetSource::Buffer(fs::read(file_path)?),
-        file_name: None,
+        filename: None,
       });
       let url = ctx.get_file_name(&reference_id);
       return Ok(Some(HookLoadOutput {

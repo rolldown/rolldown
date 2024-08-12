@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
@@ -87,8 +89,8 @@ impl<'a> GenerateStage<'a> {
           match self.options.sourcemap {
             SourceMapType::File => {
               let source = map.to_json_string();
-              outputs.push(Output::Asset(Box::new(OutputAsset {
-                filename: map_filename.clone(),
+              outputs.push(Output::Asset(Arc::new(OutputAsset {
+                filename: Some(map_filename.clone()),
                 source: source.into(),
                 name: None,
               })));

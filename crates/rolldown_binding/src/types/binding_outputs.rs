@@ -40,7 +40,10 @@ impl BindingOutputs {
       let mut inner = inner.lock().expect("PoisonError raised");
       inner.iter_mut().for_each(|o| match o {
         rolldown_common::Output::Asset(asset) => {
-          assets.push(BindingOutputAsset::new(unsafe { std::mem::transmute(asset.as_mut()) }));
+          assets.push(BindingOutputAsset::new(unsafe {
+            &mut *(std::ptr::from_mut::<std::sync::Arc<rolldown_common::EmittedAsset>>(asset)
+              .cast::<rolldown_common::EmittedAsset>())
+          }));
         }
         rolldown_common::Output::Chunk(_) => {}
       });
@@ -96,7 +99,10 @@ impl FinalBindingOutputs {
       let mut inner = inner.lock().expect("PoisonError raised");
       inner.iter_mut().for_each(|o| match o {
         rolldown_common::Output::Asset(asset) => {
-          assets.push(BindingOutputAsset::new(unsafe { std::mem::transmute(asset.as_mut()) }));
+          assets.push(BindingOutputAsset::new(unsafe {
+            &mut *(std::ptr::from_mut::<std::sync::Arc<rolldown_common::EmittedAsset>>(asset)
+              .cast::<rolldown_common::EmittedAsset>())
+          }));
         }
         rolldown_common::Output::Chunk(_) => {}
       });

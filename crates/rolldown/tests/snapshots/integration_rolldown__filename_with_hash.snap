@@ -1585,6 +1585,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-P0_yQQlj.cjs
 
+# tests/rolldown/function/format/cjs/share_chunk_without_symbol
+
+- entry1-!~{000}~.cjs => entry1-oDOCJOca.cjs
+- entry2-!~{001}~.cjs => entry2-_HPn1u-R.cjs
+- main-!~{002}~.cjs => main-Bdwd-Fr6.cjs
+
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
 - entry1-!~{000}~.cjs => entry1-i7oOHHhW.cjs

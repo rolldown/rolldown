@@ -60,7 +60,9 @@ export function parseCliArguments() {
       }
     })
 
-  values.input = positionals
+  if (!values.config) {
+    values.input = positionals
+  }
 
   return normalizeCliOptions(values)
 }

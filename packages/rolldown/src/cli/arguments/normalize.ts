@@ -9,12 +9,16 @@ import type { CliOptions } from './schema'
 export interface NormalizedCliOptions {
   input: InputOptions
   output: OutputOptions
+  help: boolean
+  config: string
 }
 
 export function normalizeCliOptions(options: CliOptions): NormalizedCliOptions {
   const result = {
     input: {},
-    output: {}
+    output: {},
+    help: options.help ?? false,
+    config: typeof options.config === 'boolean' ? (options.config ? 'rolldown.config.js' : '') : (options.config ?? ''),
   } as NormalizedCliOptions
   const keysOfInput = inputCliOptionsSchema.keyof()._def.values as string[]
   const keysOfOutput = outputCliOptionsSchema.keyof()._def.values as string[]
@@ -25,8 +29,6 @@ export function normalizeCliOptions(options: CliOptions): NormalizedCliOptions {
     } else if (keysOfOutput.includes(key)) {
       // @ts-ignore
       result.output[key] = options[key]
-    } else {
-      throw new Error(`Unknown option: ${key} in parsing the argument`)
     }
   }
   return result

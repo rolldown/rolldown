@@ -4,12 +4,24 @@ import { OutputOptions } from '../../options/output-options'
 export interface OptionConfig {
   abbreviation?: string
   description: string
-  defaultTrue?: boolean
+  default?: string | boolean
 }
 
 export const alias: Partial<
   Record<keyof InputOption & OutputOptions, OptionConfig>
 > = {
+  config: {
+    abbreviation: 'c',
+    description: 'The path to the config file (default: rolldown.config.js)',
+  },
+  help: {
+    abbreviation: 'h',
+    description: 'Show help message',
+  },
+  version: {
+    abbreviation: 'v',
+    description: 'Show version number',
+  },
   dir: {
     abbreviation: 'd',
     description: 'The directory to output files',
@@ -42,6 +54,5 @@ export const alias: Partial<
   },
   treeshake: {
     description: 'Disable treeshaking',
-    defaultTrue: true,
   },
 }

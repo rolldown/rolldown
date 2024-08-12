@@ -1,0 +1,7 @@
+{
+  "name": "npm-packages",
+  "private": true,
+  "dependencies": {
+    "util-deprecate": "1.0.2"
+  }
+}

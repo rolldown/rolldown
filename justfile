@@ -7,13 +7,13 @@ _default:
 setup:
   # Rust related setup
   cargo install cargo-binstall
-  cargo binstall taplo-cli cargo-insta cargo-deny -y
+  cargo binstall taplo-cli cargo-insta cargo-deny cargo-shear -y
   # Node.js related setup
   corepack enable
   pnpm install
   just setup-submodule
   just setup-bench
-  echo "✅✅✅ Setup complete!"
+  @echo "✅✅✅ Setup complete!"
 
 setup-submodule:
   git submodule update --init
@@ -90,6 +90,7 @@ fmt:
 fmt-rust:
     cargo fmt --all -- --emit=files
     taplo fmt
+    cargo shear --fix
 
 fmt-repo:
     pnpm lint-prettier:fix
@@ -99,10 +100,12 @@ fmt-repo:
 lint:
     just lint-rust
     just lint-node
+    just lint-repo
 
 lint-rust:
     cargo fmt --all -- --check
     cargo clippy --workspace --all-targets -- --deny warnings
+    cargo shear
 
 lint-node:
     pnpm lint-code

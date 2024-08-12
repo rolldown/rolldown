@@ -85,7 +85,7 @@ rolldown_loader_utils                   = { version = "0.1.0", path = "./crates/
 rolldown_plugin                         = { version = "0.1.0", path = "./crates/rolldown_plugin" }
 rolldown_plugin_data_url                = { version = "0.1.0", path = "./crates/rolldown_plugin_data_url" }
 rolldown_plugin_dynamic_import_vars     = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
-rolldown_plugin_glob_import             = { version = "0.1.0", path = "./crates/rolldown_plugin_glob_import" }
+rolldown_plugin_import_glob             = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
 rolldown_plugin_load_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
 rolldown_plugin_manifest                = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
 rolldown_plugin_module_preload_polyfill = { version = "0.1.0", path = "./crates/rolldown_plugin_module_preload_polyfill" }
@@ -150,9 +150,9 @@ vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
 
 # oxc crates share the same version
-oxc                = { version = "0.24.1", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
-oxc_index          = { version = "0.24.1" }
-oxc_transform_napi = { version = "0.24.1" }
+oxc                = { version = "0.24.2", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
+oxc_index          = { version = "0.24.2" }
+oxc_transform_napi = { version = "0.24.2" }
 
 [profile.release]
 codegen-units = 1

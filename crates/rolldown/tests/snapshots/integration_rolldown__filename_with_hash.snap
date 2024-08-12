@@ -1609,6 +1609,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-P0_yQQlj.cjs
 
+# tests/rolldown/function/format/cjs/share_chunk_without_symbol
+
+- entry1-!~{000}~.cjs => entry1-oDOCJOca.cjs
+- entry2-!~{001}~.cjs => entry2-_HPn1u-R.cjs
+- main-!~{002}~.cjs => main-Bdwd-Fr6.cjs
+
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
 - entry1-!~{000}~.cjs => entry1-i7oOHHhW.cjs
@@ -1653,7 +1659,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/inject
 
-- main-!~{000}~.mjs => main-7LIxqMuJ.mjs
+- main-!~{000}~.mjs => main-dKJg0iPO.mjs
 
 # tests/rolldown/function/intro/cjs
 
@@ -2052,6 +2058,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - async-entry-!~{001}~.cjs => async-entry-JSulq17A.cjs
 - main-!~{000}~.cjs => main-uhoDhOaQ.cjs
 - shared-!~{003}~.cjs => shared-R7vFlqQk.cjs
+
+# tests/rolldown/topics/npm_packages/util_deprecate
+
+- main-!~{000}~.cjs => main-tghke2_c.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 

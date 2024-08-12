@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.cjs
+
+```js
+"use strict";
+require('./main.cjs');
+
+```
+## entry2.cjs
+
+```js
+"use strict";
+require('./main.cjs');
+
+```
+## main.cjs
+
+```js
+
+//#region main.js
+console.log("share");
+
+//#endregion
+```

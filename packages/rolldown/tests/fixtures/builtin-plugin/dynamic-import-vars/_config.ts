@@ -1,6 +1,6 @@
 import {
   dynamicImportVarsPlugin,
-  globImportPlugin,
+  importGlobPlugin,
 } from 'rolldown/experimental'
 import { defineTest } from '@tests'
 import path from 'path'
@@ -9,7 +9,7 @@ export default defineTest({
   config: {
     plugins: [
       dynamicImportVarsPlugin(),
-      globImportPlugin({
+      importGlobPlugin({
         root: path.resolve(import.meta.dirname),
       }),
     ],

@@ -2,7 +2,7 @@
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-name                 = "rolldown_plugin_glob_import"
+name                 = "rolldown_plugin_import_glob"
 repository.workspace = true
 version              = "0.1.0"
 

@@ -129,7 +129,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           composed.buildStart = async function (options) {
             await Promise.all(
               batchedHandlers.map((handler) => {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
+                const { handler: handlerFn } = normalizeHook(handler)
                 return handlerFn.call(this, options)
               }),
             )
@@ -142,7 +142,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const batchedHandlers = batchedHooks.load
           composed.load = async function (id) {
             for (const handler of batchedHandlers) {
-              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(this, id)
               if (!isNullish(result)) {
                 return result
@@ -167,7 +167,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               moduleSideEffects = newModuleSideEffects ?? undefined
             }
             for (const handler of batchedHandlers) {
-              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(this, code, id, moduleType)
               if (!isNullish(result)) {
                 if (typeof result === 'string') {
@@ -213,7 +213,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           composed.buildEnd = async function (err) {
             await Promise.all(
               batchedHandlers.map((handler) => {
-                const [handlerFn, _handlerOptions] = normalizeHook(handler)
+                const { handler: handlerFn } = normalizeHook(handler)
                 return handlerFn.call(this, err)
               }),
             )
@@ -226,7 +226,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const batchedHandlers = batchedHooks.renderChunk
           composed.renderChunk = async function (code, chunk, options) {
             for (const handler of batchedHandlers) {
-              const [handlerFn, _handlerOptions] = normalizeHook(handler)
+              const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(this, code, chunk, options)
               if (!isNullish(result)) {
                 return result
@@ -255,7 +255,32 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if (R.keys(plugin).some((hookName) => isUnsupportedHooks(hookName))) {
+  // Check if the plugin has patterns that aren't composable
+  const hasNotComposablePattern = R.keys(plugin).some((hookName) => {
+    const OK_TO_COMPOSE = false
+    switch (hookName) {
+      // These props don't affect the composition
+      case 'name':
+      case 'api':
+        return OK_TO_COMPOSE
+    }
+
+    if (isUnsupportedHooks(hookName)) {
+      return !OK_TO_COMPOSE
+    }
+
+    if (plugin[hookName]) {
+      const { meta } = normalizeHook(plugin[hookName])
+      // if `order` is specified with `pre` or `post`, it's unsafe to compose this plugin
+      if (meta.order === 'pre' || meta.order === 'post') {
+        return !OK_TO_COMPOSE
+      }
+    }
+
+    return OK_TO_COMPOSE
+  })
+
+  if (hasNotComposablePattern) {
     return false
   }
 

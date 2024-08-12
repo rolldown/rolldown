@@ -32,9 +32,9 @@ export class DynamicImportVarsPlugin extends BuiltinPlugin {
   }
 }
 
-export class GlobImportPlugin extends BuiltinPlugin {
+export class ImportGlobPlugin extends BuiltinPlugin {
   constructor(config?: BindingGlobImportPluginConfig) {
-    super(BindingBuiltinPluginName.GlobImportPlugin, config)
+    super(BindingBuiltinPluginName.ImportGlobPlugin, config)
   }
 }
 
@@ -73,8 +73,8 @@ export function dynamicImportVarsPlugin() {
   return new DynamicImportVarsPlugin()
 }
 
-export function globImportPlugin(config?: BindingGlobImportPluginConfig) {
-  return new GlobImportPlugin(config)
+export function importGlobPlugin(config?: BindingGlobImportPluginConfig) {
+  return new ImportGlobPlugin(config)
 }
 
 export function manifestPlugin(config?: BindingManifestPluginConfig) {

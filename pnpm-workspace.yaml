@@ -4,3 +4,4 @@ packages:
   - docs
   - examples/*
   - scripts
+  - crates/rolldown/tests/rolldown/topics/npm_packages

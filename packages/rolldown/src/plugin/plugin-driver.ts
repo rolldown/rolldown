@@ -1,6 +1,6 @@
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { Plugin, RolldownPlugin } from './'
+import { Plugin, RolldownPluginRec } from './'
 import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { RollupError } from '../rollup'
@@ -25,7 +25,7 @@ export class PluginDriver {
       const name = plugin.name || 'unknown'
       const options = plugin.options
       if (options) {
-        const [handler, _optionsIgnoredSofar] = normalizeHook(options)
+        const { handler } = normalizeHook(options)
         const result = await handler.call(
           {
             debug: getLogHandler(
@@ -74,7 +74,7 @@ export class PluginDriver {
     for (const plugin of plugins) {
       const options = plugin.outputOptions
       if (options) {
-        const [handler, _optionsIgnoredSofar] = normalizeHook(options)
+        const { handler } = normalizeHook(options)
         const result = handler.call(null, outputOptions)
 
         if (result) {
@@ -87,7 +87,7 @@ export class PluginDriver {
   }
 }
 
-export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
+export function getObjectPlugins(plugins: RolldownPluginRec[]): Plugin[] {
   return plugins.filter((plugin) => {
     if ('_parallel' in plugin) {
       return undefined

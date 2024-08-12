@@ -22,6 +22,8 @@ import type { MinimalPluginContext } from '../log/logger'
 import { InputOptions, OutputOptions } from '..'
 import { BuiltinPlugin } from './builtin-plugin'
 import { ParallelPlugin } from './parallel-plugin'
+import type { DefinedHookNames } from '../constants/plugin'
+import { DEFINED_HOOK_NAMES } from '../constants/plugin'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
@@ -81,28 +83,31 @@ export type TransformResult =
   | (Partial<SourceDescription> & { moduleType?: ModuleType })
 
 export interface FunctionPluginHooks {
-  onLog: (
+  [DEFINED_HOOK_NAMES.onLog]: (
     this: MinimalPluginContext,
     level: LogLevel,
     log: RollupLog,
   ) => NullValue | boolean
 
-  options: (
+  [DEFINED_HOOK_NAMES.options]: (
     this: MinimalPluginContext,
     options: InputOptions,
   ) => NullValue | InputOptions
 
   // TODO find a way to make `this: PluginContext` work.
-  outputOptions: (
+  [DEFINED_HOOK_NAMES.outputOptions]: (
     this: null,
     options: OutputOptions,
   ) => NullValue | OutputOptions
 
   // --- Build hooks ---
 
-  buildStart: (this: PluginContext, options: NormalizedInputOptions) => void
+  [DEFINED_HOOK_NAMES.buildStart]: (
+    this: PluginContext,
+    options: NormalizedInputOptions,
+  ) => void
 
-  resolveId: (
+  [DEFINED_HOOK_NAMES.resolveId]: (
     this: PluginContext,
     source: string,
     importer: string | undefined,
@@ -113,34 +118,40 @@ export interface FunctionPluginHooks {
    * @deprecated
    * This hook is only for rollup plugin compatibility. Please use `resolveId` instead.
    */
-  resolveDynamicImport: (
+  [DEFINED_HOOK_NAMES.resolveDynamicImport]: (
     this: PluginContext,
     source: string,
     importer: string | undefined,
   ) => ResolveIdResult
 
-  load: (this: PluginContext, id: string) => MaybePromise<LoadResult>
+  [DEFINED_HOOK_NAMES.load]: (
+    this: PluginContext,
+    id: string,
+  ) => MaybePromise<LoadResult>
 
-  transform: (
+  [DEFINED_HOOK_NAMES.transform]: (
     this: TransformPluginContext,
     code: string,
     id: string,
     meta: BindingTransformHookExtraArgs & { moduleType: ModuleType },
   ) => TransformResult
 
-  moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void
+  [DEFINED_HOOK_NAMES.moduleParsed]: (
+    this: PluginContext,
+    moduleInfo: ModuleInfo,
+  ) => void
 
-  buildEnd: (this: PluginContext, err?: Error) => void
+  [DEFINED_HOOK_NAMES.buildEnd]: (this: PluginContext, err?: Error) => void
 
   // --- Generate hooks ---
 
-  renderStart: (
+  [DEFINED_HOOK_NAMES.renderStart]: (
     this: PluginContext,
     outputOptions: NormalizedOutputOptions,
     inputOptions: NormalizedInputOptions,
   ) => void
 
-  renderChunk: (
+  [DEFINED_HOOK_NAMES.renderChunk]: (
     this: PluginContext,
     code: string,
     chunk: RenderedChunk,
@@ -153,18 +164,21 @@ export interface FunctionPluginHooks {
         map?: SourceMapInput
       }
 
-  augmentChunkHash: (this: PluginContext, chunk: RenderedChunk) => string | void
+  [DEFINED_HOOK_NAMES.augmentChunkHash]: (
+    this: PluginContext,
+    chunk: RenderedChunk,
+  ) => string | void
 
-  renderError: (this: PluginContext, error: Error) => void
+  [DEFINED_HOOK_NAMES.renderError]: (this: PluginContext, error: Error) => void
 
-  generateBundle: (
+  [DEFINED_HOOK_NAMES.generateBundle]: (
     this: PluginContext,
     outputOptions: NormalizedOutputOptions,
     bundle: OutputBundle,
     isWrite: boolean,
   ) => void
 
-  writeBundle: (
+  [DEFINED_HOOK_NAMES.writeBundle]: (
     this: PluginContext,
     outputOptions: NormalizedOutputOptions,
     bundle: OutputBundle,
@@ -177,7 +191,10 @@ export type ObjectHookMeta<O = {}> = { order?: PluginOrder } & O
 
 export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta<O>)
 
-export type SyncPluginHooks = 'augmentChunkHash' | 'onLog' | 'outputOptions'
+export type SyncPluginHooks = DefinedHookNames[
+  | 'augmentChunkHash'
+  | 'onLog'
+  | 'outputOptions']
 // | 'renderDynamicImport'
 // | 'resolveFileUrl'
 // | 'resolveImportMeta'
@@ -187,27 +204,31 @@ export type AsyncPluginHooks = Exclude<
   SyncPluginHooks
 >
 
-export type FirstPluginHooks =
+export type FirstPluginHooks = DefinedHookNames[
   | 'load'
-  | 'renderDynamicImport'
+  // | 'renderDynamicImport'
   | 'resolveDynamicImport'
   // | 'resolveFileUrl'
-  | 'resolveId'
+  | 'resolveId']
 // | 'resolveImportMeta'
 // | 'shouldTransformCachedModule'
 
-export type SequentialPluginHooks =
+export type SequentialPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'generateBundle'
   | 'onLog'
   | 'options'
   | 'outputOptions'
   | 'renderChunk'
-  | 'transform'
+  | 'transform']
 
-export type AddonHooks = 'banner' | 'footer' | 'intro' | 'outro'
+export type AddonHooks = DefinedHookNames[
+  | 'banner'
+  | 'footer'
+  | 'intro'
+  | 'outro']
 
-export type OutputPluginHooks =
+export type OutputPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'generateBundle'
   | 'outputOptions'
@@ -217,7 +238,7 @@ export type OutputPluginHooks =
   | 'renderStart'
   // | 'resolveFileUrl'
   // | 'resolveImportMeta'
-  | 'writeBundle'
+  | 'writeBundle']
 
 export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
@@ -255,4 +276,6 @@ export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
   api?: A
 }
 
-export type RolldownPlugin<A = any> = Plugin<A> | ParallelPlugin | BuiltinPlugin
+export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin | ParallelPlugin
+// A recursive type definition for `RolldownPlugin`, this type is used internally for `config.plugins`
+export type RolldownPluginRec<A = any> = RolldownPlugin<A> | RolldownPlugin<A>[]

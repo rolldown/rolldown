@@ -112,7 +112,7 @@ export interface BindingBuiltinPlugin {
 
 export declare enum BindingBuiltinPluginName {
   WasmPlugin = 0,
-  GlobImportPlugin = 1,
+  ImportGlobPlugin = 1,
   DynamicImportVarsPlugin = 2,
   ModulePreloadPolyfillPlugin = 3,
   ManifestPlugin = 4,
@@ -167,6 +167,19 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingInjectImportNamed {
+  tagNamed: true
+  imported: string
+  alias?: string
+  from: string
+}
+
+export interface BindingInjectImportNamespace {
+  tagNamespace: true
+  alias: string
+  from: string
+}
+
 export interface BindingInputItem {
   name?: string
   import: string
@@ -185,6 +198,7 @@ export interface BindingInputOptions {
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
+  inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
 }
 
 export interface BindingJsonSourcemap {

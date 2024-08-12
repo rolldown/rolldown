@@ -79,15 +79,9 @@ function bindingifyEsModule(
 ): BindingOutputOptions['esModule'] {
   switch (esModule) {
     case true:
-      return 'always'
-
     case false:
-      return 'never'
-
     case 'if-default-prop':
-    case undefined:
-      return 'if-default-prop'
-
+      return esModule
     default:
       throw new Error(`unknown esModule: ${esModule}`)
   }

@@ -5,6 +5,7 @@ use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use derivative::Derivative;
 use napi::threadsafe_function::ThreadsafeFunction;
+use napi::Either;
 use napi_derive::napi;
 use serde::Deserialize;
 
@@ -32,8 +33,9 @@ pub struct BindingOutputOptions {
   // compact: boolean;
   pub dir: Option<String>,
   // pub entry_file_names: String, // | ((chunkInfo: PreRenderedChunk) => string)
-  #[napi(ts_type = "'always' | 'never' | 'if-default-prop'")]
-  pub es_module: Option<String>,
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "boolean | 'if-default-prop'")]
+  pub es_module: Option<Either<bool, String>>,
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]
   pub exports: Option<String>,
   // extend: boolean;

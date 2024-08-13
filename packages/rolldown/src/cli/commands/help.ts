@@ -16,18 +16,18 @@ ${bold(underline('OPTIONS'))}
 export function showHelp() {
   logger.log(
     template +
-    Object.entries(options)
-      .map(([option, { type, short, hint, description }]) => {
-        let optionStr = '  '
-        if (short) {
-          optionStr += `-${short}, `
-        }
-        optionStr += `--${option} `
-        if (type === 'string') {
-          optionStr += `<${hint ?? option}>`
-        }
-        return cyan(optionStr.padEnd(30)) + description
-      })
-      .join('\n'),
+      Object.entries(options)
+        .map(([option, { type, short, hint, description }]) => {
+          let optionStr = '  '
+          if (short) {
+            optionStr += `-${short}, `
+          }
+          optionStr += `--${option} `
+          if (type === 'string') {
+            optionStr += `<${hint ?? option}>`
+          }
+          return cyan(optionStr.padEnd(30)) + description
+        })
+        .join('\n'),
   )
 }

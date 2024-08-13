@@ -58,11 +58,7 @@ export const outputCliOptionsSchema = outputOptionsSchema.extend({
   intro: z.string().optional(),
   outro: z.string().optional(),
   // It is hard to handle the union type in json schema, so use this first.
-  esModule: z
-    .literal('if-default-prop')
-    .or(z.literal('always'))
-    .or(z.literal('never'))
-    .optional(),
+  esModule: z.boolean().optional(),
   sourcemapIgnoreList: z.boolean().optional(),
   sourcemapPathTransform: z.undefined().optional(),
 })

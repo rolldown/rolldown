@@ -3,6 +3,7 @@ import { alias, type OptionConfig } from './alias'
 import { flattenSchema, getSchemaType } from './utils'
 import { parseArgs } from 'node:util'
 import { normalizeCliOptions } from './normalize'
+import { logger } from '../utils'
 
 export const flattenedSchema = flattenSchema(objectSchema.properties)
 
@@ -39,6 +40,7 @@ export function parseCliArguments() {
     tokens: true,
     allowPositionals: true,
     allowNegative: true,
+    // We can't use `strict` mode because we should handle the default config file name.
     strict: false,
   })
 
@@ -47,16 +49,17 @@ export function parseCliArguments() {
     .forEach((option) => {
       let originalType = flattenedSchema[option.name]
       let type = getSchemaType(originalType)
-      if (option.name.startsWith('no-')) {
-        option.name = option.name.slice(3)
-        values[option.name] = false
+      if (type !== 'boolean' && typeof option.value !== 'string') {
+        logger.error('Invalid value for option: ' + option.name)
       }
       if (type === 'object') {
         const mappings = option.value?.split(',').map((x) => x.split('='))
         if (mappings) {
+          // TODO support multiple entries.
           values[option.name] = Object.fromEntries(mappings)
         }
       } else if (type === 'array') {
+        // TODO support multiple entries.
         ;(values[option.name] as string[]) = option.value?.split(',') ?? []
       }
     })

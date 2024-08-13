@@ -38,7 +38,7 @@ pub struct BindingOutputOptions {
   pub es_module: Option<Either<bool, String>>,
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]
   pub exports: Option<String>,
-  // extend: boolean;
+  pub extend: Option<bool>,
   // externalLiveBindings: boolean;
   // footer: () => string | Promise<string>;
   #[derivative(Debug = "ignore")]

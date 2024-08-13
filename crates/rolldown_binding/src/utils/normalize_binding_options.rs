@@ -150,6 +150,7 @@ pub fn normalize_binding_options(
     minify: output_options.minify,
     css_entry_filenames: None,
     css_chunk_filenames: None,
+    extend: output_options.extend,
     define: input_options.define.map(FxIndexMap::from_iter),
     inject: input_options
       .inject

@@ -236,6 +236,7 @@ export interface BindingOutputOptions {
   dir?: string
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
+  extend?: boolean
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife'
   globals?: Record<string, string>

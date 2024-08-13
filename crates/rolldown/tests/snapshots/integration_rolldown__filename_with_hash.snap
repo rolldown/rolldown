@@ -1541,6 +1541,30 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-sCXhT0Sa.mjs
 
+# tests/rolldown/function/extend/iife/namespace_default
+
+- main-!~{000}~.mjs => main-dXn5CYMX.mjs
+
+# tests/rolldown/function/extend/iife/namespace_named
+
+- main-!~{000}~.mjs => main-qFuUsGqX.mjs
+
+# tests/rolldown/function/extend/iife/no_name_default
+
+- main-!~{000}~.mjs => main-ON8YzHQv.mjs
+
+# tests/rolldown/function/extend/iife/no_name_named
+
+- main-!~{000}~.mjs => main-tJ5KtzCN.mjs
+
+# tests/rolldown/function/extend/iife/non_namespace_default
+
+- main-!~{000}~.mjs => main-oQMDGLaS.mjs
+
+# tests/rolldown/function/extend/iife/non_namespace_named
+
+- main-!~{000}~.mjs => main-4I1iemMj.mjs
+
 # tests/rolldown/function/external/commonjs_reexport_external
 
 - main-!~{000}~.mjs => main-c_gWEcpH.mjs
@@ -1601,10 +1625,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-QsUUVrUj.mjs
 
-# tests/rolldown/function/format/iife/basic
-
-- main-!~{000}~.mjs => main--9MFXZs-.mjs
-
 # tests/rolldown/function/format/iife/conflict_exports_key
 
 - main-!~{000}~.mjs => main-oG2zLm_0.mjs
@@ -1624,6 +1644,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/format/iife/iife_with_name
 
 - main-!~{000}~.mjs => main--FmiP1j0.mjs
+
+# tests/rolldown/function/format/iife/inline_dynamic_import
+
+- main-!~{000}~.mjs => main--9MFXZs-.mjs
+
+# tests/rolldown/function/format/iife/namespaced_name
+
+- main-!~{000}~.mjs => main-ELPzdqJs.mjs
+
+# tests/rolldown/function/format/iife/namespaced_name_reserved
+
+- main-!~{000}~.mjs => main-i2p4fCcn.mjs
 
 # tests/rolldown/function/inject
 
@@ -1846,6 +1878,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-rJmg3RHX.mjs
 - main2-!~{001}~.mjs => main2-XXyPpS8r.mjs
 - main~1-!~{002}~.mjs => main~1-BBAm393b.mjs
+
+# tests/rolldown/misc/footer/cjs
+
+- main-!~{000}~.cjs => main-YL1tdpU7.cjs
+
+# tests/rolldown/misc/footer/iife
+
+- main-!~{000}~.mjs => main-grrFKEuE.mjs
 
 # tests/rolldown/misc/generate_valid_name_for_kebab_case_files
 

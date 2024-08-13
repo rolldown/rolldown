@@ -105,6 +105,7 @@ pub struct BundlerOptions {
     schemars(with = "Option<HashMap<String, String>>")
   )]
   pub define: Option<FxIndexMap<String, String>>,
+  pub extend: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
 }
 

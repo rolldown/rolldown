@@ -1897,7 +1897,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
-- entry-!~{000}~.mjs => entry-sMZcMGaP.mjs
+- entry-!~{000}~.mjs => entry-0rqducjg.mjs
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 

@@ -233,39 +233,35 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let exports_len = self.ctx.linking_info.canonical_exports().count();
 
-    if exports_len == 0 {
-      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-      let importer_namespace_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
-      let export_external_stmts: Box<dyn Iterator<Item = Statement<'ast>>> =
-        if matches!(self.ctx.options.format, OutputFormat::Esm) {
-          Box::new(
-            export_all_externals_info
-              .into_iter()
-              .map(|(importee_name, importee_namespace_name)| {
-                vec![
-                  self.snippet.import_star_stmt(&importee_name, &importee_namespace_name),
-                  self.snippet.builder.statement_expression(
-                    SPAN,
-                    self.snippet.call_expr_with_2arg_expr(
-                      re_export_fn_name,
-                      importer_namespace_name,
-                      &importee_namespace_name,
-                    ),
+    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+    let importer_namespace_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
+
+    let export_external_stmts: Box<dyn Iterator<Item = Statement<'ast>>> =
+      if matches!(self.ctx.options.format, OutputFormat::Esm) {
+        Box::new(
+          export_all_externals_info
+            .into_iter()
+            .map(|(importee_name, importee_namespace_name)| {
+              vec![
+                self.snippet.import_star_stmt(&importee_name, &importee_namespace_name),
+                self.snippet.builder.statement_expression(
+                  SPAN,
+                  self.snippet.call_expr_with_2arg_expr(
+                    re_export_fn_name,
+                    importer_namespace_name,
+                    &importee_namespace_name,
                   ),
-                ]
-              })
-              .flatten(),
-          )
-        } else {
-          Box::new(std::iter::empty())
-        };
+                ),
+              ]
+            })
+            .flatten(),
+        )
+      } else {
+        Box::new(std::iter::empty())
+      };
+    if exports_len == 0 {
       let mut ret = vec![decl_stmt];
       ret.extend(export_external_stmts);
-      // let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-      // let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-      // program.body.push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
-      // program.body.push(
-      //     .into_in(self.alloc),
       return ret;
     }
 
@@ -309,6 +305,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .into_in(self.alloc),
     );
 
-    vec![decl_stmt, export_call_stmt]
+    let mut ret = vec![decl_stmt, export_call_stmt];
+    ret.extend(export_external_stmts);
+    ret
   }
 }

@@ -118,7 +118,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     define: raw_options.define.map(|inner| inner.into_iter().collect()).unwrap_or_default(),
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
-    extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
   };
 

@@ -21,7 +21,7 @@ use rolldown_sourcemap::ConcatSource;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 #[derive(Debug)]
-pub struct Injections {
+pub struct Addons {
   pub banner: Option<String>,
   pub footer: Option<String>,
   pub intro: Option<String>,
@@ -34,11 +34,11 @@ pub struct Injections {
 pub fn render_wrapper_function(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  injections: Injections,
+  addons: Addons,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  concat_source.append_optional_raw_string(injections.banner);
+  concat_source.append_optional_raw_string(addons.banner);
 
   // iife wrapper start
 
@@ -71,7 +71,7 @@ pub fn render_wrapper_function(
     concat_source.append_raw_string("\"use strict\";".to_string());
   }
 
-  concat_source.append_optional_raw_string(injections.intro);
+  concat_source.append_optional_raw_string(addons.intro);
 
   if named_exports {
     let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
@@ -93,7 +93,7 @@ pub fn render_wrapper_function(
   // iife exports
   concat_source.append_optional_raw_string(render_chunk_exports(ctx, Some(&export_mode)));
 
-  concat_source.append_optional_raw_string(injections.outro);
+  concat_source.append_optional_raw_string(addons.outro);
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
@@ -102,7 +102,7 @@ pub fn render_wrapper_function(
 
   concat_source.append_raw_string(format!("}}){caller};"));
 
-  concat_source.append_optional_raw_string(injections.footer);
+  concat_source.append_optional_raw_string(addons.footer);
 
   Ok(concat_source)
 }

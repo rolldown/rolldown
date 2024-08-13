@@ -109,7 +109,6 @@ impl<'a> LinkStage<'a> {
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
     self.include_statements();
-    dbg!(&self.used_symbol_refs);
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
@@ -282,7 +281,6 @@ impl<'a> LinkStage<'a> {
 
                     let is_reexport_all = importer.star_exports.contains(rec_id);
                     if is_reexport_all {
-                      println!("is reexport all link stage");
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                       declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
@@ -292,7 +290,6 @@ impl<'a> LinkStage<'a> {
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__reExport").into());
                       }
-                      dbg!(&stmt_info.debug_label);
                     }
                   }
                   _ => {}
@@ -352,7 +349,6 @@ impl<'a> LinkStage<'a> {
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
-                          println!("refed");
                         }
                       }
                     }
@@ -376,7 +372,6 @@ impl<'a> LinkStage<'a> {
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toCommonJS").into());
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
-                      println!("it is used");
                     }
                   },
                   ImportKind::DynamicImport => {
@@ -398,7 +393,6 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
-                          println!("wrap kind esm");
                         }
                       }
                     }

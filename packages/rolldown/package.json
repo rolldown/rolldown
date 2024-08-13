@@ -112,7 +112,7 @@
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
     "fs-extra": "^11.2.0",
-    "glob": "^10.4.1",
+    "glob": "^11.0.0",
     "locate-character": "^3.0.0",
     "mri": "^1.2.0",
     "npm-run-all2": "^6.2.0",
@@ -122,8 +122,8 @@
     "type-fest": "^4.20.0",
     "unbuild": "^2.0.0",
     "vite": "^5.2.13",
-    "vitest": "^1.6.0",
-    "why-is-node-running": "^2.2.2"
+    "vitest": "^2.0.0",
+    "why-is-node-running": "^3.0.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

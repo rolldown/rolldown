@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNLOADABLE_DEPENDENCY
 
 ```text
-[UNLOADABLE_DEPENDENCY] Error: Could not resolve test.js
+[UNLOADABLE_DEPENDENCY] Error: Could not load test.js
    ╭─[entry.js:1:18]
    │
  1 │ import test from 'test.js'

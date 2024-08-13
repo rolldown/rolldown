@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import assert from "node:assert"
+class A {
+  constructor() {
+this.test = this.test || {};
+(function(exports) {
+
+"use strict";
+
+//#region main.js
+const a = 1;
+const b = 2;
+
+//#endregion
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'b', {
+  enumerable: true,
+  get: function () {
+    return b;
+  }
+});
+})(this.test.module = this.test.module || {});
+  }
+}
+let a = new A();
+assert(a instanceof A);
+assert(a.test.module.a === 1);
+```

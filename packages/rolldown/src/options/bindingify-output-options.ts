@@ -42,6 +42,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
+    extend: outputOptions.extend,
     globals,
     esModule: bindingifyEsModule(esModule),
     name,

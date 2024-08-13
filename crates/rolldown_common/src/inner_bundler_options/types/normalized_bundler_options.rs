@@ -49,6 +49,7 @@ pub struct NormalizedBundlerOptions {
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub experimental: ExperimentalOptions,
   pub minify: bool,
+  pub extend: bool,
   pub define: Vec<(/* Target to be replaced */ String, /* Replacement */ String)>,
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,

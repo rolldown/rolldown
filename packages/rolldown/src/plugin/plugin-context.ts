@@ -43,6 +43,7 @@ export class PluginContext {
   getFileName: (referenceId: string) => string
   getModuleInfo: (id: string) => ModuleInfo | null
   getModuleIds: () => IterableIterator<string>
+  addWatchFile: (id: string) => void
   /**
    * @deprecated This rollup API won't be supported by rolldown. Using this API will cause runtime error.
    */
@@ -118,5 +119,6 @@ export class PluginContext {
     this.parse = unsupported(
       '`PluginContext#parse` is not supported by rolldown.',
     )
+    this.addWatchFile = () => {}
   }
 }

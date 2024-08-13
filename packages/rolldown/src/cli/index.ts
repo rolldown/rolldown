@@ -1,55 +1,34 @@
 import process from 'node:process'
-import parseArgs from 'mri'
-import { defineCommand, runMain, showUsage } from 'citty'
+import { parseArgs } from 'node:util'
+import { mapValues, omit } from 'remeda'
 import { bundle } from './commands/bundle'
-import {
-  version,
-  description,
-} from '../../package.json' assert { type: 'json' }
+import { showHelp } from './commands/help'
 import { DEFAULT_CONFIG_FILENAME } from './constants'
+import { CLI_OPTIONS } from './options'
+import { logger } from './utils'
 
-interface ParsedArgs {
-  config?: string | true
-  c?: string | true
-  // `citty` intercept the help option, so we don't need to deal with it
-  // help?: boolean
-  // h?: boolean
+async function main() {
+  const { values } = parseArgs({
+    options: mapValues(CLI_OPTIONS, omit(['description'])),
+    // We need to support both `rolldown -c` and `rolldown -c rolldown.config.js`,
+    // the value of the option could be either a boolean or a string in this case,
+    // so `strict` needs to be set to `false`
+    strict: false,
+  })
+
+  if (values.config) {
+    // If config is specified, we will ignore other arguments and bundle with the specified config
+    await bundle(
+      typeof values.config === 'string'
+        ? values.config
+        : DEFAULT_CONFIG_FILENAME,
+    )
+    process.exit(0)
+  }
+
+  // TODO: accept other arguments
+
+  showHelp()
 }
 
-const main = defineCommand({
-  meta: {
-    name: 'rolldown',
-    version,
-    description,
-  },
-  args: {
-    config: {
-      type: 'string',
-      alias: 'c',
-      description:
-        'Use this config file (if argument is used but value is unspecified, defaults to `rolldown.config.js`)',
-    },
-    help: {
-      type: 'boolean',
-      alias: 'h',
-      description: 'Show this help message',
-    },
-  },
-  async run(_ctx) {
-    // FIXME: `citty` doesn't support detecting if an argument is unspecified
-    const parsedArgs = parseArgs<ParsedArgs>(process.argv.slice(2))
-    let argConfig = parsedArgs.c || parsedArgs.config
-    if (argConfig) {
-      // If config is specified, we will ignore other arguments and bundle with the specified config
-      if (argConfig == true) {
-        argConfig = DEFAULT_CONFIG_FILENAME
-      }
-      await bundle(argConfig)
-      process.exit(0)
-    }
-
-    showUsage(main)
-  },
-})
-
-runMain(main)
+main().catch(logger.error)

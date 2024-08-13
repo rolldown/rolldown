@@ -8,7 +8,7 @@ use crate::{
     hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
     hook_transform_output::HookTransformOutput,
   },
-  HookBuildEndArgs, HookInjectionArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
+  HookAddonArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
   HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
@@ -133,7 +133,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn banner(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs<'_>,
+    _args: &HookAddonArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -145,7 +145,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn footer(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs<'_>,
+    _args: &HookAddonArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -157,7 +157,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn intro(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs<'_>,
+    _args: &HookAddonArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -169,7 +169,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn outro(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs<'_>,
+    _args: &HookAddonArgs<'_>,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }

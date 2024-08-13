@@ -8,7 +8,7 @@ use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
 use rolldown_error::DiagnosableResult;
-use rolldown_plugin::HookInjectionArgs;
+use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -69,7 +69,7 @@ impl Generator for EcmaGenerator {
       };
       ctx
         .plugin_driver
-        .banner(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .banner(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
         .await?
     };
 
@@ -80,7 +80,7 @@ impl Generator for EcmaGenerator {
       };
       ctx
         .plugin_driver
-        .intro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .intro(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
         .await?
     };
 
@@ -91,7 +91,7 @@ impl Generator for EcmaGenerator {
       };
       ctx
         .plugin_driver
-        .outro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .outro(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
         .await?
     };
 
@@ -102,7 +102,7 @@ impl Generator for EcmaGenerator {
       };
       ctx
         .plugin_driver
-        .footer(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .footer(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
         .await?
     };
 

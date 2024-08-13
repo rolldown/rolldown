@@ -222,7 +222,7 @@ impl Plugin for JsPlugin {
   async fn banner(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookInjectionArgs<'_>,
+    args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.banner {
       Ok(
@@ -243,7 +243,7 @@ impl Plugin for JsPlugin {
   async fn intro(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookInjectionArgs<'_>,
+    args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.intro {
       Ok(
@@ -264,7 +264,7 @@ impl Plugin for JsPlugin {
   async fn outro(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookInjectionArgs<'_>,
+    args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.outro {
       Ok(
@@ -285,7 +285,7 @@ impl Plugin for JsPlugin {
   async fn footer(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookInjectionArgs<'_>,
+    args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.footer {
       Ok(

@@ -5,8 +5,8 @@ use crate::{
   plugin_hook_meta::PluginHookMeta,
   transform_plugin_context::TransformPluginContext,
   types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
-  HookBuildEndArgs, HookInjectionArgs, HookInjectionOutputReturn, HookLoadArgs,
-  HookRenderChunkArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
+  HookAddonArgs, HookBuildEndArgs, HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs,
+  HookResolveIdArgs, HookTransformArgs, Plugin,
 };
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 
@@ -102,7 +102,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_banner(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs,
+    _args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn;
 
   fn call_banner_meta(&self) -> Option<PluginHookMeta>;
@@ -110,7 +110,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_footer(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs,
+    _args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn;
 
   fn call_footer_meta(&self) -> Option<PluginHookMeta>;
@@ -118,7 +118,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_intro(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs,
+    _args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn;
 
   fn call_intro_meta(&self) -> Option<PluginHookMeta>;
@@ -126,7 +126,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_outro(
     &self,
     _ctx: &PluginContext,
-    _args: &HookInjectionArgs,
+    _args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn;
 
   fn call_outro_meta(&self) -> Option<PluginHookMeta>;
@@ -267,7 +267,7 @@ impl<T: Plugin> Pluginable for T {
   async fn call_banner(
     &self,
     ctx: &PluginContext,
-    args: &HookInjectionArgs,
+    args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn {
     Plugin::banner(self, ctx, args).await
   }
@@ -279,7 +279,7 @@ impl<T: Plugin> Pluginable for T {
   async fn call_footer(
     &self,
     ctx: &PluginContext,
-    args: &HookInjectionArgs,
+    args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn {
     Plugin::footer(self, ctx, args).await
   }
@@ -291,7 +291,7 @@ impl<T: Plugin> Pluginable for T {
   async fn call_intro(
     &self,
     ctx: &PluginContext,
-    args: &HookInjectionArgs,
+    args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn {
     Plugin::intro(self, ctx, args).await
   }
@@ -303,7 +303,7 @@ impl<T: Plugin> Pluginable for T {
   async fn call_outro(
     &self,
     ctx: &PluginContext,
-    args: &HookInjectionArgs,
+    args: &HookAddonArgs,
   ) -> HookInjectionOutputReturn {
     Plugin::outro(self, ctx, args).await
   }

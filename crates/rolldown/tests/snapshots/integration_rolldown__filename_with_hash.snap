@@ -1625,10 +1625,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-QsUUVrUj.mjs
 
-# tests/rolldown/function/format/iife/basic
-
-- main-!~{000}~.mjs => main--9MFXZs-.mjs
-
 # tests/rolldown/function/format/iife/conflict_exports_key
 
 - main-!~{000}~.mjs => main-oG2zLm_0.mjs
@@ -1648,6 +1644,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/format/iife/iife_with_name
 
 - main-!~{000}~.mjs => main--FmiP1j0.mjs
+
+# tests/rolldown/function/format/iife/inline_dynamic_import
+
+- main-!~{000}~.mjs => main--9MFXZs-.mjs
 
 # tests/rolldown/function/format/iife/namespaced_name
 

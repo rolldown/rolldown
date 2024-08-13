@@ -89,14 +89,16 @@ pub fn render_iife(
   let (input_args, output_args) = render_iife_arguments(
     ctx,
     &externals,
-    if has_exports && named_exports && ctx.options.extend {
-      // If using `output.extend`, the first caller argument should be `name = name || {}`,
-      // then the result will be assigned to `name`.
-      Some(assignment.as_str())
-    } else if has_exports && named_exports {
-      // If not using `output.extend`, the first caller argument should be `{}`,
-      // then the result will be assigned to `exports`.
-      Some("{}")
+    if has_exports && named_exports {
+      if ctx.options.extend {
+        // If using `output.extend`, the first caller argument should be `name = name || {}`,
+        // then the result will be assigned to `name`.
+        Some(assignment.as_str())
+      } else {
+        // If not using `output.extend`, the first caller argument should be `{}`,
+        // then the result will be assigned to `exports`.
+        Some("{}")
+      }
     } else {
       // If there is no export or not using named export,
       // there shouldn't be an argument shouldn't be related to the export.
@@ -235,10 +237,14 @@ fn render_iife_arguments(
   exports_prefix: Option<&str>,
 ) -> (String, String) {
   let mut input_args = if exports_prefix.is_some() { vec!["exports".to_string()] } else { vec![] };
-  let mut output_args =
-    if exports_prefix.is_some() { vec![exports_prefix.unwrap().to_string()] } else { vec![] };
+  let mut output_args = if let Some(exports_prefix) = exports_prefix {
+    vec![exports_prefix.to_string()]
+  } else {
+    vec![]
+  };
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
+    // TODO deconflict input args
     input_args.push(legitimize_identifier_name(external).to_string());
     if let Some(global) = globals.get(external) {
       output_args.push(legitimize_identifier_name(global).to_string());

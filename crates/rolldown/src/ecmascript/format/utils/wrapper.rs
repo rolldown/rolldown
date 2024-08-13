@@ -157,14 +157,16 @@ fn render_factory(
     OutputFormat::Iife => {
       let (definition, assignment) = generate_identifier(ctx, export_mode, has_export, "this")?;
       let named_export = matches!(&export_mode, OutputExports::Named);
-      let export_invoker = if has_export && named_export && ctx.options.extend {
-        // If using `output.extend`, the first caller argument should be `name = name || {}`,
-        // then the result will be assigned to `name`.
-        Some(assignment.as_str())
-      } else if has_export && named_export {
-        // If not using `output.extend`, the first caller argument should be `{}`,
-        // then the result will be assigned to `exports`.
-        Some("{}")
+      let export_invoker = if has_export && named_export {
+        if ctx.options.extend {
+          // If using `output.extend`, the first caller argument should be `name = name || {}`,
+          // then the result will be assigned to `name`.
+          Some(assignment.as_str())
+        } else {
+          // If not using `output.extend`, the first caller argument should be `{}`,
+          // then the result will be assigned to `exports`.
+          Some("{}")
+        }
       } else {
         // If there is no export or not using named export,
         // there shouldn't be an argument shouldn't be related to the export.

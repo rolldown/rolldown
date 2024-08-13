@@ -50,7 +50,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               return;
             }
           } else {
-            // return;
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
             match &self.ctx.modules[rec.resolved_module] {

@@ -5,6 +5,7 @@ export interface OptionConfig {
   abbreviation?: string
   description: string
   default?: string | boolean
+  hint?: string
 }
 
 export const alias: Partial<
@@ -12,7 +13,9 @@ export const alias: Partial<
 > = {
   config: {
     abbreviation: 'c',
-    description: 'The path to the config file (default: rolldown.config.js)',
+    description: 'Use config file',
+    hint: 'filename',
+    default: 'rolldown.config.js',
   },
   help: {
     abbreviation: 'h',
@@ -20,7 +23,7 @@ export const alias: Partial<
   },
   version: {
     abbreviation: 'v',
-    description: 'Show version number',
+    description: 'Show version',
   },
   dir: {
     abbreviation: 'd',

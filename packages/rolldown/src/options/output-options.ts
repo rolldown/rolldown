@@ -51,17 +51,19 @@ const outputOptionsSchema = z.strictObject({
   globals: z.record(z.string()).optional(),
 })
 
-export const outputCliOptionsSchema = outputOptionsSchema.extend({
-  // Reject all functions in CLI
-  banner: z.string().optional(),
-  footer: z.string().optional(),
-  intro: z.string().optional(),
-  outro: z.string().optional(),
-  // It is hard to handle the union type in json schema, so use this first.
-  esModule: z.boolean().optional(),
-  sourcemapIgnoreList: z.boolean().optional(),
-  sourcemapPathTransform: z.undefined().optional(),
-})
+export const outputCliOptionsSchema = outputOptionsSchema
+  .extend({
+    // Reject all functions in CLI
+    banner: z.string().optional(),
+    footer: z.string().optional(),
+    intro: z.string().optional(),
+    outro: z.string().optional(),
+    // It is hard to handle the union type in json schema, so use this first.
+    esModule: z.boolean().optional(),
+    sourcemapIgnoreList: z.boolean().optional(),
+    sourcemapPathTransform: z.undefined().optional(),
+  })
+  .omit({ sourcemapPathTransform: true })
 
 export type OutputOptions = z.infer<typeof outputOptionsSchema>
 

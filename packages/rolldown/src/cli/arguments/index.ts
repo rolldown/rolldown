@@ -7,7 +7,7 @@ import { logger } from '../utils'
 
 export const flattenedSchema = flattenSchema(objectSchema.properties)
 
-const options = Object.fromEntries(
+export const options = Object.fromEntries(
   Object.entries(flattenedSchema).map(([key, schema]) => {
     const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
       | OptionConfig
@@ -18,21 +18,24 @@ const options = Object.fromEntries(
     const result = {
       type: type === 'boolean' ? 'boolean' : 'string',
       multiple: type === 'object' || type === 'array',
+      description: config?.description ?? '',
+      hint: config?.hint,
     } as {
       type: 'boolean' | 'string'
       multiple: boolean
       short?: string
       default?: boolean | string | string[]
+      hint?: string
+      description?: string
     }
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
-    if (config && config?.default) {
-      result.default = config.default
-    }
     return [key, result]
   }),
 )
+
+export type ParseArgsOptions = typeof options
 
 export function parseCliArguments() {
   const { values, tokens, positionals } = parseArgs({
@@ -48,10 +51,13 @@ export function parseCliArguments() {
     .filter((token) => token.kind === 'option')
     .forEach((option) => {
       let originalType = flattenedSchema[option.name]
-      let type = getSchemaType(originalType)
-      if (type !== 'boolean' && typeof option.value !== 'string') {
-        logger.error('Invalid value for option: ' + option.name)
+      if (!originalType) {
+        logger.warn(
+          `Invalid option: ${option.rawName}. We will ignore this option.`,
+        )
+        return
       }
+      let type = getSchemaType(originalType)
       if (type === 'object') {
         const mappings = option.value?.split(',').map((x) => x.split('='))
         if (mappings) {
@@ -64,9 +70,5 @@ export function parseCliArguments() {
       }
     })
 
-  if (!values.config && positionals.length !== 0) {
-    ;(values.input as string[]) = positionals as string[]
-  }
-
-  return normalizeCliOptions(values)
+  return normalizeCliOptions(values, positionals as string[], options)
 }

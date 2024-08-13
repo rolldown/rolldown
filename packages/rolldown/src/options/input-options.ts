@@ -98,17 +98,18 @@ export const inputOptionsSchema = z.strictObject({
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
 })
 
-export const inputCliOptionsSchema = inputOptionsSchema.extend({
-  input: z.array(z.string()).optional(),
-  external: z.array(z.string()).optional(),
-  onLog: z.string().optional(), // command
-  onwarn: z.string().optional(),
-  inject: z.record(z.string()).optional(),
-  // Doesn't support treeshake options as it is ambiguous
-  treeshake: z.undefined().optional(),
-  // Doesn't support plugin yet.
-  plugins: z.undefined().optional(),
-})
+export const inputCliOptionsSchema = inputOptionsSchema
+  .extend({
+    external: z.array(z.string()).optional(),
+    onLog: z.string().optional(), // command
+    onwarn: z.string().optional(),
+    inject: z.record(z.string()).optional(),
+    // Doesn't support treeshake options as it is ambiguous
+    treeshake: z.undefined().optional(),
+    // Doesn't support plugin yet.
+    plugins: z.undefined().optional(),
+  })
+  .omit({ input: true, plugins: true, treeshake: true })
 
 type RawInputOptions = z.infer<typeof inputOptionsSchema>
 interface OverwriteInputOptionsWithDoc {

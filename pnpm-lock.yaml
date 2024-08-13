@@ -161,9 +161,6 @@ importers:
       zod:
         specifier: ^3.23.8
         version: 3.23.8
-      zod-to-json-schema:
-        specifier: ^3.23.2
-        version: 3.23.2(zod@3.23.8)
     optionalDependencies:
       '@rolldown/binding-darwin-arm64':
         specifier: workspace:*
@@ -1940,6 +1937,7 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
+    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 

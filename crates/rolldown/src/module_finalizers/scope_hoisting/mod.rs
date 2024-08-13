@@ -1,9 +1,12 @@
+use std::iter;
+
+use arcstr::ArcStr;
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordIdx, Module, SymbolRef, WrapKind};
+use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
@@ -217,8 +220,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
+  fn generate_declaration_of_module_namespace_object(
+    &self,
+    export_all_externals_info: Vec<(ArcStr, Rstr)>,
+  ) -> Vec<ast::Statement<'ast>> {
     let var_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
+    dbg!(&self.ctx.module.namespace_object_ref);
     // construct `var ns_name = {}`
     let decl_stmt = self
       .snippet
@@ -227,7 +234,39 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let exports_len = self.ctx.linking_info.canonical_exports().count();
 
     if exports_len == 0 {
-      return vec![decl_stmt];
+      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+      let importer_namespace_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
+      let export_external_stmts: Box<dyn Iterator<Item = Statement<'ast>>> =
+        if matches!(self.ctx.options.format, OutputFormat::Esm) {
+          Box::new(
+            export_all_externals_info
+              .into_iter()
+              .map(|(importee_name, importee_namespace_name)| {
+                vec![
+                  self.snippet.import_star_stmt(&importee_name, &importee_namespace_name),
+                  self.snippet.builder.statement_expression(
+                    SPAN,
+                    self.snippet.call_expr_with_2arg_expr(
+                      re_export_fn_name,
+                      importer_namespace_name,
+                      &importee_namespace_name,
+                    ),
+                  ),
+                ]
+              })
+              .flatten(),
+          )
+        } else {
+          Box::new(std::iter::empty())
+        };
+      let mut ret = vec![decl_stmt];
+      ret.extend(export_external_stmts);
+      // let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+      // let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+      // program.body.push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
+      // program.body.push(
+      //     .into_in(self.alloc),
+      return ret;
     }
 
     // construct `{ prop_name: () => returned, ... }`

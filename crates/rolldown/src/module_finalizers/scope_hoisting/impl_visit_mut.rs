@@ -24,9 +24,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[0].is_included;
 
-    if is_namespace_referenced {
-      program.body.extend(self.generate_declaration_of_module_namespace_object());
-    }
+    let mut export_all_externals_info = vec![];
 
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
     // Skip the first statement info, which is the namespace variable declaration
@@ -52,6 +50,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               return;
             }
           } else {
+            // return;
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
             match &self.ctx.modules[rec.resolved_module] {
@@ -66,6 +65,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 match importee.exports_kind {
                   ExportsKind::Esm => {
                     if importee_linking_info.has_dynamic_exports {
+                      println!("has dynamic exports");
                       let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                       let importer_namespace_name =
                         self.canonical_name_for(self.ctx.module.namespace_object_ref);
@@ -112,25 +112,27 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               Module::External(importee) => {
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm => {
-                    // Insert `import * as ns from 'ext'`
+                    println!("external module in esm format");
+                    // Insert `import * as ns from 'ext'`external module in esm format
                     // Insert `__reExport(exports, ns)`
-                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                    let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                    // let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                     let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-                    program
-                      .body
-                      .push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
-                    program.body.push(
-                      self
-                        .snippet
-                        .call_expr_with_2arg_expr(
-                          re_export_fn_name,
-                          importer_namespace_name,
-                          importee_namespace_name,
-                        )
-                        .into_in(self.alloc),
-                    );
+                    export_all_externals_info
+                      .push((importee.name.clone(), importee_namespace_name.clone()));
+                    return;
+                    // program
+                    //   .body
+                    //   .push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
+                    // program.body.push(
+                    //   self
+                    //     .snippet
+                    //     .call_expr_with_2arg_expr(
+                    //       re_export_fn_name,
+                    //       importer_namespace_name,
+                    //       importee_namespace_name,
+                    //     )
+                    //     .into_in(self.alloc),
+                    // );
                   }
                   rolldown_common::OutputFormat::Cjs => {
                     // Insert `__reExport(exports, require('ext'))`
@@ -218,6 +220,14 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         program.body.push(top_stmt);
       },
     );
+
+    dbg!(&is_namespace_referenced);
+    if is_namespace_referenced {
+      let mut stmts =
+        self.generate_declaration_of_module_namespace_object(export_all_externals_info);
+      stmts.extend(program.body.take_in(&self.alloc));
+      program.body.extend(stmts);
+    }
 
     let mut shimmed_exports =
       self.ctx.linking_info.shimmed_missing_exports.iter().collect::<Vec<_>>();

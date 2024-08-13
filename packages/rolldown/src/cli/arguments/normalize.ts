@@ -43,10 +43,22 @@ export function normalizeCliOptions(options: CliOptions): NormalizedCliOptions {
     const [primary, secondary] = keys;
     if (keysOfInput.includes(primary)) {
       // @ts-ignore
-      result.input[key] = options[key]
+      Object.defineProperty(result.input, key, {
+        // @ts-ignore
+        value: options[key],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
     } else if (keysOfOutput.includes(primary)) {
       // @ts-ignore
-      result.output[key] = options[key]
+      Object.defineProperty(result.output, key, {
+        // @ts-ignore
+        value: options[key],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
     } else if (!reservedKeys.includes(key)) {
       logger.error(`Unknown option: ${key}`)
     }

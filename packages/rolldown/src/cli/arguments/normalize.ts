@@ -49,12 +49,12 @@ export function normalizeCliOptions(
     const keys = key.split('.')
     const [primary] = keys
     if (!args[key]) continue // Ignore the unknown options
-    if (args[key].type === 'string' && value === true) {
+    if (args[key].type === 'string' && typeof value === 'boolean') {
       const config: OptionConfig = Object.getOwnPropertyDescriptor(
         alias,
         key,
       )?.value
-      if (config.default) {
+      if (config.default && value) {
         value = config.default
       } else {
         logger.error(

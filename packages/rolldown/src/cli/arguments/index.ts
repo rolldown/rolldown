@@ -17,7 +17,8 @@ export const options = Object.fromEntries(
 
     const result = {
       type: type === 'boolean' ? 'boolean' : 'string',
-      multiple: type === 'object' || type === 'array',
+      // We only support comma seperated mode right now.
+      // multiple: type === 'object' || type === 'array',
       description: config?.description ?? '',
       hint: config?.hint,
     } as {
@@ -58,15 +59,19 @@ export function parseCliArguments() {
         return
       }
       let type = getSchemaType(originalType)
-      if (type === 'object') {
+      if (type === 'object' && typeof option.value === 'string') {
         const mappings = option.value?.split(',').map((x) => x.split('='))
         if (mappings) {
           // TODO support multiple entries.
           values[option.name] = Object.fromEntries(mappings)
         }
-      } else if (type === 'array') {
-        // TODO support multiple entries.
-        ;(values[option.name] as string[]) = option.value?.split(',') ?? []
+      } else if (type === 'array' && typeof option.value === 'string') {
+        Object.defineProperty(values, option.name, {
+          value: option.value?.split(',') ?? [],
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        })
       }
     })
 

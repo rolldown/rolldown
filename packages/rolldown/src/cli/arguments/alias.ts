@@ -54,4 +54,7 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   entryFileNames: {
     hint: 'name',
   },
+  externalLiveBindings: {
+    default: true
+  }
 }

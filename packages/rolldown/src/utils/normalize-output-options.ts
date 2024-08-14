@@ -46,6 +46,7 @@ export function normalizeOutputOptions(
     minify: opts.minify,
     extend: opts.extend,
     name,
+    externalLiveBindings: opts.externalLiveBindings ?? true,
   }
 }
 

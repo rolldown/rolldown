@@ -107,6 +107,7 @@ pub struct BundlerOptions {
   pub define: Option<FxIndexMap<String, String>>,
   pub extend: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
+  pub external_live_bindings: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

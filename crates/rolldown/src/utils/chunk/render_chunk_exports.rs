@@ -82,14 +82,21 @@ pub fn render_chunk_exports(
 
                 match export_mode {
                   Some(OutputExports::Named) => {
-                    format!(
-                      "Object.defineProperty(exports, '{exported_name}', {{
+                    if !options.external_live_bindings
+                      && export_ref
+                        .is_created_by_import_from_external(&link_output.module_table.modules)
+                    {
+                      format!("exports['{exported_name}'] = {canonical_name}")
+                    } else {
+                      format!(
+                        "Object.defineProperty(exports, '{exported_name}', {{
   enumerable: true,
   get: function () {{
     return {canonical_name};
   }}
 }});"
-                    )
+                      )
+                    }
                   }
                   Some(OutputExports::Default) => {
                     if matches!(options.format, OutputFormat::Cjs) {

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use futures::future::try_join_all;
 use rolldown_common::AssetMeta;
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::collapse_sourcemaps;
 
@@ -10,17 +11,19 @@ use crate::type_alias::IndexPreliminaryAssets;
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexPreliminaryAssets,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> Result<()> {
-  try_join_all(assets.iter_mut().map(|asset| async move {
+  let all_task_warnings = try_join_all(assets.iter_mut().map(|asset| async move {
     // TODO(hyf0): To be refactor:
     // - content should use ArcStr
     // - plugin_driver.render_chunk should return Option<...> to be able to see if there is a return value by the plugin
+    let mut task_warnings = vec![];
     if let AssetMeta::Ecma(ecma_meta) = &asset.meta {
       let render_chunk_ret = plugin_driver
-        .render_chunk(HookRenderChunkArgs {
-          code: asset.content.clone(),
-          chunk: &ecma_meta.rendered_chunk,
-        })
+        .render_chunk(
+          HookRenderChunkArgs { code: asset.content.clone(), chunk: &ecma_meta.rendered_chunk },
+          &mut task_warnings,
+        )
         .await?;
 
       asset.content = render_chunk_ret.0;
@@ -34,9 +37,13 @@ pub async fn render_chunks<'a>(
       }
     }
 
-    Ok::<(), anyhow::Error>(())
+    Ok::<_, anyhow::Error>(task_warnings)
   }))
   .await?;
+
+  for task_warnings in all_task_warnings {
+    warnings.extend(task_warnings);
+  }
 
   Ok(())
 }

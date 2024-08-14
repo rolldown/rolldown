@@ -17,7 +17,14 @@ pub async fn load_source(
   let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?
   {
-    sourcemap_chain.extend(load_hook_output.map);
+    if let Some(map) = load_hook_output.map {
+      match map {
+        rolldown_sourcemap::SourceMapOrMissing::Missing(_) => {}
+        rolldown_sourcemap::SourceMapOrMissing::SourceMap(source_map) => {
+          sourcemap_chain.push(source_map);
+        }
+      };
+    }
     if let Some(v) = load_hook_output.side_effects {
       *side_effects = Some(v);
     }

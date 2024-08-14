@@ -14,6 +14,7 @@ pub enum EventKind {
   Eval,
   CircularDependency,
   SourcemapError,
+  SourcemapBroken,
   MissingExport,
   InvalidExportOption,
   // --- These kinds are rolldown specific
@@ -40,6 +41,7 @@ impl Display for EventKind {
       EventKind::IllegalReassignment => write!(f, "ILLEGAL_REASSIGNMENT"),
       EventKind::Eval => write!(f, "EVAL"),
       EventKind::SourcemapError => write!(f, "SOURCEMAP_ERROR"),
+      EventKind::SourcemapBroken => write!(f, "SOURCEMAP_BROKEN"),
       EventKind::MixedExport => write!(f, "MIXED_EXPORT"),
       EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
       EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),

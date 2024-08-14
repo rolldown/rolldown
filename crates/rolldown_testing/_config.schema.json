@@ -154,6 +154,12 @@
             "type": "string"
           }
         },
+        "externalLiveBindings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "footer": {
           "type": [
             "string",

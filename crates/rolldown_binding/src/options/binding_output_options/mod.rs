@@ -39,7 +39,7 @@ pub struct BindingOutputOptions {
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]
   pub exports: Option<String>,
   pub extend: Option<bool>,
-  // externalLiveBindings: boolean;
+  pub external_live_bindings: Option<bool>,
   // footer: () => string | Promise<string>;
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
@@ -91,6 +91,7 @@ pub struct BindingOutputOptions {
   // strict: boolean;
   // systemNullSetters: boolean;
   // validate: boolean;
+
   // --- Enhanced options
   pub minify: Option<bool>,
 }

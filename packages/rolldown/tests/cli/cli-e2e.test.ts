@@ -72,10 +72,10 @@ describe('cli options for bundling', () => {
   })
 
   it('should handle negative boolean options', async () => {
-    const cwd = cliFixturesDir('no-external-live-bindings')
+    const cwd = cliFixturesDir('cli-option-no-external-live-bindings')
     const status = await $({
       cwd,
-    })`rolldown main.js -f cjs --external node:fs --no-externalLiveBindings`
+    })`rolldown index.ts --format iife --external node:fs --no-externalLiveBindings`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)

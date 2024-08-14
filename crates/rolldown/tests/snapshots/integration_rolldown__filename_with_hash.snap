@@ -1818,7 +1818,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-EYnPJQvV.mjs
 
-# tests/rolldown/misc/assigin-chunk-name-order
+# tests/rolldown/misc/assign-chunk-name-order
 
 - file-!~{001}~.mjs => file-qRJHr9Qk.mjs
 - file~1-!~{002}~.mjs => file~1-vk1_v-xY.mjs

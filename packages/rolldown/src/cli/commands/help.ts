@@ -36,7 +36,7 @@ const examples = [
 
 const notes = [
   'Due to the API limitation, you need to pass `-s` for `.map` sourcemap file as the last argument.',
-  'If you are using the configuration, please pass the `-c` as the first argument if you ignore the default configuration file.',
+  'If you are using the configuration, please pass the `-c` as the last argument if you ignore the default configuration file.',
   'CLI options will override the configuration file.',
   'For more information, please visit https://rolldown.rs/.',
 ]

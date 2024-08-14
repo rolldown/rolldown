@@ -184,9 +184,6 @@ impl<'a> GenerateStage<'a> {
       let chunk_name_info = &mut index_pre_generated_names[*chunk_id];
 
       let chunk_name = if chunk_name_info.explicit {
-        if used_name_map.contains_key(&chunk_name_info.name) {
-          return Err(anyhow::anyhow!("Chunk name `{}` is already used", chunk_name_info.name));
-        }
         chunk_name_info.name.clone()
       } else {
         let chunk_name = match used_name_map.entry(chunk_name_info.name.clone()) {

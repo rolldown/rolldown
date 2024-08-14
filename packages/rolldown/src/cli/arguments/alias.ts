@@ -55,9 +55,9 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
     hint: 'name',
   },
   externalLiveBindings: {
-    default: true
+    default: true,
   },
   treeshake: {
-    default: true
-  }
+    default: true,
+  },
 }

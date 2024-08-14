@@ -118,7 +118,11 @@ export const inputCliOptionsSchema = inputOptionsSchema
       .record(z.string())
       .describe('inject import statements on demand')
       .optional(),
-    treeshake: z.boolean().describe('enable treeshaking').default(true).optional(),
+    treeshake: z
+      .boolean()
+      .describe('enable treeshaking')
+      .default(true)
+      .optional(),
   })
   .omit({
     input: true,

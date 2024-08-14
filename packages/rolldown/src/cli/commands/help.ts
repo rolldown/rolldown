@@ -66,8 +66,13 @@ export function showHelp() {
       })
       .map(([option, { type, short, hint, description }]) => {
         let optionStr = '  '
-        const config = ((Object.getOwnPropertyDescriptor(alias, option) ?? {}).value ?? {}) as OptionConfig
-        if (typeof config.default === 'boolean' && type === 'boolean' && config.default) {
+        const config = ((Object.getOwnPropertyDescriptor(alias, option) ?? {})
+          .value ?? {}) as OptionConfig
+        if (
+          typeof config.default === 'boolean' &&
+          type === 'boolean' &&
+          config.default
+        ) {
           optionStr += `--no-${option}`
           description = `Do not ${description}`
         } else {

@@ -67,7 +67,11 @@ const outputOptionsSchema = z.strictObject({
       'Comma-separated list of `module-id:global` pairs (`<module-id>:<global>,...`)',
     )
     .optional(),
-  externalLiveBindings: z.boolean().describe('use external live bindings').default(true).optional(),
+  externalLiveBindings: z
+    .boolean()
+    .describe('use external live bindings')
+    .default(true)
+    .optional(),
 })
 
 const getAddonDescription = (

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region rolldown.webp
+var rolldown_default = "assets/rolldown-VzoUdkiy.webp";
+
+//#endregion
+//#region main.js
+assert(typeof rolldown_default === "string" && rolldown_default === "assets/rolldown-VzoUdkiy.webp");
+
+//#endregion
+```

@@ -1726,6 +1726,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-b_m0mFIu.mjs
 
+# tests/rolldown/function/module_types/file/binary
+
+- assets/rolldown-VzoUdkiy.webp
+- main-!~{000}~.mjs => main-fBDArdr6.mjs
+
 # tests/rolldown/function/module_types/json/array
 
 - main-!~{000}~.mjs => main-o5kDyV6h.mjs

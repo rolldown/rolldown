@@ -1,11 +1,9 @@
 use arcstr::ArcStr;
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
+use std::ffi::OsStr;
+use std::path::Path;
 use std::sync::Arc;
-
-use anyhow::Result;
-use rolldown_common::{Module, ModuleIdx, ModuleType, ResolvedId, StrOrBytes};
-use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -16,6 +14,14 @@ use crate::{
   },
   utils::{load_source::load_source, transform_source::transform_source},
 };
+use anyhow::{bail, Result};
+use rolldown_common::{
+  AssetSource, FileNameRenderOptions, Module, ModuleIdx, ModuleType, OutputAsset, ResolvedId,
+  StrOrBytes,
+};
+use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
+use rolldown_utils::sanitize_file_name::sanitize_file_name;
+use rolldown_utils::xxhash::xxhash_base64_url;
 
 pub struct EcmaModuleTaskOwner {
   source: ArcStr,
@@ -63,10 +69,12 @@ impl EcmaModuleTask {
     }
   }
 
+  #[allow(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> Result<()> {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
+    let mut assets = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let (source, mut module_type) = match load_source(
@@ -108,7 +116,28 @@ impl EcmaModuleTask {
         .await?;
         source.into()
       }
-      StrOrBytes::Bytes(_) => source,
+      StrOrBytes::Bytes(_) => {
+        let bytes = source.try_into_bytes()?;
+        let filename = self.resolved_id.id.to_string();
+        let path = Path::new(filename.as_str());
+        let Ok(extension) = path.extension().and_then(OsStr::to_str).ok_or("") else {
+          bail!("Unknown extension.")
+        };
+        let name = path.file_stem().and_then(OsStr::to_str).map(|x| sanitize_file_name(x.into()));
+        let filename = &self.ctx.options.asset_filenames.render(&FileNameRenderOptions {
+          name: name.as_deref(),
+          hash: Some(&xxhash_base64_url(&bytes).as_str()[..8]),
+          ext: Some(extension),
+        });
+        if let ModuleType::File = module_type {
+          assets.push(OutputAsset {
+            filename: filename.as_str().to_string(),
+            source: AssetSource::Buffer(bytes.clone()),
+            name,
+          });
+        }
+        StrOrBytes::from(bytes)
+      }
     };
 
     // TODO: module type should be able to updated by transform hook, for now we don't impl it.
@@ -131,6 +160,7 @@ impl EcmaModuleTask {
         warnings: &mut warnings,
         module_type: module_type.clone(),
         resolver: &self.ctx.resolver,
+        assets: &assets,
         is_user_defined_entry: self.is_user_defined_entry,
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
@@ -160,6 +190,7 @@ impl EcmaModuleTask {
         ecma_related,
         module,
         raw_import_records,
+        assets,
       }))
       .await
     {

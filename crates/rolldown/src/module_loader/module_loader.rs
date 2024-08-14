@@ -15,7 +15,7 @@ use oxc::span::Span;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, OutputFormat, ResolvedId,
+  ModuleIdx, ModuleTable, OutputAsset, OutputFormat, ResolvedId,
 };
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
@@ -69,6 +69,7 @@ pub struct ModuleLoaderOutput {
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
+  pub assets: Vec<OutputAsset>,
 }
 
 impl ModuleLoader {
@@ -197,6 +198,7 @@ impl ModuleLoader {
 
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
+    let mut all_assets = vec![];
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -234,8 +236,10 @@ impl ModuleLoader {
             raw_import_records,
             warnings,
             ecma_related,
+            assets,
           } = task_result;
           all_warnings.extend(warnings);
+          all_assets.extend(assets);
 
           let import_records: IndexVec<ImportRecordIdx, rolldown_common::ImportRecord> =
             raw_import_records
@@ -335,6 +339,7 @@ impl ModuleLoader {
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
+      assets: all_assets,
     }))
   }
 }

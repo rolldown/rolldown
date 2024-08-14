@@ -42,7 +42,7 @@ pub async fn load_source(
           ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
         )),
         (source, Some(guessed)) => match &guessed {
-          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
+          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::File => Ok((
             StrOrBytes::Bytes({
               source
                 .map(String::into_bytes)

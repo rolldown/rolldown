@@ -22,6 +22,7 @@ pub enum ModuleType {
   Dataurl,
   Binary,
   Empty,
+  File,
   Custom(String),
 }
 
@@ -37,6 +38,7 @@ impl ModuleType {
       "base64" => Ok(Self::Base64),
       "dataurl" => Ok(Self::Dataurl),
       "binary" => Ok(Self::Binary),
+      "file" => Ok(Self::File),
       "empty" => Ok(Self::Empty),
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
@@ -55,6 +57,7 @@ impl ModuleType {
       "base64" => Self::Base64,
       "dataurl" => Self::Dataurl,
       "binary" => Self::Binary,
+      "file" => Self::File,
       "empty" => Self::Empty,
       _ => Self::Custom(s.to_string()),
     }
@@ -73,6 +76,7 @@ impl Display for ModuleType {
       ModuleType::Base64 => write!(f, "base64"),
       ModuleType::Dataurl => write!(f, "dataurl"),
       ModuleType::Binary => write!(f, "binary"),
+      ModuleType::File => write!(f, "file"),
       ModuleType::Empty => write!(f, "empty"),
       ModuleType::Custom(custom_type) => write!(f, "{custom_type}"),
     }

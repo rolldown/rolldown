@@ -1,5 +1,7 @@
 use oxc::index::IndexVec;
-use rolldown_common::{ImportRecordIdx, Module, ModuleIdx, RawImportRecord, ResolvedId};
+use rolldown_common::{
+  ImportRecordIdx, Module, ModuleIdx, OutputAsset, RawImportRecord, ResolvedId,
+};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 
@@ -12,4 +14,5 @@ pub struct NormalModuleTaskResult {
   pub warnings: Vec<BuildDiagnostic>,
   pub module: Module,
   pub ecma_related: Option<(EcmaAst, AstSymbols)>,
+  pub assets: Vec<OutputAsset>,
 }

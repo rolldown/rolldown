@@ -72,6 +72,7 @@ impl ModuleFactory for EcmaModuleFactory {
       ctx.options,
       &ctx.module_type,
       args.source,
+      ctx.assets,
       ctx.replace_global_define_config.as_ref(),
     )?;
 

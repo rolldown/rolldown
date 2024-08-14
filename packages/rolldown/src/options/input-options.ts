@@ -86,6 +86,7 @@ export const inputOptionsSchema = z.strictObject({
         .or(z.literal('base64'))
         .or(z.literal('dataurl'))
         .or(z.literal('binary'))
+        .or(z.literal('file'))
         .or(z.literal('empty')),
     )
     .optional(),

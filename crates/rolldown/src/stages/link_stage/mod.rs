@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, StmtInfo, SymbolRef, WrapKind,
+  OutputAsset, OutputFormat, StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -42,6 +42,7 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
+  pub assets: Vec<OutputAsset>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
 }
 
@@ -55,6 +56,7 @@ pub struct LinkStage<'a> {
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
+  pub assets: Vec<OutputAsset>,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
@@ -96,6 +98,7 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       options,
       used_symbol_refs: FxHashSet::default(),
+      assets: scan_stage_output.assets,
     }
   }
 
@@ -122,6 +125,7 @@ impl<'a> LinkStage<'a> {
       errors: self.errors,
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
+      assets: self.assets,
     }
   }
 

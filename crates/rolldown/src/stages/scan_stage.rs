@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
-use rolldown_common::{EntryPoint, ImportKind, ModuleTable, ResolvedId};
+use rolldown_common::{EntryPoint, ImportKind, ModuleTable, OutputAsset, ResolvedId};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -34,6 +34,7 @@ pub struct ScanStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
+  pub assets: Vec<OutputAsset>,
 }
 
 impl ScanStage {
@@ -73,6 +74,7 @@ impl ScanStage {
       runtime,
       warnings,
       index_ecma_ast,
+      assets,
     } = match module_loader.fetch_all_modules(user_entries).await? {
       Ok(output) => output,
       Err(errors) => {
@@ -88,6 +90,7 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       errors: vec![],
+      assets,
     }))
   }
 

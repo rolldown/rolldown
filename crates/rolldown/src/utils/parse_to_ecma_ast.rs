@@ -6,7 +6,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
 };
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
+use rolldown_common::{AssetSource, ModuleType, NormalizedBundlerOptions, OutputAsset, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::DiagnosableResult;
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm};
@@ -27,6 +27,7 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   pure_esm_js
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,
@@ -34,45 +35,64 @@ pub fn parse_to_ecma_ast(
   options: &NormalizedBundlerOptions,
   module_type: &ModuleType,
   source: StrOrBytes,
+  assets: &[OutputAsset],
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
 ) -> anyhow::Result<DiagnosableResult<(EcmaAst, SymbolTable, ScopeTree)>> {
   // 1. Transform the source to the type that rolldown supported.
-  let (source, parsed_type) = match module_type {
-    ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
-    ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
-    ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
-    ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
-    ModuleType::Json => {
-      let content = json_to_esm(&source.try_into_string()?)?;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Text => {
-      let content = text_to_esm(&source.try_into_string()?)?;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Base64 => {
-      let source = source.try_into_bytes()?;
-      let encoded = rolldown_utils::base64::to_standard_base64(source);
-      (text_to_esm(&encoded)?, OxcParseType::Js)
-    }
-    ModuleType::Dataurl => {
-      let data = source.try_into_bytes()?;
-      let guessed_mime = guess_mime(path, &data)?;
-      let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
-      (text_to_esm(&dataurl)?, OxcParseType::Js)
-    }
-    ModuleType::Binary => {
-      let source = source.try_into_bytes()?;
-      let encoded = rolldown_utils::base64::to_standard_base64(source);
-      (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
-    }
-    ModuleType::Empty => ("export {}".to_string(), OxcParseType::Js),
-    ModuleType::Custom(custom_type) => {
-      // TODO: should provide friendly error message to say that this type is not supported by rolldown.
-      // Users should handle this type in load/transform hooks
-      return Err(anyhow::format_err!("Unknown module type: {custom_type}"));
-    }
-  };
+  let (source, parsed_type) =
+    match module_type {
+      ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
+      ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
+      ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
+      ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
+      ModuleType::Json => {
+        let content = json_to_esm(&source.try_into_string()?)?;
+        (content, OxcParseType::Js)
+      }
+      ModuleType::Text => {
+        let content = text_to_esm(&source.try_into_string()?)?;
+        (content, OxcParseType::Js)
+      }
+      ModuleType::Base64 => {
+        let source = source.try_into_bytes()?;
+        let encoded = rolldown_utils::base64::to_standard_base64(source);
+        (text_to_esm(&encoded)?, OxcParseType::Js)
+      }
+      ModuleType::Dataurl => {
+        let data = source.try_into_bytes()?;
+        let guessed_mime = guess_mime(path, &data)?;
+        let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
+        (text_to_esm(&dataurl)?, OxcParseType::Js)
+      }
+      ModuleType::Binary => {
+        let source = source.try_into_bytes()?;
+        let encoded = rolldown_utils::base64::to_standard_base64(source);
+        (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
+      }
+      ModuleType::Empty => ("export {}".to_string(), OxcParseType::Js),
+      ModuleType::File => {
+        let src = source.try_into_bytes()?;
+        assets
+          .iter()
+          .find(|asset| {
+            if let AssetSource::Buffer(source) = &asset.source {
+              &src == source
+            } else {
+              false
+            }
+          })
+          .map(|result| {
+            let exports = format!("export default \"{}\"", result.filename);
+            (exports, OxcParseType::Js)
+          })
+          .ok_or_else(|| anyhow::format_err!("Cannot find asset for file: {:?}", path))?
+      }
+      ModuleType::Custom(custom_type) => {
+        // TODO: should provide friendly error message to say that this type is not supported by rolldown.
+        // Users should handle this type in load/transform hooks
+        return Err(anyhow::format_err!("Unknown module type: {custom_type}"));
+      }
+    };
 
   let oxc_source_type = {
     let default = pure_esm_js_oxc_source_type();

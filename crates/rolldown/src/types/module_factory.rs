@@ -1,17 +1,16 @@
-use std::sync::Arc;
-
 use futures::future::join_all;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
   side_effects::HookSideEffects, ImportKind, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx,
-  ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
+  ModuleType, OutputAsset, RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 use rolldown_sourcemap::SourceMap;
+use std::sync::Arc;
 
 use crate::{runtime::RUNTIME_MODULE_ID, utils::resolve_id, SharedOptions, SharedResolver};
 
@@ -24,6 +23,7 @@ pub struct CreateModuleContext<'a> {
   pub options: &'a SharedOptions,
   pub module_type: ModuleType,
   pub warnings: &'a mut Vec<BuildDiagnostic>,
+  pub assets: &'a Vec<OutputAsset>,
   pub resolver: &'a SharedResolver,
   pub is_user_defined_entry: bool,
   pub replace_global_define_config: Option<ReplaceGlobalDefinesConfig>,

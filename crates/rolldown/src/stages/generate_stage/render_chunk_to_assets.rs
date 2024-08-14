@@ -27,6 +27,7 @@ impl<'a> GenerateStage<'a> {
   ) -> anyhow::Result<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
+    let precluded_assets = std::mem::take(&mut self.link_output.assets);
     let (mut preliminary_assets, index_chunk_to_assets) =
       self.render_preliminary_assets(chunk_graph, &mut errors, &mut warnings).await?;
 
@@ -39,6 +40,9 @@ impl<'a> GenerateStage<'a> {
     self.minify_assets(&mut assets)?;
 
     let mut outputs = vec![];
+
+    outputs.extend(precluded_assets.into_iter().map(|asset| Output::Asset(Box::new(asset))));
+
     for Asset {
       mut map,
       meta: rendered_chunk,

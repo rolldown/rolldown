@@ -32,7 +32,12 @@ export const options = Object.fromEntries(
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
-    return [(typeof config?.default === 'boolean' && config?.default) ? `no-${key}` : key, result]
+    return [
+      typeof config?.default === 'boolean' && config?.default
+        ? `no-${key}`
+        : key,
+      result,
+    ]
   }),
 )
 

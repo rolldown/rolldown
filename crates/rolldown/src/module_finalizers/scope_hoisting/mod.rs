@@ -1,4 +1,3 @@
-use arcstr::ArcStr;
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
@@ -220,7 +219,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn generate_declaration_of_module_namespace_object(
     &self,
-    export_all_externals_info: Vec<(ArcStr, Rstr)>,
+    export_all_externals_rec_ids: Vec<ImportRecordIdx>,
   ) -> Vec<ast::Statement<'ast>> {
     let var_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
     // construct `var ns_name = {}`
@@ -231,27 +230,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let exports_len = self.ctx.linking_info.canonical_exports().count();
 
     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-    let importer_namespace_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
-
     let export_external_stmts: Box<dyn Iterator<Item = Statement<'ast>>> =
       if matches!(self.ctx.options.format, OutputFormat::Esm) {
-        Box::new(export_all_externals_info.into_iter().flat_map(
-          |(importee_name, importee_namespace_name)| {
-            // Insert `import * as ns from 'ext'`external module in esm format
-            // Insert `__reExport(exports, ns)`
-            vec![
-              self.snippet.import_star_stmt(&importee_name, &importee_namespace_name),
-              self.snippet.builder.statement_expression(
-                SPAN,
-                self.snippet.call_expr_with_2arg_expr(
-                  re_export_fn_name,
-                  importer_namespace_name,
-                  &importee_namespace_name,
-                ),
+        Box::new(export_all_externals_rec_ids.into_iter().flat_map(|idx| {
+          let rec = &self.ctx.module.import_records[idx];
+          let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+          let m = self.ctx.modules.get(rec.resolved_module);
+          let Some(Module::External(module)) = m else {
+            return vec![];
+          };
+          // Insert `import * as ns from 'ext'`external module in esm format
+          // Insert `__reExport(exports, ns)`
+          let importee_name = &module.name;
+          vec![
+            self.snippet.import_star_stmt(importee_name, importee_namespace_name),
+            self.snippet.builder.statement_expression(
+              SPAN,
+              self.snippet.call_expr_with_2arg_expr(
+                re_export_fn_name,
+                var_name,
+                importee_namespace_name,
               ),
-            ]
-          },
-        ))
+            ),
+          ]
+        }))
       } else {
         Box::new(std::iter::empty())
       };

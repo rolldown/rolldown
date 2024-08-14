@@ -24,7 +24,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[0].is_included;
 
-    let mut export_all_externals_info = vec![];
+    let mut export_all_externals_rec_ids = vec![];
 
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
     // Skip the first statement info, which is the namespace variable declaration
@@ -110,9 +110,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               Module::External(importee) => {
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm => {
-                    let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-                    export_all_externals_info
-                      .push((importee.name.clone(), importee_namespace_name.clone()));
+                    export_all_externals_rec_ids.push(rec_id);
                     return;
                   }
                   rolldown_common::OutputFormat::Cjs => {
@@ -204,7 +202,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
     if is_namespace_referenced {
       let mut stmts =
-        self.generate_declaration_of_module_namespace_object(export_all_externals_info);
+        self.generate_declaration_of_module_namespace_object(export_all_externals_rec_ids);
       stmts.extend(program.body.take_in(self.alloc));
       program.body.extend(stmts);
     }

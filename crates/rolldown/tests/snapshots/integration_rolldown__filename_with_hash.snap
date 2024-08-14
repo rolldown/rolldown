@@ -1383,10 +1383,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/basic
 
-- dynamic-!~{002}~.mjs => dynamic-rZSQI5sT.mjs
-- main1-!~{000}~.mjs => main1-hPlNTzc4.mjs
-- main2-!~{001}~.mjs => main2-VzmhgX31.mjs
-- share-!~{004}~.mjs => share-UZ8xoaJI.mjs
+- dynamic-!~{004}~.mjs => dynamic-VF2TGUn6.mjs
+- main1-!~{000}~.mjs => main1-rIQjdWv-.mjs
+- main2-!~{001}~.mjs => main2-9lXyDNHK.mjs
+- share-!~{002}~.mjs => share-p7WNRG2n.mjs
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
@@ -1487,15 +1487,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
-- lazy-chunk-!~{001}~.mjs => lazy-chunk-J1hzVBvk.mjs
-- main-!~{000}~.mjs => main-CBS75r_P.mjs
-- user-lib-!~{003}~.mjs => user-lib-r-8uXvh3.mjs
+- lazy-chunk-!~{003}~.mjs => lazy-chunk-3ongZf9V.mjs
+- main-!~{000}~.mjs => main-UWLaSEMt.mjs
+- user-lib-!~{001}~.mjs => user-lib-l_QSBI41.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/strict
 
-- lazy-chunk-!~{001}~.mjs => lazy-chunk--4nEtOLs.mjs
-- main-!~{000}~.mjs => main-knHvaFWt.mjs
-- user-lib-!~{003}~.mjs => user-lib-nzh2V7Pn.mjs
+- lazy-chunk-!~{003}~.mjs => lazy-chunk-yZed9dLJ.mjs
+- main-!~{000}~.mjs => main-eXNjgcmF.mjs
+- user-lib-!~{001}~.mjs => user-lib-_vEPUJmM.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_399/non_strict
 
@@ -1820,15 +1820,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/assign_chunk_name_order
 
-- file-!~{001}~.mjs => file-qRJHr9Qk.mjs
-- file~1-!~{002}~.mjs => file~1-vk1_v-xY.mjs
-- file~2-!~{004}~.mjs => file~2-n9N_1gj9.mjs
-- file~3-!~{006}~.mjs => file~3-qjqlbfrR.mjs
-- file~4-!~{008}~.mjs => file~4-UHx-9L3z.mjs
-- file~5-!~{00a}~.mjs => file~5-KXL6yYlN.mjs
-- file~6-!~{00c}~.mjs => file~6-aKUO3c-c.mjs
-- file~7-!~{00e}~.mjs => file~7-NtuzetOV.mjs
-- main-!~{000}~.mjs => main-xQnwmfHH.mjs
+- file-!~{000}~.mjs => file-Ej3VnrZQ.mjs
+- file~1-!~{002}~.mjs => file~1-H61Mf_14.mjs
+- file~2-!~{004}~.mjs => file~2-nA_ptaQ9.mjs
+- file~3-!~{006}~.mjs => file~3-Gkv-gnvV.mjs
+- file~4-!~{008}~.mjs => file~4-Nhcoofwl.mjs
+- file~5-!~{00a}~.mjs => file~5-QY0dCciQ.mjs
+- file~6-!~{00c}~.mjs => file~6-khaY2HFs.mjs
+- file~7-!~{00e}~.mjs => file~7-2atL45yw.mjs
+- file~8-!~{00g}~.mjs => file~8-rftyyf3M.mjs
+- main-!~{001}~.mjs => main-_t3761Dh.mjs
 
 # tests/rolldown/misc/banner/cjs
 
@@ -2021,15 +2022,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
-- async-entry-!~{001}~.mjs => async-entry-vk1CvgVD.mjs
-- main-!~{000}~.mjs => main-FGi5yxGe.mjs
-- shared-!~{003}~.mjs => shared--GTZNyb6.mjs
+- async-entry-!~{003}~.mjs => async-entry-A0foFImR.mjs
+- main-!~{000}~.mjs => main-kQWVEpX7.mjs
+- shared-!~{001}~.mjs => shared-du7ETDe0.mjs
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- async-entry-!~{001}~.cjs => async-entry-JSulq17A.cjs
-- main-!~{000}~.cjs => main-uhoDhOaQ.cjs
-- shared-!~{003}~.cjs => shared-R7vFlqQk.cjs
+- async-entry-!~{003}~.cjs => async-entry-bLPO79el.cjs
+- main-!~{000}~.cjs => main-h7mF_ZsM.cjs
+- shared-!~{001}~.cjs => shared-PsOvd2ew.cjs
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 

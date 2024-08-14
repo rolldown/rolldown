@@ -224,8 +224,20 @@ impl<'a> GenerateStage<'a> {
         let b_should_be_first = Ordering::Greater;
 
         match (&chunks[*a].kind, &chunks[*b].kind) {
-          (ChunkKind::EntryPoint { .. }, ChunkKind::Common) => a_should_be_first,
-          (ChunkKind::Common, ChunkKind::EntryPoint { .. }) => b_should_be_first,
+          (ChunkKind::EntryPoint { is_user_defined, .. }, ChunkKind::Common) => {
+            if *is_user_defined {
+              a_should_be_first
+            } else {
+              b_should_be_first
+            }
+          }
+          (ChunkKind::Common, ChunkKind::EntryPoint { is_user_defined, .. }) => {
+            if *is_user_defined {
+              b_should_be_first
+            } else {
+              a_should_be_first
+            }
+          }
           _ => chunks[*a].exec_order.cmp(&chunks[*b].exec_order),
         }
       })

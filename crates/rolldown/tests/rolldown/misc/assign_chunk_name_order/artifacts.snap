@@ -6,13 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## file.mjs
 
 ```js
+import "./file~1.mjs";
+
+```
+## file~1.mjs
+
+```js
 
 //#region file.js
 console.log("file");
 
 //#endregion
 ```
-## file~1.mjs
+## file~2.mjs
 
 ```js
 
@@ -22,7 +28,7 @@ const value = "a";
 //#endregion
 export { value };
 ```
-## file~2.mjs
+## file~3.mjs
 
 ```js
 
@@ -32,7 +38,7 @@ const value = "b";
 //#endregion
 export { value };
 ```
-## file~3.mjs
+## file~4.mjs
 
 ```js
 
@@ -42,7 +48,7 @@ const value = "c";
 //#endregion
 export { value };
 ```
-## file~4.mjs
+## file~5.mjs
 
 ```js
 
@@ -52,7 +58,7 @@ const value = "d";
 //#endregion
 export { value };
 ```
-## file~5.mjs
+## file~6.mjs
 
 ```js
 
@@ -62,7 +68,7 @@ const value = "e";
 //#endregion
 export { value };
 ```
-## file~6.mjs
+## file~7.mjs
 
 ```js
 
@@ -72,7 +78,7 @@ const value = "f";
 //#endregion
 export { value };
 ```
-## file~7.mjs
+## file~8.mjs
 
 ```js
 
@@ -85,15 +91,16 @@ export { value };
 ## main.mjs
 
 ```js
+import "./file~1.mjs";
 
 //#region main.js
-import("./file~1.mjs");
 import("./file~2.mjs");
 import("./file~3.mjs");
 import("./file~4.mjs");
 import("./file~5.mjs");
 import("./file~6.mjs");
 import("./file~7.mjs");
+import("./file~8.mjs");
 
 //#endregion
 ```

@@ -1,3 +1,4 @@
+import "./file";
 
 import('./1/file')
 import('./2/file')

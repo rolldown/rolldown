@@ -1,5 +1,6 @@
 export interface JsonSchema {
   type: string
+  description?: string
 }
 
 export interface ObjectSchema extends JsonSchema {
@@ -32,6 +33,7 @@ export type StringSchema = StringConstantSchema | StringEnumSchema
 
 export interface AnyOfSchema {
   anyOf: (StringSchema | ObjectSchema | BooleanSchema | ArraySchema)[]
+  description?: string
 }
 
 export type Schema =

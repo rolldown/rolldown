@@ -19,7 +19,7 @@ export const options = Object.fromEntries(
       type: type === 'boolean' ? 'boolean' : 'string',
       // We only support comma separated mode right now.
       // multiple: type === 'object' || type === 'array',
-      description: config?.description ?? '',
+      description: schema?.description ?? config?.description ?? '',
       hint: config?.hint,
     } as {
       type: 'boolean' | 'string'

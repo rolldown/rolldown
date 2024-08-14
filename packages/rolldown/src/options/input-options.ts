@@ -9,6 +9,7 @@ import {
   RollupLogWithStringSchema,
 } from '../log/logging'
 import { TreeshakingOptions } from '../treeshake'
+import { underline, gray, yellow, dim } from '../cli/colors'
 
 const inputOptionSchema = z
   .string()
@@ -24,6 +25,20 @@ const externalSchema = zodExt
       .args(z.string(), z.string().optional(), z.boolean())
       .returns(zodExt.voidNullableWith(z.boolean())),
   )
+
+const moduleTypesSchema = z.record(
+  z
+    .literal('js')
+    .or(z.literal('jsx'))
+    .or(z.literal('ts'))
+    .or(z.literal('tsx'))
+    .or(z.literal('json'))
+    .or(z.literal('text'))
+    .or(z.literal('base64'))
+    .or(z.literal('dataurl'))
+    .or(z.literal('binary'))
+    .or(z.literal('empty')),
+)
 
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
@@ -43,16 +58,21 @@ export const inputOptionsSchema = z.strictObject({
       tsconfigFilename: z.string().optional(),
     })
     .optional(),
-  cwd: z.string().optional(),
+  cwd: z.string().describe('Current working directory.').optional(),
   platform: z
     .literal('node')
     .or(z.literal('browser'))
     .or(z.literal('neutral'))
+    .describe(
+      `Platform for which the code should be generated (node, ${underline('browser')}, neutral).`,
+    )
     .optional(),
   shimMissingExports: z.boolean().optional(),
   // FIXME: should use a more specific schema
   treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
-  logLevel: LogLevelOptionSchema.optional(),
+  logLevel: LogLevelOptionSchema.describe(
+    `Log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
+  ).optional(),
   onLog: z
     .function()
     .args(
@@ -74,42 +94,40 @@ export const inputOptionsSchema = z.strictObject({
         ),
     )
     .optional(),
-  moduleTypes: z
-    .record(
-      z
-        .literal('js')
-        .or(z.literal('jsx'))
-        .or(z.literal('ts'))
-        .or(z.literal('tsx'))
-        .or(z.literal('json'))
-        .or(z.literal('text'))
-        .or(z.literal('base64'))
-        .or(z.literal('dataurl'))
-        .or(z.literal('binary'))
-        .or(z.literal('empty')),
-    )
+  moduleTypes: moduleTypesSchema
+    .describe('Module types for customized extensions.')
     .optional(),
   experimental: z
     .strictObject({
       enableComposingJsPlugins: z.boolean().optional(),
     })
     .optional(),
-  define: z.record(z.string()).optional(),
+  define: z.record(z.string()).describe('Define global variables').optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
 })
 
 export const inputCliOptionsSchema = inputOptionsSchema
   .extend({
-    external: z.array(z.string()).optional(),
-    onLog: z.string().optional(), // command
-    onwarn: z.string().optional(),
-    inject: z.record(z.string()).optional(),
-    // Doesn't support treeshake options as it is ambiguous
-    treeshake: z.undefined().optional(),
-    // Doesn't support plugin yet.
-    plugins: z.undefined().optional(),
+    external: z
+      .array(z.string())
+      .describe(
+        'Comma-separated list of module ids to exclude from the bundle `<module-id>,...`',
+      )
+      .optional(),
+    inject: z
+      .record(z.string())
+      .describe('Inject import statements on demand')
+      .optional(),
   })
-  .omit({ input: true, plugins: true, treeshake: true })
+  .omit({
+    input: true,
+    plugins: true,
+    treeshake: true,
+    onwarn: true,
+    onLog: true,
+    resolve: true,
+    experimental: true,
+  })
 
 type RawInputOptions = z.infer<typeof inputOptionsSchema>
 interface OverwriteInputOptionsWithDoc {

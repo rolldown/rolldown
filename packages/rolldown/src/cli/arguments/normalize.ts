@@ -10,7 +10,7 @@ import {
   outputCliOptionsSchema,
   OutputOptions,
 } from '../../options/output-options'
-import type { CliOptions } from './schema'
+import { CliOptions, cliOptionsSchema } from './schema'
 import { logger } from '../utils'
 import { ParseArgsOptions } from '.'
 import { alias, OptionConfig } from './alias'
@@ -25,10 +25,20 @@ export interface NormalizedCliOptions {
 }
 
 export function normalizeCliOptions(
-  options: CliOptions,
+  cliOptions: CliOptions,
   positionals: string[],
   args: ParseArgsOptions,
 ): NormalizedCliOptions {
+  const parsed = cliOptionsSchema.safeParse(cliOptions)
+  const options = parsed.data ?? {}
+  if (!parsed.success) {
+    parsed.error.errors.forEach((error) => {
+      logger.error(
+        `Invalid value for option: ${error.path.join(', ')}. ${error.message}. You can use \`rolldown -h\` to see the help.`,
+      )
+    })
+    process.exit(1)
+  }
   const result = {
     input: {} as InputOptions,
     output: {} as OutputOptions,

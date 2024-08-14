@@ -4,8 +4,12 @@ import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
 import { arraify } from '../../utils/misc'
 import { ensureConfig, logger } from '../utils'
 import * as colors from '../colors'
+import { NormalizedCliOptions } from '../arguments/normalize'
 
-export async function bundle(configPath: string) {
+export async function bundleWithConfig(
+  configPath: string,
+  cliOptions: NormalizedCliOptions,
+) {
   const config = await ensureConfig(configPath)
 
   if (!config) {
@@ -16,15 +20,40 @@ export async function bundle(configPath: string) {
   const configList = arraify(config)
 
   for (const config of configList) {
-    await bundleInner(config)
+    await bundleInner(config, cliOptions)
   }
 }
 
-async function bundleInner(options: RolldownOptions) {
+export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
+  // TODO when supports `output.file`, we should modify it here.
+  if (cliOptions.output.dir) {
+    await bundleInner({}, cliOptions)
+  } else {
+    const build = await rolldown(cliOptions.input)
+    const { output } = await build.generate(cliOptions.output)
+    if (output.length > 1) {
+      logger.error('Multiple chunks are not supported to display in stdout')
+      process.exit(1)
+    } else if (output.length === 0) {
+      logger.error('No output generated')
+      process.exit(1)
+    } else {
+      logger.log(output[0].code)
+    }
+  }
+}
+
+async function bundleInner(
+  options: RolldownOptions,
+  cliOptions: NormalizedCliOptions,
+) {
   const startTime = performance.now()
 
-  const build = await rolldown(options)
-  const bundleOutput = await build.write(options?.output)
+  const build = await rolldown({ ...options, ...cliOptions.input })
+  const bundleOutput = await build.write({
+    ...options?.output,
+    ...cliOptions.output,
+  })
 
   const endTime = performance.now()
 

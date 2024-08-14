@@ -5,6 +5,7 @@ import {
 } from '../../../package.json' assert { type: 'json' }
 import { bold, cyan, gray, underline } from '../colors'
 import { options } from '../arguments'
+import { alias, OptionConfig } from '../arguments/alias'
 
 const introduction = `${gray(`${description} (rolldown v${version})`)}
 
@@ -65,12 +66,21 @@ export function showHelp() {
       })
       .map(([option, { type, short, hint, description }]) => {
         let optionStr = '  '
+        const config = ((Object.getOwnPropertyDescriptor(alias, option) ?? {}).value ?? {}) as OptionConfig
+        if (typeof config.default === 'boolean' && type === 'boolean' && config.default) {
+          optionStr += `--no-${option}`
+          description = `Do not ${description}`
+        } else {
+          optionStr += `--${option} `
+        }
         if (short) {
           optionStr += `-${short}, `
         }
-        optionStr += `--${option} `
         if (type === 'string') {
           optionStr += `<${hint ?? option}>`
+        }
+        if (description && description.length > 0) {
+          description = description[0].toUpperCase() + description.slice(1)
         }
         return (
           cyan(optionStr.padEnd(30)) +

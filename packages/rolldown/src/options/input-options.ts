@@ -58,20 +58,20 @@ export const inputOptionsSchema = z.strictObject({
       tsconfigFilename: z.string().optional(),
     })
     .optional(),
-  cwd: z.string().describe('Current working directory.').optional(),
+  cwd: z.string().describe('current working directory.').optional(),
   platform: z
     .literal('node')
     .or(z.literal('browser'))
     .or(z.literal('neutral'))
     .describe(
-      `Platform for which the code should be generated (node, ${underline('browser')}, neutral).`,
+      `platform for which the code should be generated (node, ${underline('browser')}, neutral).`,
     )
     .optional(),
   shimMissingExports: z.boolean().optional(),
   // FIXME: should use a more specific schema
   treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
   logLevel: LogLevelOptionSchema.describe(
-    `Log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
+    `log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
   ).optional(),
   onLog: z
     .function()
@@ -95,14 +95,14 @@ export const inputOptionsSchema = z.strictObject({
     )
     .optional(),
   moduleTypes: moduleTypesSchema
-    .describe('Module types for customized extensions.')
+    .describe('module types for customized extensions.')
     .optional(),
   experimental: z
     .strictObject({
       enableComposingJsPlugins: z.boolean().optional(),
     })
     .optional(),
-  define: z.record(z.string()).describe('Define global variables').optional(),
+  define: z.record(z.string()).describe('define global variables').optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
 })
 
@@ -116,13 +116,13 @@ export const inputCliOptionsSchema = inputOptionsSchema
       .optional(),
     inject: z
       .record(z.string())
-      .describe('Inject import statements on demand')
+      .describe('inject import statements on demand')
       .optional(),
+    treeshake: z.boolean().describe('enable treeshaking').default(true).optional(),
   })
   .omit({
     input: true,
     plugins: true,
-    treeshake: true,
     onwarn: true,
     onLog: true,
     resolve: true,

@@ -11,7 +11,7 @@ const ModuleFormatSchema = z
   .or(z.literal('commonjs'))
   .or(z.literal('iife'))
   .describe(
-    `Output format of the generated bundle (supports ${underline('esm')}, cjs, and iife).`,
+    `output format of the generated bundle (supports ${underline('esm')}, cjs, and iife).`,
   )
   .optional()
 
@@ -28,7 +28,7 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('default'))
     .or(z.literal('none'))
     .describe(
-      `Specify a export mode (${underline('auto')}, named, default, none)`,
+      `specify a export mode (${underline('auto')}, named, default, none)`,
     )
     .optional(),
   format: ModuleFormatSchema,
@@ -37,7 +37,7 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('inline'))
     .or(z.literal('hidden'))
     .describe(
-      `Generate sourcemap (\`-s inline\` for inline, or ${bold('pass the `-s` on the last argument if you want to generate `.map` file')}).`,
+      `generate sourcemap (\`-s inline\` for inline, or ${bold('pass the `-s` on the last argument if you want to generate `.map` file')}).`,
     )
     .optional(),
   sourcemapIgnoreList: z
@@ -53,28 +53,28 @@ const outputOptionsSchema = z.strictObject({
   outro: z.string().or(addonFunctionSchema).optional(),
   extend: z
     .boolean()
-    .describe('Extend global variable defined by name in IIFE or UMD formats')
+    .describe('extend global variable defined by name in IIFE or UMD formats')
     .optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
   entryFileNames: z.string().optional(),
   chunkFileNames: z.string().optional(),
   assetFileNames: z.string().optional(),
-  minify: z.boolean().describe('Minify the bundled file.').optional(),
-  name: z.string().describe('Name for UMD / IIFE format outputs').optional(),
+  minify: z.boolean().describe('minify the bundled file.').optional(),
+  name: z.string().describe('name for UMD / IIFE format outputs').optional(),
   globals: z
     .record(z.string())
     .describe(
       'Comma-separated list of `module-id:global` pairs (`<module-id>:<global>,...`)',
     )
     .optional(),
-  externalLiveBindings: z.boolean().describe('Use external live bindings').default(true).optional(),
+  externalLiveBindings: z.boolean().describe('use external live bindings').default(true).optional(),
 })
 
 const getAddonDescription = (
   placement: 'bottom' | 'top',
   wrapper: 'inside' | 'outside',
 ) => {
-  return `Code to insert the ${bold(placement)} of the bundled file (${bold(wrapper)} the wrapper function).`
+  return `code to insert the ${bold(placement)} of the bundled file (${bold(wrapper)} the wrapper function).`
 }
 
 export const outputCliOptionsSchema = outputOptionsSchema
@@ -97,7 +97,7 @@ export const outputCliOptionsSchema = outputOptionsSchema
     esModule: z
       .boolean()
       .describe(
-        'Always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable).',
+        'always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable).',
       )
       .optional(),
     sourcemapIgnoreList: z.boolean().optional(),

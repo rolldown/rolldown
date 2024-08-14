@@ -1199,9 +1199,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/circular_reference_issue251
 
-- a-!~{000}~.mjs => a-aZpbWwMm.mjs
+- a-!~{001}~.mjs => a-qnEPrCaF.mjs
 - a~1-!~{002}~.mjs => a~1-W3UJep1D.mjs
-- b-!~{001}~.mjs => b-T_YrhAwZ.mjs
+- b-!~{000}~.mjs => b-QcKeEUuj.mjs
 
 # tests/esbuild/splitting/cross_chunk_assignment_dependencies
 
@@ -1230,15 +1230,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
 
-- foo-!~{001}~.mjs => foo-bcMfcoTk.mjs
+- foo-!~{000}~.mjs => foo-YWjy4MY8.mjs
 - foo~1-!~{003}~.mjs => foo~1-GHDfbT69.mjs
-- main-!~{000}~.mjs => main-T5HWIm2o.mjs
+- main-!~{002}~.mjs => main-UasOf_IM.mjs
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
 
-- foo-!~{001}~.mjs => foo-FH-aBb5m.mjs
+- foo-!~{000}~.mjs => foo-JFcyo9H3.mjs
 - foo~1-!~{003}~.mjs => foo~1-NnQaXjY5.mjs
-- main-!~{000}~.mjs => main-pBqAE1Do.mjs
+- main-!~{002}~.mjs => main-MWgAuO-u.mjs
 
 # tests/esbuild/splitting/dynamic_import_issue_272
 
@@ -1359,9 +1359,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
-- a-!~{000}~.mjs => a-d58Tn43M.mjs
+- a-!~{001}~.mjs => a-jyZ-yksI.mjs
 - a~1-!~{002}~.mjs => a~1-vQA8k6Pt.mjs
-- b-!~{001}~.mjs => b-II-mJsUp.mjs
+- b-!~{000}~.mjs => b-0cHn69-a.mjs
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
@@ -1383,10 +1383,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/basic
 
-- dynamic-!~{004}~.mjs => dynamic-VF2TGUn6.mjs
-- main1-!~{000}~.mjs => main1-rIQjdWv-.mjs
-- main2-!~{001}~.mjs => main2-9lXyDNHK.mjs
-- share-!~{002}~.mjs => share-p7WNRG2n.mjs
+- dynamic-!~{002}~.mjs => dynamic-rZSQI5sT.mjs
+- main1-!~{000}~.mjs => main1-hPlNTzc4.mjs
+- main2-!~{001}~.mjs => main2-VzmhgX31.mjs
+- share-!~{004}~.mjs => share-UZ8xoaJI.mjs
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
@@ -1402,9 +1402,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/import_export_unicode
 
-- foo-!~{001}~.mjs => foo-6KtgwBs8.mjs
+- foo-!~{000}~.mjs => foo-QclHXuut.mjs
 - foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
-- main-!~{000}~.mjs => main-Iuj6QrqP.mjs
+- main-!~{002}~.mjs => main-0DNH7UhT.mjs
 
 # tests/rolldown/dce/conditional_exports
 
@@ -1788,19 +1788,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/issues/122/a
 
-- b-!~{003}~.mjs => b-yd-qNhBj.mjs
-- c-!~{005}~.mjs => c-XVgXQcRd.mjs
-- entry1-!~{000}~.mjs => entry1-27-uXeft.mjs
-- entry2-!~{001}~.mjs => entry2-muN8TekG.mjs
-- entry3-!~{002}~.mjs => entry3-wh3Pk6rw.mjs
+- b-!~{005}~.mjs => b-gYLSk_ER.mjs
+- c-!~{003}~.mjs => c-LEIv-tYC.mjs
+- entry1-!~{000}~.mjs => entry1-wVgKFI7T.mjs
+- entry2-!~{001}~.mjs => entry2-gO-yPKv_.mjs
+- entry3-!~{002}~.mjs => entry3-xhnBZz_E.mjs
 
 # tests/rolldown/issues/122/b
 
-- 1-!~{005}~.mjs => 1-cfAryLZn.mjs
-- 2-!~{003}~.mjs => 2-cUdSqz08.mjs
-- a-!~{000}~.mjs => a-UJeerxdy.mjs
-- b-!~{001}~.mjs => b-NGDwuXrn.mjs
-- c-!~{002}~.mjs => c-iWl5yRnj.mjs
+- 1-!~{003}~.mjs => 1-j1vD_43o.mjs
+- 2-!~{005}~.mjs => 2-A9GdrBOE.mjs
+- a-!~{000}~.mjs => a-EsBBHJoX.mjs
+- b-!~{001}~.mjs => b-UI2mLxAO.mjs
+- c-!~{002}~.mjs => c-XM1t7ET2.mjs
 
 # tests/rolldown/issues/1443
 
@@ -1817,6 +1817,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.mjs => main-EYnPJQvV.mjs
+
+# tests/rolldown/misc/assigin-chunk-name-order
+
+- file-!~{001}~.mjs => file-qRJHr9Qk.mjs
+- file~1-!~{002}~.mjs => file~1-vk1_v-xY.mjs
+- file~2-!~{004}~.mjs => file~2-n9N_1gj9.mjs
+- file~3-!~{006}~.mjs => file~3-qjqlbfrR.mjs
+- file~4-!~{008}~.mjs => file~4-UHx-9L3z.mjs
+- file~5-!~{00a}~.mjs => file~5-KXL6yYlN.mjs
+- file~6-!~{00c}~.mjs => file~6-aKUO3c-c.mjs
+- file~7-!~{00e}~.mjs => file~7-NtuzetOV.mjs
+- main-!~{000}~.mjs => main-xQnwmfHH.mjs
 
 # tests/rolldown/misc/banner/cjs
 
@@ -1837,8 +1849,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/cjs_entry_as_dependency
 
-- main-!~{000}~.mjs => main-2YMUDaQi.mjs
-- main2-!~{001}~.mjs => main2-pgqlqPLq.mjs
+- main-!~{001}~.mjs => main-vr5xux-s.mjs
+- main2-!~{000}~.mjs => main2-t5NvVlyL.mjs
 - main2~1-!~{002}~.mjs => main2~1-VZDqMsnU.mjs
 
 # tests/rolldown/misc/duplicate_entries

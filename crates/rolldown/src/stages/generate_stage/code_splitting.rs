@@ -94,7 +94,6 @@ impl<'a> GenerateStage<'a> {
       oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
-    let mut user_defined_entry_chunk_ids: Vec<ChunkIdx> = Vec::new();
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
@@ -117,9 +116,6 @@ impl<'a> GenerateStage<'a> {
       ));
       bits_to_chunk.insert(bits, chunk);
       entry_module_to_entry_chunk.insert(entry_point.id, chunk);
-      if entry_point.kind.is_user_defined() {
-        user_defined_entry_chunk_ids.push(chunk);
-      }
     }
 
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
@@ -215,15 +211,26 @@ impl<'a> GenerateStage<'a> {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
 
-    let sorted_chunk_idx_vec =
-      chunks.indices().sorted_by_key(|id| &chunks[*id].bits).collect::<Vec<_>>();
+    // The esbuild using `Chunk#bits` to sorted chunks, but the order of `Chunk#bits` is not stable, eg `BitSet(0) 00000001_00000000` > `BitSet(8) 00000000_00000001`. It couldn't ensure the order of dynamic chunks and common chunks.
+    // Consider the compare `Chunk#exec_order` should be faster than `Chunk#bits`, we use `Chunk#exec_order` to sort chunks.
+    // Note Here could be make sure the order of chunks.
+    // - entry chunks are always before other chunks
+    // - static chunks are always before dynamic chunks
+    // - other chunks has stable order at per entry chunk level
+    let sorted_chunk_idx_vec = chunks
+      .indices()
+      .sorted_unstable_by(|a, b| {
+        let a_should_be_first = Ordering::Less;
+        let b_should_be_first = Ordering::Greater;
 
-    ChunkGraph {
-      chunks,
-      sorted_chunk_idx_vec,
-      module_to_chunk,
-      entry_module_to_entry_chunk,
-      user_defined_entry_chunk_ids,
-    }
+        match (&chunks[*a].kind, &chunks[*b].kind) {
+          (ChunkKind::EntryPoint { .. }, ChunkKind::Common) => a_should_be_first,
+          (ChunkKind::Common, ChunkKind::EntryPoint { .. }) => b_should_be_first,
+          _ => chunks[*a].exec_order.cmp(&chunks[*b].exec_order),
+        }
+      })
+      .collect::<Vec<_>>();
+
+    ChunkGraph { chunks, sorted_chunk_idx_vec, module_to_chunk, entry_module_to_entry_chunk }
   }
 }

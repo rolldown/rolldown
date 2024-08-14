@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## file.mjs
+
+```js
+
+//#region file.js
+console.log("file");
+
+//#endregion
+```
+## file~1.mjs
+
+```js
+
+//#region 1/file.js
+const value = "a";
+
+//#endregion
+export { value };
+```
+## file~2.mjs
+
+```js
+
+//#region 2/file.js
+const value = "b";
+
+//#endregion
+export { value };
+```
+## file~3.mjs
+
+```js
+
+//#region 3/file.js
+const value = "c";
+
+//#endregion
+export { value };
+```
+## file~4.mjs
+
+```js
+
+//#region 4/file.js
+const value = "d";
+
+//#endregion
+export { value };
+```
+## file~5.mjs
+
+```js
+
+//#region 5/file.js
+const value = "e";
+
+//#endregion
+export { value };
+```
+## file~6.mjs
+
+```js
+
+//#region 6/file.js
+const value = "f";
+
+//#endregion
+export { value };
+```
+## file~7.mjs
+
+```js
+
+//#region 7/file.js
+const value = "g";
+
+//#endregion
+export { value };
+```
+## main.mjs
+
+```js
+
+//#region main.js
+import("./file~1.mjs");
+import("./file~2.mjs");
+import("./file~3.mjs");
+import("./file~4.mjs");
+import("./file~5.mjs");
+import("./file~6.mjs");
+import("./file~7.mjs");
+
+//#endregion
+```

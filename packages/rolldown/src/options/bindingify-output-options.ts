@@ -52,6 +52,7 @@ export function bindingifyOutputOptions(
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
+    externalLiveBindings: outputOptions.externalLiveBindings,
   }
 }
 

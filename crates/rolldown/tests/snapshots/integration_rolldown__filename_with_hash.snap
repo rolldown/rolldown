@@ -1591,6 +1591,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-91SdaZrf.mjs
 - share-!~{002}~.mjs => share-Ak_TT_yj.mjs
 
+# tests/rolldown/function/external_live_bindings
+
+- main-!~{000}~.cjs => main-gvGF4Vpz.cjs
+
 # tests/rolldown/function/format/app/multiple_entry_modules
 
 - cube-!~{002}~.mjs => cube-UC9SFjeM.mjs

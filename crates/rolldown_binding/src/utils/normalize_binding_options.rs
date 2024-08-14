@@ -155,6 +155,7 @@ pub fn normalize_binding_options(
     inject: input_options
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
+    external_live_bindings: output_options.external_live_bindings,
   };
 
   #[cfg(not(target_family = "wasm"))]

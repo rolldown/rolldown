@@ -16,6 +16,7 @@ use super::{
 };
 use crate::{EsModuleFlag, InjectImport, InputItem, ModuleType};
 
+#[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
   // --- Input
@@ -53,4 +54,5 @@ pub struct NormalizedBundlerOptions {
   pub define: Vec<(/* Target to be replaced */ String, /* Replacement */ String)>,
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
+  pub external_live_bindings: bool,
 }

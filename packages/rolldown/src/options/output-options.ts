@@ -49,6 +49,7 @@ const outputOptionsSchema = z.strictObject({
   minify: z.boolean().optional(),
   name: z.string().optional(),
   globals: z.record(z.string()).optional(),
+  externalLiveBindings: z.boolean().optional(),
 })
 
 export const outputCliOptionsSchema = outputOptionsSchema

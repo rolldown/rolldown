@@ -118,6 +118,7 @@
     "napi",
     "nocheck",
     "nodenext",
+    "notjson",
     "onwarn",
     "outdir",
     "outro",

@@ -3,34 +3,31 @@ import {
   version,
   description,
 } from '../../../package.json' assert { type: 'json' }
-import { CLI_OPTIONS } from '../options'
 import { bold, cyan, gray, underline } from '../colors'
+import { options } from '../arguments'
 
-const HELP_TEMPLATE = `${gray(`${description} (rolldown v${version})`)}
+const template = `${gray(`${description} (rolldown v${version})`)}
 
-${bold(underline('USAGE'))} ${cyan('rolldown [OPTIONS]')}
+${bold(underline('USAGE'))} ${cyan('rolldown -c <config>')} or ${cyan('rolldown <input> <options>')}
 
 ${bold(underline('OPTIONS'))}
-__OPTIONS__
 `
 
 export function showHelp() {
   logger.log(
-    HELP_TEMPLATE.replace(
-      '__OPTIONS__',
-      Object.entries(CLI_OPTIONS)
-        .map(([option, { short, hint, description }]) => {
+    template +
+      Object.entries(options)
+        .map(([option, { type, short, hint, description }]) => {
           let optionStr = '  '
           if (short) {
             optionStr += `-${short}, `
           }
           optionStr += `--${option} `
-          if (hint) {
-            optionStr += `<${hint}> `
+          if (type === 'string') {
+            optionStr += `<${hint ?? option}>`
           }
           return cyan(optionStr.padEnd(30)) + description
         })
         .join('\n'),
-    ),
   )
 }

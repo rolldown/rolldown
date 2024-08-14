@@ -10,11 +10,4 @@ import "foo";
 
 export * from "foo"
 
-
-//#region entry.js
-var entry_ns = {};
-import * as import_foo from "foo";
-__reExport(entry_ns, import_foo);
-
-//#endregion
 ```

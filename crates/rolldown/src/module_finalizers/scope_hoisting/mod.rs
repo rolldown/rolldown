@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{self, IdentifierReference, Statement},
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordIdx, Module, SymbolRef, WrapKind};
+use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
@@ -217,7 +217,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
+  fn generate_declaration_of_module_namespace_object(
+    &self,
+    export_all_externals_rec_ids: Vec<ImportRecordIdx>,
+  ) -> Vec<ast::Statement<'ast>> {
     let var_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
     // construct `var ns_name = {}`
     let decl_stmt = self
@@ -226,8 +229,38 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let exports_len = self.ctx.linking_info.canonical_exports().count();
 
+    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+    let export_external_stmts: Box<dyn Iterator<Item = Statement<'ast>>> =
+      if matches!(self.ctx.options.format, OutputFormat::Esm) {
+        Box::new(export_all_externals_rec_ids.into_iter().flat_map(|idx| {
+          let rec = &self.ctx.module.import_records[idx];
+          let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+          let m = self.ctx.modules.get(rec.resolved_module);
+          let Some(Module::External(module)) = m else {
+            return vec![];
+          };
+          // Insert `import * as ns from 'ext'`external module in esm format
+          // Insert `__reExport(exports, ns)`
+          let importee_name = &module.name;
+          vec![
+            self.snippet.import_star_stmt(importee_name, importee_namespace_name),
+            self.snippet.builder.statement_expression(
+              SPAN,
+              self.snippet.call_expr_with_2arg_expr(
+                re_export_fn_name,
+                var_name,
+                importee_namespace_name,
+              ),
+            ),
+          ]
+        }))
+      } else {
+        Box::new(std::iter::empty())
+      };
     if exports_len == 0 {
-      return vec![decl_stmt];
+      let mut ret = vec![decl_stmt];
+      ret.extend(export_external_stmts);
+      return ret;
     }
 
     // construct `{ prop_name: () => returned, ... }`
@@ -270,6 +303,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .into_in(self.alloc),
     );
 
-    vec![decl_stmt, export_call_stmt]
+    let mut ret = vec![decl_stmt, export_call_stmt];
+    ret.extend(export_external_stmts);
+    ret
   }
 }

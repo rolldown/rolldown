@@ -262,7 +262,6 @@ impl<'a> LinkStage<'a> {
         // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
-
         // store the symbol reference to the declared statement index
         let mut declared_symbol_for_stmt_pairs = vec![];
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
@@ -273,9 +272,8 @@ impl<'a> LinkStage<'a> {
                 // Make sure symbols from external modules are included and de_conflicted
                 match rec.kind {
                   ImportKind::Import => {
-                    if matches!(self.options.format, OutputFormat::Cjs)
-                      && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
-                    {
+                    let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
+                    if cjs_format && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT) {
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
@@ -286,10 +284,12 @@ impl<'a> LinkStage<'a> {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                       declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
-                      stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
-                      stmt_info
-                        .referenced_symbols
-                        .push(self.runtime.resolve_symbol("__reExport").into());
+                      if cjs_format {
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                        stmt_info
+                          .referenced_symbols
+                          .push(self.runtime.resolve_symbol("__reExport").into());
+                      }
                     }
                   }
                   _ => {}
@@ -449,6 +449,7 @@ impl<'a> LinkStage<'a> {
           .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
+        referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
         let namespace_stmt_info = StmtInfo {
           stmt_idx: None,
           declared_symbols: vec![ecma_module.namespace_object_ref],

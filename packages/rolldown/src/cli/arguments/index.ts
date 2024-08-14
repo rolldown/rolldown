@@ -32,7 +32,7 @@ export const options = Object.fromEntries(
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
-    return [key, result]
+    return [(typeof config?.default === 'boolean' && config?.default) ? `no-${key}` : key, result]
   }),
 )
 
@@ -43,7 +43,6 @@ export function parseCliArguments() {
     options,
     tokens: true,
     allowPositionals: true,
-    allowNegative: true,
     // We can't use `strict` mode because we should handle the default config file name.
     strict: false,
   })
@@ -51,6 +50,16 @@ export function parseCliArguments() {
   tokens
     .filter((token) => token.kind === 'option')
     .forEach((option) => {
+      if (option.name.startsWith('no-')) {
+        // stripe `no-` prefix
+        const name = option.name.substring(3)
+        if (name in flattenedSchema) {
+          // Remove the `no-` in values
+          delete values[option.name]
+          option.name = name
+          values[option.name] = true
+        }
+      }
       let originalType = flattenedSchema[option.name]
       if (!originalType) {
         logger.warn(

@@ -8,7 +8,6 @@ use crate::type_alias::IndexChunks;
 pub struct ChunkGraph {
   pub chunks: IndexChunks,
   pub sorted_chunk_idx_vec: Vec<ChunkIdx>,
-  pub user_defined_entry_chunk_ids: Vec<ChunkIdx>,
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
   pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,

@@ -2,7 +2,6 @@ use std::collections::hash_map::Entry;
 
 use anyhow::Result;
 use arcstr::ArcStr;
-use indexmap::IndexSet;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashMap;
@@ -172,25 +171,17 @@ impl<'a> GenerateStage<'a> {
       .collect::<Vec<_>>()
       .into();
 
-    // We make entries listed first to ensure names of user-defined entries chunks aren't shadowed by other chunks
-    let chunk_ids = chunk_graph
-      .user_defined_entry_chunk_ids
-      .iter()
-      .copied()
-      .chain(chunk_graph.sorted_chunk_idx_vec.iter().copied())
-      .collect::<IndexSet<_>>();
-
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
     let mut used_name_map: FxHashMap<ArcStr, u32> = FxHashMap::default();
 
-    chunk_ids.into_iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
-      let chunk = &mut chunk_graph.chunks[chunk_id];
+    chunk_graph.sorted_chunk_idx_vec.iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
+      let chunk = &mut chunk_graph.chunks[*chunk_id];
       if chunk.preliminary_filename.is_some() {
         // Already generated
         return Ok(());
       }
 
-      let chunk_name_info = &mut index_pre_generated_names[chunk_id];
+      let chunk_name_info = &mut index_pre_generated_names[*chunk_id];
 
       let chunk_name = if chunk_name_info.explicit {
         if used_name_map.contains_key(&chunk_name_info.name) {

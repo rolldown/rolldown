@@ -14,12 +14,6 @@ Object.keys(foo).forEach(function (k) {
     get: function () { return foo[k]; }
   });
 });
-
 require("foo");
 
-//#region entry.js
-var entry_ns = {};
-__reExport(entry_ns, require("foo"));
-
-//#endregion
 ```

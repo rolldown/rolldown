@@ -2,7 +2,9 @@ use oxc::{
   index::IndexVec,
   span::{CompactStr, Span},
 };
-use rolldown_common::{ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind};
+use rolldown_common::{
+  ImportRecordIdx, ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
+};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -57,6 +59,7 @@ pub struct LinkingMetadata {
   pub resolved_member_expr_refs: FxHashMap<Span, Option<(SymbolRef, Vec<CompactStr>)>>,
   // We need to generate `const ext = require('ext')` for `export * from 'ext'` in cjs output
   pub require_bindings_for_star_exports: FxHashMap<ModuleIdx, SymbolRef>,
+  pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
 }
 
 impl LinkingMetadata {

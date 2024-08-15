@@ -18,17 +18,17 @@ impl StringOrRegex {
   }
 }
 
-/// `id` is the raw path of file or url, used for `regex` testing
-/// `stablized_id` is the relative path for cwd or url, used for `glob` testing
+/// `id` is the raw path of file used for `regex` testing
+/// `stable_id` is the relative path for cwd , used for `glob` testing
 pub fn filter(
   exclude: &[StringOrRegex],
   include: &[StringOrRegex],
   id: &str,
-  stablized_id: &str,
+  stable_id: &str,
 ) -> bool {
   for pattern in exclude {
     let v = match pattern {
-      StringOrRegex::String(glob) => glob_match(glob.as_str(), stablized_id),
+      StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id),
       StringOrRegex::Regex(re) => re.matches(id),
     };
     if v {
@@ -37,7 +37,7 @@ pub fn filter(
   }
   for pattern in include {
     let v = match pattern {
-      StringOrRegex::String(glob) => glob_match(glob.as_str(), stablized_id),
+      StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id),
       StringOrRegex::Regex(re) => re.matches(id),
     };
     if v {

@@ -115,7 +115,7 @@ impl TransformPlugin {
       pattern_filter::filter(&self.exclude, &self.include, id, &normalized_id)
     } else {
       pattern_filter::filter(&self.exclude, &self.include, id, &normalized_id)
-        && pattern_filter::filter(&self.exclude, &self.include, id, &cleaned_id)
+        && pattern_filter::filter(&self.exclude, &self.include, id, cleaned_id)
     }
   }
 }

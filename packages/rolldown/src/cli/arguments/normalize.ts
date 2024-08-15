@@ -41,13 +41,10 @@ export function normalizeCliOptions(
     output: {} as OutputOptions,
     help: options.help ?? false,
     version: options.version ?? false,
-    config:
-      typeof options.config === 'boolean'
-        ? options.config
-          ? 'rolldown.config.js'
-          : ''
-        : (options.config ?? ''),
   } as NormalizedCliOptions
+  if (typeof options.config === 'string') {
+    result.config = options.config ? options.config : 'rolldown.config.js'
+  }
   const reservedKeys = ['help', 'version', 'config']
   const keysOfInput = inputCliOptionsSchema.keyof()._def.values as string[]
   // Because input is the positional args, we shouldn't include it in the input schema.

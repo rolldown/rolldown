@@ -122,7 +122,7 @@ export function parseCliArguments() {
         })
       } else {
         Object.defineProperty(values, option.name, {
-          value: option.value,
+          value: option.value ?? '',
           enumerable: true,
           configurable: true,
           writable: true,

@@ -1,32 +1,14 @@
-use glob_match::glob_match;
 use oxc::codegen::{CodeGenerator, CodegenReturn};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
-use rolldown_common::js_regex::HybridRegex;
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 
 use rolldown_plugin::Plugin;
+use rolldown_utils::pattern_filter::{self, StringOrRegex};
 use std::borrow::Cow;
 use std::path::Path;
 use sugar_path::SugarPath;
-
-#[derive(Debug)]
-pub enum StringOrRegex {
-  String(String),
-  Regex(HybridRegex),
-}
-
-impl StringOrRegex {
-  pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
-    if let Some(flag) = flag {
-      let regex = HybridRegex::with_flags(&value, flag)?;
-      Ok(Self::Regex(regex))
-    } else {
-      Ok(Self::String(value))
-    }
-  }
-}
 
 #[derive(Debug, Default)]
 pub struct TransformPlugin {
@@ -129,31 +111,11 @@ impl TransformPlugin {
     let normalized_path = Path::new(id).relative(ctx.inner.cwd());
     let normalized_id = normalized_path.to_string_lossy();
     let cleaned_id = rolldown_utils::path_ext::clean_url(&normalized_id);
-    let inner_filter = |id: &str| {
-      for pattern in &self.exclude {
-        let v = match pattern {
-          StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
-          StringOrRegex::Regex(re) => re.matches(id),
-        };
-        if v {
-          return false;
-        }
-      }
-      for pattern in &self.include {
-        let v = match pattern {
-          StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
-          StringOrRegex::Regex(re) => re.matches(id),
-        };
-        if v {
-          return true;
-        }
-      }
-      self.include.is_empty()
-    };
     if cleaned_id == normalized_id {
-      inner_filter(&normalized_id)
+      pattern_filter::filter(&self.exclude, &self.include, id, &normalized_id)
     } else {
-      inner_filter(&normalized_id) && inner_filter(cleaned_id)
+      pattern_filter::filter(&self.exclude, &self.include, id, &normalized_id)
+        && pattern_filter::filter(&self.exclude, &self.include, id, cleaned_id)
     }
   }
 }

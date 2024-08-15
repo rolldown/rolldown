@@ -2228,8 +2228,6 @@ dependencies = [
  "glob-match",
  "lightningcss",
  "oxc",
- "regex",
- "regress",
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2377,7 +2375,6 @@ name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "glob-match",
  "oxc",
  "rolldown_common",
  "rolldown_ecmascript",
@@ -2481,6 +2478,7 @@ dependencies = [
  "async-scoped",
  "base64-simd 0.8.0",
  "futures",
+ "glob-match",
  "indexmap",
  "infer",
  "memchr",
@@ -2489,6 +2487,7 @@ dependencies = [
  "phf 0.11.2",
  "rayon",
  "regex",
+ "regress",
  "rustc-hash",
  "sugar_path",
  "xxhash-rust",

@@ -27,16 +27,18 @@ use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
 ///    this.namespace.module.hello
 ///    ```
 fn generate_namespace_definition(name: &str) -> (String, String) {
-  let parts: Vec<&str> = name.split('.').collect();
   let mut initial_code = String::new();
   let mut final_code = String::from("this");
+
+  let context_len = final_code.len();
+  let parts: Vec<&str> = name.split('.').collect();
 
   for (i, part) in parts.iter().enumerate() {
     let caller = generate_caller(part);
     final_code.push_str(&caller);
 
     if i < parts.len() - 1 {
-      let callers = &final_code[4..];
+      let callers = &final_code[context_len..];
       initial_code.push_str(&format!("this{callers} = this{callers} || {{}};\n"));
     }
   }

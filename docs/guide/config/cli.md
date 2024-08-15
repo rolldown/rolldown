@@ -75,11 +75,11 @@ Only used if there's only one output file.
 Generate the source map file.
 
 - If you intend to inline the sourcemap, please use:
-   ```shell
-   rolldown main.ts -s inline
-   ```
+  ```shell
+  rolldown main.ts -s inline
+  ```
 - If you wish to emit the sourcemap file, please use:
-   ```shell
-   rolldown main.ts -s
-   ```
-   Remember to pass the argument at the end of the command, as per the API limit.
+  ```shell
+  rolldown main.ts -s
+  ```
+  Remember to pass the argument at the end of the command, as per the API limit.

@@ -6,8 +6,8 @@ It is recommended to utilize a configuration file rather than directly invoking 
 export default {
   input: 'src/main.ts',
   output: {
-    format: 'iife'
-  }
+    format: 'iife',
+  },
 }
 ```
 
@@ -21,8 +21,8 @@ import { defineConfig } from 'rolldown'
 export default defineConfig({
   input: 'src/main.ts',
   output: {
-    format: 'iife'
-  }
+    format: 'iife',
+  },
 })
 ```
 
@@ -36,15 +36,15 @@ export default defineConfig([
     input: 'src/main.ts',
     output: {
       format: 'esm',
-    }
+    },
   },
   {
     input: 'src/worker.ts',
     output: {
       format: 'iife',
-      dir: 'dist/worker'
-    }
-  }
+      dir: 'dist/worker',
+    },
+  },
 ])
 ```
 

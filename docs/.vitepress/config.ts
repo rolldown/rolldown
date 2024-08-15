@@ -64,17 +64,19 @@ export default defineConfig({
     sidebar: {
       '/guide/': [
         {
-          text: 'Config', items: [
+          text: 'Config',
+          items: [
             { text: 'Configuration', link: '/guide/config/config.md' },
             { text: 'Command Line Interface', link: '/guide/config/cli.md' },
           ],
         },
         {
-          text: 'In Depth', items: [
+          text: 'In Depth',
+          items: [
             { text: 'Module Types', link: '/guide/in-depth/module-type.md' },
             { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
-          ]
-        }
+          ],
+        },
       ],
       '/contrib-guide/': [
         { text: 'Overview', link: '/contrib-guide/' },

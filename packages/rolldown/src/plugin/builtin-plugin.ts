@@ -44,9 +44,9 @@ export class ManifestPlugin extends BuiltinPlugin {
   }
 }
 
-export class WasmPlugin extends BuiltinPlugin {
+export class WasmHelperPlugin extends BuiltinPlugin {
   constructor() {
-    super(BindingBuiltinPluginName.WasmPlugin)
+    super(BindingBuiltinPluginName.WasmHelperPlugin)
   }
 }
 
@@ -87,8 +87,8 @@ export function manifestPlugin(config?: BindingManifestPluginConfig) {
   return new ManifestPlugin(config)
 }
 
-export function wasmPlugin() {
-  return new WasmPlugin()
+export function wasmHelperPlugin() {
+  return new WasmHelperPlugin()
 }
 
 export function wasmFallbackPlugin() {

@@ -6,14 +6,14 @@ use rolldown_plugin::{
   HookResolveIdReturn, Plugin, PluginContext,
 };
 
-const WASM_RUNTIME: &str = "\0rolldown_wasm_runtime.js";
+const WASM_HELPER_ID: &str = "\0vite/wasm-helper.js";
 
 #[derive(Debug)]
-pub struct WasmPlugin {}
+pub struct WasmHelperPlugin {}
 
-impl Plugin for WasmPlugin {
+impl Plugin for WasmHelperPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:wasm-plugin")
+    Cow::Borrowed("builtin:wasm-helper")
   }
 
   async fn resolve_id(
@@ -21,15 +21,15 @@ impl Plugin for WasmPlugin {
     _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier == WASM_RUNTIME {
-      Ok(Some(HookResolveIdOutput { id: WASM_RUNTIME.to_string(), ..Default::default() }))
+    if args.specifier == WASM_HELPER_ID {
+      Ok(Some(HookResolveIdOutput { id: WASM_HELPER_ID.to_string(), ..Default::default() }))
     } else {
       Ok(None)
     }
   }
 
   async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if args.id == WASM_RUNTIME {
+    if args.id == WASM_HELPER_ID {
       return Ok(Some(HookLoadOutput {
         code: include_str!("wasm_runtime.js").to_string(),
         ..Default::default()
@@ -47,7 +47,7 @@ impl Plugin for WasmPlugin {
       let url = ctx.get_file_name(&reference_id);
       return Ok(Some(HookLoadOutput {
         code: format!(
-          r#"import initWasm from "{WASM_RUNTIME}"; 
+          r#"import initWasm from "{WASM_HELPER_ID}"; 
           export default opts => initWasm(opts, "{url}")"#
         ),
         ..Default::default()

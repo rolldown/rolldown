@@ -9,8 +9,8 @@ use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_transform::TransformPlugin;
-use rolldown_plugin_wasm::WasmPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
+use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -40,7 +40,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 #[derive(Debug, Deserialize)]
 #[napi]
 pub enum BindingBuiltinPluginName {
-  WasmPlugin,
+  WasmHelperPlugin,
   ImportGlobPlugin,
   DynamicImportVarsPlugin,
   ModulePreloadPolyfillPlugin,
@@ -134,7 +134,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
+      BindingBuiltinPluginName::WasmHelperPlugin => Arc::new(WasmHelperPlugin {}),
       BindingBuiltinPluginName::WasmFallbackPlugin => Arc::new(WasmFallbackPlugin {}),
       BindingBuiltinPluginName::ImportGlobPlugin => {
         let config = if let Some(options) = plugin.options {

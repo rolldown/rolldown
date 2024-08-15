@@ -1,10 +1,7 @@
 use crate::options::binding_inject_import::normalize_binding_inject_import;
-#[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
-  options::plugin::ParallelJsPlugin,
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
-  worker_manager::WorkerManager,
 };
 use napi::bindgen_prelude::Either;
 use rolldown::{
@@ -14,6 +11,9 @@ use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+#[cfg(not(target_family = "wasm"))]
+use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
 

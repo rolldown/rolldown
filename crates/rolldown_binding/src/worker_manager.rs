@@ -1,7 +1,8 @@
+#![cfg(not(target_family = "wasm"))]
+
 use async_channel::{Receiver, Sender};
 
 #[derive(Debug)]
-#[allow(unused)]
 pub struct WorkerManager {
   free_workers_sender: Sender<u16>,
   free_workers_receiver: Receiver<u16>,

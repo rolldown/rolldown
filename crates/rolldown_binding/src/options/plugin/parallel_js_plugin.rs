@@ -1,3 +1,5 @@
+#![cfg(not(target_family = "wasm"))]
+
 #[cfg(not(target_family = "wasm"))]
 use std::borrow::Cow;
 use std::sync::Arc;

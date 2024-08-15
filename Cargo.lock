@@ -2207,8 +2207,8 @@ dependencies = [
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_transform",
- "rolldown_plugin_wasm",
  "rolldown_plugin_wasm_fallback",
+ "rolldown_plugin_wasm_helper",
  "rolldown_sourcemap",
  "rolldown_tracing",
  "rolldown_utils",
@@ -2384,18 +2384,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_wasm"
-version = "0.1.0"
-dependencies = [
- "rolldown_common",
- "rolldown_plugin",
-]
-
-[[package]]
 name = "rolldown_plugin_wasm_fallback"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_wasm_helper"
+version = "0.1.0"
+dependencies = [
+ "rolldown_common",
  "rolldown_plugin",
 ]
 

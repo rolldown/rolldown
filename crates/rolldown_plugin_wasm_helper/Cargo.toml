@@ -2,7 +2,7 @@
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-name                 = "rolldown_plugin_wasm"
+name                 = "rolldown_plugin_wasm_helper"
 repository.workspace = true
 version              = "0.1.0"
 

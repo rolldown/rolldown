@@ -32,6 +32,7 @@ export default defineConfig({
         text: 'About',
         link: '/about.md',
       },
+      { text: 'Guide', link: '/guide/' },
       { text: 'Contribute', link: '/contrib-guide/' },
       {
         text: 'Resources',
@@ -61,6 +62,20 @@ export default defineConfig({
     ],
 
     sidebar: {
+      '/guide/': [
+        {
+          text: 'Config', items: [
+            { text: 'Configuration', link: '/guide/config/config.md' },
+            { text: 'Command Line Interface', link: '/guide/config/cli.md' },
+          ],
+        },
+        {
+          text: 'In Depth', items: [
+            { text: 'Module Types', link: '/guide/in-depth/module-type.md' },
+            { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
+          ]
+        }
+      ],
       '/contrib-guide/': [
         { text: 'Overview', link: '/contrib-guide/' },
         {

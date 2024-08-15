@@ -6,7 +6,7 @@ use crate::{
   ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, NamedImport,
   StmtInfo, StmtInfos, SymbolRef,
 };
-use crate::{EcmaAstIdx, IndexModules, ModuleType};
+use crate::{EcmaAstIdx, IndexModules, Module, ModuleType};
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::Span;
@@ -150,6 +150,19 @@ impl EcmaModule {
 
   pub fn ecma_ast_idx(&self) -> EcmaAstIdx {
     self.ecma_ast_idx.expect("ecma_ast_idx should be set in this stage")
+  }
+
+  pub fn star_exports_from_external_modules<'me>(
+    &'me self,
+    modules: &'me IndexModules,
+  ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
+    self.star_exports.iter().filter_map(move |rec_id| {
+      let rec = &self.import_records[*rec_id];
+      match modules[rec.resolved_module] {
+        Module::External(_) => Some(*rec_id),
+        Module::Ecma(_) => None,
+      }
+    })
   }
 }
 

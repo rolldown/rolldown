@@ -21,14 +21,7 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-
 require("node:fs");
 require("node:path");
 
-//#region main.js
-var main_ns = {};
-__reExport(main_ns, require("node:fs"));
-__reExport(main_ns, require("node:path"));
-
-//#endregion
 ```

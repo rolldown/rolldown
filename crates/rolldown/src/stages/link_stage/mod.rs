@@ -84,6 +84,11 @@ impl<'a> LinkStage<'a> {
               OutputFormat::Iife => Some(rec.resolved_module),
             })
             .collect(),
+          star_exports_from_external_modules: module.as_ecma().map_or(vec![], |inner| {
+            inner
+              .star_exports_from_external_modules(&scan_stage_output.module_table.modules)
+              .collect()
+          }),
           ..LinkingMetadata::default()
         })
         .collect::<IndexVec<ModuleIdx, _>>(),
@@ -272,23 +277,18 @@ impl<'a> LinkStage<'a> {
                 // Make sure symbols from external modules are included and de_conflicted
                 match rec.kind {
                   ImportKind::Import => {
-                    let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
-                    if cjs_format && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT) {
-                      stmt_info
-                        .referenced_symbols
-                        .push(self.runtime.resolve_symbol("__toESM").into());
-                    }
-
                     let is_reexport_all = importer.star_exports.contains(rec_id);
                     if is_reexport_all {
+                      // export * from 'external' would be just removed. So it references nothing.
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
-                      declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
-                      if cjs_format {
-                        stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                    } else {
+                      // import ... from 'external' or export ... from 'external'
+                      let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
+                      if cjs_format && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT) {
                         stmt_info
                           .referenced_symbols
-                          .push(self.runtime.resolve_symbol("__reExport").into());
+                          .push(self.runtime.resolve_symbol("__toESM").into());
                       }
                     }
                   }
@@ -442,17 +442,31 @@ impl<'a> LinkStage<'a> {
       if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
         let meta = &self.metas[ecma_module.idx];
         let mut referenced_symbols = vec![];
+        let mut declared_symbols = vec![];
         if !meta.is_canonical_exports_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
+          referenced_symbols
+            .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
         }
-        referenced_symbols
-          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
+        if !meta.star_exports_from_external_modules.is_empty() {
+          referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
+          match self.options.format {
+            OutputFormat::Esm => {
+              meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
+                referenced_symbols.push(ecma_module.import_records[rec_idx].namespace_ref.into());
+                declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
+              });
+            }
+            OutputFormat::Cjs | OutputFormat::Iife => {}
+            OutputFormat::App => unreachable!(),
+          }
+        };
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
-        referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
+        declared_symbols.push(ecma_module.namespace_object_ref);
         let namespace_stmt_info = StmtInfo {
           stmt_idx: None,
-          declared_symbols: vec![ecma_module.namespace_object_ref],
+          declared_symbols,
           referenced_symbols,
           side_effect: false,
           is_included: false,

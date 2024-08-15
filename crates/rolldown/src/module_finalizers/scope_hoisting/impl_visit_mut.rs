@@ -24,8 +24,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[0].is_included;
 
-    let mut export_all_externals_rec_ids = vec![];
-
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
     // Skip the first statement info, which is the namespace variable declaration
     stmt_infos.next();
@@ -107,32 +105,15 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::None => {}
                 }
               }
-              Module::External(importee) => {
+              Module::External(_importee) => {
                 match self.ctx.options.format {
-                  rolldown_common::OutputFormat::Esm => {
-                    export_all_externals_rec_ids.push(rec_id);
+                  rolldown_common::OutputFormat::Esm
+                  | rolldown_common::OutputFormat::Iife
+                  | rolldown_common::OutputFormat::Cjs => {
+                    // Just remove the statement
                     return;
                   }
-                  rolldown_common::OutputFormat::Cjs => {
-                    // Insert `__reExport(exports, require('ext'))`
-                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                    let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
-                    program.body.push(
-                      self
-                        .snippet
-                        .call_expr_with_2arg_expr_expr(
-                          re_export_fn_name,
-                          self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                          self.snippet.call_expr_with_arg_expr_expr(
-                            "require",
-                            self.snippet.string_literal_expr(&importee.name, SPAN),
-                          ),
-                        )
-                        .into_in(self.alloc),
-                    );
-                  }
-                  rolldown_common::OutputFormat::App | rolldown_common::OutputFormat::Iife => {
+                  rolldown_common::OutputFormat::App => {
                     unreachable!()
                   }
                 }
@@ -201,8 +182,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     );
 
     if is_namespace_referenced {
-      let mut stmts =
-        self.generate_declaration_of_module_namespace_object(export_all_externals_rec_ids);
+      let mut stmts = self.generate_declaration_of_module_namespace_object();
       stmts.extend(program.body.take_in(self.alloc));
       program.body.extend(stmts);
     }

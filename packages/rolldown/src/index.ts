@@ -37,7 +37,7 @@ import {
   EmittedFile,
   PluginContext,
 } from './plugin/plugin-context'
-import { TransformPluginContext } from './plugin/transfrom-plugin-context'
+import { TransformPluginContext } from './plugin/transform-plugin-context'
 import {
   InternalModuleFormat,
   NormalizedOutputOptions,

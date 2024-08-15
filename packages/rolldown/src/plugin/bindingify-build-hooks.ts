@@ -11,7 +11,7 @@ import { transformModuleInfo } from '../utils/transform-module-info'
 import path from 'node:path'
 import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
-import { TransformPluginContext } from './transfrom-plugin-context'
+import { TransformPluginContext } from './transform-plugin-context'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
 import { PluginContextData } from './plugin-context-data'
 import {

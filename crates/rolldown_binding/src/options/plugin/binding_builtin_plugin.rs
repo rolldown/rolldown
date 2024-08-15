@@ -8,9 +8,10 @@ use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
-use rolldown_plugin_transform::{StringOrRegex, TransformPlugin};
+use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_wasm::WasmPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
+use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
 use std::sync::Arc;
 

@@ -63,7 +63,6 @@ pub use crate::{
     ImportKind, ImportRecord, ImportRecordIdx, ImportRecordMeta, RawImportRecord,
   },
   types::importer_record::ImporterRecord,
-  types::js_regex,
   types::member_expr_ref::MemberExprRef,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,

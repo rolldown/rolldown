@@ -1,4 +1,4 @@
-use crate::types::js_regex::HybridRegex;
+use rolldown_utils::js_regex::HybridRegex;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]

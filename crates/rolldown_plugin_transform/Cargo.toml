@@ -16,7 +16,6 @@ workspace = true
 
 [dependencies]
 anyhow              = { workspace = true }
-glob-match          = { workspace = true }
 oxc                 = { workspace = true }
 rolldown_common     = { workspace = true }
 rolldown_ecmascript = { workspace = true }

@@ -1,5 +1,5 @@
 use rolldown::{InnerOptions, ModuleSideEffects};
-use rolldown_common::js_regex::HybridRegex;
+use rolldown_utils::js_regex::HybridRegex;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]

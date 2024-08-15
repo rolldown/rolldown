@@ -130,5 +130,5 @@ export function parseCliArguments() {
       }
     })
 
-  return normalizeCliOptions(values, positionals as string[], options)
+  return normalizeCliOptions(values, positionals as string[])
 }

@@ -55,7 +55,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-array')
     const status = await $({
       cwd,
-    })`rolldown index.ts --external node:path,node:url -d dist`
+    })`rolldown index.ts --external node:path --external node:url -d dist`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)
@@ -65,7 +65,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-object')
     const status = await $({
       cwd,
-    })`rolldown index.ts --moduleTypes .123=text,.notjson=json,.b64=base64 -d dist`
+    })`rolldown index.ts --module-types .123=text --module-types notjson=json --module-types .b64=base64 -d dist`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)
@@ -75,7 +75,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-no-external-live-bindings')
     const status = await $({
       cwd,
-    })`rolldown index.ts --format iife --external node:fs --no-externalLiveBindings`
+    })`rolldown index.ts --format iife --external node:fs --no-external-live-bindings`
     expect(status.exitCode).toBe(0)
     // FIXME: emit nothing, so use `dist` first.
     expect(status.stdout).toMatchSnapshot(`""`)

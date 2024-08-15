@@ -1,8 +1,8 @@
-import { wasmFallbackPlugin, wasmPlugin } from 'rolldown/experimental'
+import { wasmFallbackPlugin, wasmHelperPlugin } from 'rolldown/experimental'
 import { defineTest } from '@tests'
 
 export default defineTest({
   config: {
-    plugins: [wasmPlugin(), wasmFallbackPlugin()],
+    plugins: [wasmHelperPlugin(), wasmFallbackPlugin()],
   },
 })

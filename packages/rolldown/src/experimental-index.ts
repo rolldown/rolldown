@@ -6,7 +6,7 @@ export { transform } from './binding'
 export {
   modulePreloadPolyfillPlugin,
   dynamicImportVarsPlugin,
-  wasmPlugin,
+  wasmHelperPlugin,
   wasmFallbackPlugin,
   importGlobPlugin,
   manifestPlugin,

@@ -1,7 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`args > should render help message for empty args > "" 1`] = `""`;
-
 exports[`basic arguments > should render help message for empty args > "" 1`] = `""`;
 
 exports[`cli options for bundling > should handle negative boolean options > "" 1`] = `""`;

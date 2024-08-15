@@ -27,30 +27,23 @@ use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
 ///    this.namespace.module.hello
 ///    ```
 fn generate_namespace_definition(name: &str) -> (String, String) {
+  let mut initial_code = String::new();
+  let mut final_code = String::from("this");
+
+  let context_len = final_code.len();
   let parts: Vec<&str> = name.split('.').collect();
 
-  let initialization_code = parts
-    .iter()
-    .enumerate()
-    .scan(String::new(), |state, (i, part)| {
-      // We use `scan` to generate the declaration sentence level-by-level.
-      let caller = generate_caller(part);
-      state.push_str(&caller);
-      let line = if i < parts.len() - 1 {
-        Some(format!("this{state} = this{state} || {{}};\n"))
-      } else {
-        None
-      };
-      Some(line)
-    })
-    .flatten()
-    .collect::<String>();
+  for (i, part) in parts.iter().enumerate() {
+    let caller = generate_caller(part);
+    final_code.push_str(&caller);
 
-  // TODO do not call the `generate_caller` function twice.
-  let final_code =
-    format!("this{}", parts.iter().map(|&part| generate_caller(part)).collect::<String>());
+    if i < parts.len() - 1 {
+      let callers = &final_code[context_len..];
+      initial_code.push_str(&format!("this{callers} = this{callers} || {{}};\n"));
+    }
+  }
 
-  (initialization_code, final_code)
+  (initial_code, final_code)
 }
 
 /// This function generates a namespace definition for the given name, especially for IIFE format or UMD format.

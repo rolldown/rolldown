@@ -37,7 +37,7 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   sourcemap: {
     abbreviation: 's',
-    default: true,
+    default: false,
   },
   minify: {
     abbreviation: 'm',
@@ -59,5 +59,8 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   treeshake: {
     default: true,
+  },
+  moduleTypes: {
+    hint: 'types',
   },
 }

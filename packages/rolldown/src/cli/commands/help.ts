@@ -6,6 +6,7 @@ import {
 import { bold, cyan, gray, underline } from '../colors'
 import { options } from '../arguments'
 import { alias, OptionConfig } from '../arguments/alias'
+import { camelCaseToKebabCase } from '../arguments/utils'
 
 const introduction = `${gray(`${description} (rolldown v${version})`)}
 
@@ -68,6 +69,7 @@ export function showHelp() {
         let optionStr = '  '
         const config = ((Object.getOwnPropertyDescriptor(alias, option) ?? {})
           .value ?? {}) as OptionConfig
+        option = camelCaseToKebabCase(option)
         if (
           typeof config.default === 'boolean' &&
           type === 'boolean' &&

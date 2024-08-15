@@ -6,9 +6,13 @@ import { z } from 'zod'
 
 export const cliOptionsSchema = z
   .strictObject({
-    config: z.string().or(z.boolean()).optional(),
-    help: z.boolean().optional(),
-    version: z.boolean().optional(),
+    config: z
+      .string()
+      .or(z.boolean())
+      .describe('Path to the config file (default: `rollup.config.js`)')
+      .optional(),
+    help: z.boolean().describe('Show help').optional(),
+    version: z.boolean().describe('Show version number').optional(),
   })
   .merge(inputCliOptionsSchema)
   .merge(outputCliOptionsSchema)

@@ -1,16 +1,13 @@
-import { InputOption } from '../../options/input-options'
-import { OutputOptions } from '../../options/output-options'
+import { CliOptions } from './schema'
 
 export interface OptionConfig {
   abbreviation?: string
-  description: string
+  description?: string
   default?: string | boolean
   hint?: string
 }
 
-export const alias: Partial<
-  Record<keyof InputOption & OutputOptions, OptionConfig>
-> = {
+export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   config: {
     abbreviation: 'c',
     description: 'Use config file',
@@ -19,43 +16,51 @@ export const alias: Partial<
   },
   help: {
     abbreviation: 'h',
-    description: 'Show help message',
   },
   version: {
     abbreviation: 'v',
-    description: 'Show version',
   },
   dir: {
     abbreviation: 'd',
-    description: 'The directory to output files',
   },
   external: {
     abbreviation: 'e',
-    description: 'Modules to exclude in the bundle (comma separated)',
   },
   format: {
     abbreviation: 'f',
-    description:
-      'The format of the generated bundle (accept esm, cjs, iife, amd, umd, system)',
   },
   name: {
     abbreviation: 'n',
-    description: 'The name of the generated bundle (for iife and umd format)',
   },
   globals: {
     abbreviation: 'g',
-    description:
-      'Global variables to replace with (comma separated with list of module-id:global-key)',
   },
   sourcemap: {
     abbreviation: 's',
-    description: 'Generate sourcemap',
+    default: false,
   },
   minify: {
     abbreviation: 'm',
-    description: 'Minify the generated bundle',
+  },
+  platform: {
+    abbreviation: 'p',
+  },
+  assetFileNames: {
+    hint: 'name',
+  },
+  chunkFileNames: {
+    hint: 'name',
+  },
+  entryFileNames: {
+    hint: 'name',
+  },
+  externalLiveBindings: {
+    default: true,
   },
   treeshake: {
-    description: 'Disable treeshaking',
+    default: true,
+  },
+  moduleTypes: {
+    hint: 'types',
   },
 }

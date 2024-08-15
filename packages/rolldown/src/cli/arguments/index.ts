@@ -1,6 +1,11 @@
 import { schema as objectSchema } from './schema'
 import { alias, type OptionConfig } from './alias'
-import { flattenSchema, getSchemaType } from './utils'
+import {
+  camelCaseToKebabCase,
+  flattenSchema,
+  getSchemaType,
+  kebabCaseToCamelCase,
+} from './utils'
 import { parseArgs } from 'node:util'
 import { normalizeCliOptions } from './normalize'
 import { logger } from '../utils'
@@ -19,7 +24,7 @@ export const options = Object.fromEntries(
       type: type === 'boolean' ? 'boolean' : 'string',
       // We only support comma separated mode right now.
       // multiple: type === 'object' || type === 'array',
-      description: config?.description ?? '',
+      description: schema?.description ?? config?.description ?? '',
       hint: config?.hint,
     } as {
       type: 'boolean' | 'string'
@@ -32,7 +37,13 @@ export const options = Object.fromEntries(
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
-    return [key, result]
+    key = camelCaseToKebabCase(key)
+    return [
+      typeof config?.default === 'boolean' && config?.default
+        ? `no-${key}`
+        : key,
+      result,
+    ]
   }),
 )
 
@@ -43,7 +54,6 @@ export function parseCliArguments() {
     options,
     tokens: true,
     allowPositionals: true,
-    allowNegative: true,
     // We can't use `strict` mode because we should handle the default config file name.
     strict: false,
   })
@@ -51,6 +61,19 @@ export function parseCliArguments() {
   tokens
     .filter((token) => token.kind === 'option')
     .forEach((option) => {
+      let negative = false
+      if (option.name.startsWith('no-')) {
+        // stripe `no-` prefix
+        const name = kebabCaseToCamelCase(option.name.substring(3))
+        if (name in flattenedSchema) {
+          // Remove the `no-` in values
+          delete values[option.name]
+          option.name = name
+          negative = true
+        }
+      }
+      delete values[option.name] // Strip the kebab-case options.
+      option.name = kebabCaseToCamelCase(option.name)
       let originalType = flattenedSchema[option.name]
       if (!originalType) {
         logger.warn(
@@ -60,14 +83,46 @@ export function parseCliArguments() {
       }
       let type = getSchemaType(originalType)
       if (type === 'object' && typeof option.value === 'string') {
-        const mappings = option.value?.split(',').map((x) => x.split('='))
-        if (mappings) {
+        const [key, value] = option.value
+          ?.split(',')
+          .map((x) => x.split('='))[0]
+        if (!values[option.name]) {
+          Object.defineProperty(values, option.name, {
+            value: {},
+            enumerable: true,
+            configurable: true,
+            writable: true,
+          })
+        }
+        if (key && value) {
           // TODO support multiple entries.
-          values[option.name] = Object.fromEntries(mappings)
+          Object.defineProperty(values[option.name], key, {
+            value,
+            enumerable: true,
+            configurable: true,
+            writable: true,
+          })
         }
       } else if (type === 'array' && typeof option.value === 'string') {
+        if (!values[option.name]) {
+          Object.defineProperty(values, option.name, {
+            value: [],
+            enumerable: true,
+            configurable: true,
+            writable: true,
+          })
+        }
+        ;(values[option.name] as string[]).push(option.value)
+      } else if (type === 'boolean') {
         Object.defineProperty(values, option.name, {
-          value: option.value?.split(',') ?? [],
+          value: !negative,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        })
+      } else {
+        Object.defineProperty(values, option.name, {
+          value: option.value,
           enumerable: true,
           configurable: true,
           writable: true,
@@ -75,5 +130,5 @@ export function parseCliArguments() {
       }
     })
 
-  return normalizeCliOptions(values, positionals as string[], options)
+  return normalizeCliOptions(values, positionals as string[])
 }

@@ -11,7 +11,7 @@ export type TransformPluginConfig = Omit<
   exclude?: TransformPattern
 }
 
-export function normalizedEcmaTransformPluginConfig(
+export function normalizeEcmaTransformPluginConfig(
   config?: TransformPluginConfig,
 ): BindingTransformPluginConfig | undefined {
   if (!config) {

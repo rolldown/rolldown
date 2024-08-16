@@ -4,17 +4,17 @@ use std::sync::Arc;
 use rolldown_plugin::{HookResolveIdOutput, Plugin, PluginContext, PluginContextResolveOptions};
 use rolldown_utils::pattern_filter::StringOrRegex;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AliasPlugin {
   // We don't support `customResolver` and `resolverFunction`, it will generate many threadSafeFunction in queue, and slowdown the
   // performance, downstream user should fallback to js alias plugin when needs advance feature.
-  entries: Vec<Alias>,
+  pub entries: Vec<Alias>,
 }
 
 #[derive(Debug)]
 pub struct Alias {
-  find: StringOrRegex,
-  replacement: String,
+  pub find: StringOrRegex,
+  pub replacement: String,
 }
 
 impl AliasPlugin {

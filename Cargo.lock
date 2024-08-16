@@ -2201,6 +2201,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_plugin",
+ "rolldown_plugin_alias",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_import_glob",
  "rolldown_plugin_load_fallback",
@@ -2312,7 +2313,6 @@ dependencies = [
 name = "rolldown_plugin_alias"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "rolldown_plugin",
  "rolldown_utils",
 ]

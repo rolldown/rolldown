@@ -3,6 +3,7 @@ use napi::bindgen_prelude::FromNapiValue;
 use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
+use rolldown_plugin_alias::{Alias, AliasPlugin};
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
@@ -48,6 +49,7 @@ pub enum BindingBuiltinPluginName {
   LoadFallbackPlugin,
   TransformPlugin,
   WasmFallbackPlugin,
+  AliasPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -97,6 +99,37 @@ pub struct BindingTransformPluginConfig {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub jsx_inject: Option<String>,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingAliasPluginConfig {
+  pub entries: Vec<BindingAliasPluginAlias>,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingAliasPluginAlias {
+  pub find: BindingStringOrRegex,
+  pub replacement: String,
+}
+
+impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingAliasPluginConfig) -> Result<Self, Self::Error> {
+    let mut ret = Vec::with_capacity(value.entries.len());
+    for item in value.entries {
+      ret.push(Alias {
+        find: StringOrRegex::new(item.find.value, &item.find.flag)?,
+        replacement: item.replacement,
+      });
+    }
+
+    Ok(Self { entries: ret })
+  }
 }
 
 impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
@@ -168,6 +201,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           BindingTransformPluginConfig::from_unknown(options)?.try_into()?
         } else {
           TransformPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::AliasPlugin => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingAliasPluginConfig::from_unknown(options)?.try_into()?
+        } else {
+          AliasPlugin::default()
         };
         Arc::new(plugin)
       }

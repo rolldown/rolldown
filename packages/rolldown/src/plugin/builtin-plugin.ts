@@ -1,7 +1,12 @@
 import {
-  normalizedEcmaTransformPluginConfig,
+  normalizeEcmaTransformPluginConfig,
   TransformPluginConfig,
 } from '../options/normalized-ecma-transform-plugin-config'
+
+import {
+  AliasPluginConfig,
+  normalizeAliasPluginConfig,
+} from '../options/normalized-alias-plugin-config'
 import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
@@ -62,9 +67,16 @@ export class LoadFallbackPlugin extends BuiltinPlugin {
   }
 }
 
+export class AliasPlugin extends BuiltinPlugin {
+  constructor(config?: AliasPluginConfig) {
+    let normalizedAliasPluginConfig = normalizeAliasPluginConfig(config)
+    super(BindingBuiltinPluginName.AliasPlugin, normalizedAliasPluginConfig)
+  }
+}
+
 export class TransformPlugin extends BuiltinPlugin {
   constructor(config?: TransformPluginConfig) {
-    let normalizedConfig = normalizedEcmaTransformPluginConfig(config)
+    let normalizedConfig = normalizeEcmaTransformPluginConfig(config)
     super(BindingBuiltinPluginName.TransformPlugin, normalizedConfig)
   }
 }
@@ -102,6 +114,11 @@ export function transformPlugin(config?: TransformPluginConfig) {
 export function loadFallbackPlugin() {
   return new LoadFallbackPlugin()
 }
+
+export function aliasPlugin(config: AliasPluginConfig) {
+  return new AliasPlugin(config)
+}
+
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,
 ): BindingBuiltinPlugin {

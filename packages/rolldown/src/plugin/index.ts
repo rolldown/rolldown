@@ -65,6 +65,7 @@ export interface PartialResolvedId extends Partial<PartialNull<ModuleOptions>> {
 export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
   code: string
   map?: SourceMapInput
+  moduleType?: ModuleType
 }
 
 interface ResolveIdExtraOptions {
@@ -77,10 +78,7 @@ export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
 
-export type TransformResult =
-  | NullValue
-  | string
-  | (Partial<SourceDescription> & { moduleType?: ModuleType })
+export type TransformResult = NullValue | string | Partial<SourceDescription>
 
 export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.onLog]: (

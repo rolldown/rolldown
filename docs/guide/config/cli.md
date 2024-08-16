@@ -62,14 +62,6 @@ rolldown main.ts -m
 
 Rolldown will utilize the `oxc_minify` tool from the [oxc](https://oxc.rs/docs/contribute/minifier.html) to minify the output file. This process is highly efficient.
 
-### `--file` / `-o` (Unsupported)
-
-::: danger UNSUPPORTED
-This option is not supported yet.
-:::
-
-Only used if there's only one output file.
-
 ### `—sourcemap` / `-s`
 
 Generate the source map file.
@@ -82,4 +74,4 @@ Generate the source map file.
   ```shell
   rolldown main.ts -s
   ```
-  Remember to pass the argument at the end of the command, as per the API limit.
+  Remember to pass the argument at the end of the command, as per the API limit. We'll try to fix this in the future.

@@ -64,7 +64,8 @@ NOTES
 `;
 
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
-"(function(exports, node_fs) {
+"Invalid option: --no-external-live-bindingsfjei. We will ignore this option.
+(function(exports, node_fs) {
 
 "use strict";
 const { read, readFile, readFileSync, readSync } = node_fs;
@@ -79,10 +80,30 @@ Object.defineProperty(exports, 'nonExternal', {
     return nonExternal;
   }
 });
-exports['read'] = read
-exports['readFile'] = readFile
-exports['readFileSync'] = readFileSync
-exports['readSync'] = readSync
+Object.defineProperty(exports, 'read', {
+  enumerable: true,
+  get: function () {
+    return read;
+  }
+});
+Object.defineProperty(exports, 'readFile', {
+  enumerable: true,
+  get: function () {
+    return readFile;
+  }
+});
+Object.defineProperty(exports, 'readFileSync', {
+  enumerable: true,
+  get: function () {
+    return readFileSync;
+  }
+});
+Object.defineProperty(exports, 'readSync', {
+  enumerable: true,
+  get: function () {
+    return readSync;
+  }
+});
 return exports;
 })({}, node_fs);"
 `;
@@ -90,7 +111,7 @@ return exports;
 exports[`cli options for bundling > should handle single array options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
 
-Finished in 9.62 ms"
+Finished in 9.46 ms"
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
@@ -159,17 +180,17 @@ NOTES
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.12 kB
 
-Finished in 9.09 ms"
+Finished in 8.75 ms"
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.27 kB
 
-Finished in 9.14 ms"
+Finished in 8.61 ms"
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.15 kB
 
-Finished in 8.03 ms"
+Finished in 8.63 ms"
 `;

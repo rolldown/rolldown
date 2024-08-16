@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 /// According to the doc of `regress`, https://docs.rs/regress/0.10.0/regress/#comparison-to-regex-crate
 /// **regress supports features that regex does not, in particular backreferences and zero-width lookaround assertions.**
 /// these features are not commonly used, so in most cases the slow path will not be reached.
@@ -32,9 +34,40 @@ impl HybridRegex {
       HybridRegex::Ecma(reg) => reg.find(text).is_some(),
     }
   }
+
+  pub fn replace_all(&self, haystack: &str, replacement: &str) -> String {
+    match self {
+      HybridRegex::Optimize(r) => r.replace_all(haystack, replacement).to_string(),
+      HybridRegex::Ecma(reg) => regress_regexp_replace_all(reg, haystack, replacement).to_string(),
+    }
+  }
 }
 
+fn regress_regexp_replace_all<'a>(
+  reg: &regress::Regex,
+  haystack: &'a str,
+  replacement: &str,
+) -> Cow<'a, str> {
+  let iter = reg.find_iter(haystack);
+  let mut iter = iter.peekable();
+  if iter.peek().is_none() {
+    return Cow::Borrowed(haystack);
+  };
+
+  let mut ret = String::with_capacity(haystack.len());
+  let mut last = 0;
+  for m in iter {
+    ret.push_str(&haystack[last..m.start()]);
+    ret.push_str(replacement);
+    last = m.end();
+  }
+  ret.push_str(&haystack[last..]);
+  Cow::Owned(ret)
+}
+
+#[test]
 mod test {
+
   #[test]
   fn with_flags() {
     let reg = super::HybridRegex::with_flags("a", "i").unwrap();
@@ -42,5 +75,11 @@ mod test {
 
     let reg = super::HybridRegex::new("a").unwrap();
     assert!(!reg.matches("A"));
+  }
+
+  #[test]
+  fn regress_replace_all() {
+    let reg = regress::Regex::new("\\d+").unwrap();
+    assert_eq!(regress_regexp_replace_all(&reg, "111aa111", "1"), "1aa1");
   }
 }

@@ -2309,6 +2309,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_alias"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rolldown_plugin",
+ "rolldown_utils",
+]
+
+[[package]]
 name = "rolldown_plugin_data_url"
 version = "0.1.0"
 dependencies = [

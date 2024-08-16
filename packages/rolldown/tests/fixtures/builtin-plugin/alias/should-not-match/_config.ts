@@ -11,6 +11,7 @@ export default defineTest({
       }),
     ],
   },
+  // cspell:ignore rolldownlib
   async afterTest() {
     try {
       await import('./assert.mjs')

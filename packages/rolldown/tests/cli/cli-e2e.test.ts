@@ -15,11 +15,10 @@ function cleanStdout(stdout: string) {
 	return stripAnsi(stdout).replace(/Finished in \d+(\.\d+)? ms/g, "")
 }
 
-const binPath = path.resolve(import.meta.dirname, "../../bin/cli.js");
 describe("should not hang after running", () => {
 	test.skip("basic", async () => {
 		const cwd = cliFixturesDir("no-config");
-		const _ret = execSync(`node ${binPath}`, { cwd });
+		const _ret = execa(`rolldown`, { cwd });
 	});
 });
 

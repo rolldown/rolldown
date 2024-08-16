@@ -6,7 +6,7 @@ import type { ConfigExport } from '../types/config-export'
 /**
  * Console logger
  */
-export const logger = process.env.TEST
+export const logger = process.env.ROLLDOWN_TEST
   ? createTestingLogger()
   : createConsola({
       formatOptions: {

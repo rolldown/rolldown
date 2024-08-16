@@ -6,16 +6,44 @@ import type { ConfigExport } from '../types/config-export'
 /**
  * Console logger
  */
-export const logger = createConsola({
-  formatOptions: {
-    date: false,
-  },
-})
+export const logger = process.env.TEST
+  ? createTestingLogger()
+  : createConsola({
+      formatOptions: {
+        date: false,
+      },
+    })
+
+function createTestingLogger() {
+  const types = [
+    'silent',
+    'fatal',
+    'error',
+    'warn',
+    'log',
+    'info',
+    'success',
+    'fail',
+    'ready',
+    'start',
+    'box',
+    'debug',
+    'trace',
+    'verbose',
+  ]
+  const ret: Record<string, any> = Object.create(null)
+  for (const type of types) {
+    ret[type] = console.log
+  }
+  return ret
+}
 
 export async function ensureConfig(configPath: string): Promise<ConfigExport> {
   if (!isSupportedFormat(configPath)) {
     throw new Error(
-      `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(',')}\` but got \`${nodePath.extname(configPath)}\``,
+      `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(
+        ',',
+      )}\` but got \`${nodePath.extname(configPath)}\``,
     )
   }
 

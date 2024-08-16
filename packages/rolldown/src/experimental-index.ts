@@ -12,4 +12,5 @@ export {
   manifestPlugin,
   loadFallbackPlugin,
   transformPlugin,
+  aliasPlugin,
 } from './plugin/builtin-plugin'

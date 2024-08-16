@@ -101,6 +101,15 @@ export interface ArrowFunctionsBindingOptions {
   spec?: boolean
 }
 
+export interface BindingAliasPluginAlias {
+  find: BindingStringOrRegex
+  replacement: string
+}
+
+export interface BindingAliasPluginConfig {
+  entries: Array<BindingAliasPluginAlias>
+}
+
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -118,7 +127,8 @@ export declare enum BindingBuiltinPluginName {
   ManifestPlugin = 4,
   LoadFallbackPlugin = 5,
   TransformPlugin = 6,
-  WasmFallbackPlugin = 7
+  WasmFallbackPlugin = 7,
+  AliasPlugin = 8
 }
 
 export interface BindingEmittedAsset {

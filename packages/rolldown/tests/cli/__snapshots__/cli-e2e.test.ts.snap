@@ -64,8 +64,7 @@ NOTES
 `;
 
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
-"Invalid option: --no-external-live-bindingsfjei. We will ignore this option.
-(function(exports, node_fs) {
+"(function(exports, node_fs) {
 
 "use strict";
 const { read, readFile, readFileSync, readSync } = node_fs;
@@ -80,30 +79,10 @@ Object.defineProperty(exports, 'nonExternal', {
     return nonExternal;
   }
 });
-Object.defineProperty(exports, 'read', {
-  enumerable: true,
-  get: function () {
-    return read;
-  }
-});
-Object.defineProperty(exports, 'readFile', {
-  enumerable: true,
-  get: function () {
-    return readFile;
-  }
-});
-Object.defineProperty(exports, 'readFileSync', {
-  enumerable: true,
-  get: function () {
-    return readFileSync;
-  }
-});
-Object.defineProperty(exports, 'readSync', {
-  enumerable: true,
-  get: function () {
-    return readSync;
-  }
-});
+exports['read'] = read
+exports['readFile'] = readFile
+exports['readFileSync'] = readFileSync
+exports['readSync'] = readSync
 return exports;
 })({}, node_fs);"
 `;

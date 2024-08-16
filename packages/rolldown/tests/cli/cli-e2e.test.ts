@@ -35,14 +35,14 @@ describe("basic arguments", () => {
 describe("cli options for bundling", () => {
 	it("should handle single boolean option", async () => {
 		const cwd = cliFixturesDir("cli-option-boolean");
-		const status = await $({ cwd })`node ${binPath} --minify -d dist`;
+		const status = await $({ cwd })`rolldown --minify -d dist`;
 		expect(status.exitCode).toBe(0);
 		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
 
 	it("should handle single boolean short options", async () => {
 		const cwd = cliFixturesDir("cli-option-short-boolean");
-		const status = await $({ cwd })`node ${binPath} index.ts -m -d dist`;
+		const status = await $({ cwd })`rolldown index.ts -m -d dist`;
 		expect(status.exitCode).toBe(0);
 		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
@@ -51,7 +51,7 @@ describe("cli options for bundling", () => {
 		const cwd = cliFixturesDir("cli-option-string");
 		const status = await $({
 			cwd,
-		})`node ${binPath} index.ts --format cjs -d dist`;
+		})`rolldown index.ts --format cjs -d dist`;
 		expect(status.exitCode).toBe(0);
 		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
@@ -60,7 +60,7 @@ describe("cli options for bundling", () => {
 		const cwd = cliFixturesDir("cli-option-array");
 		const status = await $({
 			cwd,
-		})`node ${binPath} index.ts --external node:path --external node:url -d dist`;
+		})`rolldown index.ts --external node:path --external node:url -d dist`;
 		expect(status.exitCode).toBe(0);
 		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
@@ -78,7 +78,7 @@ describe("cli options for bundling", () => {
 		const cwd = cliFixturesDir("cli-option-no-external-live-bindings");
 		const status = await $({
 			cwd,
-		})`rolldown index.ts --format iife --external node:fs --no-external-live-bindingsfjei`;
+		})`rolldown index.ts --format iife --external node:fs --no-external-live-bindings`;
 		expect(status.exitCode).toBe(0);
 		expect(stripAnsi(status.stdout)).toMatchSnapshot();
 	});

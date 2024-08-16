@@ -8,6 +8,8 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "vitepress": "^1.2.3"
+    "@iconify-json/vscode-icons": "^1.1.37",
+    "vitepress": "^1.2.3",
+    "vitepress-plugin-group-icons": "^0.0.9"
   }
 }

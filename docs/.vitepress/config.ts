@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import { groupIconPlugin } from 'vitepress-plugin-group-icons'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -106,6 +107,13 @@ export default defineConfig({
     footer: {
       message: 'Released under the MIT License.',
       copyright: 'Copyright © 2023-present Rolldown Team & Contributors',
+    },
+  },
+
+  markdown: {
+    config(md) {
+      // @ts-ignore wait upstream fix: https://github.com/vuejs/vitepress/issues/4116
+      md.use(groupIconPlugin)
     },
   },
 })

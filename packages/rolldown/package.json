@@ -69,7 +69,7 @@
     "build-wasi:debug": "run-s build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding:wasi:release build-node",
     "# Scrips for checking #": "_",
-    "test": "NO_ASCII=1 vitest run --reporter verbose --hideSkippedTests",
+    "test": "TEST=1 vitest run --reporter verbose --hideSkippedTests",
     "test:update": "vitest run -u",
     "type-check": "tsc"
   },

@@ -245,7 +245,7 @@ export function bindingifyLoad(
       }
 
       if (!ret.map) {
-        return { code: ret.code }
+        return { code: ret.code, moduleType: ret.moduleType }
       }
 
       let map =
@@ -265,6 +265,7 @@ export function bindingifyLoad(
       const result = {
         code: ret.code,
         map: bindingifySourcemap(map),
+        moduleType: ret.moduleType,
       }
 
       if (ret.moduleSideEffects !== null) {

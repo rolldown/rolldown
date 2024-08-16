@@ -136,6 +136,7 @@ export interface BindingHookLoadOutput {
   code: string
   sideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
+  moduleType?: string
 }
 
 export interface BindingHookRenderChunkOutput {

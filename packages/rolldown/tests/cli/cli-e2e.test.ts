@@ -1,15 +1,20 @@
 import { describe, test, it, expect, beforeEach, vi } from "vitest";
-import { exec, execSync, spawnSync } from "node:child_process";
-import exea, { $, execa } from "execa";
+import { execSync } from "node:child_process";
+import { $, execa } from "execa";
 import * as path from "path";
-
-import { projectDir, testsDir } from "@tests/utils";
+import { stripAnsi } from "consola/utils";
+import { testsDir } from "@tests/utils";
 
 function cliFixturesDir(...joined: string[]) {
 	return testsDir("cli/fixtures", ...joined);
 }
 
-import { stripAnsi } from "consola/utils";
+// remove `Finished in x ms` since it is not deterministic
+// remove Ansi colors for snapshot testing
+function cleanStdout(stdout: string) {
+	return stripAnsi(stdout.replace(/Finished in \d+(\.\d+)? ms/g, ""))
+}
+
 const binPath = path.resolve(import.meta.dirname, "../../bin/cli.js");
 describe("should not hang after running", () => {
 	test.skip("basic", async () => {
@@ -23,7 +28,7 @@ describe("basic arguments", () => {
 		const ret = await execa`rolldown`;
 
 		expect(ret.exitCode).toBe(0);
-		expect(stripAnsi(ret.stdout)).toMatchSnapshot();
+		expect(cleanStdout(ret.stdout)).toMatchSnapshot();
 	});
 });
 
@@ -32,14 +37,14 @@ describe("cli options for bundling", () => {
 		const cwd = cliFixturesDir("cli-option-boolean");
 		const status = await $({ cwd })`node ${binPath} --minify -d dist`;
 		expect(status.exitCode).toBe(0);
-		expect(stripAnsi(status.stdout)).toMatchSnapshot();
+		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
 
 	it("should handle single boolean short options", async () => {
 		const cwd = cliFixturesDir("cli-option-short-boolean");
 		const status = await $({ cwd })`node ${binPath} index.ts -m -d dist`;
 		expect(status.exitCode).toBe(0);
-		expect(stripAnsi(status.stdout)).toMatchSnapshot();
+		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
 
 	it("should handle single string options", async () => {
@@ -48,7 +53,7 @@ describe("cli options for bundling", () => {
 			cwd,
 		})`node ${binPath} index.ts --format cjs -d dist`;
 		expect(status.exitCode).toBe(0);
-		expect(stripAnsi(status.stdout)).toMatchSnapshot();
+		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
 
 	it("should handle single array options", async () => {
@@ -57,7 +62,7 @@ describe("cli options for bundling", () => {
 			cwd,
 		})`node ${binPath} index.ts --external node:path --external node:url -d dist`;
 		expect(status.exitCode).toBe(0);
-		expect(stripAnsi(status.stdout)).toMatchSnapshot();
+		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
 
 	it("should handle single object options", async () => {
@@ -66,7 +71,7 @@ describe("cli options for bundling", () => {
 			cwd,
 		})`node ${binPath} index.ts --module-types .123=text --module-types notjson=json --module-types .b64=base64 -d dist`;
 		expect(status.exitCode).toBe(0);
-		expect(stripAnsi(status.stdout)).toMatchSnapshot();
+		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});
 
 	it("should handle negative boolean options", async () => {

@@ -111,7 +111,7 @@ return exports;
 exports[`cli options for bundling > should handle single array options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
 
-Finished in 9.46 ms"
+Finished in 9.65 ms"
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
@@ -180,17 +180,17 @@ NOTES
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.12 kB
 
-Finished in 8.75 ms"
+Finished in 8.82 ms"
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.27 kB
 
-Finished in 8.61 ms"
+Finished in 8.69 ms"
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.15 kB
 
-Finished in 8.63 ms"
+Finished in 8.50 ms"
 `;

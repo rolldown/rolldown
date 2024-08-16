@@ -116,6 +116,19 @@ lint-repo:
     pnpm lint-spell
     pnpm lint-toml
 
+fix:
+    just fix-rust
+    just fix-repo
+
+fix-rust:
+    just fmt-rust
+    cargo fix --allow-dirty
+    cargo shear --fix
+
+fix-repo:
+    pnpm lint-code --fix
+    just fmt-repo
+
 # Support `just build [native|wasi] [debug|release]`
 build target="native" mode="debug":
   pnpm run --filter rolldown build-{{target}}:{{mode}}

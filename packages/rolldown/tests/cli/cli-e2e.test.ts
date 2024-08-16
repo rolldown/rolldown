@@ -12,7 +12,7 @@ function cliFixturesDir(...joined: string[]) {
 // remove `Finished in x ms` since it is not deterministic
 // remove Ansi colors for snapshot testing
 function cleanStdout(stdout: string) {
-	return stripAnsi(stdout.replace(/Finished in \d+(\.\d+)? ms/g, ""))
+	return stripAnsi(stdout).replace(/Finished in \d+(\.\d+)? ms/g, "")
 }
 
 const binPath = path.resolve(import.meta.dirname, "../../bin/cli.js");
@@ -69,7 +69,7 @@ describe("cli options for bundling", () => {
 		const cwd = cliFixturesDir("cli-option-object");
 		const status = await $({
 			cwd,
-		})`node ${binPath} index.ts --module-types .123=text --module-types notjson=json --module-types .b64=base64 -d dist`;
+		})`rolldown index.ts --module-types .123=text --module-types notjson=json --module-types .b64=base64 -d dist`;
 		expect(status.exitCode).toBe(0);
 		expect(cleanStdout(status.stdout)).toMatchSnapshot();
 	});

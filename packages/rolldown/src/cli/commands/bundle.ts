@@ -60,7 +60,7 @@ async function bundleInner(
   printBundleOutputPretty(bundleOutput)
 
   logger.log(``)
-  logger.success(
+  logger.log(
     `Finished in ${colors.bold((endTime - startTime).toFixed(2))} ms`,
   )
 }

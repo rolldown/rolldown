@@ -18,7 +18,7 @@ pub struct Alias {
 }
 
 impl AliasPlugin {
-  fn matches(&self, pattern: &StringOrRegex, importee: &str) -> bool {
+  fn matches(pattern: &StringOrRegex, importee: &str) -> bool {
     match pattern {
       StringOrRegex::String(p) => {
         if importee.len() < p.len() {
@@ -46,7 +46,7 @@ impl Plugin for AliasPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let importee = args.specifier;
-    let match_entry = self.entries.iter().find(|alias| self.matches(&alias.find, importee));
+    let match_entry = self.entries.iter().find(|alias| Self::matches(&alias.find, importee));
     let Some(match_entry) = match_entry else {
       return Ok(None);
     };

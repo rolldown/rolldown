@@ -65,8 +65,9 @@ fn regress_regexp_replace_all<'a>(
   Cow::Owned(ret)
 }
 
-#[test]
+#[cfg(test)]
 mod test {
+  use crate::js_regex::regress_regexp_replace_all;
 
   #[test]
   fn with_flags() {

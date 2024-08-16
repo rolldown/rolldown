@@ -60,7 +60,9 @@ async function bundleInner(
   printBundleOutputPretty(bundleOutput)
 
   logger.log(``)
-  logger.log(`Finished in ${colors.bold((endTime - startTime).toFixed(2))} ms`)
+  logger.success(
+    `Finished in ${colors.bold((endTime - startTime).toFixed(2))} ms`,
+  )
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

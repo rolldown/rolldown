@@ -69,7 +69,7 @@
     "build-wasi:debug": "run-s build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding:wasi:release build-node",
     "# Scrips for checking #": "_",
-    "test": "TEST=1 vitest run --reporter verbose --hideSkippedTests",
+    "test": "cross-env TEST=1 vitest run --reporter verbose --hideSkippedTests",
     "test:update": "vitest run -u",
     "type-check": "tsc"
   },
@@ -108,6 +108,7 @@
     "@types/lodash-es": "^4.17.12",
     "colorette": "^2.0.20",
     "consola": "^3.2.3",
+    "cross-env": "^7.0.3",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
     "fs-extra": "^11.2.0",

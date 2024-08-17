@@ -343,7 +343,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_unary_operators
 
-- entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
+- entry_js-!~{000}~.mjs => entry_js-mG_EK2pI.mjs
 
 # tests/esbuild/default/ambiguous_reexport_msg
 

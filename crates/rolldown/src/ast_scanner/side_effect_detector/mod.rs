@@ -140,20 +140,20 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_assignment_target(expr: &AssignmentTarget) -> bool {
-    if let Some(pattern) = expr.as_assignment_target_pattern() {
-      match pattern {
-        // {} = expr
-        AssignmentTargetPattern::ArrayAssignmentTarget(array_pattern) => {
-          !array_pattern.elements.is_empty() || array_pattern.rest.is_some()
-        }
-        // [] = expr
-        AssignmentTargetPattern::ObjectAssignmentTarget(object_pattern) => {
-          !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
-        }
+    let Some(pattern) = expr.as_assignment_target_pattern() else {
+      return true;
+    };
+    match pattern {
+      // {} = expr
+      AssignmentTargetPattern::ArrayAssignmentTarget(array_pattern) => {
+        !array_pattern.elements.is_empty() || array_pattern.rest.is_some()
       }
-    } else {
-      true
+      // [] = expr
+      AssignmentTargetPattern::ObjectAssignmentTarget(object_pattern) => {
+        !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
+      }
     }
+
   }
 
   #[allow(clippy::too_many_lines)]

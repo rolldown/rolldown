@@ -5,6 +5,7 @@ use rolldown_testing::{
   fixture::Fixture,
   integration_test::IntegrationTest,
   test_config::{read_test_config, TestConfig, TestMeta},
+  workspace,
 };
 use sugar_path::SugarPath;
 use testing_macros::fixture;
@@ -61,5 +62,15 @@ async fn filename_with_hash() {
 
     snapshot_outputs.push(snapshot_output);
   }
+  let snapshot_path = workspace::crate_dir("rolldown")
+    .join("tests/snapshots/integration_rolldown__filename_with_hash.snap");
+  let before_snapshot = std::fs::read_to_string(&snapshot_path).unwrap();
+
   insta::assert_snapshot!(snapshot_outputs.join("\n"));
+
+  let in_github_action = std::env::var("GITHUB_ACTIONS").is_ok();
+  let after_snapshot = std::fs::read_to_string(&snapshot_path).unwrap();
+  if (before_snapshot != after_snapshot && in_github_action) {
+    std::process::exit(-1);
+  }
 }

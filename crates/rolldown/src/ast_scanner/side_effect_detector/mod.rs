@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  Expression, IdentifierReference, PropertyKey,
+  Expression, IdentifierReference, PropertyKey, SimpleAssignmentTarget,
 };
 use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -239,6 +239,23 @@ impl<'a> SideEffectDetector<'a> {
         Self::detect_side_effect_of_assignment_target(&expr.left)
           || self.detect_side_effect_of_expr(&expr.right)
       }
+      Expression::UpdateExpression(expr) => match &expr.argument {
+        SimpleAssignmentTarget::AssignmentTargetIdentifier(ident) => {
+          self.detect_side_effect_of_identifier(&ident)
+        }
+        SimpleAssignmentTarget::ComputedMemberExpression(_)
+        | SimpleAssignmentTarget::StaticMemberExpression(_)
+        | SimpleAssignmentTarget::PrivateFieldExpression(_) => {
+          self.detect_side_effect_of_member_expr(expr.argument.to_member_expression())
+        }
+        SimpleAssignmentTarget::TSAsExpression(_)
+        | SimpleAssignmentTarget::TSSatisfiesExpression(_)
+        | SimpleAssignmentTarget::TSNonNullExpression(_)
+        | SimpleAssignmentTarget::TSTypeAssertion(_)
+        | SimpleAssignmentTarget::TSInstantiationExpression(_) => {
+          unreachable!("ts should be transpiled")
+        }
+      },
 
       // TODO: Implement these
       Expression::Super(_)
@@ -246,7 +263,6 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::TaggedTemplateExpression(_)
-      | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,

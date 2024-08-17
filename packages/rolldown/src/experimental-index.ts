@@ -1,7 +1,7 @@
 export { defineParallelPlugin } from './plugin/parallel-plugin'
 export { experimental_scan as scan } from './rolldown'
 export { transform } from './binding'
-export { composeJsPlugins } from './utils/compose-js-plugins'
+export { composeJsPlugins as composePlugins } from './utils/compose-js-plugins'
 // Builtin plugin factory
 export {
   modulePreloadPolyfillPlugin,

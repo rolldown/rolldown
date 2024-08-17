@@ -5,7 +5,6 @@ export interface TestConfig {
   skip?: boolean
   skipComposingJsPlugin?: boolean
   config?: RolldownOptions
-  beforeTest?: (testKind: TestKind) => Promise<void> | void
   afterTest?: (output: RolldownOutput) => Promise<void> | void
   catchError?: (err: unknown) => Promise<void> | void
 }

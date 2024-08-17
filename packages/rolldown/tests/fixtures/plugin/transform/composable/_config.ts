@@ -1,6 +1,5 @@
 import { defineTest } from '@tests'
 import { expect } from 'vitest'
-import { composeJsPlugins } from 'rolldown/experimental'
 import { Plugin as RolldownPlugin } from 'rolldown'
 
 let plugins: RolldownPlugin[] = [
@@ -27,14 +26,6 @@ let plugins: RolldownPlugin[] = [
 export default defineTest({
   config: {
     plugins,
-  },
-  beforeTest(testKind) {
-    if (testKind === 'compose-js-plugin') {
-      plugins = composeJsPlugins(plugins) as RolldownPlugin[]
-      expect(plugins.length).toBe(1)
-    } else {
-      expect(plugins.length).toBe(2)
-    }
   },
   afterTest: (output) => {
     expect(output.output[0].code).contains('transformed')

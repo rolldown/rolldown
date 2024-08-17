@@ -151,8 +151,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ArrowFunctionExpression(_)
       | Expression::MetaProperty(_)
       | Expression::ThisExpression(_)
-      | Expression::StringLiteral(_)
-      | Expression::Super(_) => false,
+      | Expression::StringLiteral(_) => false,
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
           oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
@@ -236,8 +235,10 @@ impl<'a> SideEffectDetector<'a> {
           true
         }
       }
+
       // TODO: Implement these
-      Expression::AwaitExpression(_)
+      Expression::Super(_)
+      | Expression::AwaitExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::TaggedTemplateExpression(_)

@@ -718,12 +718,12 @@ mod test {
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("b = 1"));
     assert!(get_statements_side_effect("let a; a = b"));
+    assert!(get_statements_side_effect("let a; a.b = 1"));
+    assert!(get_statements_side_effect("let a; a['b'] = 1"));
+    assert!(get_statements_side_effect("let a; a = a.b"));
     assert!(get_statements_side_effect("let a, b; ({ a } = b)"));
     assert!(get_statements_side_effect("let a, b; ({ ...a } = b)"));
     assert!(get_statements_side_effect("let a, b; [ a ] = b"));
     assert!(get_statements_side_effect("let a, b; [ ...a ] = b"));
-    assert!(get_statements_side_effect("let a; a.b = 1"));
-    assert!(get_statements_side_effect("let a; a['b'] = 1"));
-    assert!(get_statements_side_effect("let a; a = a.b"));
   }
 }

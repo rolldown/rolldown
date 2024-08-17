@@ -1,8 +1,4 @@
-import type {
-  RolldownOptions,
-  RolldownOutput,
-  NormalizedInputOptions,
-} from 'rolldown'
+import type { RolldownOptions, RolldownOutput } from 'rolldown'
 
 export type TestKind = 'default' | 'compose-js-plugin'
 export interface TestConfig {
@@ -12,8 +8,4 @@ export interface TestConfig {
   beforeTest?: (testKind: TestKind) => Promise<void> | void
   afterTest?: (output: RolldownOutput) => Promise<void> | void
   catchError?: (err: unknown) => Promise<void> | void
-  afterNormalizedOptions?: (
-    testKind: TestKind,
-    options?: NormalizedInputOptions,
-  ) => Promise<void> | void
 }

@@ -7,7 +7,6 @@ import { normalizeInputOptions } from './normalize-input-options'
 import { normalizeOutputOptions } from './normalize-output-options'
 import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { PluginDriver } from '../plugin/plugin-driver'
-import { NormalizedInputOptions } from '../options/normalized-input-options'
 
 export async function createBundler(
   inputOptions: InputOptions,
@@ -15,7 +14,6 @@ export async function createBundler(
 ): Promise<{
   bundler: Bundler
   stopWorkers?: () => Promise<void>
-  normalizedInputOptions: NormalizedInputOptions
 }> {
   const pluginDriver = new PluginDriver()
   inputOptions = await pluginDriver.callOptionsHook(inputOptions)
@@ -46,7 +44,6 @@ export async function createBundler(
         parallelPluginInitResult?.registry,
       ),
       stopWorkers: parallelPluginInitResult?.stopWorkers,
-      normalizedInputOptions,
     }
   } catch (e) {
     await parallelPluginInitResult?.stopWorkers()

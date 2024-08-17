@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
-  Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
-  PropertyKey,
+  Argument, ArrayExpressionElement, AssignmentTargetPattern, BindingPatternKind, Expression,
+  IdentifierReference, PropertyKey, SimpleAssignmentTarget,
 };
 use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -151,7 +151,8 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ArrowFunctionExpression(_)
       | Expression::MetaProperty(_)
       | Expression::ThisExpression(_)
-      | Expression::StringLiteral(_) => false,
+      | Expression::StringLiteral(_)
+      | Expression::Super(_) => false,
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
           oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
@@ -219,10 +220,35 @@ impl<'a> SideEffectDetector<'a> {
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
+      Expression::AssignmentExpression(expr) => {
+        if let Some(simple_target) = expr.left.as_simple_assignment_target() {
+          // a.b = expr
+          if simple_target.is_member_expression() {
+            return true;
+          }
+          // a = expr
+          if let SimpleAssignmentTarget::AssignmentTargetIdentifier(identifier) = simple_target {
+            if self.detect_side_effect_of_identifier(identifier) {
+              return true;
+            }
+          }
+          self.detect_side_effect_of_expr(&expr.right)
+        } else {
+          let pattern = expr.left.to_assignment_target_pattern();
+          match pattern {
+            // {} = expr
+            AssignmentTargetPattern::ArrayAssignmentTarget(array_pattern) => {
+              !array_pattern.elements.is_empty() || array_pattern.rest.is_some()
+            }
+            // [] = expr
+            AssignmentTargetPattern::ObjectAssignmentTarget(object_pattern) => {
+              !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
+            }
+          }
+        }
+      }
       // TODO: Implement these
-      Expression::Super(_)
-      | Expression::AssignmentExpression(_)
-      | Expression::AwaitExpression(_)
+      Expression::AwaitExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::TaggedTemplateExpression(_)
@@ -682,5 +708,22 @@ mod test {
     assert!(get_statements_side_effect("import.meta.url"));
     assert!(get_statements_side_effect("const { url } = import.meta"));
     assert!(get_statements_side_effect("import.meta.url = 'test'"));
+  }
+
+  #[test]
+  fn test_assignment_expression() {
+    assert!(!get_statements_side_effect("let a; a = 1"));
+    assert!(!get_statements_side_effect("let a, b; a = b; a = b = 1"));
+    assert!(!get_statements_side_effect("let a; [] = a; ({} = a)"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("b = 1"));
+    assert!(get_statements_side_effect("let a; a = b"));
+    assert!(get_statements_side_effect("let a, b; ({ a } = b)"));
+    assert!(get_statements_side_effect("let a, b; ({ ...a } = b)"));
+    assert!(get_statements_side_effect("let a, b; [ a ] = b"));
+    assert!(get_statements_side_effect("let a, b; [ ...a ] = b"));
+    assert!(get_statements_side_effect("let a; a.b = 1"));
+    assert!(get_statements_side_effect("let a; a['b'] = 1"));
+    assert!(get_statements_side_effect("let a; a = a.b"));
   }
 }

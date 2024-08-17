@@ -153,7 +153,6 @@ impl<'a> SideEffectDetector<'a> {
         !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
       }
     }
-
   }
 
   #[allow(clippy::too_many_lines)]

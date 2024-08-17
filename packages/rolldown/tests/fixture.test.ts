@@ -47,6 +47,9 @@ function main() {
         testConfig.config.experimental.enableComposingJsPlugins =
           testConfig.config.experimental.enableComposingJsPlugins ?? true
         try {
+          if (testConfig.beforeTest) {
+            await testConfig.beforeTest()
+          }
           const output = await compileFixture(
             nodePath.join(import.meta.dirname, dirPath),
             testConfig,

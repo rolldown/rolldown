@@ -6,11 +6,13 @@ import { createBundler } from './utils/create-bundler'
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
 import type { InputOptions } from './options/input-options'
+import { NormalizedInputOptions } from './options/normalized-input-options'
 
 export class RolldownBuild {
   #inputOptions: InputOptions
   #bundler?: Bundler
   #stopWorkers?: () => Promise<void>
+  normalizedInputOptions?: NormalizedInputOptions
 
   constructor(inputOptions: InputOptions) {
     // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
@@ -19,12 +21,14 @@ export class RolldownBuild {
 
   async #getBundler(outputOptions: OutputOptions): Promise<Bundler> {
     if (typeof this.#bundler === 'undefined') {
-      const { bundler, stopWorkers } = await createBundler(
+      const { bundler, stopWorkers, normalizedInputOptions } = await createBundler(
         this.#inputOptions,
         outputOptions,
       )
       this.#bundler = bundler
       this.#stopWorkers = stopWorkers
+      this.normalizedInputOptions = normalizedInputOptions
+      console.log(`this.normalizedInputOptions: `, this.normalizedInputOptions)
     }
     return this.#bundler
   }

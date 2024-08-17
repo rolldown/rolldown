@@ -1,5 +1,5 @@
 import { test } from 'vitest'
-import type { TestConfig } from './src/types'
+import type { TestConfig, TestKind } from './src/types'
 import { InputOptions, OutputOptions, rolldown } from 'rolldown'
 import nodePath from 'node:path'
 
@@ -17,11 +17,12 @@ function main() {
     test.skipIf(testConfig.skip)(testName, async () => {
       try {
         if (testConfig.beforeTest) {
-          await testConfig.beforeTest()
+          await testConfig.beforeTest('default')
         }
         const output = await compileFixture(
           nodePath.join(import.meta.dirname, dirPath),
           testConfig,
+          'default'
         ).catch(async (err) => {
           if (testConfig.catchError) {
             await testConfig.catchError(err)
@@ -51,11 +52,12 @@ function main() {
           testConfig.config.experimental.enableComposingJsPlugins ?? true
         try {
           if (testConfig.beforeTest) {
-            await testConfig.beforeTest()
+            await testConfig.beforeTest('compose-js-plugin')
           }
           const output = await compileFixture(
             nodePath.join(import.meta.dirname, dirPath),
             testConfig,
+            'compose-js-plugin'
           ).catch(async (err) => {
             if (testConfig.catchError) {
               await testConfig.catchError(err)
@@ -74,7 +76,7 @@ function main() {
   }
 }
 
-async function compileFixture(fixturePath: string, config: TestConfig) {
+async function compileFixture(fixturePath: string, config: TestConfig, testKind: TestKind ) {
   let outputOptions: OutputOptions = config.config?.output ?? {}
   const inputOptions: InputOptions = {
     input: 'main.js',
@@ -82,5 +84,9 @@ async function compileFixture(fixturePath: string, config: TestConfig) {
     ...config.config,
   }
   const build = await rolldown(inputOptions)
-  return await build.write(outputOptions)
+  let ret = await build.write(outputOptions)
+  if (config.afterNormalizedOptions) {
+    await config.afterNormalizedOptions(testKind, build.normalizedInputOptions)
+  }
+  return ret
 }

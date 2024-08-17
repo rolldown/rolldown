@@ -26,7 +26,6 @@ export class RolldownBuild {
       this.#bundler = bundler
       this.#stopWorkers = stopWorkers
       this.normalizedInputOptions = normalizedInputOptions
-      console.log(`this.normalizedInputOptions: `, this.normalizedInputOptions)
     }
     return this.#bundler
   }

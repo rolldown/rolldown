@@ -1,6 +1,6 @@
 import { defineTest } from '@tests'
 import { TestKind } from '@tests/types'
-import { expect, vi } from 'vitest'
+import { expect } from 'vitest'
 
 export default defineTest({
   config: {
@@ -26,9 +26,12 @@ export default defineTest({
     ],
   },
   afterNormalizedOptions(testKind: TestKind, options) {
-    if (testKind === 'compose-js-plugin') {
       expect(options).not.toBeUndefined()
+    if (testKind === 'compose-js-plugin') {
       expect(options?.plugins.length).toBe(1)
+    } else {
+
+      expect(options?.plugins.length).toBe(2)
     }
   },
   afterTest: (output) => {

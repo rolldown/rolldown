@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
-  Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
-  PropertyKey,
+  Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
+  Expression, IdentifierReference, PropertyKey,
 };
 use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -139,6 +139,22 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  fn detect_side_effect_of_assignment_target(expr: &AssignmentTarget) -> bool {
+    let Some(pattern) = expr.as_assignment_target_pattern() else {
+      return true;
+    };
+    match pattern {
+      // {} = expr
+      AssignmentTargetPattern::ArrayAssignmentTarget(array_pattern) => {
+        !array_pattern.elements.is_empty() || array_pattern.rest.is_some()
+      }
+      // [] = expr
+      AssignmentTargetPattern::ObjectAssignmentTarget(object_pattern) => {
+        !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
+      }
+    }
+  }
+
   #[allow(clippy::too_many_lines)]
   fn detect_side_effect_of_expr(&mut self, expr: &oxc::ast::ast::Expression) -> bool {
     match expr {
@@ -219,9 +235,13 @@ impl<'a> SideEffectDetector<'a> {
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
+      Expression::AssignmentExpression(expr) => {
+        Self::detect_side_effect_of_assignment_target(&expr.left)
+          || self.detect_side_effect_of_expr(&expr.right)
+      }
+
       // TODO: Implement these
       Expression::Super(_)
-      | Expression::AssignmentExpression(_)
       | Expression::AwaitExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
@@ -682,5 +702,23 @@ mod test {
     assert!(get_statements_side_effect("import.meta.url"));
     assert!(get_statements_side_effect("const { url } = import.meta"));
     assert!(get_statements_side_effect("import.meta.url = 'test'"));
+  }
+
+  #[test]
+  fn test_assignment_expression() {
+    assert!(!get_statements_side_effect("let a; [] = a; ({} = a)"));
+    assert!(get_statements_side_effect("let a; a = 1"));
+    assert!(get_statements_side_effect("let a, b; a = b; a = b = 1"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("b = 1"));
+    assert!(get_statements_side_effect("[] = b"));
+    assert!(get_statements_side_effect("let a; a = b"));
+    assert!(get_statements_side_effect("let a; a.b = 1"));
+    assert!(get_statements_side_effect("let a; a['b'] = 1"));
+    assert!(get_statements_side_effect("let a; a = a.b"));
+    assert!(get_statements_side_effect("let a, b; ({ a } = b)"));
+    assert!(get_statements_side_effect("let a, b; ({ ...a } = b)"));
+    assert!(get_statements_side_effect("let a, b; [ a ] = b"));
+    assert!(get_statements_side_effect("let a, b; [ ...a ] = b"));
   }
 }

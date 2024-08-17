@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTargetPattern, BindingPatternKind, Expression,
-  IdentifierReference, PropertyKey, SimpleAssignmentTarget,
+  IdentifierReference, PropertyKey,
 };
 use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -221,20 +221,7 @@ impl<'a> SideEffectDetector<'a> {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
       Expression::AssignmentExpression(expr) => {
-        if let Some(simple_target) = expr.left.as_simple_assignment_target() {
-          // a.b = expr
-          if simple_target.is_member_expression() {
-            return true;
-          }
-          // a = expr
-          if let SimpleAssignmentTarget::AssignmentTargetIdentifier(identifier) = simple_target {
-            if self.detect_side_effect_of_identifier(identifier) {
-              return true;
-            }
-          }
-          self.detect_side_effect_of_expr(&expr.right)
-        } else {
-          let pattern = expr.left.to_assignment_target_pattern();
+        if let Some(pattern) = expr.left.as_assignment_target_pattern() {
           match pattern {
             // {} = expr
             AssignmentTargetPattern::ArrayAssignmentTarget(array_pattern) => {
@@ -245,6 +232,8 @@ impl<'a> SideEffectDetector<'a> {
               !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
             }
           }
+        } else {
+          true
         }
       }
       // TODO: Implement these
@@ -712,9 +701,9 @@ mod test {
 
   #[test]
   fn test_assignment_expression() {
-    assert!(!get_statements_side_effect("let a; a = 1"));
-    assert!(!get_statements_side_effect("let a, b; a = b; a = b = 1"));
     assert!(!get_statements_side_effect("let a; [] = a; ({} = a)"));
+    assert!(get_statements_side_effect("let a; a = 1"));
+    assert!(get_statements_side_effect("let a, b; a = b; a = b = 1"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("b = 1"));
     assert!(get_statements_side_effect("let a; a = b"));

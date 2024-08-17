@@ -1,5 +1,6 @@
 import type { RolldownOptions, RolldownOutput } from 'rolldown'
 
+export type TestKind = 'default' | 'compose-js-plugin'
 export interface TestConfig {
   skip?: boolean
   skipComposingJsPlugin?: boolean

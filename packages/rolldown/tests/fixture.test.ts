@@ -22,7 +22,7 @@ function main() {
         const output = await compileFixture(
           nodePath.join(import.meta.dirname, dirPath),
           testConfig,
-          'default'
+          'default',
         ).catch(async (err) => {
           if (testConfig.catchError) {
             await testConfig.catchError(err)
@@ -57,7 +57,7 @@ function main() {
           const output = await compileFixture(
             nodePath.join(import.meta.dirname, dirPath),
             testConfig,
-            'compose-js-plugin'
+            'compose-js-plugin',
           ).catch(async (err) => {
             if (testConfig.catchError) {
               await testConfig.catchError(err)
@@ -76,7 +76,11 @@ function main() {
   }
 }
 
-async function compileFixture(fixturePath: string, config: TestConfig, testKind: TestKind ) {
+async function compileFixture(
+  fixturePath: string,
+  config: TestConfig,
+  testKind: TestKind,
+) {
   let outputOptions: OutputOptions = config.config?.output ?? {}
   const inputOptions: InputOptions = {
     input: 'main.js',

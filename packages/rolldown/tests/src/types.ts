@@ -1,19 +1,19 @@
 import type {
-	RolldownOptions,
-	RolldownOutput,
-	NormalizedInputOptions,
-} from "rolldown";
+  RolldownOptions,
+  RolldownOutput,
+  NormalizedInputOptions,
+} from 'rolldown'
 
-export type TestKind = "default" | "compose-js-plugin";
+export type TestKind = 'default' | 'compose-js-plugin'
 export interface TestConfig {
-	skip?: boolean;
-	skipComposingJsPlugin?: boolean;
-	config?: RolldownOptions;
-	beforeTest?: (testKind: TestKind) => Promise<void> | void;
-	afterTest?: (output: RolldownOutput) => Promise<void> | void;
-	catchError?: (err: unknown) => Promise<void> | void;
-	afterNormalizedOptions?: (
-		testKind: TestKind,
-		options?: NormalizedInputOptions,
-	) => Promise<void> | void;
+  skip?: boolean
+  skipComposingJsPlugin?: boolean
+  config?: RolldownOptions
+  beforeTest?: (testKind: TestKind) => Promise<void> | void
+  afterTest?: (output: RolldownOutput) => Promise<void> | void
+  catchError?: (err: unknown) => Promise<void> | void
+  afterNormalizedOptions?: (
+    testKind: TestKind,
+    options?: NormalizedInputOptions,
+  ) => Promise<void> | void
 }

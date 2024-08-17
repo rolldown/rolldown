@@ -21,10 +21,8 @@ export class RolldownBuild {
 
   async #getBundler(outputOptions: OutputOptions): Promise<Bundler> {
     if (typeof this.#bundler === 'undefined') {
-      const { bundler, stopWorkers, normalizedInputOptions } = await createBundler(
-        this.#inputOptions,
-        outputOptions,
-      )
+      const { bundler, stopWorkers, normalizedInputOptions } =
+        await createBundler(this.#inputOptions, outputOptions)
       this.#bundler = bundler
       this.#stopWorkers = stopWorkers
       this.normalizedInputOptions = normalizedInputOptions

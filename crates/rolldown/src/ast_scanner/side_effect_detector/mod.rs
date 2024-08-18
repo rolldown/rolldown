@@ -280,7 +280,15 @@ impl<'a> SideEffectDetector<'a> {
         }
       }),
       Expression::NewExpression(expr) => {
-        todo!()
+        let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+        if is_pure {
+          expr.arguments.iter().any(|arg| match arg {
+            Argument::SpreadElement(_) => true,
+            _ => self.detect_side_effect_of_expr(arg.to_expression()),
+          })
+        } else {
+          true
+        }
       }
       Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr_or_new_expr(expr),
     }

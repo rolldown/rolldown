@@ -1,8 +1,8 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  Expression, ForStatementInit, ForStatementLeft, IdentifierReference, PropertyKey,
+  ChainElement, Expression, ForStatementInit, ForStatementLeft, IdentifierReference, PropertyKey,
 };
-use oxc::ast::{match_expression, Trivias};
+use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
@@ -155,6 +155,18 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  fn detect_side_effect_of_call_expr(&mut self, expr: &oxc::ast::ast::CallExpression) -> bool {
+    let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+    if is_pure {
+      expr.arguments.iter().any(|arg| match arg {
+        Argument::SpreadElement(_) => true,
+        _ => self.detect_side_effect_of_expr(arg.to_expression()),
+      })
+    } else {
+      true
+    }
+  }
+
   #[allow(clippy::too_many_lines)]
   fn detect_side_effect_of_expr(&mut self, expr: &Expression) -> bool {
     match expr {
@@ -240,9 +252,15 @@ impl<'a> SideEffectDetector<'a> {
           || self.detect_side_effect_of_expr(&expr.right)
       }
 
+      Expression::ChainExpression(expr) => match &expr.expression {
+        ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
+        match_member_expression!(ChainElement) => {
+          self.detect_side_effect_of_member_expr(expr.expression.to_member_expression())
+        }
+      },
+
       Expression::Super(_)
       | Expression::AwaitExpression(_)
-      | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)

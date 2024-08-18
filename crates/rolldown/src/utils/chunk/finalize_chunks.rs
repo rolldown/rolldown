@@ -23,7 +23,7 @@ use crate::{
 #[tracing::instrument(level = "debug", skip_all)]
 pub fn finalize_assets(
   chunk_graph: &mut ChunkGraph,
-  mut preliminary_assets: IndexPreliminaryAssets,
+  preliminary_assets: IndexPreliminaryAssets,
   index_chunk_to_assets: &IndexChunkToAssets,
 ) -> IndexAssets {
   let asset_idx_by_placeholder = preliminary_assets

@@ -5,7 +5,10 @@ use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{AssetIdx, AssetMeta, ModuleId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
-  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+  rayon::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelBridge,
+    ParallelIterator,
+  },
   xxhash::xxhash_base64_url,
 };
 use rustc_hash::FxHashMap;
@@ -20,7 +23,7 @@ use crate::{
 #[tracing::instrument(level = "debug", skip_all)]
 pub fn finalize_assets(
   chunk_graph: &mut ChunkGraph,
-  preliminary_assets: IndexPreliminaryAssets,
+  mut preliminary_assets: IndexPreliminaryAssets,
   index_chunk_to_assets: &IndexChunkToAssets,
 ) -> IndexAssets {
   let asset_idx_by_placeholder = preliminary_assets
@@ -52,14 +55,13 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
+  let mut index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
-  let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
-    .into_iter_enumerated()
-    // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
-    .collect::<Vec<_>>()
+  let index_final_hashes: IndexVec<AssetIdx, String> = std::mem::take(&mut index_asset_hashers.raw)
+    .to_vec()
     .into_par_iter()
+    .enumerate()
     .map(|(asset_idx, mut hasher)| {
       // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
@@ -97,10 +99,7 @@ pub fn finalize_assets(
     })
     .collect::<FxHashMap<_, _>>();
 
-  let mut assets: IndexAssets = preliminary_assets
-    .into_iter()
-    // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
-    .collect::<Vec<_>>()
+  let mut assets: IndexAssets = std::mem::take(&mut preliminary_assets.raw)
     .into_par_iter()
     .map(|mut asset| {
       let preliminary_filename_raw = asset.preliminary_filename.to_string();

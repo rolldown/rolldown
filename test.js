@@ -1,1 +1,1 @@
-const d = "dfasfejawiojoi"
+const a = kj;

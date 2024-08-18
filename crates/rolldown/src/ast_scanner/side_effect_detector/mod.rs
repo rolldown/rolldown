@@ -246,10 +246,11 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ImportExpression(_)
       | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)
-      | Expression::YieldExpression(_)
+      | Expression::YieldExpression(_) => true,
 
-      // TODO: Implement these
-      | Expression::JSXElement(_) | Expression::JSXFragment(_) => true,
+      Expression::JSXElement(_) | Expression::JSXFragment(_) => {
+        unreachable!("jsx should be transpiled")
+      }
 
       Expression::ArrayExpression(expr) => expr.elements.iter().any(|elem| match elem {
         ArrayExpressionElement::SpreadElement(_) => true,

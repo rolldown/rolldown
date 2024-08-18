@@ -173,7 +173,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                 self.ast_builder.identifier_name(SPAN, "glob"),
                 false,
               )),
-              Option::<TSTypeParameterInstantiation>::None,
+              None::<TSTypeParameterInstantiation>,
               false,
             ),
           ),
@@ -192,7 +192,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
       self
         .ast_builder
         .expression_identifier_reference(SPAN, "__variableDynamicImportRuntimeHelper"),
-      Option::<TSTypeParameterInstantiation>::None,
+      None::<TSTypeParameterInstantiation>,
       false,
     )
   }

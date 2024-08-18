@@ -64,7 +64,8 @@ impl<'a> GenerateStage<'a> {
       &mut index_imports_from_other_chunks,
     );
 
-    let index_sorted_cross_chunk_imports = std::mem::take(&mut index_cross_chunk_imports.raw)
+    let index_sorted_cross_chunk_imports = index_cross_chunk_imports
+      .raw
       .into_par_iter()
       .map(|cross_chunk_imports| {
         let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();

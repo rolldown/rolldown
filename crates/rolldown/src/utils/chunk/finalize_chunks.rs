@@ -55,11 +55,11 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let mut index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
+  let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
-  let index_final_hashes: IndexVec<AssetIdx, String> = std::mem::take(&mut index_asset_hashers.raw)
-    .to_vec()
+  let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
+    .raw
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut hasher)| {
@@ -99,7 +99,8 @@ pub fn finalize_assets(
     })
     .collect::<FxHashMap<_, _>>();
 
-  let mut assets: IndexAssets = std::mem::take(&mut preliminary_assets.raw)
+  let mut assets: IndexAssets = preliminary_assets
+    .raw
     .into_par_iter()
     .map(|mut asset| {
       let preliminary_filename_raw = asset.preliminary_filename.to_string();

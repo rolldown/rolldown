@@ -57,6 +57,7 @@ pub fn finalize_assets(
   let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
+  // TODO: support rayon trait in `oxc_index`
   let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
     .raw
     .into_par_iter()
@@ -98,6 +99,7 @@ pub fn finalize_assets(
     })
     .collect::<FxHashMap<_, _>>();
 
+  // TODO: support rayon trait in `oxc_index`
   let mut assets: IndexAssets = preliminary_assets
     .raw
     .into_par_iter()

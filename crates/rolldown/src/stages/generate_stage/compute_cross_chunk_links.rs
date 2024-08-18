@@ -64,6 +64,7 @@ impl<'a> GenerateStage<'a> {
       &mut index_imports_from_other_chunks,
     );
 
+    // TODO: support rayon trait in `oxc_index`
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .raw
       .into_par_iter()

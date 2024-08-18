@@ -57,7 +57,7 @@ pub fn finalize_assets(
   let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
-  // TODO: support rayon trait in `oxc_index`
+  // TODO: support `par_into_iter_enumerated`/rayon trait in `oxc_index`
   let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
     .raw
     .into_par_iter()

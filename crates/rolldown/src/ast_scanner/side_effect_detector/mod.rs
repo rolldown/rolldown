@@ -1,8 +1,8 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  Expression, IdentifierReference, PropertyKey,
+  ChainElement, Expression, IdentifierReference, PropertyKey,
 };
-use oxc::ast::{match_expression, Trivias};
+use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
@@ -155,8 +155,20 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  fn detect_side_effect_of_call_expr(&mut self, expr: &oxc::ast::ast::CallExpression) -> bool {
+    let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+    if is_pure {
+      expr.arguments.iter().any(|arg| match arg {
+        Argument::SpreadElement(_) => true,
+        _ => self.detect_side_effect_of_expr(arg.to_expression()),
+      })
+    } else {
+      true
+    }
+  }
+
   #[allow(clippy::too_many_lines)]
-  fn detect_side_effect_of_expr(&mut self, expr: &oxc::ast::ast::Expression) -> bool {
+  fn detect_side_effect_of_expr(&mut self, expr: &Expression) -> bool {
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
@@ -240,16 +252,23 @@ impl<'a> SideEffectDetector<'a> {
           || self.detect_side_effect_of_expr(&expr.right)
       }
 
-      // TODO: Implement these
+      Expression::ChainExpression(expr) => match &expr.expression {
+        ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
+        match_member_expression!(ChainElement) => {
+          self.detect_side_effect_of_member_expr(expr.expression.to_member_expression())
+        }
+      },
+
       Expression::Super(_)
       | Expression::AwaitExpression(_)
-      | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)
-      | Expression::YieldExpression(_)
-      | Expression::JSXElement(_)
-      | Expression::JSXFragment(_) => true,
+      | Expression::YieldExpression(_) => true,
+
+      Expression::JSXElement(_) | Expression::JSXFragment(_) => {
+        unreachable!("jsx should be transpiled")
+      }
 
       Expression::ArrayExpression(expr) => expr.elements.iter().any(|elem| match elem {
         ArrayExpressionElement::SpreadElement(_) => true,
@@ -343,6 +362,7 @@ impl<'a> SideEffectDetector<'a> {
     self.is_unresolved_reference(ident_ref) && ident_ref.name != "undefined"
   }
 
+  #[allow(clippy::too_many_lines)]
   pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {
     use oxc::ast::ast::Statement;
     match stmt {
@@ -426,10 +446,11 @@ impl<'a> SideEffectDetector<'a> {
               || case.consequent.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
           })
       }
+
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
       | Statement::BreakStatement(_) => false,
-      // TODO: Implement these
+
       Statement::DebuggerStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
@@ -720,5 +741,29 @@ mod test {
     assert!(get_statements_side_effect("let a, b; ({ ...a } = b)"));
     assert!(get_statements_side_effect("let a, b; [ a ] = b"));
     assert!(get_statements_side_effect("let a, b; [ ...a ] = b"));
+  }
+
+  #[test]
+  fn test_chain_expression() {
+    assert!(!get_statements_side_effect("Object.create"));
+    assert!(!get_statements_side_effect("Object?.create"));
+    assert!(!get_statements_side_effect("let a; /*#__PURE__*/ a?.()"));
+    assert!(get_statements_side_effect("let a; a?.b"));
+    assert!(get_statements_side_effect("let a; a?.()"));
+    assert!(get_statements_side_effect("let a; a?.[a]"));
+  }
+
+  #[test]
+  fn test_other_statements() {
+    assert!(get_statements_side_effect("debugger;"));
+    assert!(get_statements_side_effect("for (const k in {}) { }"));
+    assert!(get_statements_side_effect("let a; for (const v of []) { a++ }"));
+    assert!(get_statements_side_effect("for (;;) { }"));
+    assert!(get_statements_side_effect("throw 1;"));
+    assert!(get_statements_side_effect("with(a) { }"));
+    assert!(get_statements_side_effect("await 1"));
+    assert!(get_statements_side_effect("import('foo')"));
+    assert!(get_statements_side_effect("let a; a``"));
+    assert!(get_statements_side_effect("let a; a++"));
   }
 }

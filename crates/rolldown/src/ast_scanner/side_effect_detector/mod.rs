@@ -749,7 +749,7 @@ mod test {
     assert!(!get_statements_side_effect("Object?.create"));
     assert!(!get_statements_side_effect("let a; /*#__PURE__*/ a?.()"));
     assert!(get_statements_side_effect("let a, b; a?.b"));
-    assert!(get_statements_side_effect("let a; a?()"));
+    assert!(get_statements_side_effect("let a; a?.()"));
   }
 
   #[test]

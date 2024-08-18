@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  ChainElement, Expression, ForStatementInit, ForStatementLeft, IdentifierReference, PropertyKey,
+  ChainElement, Expression, IdentifierReference, PropertyKey,
 };
 use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -756,7 +756,6 @@ mod test {
 
   #[test]
   fn test_other_statements() {
-    assert!(get_statements_side_effect("debugger;"));
     assert!(get_statements_side_effect("debugger;"));
     assert!(get_statements_side_effect("for (const k in {}) { }"));
     assert!(get_statements_side_effect("let a; for (const v of []) { a++ }"));

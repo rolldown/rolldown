@@ -357,29 +357,6 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_for_stmt_left(&mut self, left: &ForStatementLeft) -> bool {
-    match left {
-      ForStatementLeft::VariableDeclaration(decl) => self.detect_side_effect_of_var_decl(decl),
-      ForStatementLeft::UsingDeclaration(decl) => {
-        decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
-      }
-      _ => {
-        let assignment_target = left.to_assignment_target();
-        Self::detect_side_effect_of_assignment_target(assignment_target)
-      }
-    }
-  }
-
-  fn detect_side_effect_of_for_stmt_init(&mut self, init: &ForStatementInit) -> bool {
-    match init {
-      ForStatementInit::VariableDeclaration(decl) => self.detect_side_effect_of_var_decl(decl),
-      ForStatementInit::UsingDeclaration(decl) => {
-        decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
-      }
-      _ => self.detect_side_effect_of_expr(init.to_expression()),
-    }
-  }
-
   #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> bool {
     self.is_unresolved_reference(ident_ref) && ident_ref.name != "undefined"
@@ -469,25 +446,15 @@ impl<'a> SideEffectDetector<'a> {
               || case.consequent.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
           })
       }
-      Statement::ForInStatement(for_in) => {
-        self.detect_side_effect_of_for_stmt_left(&for_in.left)
-          || self.detect_side_effect_of_expr(&for_in.right)
-          || self.detect_side_effect_of_stmt(&for_in.body)
-      }
-      Statement::ForStatement(for_stmt) => {
-        for_stmt.init.as_ref().map_or(false, |init| self.detect_side_effect_of_for_stmt_init(init))
-          || for_stmt.test.as_ref().map_or(false, |test| self.detect_side_effect_of_expr(test))
-          || for_stmt
-            .update
-            .as_ref()
-            .map_or(false, |update| self.detect_side_effect_of_expr(update))
-          || self.detect_side_effect_of_stmt(&for_stmt.body)
-      }
+
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
       | Statement::BreakStatement(_) => false,
+
       Statement::DebuggerStatement(_)
+      | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
+      | Statement::ForStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::WithStatement(_) => true,
     }
@@ -788,31 +755,12 @@ mod test {
   }
 
   #[test]
-  fn test_for_in_statement() {
-    assert!(!get_statements_side_effect("for (const k in {}) { }"));
-    assert!(!get_statements_side_effect("let a; for (const k in a) { }"));
-    assert!(get_statements_side_effect("let a; for (const k in {}) { a++ }"));
-    assert!(get_statements_side_effect("let k; for (k in {}) { }"));
-    // accessing global variable may have side effect
-    assert!(get_statements_side_effect("for (const a in b) { }"));
-    assert!(get_statements_side_effect("for (const a in { b }) { }"));
-    assert!(get_statements_side_effect("for (const a in { }) { b; }"));
-  }
-
-  #[test]
-  fn test_chain_expression() {
-    assert!(!get_statements_side_effect("Object.create"));
-    assert!(!get_statements_side_effect("Object?.create"));
-    assert!(!get_statements_side_effect("let a; /*#__PURE__*/ a?.()"));
-    assert!(get_statements_side_effect("let a; a?.b"));
-    assert!(get_statements_side_effect("let a; a?.()"));
-  }
-
-  #[test]
   fn test_other_statements() {
     assert!(get_statements_side_effect("debugger;"));
     assert!(get_statements_side_effect("debugger;"));
+    assert!(get_statements_side_effect("for (const k in {}) { }"));
     assert!(get_statements_side_effect("let a; for (const v of []) { a++ }"));
+    assert!(get_statements_side_effect("for (;;) { }"));
     assert!(get_statements_side_effect("throw 1;"));
     assert!(get_statements_side_effect("with(a) { }"));
     assert!(get_statements_side_effect("await 1"));

@@ -1,4 +1,5 @@
 import * as selfExports from './constants.js'
+// oxlint-disable
 import { workspaceRoot } from '@rolldown/testing'
 
 export const REPO_ROOT = workspaceRoot()

@@ -3,12 +3,11 @@ use std::hash::Hash;
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{AssetIdx, AssetMeta, ModuleId};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
-  rayon::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelBridge,
-    ParallelIterator,
-  },
+  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
   xxhash::xxhash_base64_url,
 };
 use rustc_hash::FxHashMap;

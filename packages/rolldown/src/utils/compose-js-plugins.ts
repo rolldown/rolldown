@@ -9,8 +9,6 @@ import { AssertNever } from './type-assert'
 
 const unsupportedHookName = [
   'augmentChunkHash',
-  'banner',
-  'footer',
   'generateBundle',
   'moduleParsed',
   'onLog',
@@ -23,8 +21,6 @@ const unsupportedHookName = [
   // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
   // we have to bailout all plugins with `resolveId` hook.
   'resolveId',
-  'intro',
-  'outro',
 ] as const
 const unsupportedHooks: Set<string> = new Set(unsupportedHookName)
 
@@ -105,6 +101,16 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           batchedHooks.renderChunk = handlers
           if (plugin.renderChunk) {
             handlers.push(plugin.renderChunk)
+          }
+          break
+        }
+        case 'banner':
+        case 'footer':
+        case 'intro':
+        case 'outro': {
+          const hook = plugin[pluginProp]
+          if (hook) {
+            ;(batchedHooks[pluginProp] ??= []).push(hook)
           }
           break
         }
@@ -232,6 +238,29 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
                 return result
               }
             }
+          }
+        }
+        break
+      }
+      case 'banner':
+      case 'footer':
+      case 'intro':
+      case 'outro': {
+        const hooks = batchedHooks[hookName]
+        if (hooks?.length) {
+          composed[hookName] = async function (chunk) {
+            const ret: string[] = []
+            for (const hook of hooks) {
+              {
+                const { handler } = normalizeHook(hook)
+                ret.push(
+                  typeof handler === 'string'
+                    ? handler
+                    : await handler.call(this, chunk),
+                )
+              }
+            }
+            return ret.join('\n')
           }
         }
         break

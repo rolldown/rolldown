@@ -155,7 +155,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_call_expr_or_new_expr(&mut self, expr: &CallExpression) -> bool {
+  fn detect_side_effect_of_call_expr(&mut self, expr: &CallExpression) -> bool {
     let is_pure = self.is_pure_function_or_constructor_call(expr.span);
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
@@ -253,9 +253,7 @@ impl<'a> SideEffectDetector<'a> {
       }
 
       Expression::ChainExpression(expr) => match &expr.expression {
-        ChainElement::CallExpression(call_expr) => {
-          self.detect_side_effect_of_call_expr_or_new_expr(&call_expr)
-        }
+        ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
         match_member_expression!(ChainElement) => {
           self.detect_side_effect_of_member_expr(expr.expression.to_member_expression())
         }
@@ -290,7 +288,7 @@ impl<'a> SideEffectDetector<'a> {
           true
         }
       }
-      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr_or_new_expr(expr),
+      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
     }
   }
 

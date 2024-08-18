@@ -1,9 +1,8 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  ChainElement, Expression, IdentifierReference, PropertyKey,
+  CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
 };
 use oxc::ast::{match_expression, match_member_expression, Trivias};
-use oxc::span::Span;
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
@@ -16,20 +15,6 @@ use self::utils::{known_primitive_type, PrimitiveType};
 
 mod annotation;
 mod utils;
-
-enum CallExprOrNewExpr<'a, 'b: 'a> {
-  CallExpr(&'a oxc::ast::ast::CallExpression<'b>),
-  NewExpr(&'a oxc::ast::ast::NewExpression<'b>),
-}
-
-impl<'a, 'b> CallExprOrNewExpr<'a, 'b> {
-  pub fn span(&self) -> &Span {
-    match self {
-      CallExprOrNewExpr::CallExpr(e) => &e.span,
-      CallExprOrNewExpr::NewExpr(e) => &e.span,
-    }
-  }
-}
 
 // Probably we should generate this using macros.
 static SIDE_EFFECT_FREE_MEMBER_EXPR_2: LazyLock<FxHashSet<(&'static str, &'static str)>> =
@@ -170,14 +155,10 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_call_expr_or_new_expr(&mut self, expr: CallExprOrNewExpr) -> bool {
-    let is_pure = self.is_pure_function_or_constructor_call(*expr.span());
+  fn detect_side_effect_of_call_expr_or_new_expr(&mut self, expr: &CallExpression) -> bool {
+    let is_pure = self.is_pure_function_or_constructor_call(expr.span);
     if is_pure {
-      let arguments = match expr {
-        CallExprOrNewExpr::CallExpr(call_expr) => &call_expr.arguments,
-        CallExprOrNewExpr::NewExpr(new_expr) => &new_expr.arguments,
-      };
-      arguments.iter().any(|arg| match arg {
+      expr.arguments.iter().any(|arg| match arg {
         Argument::SpreadElement(_) => true,
         _ => self.detect_side_effect_of_expr(arg.to_expression()),
       })
@@ -273,7 +254,7 @@ impl<'a> SideEffectDetector<'a> {
 
       Expression::ChainExpression(expr) => match &expr.expression {
         ChainElement::CallExpression(call_expr) => {
-          self.detect_side_effect_of_call_expr_or_new_expr(CallExprOrNewExpr::CallExpr(&*call_expr))
+          self.detect_side_effect_of_call_expr_or_new_expr(&call_expr)
         }
         match_member_expression!(ChainElement) => {
           self.detect_side_effect_of_member_expr(expr.expression.to_member_expression())
@@ -299,11 +280,9 @@ impl<'a> SideEffectDetector<'a> {
         }
       }),
       Expression::NewExpression(expr) => {
-        self.detect_side_effect_of_call_expr_or_new_expr(CallExprOrNewExpr::NewExpr(&*expr))
+        todo!()
       }
-      Expression::CallExpression(expr) => {
-        self.detect_side_effect_of_call_expr_or_new_expr(CallExprOrNewExpr::CallExpr(&*expr))
-      }
+      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr_or_new_expr(expr),
     }
   }
 

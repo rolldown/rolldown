@@ -800,6 +800,15 @@ mod test {
   }
 
   #[test]
+  fn test_chain_expression() {
+    assert!(!get_statements_side_effect("Object.create"));
+    assert!(!get_statements_side_effect("Object?.create"));
+    assert!(!get_statements_side_effect("let a; /*#__PURE__*/ a?.()"));
+    assert!(get_statements_side_effect("let a; a?.b"));
+    assert!(get_statements_side_effect("let a; a?.()"));
+  }
+
+  #[test]
   fn test_other_statements() {
     assert!(get_statements_side_effect("debugger;"));
     assert!(get_statements_side_effect("debugger;"));
@@ -807,7 +816,6 @@ mod test {
     assert!(get_statements_side_effect("throw 1;"));
     assert!(get_statements_side_effect("with(a) { }"));
     assert!(get_statements_side_effect("await 1"));
-    assert!(get_statements_side_effect("let a; a?.b"));
     assert!(get_statements_side_effect("import('foo')"));
     assert!(get_statements_side_effect("let a; a``"));
     assert!(get_statements_side_effect("let a; a++"));

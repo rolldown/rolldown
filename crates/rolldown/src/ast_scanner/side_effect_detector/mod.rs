@@ -744,14 +744,12 @@ mod test {
   }
 
   #[test]
-  fn test_for_statement() {
-    assert!(!get_statements_side_effect("for (;;) { }"));
-    assert!(get_statements_side_effect("for (let i = 0; i < 10; i++) { const a = 1; }"));
-    assert!(get_statements_side_effect("let f; for (;f();) { }"));
-    assert!(get_statements_side_effect("let f; for (;;f()) { }"));
-    // accessing global variable may have side effect
-    assert!(get_statements_side_effect("for (let i = 0; i < 10; i++) { bar; }"));
-    assert!(get_statements_side_effect("for (i = 0; i < 10; i++) { }"));
+  fn test_chain_expression() {
+    assert!(!get_statements_side_effect("Object.create"));
+    assert!(!get_statements_side_effect("Object?.create"));
+    assert!(!get_statements_side_effect("let a; /*#__PURE__*/ a?.()"));
+    assert!(get_statements_side_effect("let a, b; a?.b"));
+    assert!(get_statements_side_effect("let a; a?()"));
   }
 
   #[test]

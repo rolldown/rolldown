@@ -184,7 +184,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       Some(init),
@@ -210,7 +210,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       Some(init),
@@ -237,7 +237,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
-          None::<Box<'_, TSTypeAnnotation<'_>>>,
+          None::<TSTypeAnnotation>,
           false,
         ),
         false,
@@ -279,14 +279,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSTypeParameterDeclaration>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
     arrow_expr.params.items.push(self.builder.formal_parameter(
@@ -294,7 +294,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       None,
@@ -307,7 +307,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       None,
@@ -344,14 +344,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSTypeParameterDeclaration>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
 
@@ -418,14 +418,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       true,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSTypeParameterDeclaration>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     ))
   }
@@ -476,7 +476,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, as_name),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
@@ -504,7 +504,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
-          None::<Box<'_, TSTypeAnnotation<'_>>>,
+          None::<TSTypeAnnotation>,
           false,
         ),
         false,
@@ -522,9 +522,9 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.binding_pattern_kind_object_pattern(
           SPAN,
           properties,
-          None::<Box<'_, BindingRestElement<'_>>>,
+          None::<BindingRestElement>,
         ),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
@@ -548,19 +548,19 @@ impl<'ast> AstSnippet<'ast> {
     let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
       ast::FunctionType::FunctionExpression,
       SPAN,
-      None::<BindingIdentifier<'_>>,
+      None::<BindingIdentifier>,
       false,
       false,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
-      None::<TSThisParameter<'_>>,
+      None::<TSTypeParameterDeclaration>,
+      None::<TSThisParameter>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
     )));
 
@@ -576,7 +576,7 @@ impl<'ast> AstSnippet<'ast> {
             self.id_name("resolve", SPAN),
             false,
           )),
-          None::<Box<'_, TSTypeParameterInstantiation<'_>>>,
+          None::<TSTypeParameterInstantiation>,
           false,
         )),
         self.id_name("then", SPAN),
@@ -586,7 +586,7 @@ impl<'ast> AstSnippet<'ast> {
       span,
       arguments,
       callee,
-      None::<Box<'_, TSTypeParameterInstantiation<'_>>>,
+      None::<TSTypeParameterInstantiation>,
       false,
     ))
   }

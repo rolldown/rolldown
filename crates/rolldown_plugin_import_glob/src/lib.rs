@@ -320,7 +320,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                     SPAN,
                     true,
                     false,
-                    Option::<TSTypeParameterDeclaration>::None,
+                    None::<TSTypeParameterDeclaration>,
                     self.ast_builder.formal_parameters(
                       SPAN,
                       FormalParameterKind::ArrowFormalParameters,
@@ -329,16 +329,16 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                         self.ast_builder.vec(),
                         self.ast_builder.binding_pattern(
                           self.ast_builder.binding_pattern_kind_binding_identifier(SPAN, "m"),
-                          Option::<TSTypeAnnotation>::None,
+                          None::<TSTypeAnnotation>,
                           false,
                         ),
                         None,
                         false,
                         false,
                       )),
-                      Option::<BindingRestElement>::None,
+                      None::<BindingRestElement>,
                     ),
-                    Option::<TSTypeAnnotation>::None,
+                    None::<TSTypeAnnotation>,
                     self.ast_builder.function_body(
                       SPAN,
                       self.ast_builder.vec(),
@@ -363,7 +363,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                 self.ast_builder.identifier_name(SPAN, "then"),
                 false,
               )),
-              Option::<TSTypeParameterInstantiation>::None,
+              None::<TSTypeParameterInstantiation>,
               false,
             );
           }
@@ -374,14 +374,14 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           SPAN,
           true,
           false,
-          Option::<TSTypeParameterDeclaration>::None,
+          None::<TSTypeParameterDeclaration>,
           self.ast_builder.formal_parameters(
             SPAN,
             FormalParameterKind::ArrowFormalParameters,
             self.ast_builder.vec(),
-            Option::<BindingRestElement>::None,
+            None::<BindingRestElement>,
           ),
-          Option::<TSTypeAnnotation>::None,
+          None::<TSTypeAnnotation>,
           self.ast_builder.function_body(
             SPAN,
             self.ast_builder.vec(),

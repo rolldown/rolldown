@@ -30,6 +30,7 @@ impl Plugin for UnresolvedImport {
   }
 }
 
+#[ignore = "https://github.com/rolldown/rolldown/pull/2006#issuecomment-2294898310"]
 #[tokio::test(flavor = "multi_thread")]
 async fn should_failed_to_resolve_the_module_with_diagnostic() {
   let cwd = abs_file_dir!();

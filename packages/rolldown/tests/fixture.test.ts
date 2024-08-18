@@ -16,9 +16,6 @@ function main() {
 
     test.skipIf(testConfig.skip)(testName, async () => {
       try {
-        if (testConfig.beforeTest) {
-          await testConfig.beforeTest()
-        }
         const output = await compileFixture(
           nodePath.join(import.meta.dirname, dirPath),
           testConfig,

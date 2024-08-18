@@ -1,9 +1,9 @@
-use super::ecma_module_task::{EcmaModuleTask, EcmaModuleTaskOwner};
-use super::runtime_ecma_module_task::RuntimeEcmaModuleTask;
+use super::module_task::{ModuleTask, ModuleTaskOwner};
+use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
+use crate::module_loader::runtime_module_task::RuntimeModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::type_alias::IndexEcmaAst;
@@ -112,7 +112,7 @@ impl ModuleLoader {
     let mut symbols = Symbols::default();
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx(&mut symbols);
 
-    let task = RuntimeEcmaModuleTask::new(runtime_id, tx_to_runtime_module);
+    let task = RuntimeModuleTask::new(runtime_id, tx_to_runtime_module);
 
     #[cfg(target_family = "wasm")]
     {
@@ -142,7 +142,7 @@ impl ModuleLoader {
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    owner: Option<EcmaModuleTaskOwner>,
+    owner: Option<ModuleTaskOwner>,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -169,7 +169,7 @@ impl ModuleLoader {
           not_visited.insert(idx);
           self.remaining += 1;
 
-          let task = EcmaModuleTask::new(Arc::clone(&self.shared_context), idx, resolved_id, owner);
+          let task = ModuleTask::new(Arc::clone(&self.shared_context), idx, resolved_id, owner);
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
@@ -243,7 +243,7 @@ impl ModuleLoader {
               .zip(resolved_deps)
               .map(|(raw_rec, info)| {
                 let ecma_module = module.as_ecma().unwrap();
-                let owner = EcmaModuleTaskOwner::new(
+                let owner = ModuleTaskOwner::new(
                   ecma_module.source.clone(),
                   ecma_module.stable_id.as_str().into(),
                   Span::new(raw_rec.module_request_start, raw_rec.module_request_end()),
@@ -272,7 +272,7 @@ impl ModuleLoader {
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeEcmaModuleTaskResult { ast_symbols, mut module, runtime, ast } = task_result;
+          let RuntimeModuleTaskResult { ast_symbols, mut module, runtime, ast } = task_result;
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
           module.ecma_ast_idx = Some(ast_idx);
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());

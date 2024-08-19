@@ -17,13 +17,17 @@ type PassedStr<'a> = &'a str;
 
 // `AstBuilder` is more suitable name, but it's already used in oxc.
 pub struct AstSnippet<'ast> {
-  pub alloc: &'ast Allocator,
   pub builder: AstBuilder<'ast>,
 }
 
 impl<'ast> AstSnippet<'ast> {
   pub fn new(alloc: &'ast Allocator) -> Self {
-    Self { alloc, builder: AstBuilder::new(alloc) }
+    Self { builder: AstBuilder::new(alloc) }
+  }
+
+  #[inline]
+  pub fn alloc(&self) -> &'ast Allocator {
+    self.builder.allocator
   }
 
   pub fn atom(&self, value: &str) -> Atom<'ast> {
@@ -96,21 +100,21 @@ impl<'ast> AstSnippet<'ast> {
     ast::CallExpression {
       callee: self.id_ref_expr(name, SPAN),
       arguments: self.builder.vec(),
-      ..TakeIn::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc())
     }
   }
 
   /// `name()`
   pub fn call_expr_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
-    ast::Expression::CallExpression(self.call_expr(name).into_in(self.alloc))
+    ast::Expression::CallExpression(self.call_expr(name).into_in(self.alloc()))
   }
 
   /// `name(arg)`
   pub fn call_expr_with_arg_expr(&self, name: PassedStr, arg: PassedStr) -> ast::Expression<'ast> {
-    let arg = ast::Argument::Identifier(self.id_ref(arg, SPAN).into_in(self.alloc));
+    let arg = ast::Argument::Identifier(self.id_ref(arg, SPAN).into_in(self.alloc()));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name(arg)`
@@ -122,7 +126,7 @@ impl<'ast> AstSnippet<'ast> {
     let arg = ast::Argument::from(arg);
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name(arg1, arg2)`
@@ -137,7 +141,7 @@ impl<'ast> AstSnippet<'ast> {
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg1);
     call_expr.arguments.push(arg2);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name(arg1, arg2)`
@@ -152,7 +156,7 @@ impl<'ast> AstSnippet<'ast> {
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg1);
     call_expr.arguments.push(arg2);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name()`
@@ -247,12 +251,12 @@ impl<'ast> AstSnippet<'ast> {
     declarations.push(ast::VariableDeclarator {
       id: ast::BindingPattern {
         kind: ast::BindingPatternKind::ObjectPattern(
-          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc()) }.into_in(self.alloc()),
         ),
-        ..TakeIn::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc())
       },
       init: Some(init),
-      ..TakeIn::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc())
     });
     self.builder.alloc_variable_declaration(
       SPAN,
@@ -323,7 +327,7 @@ impl<'ast> AstSnippet<'ast> {
 
     let var_decl_stmt = self.var_decl_stmt(
       binding_name,
-      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
+      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),
     );
 
     var_decl_stmt
@@ -363,7 +367,7 @@ impl<'ast> AstSnippet<'ast> {
 
     self.var_decl_stmt(
       binding_name,
-      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
+      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),
     )
   }
 
@@ -404,7 +408,7 @@ impl<'ast> AstSnippet<'ast> {
     id: PassedStr,
     span: Span,
   ) -> ast::AssignmentTarget<'ast> {
-    ast::AssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id, span).into_in(self.alloc))
+    ast::AssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id, span).into_in(self.alloc()))
   }
 
   /// ```js
@@ -444,7 +448,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   pub fn string_literal_expr(&self, value: PassedStr, span: Span) -> ast::Expression<'ast> {
-    ast::Expression::StringLiteral(self.string_literal(value, span).into_in(self.alloc))
+    ast::Expression::StringLiteral(self.string_literal(value, span).into_in(self.alloc()))
   }
 
   pub fn import_star_stmt(&self, source: PassedStr, as_name: PassedStr) -> ast::Statement<'ast> {
@@ -465,11 +469,11 @@ impl<'ast> AstSnippet<'ast> {
     as_name: &str,
     importee_source: &str,
   ) -> ast::Statement<'ast> {
-    let mut declarations = allocator::Vec::new_in(self.alloc);
+    let mut declarations = allocator::Vec::new_in(self.alloc());
 
     let mut call_expr = self.call_expr("__static_import");
     call_expr.arguments.push(ast::Argument::StringLiteral(
-      self.string_literal(importee_source, SPAN).into_in(self.alloc),
+      self.string_literal(importee_source, SPAN).into_in(self.alloc()),
     ));
     declarations.push(self.builder.variable_declarator(
       SPAN,
@@ -479,7 +483,7 @@ impl<'ast> AstSnippet<'ast> {
         None::<TSTypeAnnotation>,
         false,
       ),
-      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
+      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
       false,
     ));
 
@@ -513,7 +517,7 @@ impl<'ast> AstSnippet<'ast> {
     });
     let mut call_expr = self.call_expr("__static_import");
     call_expr.arguments.push(ast::Argument::StringLiteral(
-      self.string_literal(importee_source, SPAN).into_in(self.alloc),
+      self.string_literal(importee_source, SPAN).into_in(self.alloc()),
     ));
     declarations.push(self.builder.variable_declarator(
       SPAN,
@@ -527,7 +531,7 @@ impl<'ast> AstSnippet<'ast> {
         None::<TSTypeAnnotation>,
         false,
       ),
-      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
+      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
       false,
     ));
 
@@ -594,8 +598,8 @@ impl<'ast> AstSnippet<'ast> {
   // return xxx
   pub fn return_stmt(&self, argument: ast::Expression<'ast>) -> ast::Statement<'ast> {
     ast::Statement::ReturnStatement(
-      ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc) }
-        .into_in(self.alloc),
+      ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc()) }
+        .into_in(self.alloc()),
     )
   }
 }

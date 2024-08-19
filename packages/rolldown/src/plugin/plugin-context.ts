@@ -14,6 +14,7 @@ import { AssetSource, bindingAssetSource } from '../utils/asset-source'
 import { unimplemented, unsupported } from '../utils/misc'
 import { ModuleInfo } from '../types/module-info'
 import { PluginContextData } from './plugin-context-data'
+import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -24,6 +25,16 @@ export interface EmittedAsset {
 
 export type EmittedFile = EmittedAsset
 
+export interface PluginContextResolveOptions {
+  skipSelf?: boolean
+  custom?: CustomPluginOptions
+}
+
+export interface PrivatePluginContextResolveOptions
+  extends PluginContextResolveOptions {
+  [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol
+}
+
 export class PluginContext {
   debug: LoggingFunction
   info: LoggingFunction
@@ -32,12 +43,7 @@ export class PluginContext {
   resolve: (
     source: string,
     importer?: string,
-    options?: {
-      // assertions?: Record<string, string>
-      custom?: CustomPluginOptions
-      // isEntry?: boolean
-      skipSelf?: boolean
-    },
+    options?: PluginContextResolveOptions,
   ) => Promise<ResolvedId | null>
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
@@ -82,22 +88,19 @@ export class PluginContext {
     this.error = (e): never => {
       return error(logPluginError(normalizeLog(e), pluginName))
     }
-    this.resolve = async (
-      source: string,
-      importer?: string,
-      options?: {
-        // assertions?: Record<string, string>
-        custom?: CustomPluginOptions
-        // isEntry?: boolean
-        skipSelf?: boolean
-      },
-    ) => {
-      let custom = options?.custom && data.setResolveCustom(options.custom)
+    this.resolve = async (source, importer, options) => {
+      let receipt: number | undefined = undefined
+      if (options != null) {
+        receipt = data.saveResolveOptions(options)
+      }
       const res = await context.resolve(source, importer, {
-        custom,
+        custom: receipt,
         skipSelf: options?.skipSelf,
       })
-      typeof custom === 'number' && data.removeResolveCustom(custom)
+      if (receipt != null) {
+        data.removeSavedResolveOptions(receipt)
+      }
+
       if (res == null) return null
       const info = data.getModuleOption(res.id) || ({} as ModuleOptions)
       return { ...res, ...info }

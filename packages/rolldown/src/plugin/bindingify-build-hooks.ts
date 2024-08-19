@@ -4,13 +4,16 @@ import type {
   BindingPluginOptions,
 } from '../binding'
 
-import type { Plugin } from './index'
+import type { Plugin, PrivateResolveIdExtraOptions } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
 import { transformModuleInfo } from '../utils/transform-module-info'
 import path from 'node:path'
 import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap'
-import { PluginContext } from './plugin-context'
+import {
+  PluginContext,
+  PrivatePluginContextResolveOptions,
+} from './plugin-context'
 import { TransformPluginContext } from './transform-plugin-context'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
 import { PluginContextData } from './plugin-context-data'
@@ -18,6 +21,7 @@ import {
   PluginHookWithBindingMeta,
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
+import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -76,17 +80,26 @@ export function bindingifyResolveId(
 
   return [
     async (ctx, specifier, importer, extraOptions) => {
+      // `contextResolveOptions` comes from `PluginContext.resolve(.., .., options)` method if this hook is triggered by `PluginContext.resolve`.
+      const contextResolveOptions =
+        extraOptions.custom != null
+          ? (pluginContextData.getSavedResolveOptions(
+              extraOptions.custom,
+            ) as PrivatePluginContextResolveOptions)
+          : undefined
+
+      const newExtraOptions: PrivateResolveIdExtraOptions = {
+        ...extraOptions,
+        custom: contextResolveOptions?.custom,
+        [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]:
+          contextResolveOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
+      }
+
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         specifier,
         importer ?? undefined,
-        {
-          ...extraOptions,
-          custom:
-            typeof extraOptions.custom === 'number'
-              ? pluginContextData.getResolveCustom(extraOptions.custom)
-              : undefined,
-        },
+        newExtraOptions,
       )
       if (ret == false || ret == null) {
         return

@@ -2,18 +2,16 @@ export { defineParallelPlugin } from './plugin/parallel-plugin'
 export { experimental_scan as scan } from './rolldown'
 export { transform } from './binding'
 export { composeJsPlugins as composePlugins } from './utils/compose-js-plugins'
-import { defineParallelPlugin } from './plugin/parallel-plugin'
-import { experimental_scan } from './rolldown'
-import {
+// Builtin plugin factory
+export {
   modulePreloadPolyfillPlugin,
   dynamicImportVarsPlugin,
-  globImportPlugin,
+  wasmHelperPlugin,
+  wasmFallbackPlugin,
+  importGlobPlugin,
   manifestPlugin,
-  wasmPlugin,
   loadFallbackPlugin,
   transformPlugin,
+  aliasPlugin,
+  jsonPlugin
 } from './plugin/builtin-plugin'
-import { transform } from './binding'
-
-export { defineParallelPlugin, experimental_scan as scan, transform }
-

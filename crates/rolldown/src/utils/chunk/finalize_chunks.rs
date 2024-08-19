@@ -3,6 +3,8 @@ use std::hash::Hash;
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{AssetIdx, AssetMeta, ModuleId};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -55,11 +57,11 @@ pub fn finalize_assets(
   let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
+  // TODO: support `par_into_iter_enumerated`/rayon trait in `oxc_index`
   let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
-    .into_iter_enumerated()
-    // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
-    .collect::<Vec<_>>()
+    .raw
     .into_par_iter()
+    .enumerate()
     .map(|(asset_idx, mut hasher)| {
       // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
@@ -97,10 +99,9 @@ pub fn finalize_assets(
     })
     .collect::<FxHashMap<_, _>>();
 
+  // TODO: support rayon trait in `oxc_index`
   let mut assets: IndexAssets = preliminary_assets
-    .into_iter()
-    // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
-    .collect::<Vec<_>>()
+    .raw
     .into_par_iter()
     .map(|mut asset| {
       let preliminary_filename_raw = asset.preliminary_filename.to_string();

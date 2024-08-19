@@ -23,7 +23,7 @@ impl Plugin for JsonPlugin {
     if !is_json_ext(args.id) || is_special_query(args.id) {
       return Ok(None);
     }
-    let code = strim_bom(args.code);
+    let code = strip_bom(args.code);
     if self.stringify {
       let normalized_code = if self.is_build {
         let value = serde_json::from_str::<Value>(code)?;
@@ -45,7 +45,8 @@ impl Plugin for JsonPlugin {
   }
 }
 
-fn strim_bom(code: &str) -> &str {
+// cSpell:disable
+fn strip_bom(code: &str) -> &str {
   if let Some(stripped) = code.strip_prefix("\u{FEFF}") {
     stripped
   } else {

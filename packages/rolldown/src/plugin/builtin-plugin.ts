@@ -126,7 +126,6 @@ export function aliasPlugin(config: AliasPluginConfig) {
   return new AliasPlugin(config)
 }
 
-
 export function jsonPlugin(config?: BindingJsonPluginConfig) {
   return new JsonPlugin(config)
 }

@@ -23,7 +23,7 @@ impl Plugin for JsonPlugin {
     if !is_json_ext(args.id) || is_special_query(args.id) {
       return Ok(None);
     }
-    let code = strim_bom(&args.code);
+    let code = strim_bom(args.code);
     if self.stringify {
       let normalized_code = if self.is_build {
         let value = serde_json::from_str::<Value>(code)?;
@@ -46,14 +46,15 @@ impl Plugin for JsonPlugin {
 }
 
 fn strim_bom(code: &str) -> &str {
-  if code.starts_with("\u{FEFF}") {
-    &code[3..]
+  if let Some(stripped) = code.strip_prefix("\u{FEFF}") {
+    stripped
   } else {
     code
   }
 }
 
 /// /\.json(?:$|\?)(?!commonjs-(?:proxy|external))/
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
 fn is_json_ext(ext: &str) -> bool {
   if ext.ends_with(".json") {
     return true;
@@ -73,15 +74,13 @@ fn is_special_query(ext: &str) -> bool {
       6usize
     } else if after.starts_with("sharedworker") {
       12usize
-    } else if after.starts_with("raw") {
-      3usize
-    } else if after.starts_with("url") {
+    } else if after.starts_with("raw") || after.starts_with("url") {
       3usize
     } else {
       continue;
     };
     // test if match `\b`
-    match after.get(boundary..boundary + 1).and_then(|c| c.bytes().next()) {
+    match after.get(boundary..=boundary).and_then(|c| c.bytes().next()) {
       Some(ch) if !matches!(ch, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_') => {
         return true;
       }
@@ -111,7 +110,6 @@ mod test {
   fn special_query() {
     assert!(is_special_query("test?workers&worker"));
     assert!(is_special_query("test?url&sharedworker"));
-    assert!(is_special_query("test?url&raw"));
     assert!(is_special_query("test?url&raw"));
 
     assert!(!is_special_query("test?&woer"));

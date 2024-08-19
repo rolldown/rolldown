@@ -3,7 +3,6 @@ import type {
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
 } from '../binding'
-import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'
 import { arraify } from '../utils/misc'
@@ -145,9 +144,7 @@ function bindingifyInput(
 ): BindingInputOptions['input'] {
   if (Array.isArray(input)) {
     return input.map((src) => {
-      const name = nodePath.parse(src).name
       return {
-        name,
         import: src,
       }
     })

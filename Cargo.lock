@@ -1393,21 +1393,21 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 [[package]]
 name = "oxc"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_codegen 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_codegen 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "oxc_minifier",
- "oxc_parser 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_sourcemap 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_transformer 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_parser 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_sourcemap 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_transformer 0.24.3 (git+https://github.com/oxc-project/oxc)",
 ]
 
 [[package]]
@@ -1437,7 +1437,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1460,14 +1460,14 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "bitflags 2.6.0",
  "num-bigint",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
 ]
 
 [[package]]
@@ -1484,7 +1484,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_macros"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1507,11 +1507,11 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "bitflags 2.6.0",
  "itertools 0.13.0",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "petgraph",
  "rustc-hash",
 ]
@@ -1538,19 +1538,19 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "bitflags 2.6.0",
  "daachorse",
  "nonmax",
  "once_cell",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_sourcemap 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_sourcemap 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "rustc-hash",
 ]
 
@@ -1569,7 +1569,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "miette",
  "owo-colors",
@@ -1586,7 +1586,7 @@ checksum = "fa1d58c483b1ec74c7219b1525648b4b6beea7ff4685b02ad74693190df43308"
 [[package]]
 name = "oxc_index"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 
 [[package]]
 name = "oxc_isolated_declarations"
@@ -1618,32 +1618,32 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "itertools 0.13.0",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
 ]
 
 [[package]]
 name = "oxc_minifier"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "num-bigint",
  "num-traits",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_codegen 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_parser 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_traverse 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_codegen 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_parser 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_traverse 0.24.3 (git+https://github.com/oxc-project/oxc)",
 ]
 
 [[package]]
@@ -1669,18 +1669,18 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
  "memchr",
  "num-bigint",
  "num-traits",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "rustc-hash",
  "seq-macro",
 ]
@@ -1726,18 +1726,18 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "assert-unchecked",
  "indexmap",
  "itertools 0.13.0",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_cfg 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_cfg 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "phf 0.11.2",
  "rustc-hash",
 ]
@@ -1758,7 +1758,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",
@@ -1783,12 +1783,12 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "compact_str",
  "miette",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc)",
 ]
 
 [[package]]
@@ -1813,15 +1813,15 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "bitflags 2.6.0",
  "dashmap 6.0.1",
  "nonmax",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "phf 0.11.2",
  "rustc-hash",
  "ryu-js",
@@ -1873,18 +1873,18 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "dashmap 6.0.1",
  "indexmap",
  "oxc-browserslist",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_traverse 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_traverse 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "ropey",
  "rustc-hash",
  "serde",
@@ -1909,15 +1909,15 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.24.3"
-source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+source = "git+https://github.com/oxc-project/oxc#7f3129efd108d4926c95549e77752de17ae5bef2"
 dependencies = [
  "compact_str",
  "memoffset",
- "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
- "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc)",
 ]
 
 [[package]]
@@ -2502,7 +2502,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-trait",
- "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc)",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_resolver",

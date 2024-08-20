@@ -154,14 +154,14 @@ vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
 
 # oxc crates share the same version
-oxc = { git = "https://github.com/oxc-project/oxc", branch = "fix/comments-gen-regression", version = "0.24.3", features = [
+oxc = { git = "https://github.com/oxc-project/oxc", commit = "b7db235065381cfef9fcc039fa6bfffdfdc84aa5", version = "0.24.3", features = [
   "sourcemap_concurrent",
   "transformer",
   "minifier",
   "semantic",
   "codegen",
 ] }
-oxc_index = { git = "https://github.com/oxc-project/oxc", branch = "fix/comments-gen-regression", version = "0.24.3" }
+oxc_index = { git = "https://github.com/oxc-project/oxc", commit = "b7db235065381cfef9fcc039fa6bfffdfdc84aa5", version = "0.24.3" }
 oxc_transform_napi = { version = "0.24.3" }
 
 [profile.release]

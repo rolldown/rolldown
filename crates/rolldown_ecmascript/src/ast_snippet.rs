@@ -573,7 +573,6 @@ impl<'ast> AstSnippet<'ast> {
         SPAN,
         ast::Expression::CallExpression(self.builder.alloc_call_expression(
           SPAN,
-          self.builder.vec(),
           ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
             SPAN,
             self.id_ref_expr("Promise", SPAN),
@@ -581,6 +580,7 @@ impl<'ast> AstSnippet<'ast> {
             false,
           )),
           None::<TSTypeParameterInstantiation>,
+          self.builder.vec(),
           false,
         )),
         self.id_name("then", SPAN),
@@ -588,9 +588,9 @@ impl<'ast> AstSnippet<'ast> {
       ));
     ast::Expression::CallExpression(self.builder.alloc_call_expression(
       span,
-      arguments,
       callee,
       None::<TSTypeParameterInstantiation>,
+      arguments,
       false,
     ))
   }

@@ -1393,22 +1393,21 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 [[package]]
 name = "oxc"
 version = "0.24.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e661878abdc6fdf85c18a106961fb56884d2e129744285745b26ac2847c6c32d"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
 dependencies = [
- "oxc_allocator",
- "oxc_ast",
- "oxc_codegen",
- "oxc_diagnostics",
- "oxc_index",
- "oxc_mangler",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_codegen 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "oxc_minifier",
- "oxc_parser",
- "oxc_semantic",
- "oxc_sourcemap",
- "oxc_span",
- "oxc_syntax",
- "oxc_transformer",
+ "oxc_parser 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_sourcemap 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_transformer 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
 ]
 
 [[package]]
@@ -1436,6 +1435,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_allocator"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "allocator-api2",
+ "bumpalo",
+]
+
+[[package]]
 name = "oxc_ast"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1443,10 +1451,23 @@ checksum = "1599f878d8ac6fcc229be06426f04134f7663dcd5c71046414d8ddd12a20ad3b"
 dependencies = [
  "bitflags 2.6.0",
  "num-bigint",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast_macros 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oxc_ast"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "bitflags 2.6.0",
+ "num-bigint",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
 ]
 
 [[package]]
@@ -1461,6 +1482,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_ast_macros"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.74",
+]
+
+[[package]]
 name = "oxc_cfg"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1468,7 +1499,19 @@ checksum = "e855fef3a078ea1e1751706b08c5f7e5e901a1a98b18f1ca8e9e06e505a2e035"
 dependencies = [
  "bitflags 2.6.0",
  "itertools 0.13.0",
- "oxc_syntax",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "petgraph",
+ "rustc-hash",
+]
+
+[[package]]
+name = "oxc_cfg"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "bitflags 2.6.0",
+ "itertools 0.13.0",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "petgraph",
  "rustc-hash",
 ]
@@ -1483,13 +1526,32 @@ dependencies = [
  "daachorse",
  "nonmax",
  "once_cell",
- "oxc_allocator",
- "oxc_ast",
- "oxc_index",
- "oxc_mangler",
- "oxc_sourcemap",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_index 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_mangler 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_sourcemap 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oxc_codegen"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "bitflags 2.6.0",
+ "daachorse",
+ "nonmax",
+ "once_cell",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_sourcemap 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1505,10 +1567,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_diagnostics"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "miette",
+ "owo-colors",
+ "textwrap",
+ "unicode-width",
+]
+
+[[package]]
 name = "oxc_index"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa1d58c483b1ec74c7219b1525648b4b6beea7ff4685b02ad74693190df43308"
+
+[[package]]
+name = "oxc_index"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
 
 [[package]]
 name = "oxc_isolated_declarations"
@@ -1516,11 +1594,11 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "682d80166e440ef1b7c384bc9b6762620029fe63771c98a59e4a252f408a3366"
 dependencies = [
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_diagnostics 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hash",
 ]
 
@@ -1531,30 +1609,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28c3139067931258d3c3ace55b15e21c7213eeffb25921b3d85cfd653da35ca7"
 dependencies = [
  "itertools 0.13.0",
- "oxc_ast",
- "oxc_index",
- "oxc_semantic",
- "oxc_span",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_index 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_semantic 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oxc_mangler"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "itertools 0.13.0",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
 ]
 
 [[package]]
 name = "oxc_minifier"
 version = "0.24.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07330f266cd7d65b2c63c4c73f5f51c6acf37d23f26d58d9210b190624dbf0a"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
 dependencies = [
  "num-bigint",
  "num-traits",
- "oxc_allocator",
- "oxc_ast",
- "oxc_codegen",
- "oxc_diagnostics",
- "oxc_mangler",
- "oxc_parser",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
- "oxc_traverse",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_codegen 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_mangler 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_parser 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_traverse 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
 ]
 
 [[package]]
@@ -1568,11 +1657,30 @@ dependencies = [
  "memchr",
  "num-bigint",
  "num-traits",
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_diagnostics 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hash",
+ "seq-macro",
+]
+
+[[package]]
+name = "oxc_parser"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "assert-unchecked",
+ "bitflags 2.6.0",
+ "memchr",
+ "num-bigint",
+ "num-traits",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "rustc-hash",
  "seq-macro",
 ]
@@ -1604,13 +1712,32 @@ dependencies = [
  "assert-unchecked",
  "indexmap",
  "itertools 0.13.0",
- "oxc_allocator",
- "oxc_ast",
- "oxc_cfg",
- "oxc_diagnostics",
- "oxc_index",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_cfg 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_diagnostics 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_index 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "phf 0.11.2",
+ "rustc-hash",
+]
+
+[[package]]
+name = "oxc_semantic"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "assert-unchecked",
+ "indexmap",
+ "itertools 0.13.0",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_cfg 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "phf 0.11.2",
  "rustc-hash",
 ]
@@ -1620,6 +1747,18 @@ name = "oxc_sourcemap"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29b246cb91d8982a1dc744c91764f174e60e4e3829e70c6746168c8d0537efa2"
+dependencies = [
+ "base64-simd 0.8.0",
+ "cfg-if",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxc_sourcemap"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",
@@ -1637,8 +1776,19 @@ checksum = "e7a4f6e525a64e61bcfa256e4707e46be54f3261e0b524670d0a1c6827c28931"
 dependencies = [
  "compact_str",
  "miette",
- "oxc_allocator",
- "oxc_ast_macros",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast_macros 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oxc_span"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "compact_str",
+ "miette",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
 ]
 
 [[package]]
@@ -1650,10 +1800,28 @@ dependencies = [
  "bitflags 2.6.0",
  "dashmap 6.0.1",
  "nonmax",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_index",
- "oxc_span",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast_macros 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_index 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "phf 0.11.2",
+ "rustc-hash",
+ "ryu-js",
+ "unicode-id-start",
+]
+
+[[package]]
+name = "oxc_syntax"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "bitflags 2.6.0",
+ "dashmap 6.0.1",
+ "nonmax",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast_macros 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "phf 0.11.2",
  "rustc-hash",
  "ryu-js",
@@ -1669,15 +1837,15 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "oxc_allocator",
- "oxc_ast",
- "oxc_codegen",
- "oxc_diagnostics",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_codegen 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_diagnostics 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "oxc_isolated_declarations",
- "oxc_parser",
- "oxc_sourcemap",
- "oxc_span",
- "oxc_transformer",
+ "oxc_parser 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_sourcemap 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_transformer 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1689,13 +1857,34 @@ dependencies = [
  "dashmap 6.0.1",
  "indexmap",
  "oxc-browserslist",
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
- "oxc_traverse",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_diagnostics 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_semantic 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_traverse 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ropey",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxc_transformer"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "dashmap 6.0.1",
+ "indexmap",
+ "oxc-browserslist",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_diagnostics 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_traverse 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "ropey",
  "rustc-hash",
  "serde",
@@ -1710,11 +1899,25 @@ checksum = "8ebe424dba47c4cfff5f9bf72d0c27c8d855da3eae6c2eee14b795cc038af7aa"
 dependencies = [
  "compact_str",
  "memoffset",
- "oxc_allocator",
- "oxc_ast",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_ast 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_semantic 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_span 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oxc_syntax 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oxc_traverse"
+version = "0.24.3"
+source = "git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression#605e7c5d631169184beaf48840b4b0da96f69ed9"
+dependencies = [
+ "compact_str",
+ "memoffset",
+ "oxc_allocator 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_ast 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_semantic 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_span 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
+ "oxc_syntax 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
 ]
 
 [[package]]
@@ -2299,7 +2502,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-trait",
- "oxc_index",
+ "oxc_index 0.24.3 (git+https://github.com/oxc-project/oxc?branch=fix/comments-gen-regression)",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_resolver",

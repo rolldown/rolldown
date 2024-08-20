@@ -30,9 +30,9 @@ impl Plugin for JsonPlugin {
         let str = serde_json::to_string(&value)?;
         // TODO: perf: find better way than https://github.com/rolldown/vite/blob/3bf86e3f715c952a032b476b60c8c869e9c50f3f/packages/vite/src/node/plugins/json.ts#L55-L57
         let str = serde_json::to_string(&str)?;
-        format!("export default JSON.parse({str})")
+        format!("export default /*#__PURE__*/ JSON.parse({str})")
       } else {
-        format!("export default JSON.parse({})", serde_json::to_string(code)?)
+        format!("export default /*#__PURE__*/ JSON.parse({})", serde_json::to_string(code)?)
       };
       return Ok(Some(HookTransformOutput {
         code: Some(normalized_code),

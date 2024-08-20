@@ -71,23 +71,20 @@ fn split_top_level_variable_declaration<'a>(
           .enumerate()
           .map(|(i, declarator)| {
             let is_first = i == 0;
-            let new_decl = ast_builder.alloc(ast_builder.variable_declaration(
+            let new_decl = ast_builder.alloc_variable_declaration(
               SPAN,
               var_decl.kind,
               ast_builder.vec_from_iter([declarator]),
               var_decl.declare,
-            ));
-            Statement::ExportNamedDeclaration(ast_builder.alloc(
-              ast_builder.export_named_declaration(
-                if is_first { named_decl_span } else { SPAN },
-                Some(Declaration::VariableDeclaration(new_decl)),
-                // Since it is
-                ast_builder.vec(),
-                // Since it is `export a = 1, b = 2;`, source should be `None`
-                None,
-                named_decl_export_kind,
-                None,
-              ),
+            );
+            Statement::ExportNamedDeclaration(ast_builder.alloc_export_named_declaration(
+              if is_first { named_decl_span } else { SPAN },
+              Some(Declaration::VariableDeclaration(new_decl)),
+              ast_builder.vec(),
+              // Since it is `export a = 1, b = 2;`, source should be `None`
+              None,
+              named_decl_export_kind,
+              None,
             ))
           })
           .collect_vec()

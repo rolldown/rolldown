@@ -1,4 +1,3 @@
-use oxc::allocator::IntoIn;
 use oxc::ast::ast::{self, IdentifierReference};
 use rolldown_common::SymbolRef;
 use rolldown_ecmascript::ExpressionExt;
@@ -74,7 +73,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let canonical_name = self.canonical_name_for(canonical_ref);
     if id_ref.name != canonical_name.as_str() {
       return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self.snippet.id_ref(canonical_name, id_ref.span).into_in(self.alloc),
+        self.snippet.alloc_id_ref(canonical_name, id_ref.span),
       ));
     }
 

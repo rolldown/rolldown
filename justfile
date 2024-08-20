@@ -104,10 +104,7 @@ lint-node:
     pnpm lint-code
 
 lint-repo:
-    pnpm lint-filename
-    pnpm lint-prettier
-    pnpm lint-spell
-    pnpm lint-toml
+    pnpm lint-repo
 
 fix: fix-rust fix-repo
 

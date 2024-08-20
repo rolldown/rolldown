@@ -91,7 +91,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                     program.body.push(
                       self
                         .snippet
-                        .call_expr_with_2arg_expr_expr(
+                        .alloc_call_expr_with_2arg_expr_expr(
                           re_export_fn_name,
                           self.snippet.id_ref_expr(importer_namespace_name, SPAN),
                           self.snippet.call_expr_with_arg_expr_expr(
@@ -394,10 +394,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
               // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
               *request_path = ast::Argument::StringLiteral(
-                self
-                  .snippet
-                  .string_literal(&importee.name, request_path.span())
-                  .into_in(self.alloc),
+                self.snippet.alloc_string_literal(&importee.name, request_path.span()),
               );
             }
           }

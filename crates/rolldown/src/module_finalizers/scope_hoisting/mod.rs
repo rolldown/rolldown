@@ -131,16 +131,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     if let Some(ns_alias) = namespace_alias {
       expr = ast::Expression::StaticMemberExpression(
-        self
-          .snippet
-          .builder
-          .static_member_expression(
-            SPAN,
-            expr,
-            self.snippet.id_name(&ns_alias.property_name, SPAN),
-            false,
-          )
-          .into_in(self.alloc),
+        self.snippet.builder.alloc_static_member_expression(
+          SPAN,
+          expr,
+          self.snippet.id_name(&ns_alias.property_name, SPAN),
+          false,
+        ),
       );
       if preserve_this_semantic_if_needed {
         expr = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), expr);
@@ -267,7 +263,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let importee = &self.ctx.modules[rec.resolved_module];
             let stmt: ast::Statement = self
               .snippet
-              .call_expr_with_2arg_expr_expr(
+              .alloc_call_expr_with_2arg_expr_expr(
                 re_export_fn_name,
                 self.snippet.id_ref_expr(importer_namespace_name, SPAN),
                 self.snippet.call_expr_with_arg_expr_expr(
@@ -306,9 +302,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
             )
           } else {
-            ast::PropertyKey::StringLiteral(
-              self.snippet.string_literal(prop_name, SPAN).into_in(self.alloc),
-            )
+            ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
           },
           value: self.snippet.only_return_arrow_expr(returned),
           ..TakeIn::dummy(self.alloc)

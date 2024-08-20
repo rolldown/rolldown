@@ -80,7 +80,6 @@ fn split_top_level_variable_declaration<'a>(
             Statement::ExportNamedDeclaration(ast_builder.alloc_export_named_declaration(
               if is_first { named_decl_span } else { SPAN },
               Some(Declaration::VariableDeclaration(new_decl)),
-              // Since it is
               ast_builder.vec(),
               // Since it is `export a = 1, b = 2;`, source should be `None`
               None,

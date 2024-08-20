@@ -21,7 +21,7 @@
     "test": "echo \"Use just test-node\"",
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
     "type-check": "pnpm --recursive run type-check",
-    "docs": "pnpm --filter rolldown-docs lint-prettier lint-toml lint-spell",
+    "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"

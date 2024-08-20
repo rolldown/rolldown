@@ -26,10 +26,8 @@ impl EcmaCompiler {
     let mut trivias = None;
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
-        let parser = Parser::new(&owner.allocator, &owner.source, ty).with_options(ParseOptions {
-          allow_return_outside_function: true,
-          preserve_parens: true,
-        });
+        let parser = Parser::new(&owner.allocator, &owner.source, ty)
+          .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() });
         let ret = parser.parse();
         if ret.panicked || !ret.errors.is_empty() {
           Err(
@@ -81,7 +79,8 @@ impl EcmaCompiler {
     let program = allocator.alloc(program);
     let options = MinifierOptions { mangle: true, ..MinifierOptions::default() };
     Minifier::new(options).build(&allocator, program);
-    let codegen = Codegen::new();
+    let codegen = Codegen::new()
+      .with_options(oxc::codegen::CodegenOptions { minify: true, ..Default::default() });
     let codegen =
       if enable_sourcemap { codegen.enable_source_map(filename, source_text) } else { codegen };
 

@@ -7,9 +7,7 @@ export default defineTest({
     plugins: [jsonPlugin({ stringify: true, isBuild: false })],
   },
   async afterTest(output) {
-    expect(output.output[0].code).not.toContain(
-      `JSON.parse`,
-    )
+    expect(output.output[0].code).not.toContain(`JSON.parse`)
     await import('./assert.mjs')
   },
 })

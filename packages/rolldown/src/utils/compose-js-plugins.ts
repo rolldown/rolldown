@@ -1,4 +1,9 @@
-import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
+import {
+  ModuleSideEffects,
+  Plugin,
+  PrivateResolveIdExtraOptions,
+  RolldownPlugin,
+} from '../plugin'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
@@ -6,6 +11,8 @@ import { TupleToUnion } from 'type-fest'
 import * as R from 'remeda'
 import { PluginHookNames } from '../constants/plugin'
 import { AssertNever } from './type-assert'
+import { PrivatePluginContextResolveOptions } from '../plugin/plugin-context'
+import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 
 const unsupportedHookName = [
   'augmentChunkHash',
@@ -18,9 +25,6 @@ const unsupportedHookName = [
   'renderStart',
   'resolveDynamicImport',
   'writeBundle',
-  // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-  // we have to bailout all plugins with `resolveId` hook.
-  'resolveId',
 ] as const
 const unsupportedHooks: Set<string> = new Set(unsupportedHookName)
 
@@ -80,14 +84,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
-        // case 'resolveId': {
-        //   const handlers = batchedHooks.resolveId ?? []
-        //   batchedHooks.resolveId = handlers
-        //   if (plugin.resolveId) {
-        //     handlers.push(plugin.resolveId)
-        //   }
-        //   break
-        // }
+        case 'resolveId': {
+          const handlers = batchedHooks.resolveId ?? []
+          batchedHooks.resolveId = handlers
+          if (plugin.resolveId) {
+            handlers.push(plugin.resolveId)
+          }
+          break
+        }
         case 'buildEnd': {
           const handlers = batchedHooks.buildEnd ?? []
           batchedHooks.buildEnd = handlers
@@ -193,26 +197,65 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         }
         break
       }
-      // case 'resolveId': {
-      //   if (batchedHooks.resolveId) {
-      //     const batchedHandlers = batchedHooks.resolveId
-      //     composed.resolveId = async function (source, importer, options) {
-      //       for (const handler of batchedHandlers) {
-      //         const [handlerFn, _handlerOptions] = normalizeHook(handler)
-      //         const result = await handlerFn.call(
-      //           this,
-      //           source,
-      //           importer,
-      //           options,
-      //         )
-      //         if (!isNullish(result)) {
-      //           return result
-      //         }
-      //       }
-      //     }
-      //   }
-      //   break
-      // }
+      case 'resolveId': {
+        if (batchedHooks.resolveId) {
+          const batchedHandlers = batchedHooks.resolveId
+          const handlerSymbols = batchedHandlers.map((_handler, idx) =>
+            Symbol(idx),
+          )
+          composed.resolveId = async function (
+            source,
+            importer,
+            rawHookResolveIdOptions,
+          ) {
+            const hookResolveIdOptions: PrivateResolveIdExtraOptions =
+              rawHookResolveIdOptions
+
+            const symbolForCallerThatSkipSelf =
+              hookResolveIdOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]
+
+            for (
+              let handlerIdx = 0;
+              handlerIdx < batchedHandlers.length;
+              handlerIdx++
+            ) {
+              const handler = batchedHandlers[handlerIdx]
+              const handlerSymbol = handlerSymbols[handlerIdx]
+
+              if (symbolForCallerThatSkipSelf === handlerSymbol) {
+                continue
+              }
+
+              const { handler: handlerFn } = normalizeHook(handler)
+              const result = await handlerFn.call(
+                {
+                  ...this,
+                  resolve: (source, importer, rawContextResolveOptions) => {
+                    const contextResolveOptions: PrivatePluginContextResolveOptions =
+                      rawContextResolveOptions ?? {}
+
+                    if (contextResolveOptions.skipSelf) {
+                      contextResolveOptions[
+                        SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF
+                      ] = handlerSymbol
+                      contextResolveOptions.skipSelf = false
+                    }
+
+                    return this.resolve(source, importer, contextResolveOptions)
+                  },
+                },
+                source,
+                importer,
+                rawHookResolveIdOptions,
+              )
+              if (!isNullish(result)) {
+                return result
+              }
+            }
+          }
+        }
+        break
+      }
       case 'buildEnd': {
         if (batchedHooks.buildEnd) {
           const batchedHandlers = batchedHooks.buildEnd

@@ -24,6 +24,7 @@ import { BuiltinPlugin } from './builtin-plugin'
 import { ParallelPlugin } from './parallel-plugin'
 import type { DefinedHookNames } from '../constants/plugin'
 import { DEFINED_HOOK_NAMES } from '../constants/plugin'
+import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
@@ -72,6 +73,10 @@ interface ResolveIdExtraOptions {
   custom?: CustomPluginOptions
   isEntry: boolean
   kind: 'import' | 'dynamic-import' | 'require-call'
+}
+
+export interface PrivateResolveIdExtraOptions extends ResolveIdExtraOptions {
+  [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol
 }
 
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId

@@ -17,33 +17,33 @@ use crate::{
   utils::{load_source::load_source, transform_source::transform_source},
 };
 
-pub struct EcmaModuleTaskOwner {
+pub struct ModuleTaskOwner {
   source: ArcStr,
   importer_id: Rstr,
   importee_span: Span,
 }
 
-impl EcmaModuleTaskOwner {
+impl ModuleTaskOwner {
   pub fn new(source: ArcStr, importer_id: Rstr, importee_span: Span) -> Self {
-    EcmaModuleTaskOwner { source, importer_id, importee_span }
+    ModuleTaskOwner { source, importer_id, importee_span }
   }
 }
 
-pub struct EcmaModuleTask {
+pub struct ModuleTask {
   ctx: Arc<TaskContext>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
-  owner: Option<EcmaModuleTaskOwner>,
+  owner: Option<ModuleTaskOwner>,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
 }
 
-impl EcmaModuleTask {
+impl ModuleTask {
   pub fn new(
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
-    owner: Option<EcmaModuleTaskOwner>,
+    owner: Option<ModuleTaskOwner>,
   ) -> Self {
     let is_user_defined_entry = owner.is_none();
     Self { ctx, module_idx: idx, resolved_id, owner, errors: vec![], is_user_defined_entry }

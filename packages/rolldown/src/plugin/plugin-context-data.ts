@@ -1,12 +1,13 @@
 import { BindingPluginContext } from '../binding'
-import { CustomPluginOptions, ModuleInfo, ModuleOptions } from '..'
+import { ModuleInfo, ModuleOptions } from '..'
 import { transformModuleInfo } from '../utils/transform-module-info'
+import { PluginContextResolveOptions } from './plugin-context'
 
 export class PluginContextData {
   modules = new Map<string, ModuleInfo>()
   moduleIds: Array<string> | null = null
   moduleOptionMap = new Map<string, ModuleOptions>()
-  resolveCustomMap = new Map<number, CustomPluginOptions>()
+  resolveOptionsMap = new Map<number, PluginContextResolveOptions>()
 
   updateModuleOption(id: string, option: ModuleOptions) {
     const existing = this.moduleOptionMap.get(id)
@@ -52,17 +53,17 @@ export class PluginContextData {
     return [].values()
   }
 
-  setResolveCustom(custom: CustomPluginOptions): number {
-    const index = Object.keys(this.resolveCustomMap).length
-    this.resolveCustomMap.set(index, custom)
+  saveResolveOptions(options: PluginContextResolveOptions): number {
+    const index = this.resolveOptionsMap.size
+    this.resolveOptionsMap.set(index, options)
     return index
   }
 
-  getResolveCustom(index: number) {
-    return this.resolveCustomMap.get(index)
+  getSavedResolveOptions(receipt: number) {
+    return this.resolveOptionsMap.get(receipt)
   }
 
-  removeResolveCustom(index: number) {
-    this.resolveCustomMap.delete(index)
+  removeSavedResolveOptions(receipt: number) {
+    this.resolveOptionsMap.delete(receipt)
   }
 }

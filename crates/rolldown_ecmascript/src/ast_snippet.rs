@@ -17,13 +17,17 @@ type PassedStr<'a> = &'a str;
 
 // `AstBuilder` is more suitable name, but it's already used in oxc.
 pub struct AstSnippet<'ast> {
-  pub alloc: &'ast Allocator,
   pub builder: AstBuilder<'ast>,
 }
 
 impl<'ast> AstSnippet<'ast> {
   pub fn new(alloc: &'ast Allocator) -> Self {
-    Self { alloc, builder: AstBuilder::new(alloc) }
+    Self { builder: AstBuilder::new(alloc) }
+  }
+
+  #[inline]
+  pub fn alloc(&self) -> &'ast Allocator {
+    self.builder.allocator
   }
 
   pub fn atom(&self, value: &str) -> Atom<'ast> {
@@ -36,8 +40,12 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   #[inline]
-  pub fn id_ref(&self, name: PassedStr, span: Span) -> ast::IdentifierReference<'ast> {
-    self.builder.identifier_reference(span, name)
+  pub fn alloc_id_ref(
+    &self,
+    name: PassedStr,
+    span: Span,
+  ) -> Box<'ast, ast::IdentifierReference<'ast>> {
+    self.builder.alloc_identifier_reference(span, name)
   }
 
   #[inline]
@@ -92,25 +100,34 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
+  #[inline]
   pub fn call_expr(&self, name: PassedStr) -> ast::CallExpression<'ast> {
-    ast::CallExpression {
-      callee: self.id_ref_expr(name, SPAN),
-      arguments: self.builder.vec(),
-      ..TakeIn::dummy(self.alloc)
-    }
+    self.builder.call_expression(
+      SPAN,
+      self.builder.vec(),
+      self.builder.expression_identifier_reference(SPAN, name),
+      None::<TSTypeParameterInstantiation>,
+      false,
+    )
   }
 
   /// `name()`
   pub fn call_expr_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
-    ast::Expression::CallExpression(self.call_expr(name).into_in(self.alloc))
+    self.builder.expression_call(
+      SPAN,
+      self.builder.vec(),
+      self.builder.expression_identifier_reference(SPAN, name),
+      None::<TSTypeParameterInstantiation>,
+      false,
+    )
   }
 
   /// `name(arg)`
   pub fn call_expr_with_arg_expr(&self, name: PassedStr, arg: PassedStr) -> ast::Expression<'ast> {
-    let arg = ast::Argument::Identifier(self.id_ref(arg, SPAN).into_in(self.alloc));
+    let arg = ast::Argument::Identifier(self.alloc_id_ref(arg, SPAN));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name(arg)`
@@ -122,7 +139,7 @@ impl<'ast> AstSnippet<'ast> {
     let arg = ast::Argument::from(arg);
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name(arg1, arg2)`
@@ -137,30 +154,32 @@ impl<'ast> AstSnippet<'ast> {
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg1);
     call_expr.arguments.push(arg2);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
 
   /// `name(arg1, arg2)`
-  pub fn call_expr_with_2arg_expr_expr(
+  pub fn alloc_call_expr_with_2arg_expr_expr(
     &self,
     name: PassedStr,
     arg1: ast::Expression<'ast>,
     arg2: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
-    let arg1 = ast::Argument::from(arg1);
-    let arg2 = ast::Argument::from(arg2);
-    let mut call_expr = self.call_expr(name);
-    call_expr.arguments.push(arg1);
-    call_expr.arguments.push(arg2);
-    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+    self.builder.expression_call(
+      SPAN,
+      self.builder.vec_from_iter([
+        self.builder.argument_expression(arg1),
+        self.builder.argument_expression(arg2),
+      ]),
+      self.builder.expression_identifier_reference(SPAN, name),
+      None::<TSTypeParameterInstantiation>,
+      false,
+    )
   }
 
   /// `name()`
   #[inline]
   pub fn call_expr_stmt(&self, name: PassedStr) -> ast::Statement<'ast> {
-    ast::Statement::ExpressionStatement(
-      self.builder.alloc_expression_statement(SPAN, self.call_expr_expr(name)),
-    )
+    self.builder.statement_expression(SPAN, self.call_expr_expr(name))
   }
 
   /// `var [name] = [init]`
@@ -184,7 +203,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       Some(init),
@@ -210,7 +229,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       Some(init),
@@ -237,7 +256,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
-          None::<Box<'_, TSTypeAnnotation<'_>>>,
+          None::<TSTypeAnnotation>,
           false,
         ),
         false,
@@ -247,12 +266,12 @@ impl<'ast> AstSnippet<'ast> {
     declarations.push(ast::VariableDeclarator {
       id: ast::BindingPattern {
         kind: ast::BindingPatternKind::ObjectPattern(
-          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc()) }.into_in(self.alloc()),
         ),
-        ..TakeIn::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc())
       },
       init: Some(init),
-      ..TakeIn::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc())
     });
     self.builder.alloc_variable_declaration(
       SPAN,
@@ -279,14 +298,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSTypeParameterDeclaration>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
     arrow_expr.params.items.push(self.builder.formal_parameter(
@@ -294,7 +313,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       None,
@@ -307,7 +326,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
       None,
@@ -322,7 +341,7 @@ impl<'ast> AstSnippet<'ast> {
     // var require_foo = ...
     let var_decl_stmt = self.var_decl_stmt(
       binding_name,
-      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
+      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),
     );
 
     var_decl_stmt
@@ -343,14 +362,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSTypeParameterDeclaration>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
 
@@ -362,7 +381,7 @@ impl<'ast> AstSnippet<'ast> {
 
     self.var_decl_stmt(
       binding_name,
-      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
+      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),
     )
   }
 
@@ -403,7 +422,7 @@ impl<'ast> AstSnippet<'ast> {
     id: PassedStr,
     span: Span,
   ) -> ast::AssignmentTarget<'ast> {
-    ast::AssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id, span).into_in(self.alloc))
+    ast::AssignmentTarget::AssignmentTargetIdentifier(self.alloc_id_ref(id, span))
   }
 
   /// ```js
@@ -417,14 +436,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       true,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSTypeParameterDeclaration>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     ))
   }
@@ -438,12 +457,16 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
-  pub fn string_literal(&self, value: PassedStr, span: Span) -> ast::StringLiteral<'ast> {
-    ast::StringLiteral { span, value: self.atom(value) }
+  pub fn alloc_string_literal(
+    &self,
+    value: PassedStr,
+    span: Span,
+  ) -> Box<'ast, ast::StringLiteral<'ast>> {
+    self.builder.alloc_string_literal(span, value)
   }
 
   pub fn string_literal_expr(&self, value: PassedStr, span: Span) -> ast::Expression<'ast> {
-    ast::Expression::StringLiteral(self.string_literal(value, span).into_in(self.alloc))
+    ast::Expression::StringLiteral(self.alloc_string_literal(value, span))
   }
 
   pub fn import_star_stmt(&self, source: PassedStr, as_name: PassedStr) -> ast::Statement<'ast> {
@@ -453,7 +476,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Statement::ImportDeclaration(self.builder.alloc_import_declaration(
       SPAN,
       Some(specifiers),
-      self.string_literal(source, SPAN),
+      self.builder.string_literal(SPAN, source),
       None,
       ImportOrExportKind::Value,
     ))
@@ -464,21 +487,21 @@ impl<'ast> AstSnippet<'ast> {
     as_name: &str,
     importee_source: &str,
   ) -> ast::Statement<'ast> {
-    let mut declarations = allocator::Vec::new_in(self.alloc);
+    let mut declarations = allocator::Vec::new_in(self.alloc());
 
     let mut call_expr = self.call_expr("__static_import");
-    call_expr.arguments.push(ast::Argument::StringLiteral(
-      self.string_literal(importee_source, SPAN).into_in(self.alloc),
-    ));
+    call_expr
+      .arguments
+      .push(ast::Argument::StringLiteral(self.alloc_string_literal(importee_source, SPAN)));
     declarations.push(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, as_name),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
-      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
+      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
       false,
     ));
 
@@ -503,7 +526,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
-          None::<Box<'_, TSTypeAnnotation<'_>>>,
+          None::<TSTypeAnnotation>,
           false,
         ),
         false,
@@ -511,9 +534,9 @@ impl<'ast> AstSnippet<'ast> {
       ));
     });
     let mut call_expr = self.call_expr("__static_import");
-    call_expr.arguments.push(ast::Argument::StringLiteral(
-      self.string_literal(importee_source, SPAN).into_in(self.alloc),
-    ));
+    call_expr
+      .arguments
+      .push(ast::Argument::StringLiteral(self.alloc_string_literal(importee_source, SPAN)));
     declarations.push(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
@@ -521,12 +544,12 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.binding_pattern_kind_object_pattern(
           SPAN,
           properties,
-          None::<Box<'_, BindingRestElement<'_>>>,
+          None::<BindingRestElement>,
         ),
-        None::<Box<'_, TSTypeAnnotation<'_>>>,
+        None::<TSTypeAnnotation>,
         false,
       ),
-      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
+      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
       false,
     ));
 
@@ -547,19 +570,19 @@ impl<'ast> AstSnippet<'ast> {
     let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
       ast::FunctionType::FunctionExpression,
       SPAN,
-      None::<BindingIdentifier<'_>>,
+      None::<BindingIdentifier>,
       false,
       false,
       false,
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
-      None::<TSThisParameter<'_>>,
+      None::<TSTypeParameterDeclaration>,
+      None::<TSThisParameter>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
-        None::<Box<'_, BindingRestElement<'_>>>,
+        None::<BindingRestElement>,
       ),
-      None::<Box<'_, TSTypeAnnotation<'_>>>,
+      None::<TSTypeAnnotation>,
       Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
     )));
 
@@ -575,7 +598,7 @@ impl<'ast> AstSnippet<'ast> {
             self.id_name("resolve", SPAN),
             false,
           )),
-          None::<Box<'_, TSTypeParameterInstantiation<'_>>>,
+          None::<TSTypeParameterInstantiation>,
           false,
         )),
         self.id_name("then", SPAN),
@@ -585,7 +608,7 @@ impl<'ast> AstSnippet<'ast> {
       span,
       arguments,
       callee,
-      None::<Box<'_, TSTypeParameterInstantiation<'_>>>,
+      None::<TSTypeParameterInstantiation>,
       false,
     ))
   }
@@ -593,8 +616,8 @@ impl<'ast> AstSnippet<'ast> {
   // return xxx
   pub fn return_stmt(&self, argument: ast::Expression<'ast>) -> ast::Statement<'ast> {
     ast::Statement::ReturnStatement(
-      ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc) }
-        .into_in(self.alloc),
+      ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc()) }
+        .into_in(self.alloc()),
     )
   }
 }

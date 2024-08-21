@@ -142,16 +142,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - stmt-export-default-after-fn-name_js-!~{00f}~.mjs => stmt-export-default-after-fn-name_js-6C8jVjN1.mjs
 - stmt-export-default-after-gen-fn-anon_js-!~{00g}~.mjs => stmt-export-default-after-gen-fn-anon_js-HIqHYRxS.mjs
 - stmt-export-default-after-gen-fn-name_js-!~{00h}~.mjs => stmt-export-default-after-gen-fn-name_js-iGWZdGhk.mjs
-- stmt-export-default-before-async-fn-anon_js-!~{00a}~.mjs => stmt-export-default-before-async-fn-anon_js-KlPlY6Zy.mjs
-- stmt-export-default-before-async-fn-name_js-!~{00b}~.mjs => stmt-export-default-before-async-fn-name_js-vYOur1vd.mjs
-- stmt-export-default-before-async-gen-fn-anon_js-!~{00c}~.mjs => stmt-export-default-before-async-gen-fn-anon_js-QzxrgjGw.mjs
-- stmt-export-default-before-async-gen-fn-name_js-!~{00d}~.mjs => stmt-export-default-before-async-gen-fn-name_js--HfYK_48.mjs
-- stmt-export-default-before-fn-anon_js-!~{006}~.mjs => stmt-export-default-before-fn-anon_js-Y3OEMRgq.mjs
-- stmt-export-default-before-fn-name_js-!~{007}~.mjs => stmt-export-default-before-fn-name_js-5N9LZwly.mjs
-- stmt-export-default-before-gen-fn-anon_js-!~{008}~.mjs => stmt-export-default-before-gen-fn-anon_js-4DRYHyMa.mjs
-- stmt-export-default-before-gen-fn-name_js-!~{009}~.mjs => stmt-export-default-before-gen-fn-name_js-pvTIXxqc.mjs
-- stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
-- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-uHmpXE13.mjs
+- stmt-export-default-before-async-fn-anon_js-!~{00a}~.mjs => stmt-export-default-before-async-fn-anon_js-YFTr91Qa.mjs
+- stmt-export-default-before-async-fn-name_js-!~{00b}~.mjs => stmt-export-default-before-async-fn-name_js-ZfeBiOfE.mjs
+- stmt-export-default-before-async-gen-fn-anon_js-!~{00c}~.mjs => stmt-export-default-before-async-gen-fn-anon_js-phpV7C28.mjs
+- stmt-export-default-before-async-gen-fn-name_js-!~{00d}~.mjs => stmt-export-default-before-async-gen-fn-name_js-5B12RTgx.mjs
+- stmt-export-default-before-fn-anon_js-!~{006}~.mjs => stmt-export-default-before-fn-anon_js-sLVm62ea.mjs
+- stmt-export-default-before-fn-name_js-!~{007}~.mjs => stmt-export-default-before-fn-name_js-DgmVSQbx.mjs
+- stmt-export-default-before-gen-fn-anon_js-!~{008}~.mjs => stmt-export-default-before-gen-fn-anon_js-0rvRU2sk.mjs
+- stmt-export-default-before-gen-fn-name_js-!~{009}~.mjs => stmt-export-default-before-gen-fn-name_js-f3p6_Y_E.mjs
+- stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-PD0nX_cF.mjs
+- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-Z90-bMF5.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
 
@@ -2157,7 +2157,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/tree_shaking/pure_annotation
 
-- main-!~{000}~.mjs => main-XCncN_Yu.mjs
+- main-!~{000}~.mjs => main-DH-gdM9b.mjs
 
 # tests/rolldown/tree_shaking/unused_import_cjs
 

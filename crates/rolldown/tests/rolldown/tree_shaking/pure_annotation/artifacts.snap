@@ -18,7 +18,7 @@ const c = test();
 //#endregion
 //#region d.js
 function test2() {}
-const e = test2();
+const e = /* #__PURE__ */ test2();
 
 //#endregion
 //#region main.js

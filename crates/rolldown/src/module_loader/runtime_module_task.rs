@@ -15,13 +15,13 @@ use crate::{
   types::ast_symbols::AstSymbols,
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
-pub struct RuntimeEcmaModuleTask {
+pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
   module_id: ModuleIdx,
   errors: Vec<BuildDiagnostic>,
 }
 
-pub struct RuntimeEcmaModuleTaskResult {
+pub struct RuntimeModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbols: AstSymbols,
   pub ast: EcmaAst,
@@ -37,7 +37,7 @@ pub struct MakeEcmaAstResult {
   namespace_object_ref: SymbolRef,
 }
 
-impl RuntimeEcmaModuleTask {
+impl RuntimeModuleTask {
   pub fn new(id: ModuleIdx, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
     Self { module_id: id, tx, errors: Vec::new() }
   }
@@ -108,7 +108,7 @@ impl RuntimeEcmaModuleTask {
       has_eval,
     };
 
-    if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeEcmaModuleTaskResult {
+    if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
       // warnings: self.warnings,
       ast_symbols,
       module,

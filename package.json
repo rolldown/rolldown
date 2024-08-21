@@ -2,7 +2,7 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
-  "packageManager": "pnpm@9.7.0",
+  "packageManager": "pnpm@9.7.1",
   "engines": {
     "node": ">=18.20.3"
   },
@@ -15,6 +15,7 @@
     "lint-prettier:fix": "prettier . '**/*.{js,ts,json,md,yml,yaml,vue}' -w",
     "lint-toml": "taplo format --check",
     "lint-toml:fix": "taplo format",
+    "lint-repo": "npm-run-all --parallel lint-prettier lint-toml lint-spell",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
@@ -29,14 +30,15 @@
   "devDependencies": {
     "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "22.2.0",
+    "@types/node": "22.4.1",
     "cjs-module-lexer": "^1.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.5",
     "npm-rolldown": "npm:rolldown@0.12.2",
-    "oxlint": "0.7.1",
+    "npm-run-all": "^4.1.5",
+    "oxlint": "0.7.2",
     "prettier": "^3.3.1",
     "rolldown": "workspace:*",
     "typescript": "^5.4.5"

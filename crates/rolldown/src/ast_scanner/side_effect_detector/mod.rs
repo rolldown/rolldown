@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  ChainElement, Expression, IdentifierReference, PropertyKey,
+  CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
 };
 use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -62,9 +62,9 @@ impl<'a> SideEffectDetector<'a> {
         is_computed && {
           let key_expr = key.to_expression();
           match key_expr {
-            Expression::StaticMemberExpression(_) | Expression::ComputedMemberExpression(_) => {
+            match_member_expression!(Expression) => {
               if let Some((ref_id, chain)) =
-                extract_member_expr_chain(key.to_member_expression(), 2)
+                extract_member_expr_chain(key_expr.to_member_expression(), 2)
               {
                 !(chain == ["Symbol", "iterator"] && self.scope.is_unresolved(ref_id))
               } else {
@@ -155,7 +155,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_call_expr(&mut self, expr: &oxc::ast::ast::CallExpression) -> bool {
+  fn detect_side_effect_of_call_expr(&mut self, expr: &CallExpression) -> bool {
     let is_pure = self.is_pure_function_or_constructor_call(expr.span);
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
@@ -288,17 +288,7 @@ impl<'a> SideEffectDetector<'a> {
           true
         }
       }
-      Expression::CallExpression(expr) => {
-        let is_pure = self.is_pure_function_or_constructor_call(expr.span);
-        if is_pure {
-          expr.arguments.iter().any(|arg| match arg {
-            Argument::SpreadElement(_) => true,
-            _ => self.detect_side_effect_of_expr(arg.to_expression()),
-          })
-        } else {
-          true
-        }
-      }
+      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
     }
   }
 

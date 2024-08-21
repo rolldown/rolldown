@@ -13,4 +13,5 @@ export {
   loadFallbackPlugin,
   transformPlugin,
   aliasPlugin,
+  jsonPlugin,
 } from './plugin/builtin-plugin'

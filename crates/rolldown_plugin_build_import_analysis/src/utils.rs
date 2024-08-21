@@ -20,10 +20,10 @@ pub fn construct_snippet_from_import_expr<'a>(
     ast_builder.binding_pattern(
       ast_builder.binding_pattern_kind_object_pattern(
         SPAN,
-        ast_builder.vec_from_iter(decls.into_iter().map(|name| {
+        ast_builder.vec_from_iter(decls.iter().map(|name| {
           ast_builder.binding_property(
             SPAN,
-            ast_builder.property_key_identifier_name(SPAN, name.clone()),
+            ast_builder.property_key_identifier_name(SPAN, name),
             ast_builder.binding_pattern(
               ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
               None::<TSTypeAnnotation>,
@@ -67,17 +67,19 @@ pub fn construct_snippet_from_import_expr<'a>(
                   ast_builder.binding_pattern(
                     ast_builder.binding_pattern_kind_object_pattern(
                       SPAN,
-                      ast_builder.vec1(ast_builder.binding_property(
-                        SPAN,
-                        ast_builder.property_key_identifier_name(SPAN, "b"),
-                        ast_builder.binding_pattern(
-                          ast_builder.binding_pattern_kind_binding_identifier(SPAN, "b"),
-                          None::<TSTypeAnnotation>,
+                      ast_builder.vec_from_iter(decls.iter().map(|name| {
+                        ast_builder.binding_property(
+                          SPAN,
+                          ast_builder.property_key_identifier_name(SPAN, name),
+                          ast_builder.binding_pattern(
+                            ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
+                            None::<TSTypeAnnotation>,
+                            false,
+                          ),
+                          true,
                           false,
-                        ),
-                        true,
-                        false,
-                      )),
+                        )
+                      })),
                       None::<BindingRestElement>,
                     ),
                     None::<TSTypeAnnotation>,
@@ -87,7 +89,7 @@ pub fn construct_snippet_from_import_expr<'a>(
                     SPAN,
                     ast_builder.expression_import(
                       SPAN,
-                      ast_builder.expression_string_literal(SPAN, "./lib-!~{002}~.js"),
+                      ast_builder.expression_string_literal(SPAN, source),
                       ast_builder.vec(),
                     ),
                   )),
@@ -99,16 +101,18 @@ pub fn construct_snippet_from_import_expr<'a>(
                 SPAN,
                 Some(ast_builder.expression_object(
                   SPAN,
-                  ast_builder.vec1(ast_builder.object_property_kind_object_property(
-                    SPAN,
-                    PropertyKind::Init,
-                    ast_builder.property_key_identifier_name(SPAN, "b"),
-                    ast_builder.expression_identifier_reference(SPAN, "b"),
-                    None,
-                    false,
-                    true,
-                    false,
-                  )),
+                  ast_builder.vec_from_iter(decls.iter().map(|name| {
+                    ast_builder.object_property_kind_object_property(
+                      SPAN,
+                      PropertyKind::Init,
+                      ast_builder.property_key_identifier_name(SPAN, name),
+                      ast_builder.expression_identifier_reference(SPAN, name),
+                      None,
+                      false,
+                      true,
+                      false,
+                    )
+                  })),
                   None,
                 )),
               ));

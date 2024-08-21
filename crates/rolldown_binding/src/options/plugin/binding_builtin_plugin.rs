@@ -4,6 +4,7 @@ use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
+use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_json::JsonPlugin;
@@ -52,6 +53,7 @@ pub enum BindingBuiltinPluginName {
   WasmFallbackPlugin,
   AliasPlugin,
   JsonPlugin,
+  BuildImportAnalysisPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -124,6 +126,25 @@ pub struct BindingAliasPluginConfig {
 pub struct BindingAliasPluginAlias {
   pub find: BindingStringOrRegex,
   pub replacement: String,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingBuildImportAnalysisPluginConfig {
+  pub preload_code: String,
+  pub insert_preload: bool,
+}
+
+impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
+    Ok(BuildImportAnalysisPlugin {
+      preload_code: value.preload_code,
+      insert_preload: value.insert_preload,
+    })
+  }
 }
 
 impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
@@ -233,6 +254,17 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           stringify: config.stringify.unwrap_or_default(),
           is_build: config.is_build.unwrap_or_default(),
         })
+      }
+      BindingBuiltinPluginName::BuildImportAnalysisPlugin => {
+        let config: BindingBuildImportAnalysisPluginConfig = if let Some(options) = plugin.options {
+          BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for BuildImportAnalysisPlugin",
+          ));
+        };
+        Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
       }
     })
   }

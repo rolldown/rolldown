@@ -9,6 +9,7 @@ use oxc::ast::ast::{
 use oxc::ast::visit::walk::walk_program;
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{match_module_declaration, AstBuilder, VisitMut};
+use oxc::codegen::{CodeGenerator, CodegenReturn};
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -20,7 +21,8 @@ use self::utils::construct_snippet_from_import_expr;
 mod utils;
 #[derive(Debug)]
 pub struct BuildImportAnalysisPlugin {
-  preload_code: String,
+  pub preload_code: String,
+  pub insert_preload: bool,
 }
 
 const PRELOAD_METHOD: &str = "__vitePreload";
@@ -69,11 +71,18 @@ impl Plugin for BuildImportAnalysisPlugin {
     mut args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     let mut ast = args.ast;
+    let CodegenReturn { source_text, source_map } = CodeGenerator::new().build(ast.program());
+    println!("{:?}", args.cwd);
+    println!("{}", source_text);
     ast.program.with_mut(|fields| {
       let builder = AstBuilder::new(&fields.allocator);
       let mut visitor = BuildImportAnalysisVisitor::new(&self.preload_code, builder);
       visitor.visit_program(fields.program);
     });
+    let CodegenReturn { source_text, source_map } = CodeGenerator::new().build(ast.program());
+    println!("after");
+    println!("{:?}", args.cwd);
+    println!("{}", source_text);
     Ok(ast)
   }
 }

@@ -15,8 +15,8 @@ pub fn construct_snippet_from_import_expr<'a>(
   ast_builder.variable_declarator(
     SPAN,
     decl_kind,
-    /// `const {a, b}`
-    ///         ^  ^
+    // `const {a, b}`
+    //         ^  ^
     ast_builder.binding_pattern(
       ast_builder.binding_pattern_kind_object_pattern(
         SPAN,
@@ -26,16 +26,16 @@ pub fn construct_snippet_from_import_expr<'a>(
             ast_builder.property_key_identifier_name(SPAN, name.clone()),
             ast_builder.binding_pattern(
               ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
-              Option::<TSTypeAnnotation>::None,
+              None::<TSTypeAnnotation>,
               false,
             ),
             true,
             false,
           )
         })),
-        Option::<BindingRestElement>::None,
+        None::<BindingRestElement>,
       ),
-      Option::<TSTypeAnnotation>::None,
+      None::<TSTypeAnnotation>,
       false,
     ),
     Some(ast_builder.expression_await(
@@ -48,14 +48,14 @@ pub fn construct_snippet_from_import_expr<'a>(
             SPAN,
             false,
             true,
-            Option::<TSTypeParameterDeclaration>::None,
+            None::<TSTypeParameterDeclaration>,
             ast_builder.formal_parameters(
               SPAN,
               FormalParameterKind::ArrowFormalParameters,
               ast_builder.vec(),
-              Option::<BindingRestElement>::None,
+              None::<BindingRestElement>,
             ),
-            Option::<TSTypeAnnotation>::None,
+            None::<TSTypeAnnotation>,
             ast_builder.function_body(SPAN, ast_builder.vec(), {
               let mut items = ast_builder.vec();
               items.push(ast_builder.statement_declaration(ast_builder.declaration_variable(
@@ -72,15 +72,15 @@ pub fn construct_snippet_from_import_expr<'a>(
                         ast_builder.property_key_identifier_name(SPAN, "b"),
                         ast_builder.binding_pattern(
                           ast_builder.binding_pattern_kind_binding_identifier(SPAN, "b"),
-                          Option::<TSTypeAnnotation>::None,
+                          None::<TSTypeAnnotation>,
                           false,
                         ),
                         true,
                         false,
                       )),
-                      Option::<BindingRestElement>::None,
+                      None::<BindingRestElement>,
                     ),
-                    Option::<TSTypeAnnotation>::None,
+                    None::<TSTypeAnnotation>,
                     false,
                   ),
                   Some(ast_builder.expression_await(
@@ -128,7 +128,7 @@ pub fn construct_snippet_from_import_expr<'a>(
           items
         },
         ast_builder.expression_identifier_reference(SPAN, "__vitePreload"),
-        Option::<TSTypeParameterInstantiation>::None,
+        None::<TSTypeParameterInstantiation>,
         false,
       ),
     )),

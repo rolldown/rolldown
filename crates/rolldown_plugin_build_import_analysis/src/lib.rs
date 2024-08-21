@@ -1,12 +1,10 @@
 use std::borrow::Cow;
 
 use anyhow::Ok;
-use oxc::allocator::Allocator;
 use oxc::ast::ast::{
-  AwaitExpression, BindingPattern, BindingPatternKind, Expression, ExpressionStatement,
-  ImportOrExportKind, NumberBase, ObjectExpression, ObjectPattern, PropertyKey, Statement,
-  StaticMemberExpression, TSTypeAnnotation, TSTypeParameterDeclaration, VariableDeclaration,
-  VariableDeclarationKind,
+  BindingPattern, BindingPatternKind, Expression, ExpressionStatement, ImportOrExportKind,
+  NumberBase, ObjectExpression, ObjectPattern, PropertyKey, Statement, StaticMemberExpression,
+  TSTypeAnnotation, TSTypeParameterDeclaration, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc::ast::visit::walk::walk_program;
 use oxc::ast::visit::walk_mut;
@@ -112,6 +110,7 @@ impl<'b, 'a> VisitMut<'a> for BuildImportAnalysisVisitor<'b, 'a> {
       it.body.push(helper_stmt);
     }
   }
+
   fn visit_variable_declaration(&mut self, decl: &mut VariableDeclaration<'a>) {
     let mut declarators_map = decl
       .declarations
@@ -124,9 +123,7 @@ impl<'b, 'a> VisitMut<'a> for BuildImportAnalysisVisitor<'b, 'a> {
         let Expression::ImportExpression(ref mut import) = init.argument else {
           return None;
         };
-        let BindingPattern { kind, .. } = &decl.id else {
-          return None;
-        };
+        let BindingPattern { kind, .. } = &decl.id;
         let BindingPatternKind::ObjectPattern(kind) = kind else {
           return None;
         };

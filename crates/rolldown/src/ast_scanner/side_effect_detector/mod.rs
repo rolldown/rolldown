@@ -112,7 +112,6 @@ impl<'a> SideEffectDetector<'a> {
       }
       ClassElement::AccessorProperty(def) => {
         (match &def.key {
-          // FIXME: this is wrong, we should also always check the `def.value`.
           PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
           key @ oxc::ast::match_expression!(PropertyKey) => {
             self.detect_side_effect_of_expr(key.to_expression())

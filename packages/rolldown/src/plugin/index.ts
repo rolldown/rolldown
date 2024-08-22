@@ -247,13 +247,11 @@ export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks
 >
-type hookFilterExtension<K extends keyof FunctionPluginHooks> =
+export type hookFilterExtension<K extends keyof FunctionPluginHooks> =
   K extends 'transform'
     ? { filter?: BaseHookFilter }
-    : K extends 'load'
+    : K extends ('load' | 'resolveId')
       ? { filter?: Omit<BaseHookFilter, 'code' | 'moduleType'> }
-      : K extends 'resolveId'
-        ? { filter?: Omit<BaseHookFilter, 'code' | 'moduleType'> }
         : {}
 export type BaseHookFilter = {
   id?: {
@@ -274,13 +272,15 @@ export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<
     (K extends AsyncPluginHooks
       ? MakeAsync<FunctionPluginHooks[K]>
-      : FunctionPluginHooks[K]) &
-      hookFilterExtension<K>
+      : FunctionPluginHooks[K])
+  , hookFilterExtension<K>
     // eslint-disable-next-line @typescript-eslint/ban-types
     // TODO
     // K extends ParallelPluginHooks ? { sequential?: boolean } : {}
   >
 }
+type A = PluginHooks['transform']
+let a: A = (id) => {};
 
 export type AddonHookFunction = (
   this: PluginContext,

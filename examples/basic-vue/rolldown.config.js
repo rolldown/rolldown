@@ -13,9 +13,11 @@ export default defineConfig({
     {
       name: 'test',
       transform: {
-        filter: {
-          code: {},
-        },
+        // filter: {
+        //   code: {
+        //     include: ['test']
+        //   },
+        // },
         handler() {},
       },
       resolveId: {

@@ -4,7 +4,7 @@ import type {
   BindingPluginOptions,
 } from '../binding'
 
-import type { Plugin, PrivateResolveIdExtraOptions } from './index'
+import type { hookFilterExtension, Plugin, PluginHooks, PrivateResolveIdExtraOptions } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
 import { transformModuleInfo } from '../utils/transform-module-info'
@@ -22,6 +22,7 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
+import { bindingifyResolveIdFilter } from './bindingify-hook-filter'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -69,14 +70,17 @@ export function bindingifyBuildEnd(
 
 export function bindingifyResolveId(
   plugin: Plugin,
-  options: NormalizedInputOptions,
+  normalizedOptions: NormalizedInputOptions,
   pluginContextData: PluginContextData,
-): PluginHookWithBindingExt<BindingPluginOptions['resolveId']> {
-  const hook = plugin.resolveId
+): PluginHookWithBindingExt<BindingPluginOptions['resolveId'], hookFilterExtension<'transform'>> {
+  const hook = plugin.resolveId as unknown as PluginHooks['resolveId']
   if (!hook) {
     return {}
   }
-  const { handler, meta } = normalizeHook(hook)
+  const { handler, meta, options } = normalizeHook(hook)
+  console.log(options)
+  
+  
 
   return {
     plugin: async (ctx, specifier, importer, extraOptions) => {
@@ -96,7 +100,7 @@ export function bindingifyResolveId(
       }
 
       const ret = await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
         specifier,
         importer ?? undefined,
         newExtraOptions,
@@ -128,6 +132,8 @@ export function bindingifyResolveId(
       return result
     },
     meta: bindingifyPluginHookMeta(meta),
+    // @ts-ignore
+    filter: bindingifyResolveIdFilter(options.filter)
   }
 }
 
@@ -181,20 +187,21 @@ export function bindingifyResolveDynamicImport(
 
 export function bindingifyTransform(
   plugin: Plugin,
-  options: NormalizedInputOptions,
+  normalizedOptions: NormalizedInputOptions,
   pluginContextData: PluginContextData,
 ): PluginHookWithBindingExt<BindingPluginOptions['transform']> {
   const hook = plugin.transform
   if (!hook) {
     return {}
   }
-  const { handler, meta } = normalizeHook(hook)
+  const { handler, meta, options } = normalizeHook(hook)
 
+  console.log(`options: `, options)
   return {
     plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
         new TransformPluginContext(
-          options,
+          normalizedOptions,
           ctx.inner(),
           plugin,
           pluginContextData,

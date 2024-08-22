@@ -1,4 +1,5 @@
 use rolldown_utils::js_regex::HybridRegex;
+use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]
@@ -14,11 +15,16 @@ pub struct BindingStringOrRegex {
   pub flag: Option<String>,
 }
 
-impl TryFrom<BindingStringOrRegex> for HybridRegex {
+impl TryFrom<BindingStringOrRegex> for StringOrRegex {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
-    let flag = value.flag.unwrap_or_default();
-    HybridRegex::with_flags(&value.value, &flag)
+    let ret = if let Some(flag) = value.flag {
+      let reg = HybridRegex::with_flags(&value.value, &flag)?;
+      StringOrRegex::Regex(reg)
+    } else {
+      StringOrRegex::String(value.value)
+    };
+    Ok(ret)
   }
 }

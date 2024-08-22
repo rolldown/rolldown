@@ -37,11 +37,12 @@ export function bindingifyPlugin(
   const { plugin: buildStart, meta: buildStartMeta } =
     bindingifyBuildStart(plugin, options, pluginContextData)
 
-  const { plugin: resolveId, meta: resolveIdMeta } = bindingifyResolveId(
+  const { plugin: resolveId, meta: resolveIdMeta, filter: resolveIdFilter } = bindingifyResolveId(
     plugin,
     options,
     pluginContextData,
   )
+  console.log(`resolveIdFilter: `, resolveIdFilter)
 
   const { plugin: resolveDynamicImport, meta: resolveDynamicImportMeta } =
     bindingifyResolveDynamicImport(plugin, options, pluginContextData)
@@ -112,6 +113,8 @@ export function bindingifyPlugin(
     buildStartMeta,
     resolveId,
     resolveIdMeta,
+    // @ts-ignore
+    resolveIdFilter,
     resolveDynamicImport,
     resolveDynamicImportMeta,
     buildEnd,

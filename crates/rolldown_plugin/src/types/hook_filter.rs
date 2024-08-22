@@ -1,10 +1,11 @@
 use rolldown_common::ModuleType;
 use rolldown_utils::js_regex::HybridRegex;
+use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[derive(Default, Debug)]
 pub struct GeneralHookFilter {
-  pub include: Option<Vec<HybridRegex>>,
-  pub exclude: Option<Vec<HybridRegex>>,
+  pub include: Option<Vec<StringOrRegex>>,
+  pub exclude: Option<Vec<StringOrRegex>>,
 }
 
 #[derive(Default, Debug)]

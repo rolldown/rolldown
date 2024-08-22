@@ -1,1 +1,3 @@
-import('eslint/lib/rules')
+import { createApp } from 'vue'
+
+export default createApp({})

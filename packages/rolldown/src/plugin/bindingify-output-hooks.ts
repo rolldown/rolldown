@@ -25,7 +25,7 @@ export function bindingifyRenderStart(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx) => {
+    plugin: async (ctx) => {
       handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         outputOptions,
@@ -49,7 +49,7 @@ export function bindingifyRenderChunk(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, code, chunk) => {
+    plugin: async (ctx, code, chunk) => {
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         code,
@@ -90,7 +90,7 @@ export function bindingifyAugmentChunkHash(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, chunk) => {
+    plugin: async (ctx, chunk) => {
       return await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         chunk,
@@ -112,7 +112,7 @@ export function bindingifyRenderError(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, err) => {
+    plugin: async (ctx, err) => {
       handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         new Error(err),
@@ -135,7 +135,7 @@ export function bindingifyGenerateBundle(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, bundle, isWrite) => {
+    plugin: async (ctx, bundle, isWrite) => {
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         outputOptions,
@@ -159,7 +159,7 @@ export function bindingifyWriteBundle(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, bundle) => {
+    plugin: async (ctx, bundle) => {
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         outputOptions,
@@ -182,7 +182,7 @@ export function bindingifyBanner(
 
   const { handler, meta } = normalizeHook(hook)
   return {
-    pluginOption: async (ctx, chunk) => {
+    plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
         return handler
       }
@@ -209,7 +209,7 @@ export function bindingifyFooter(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, chunk) => {
+    plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
         return handler
       }
@@ -236,7 +236,7 @@ export function bindingifyIntro(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, chunk) => {
+    plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
         return handler
       }
@@ -263,7 +263,7 @@ export function bindingifyOutro(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, chunk) => {
+    plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
         return handler
       }

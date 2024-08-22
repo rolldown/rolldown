@@ -403,14 +403,14 @@ impl<T: Plugin> Pluginable for T {
   }
 
   fn call_get_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
-    Ok(None)
+    Plugin::get_transform_filter(self)
   }
 
   fn call_get_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    Ok(None)
+    Plugin::get_resolve_id_filter(self)
   }
 
   fn call_get_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
-    Ok(None)
+    Plugin::get_load_filter(self)
   }
 }

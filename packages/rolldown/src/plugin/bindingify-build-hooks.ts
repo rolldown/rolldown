@@ -35,7 +35,7 @@ export function bindingifyBuildStart(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx) => {
+    plugin: async (ctx) => {
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         options,
@@ -57,7 +57,7 @@ export function bindingifyBuildEnd(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, err) => {
+    plugin: async (ctx, err) => {
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         err ? new Error(err) : undefined,
@@ -79,7 +79,7 @@ export function bindingifyResolveId(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, specifier, importer, extraOptions) => {
+    plugin: async (ctx, specifier, importer, extraOptions) => {
       // `contextResolveOptions` comes from `PluginContext.resolve(.., .., options)` method if this hook is triggered by `PluginContext.resolve`.
       const contextResolveOptions =
         extraOptions.custom != null
@@ -143,7 +143,7 @@ export function bindingifyResolveDynamicImport(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, specifier, importer) => {
+    plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         specifier,
@@ -191,7 +191,7 @@ export function bindingifyTransform(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, code, id, meta) => {
+    plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
         new TransformPluginContext(
           options,
@@ -243,7 +243,7 @@ export function bindingifyLoad(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, id) => {
+    plugin: async (ctx, id) => {
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         id,
@@ -309,7 +309,7 @@ export function bindingifyModuleParsed(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    pluginOption: async (ctx, moduleInfo) => {
+    plugin: async (ctx, moduleInfo) => {
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         transformModuleInfo(

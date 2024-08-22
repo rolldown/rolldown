@@ -6,11 +6,9 @@
     "build": "rolldown --config ./rolldown.config.js"
   },
   "devDependencies": {
-    "eslint-plugin-import": "^2.29.1",
     "rolldown": "workspace:*"
   },
   "dependencies": {
-    "vue": "^3.4.21",
-    "eslint": "^8.6.0"
+    "vue": "^3.4.21"
   }
 }

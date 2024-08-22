@@ -11,26 +11,27 @@ export default defineConfig({
   },
   plugins: [
     {
-      name: "test",
+      name: 'test',
       transform: {
         filter: {
-          code: {
-          }
+          code: {},
         },
-        handler() {}
+        handler() {},
       },
       resolveId: {
         handler() {},
         filter: {
           id: {
-            include: ["test"],
-            exclude: ["test", /test/]
+            include: ['test'],
+            exclude: ['test', /test/],
           },
-        }
+        },
       },
       banner: {
-        handler() {return ''}
-      }
-    }
-  ]
+        handler() {
+          return ''
+        },
+      },
+    },
+  ],
 })

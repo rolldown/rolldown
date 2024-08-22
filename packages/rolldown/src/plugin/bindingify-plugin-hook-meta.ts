@@ -25,7 +25,8 @@ function bindingPluginOrder(
   }
 }
 
-export type PluginHookWithBindingMeta<T> = [
-  T | undefined,
-  BindingPluginHookMeta | undefined,
-]
+export type PluginHookWithBindingExt<T, F = undefined> = {
+  pluginOption?: T
+  meta?: BindingPluginHookMeta
+  filter?: F
+}

@@ -34,80 +34,77 @@ export function bindingifyPlugin(
   outputOptions: NormalizedOutputOptions,
   pluginContextData: PluginContextData,
 ): BindingPluginOptions {
-  const [buildStart, buildStartMeta] = bindingifyBuildStart(
+  const { pluginOption: buildStart, meta: buildStartMeta } =
+    bindingifyBuildStart(plugin, options, pluginContextData)
+
+  const { pluginOption: resolveId, meta: resolveIdMeta } = bindingifyResolveId(
     plugin,
     options,
     pluginContextData,
   )
-  const [resolveId, resolveIdMeta] = bindingifyResolveId(
-    plugin,
-    options,
-    pluginContextData,
-  )
-  const [resolveDynamicImport, resolveDynamicImportMeta] =
+
+  const { pluginOption: resolveDynamicImport, meta: resolveDynamicImportMeta } =
     bindingifyResolveDynamicImport(plugin, options, pluginContextData)
-  const [buildEnd, buildEndMeta] = bindingifyBuildEnd(
+
+  const { pluginOption: buildEnd, meta: buildEndMeta } = bindingifyBuildEnd(
     plugin,
     options,
     pluginContextData,
   )
-  const [transform, transformMeta] = bindingifyTransform(
+
+  const { pluginOption: transform, meta: transformMeta } = bindingifyTransform(
     plugin,
     options,
     pluginContextData,
   )
-  const [moduleParsed, moduleParsedMeta] = bindingifyModuleParsed(
+
+  const { pluginOption: moduleParsed, meta: moduleParsedMeta } =
+    bindingifyModuleParsed(plugin, options, pluginContextData)
+
+  const { pluginOption: load, meta: loadMeta } = bindingifyLoad(
     plugin,
     options,
     pluginContextData,
   )
-  const [load, loadMeta] = bindingifyLoad(plugin, options, pluginContextData)
-  const [renderChunk, renderChunkMeta] = bindingifyRenderChunk(
-    plugin,
-    options,
-    outputOptions,
-    pluginContextData,
-  )
-  const [augmentChunkHash, augmentChunkHashMeta] = bindingifyAugmentChunkHash(
-    plugin,
-    options,
-    pluginContextData,
-  )
-  const [renderStart, renderStartMeta] = bindingifyRenderStart(
-    plugin,
-    options,
-    outputOptions,
-    pluginContextData,
-  )
-  const [renderError, renderErrorMeta] = bindingifyRenderError(
-    plugin,
-    options,
-    pluginContextData,
-  )
-  const [generateBundle, generateBundleMeta] = bindingifyGenerateBundle(
-    plugin,
-    options,
-    outputOptions,
-    pluginContextData,
-  )
-  const [writeBundle, writeBundleMeta] = bindingifyWriteBundle(
-    plugin,
-    options,
-    outputOptions,
-    pluginContextData,
-  )
-  const [banner, bannerMeta] = bindingifyBanner(
+
+  const { pluginOption: renderChunk, meta: renderChunkMeta } =
+    bindingifyRenderChunk(plugin, options, outputOptions, pluginContextData)
+
+  const { pluginOption: augmentChunkHash, meta: augmentChunkHashMeta } =
+    bindingifyAugmentChunkHash(plugin, options, pluginContextData)
+
+  const { pluginOption: renderStart, meta: renderStartMeta } =
+    bindingifyRenderStart(plugin, options, outputOptions, pluginContextData)
+
+  const { pluginOption: renderError, meta: renderErrorMeta } =
+    bindingifyRenderError(plugin, options, pluginContextData)
+
+  const { pluginOption: generateBundle, meta: generateBundleMeta } =
+    bindingifyGenerateBundle(plugin, options, outputOptions, pluginContextData)
+
+  const { pluginOption: writeBundle, meta: writeBundleMeta } =
+    bindingifyWriteBundle(plugin, options, outputOptions, pluginContextData)
+
+  const { pluginOption: banner, meta: bannerMeta } = bindingifyBanner(
     plugin,
     options,
     pluginContextData,
   )
-  const [footer, footerMeta] = bindingifyFooter(
+  const { pluginOption: footer, meta: footerMeta } = bindingifyFooter(
     plugin,
     options,
     pluginContextData,
   )
-  const [intro, introMeta] = bindingifyIntro(plugin, options, pluginContextData)
-  const [outro, outroMeta] = bindingifyOutro(plugin, options, pluginContextData)
+  const { pluginOption: intro, meta: introMeta } = bindingifyIntro(
+    plugin,
+    options,
+    pluginContextData,
+  )
+  const { pluginOption: outro, meta: outroMeta } = bindingifyOutro(
+    plugin,
+    options,
+    pluginContextData,
+  )
 
   return {
     name: plugin.name ?? 'unknown',

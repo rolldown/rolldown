@@ -35,7 +35,14 @@ impl FileSystem for OsFileSystem {
 
 impl OxcResolverFileSystem for OsFileSystem {
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    std::fs::read_to_string(path)
+    // `simdutf8` is faster than `std::str::from_utf8` which `fs::read_to_string` uses internally
+    let bytes = std::fs::read(path)?;
+    if simdutf8::basic::from_utf8(&bytes).is_err() {
+      // Same error as `fs::read_to_string` produces (`io::Error::INVALID_UTF8`)
+      return Err(io::Error::new(io::ErrorKind::InvalidData, "stream did not contain valid UTF-8"));
+    }
+    // SAFETY: `simdutf8` has ensured it's a valid UTF-8 string
+    Ok(unsafe { String::from_utf8_unchecked(bytes) })
   }
 
   fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {

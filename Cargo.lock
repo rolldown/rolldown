@@ -2279,6 +2279,7 @@ version = "0.1.0"
 dependencies = [
  "dunce",
  "oxc_resolver",
+ "simdutf8",
  "vfs",
 ]
 

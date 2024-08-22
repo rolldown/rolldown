@@ -23,7 +23,6 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
-use std::usize;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -284,6 +283,9 @@ impl ModuleLoader {
         Msg::BuildErrors(e) => {
           errors.extend(e);
         }
+        // Expect cast to u32, since we are not going to have more than 2^32 tasks, or the
+        // `remaining` will overflow
+        #[allow(clippy::cast_possible_truncation)]
         Msg::Panics(err) => {
           // `self.remaining -1` for the panic task it self
           self.remaining -= 1;

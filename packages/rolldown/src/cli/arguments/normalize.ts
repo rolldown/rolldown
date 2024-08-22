@@ -13,6 +13,16 @@ import {
 import { CliOptions, cliOptionsSchema } from './schema'
 import { logger } from '../utils'
 import { setNestedProperty } from './utils'
+import { resolveCommandPlugin } from '../plugins/resolver'
+import type { RolldownPlugin } from '../../plugin'
+
+async function normalizePlugins(plugins: string[]): Promise<Array<RolldownPlugin>> {
+  const pipeline = plugins.map((plugin) => {
+    return resolveCommandPlugin(plugin)
+  })
+  const result = await Promise.all(pipeline)
+  return result
+}
 
 export interface NormalizedCliOptions {
   input: InputOptions
@@ -52,7 +62,17 @@ export function normalizeCliOptions(
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.')
     const [primary] = keys
-    if (keysOfInput.includes(primary)) {
+    if (primary === 'plugin') {
+      if (Array.isArray(value)) {
+        normalizePlugins(value).then((plugins) => {
+          result.input.plugins = plugins
+        })
+      } else {
+        normalizePlugins([value as string]).then((plugins) => {
+          result.input.plugins = plugins
+        })
+      }
+    } else if (keysOfInput.includes(primary)) {
       setNestedProperty(result.input, key, value)
     } else if (keysOfOutput.includes(primary)) {
       setNestedProperty(result.output, key, value)

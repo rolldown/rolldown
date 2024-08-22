@@ -123,10 +123,10 @@ export const inputCliOptionsSchema = inputOptionsSchema
       .describe('enable treeshaking')
       .default(true)
       .optional(),
+    plugins: z.array(z.string()).describe('list of plugins').optional(),
   })
   .omit({
     input: true,
-    plugins: true,
     onwarn: true,
     onLog: true,
     resolve: true,

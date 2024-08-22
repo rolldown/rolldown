@@ -13,6 +13,9 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
     hint: 'filename',
     default: 'rolldown.config.js',
   },
+  plugins: {
+    abbreviation: 'p',
+  },
   help: {
     abbreviation: 'h',
   },

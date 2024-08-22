@@ -23,7 +23,6 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
-use std::usize;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -285,14 +284,7 @@ impl ModuleLoader {
           errors.extend(e);
         }
         Msg::Panics(err) => {
-          // `self.remaining -1` for the panic task it self
-          self.remaining -= 1;
-          // gracefully shutdown all working thread, only receive and do not spawn
-          while self.remaining > 0 {
-            let mut task = Vec::with_capacity(self.remaining as usize);
-            let received = self.rx.recv_many(&mut task, self.remaining as usize).await;
-            self.remaining -= received as u32;
-          }
+          // Wait all tasks to finish
           return Err(err);
         }
       }

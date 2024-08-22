@@ -82,6 +82,8 @@ impl PluginDriver {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
+      let ret = &self.index_plugin_filters[plugin_idx];
+      dbg!(&ret);
       if let Some(r) = plugin
         .call_resolve_id(
           &skipped_resolve_calls.map_or_else(

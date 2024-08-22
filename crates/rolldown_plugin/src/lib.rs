@@ -27,6 +27,9 @@ pub use crate::{
   transform_plugin_context::TransformPluginContext,
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,
+  types::hook_filter::{
+    GeneralHookFilter, LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter,
+  },
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,

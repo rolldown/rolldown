@@ -138,6 +138,11 @@ export interface BindingEmittedAsset {
   source: BindingAssetSource
 }
 
+export interface BindingGeneralHookFilter {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+}
+
 export interface BindingGlobImportPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
@@ -288,12 +293,15 @@ export interface BindingPluginOptions {
   buildStartMeta?: BindingPluginHookMeta
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
+  resolveIdFilter?: BindingGeneralHookFilter
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
+  loadFilter?: BindingGeneralHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   transformMeta?: BindingPluginHookMeta
+  transformFilter?: BindingTransformHookFilter
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
@@ -367,6 +375,12 @@ export interface BindingStringOrRegex {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+}
+
+export interface BindingTransformHookFilter {
+  code?: BindingGeneralHookFilter
+  moduleType?: Array<string>
+  id?: BindingGeneralHookFilter
 }
 
 export interface BindingTransformPluginConfig {

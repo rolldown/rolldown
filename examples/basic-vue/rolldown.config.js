@@ -1,3 +1,4 @@
+// @ts-check
 import { defineConfig } from 'rolldown'
 
 export default defineConfig({
@@ -8,4 +9,28 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  plugins: [
+    {
+      name: "test",
+      transform: {
+        filter: {
+          code: {
+          }
+        },
+        handler() {}
+      },
+      resolveId: {
+        handler() {},
+        filter: {
+          id: {
+            include: ["test"],
+            exclude: ["test", /test/]
+          },
+        }
+      },
+      banner: {
+        handler() {return ''}
+      }
+    }
+  ]
 })

@@ -62,7 +62,7 @@ export function bindingifyPlugin(
   const { plugin: moduleParsed, meta: moduleParsedMeta } =
     bindingifyModuleParsed(plugin, options, pluginContextData)
 
-  const { plugin: load, meta: loadMeta } = bindingifyLoad(
+  const { plugin: load, meta: loadMeta, filter: loadFilter } = bindingifyLoad(
     plugin,
     options,
     pluginContextData,
@@ -125,6 +125,8 @@ export function bindingifyPlugin(
     moduleParsedMeta,
     load,
     loadMeta,
+    // @ts-ignore
+    loadFilter,
     renderChunk,
     renderChunkMeta,
     augmentChunkHash,

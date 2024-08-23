@@ -23,3 +23,17 @@ pub fn filter_resolve_id(options: &HookFilterOptions, id: &str, cwd: &PathBuf) -
     &normalized_id,
   ))
 }
+
+pub fn filter_load(options: &HookFilterOptions, id: &str, cwd: &PathBuf) -> Option<bool> {
+  let load_hook_filter_options = options.load.as_ref()?;
+  let id_filter = load_hook_filter_options.id.as_ref()?;
+
+  let stabilized_path = Path::new(id).relative(cwd);
+  let normalized_id = stabilized_path.to_string_lossy();
+  Some(pattern_filter::filter(
+    id_filter.exclude.as_ref().map(|item| item.as_slice()),
+    id_filter.include.as_ref().map(|item| item.as_slice()),
+    id,
+    &normalized_id,
+  ))
+}

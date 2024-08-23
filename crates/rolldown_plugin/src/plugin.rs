@@ -16,7 +16,6 @@ use crate::{
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 use rolldown_ecmascript::EcmaAst;
-use rolldown_utils::js_regex::HybridRegex;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
 pub type HookTransformAstReturn = Result<EcmaAst>;

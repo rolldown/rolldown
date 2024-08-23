@@ -22,7 +22,7 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
-import { bindingifyResolveIdFilter } from './bindingify-hook-filter'
+import { bindingifyLoadFilter, bindingifyResolveIdFilter } from './bindingify-hook-filter'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -240,19 +240,21 @@ export function bindingifyTransform(
 
 export function bindingifyLoad(
   plugin: Plugin,
-  options: NormalizedInputOptions,
+  normalized_options: NormalizedInputOptions,
   pluginContextData: PluginContextData,
 ): PluginHookWithBindingExt<BindingPluginOptions['load']> {
   const hook = plugin.load
   if (!hook) {
     return {}
   }
-  const { handler, meta } = normalizeHook(hook)
+  const { handler, meta , options} = normalizeHook(hook)
 
+  // @ts-ignore
+  console.log(`options.filter: `, options.filter)
   return {
     plugin: async (ctx, id) => {
       const ret = await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(normalized_options, ctx, plugin, pluginContextData),
         id,
       )
 
@@ -301,6 +303,8 @@ export function bindingifyLoad(
       return result
     },
     meta: bindingifyPluginHookMeta(meta),
+    // @ts-ignore
+    filter: bindingifyLoadFilter(options.filter)
   }
 }
 

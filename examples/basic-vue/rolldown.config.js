@@ -20,14 +20,15 @@ export default defineConfig({
         // },
         handler() {},
       },
-      resolveId: {
+      load: {
         handler(id) {
           console.log(`id: `, id)
           return null
         },
         filter: {
           id: {
-            exclude: [ "dir/**/*.css"],
+            include: ['dir/**/*.res'],
+            exclude: [ "dir/**/*.cs"],
           },
         },
       },

@@ -1,5 +1,5 @@
 import { BindingGeneralHookFilter, BindingTransformHookFilter } from "../binding.d";
-import { hookFilterExtension } from ".";
+import { hookFilterExtension, ModuleType } from ".";
 import { normalizedStringOrRegex } from "../options/utils";
 
 export function bindingifyResolveIdFilter(
@@ -48,7 +48,60 @@ export function bindingifyLoadFilter(
   let ret = {
     include,exclude
   }
-  console.log(`ret: `, ret)
   return ret;
+}
+
+
+export function bindingifyTransformFilter(
+  filterOption?: hookFilterExtension<'transform'>['filter'],
+):BindingTransformHookFilter | undefined {
+  if (!filterOption) {
+    return undefined;
+  }
+  const {id, moduleType, code}= filterOption;
+  let idRet;
+  let moduleTypeRet: ModuleType[] | undefined;
+  let codeRet;
+  if (id) {
+    let include;
+    let exclude;
+    if (id.include) {
+      include = normalizedStringOrRegex(id.include)
+    }
+    if (id.exclude) {
+      exclude = normalizedStringOrRegex(id.exclude)
+    }
+    idRet = {
+      include,
+      exclude
+    }
+  }
+  if (code) {
+    let include;
+    let exclude;
+    if (code.include) {
+      include = normalizedStringOrRegex(code.include)
+    }
+    if (code.exclude) {
+      exclude = normalizedStringOrRegex(code.exclude)
+    }
+    codeRet = {
+      include,
+      exclude
+    }
+  }
+  if (moduleType) {
+    if (Array.isArray(moduleType)) {
+      moduleTypeRet = moduleType;
+    } else {
+      moduleTypeRet = moduleType.include;
+    }
+  }
+
+  return {
+    id: idRet,
+    moduleType: moduleTypeRet,
+    code: codeRet
+  };
 }
 

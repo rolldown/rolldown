@@ -13,23 +13,21 @@ export default defineConfig({
     {
       name: 'test',
       transform: {
-        // filter: {
-        //   code: {
-        //     include: ['test']
-        //   },
-        // },
-        handler() {},
-      },
-      load: {
-        handler(id) {
+        filter: {
+          // code: {
+          //   include: ['test']
+          // },
+          // moduleType: ['js']
+        },
+        handler(code, id) {
           console.log(`id: `, id)
           return null
         },
-        filter: {
-          id: {
-            include: ['dir/**/*.res'],
-            exclude: [ "dir/**/*.cs"],
-          },
+      },
+      load: {
+        handler(id) {
+          // console.log(`id: `, id)
+          return null
         },
       },
       banner: {

@@ -1,5 +1,6 @@
 use crate::js_regex::HybridRegex;
 use glob_match::glob_match;
+use regex::Match;
 
 #[derive(Debug)]
 pub enum StringOrRegex {
@@ -20,14 +21,16 @@ impl StringOrRegex {
 
 /// `id` is the raw path of file used for `regex` testing
 /// `stable_id` is the relative path for cwd , used for `glob` testing
-/// return `true` if the `id` or `stable_id` should included
-/// return `false`
+/// Using `FilterResult` rather than `bool` for complicated secenario, e.g.
+/// If you have only one filter, just use `FilterResult#inner` to determine if the `id` is matched,
+/// for multiple filters, you should use `FilterResult` to determine if the `id` is matched.
+/// See doc of [FilterResult]
 pub fn filter(
   exclude: Option<&[StringOrRegex]>,
   include: Option<&[StringOrRegex]>,
   id: &str,
   stable_id: &str,
-) -> bool {
+) -> FilterResult {
   if let Some(exclude) = exclude {
     for pattern in exclude {
       let v = match pattern {
@@ -35,7 +38,7 @@ pub fn filter(
         StringOrRegex::Regex(re) => re.matches(id),
       };
       if v {
-        return false;
+        return FilterResult::Match(false);
       }
     }
   }
@@ -46,14 +49,69 @@ pub fn filter(
         StringOrRegex::Regex(re) => re.matches(id),
       };
       if v {
-        return true;
+        return FilterResult::Match(true);
       }
     }
   }
   // If the path is neither matched the exclude nor include,
   // it should only considered should be included if the include pattern is empty
   match include {
-    None => true,
-    Some(ref include) => include.is_empty(),
+    None => FilterResult::NoneMatch(true),
+    Some(ref include) => FilterResult::NoneMatch(include.is_empty()),
+  }
+}
+
+pub enum FilterResult {
+  /// `Match(true)` means it is matched by `included`,
+  /// `Match(false)` means it is matched by `excluded`
+  Match(bool),
+  /// `NoneMatch(true)` means it is neither matched by `excluded` nor `included`, and the `include` is empty
+  /// `NoneMatch(false)` means it is neither matched by `excluded` nor `included`, and the `include` is not empty
+  /// You should determine according to the context.
+  NoneMatch(bool),
+}
+
+impl FilterResult {
+  pub fn inner(&self) -> bool {
+    match self {
+      FilterResult::Match(v) => *v,
+      FilterResult::NoneMatch(v) => *v,
+    }
+  }
+}
+
+/// Same as above but for `code`
+pub fn filter_code(
+  exclude: Option<&[StringOrRegex]>,
+  include: Option<&[StringOrRegex]>,
+  code: &str,
+) -> FilterResult {
+  if let Some(exclude) = exclude {
+    for pattern in exclude {
+      let v = match pattern {
+        StringOrRegex::String(pattern) => code.contains(pattern),
+        StringOrRegex::Regex(re) => re.matches(code),
+      };
+      if v {
+        return FilterResult::Match(false);
+      }
+    }
+  }
+  if let Some(include) = include {
+    for pattern in include {
+      let v = match pattern {
+        StringOrRegex::String(pattern) => code.contains(pattern),
+        StringOrRegex::Regex(re) => re.matches(code),
+      };
+      if v {
+        return FilterResult::Match(true);
+      }
+    }
+  }
+  // If the path is neither matched the exclude nor include,
+  // it should only considered should be included if the include pattern is empty
+  match include {
+    None => FilterResult::NoneMatch(true),
+    Some(ref include) => FilterResult::NoneMatch(include.is_empty()),
   }
 }

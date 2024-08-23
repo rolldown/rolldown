@@ -22,7 +22,7 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
-import { bindingifyLoadFilter, bindingifyResolveIdFilter } from './bindingify-hook-filter'
+import { bindingifyLoadFilter, bindingifyResolveIdFilter, bindingifyTransformFilter } from './bindingify-hook-filter'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -196,7 +196,6 @@ export function bindingifyTransform(
   }
   const { handler, meta, options } = normalizeHook(hook)
 
-  console.log(`options: `, options)
   return {
     plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
@@ -235,6 +234,8 @@ export function bindingifyTransform(
       }
     },
     meta: bindingifyPluginHookMeta(meta),
+    // @ts-ignore
+    filter: bindingifyTransformFilter(options.filter),
   }
 }
 

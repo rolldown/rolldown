@@ -10,7 +10,7 @@ use serde::Deserialize;
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleType {
   Js,
   Jsx,

@@ -3,8 +3,9 @@ use std::sync::Arc;
 use crate::{
   pluginable::HookTransformAstReturn,
   types::{
-    hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
-    plugin_idx::PluginIdx,
+    hook_resolve_id_skipped::HookResolveIdSkipped,
+    hook_transform_ast_args::HookTransformAstArgs,
+    plugin_idx::{self, PluginIdx},
   },
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
@@ -14,7 +15,7 @@ use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
-use super::hook_filter::{filter_load, filter_resolve_id};
+use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
@@ -169,7 +170,13 @@ impl PluginDriver {
     module_type: &mut ModuleType,
   ) -> Result<String> {
     let mut code = args.code.to_string();
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
+    {
+      let filter_option = &self.index_plugin_filters[plugin_idx];
+      if !filter_transform(filter_option, args.id, ctx.cwd(), module_type, &code) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(ctx.clone(), sourcemap_chain, original_code, args.id),

@@ -42,7 +42,6 @@ export function bindingifyPlugin(
     options,
     pluginContextData,
   )
-  console.log(`resolveIdFilter: `, resolveIdFilter)
 
   const { plugin: resolveDynamicImport, meta: resolveDynamicImportMeta } =
     bindingifyResolveDynamicImport(plugin, options, pluginContextData)
@@ -53,7 +52,7 @@ export function bindingifyPlugin(
     pluginContextData,
   )
 
-  const { plugin: transform, meta: transformMeta } = bindingifyTransform(
+  const { plugin: transform, meta: transformMeta, filter: transformFilter } = bindingifyTransform(
     plugin,
     options,
     pluginContextData,
@@ -121,6 +120,7 @@ export function bindingifyPlugin(
     buildEndMeta,
     transform,
     transformMeta,
+    transformFilter,
     moduleParsed,
     moduleParsedMeta,
     load,

@@ -18,8 +18,8 @@ workspace = true
 [dependencies]
 anyhow      = { workspace = true }
 base64-simd = { workspace = true }
+fast-glob   = { workspace = true }
 futures     = { workspace = true }
-glob-match  = { workspace = true }
 indexmap    = { workspace = true, features = ["serde"] }
 infer       = { workspace = true }
 memchr      = { workspace = true }

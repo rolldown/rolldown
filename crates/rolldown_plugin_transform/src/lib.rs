@@ -112,10 +112,10 @@ impl TransformPlugin {
     let normalized_id = normalized_path.to_string_lossy();
     let cleaned_id = rolldown_utils::path_ext::clean_url(&normalized_id);
     if cleaned_id == normalized_id {
-      pattern_filter::filter(&self.exclude, &self.include, id, &normalized_id)
+      pattern_filter::filter(Some(&self.exclude), Some(&self.include), id, &normalized_id)
     } else {
-      pattern_filter::filter(&self.exclude, &self.include, id, &normalized_id)
-        && pattern_filter::filter(&self.exclude, &self.include, id, cleaned_id)
+      pattern_filter::filter(Some(&self.exclude), Some(&self.include), id, &normalized_id)
+        && pattern_filter::filter(Some(&self.exclude), Some(&self.include), id, cleaned_id)
     }
   }
 }

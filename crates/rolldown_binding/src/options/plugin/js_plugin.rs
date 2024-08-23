@@ -2,7 +2,6 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use anyhow::anyhow;
 use rolldown_plugin::{
   Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, ResolvedIdHookFilter,
   TransformHookFilter,
@@ -408,7 +407,6 @@ impl Plugin for JsPlugin {
   fn get_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
     match self.inner.resolve_id_filter {
       Some(ref item) => {
-        dbg!(&item);
         let filter = ResolvedIdHookFilter::try_from(item.clone())?;
         Ok(Some(filter))
       }

@@ -21,11 +21,13 @@ export default defineConfig({
         handler() {},
       },
       resolveId: {
-        handler() {},
+        handler(id) {
+          console.log(`id: `, id)
+          return null
+        },
         filter: {
           id: {
-            include: ['test'],
-            exclude: ['test', /test/],
+            exclude: [ "dir/**/*.css"],
           },
         },
       },

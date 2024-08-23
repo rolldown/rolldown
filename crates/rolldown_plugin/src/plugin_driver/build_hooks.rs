@@ -14,6 +14,8 @@ use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
+use super::hook_filter::filter_resolve_id;
+
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self) -> HookNoopReturn {
@@ -82,8 +84,10 @@ impl PluginDriver {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
-      let ret = &self.index_plugin_filters[plugin_idx];
-      dbg!(&ret);
+      let filter_option = &self.index_plugin_filters[plugin_idx];
+      if filter_resolve_id(filter_option, args.specifier, ctx.cwd()) == Some(false) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_resolve_id(
           &skipped_resolve_calls.map_or_else(

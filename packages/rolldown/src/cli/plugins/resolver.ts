@@ -62,7 +62,7 @@ async function loadAndRegisterCustomizedPlugin(
         else if (/^[A-Za-z]:\\/.test(text)) {
           text = pathToFileURL(resolve(text)).href
         }
-        plugin = await import(text)
+        plugin = await requireOrImport(text)
       } catch (error: any) {
         throw new Error(`Cannot load plugin "${text}": ${error.message}.`)
       }

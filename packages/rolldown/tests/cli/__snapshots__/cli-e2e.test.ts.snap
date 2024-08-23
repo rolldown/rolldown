@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`\`-p\` options > should handle file plugin 1`] = `
+"import { default as a } from "hello";
+import { default as assert } from "node:assert";
+
+//#region index.js
+assert(a.hello === "world");
+
+//#endregion"
+`;
+
 exports[`basic arguments > should render help message for empty args 1`] = `
 "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.13.2)
 
@@ -15,6 +25,7 @@ OPTIONS
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
+  --plugins -p, <plugins>     List of plugins.
   --platform -p, <platform>   Platform for which the code should be generated (node, browser, neutral).
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
   --version -v,               Show version number.
@@ -110,6 +121,7 @@ OPTIONS
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
+  --plugins -p, <plugins>     List of plugins.
   --platform -p, <platform>   Platform for which the code should be generated (node, browser, neutral).
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
   --version -v,               Show version number.

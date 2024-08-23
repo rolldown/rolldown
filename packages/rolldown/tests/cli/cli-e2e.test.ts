@@ -81,6 +81,15 @@ describe('cli options for bundling', () => {
   })
 })
 
+describe('`-p` options', () => {
+  it('should handle file plugin', async () => {
+    const cwd = cliFixturesDir('plugin-file')
+    const status = await $({ cwd })`rolldown index.js -p ./plugin.js`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+})
+
 describe('config', () => {
   describe('no package.json', () => {
     it('should bundle in ext-js-syntax-cjs', async () => {

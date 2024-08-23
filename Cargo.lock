@@ -665,6 +665,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast-glob"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb10ed0f8a3dca52477be37ac0fb8f9d1fd4cd8d311b4484bdd45c1c56e0c9ec"
+
+[[package]]
 name = "filetime"
 version = "0.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -835,12 +841,6 @@ name = "glob"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
-
-[[package]]
-name = "glob-match"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9985c9503b412198aa4197559e9a318524ebc4519c229bfa05a535828c950b9d"
 
 [[package]]
 name = "half"
@@ -2226,7 +2226,7 @@ dependencies = [
  "arcstr",
  "bitflags 2.6.0",
  "dashmap 6.0.1",
- "glob-match",
+ "fast-glob",
  "lightningcss",
  "oxc",
  "rolldown_fs",
@@ -2496,8 +2496,8 @@ dependencies = [
  "anyhow",
  "async-scoped",
  "base64-simd 0.8.0",
+ "fast-glob",
  "futures",
- "glob-match",
  "indexmap",
  "infer",
  "memchr",

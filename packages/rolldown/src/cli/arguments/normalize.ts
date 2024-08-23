@@ -34,10 +34,10 @@ export interface NormalizedCliOptions {
   version: boolean
 }
 
-export function normalizeCliOptions(
+export async function normalizeCliOptions(
   cliOptions: CliOptions,
   positionals: string[],
-): NormalizedCliOptions {
+): Promise<NormalizedCliOptions> {
   const parsed = cliOptionsSchema.safeParse(cliOptions)
   const options = parsed.data ?? {}
   if (!parsed.success) {
@@ -65,15 +65,8 @@ export function normalizeCliOptions(
     const keys = key.split('.')
     const [primary] = keys
     if (primary === 'plugins') {
-      if (Array.isArray(value)) {
-        normalizePlugins(value).then((plugins) => {
-          result.input.plugins = plugins
-        })
-      } else {
-        normalizePlugins([value as string]).then((plugins) => {
-          result.input.plugins = plugins
-        })
-      }
+      const plugins = await normalizePlugins(value as string[])
+      result.input.plugins = plugins
     } else if (keysOfInput.includes(primary)) {
       setNestedProperty(result.input, key, value)
     } else if (keysOfOutput.includes(primary)) {

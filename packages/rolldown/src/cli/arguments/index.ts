@@ -49,7 +49,7 @@ export const options = Object.fromEntries(
 
 export type ParseArgsOptions = typeof options
 
-export function parseCliArguments() {
+export async function parseCliArguments() {
   const { values, tokens, positionals } = parseArgs({
     options,
     tokens: true,
@@ -142,5 +142,5 @@ export function parseCliArguments() {
       }
     })
 
-  return normalizeCliOptions(values, positionals as string[])
+  return await normalizeCliOptions(values, positionals as string[])
 }

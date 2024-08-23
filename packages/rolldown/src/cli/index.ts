@@ -6,7 +6,7 @@ import { showHelp } from './commands/help'
 import { version } from '../../package.json'
 
 async function main() {
-  const cliOptions = parseCliArguments()
+  const cliOptions = await parseCliArguments()
 
   if (cliOptions.config) {
     await bundleWithConfig(cliOptions.config, cliOptions)

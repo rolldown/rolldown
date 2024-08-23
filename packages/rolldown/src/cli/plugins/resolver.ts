@@ -54,13 +54,15 @@ async function loadAndRegisterCustomizedPlugin(
     }
     if (!plugin) {
       try {
-        if (text[0] == '.') text = resolve(text)
+        if (text[0] == '.') {
+          text = resolve(text)
+        }
         // Windows absolute paths must be specified as file:// protocol URL
         // Note that we do not have coverage for Windows-only code paths
         else if (/^[A-Za-z]:\\/.test(text)) {
           text = pathToFileURL(resolve(text)).href
         }
-        plugin = await requireOrImport(text)
+        plugin = await import(text)
       } catch (error: any) {
         throw new Error(`Cannot load plugin "${text}": ${error.message}.`)
       }

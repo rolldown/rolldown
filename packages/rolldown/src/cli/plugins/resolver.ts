@@ -6,13 +6,13 @@ import * as builtinPlugins from '../../plugin/builtin-plugin'
 import { resolve } from 'node:path'
 
 export async function resolveCommandPlugin(
-  plugin: string
+  plugin: string,
 ): Promise<RolldownPlugin> {
   const builtinResolved = await resolveAsBuiltinPlugin(plugin)
   if (builtinResolved) {
     return builtinResolved
   }
-  return await loadAndRegisterCustomizedPlugin(plugin);
+  return await loadAndRegisterCustomizedPlugin(plugin)
 }
 
 async function loadAndRegisterCustomizedPlugin(
@@ -31,12 +31,19 @@ async function loadAndRegisterCustomizedPlugin(
       text = match[1]
       pluginArgument = new Function('return ' + match[3])()
     } else {
-      throw new Error(`Invalid --plugin argument format: ${JSON.stringify(text)}`)
+      throw new Error(
+        `Invalid --plugin argument format: ${JSON.stringify(text)}`,
+      )
     }
     if (!/^\.|^(rollup|rolldown)-plugin-|[/@\\]/.test(text)) {
       // Try using plugin prefix variations first if applicable.
       // Prefix order is significant - left has higher precedence.
-      for (const prefix of ['@rollup/plugin-', 'rollup-plugin-', '@rolldown/plugin-', 'rolldown-plugin-']) {
+      for (const prefix of [
+        '@rollup/plugin-',
+        'rollup-plugin-',
+        '@rolldown/plugin-',
+        'rolldown-plugin-',
+      ]) {
         try {
           plugin = await requireOrImport(prefix + text)
           break
@@ -48,7 +55,7 @@ async function loadAndRegisterCustomizedPlugin(
     if (!plugin) {
       try {
         if (text[0] == '.') text = resolve(text)
-          // Windows absolute paths must be specified as file:// protocol URL
+        // Windows absolute paths must be specified as file:// protocol URL
         // Note that we do not have coverage for Windows-only code paths
         else if (/^[A-Za-z]:\\/.test(text)) {
           text = pathToFileURL(resolve(text)).href
@@ -71,7 +78,9 @@ async function loadAndRegisterCustomizedPlugin(
       )}" for Rolldown to recognize it.`,
     )
   }
-  return typeof plugin === 'function' ? plugin.call(plugin, pluginArgument) : plugin
+  return typeof plugin === 'function'
+    ? plugin.call(plugin, pluginArgument)
+    : plugin
 }
 
 export async function resolveAsBuiltinPlugin(

@@ -16,7 +16,9 @@ import { setNestedProperty } from './utils'
 import { resolveCommandPlugin } from '../plugins/resolver'
 import type { RolldownPlugin } from '../../plugin'
 
-async function normalizePlugins(plugins: string[]): Promise<Array<RolldownPlugin>> {
+async function normalizePlugins(
+  plugins: string[],
+): Promise<Array<RolldownPlugin>> {
   const pipeline = plugins.map((plugin) => {
     return resolveCommandPlugin(plugin)
   })
@@ -62,7 +64,7 @@ export function normalizeCliOptions(
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.')
     const [primary] = keys
-    if (primary === 'plugin') {
+    if (primary === 'plugins') {
       if (Array.isArray(value)) {
         normalizePlugins(value).then((plugins) => {
           result.input.plugins = plugins

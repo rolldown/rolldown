@@ -88,6 +88,7 @@ export class PluginDriver {
 }
 
 export function getObjectPlugins(plugins: RolldownPluginRec[]): Plugin[] {
+  console.log(plugins)
   return plugins.filter((plugin) => {
     if ('_parallel' in plugin) {
       return undefined

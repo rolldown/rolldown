@@ -20,6 +20,7 @@ export interface EmittedAsset {
   type: 'asset'
   name?: string
   fileName?: string
+  originalFileName?: string | null
   source: AssetSource
 }
 
@@ -113,6 +114,7 @@ export class PluginContext {
       }
       return context.emitFile({
         ...file,
+        originalFileName: file.originalFileName || undefined,
         source: bindingAssetSource(file.source),
       })
     }

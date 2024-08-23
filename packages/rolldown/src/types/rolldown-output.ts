@@ -10,6 +10,7 @@ import type { RenderedModule } from './rendered-module'
 export interface RolldownOutputAsset {
   type: 'asset'
   fileName: string
+  originalFileName: string | null
   source: AssetSource
   name: string | undefined
 }

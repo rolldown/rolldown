@@ -104,9 +104,9 @@ impl<'ast> AstSnippet<'ast> {
   pub fn call_expr(&self, name: PassedStr) -> ast::CallExpression<'ast> {
     self.builder.call_expression(
       SPAN,
-      self.builder.vec(),
       self.builder.expression_identifier_reference(SPAN, name),
       None::<TSTypeParameterInstantiation>,
+      self.builder.vec(),
       false,
     )
   }
@@ -115,9 +115,9 @@ impl<'ast> AstSnippet<'ast> {
   pub fn call_expr_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
-      self.builder.vec(),
       self.builder.expression_identifier_reference(SPAN, name),
       None::<TSTypeParameterInstantiation>,
+      self.builder.vec(),
       false,
     )
   }
@@ -166,12 +166,12 @@ impl<'ast> AstSnippet<'ast> {
   ) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
+      self.builder.expression_identifier_reference(SPAN, name),
+      None::<TSTypeParameterInstantiation>,
       self.builder.vec_from_iter([
         self.builder.argument_expression(arg1),
         self.builder.argument_expression(arg2),
       ]),
-      self.builder.expression_identifier_reference(SPAN, name),
-      None::<TSTypeParameterInstantiation>,
       false,
     )
   }
@@ -592,7 +592,6 @@ impl<'ast> AstSnippet<'ast> {
         SPAN,
         ast::Expression::CallExpression(self.builder.alloc_call_expression(
           SPAN,
-          self.builder.vec(),
           ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
             SPAN,
             self.id_ref_expr("Promise", SPAN),
@@ -600,6 +599,7 @@ impl<'ast> AstSnippet<'ast> {
             false,
           )),
           None::<TSTypeParameterInstantiation>,
+          self.builder.vec(),
           false,
         )),
         self.id_name("then", SPAN),
@@ -607,9 +607,9 @@ impl<'ast> AstSnippet<'ast> {
       ));
     ast::Expression::CallExpression(self.builder.alloc_call_expression(
       span,
-      arguments,
       callee,
       None::<TSTypeParameterInstantiation>,
+      arguments,
       false,
     ))
   }

@@ -110,6 +110,7 @@ impl Plugin for ManifestPlugin {
     ctx.emit_file(EmittedAsset {
       file_name: Some(self.config.out_path.clone()),
       name: None,
+      original_file_name: None,
       source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
     });
     // }

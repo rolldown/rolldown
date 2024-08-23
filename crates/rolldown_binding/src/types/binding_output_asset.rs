@@ -19,6 +19,11 @@ impl BindingOutputAsset {
   }
 
   #[napi(getter)]
+  pub fn original_file_name(&self) -> Option<String> {
+    self.inner.original_file_name.clone()
+  }
+
+  #[napi(getter)]
   pub fn source(&self) -> BindingAssetSource {
     self.inner.source.clone().into()
   }

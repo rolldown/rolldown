@@ -1,6 +1,9 @@
-use oxc::codegen::{CodeGenerator, CodegenReturn};
-use oxc::span::SourceType;
-use oxc::transformer::{TransformOptions, Transformer};
+use oxc::{
+  codegen::{CodeGenerator, CodegenReturn},
+  semantic::SemanticBuilder,
+  span::SourceType,
+  transformer::{TransformOptions, Transformer},
+};
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 
@@ -64,6 +67,10 @@ impl Plugin for TransformPlugin {
         }
       }
 
+      let (symbols, scopes) = SemanticBuilder::new(fields.source, source_type)
+        .build(fields.program)
+        .semantic
+        .into_symbol_table_and_scope_tree();
       Transformer::new(
         fields.allocator,
         Path::new(args.id),
@@ -72,7 +79,7 @@ impl Plugin for TransformPlugin {
         trivias,
         transformer_options,
       )
-      .build(fields.program)
+      .build_with_symbols_and_scopes(symbols, scopes, fields.program)
     });
     if !ret.errors.is_empty() {
       // TODO: better error handling

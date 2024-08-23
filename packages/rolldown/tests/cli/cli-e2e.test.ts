@@ -89,11 +89,29 @@ describe('`-p` options', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
 
-  it('should handle official rollup plugin', async () => {
+  it('should handle abbr official rollup plugin', async () => {
     const cwd = cliFixturesDir('plugin-package')
     const status = await $({
       cwd,
     })`rolldown index.js -p dsv --module-types .csv=js`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
+  it('should handle official rollup plugin', async () => {
+    const cwd = cliFixturesDir('plugin-package')
+    const status = await $({
+      cwd,
+    })`rolldown index.js -p @rollup/plugin-dsv --module-types .csv=js`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
+  it('should handle direct function', async () => {
+    const cwd = cliFixturesDir('plugin-direct')
+    const status = await $({
+      cwd,
+    })`rolldown index.js -p {resolveId(id){if(id==='hello')return\ {id,external:false,moduleSideEffects:false}},load(id){if(id==='hello')return\ 'export\ default\ {\ hello:\ \\'world\\'\ };'}}`
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })

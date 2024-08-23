@@ -1,5 +1,40 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`\`-p\` options > should handle abbr official rollup plugin 1`] = `
+"import { default as assert } from "node:assert";
+
+//#region test.csv
+var test_default = [{
+	k: "a",
+	v: "1"
+}, {
+	k: "b",
+	v: "2"
+}, {
+	k: "c",
+	v: "3"
+}];
+
+//#endregion
+//#region index.js
+assert(Array.isArray(test_default));
+
+//#endregion"
+`;
+
+exports[`\`-p\` options > should handle direct function 1`] = `
+"import { default as assert } from "node:assert";
+
+//#region hello
+var hello_default = { hello: "world" };
+
+//#endregion
+//#region index.js
+assert(hello_default.hello === "world");
+
+//#endregion"
+`;
+
 exports[`\`-p\` options > should handle file plugin 1`] = `
 "import { default as assert } from "node:assert";
 

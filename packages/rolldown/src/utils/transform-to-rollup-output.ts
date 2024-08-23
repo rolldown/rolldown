@@ -68,6 +68,7 @@ function transformToRollupOutputAsset(
   return {
     type: 'asset',
     fileName: asset.fileName,
+    originalFileName: asset.originalFileName || null,
     get source(): AssetSource {
       return transformAssetSource(asset.source)
     },

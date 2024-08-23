@@ -41,6 +41,7 @@ impl Plugin for WasmHelperPlugin {
       let file_path = Path::new(&id);
       let reference_id = ctx.emit_file(EmittedAsset {
         name: file_path.file_name().map(|x| x.to_string_lossy().to_string()),
+        original_file_name: None,
         source: AssetSource::Buffer(fs::read(file_path)?),
         file_name: None,
       });

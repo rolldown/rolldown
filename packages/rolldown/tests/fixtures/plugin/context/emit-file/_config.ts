@@ -7,6 +7,8 @@ import path from 'node:path'
 
 let referenceId: string
 
+const ORIGINAL_FILE_NAME = 'original.txt'
+
 export default defineTest({
   config: {
     output: {
@@ -21,6 +23,7 @@ export default defineTest({
             type: 'asset',
             name: '+emitted.txt',
             source: 'emitted',
+            originalFileName: ORIGINAL_FILE_NAME,
           })
         },
         generateBundle() {
@@ -45,6 +48,7 @@ export default defineTest({
           expect(asset.fileName).toMatchInlineSnapshot(
             `"_emitted-umwR9Fta.txt"`,
           )
+          expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME)
           break
 
         case 'icon.png':

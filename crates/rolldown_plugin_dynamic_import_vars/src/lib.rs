@@ -114,6 +114,10 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
     let segments = pattern.split('/').count();
     self.ast_builder.expression_call(
       span,
+      self
+        .ast_builder
+        .expression_identifier_reference(SPAN, "__variableDynamicImportRuntimeHelper"),
+      None::<TSTypeParameterInstantiation>,
       {
         let mut items = self.ast_builder.vec();
         items.push(self.ast_builder.argument_expression(
@@ -121,6 +125,17 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
             SPAN,
             self.ast_builder.expression_call(
               SPAN,
+              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
+                SPAN,
+                self.ast_builder.expression_meta_property(
+                  SPAN,
+                  self.ast_builder.identifier_name(SPAN, "import"),
+                  self.ast_builder.identifier_name(SPAN, "meta"),
+                ),
+                self.ast_builder.identifier_name(SPAN, "glob"),
+                false,
+              )),
+              None::<TSTypeParameterInstantiation>,
               {
                 let mut arguments =
                   self.ast_builder.vec1(self.ast_builder.argument_expression(
@@ -163,17 +178,6 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                 }
                 arguments
               },
-              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
-                SPAN,
-                self.ast_builder.expression_meta_property(
-                  SPAN,
-                  self.ast_builder.identifier_name(SPAN, "import"),
-                  self.ast_builder.identifier_name(SPAN, "meta"),
-                ),
-                self.ast_builder.identifier_name(SPAN, "glob"),
-                false,
-              )),
-              None::<TSTypeParameterInstantiation>,
               false,
             ),
           ),
@@ -189,10 +193,6 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
         ));
         items
       },
-      self
-        .ast_builder
-        .expression_identifier_reference(SPAN, "__variableDynamicImportRuntimeHelper"),
-      None::<TSTypeParameterInstantiation>,
       false,
     )
   }

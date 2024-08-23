@@ -149,9 +149,9 @@ impl<'name> Renamer<'name> {
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
-      let child_scopes = module.scope.get_child_ids(scope_id).cloned().unwrap_or_default();
-      child_scopes.into_iter().for_each(|scope_id| {
-        rename_symbols_of_nested_scopes(module, scope_id, stack, canonical_names);
+      let child_scopes = module.scope.get_child_ids(scope_id);
+      child_scopes.iter().for_each(|scope_id| {
+        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names);
       });
       stack.pop();
     }
@@ -159,8 +159,7 @@ impl<'name> Renamer<'name> {
     let copied_scope_iter =
       modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_ecma()).flat_map(
         |module| {
-          let child_scopes: &[ScopeId] =
-            module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
+          let child_scopes: &[ScopeId] = module.scope.get_child_ids(module.scope.root_scope_id());
 
           child_scopes.into_par_iter().map(|child_scope_id| {
             let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];

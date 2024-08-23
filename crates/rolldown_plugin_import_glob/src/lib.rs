@@ -313,6 +313,13 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           if import != "*" {
             import_expression = self.ast_builder.expression_call(
               SPAN,
+              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
+                SPAN,
+                import_expression,
+                self.ast_builder.identifier_name(SPAN, "then"),
+                false,
+              )),
+              None::<TSTypeParameterInstantiation>,
               self.ast_builder.vec1(
                 self
                   .ast_builder
@@ -357,13 +364,6 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                   )
                   .into(),
               ),
-              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
-                SPAN,
-                import_expression,
-                self.ast_builder.identifier_name(SPAN, "then"),
-                false,
-              )),
-              None::<TSTypeParameterInstantiation>,
               false,
             );
           }

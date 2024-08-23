@@ -3,7 +3,6 @@ use std::cell::Cell;
 use oxc::{
   allocator::{Allocator, Box},
   ast::ast,
-  semantic::ReferenceFlag,
   span::{Atom, SourceType, SPAN},
 };
 
@@ -133,12 +132,7 @@ impl<'ast> TakeIn<'ast> for ast::StaticMemberExpression<'ast> {
 
 impl<'ast> TakeIn<'ast> for ast::IdentifierReference<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self {
-      span: TakeIn::dummy(alloc),
-      name: TakeIn::dummy(alloc),
-      reference_id: Cell::default(),
-      reference_flag: ReferenceFlag::default(),
-    }
+    Self { span: TakeIn::dummy(alloc), name: TakeIn::dummy(alloc), reference_id: Cell::default() }
   }
 }
 

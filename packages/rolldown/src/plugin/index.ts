@@ -1,6 +1,5 @@
 import type {
   BindingHookResolveIdExtraArgs,
-  BindingStringOrRegex,
   BindingTransformHookExtraArgs,
   RenderedChunk,
 } from '../binding'
@@ -279,8 +278,6 @@ export type PluginHooks = {
     // K extends ParallelPluginHooks ? { sequential?: boolean } : {}
   >
 }
-type A = PluginHooks['transform']
-let a: A = (id) => {};
 
 export type AddonHookFunction = (
   this: PluginContext,

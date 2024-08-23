@@ -1,7 +1,5 @@
 use rolldown::ModuleType;
-use rolldown_plugin::{
-  GeneralHookFilter, LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter,
-};
+use rolldown_plugin::{GeneralHookFilter, ResolvedIdHookFilter, TransformHookFilter};
 use serde::Deserialize;
 
 use super::binding_js_or_regex::BindingStringOrRegex;

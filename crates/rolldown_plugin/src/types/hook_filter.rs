@@ -1,5 +1,4 @@
 use rolldown_common::ModuleType;
-use rolldown_utils::js_regex::HybridRegex;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[derive(Default, Debug)]

@@ -1,6 +1,5 @@
 use crate::js_regex::HybridRegex;
 use glob_match::glob_match;
-use regex::Match;
 
 #[derive(Debug)]
 pub enum StringOrRegex {
@@ -57,7 +56,7 @@ pub fn filter(
   // it should only considered should be included if the include pattern is empty
   match include {
     None => FilterResult::NoneMatch(true),
-    Some(ref include) => FilterResult::NoneMatch(include.is_empty()),
+    Some(include) => FilterResult::NoneMatch(include.is_empty()),
   }
 }
 
@@ -74,8 +73,7 @@ pub enum FilterResult {
 impl FilterResult {
   pub fn inner(&self) -> bool {
     match self {
-      FilterResult::Match(v) => *v,
-      FilterResult::NoneMatch(v) => *v,
+      FilterResult::Match(v) | FilterResult::NoneMatch(v) => *v,
     }
   }
 }
@@ -112,6 +110,6 @@ pub fn filter_code(
   // it should only considered should be included if the include pattern is empty
   match include {
     None => FilterResult::NoneMatch(true),
-    Some(ref include) => FilterResult::NoneMatch(include.is_empty()),
+    Some(include) => FilterResult::NoneMatch(include.is_empty()),
   }
 }

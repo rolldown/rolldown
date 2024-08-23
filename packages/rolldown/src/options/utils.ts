@@ -1,5 +1,5 @@
 import { BindingStringOrRegex } from "../binding.d";
-import { isRegExp } from "util/types";
+import { isRegExp } from "node:util/types";
 
 export function normalizedStringOrRegex(pattern?: Array<string  | RegExp> | (string | RegExp)): BindingStringOrRegex[] | undefined {
   if (!pattern) {

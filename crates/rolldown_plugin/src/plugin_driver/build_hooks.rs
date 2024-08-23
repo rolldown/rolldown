@@ -3,9 +3,8 @@ use std::sync::Arc;
 use crate::{
   pluginable::HookTransformAstReturn,
   types::{
-    hook_resolve_id_skipped::HookResolveIdSkipped,
-    hook_transform_ast_args::HookTransformAstArgs,
-    plugin_idx::{self, PluginIdx},
+    hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
+    plugin_idx::PluginIdx,
   },
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,

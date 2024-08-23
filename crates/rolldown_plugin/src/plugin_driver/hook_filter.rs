@@ -19,8 +19,8 @@ pub fn filter_resolve_id(options: &HookFilterOptions, id: &str, cwd: &PathBuf) -
   let normalized_id = stabilized_path.to_string_lossy();
   Some(
     pattern_filter::filter(
-      id_filter.exclude.as_ref().map(|item| item.as_slice()),
-      id_filter.include.as_ref().map(|item| item.as_slice()),
+      id_filter.exclude.as_deref(),
+      id_filter.include.as_deref(),
       id,
       &normalized_id,
     )
@@ -36,8 +36,8 @@ pub fn filter_load(options: &HookFilterOptions, id: &str, cwd: &PathBuf) -> Opti
   let normalized_id = stabilized_path.to_string_lossy();
   Some(
     pattern_filter::filter(
-      id_filter.exclude.as_ref().map(|item| item.as_slice()),
-      id_filter.include.as_ref().map(|item| item.as_slice()),
+      id_filter.exclude.as_deref(),
+      id_filter.include.as_deref(),
       id,
       &normalized_id,
     )
@@ -70,8 +70,8 @@ pub fn filter_transform(
     let stabilized_path = Path::new(id).relative(cwd);
     let normalized_id = stabilized_path.to_string_lossy();
     let id_res = pattern_filter::filter(
-      id_filter.exclude.as_ref().map(|item| item.as_slice()),
-      id_filter.include.as_ref().map(|item| item.as_slice()),
+      id_filter.exclude.as_deref(),
+      id_filter.include.as_deref(),
       id,
       &normalized_id,
     );
@@ -84,8 +84,8 @@ pub fn filter_transform(
 
   if let Some(ref code_filter) = transform_hook_filter_options.code {
     let code_res = pattern_filter::filter_code(
-      code_filter.exclude.as_ref().map(|item| item.as_slice()),
-      code_filter.include.as_ref().map(|item| item.as_slice()),
+      code_filter.exclude.as_deref(),
+      code_filter.include.as_deref(),
       code,
     );
     // it matched by `exclude` or `include`, early return

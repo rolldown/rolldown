@@ -88,6 +88,15 @@ describe('`-p` options', () => {
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+
+  it('should handle official rollup plugin', async () => {
+    const cwd = cliFixturesDir('plugin-package')
+    const status = await $({
+      cwd,
+    })`rolldown index.js -p dsv --module-types .csv=js`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
 })
 
 describe('config', () => {

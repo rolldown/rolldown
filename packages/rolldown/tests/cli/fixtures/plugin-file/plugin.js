@@ -4,7 +4,7 @@ module.exports = () => {
     // Resolve `hello` module as `{ hello: 'world' }`.
     resolveId(id) {
       if (id === 'hello') {
-        return { id, external: true, moduleSideEffects: false }
+        return { id, external: false, moduleSideEffects: false }
       }
     },
     load(id) {

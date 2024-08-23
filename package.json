@@ -30,6 +30,7 @@
   "license": "MIT",
   "devDependencies": {
     "@ls-lint/ls-lint": "^2.2.3",
+    "@rollup/plugin-dsv": "^3.0.4",
     "@taplo/cli": "^0.7.0",
     "@types/node": "22.5.2",
     "cjs-module-lexer": "^1.3.1",

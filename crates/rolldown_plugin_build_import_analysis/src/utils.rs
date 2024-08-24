@@ -1,15 +1,23 @@
-use oxc::ast::{ast::*, AstBuilder};
-use oxc::span::SPAN;
+use oxc::{
+  ast::{
+    ast::{
+      Atom, BindingRestElement, Expression, FormalParameterKind, PropertyKind, TSTypeAnnotation,
+      TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
+      VariableDeclarator,
+    },
+    AstBuilder,
+  },
+  span::SPAN,
+};
 
 use crate::IS_MODERN_FLAG;
 
 pub fn construct_snippet_from_await_decl<'a>(
-  ast_builder: &AstBuilder<'a>,
+  ast_builder: AstBuilder<'a>,
   source: Atom<'a>,
-  decls: Vec<Atom<'a>>,
+  decls: &[Atom<'a>],
   decl_kind: VariableDeclarationKind,
 ) -> VariableDeclarator<'a> {
-  dbg!(&source);
   ast_builder.variable_declarator(
     SPAN,
     decl_kind,
@@ -45,9 +53,9 @@ pub fn construct_snippet_from_await_decl<'a>(
 }
 
 fn construct_vite_preload_call<'a>(
-  ast_builder: &AstBuilder<'a>,
+  ast_builder: AstBuilder<'a>,
   decl_kind: VariableDeclarationKind,
-  decls: Vec<Atom<'a>>,
+  decls: &[Atom<'a>],
   source: Atom<'a>,
 ) -> Expression<'a> {
   ast_builder.expression_call(
@@ -143,22 +151,14 @@ fn construct_vite_preload_call<'a>(
   )
 }
 
-/// transform `import('foo').then(({foo})=>{})`
-/// to `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...).then(({foo})=>{})`
+/// 1.transform `import('foo').then(({foo})=>{})`
+///   to `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...).then(({foo})=>{})`
+/// 2.transform `(await import('foo')).foo`
+///   to `__vitePreload(async () => { const {foo} = (await import('foo')); return { foo }},...)).foo`
 pub fn construct_snippet_from_import_then<'a>(
-  ast_builder: &AstBuilder<'a>,
+  ast_builder: AstBuilder<'a>,
   source: Atom<'a>,
-  decls: Vec<Atom<'a>>,
-) -> Expression<'a> {
-  construct_vite_preload_call(ast_builder, VariableDeclarationKind::Const, decls, source)
-}
-
-///transform `(await import('foo')).foo`
-/// to `__vitePreload(async () => { const {foo} = (await import('foo')); return { foo }},...)).foo`
-pub fn construct_snippet_from_parenthesis_epxr<'a>(
-  ast_builder: &AstBuilder<'a>,
-  source: Atom<'a>,
-  decls: Vec<Atom<'a>>,
+  decls: &[Atom<'a>],
 ) -> Expression<'a> {
   construct_vite_preload_call(ast_builder, VariableDeclarationKind::Const, decls, source)
 }

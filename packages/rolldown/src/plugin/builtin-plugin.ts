@@ -14,7 +14,7 @@ import {
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
   BindingJsonPluginConfig,
-BindingBuildImportAnalysisPluginConfig
+  BindingBuildImportAnalysisPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -137,11 +137,11 @@ export function jsonPlugin(config?: BindingJsonPluginConfig) {
   return new JsonPlugin(config)
 }
 
-export function buildImportAnalysisPlugin(config: BindingBuildImportAnalysisPluginConfig) {
+export function buildImportAnalysisPlugin(
+  config: BindingBuildImportAnalysisPluginConfig,
+) {
   return new BuildImportAnalysisPlugin(config)
 }
-
-
 
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,

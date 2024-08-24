@@ -1,36 +1,36 @@
-import { buildImportAnalysisPlugin } from "rolldown/experimental";
-import { defineTest } from "@tests";
+import { buildImportAnalysisPlugin } from 'rolldown/experimental'
+import { defineTest } from '@tests'
 
 export default defineTest({
   skipComposingJsPlugin: true,
-	config: {
-		input: "./main.js",
-		plugins: [
-			{
+  config: {
+    input: './main.js',
+    plugins: [
+      {
         // insert some dummy runtime flag to assert the runtime behavior
-				name: "insert_dummy_flag",
-				transform(code, id) {
+        name: 'insert_dummy_flag',
+        transform(code, id) {
           let runtimeCode = `
 const __VITE_IS_MODERN__ = false;
 
 `
-					return {
-						code: runtimeCode + code,
-					};
-				},
-			},
-			buildImportAnalysisPlugin({
-				preloadCode: `
+          return {
+            code: runtimeCode + code,
+          }
+        },
+      },
+      buildImportAnalysisPlugin({
+        preloadCode: `
 export const __vitePreload = (v) => {
   return v()
 };
 `,
-				insertPreload: true,
-        optimizeModulePreloadRelativePaths: false
-			}),
-		],
-	},
-	async afterTest() {
-		await import("./assert.mjs");
-	},
-});
+        insertPreload: true,
+        optimizeModulePreloadRelativePaths: false,
+      }),
+    ],
+  },
+  async afterTest() {
+    await import('./assert.mjs')
+  },
+})

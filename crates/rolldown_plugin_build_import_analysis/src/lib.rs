@@ -2,13 +2,11 @@ use std::borrow::Cow;
 
 use anyhow::Ok;
 use oxc::ast::ast::{
-  Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ExpressionStatement,
-  ImportOrExportKind, PropertyKey, StaticMemberExpression, TSTypeAnnotation, VariableDeclaration,
-  VariableDeclarationKind,
+  Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ImportOrExportKind,
+  PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
 };
-use oxc::ast::visit::walk::{walk_expression, walk_ts_call_signature_declaration};
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{ast_builder, AstBuilder, VisitMut};
+use oxc::ast::{AstBuilder, VisitMut};
 use oxc::codegen::{self, CodeGenerator, Gen};
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
@@ -75,7 +73,7 @@ impl Plugin for BuildImportAnalysisPlugin {
     }
     let mut ast = args.ast;
     ast.program.with_mut(|fields| {
-      let builder = AstBuilder::new(&fields.allocator);
+      let builder = AstBuilder::new(fields.allocator);
       let mut visitor = BuildImportAnalysisVisitor::new(builder, self.insert_preload);
       visitor.visit_program(fields.program);
     });
@@ -121,8 +119,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
     let property = member_expr.property.name.clone();
 
-    let vite_preload_call =
-      construct_snippet_from_import_then(&self.builder, source, vec![property]);
+    let vite_preload_call = construct_snippet_from_import_then(self.builder, source, &[property]);
     expr.argument = vite_preload_call;
     self.need_prepend_helper = true;
   }
@@ -148,9 +145,8 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     if callee.property.name != "then" {
       return;
     };
-    let arrow_expr = match expr.arguments.as_slice() {
-      [Argument::ArrowFunctionExpression(arrow)] => arrow,
-      _ => return,
+    let [Argument::ArrowFunctionExpression(arrow_expr)] = expr.arguments.as_slice() else {
+      return;
     };
     let Some(first_param) = arrow_expr.params.items.first() else {
       return;
@@ -169,7 +165,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       })
       .collect::<Vec<_>>();
 
-    let vite_preload_call = construct_snippet_from_import_then(&self.builder, source, decls);
+    let vite_preload_call = construct_snippet_from_import_then(self.builder, source, &decls);
     callee.object = vite_preload_call;
     self.need_prepend_helper = true;
   }
@@ -247,7 +243,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           ImportPattern::Decl(source, decls) => {
             self.need_prepend_helper = true;
             let mut declarator =
-              construct_snippet_from_await_decl(&self.builder, source, decls, kind);
+              construct_snippet_from_await_decl(self.builder, source, &decls, kind);
             std::mem::swap(d, &mut declarator);
           }
         }

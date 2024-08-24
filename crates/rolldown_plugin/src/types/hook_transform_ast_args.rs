@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use arcstr::ArcStr;
 use rolldown_ecmascript::EcmaAst;
 
 #[derive(Debug)]

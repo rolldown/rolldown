@@ -14,7 +14,7 @@ doctest = false
 test    = false
 
 [dependencies]
-criterion2         = { version = "0.11.0", default-features = false }
+criterion2         = { version = "1.0.0", default-features = false }
 oxc                = { workspace = true }
 rolldown           = { workspace = true }
 rolldown_sourcemap = { workspace = true }

@@ -1,5 +1,5 @@
 // @ts-nocheck
 import assert from 'node:assert'
-import { a } from './dist/main'
+import { foo } from './dist/main'
 
-assert.strictEqual(a, 100)
+assert.strictEqual(foo, 100)

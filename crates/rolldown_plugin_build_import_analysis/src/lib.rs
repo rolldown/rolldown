@@ -2,12 +2,11 @@ use std::borrow::Cow;
 
 use anyhow::Ok;
 use oxc::ast::ast::{
-  BindingPattern, BindingPatternKind, Expression, ImportOrExportKind, PropertyKey, StaticMemberExpression,
-  TSTypeAnnotation, VariableDeclaration, VariableDeclarationKind,
+  BindingPattern, BindingPatternKind, Expression, ImportOrExportKind, PropertyKey,
+  StaticMemberExpression, TSTypeAnnotation, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{AstBuilder, VisitMut};
-use oxc::codegen::{CodeGenerator, CodegenReturn};
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -21,9 +20,12 @@ mod utils;
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: String,
   pub insert_preload: bool,
+  pub optimize_module_preload_relative_paths: bool,
 }
 
 const PRELOAD_METHOD: &str = "__vitePreload";
+
+pub const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 
 // TODO:replace `\t` with `\0`
 const PRELOAD_HELPER_ID: &str = "\tvite/preload-helper.js";
@@ -68,38 +70,35 @@ impl Plugin for BuildImportAnalysisPlugin {
     _ctx: &PluginContext,
     args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
+    if args.id.contains("node_modules") {
+      return Ok(args.ast);
+    }
     let mut ast = args.ast;
-    let CodegenReturn { source_text, source_map } = CodeGenerator::new().build(ast.program());
-    println!("{:?}", args.cwd);
-    println!("{}", source_text);
     ast.program.with_mut(|fields| {
       let builder = AstBuilder::new(&fields.allocator);
-      let mut visitor = BuildImportAnalysisVisitor::new(&self.preload_code, builder);
+      let mut visitor = BuildImportAnalysisVisitor::new(builder, self.insert_preload);
       visitor.visit_program(fields.program);
     });
-    let CodegenReturn { source_text, source_map } = CodeGenerator::new().build(ast.program());
-    println!("after");
-    println!("{:?}", args.cwd);
-    println!("{}", source_text);
     Ok(ast)
   }
 }
 
-struct BuildImportAnalysisVisitor<'b, 'a: 'b> {
-  preload_code: &'b str,
+struct BuildImportAnalysisVisitor<'a> {
   builder: AstBuilder<'a>,
   need_prepend_helper: bool,
+  insert_preload: bool,
 }
-impl<'b, 'a> BuildImportAnalysisVisitor<'b, 'a> {
-  pub fn new(preload_code: &'b str, builder: AstBuilder<'a>) -> Self {
-    Self { preload_code, builder, need_prepend_helper: false }
+impl<'a> BuildImportAnalysisVisitor<'a> {
+  pub fn new(builder: AstBuilder<'a>, insert_preload: bool) -> Self {
+    Self { builder, need_prepend_helper: false, insert_preload }
   }
 }
 
-impl<'b, 'a> VisitMut<'a> for BuildImportAnalysisVisitor<'b, 'a> {
+impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
     walk_mut::walk_program(self, it);
-    if self.need_prepend_helper {
+    // TODO: passing scope to detect if the helper is inserted before
+    if self.need_prepend_helper && self.insert_preload {
       let helper_stmt = self.builder.statement_module_declaration(
         self.builder.module_declaration_import_declaration(
           SPAN,
@@ -163,6 +162,7 @@ impl<'b, 'a> VisitMut<'a> for BuildImportAnalysisVisitor<'b, 'a> {
       if let Some((pattern, kind)) = declarators_map.remove(&i) {
         match pattern {
           ImportPattern::Decl(source, decls) => {
+            self.need_prepend_helper = true;
             let decl = construct_snippet_from_import_expr(&self.builder, source, decls, kind);
             ret.push(decl);
           }

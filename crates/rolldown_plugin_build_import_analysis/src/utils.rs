@@ -1,6 +1,7 @@
 use oxc::ast::{ast::*, AstBuilder};
 use oxc::span::SPAN;
 
+use crate::IS_MODERN_FLAG;
 
 // pub fn construct_snippet_from_pattern(patter: ImportPattern) -> Statement {}
 
@@ -121,13 +122,9 @@ pub fn construct_snippet_from_import_expr<'a>(
           )));
           items.push(ast_builder.argument_expression(ast_builder.expression_conditional(
             SPAN,
-            ast_builder.expression_boolean_literal(SPAN, true),
+            ast_builder.expression_identifier_reference(SPAN, IS_MODERN_FLAG),
             ast_builder.expression_identifier_reference(SPAN, "__VITE_PRELOAD__"),
-            ast_builder.expression_unary(
-              SPAN,
-              UnaryOperator::Void,
-              ast_builder.expression_numeric_literal(SPAN, 0f64, "0", NumberBase::Decimal),
-            ),
+            ast_builder.void_0(),
           )));
           items
         },

@@ -1,1 +1,1 @@
-export const a = 100
+export const foo = 100

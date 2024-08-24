@@ -134,6 +134,7 @@ pub struct BindingAliasPluginAlias {
 pub struct BindingBuildImportAnalysisPluginConfig {
   pub preload_code: String,
   pub insert_preload: bool,
+  pub optimize_module_preload_relative_paths: bool,
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
@@ -143,6 +144,7 @@ impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlug
     Ok(BuildImportAnalysisPlugin {
       preload_code: value.preload_code,
       insert_preload: value.insert_preload,
+      optimize_module_preload_relative_paths: value.optimize_module_preload_relative_paths,
     })
   }
 }

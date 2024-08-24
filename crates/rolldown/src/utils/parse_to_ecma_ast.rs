@@ -94,8 +94,11 @@ pub fn parse_to_ecma_ast(
     }
   };
 
-  ecma_ast =
-    plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: ecma_ast })?;
+  ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
+    cwd: &options.cwd,
+    ast: ecma_ast,
+    id: stable_id,
+  })?;
 
   pre_process_ecma_ast(
     ecma_ast,

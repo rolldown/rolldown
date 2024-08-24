@@ -118,6 +118,7 @@ export interface BindingAssetSource {
 export interface BindingBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
+  optimizeModulePreloadRelativePaths: boolean
 }
 
 export interface BindingBuiltinPlugin {

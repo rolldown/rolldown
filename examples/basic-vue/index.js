@@ -1,3 +1,4 @@
-import { createApp } from 'vue'
+const {foo} = await import('./lib.js')
 
-export default createApp({})
+export {foo}
+

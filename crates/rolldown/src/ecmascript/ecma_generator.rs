@@ -3,7 +3,7 @@ use crate::{
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
-use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
+use super::format::{app::render_app, cjs::render_cjs, esm::render_esm};
 use crate::ecmascript::format::utils::wrapper::render_wrapper_function;
 use anyhow::Result;
 use rolldown_common::{

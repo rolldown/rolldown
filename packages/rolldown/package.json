@@ -1,11 +1,12 @@
 {
   "name": "rolldown",
+  "type": "commonjs",
   "version": "0.12.2",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rolldown/rolldown.git",
+    "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/rolldown"
   },
   "license": "MIT",
@@ -43,7 +44,8 @@
       "types": "./dist/types/parallel-plugin.d.ts",
       "require": "./dist/cjs/parallel-plugin.cjs",
       "import": "./dist/esm/parallel-plugin.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "imports": {
     "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.mjs"

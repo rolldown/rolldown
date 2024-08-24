@@ -33,10 +33,10 @@ export const __vitePreload = (v) => {
   },
   async afterTest(output) {
     await import('./assert.mjs')
-    output.output.forEach(item => {
+    output.output.forEach((item) => {
       if (item.type === 'chunk') {
-        Object.keys(item.modules).forEach(key => {
-          expect(key).not.contains("vite")
+        Object.keys(item.modules).forEach((key) => {
+          expect(key).not.contains('vite')
         })
       }
     })

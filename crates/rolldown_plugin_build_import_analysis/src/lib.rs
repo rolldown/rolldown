@@ -127,7 +127,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   /// ```js
   /// import('foo').then(({foo})=>{})
   /// ```
-  fn rewrite_from_import_expr(&mut self, expr: &mut CallExpression<'a>) {
+  fn rewrite_import_expr(&mut self, expr: &mut CallExpression<'a>) {
     let Expression::StaticMemberExpression(ref mut callee) = expr.callee else {
       return;
     };
@@ -255,7 +255,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
     walk_mut::walk_expression(self, expr);
     match expr {
       Expression::StaticMemberExpression(expr) => self.rewrite_paren_member_expr(expr),
-      Expression::CallExpression(expr) => self.rewrite_from_import_expr(expr),
+      Expression::CallExpression(expr) => self.rewrite_import_expr(expr),
       _ => {}
     }
   }

@@ -156,7 +156,7 @@ fn construct_vite_preload_call<'a>(
 ///   to `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...).then(({foo})=>{})`
 /// 2.transform `(await import('foo')).foo`
 ///   to `__vitePreload(async () => { const {foo} = (await import('foo')); return { foo }},...)).foo`
-pub fn construct_snippet_from_import_then<'a>(
+pub fn construct_snippet_for_expression<'a>(
   ast_builder: AstBuilder<'a>,
   source: Atom<'a>,
   decls: &[Atom<'a>],

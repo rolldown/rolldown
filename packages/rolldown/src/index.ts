@@ -49,8 +49,10 @@ import { ModuleInfo } from './types/module-info'
 import { MinimalPluginContext } from './log/logger'
 import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
+import { version } from '../package.json'
 
 export { defineConfig, rolldown }
+export const VERSION: string = version
 
 export type {
   RolldownOutputAsset,

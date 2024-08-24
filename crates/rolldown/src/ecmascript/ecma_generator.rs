@@ -3,6 +3,8 @@ use crate::{
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
+use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
+use crate::ecmascript::format::utils::wrapper::render_wrapper_function;
 use anyhow::Result;
 use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
@@ -13,8 +15,6 @@ use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
-
-use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
 
 pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
 
@@ -115,7 +115,8 @@ impl Generator for EcmaGenerator {
       }
       OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer, intro, outro),
       OutputFormat::Iife => {
-        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro) {
+        // Because things are similar in UMD, IIFE, and AMD, so there's no need for a separate function.
+        match render_wrapper_function(ctx, rendered_module_sources, banner, footer, intro, outro) {
           Ok(concat_source) => concat_source,
           Err(errors) => return Ok(Err(errors)),
         }

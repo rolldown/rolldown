@@ -3,7 +3,6 @@ use rolldown_sourcemap::{ConcatSource, RawSource};
 pub mod app;
 pub mod cjs;
 pub mod esm;
-pub mod iife;
 pub mod utils;
 
 pub trait AppendRawString {

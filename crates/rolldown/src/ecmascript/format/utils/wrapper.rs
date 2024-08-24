@@ -20,25 +20,20 @@ use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::ConcatSource;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
-#[derive(Debug)]
-pub struct Addons {
-  pub banner: Option<String>,
-  pub footer: Option<String>,
-  pub intro: Option<String>,
-  pub outro: Option<String>,
-}
-
 /// The main function for rendering the IIFE format chunks.
 /// The factory, e.g. in UMD, it is the factory function. In iife, it is the declaration / assignment.
 /// The caller, e.g. in UMD and AMD, it should end up immediately; in IIFE, it should be passed with invoke arguments.
 pub fn render_wrapper_function(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  addons: Addons,
+  banner: Option<String>,
+  footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  concat_source.append_optional_raw_string(addons.banner);
+  concat_source.append_optional_raw_string(banner);
 
   // iife wrapper start
 
@@ -71,7 +66,7 @@ pub fn render_wrapper_function(
     concat_source.append_raw_string("\"use strict\";".to_string());
   }
 
-  concat_source.append_optional_raw_string(addons.intro);
+  concat_source.append_optional_raw_string(intro);
 
   if named_exports {
     let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
@@ -93,7 +88,7 @@ pub fn render_wrapper_function(
   // iife exports
   concat_source.append_optional_raw_string(render_chunk_exports(ctx, Some(&export_mode)));
 
-  concat_source.append_optional_raw_string(addons.outro);
+  concat_source.append_optional_raw_string(outro);
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
@@ -102,7 +97,7 @@ pub fn render_wrapper_function(
 
   concat_source.append_raw_string(format!("}}){caller};"));
 
-  concat_source.append_optional_raw_string(addons.footer);
+  concat_source.append_optional_raw_string(footer);
 
   Ok(concat_source)
 }

@@ -1,8 +1,6 @@
-use oxc::ast::visit;
 use oxc::ast::{ast::*, AstBuilder};
 use oxc::span::SPAN;
 
-use crate::ImportPattern;
 
 // pub fn construct_snippet_from_pattern(patter: ImportPattern) -> Statement {}
 
@@ -42,6 +40,8 @@ pub fn construct_snippet_from_import_expr<'a>(
       SPAN,
       ast_builder.expression_call(
         SPAN,
+        ast_builder.expression_identifier_reference(SPAN, "__vitePreload"),
+        None::<TSTypeParameterInstantiation>,
         {
           let mut items = ast_builder.vec();
           items.push(ast_builder.argument_expression(ast_builder.expression_arrow_function(
@@ -131,8 +131,6 @@ pub fn construct_snippet_from_import_expr<'a>(
           )));
           items
         },
-        ast_builder.expression_identifier_reference(SPAN, "__vitePreload"),
-        None::<TSTypeParameterInstantiation>,
         false,
       ),
     )),

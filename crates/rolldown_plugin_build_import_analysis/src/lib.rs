@@ -2,13 +2,11 @@ use std::borrow::Cow;
 
 use anyhow::Ok;
 use oxc::ast::ast::{
-  BindingPattern, BindingPatternKind, Expression, ExpressionStatement, ImportOrExportKind,
-  NumberBase, ObjectExpression, ObjectPattern, PropertyKey, Statement, StaticMemberExpression,
-  TSTypeAnnotation, TSTypeParameterDeclaration, VariableDeclaration, VariableDeclarationKind,
+  BindingPattern, BindingPatternKind, Expression, ImportOrExportKind, PropertyKey, StaticMemberExpression,
+  TSTypeAnnotation, VariableDeclaration, VariableDeclarationKind,
 };
-use oxc::ast::visit::walk::walk_program;
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{match_module_declaration, AstBuilder, VisitMut};
+use oxc::ast::{AstBuilder, VisitMut};
 use oxc::codegen::{CodeGenerator, CodegenReturn};
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
@@ -68,7 +66,7 @@ impl Plugin for BuildImportAnalysisPlugin {
   fn transform_ast(
     &self,
     _ctx: &PluginContext,
-    mut args: HookTransformAstArgs,
+    args: HookTransformAstArgs,
   ) -> HookTransformAstReturn {
     let mut ast = args.ast;
     let CodegenReturn { source_text, source_map } = CodeGenerator::new().build(ast.program());

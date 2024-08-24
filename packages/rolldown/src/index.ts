@@ -51,6 +51,7 @@ import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 
 export { defineConfig, rolldown }
+export { version as VERSION } from '../package.json'
 
 export type {
   RolldownOutputAsset,

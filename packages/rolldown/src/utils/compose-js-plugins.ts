@@ -11,7 +11,10 @@ import { TupleToUnion } from 'type-fest'
 import * as R from 'remeda'
 import { PluginHookNames } from '../constants/plugin'
 import { AssertNever } from './type-assert'
-import { PrivatePluginContextResolveOptions } from '../plugin/plugin-context'
+import {
+  PluginContext,
+  PrivatePluginContextResolveOptions,
+} from '../plugin/plugin-context'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import { isPluginHookName } from './plugin'
 
@@ -43,7 +46,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
 
   const names: string[] = []
   const batchedHooks: {
-    [K in SupportedHookNames]?: NonNullable<Plugin[K]>[]
+    [K in SupportedHookNames]?: [NonNullable<Plugin[K]>, Plugin][]
   } = {}
 
   plugins.forEach((plugin, index) => {
@@ -66,7 +69,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const handlers = batchedHooks.buildStart ?? []
           batchedHooks.buildStart = handlers
           if (plugin.buildStart) {
-            handlers.push(plugin.buildStart)
+            handlers.push([plugin.buildStart, plugin])
           }
           break
         }
@@ -74,7 +77,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const handlers = batchedHooks.load ?? []
           batchedHooks.load = handlers
           if (plugin.load) {
-            handlers.push(plugin.load)
+            handlers.push([plugin.load, plugin])
           }
           break
         }
@@ -82,7 +85,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const handlers = batchedHooks.transform ?? []
           batchedHooks.transform = handlers
           if (plugin.transform) {
-            handlers.push(plugin.transform)
+            handlers.push([plugin.transform, plugin])
           }
           break
         }
@@ -90,7 +93,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const handlers = batchedHooks.resolveId ?? []
           batchedHooks.resolveId = handlers
           if (plugin.resolveId) {
-            handlers.push(plugin.resolveId)
+            handlers.push([plugin.resolveId, plugin])
           }
           break
         }
@@ -98,7 +101,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const handlers = batchedHooks.buildEnd ?? []
           batchedHooks.buildEnd = handlers
           if (plugin.buildEnd) {
-            handlers.push(plugin.buildEnd)
+            handlers.push([plugin.buildEnd, plugin])
           }
           break
         }
@@ -106,7 +109,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           const handlers = batchedHooks.renderChunk ?? []
           batchedHooks.renderChunk = handlers
           if (plugin.renderChunk) {
-            handlers.push(plugin.renderChunk)
+            handlers.push([plugin.renderChunk, plugin])
           }
           break
         }
@@ -116,7 +119,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'outro': {
           const hook = plugin[pluginProp]
           if (hook) {
-            ;(batchedHooks[pluginProp] ??= []).push(hook)
+            ;(batchedHooks[pluginProp] ??= []).push([hook, plugin])
           }
           break
         }
@@ -133,16 +136,109 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
     name: `Composed(${names.join(', ')})`,
   }
 
+  const createFixedPluginResolveFnMap = new Map<
+    Plugin,
+    (ctx: PluginContext) => PluginContext['resolve']
+  >()
+
+  function applyFixedPluginResolveFn(ctx: PluginContext, plugin: Plugin) {
+    const createFixedPluginResolveFn = createFixedPluginResolveFnMap.get(plugin)
+
+    if (createFixedPluginResolveFn) {
+      return {
+        ...ctx,
+        resolve: createFixedPluginResolveFn(ctx),
+      }
+    }
+
+    return ctx
+  }
+
+  if (batchedHooks.resolveId) {
+    const batchedHandlers = batchedHooks.resolveId
+    const handlerSymbols = batchedHandlers.map(([_handler, plugin]) =>
+      Symbol(plugin.name ?? `Anonymous`),
+    )
+    for (
+      let handlerIdx = 0;
+      handlerIdx < batchedHandlers.length;
+      handlerIdx++
+    ) {
+      const [_handler, plugin] = batchedHandlers[handlerIdx]
+      const handlerSymbol = handlerSymbols[handlerIdx]
+      const createFixedPluginResolveFn = (
+        ctx: PluginContext,
+      ): PluginContext['resolve'] => {
+        return (source, importer, rawContextResolveOptions) => {
+          const contextResolveOptions: PrivatePluginContextResolveOptions =
+            rawContextResolveOptions ?? {}
+
+          if (contextResolveOptions.skipSelf) {
+            contextResolveOptions[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF] =
+              handlerSymbol
+            contextResolveOptions.skipSelf = false
+          }
+
+          return ctx.resolve(source, importer, contextResolveOptions)
+        }
+      }
+      createFixedPluginResolveFnMap.set(plugin, createFixedPluginResolveFn)
+    }
+
+    composed.resolveId = async function (
+      source,
+      importer,
+      rawHookResolveIdOptions,
+    ) {
+      const hookResolveIdOptions: PrivateResolveIdExtraOptions =
+        rawHookResolveIdOptions
+
+      const symbolForCallerThatSkipSelf =
+        hookResolveIdOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]
+
+      for (
+        let handlerIdx = 0;
+        handlerIdx < batchedHandlers.length;
+        handlerIdx++
+      ) {
+        const [handler, plugin] = batchedHandlers[handlerIdx]
+        const handlerSymbol = handlerSymbols[handlerIdx]
+
+        if (symbolForCallerThatSkipSelf === handlerSymbol) {
+          continue
+        }
+
+        const { handler: handlerFn } = normalizeHook(handler)
+        const result = await handlerFn.call(
+          applyFixedPluginResolveFn(this, plugin),
+          source,
+          importer,
+          rawHookResolveIdOptions,
+        )
+        if (!isNullish(result)) {
+          return result
+        }
+      }
+    }
+  }
+
   R.keys(batchedHooks).forEach((hookName) => {
     switch (hookName) {
+      case 'resolveId': {
+        // It's handled above
+        break
+      }
       case 'buildStart': {
         if (batchedHooks.buildStart) {
           const batchedHandlers = batchedHooks.buildStart
           composed.buildStart = async function (options) {
             await Promise.all(
-              batchedHandlers.map((handler) => {
+              batchedHandlers.map(([handler, plugin]) => {
                 const { handler: handlerFn } = normalizeHook(handler)
-                return handlerFn.call(this, options)
+                return handlerFn.call(
+                  applyFixedPluginResolveFn(this, plugin),
+                  options,
+                )
               }),
             )
           }
@@ -153,9 +249,12 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         if (batchedHooks.load) {
           const batchedHandlers = batchedHooks.load
           composed.load = async function (id) {
-            for (const handler of batchedHandlers) {
+            for (const [handler, plugin] of batchedHandlers) {
               const { handler: handlerFn } = normalizeHook(handler)
-              const result = await handlerFn.call(this, id)
+              const result = await handlerFn.call(
+                applyFixedPluginResolveFn(this, plugin),
+                id,
+              )
               if (!isNullish(result)) {
                 return result
               }
@@ -178,9 +277,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               code = newCode
               moduleSideEffects = newModuleSideEffects ?? undefined
             }
-            for (const handler of batchedHandlers) {
+            for (const [handler, plugin] of batchedHandlers) {
               const { handler: handlerFn } = normalizeHook(handler)
-              const result = await handlerFn.call(this, code, id, moduleType)
+              const result = await handlerFn.call(
+                applyFixedPluginResolveFn(this, plugin),
+                code,
+                id,
+                moduleType,
+              )
               if (!isNullish(result)) {
                 if (typeof result === 'string') {
                   updateOutput(result)
@@ -199,73 +303,17 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         }
         break
       }
-      case 'resolveId': {
-        if (batchedHooks.resolveId) {
-          const batchedHandlers = batchedHooks.resolveId
-          const handlerSymbols = batchedHandlers.map((_handler, idx) =>
-            Symbol(idx),
-          )
-          composed.resolveId = async function (
-            source,
-            importer,
-            rawHookResolveIdOptions,
-          ) {
-            const hookResolveIdOptions: PrivateResolveIdExtraOptions =
-              rawHookResolveIdOptions
-
-            const symbolForCallerThatSkipSelf =
-              hookResolveIdOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]
-
-            for (
-              let handlerIdx = 0;
-              handlerIdx < batchedHandlers.length;
-              handlerIdx++
-            ) {
-              const handler = batchedHandlers[handlerIdx]
-              const handlerSymbol = handlerSymbols[handlerIdx]
-
-              if (symbolForCallerThatSkipSelf === handlerSymbol) {
-                continue
-              }
-
-              const { handler: handlerFn } = normalizeHook(handler)
-              const result = await handlerFn.call(
-                {
-                  ...this,
-                  resolve: (source, importer, rawContextResolveOptions) => {
-                    const contextResolveOptions: PrivatePluginContextResolveOptions =
-                      rawContextResolveOptions ?? {}
-
-                    if (contextResolveOptions.skipSelf) {
-                      contextResolveOptions[
-                        SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF
-                      ] = handlerSymbol
-                      contextResolveOptions.skipSelf = false
-                    }
-
-                    return this.resolve(source, importer, contextResolveOptions)
-                  },
-                },
-                source,
-                importer,
-                rawHookResolveIdOptions,
-              )
-              if (!isNullish(result)) {
-                return result
-              }
-            }
-          }
-        }
-        break
-      }
       case 'buildEnd': {
         if (batchedHooks.buildEnd) {
           const batchedHandlers = batchedHooks.buildEnd
           composed.buildEnd = async function (err) {
             await Promise.all(
-              batchedHandlers.map((handler) => {
+              batchedHandlers.map(([handler, plugin]) => {
                 const { handler: handlerFn } = normalizeHook(handler)
-                return handlerFn.call(this, err)
+                return handlerFn.call(
+                  applyFixedPluginResolveFn(this, plugin),
+                  err,
+                )
               }),
             )
           }
@@ -276,9 +324,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         if (batchedHooks.renderChunk) {
           const batchedHandlers = batchedHooks.renderChunk
           composed.renderChunk = async function (code, chunk, options) {
-            for (const handler of batchedHandlers) {
+            for (const [handler, plugin] of batchedHandlers) {
               const { handler: handlerFn } = normalizeHook(handler)
-              const result = await handlerFn.call(this, code, chunk, options)
+              const result = await handlerFn.call(
+                applyFixedPluginResolveFn(this, plugin),
+                code,
+                chunk,
+                options,
+              )
               if (!isNullish(result)) {
                 return result
               }
@@ -295,13 +348,16 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         if (hooks?.length) {
           composed[hookName] = async function (chunk) {
             const ret: string[] = []
-            for (const hook of hooks) {
+            for (const [hook, plugin] of hooks) {
               {
                 const { handler } = normalizeHook(hook)
                 ret.push(
                   typeof handler === 'string'
                     ? handler
-                    : await handler.call(this, chunk),
+                    : await handler.call(
+                        applyFixedPluginResolveFn(this, plugin),
+                        chunk,
+                      ),
                 )
               }
             }

@@ -40,21 +40,21 @@ export class PluginContext {
   debug: LoggingFunction
   info: LoggingFunction
   warn: LoggingFunction
-  error: (error: RollupError | string) => never
-  resolve: (
+  readonly error: (error: RollupError | string) => never
+  readonly resolve: (
     source: string,
     importer?: string,
     options?: PluginContextResolveOptions,
   ) => Promise<ResolvedId | null>
-  emitFile: (file: EmittedAsset) => string
-  getFileName: (referenceId: string) => string
-  getModuleInfo: (id: string) => ModuleInfo | null
-  getModuleIds: () => IterableIterator<string>
-  addWatchFile: (id: string) => void
+  readonly emitFile: (file: EmittedAsset) => string
+  readonly getFileName: (referenceId: string) => string
+  readonly getModuleInfo: (id: string) => ModuleInfo | null
+  readonly getModuleIds: () => IterableIterator<string>
+  readonly addWatchFile: (id: string) => void
   /**
    * @deprecated This rollup API won't be supported by rolldown. Using this API will cause runtime error.
    */
-  parse: (input: string, options?: any) => any
+  readonly parse: (input: string, options?: any) => any
 
   constructor(
     options: NormalizedInputOptions,

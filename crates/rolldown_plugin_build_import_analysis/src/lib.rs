@@ -6,9 +6,10 @@ use oxc::ast::ast::{
   ImportOrExportKind, PropertyKey, StaticMemberExpression, TSTypeAnnotation, VariableDeclaration,
   VariableDeclarationKind,
 };
-use oxc::ast::visit::walk::walk_ts_call_signature_declaration;
+use oxc::ast::visit::walk::{walk_expression, walk_ts_call_signature_declaration};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{ast_builder, AstBuilder, VisitMut};
+use oxc::codegen::{self, CodeGenerator, Gen};
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -33,13 +34,10 @@ pub const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 const PRELOAD_HELPER_ID: &str = "\tvite/preload-helper.js";
 
 /// First element is the import specifier, second element is `decls` or `props` of expr
+#[derive(Debug)]
 enum ImportPattern<'a> {
-  /// (await import('foo')).foo
-  MemberExpr(Atom<'a>, Vec<Atom<'a>>),
   /// const {foo} = await import('foo')
   Decl(Atom<'a>, Vec<Atom<'a>>),
-  /// import('foo').then(({foo})=>{})
-  ImportExpr(Atom<'a>, Vec<Atom<'a>>),
 }
 impl Plugin for BuildImportAnalysisPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -81,6 +79,9 @@ impl Plugin for BuildImportAnalysisPlugin {
       let mut visitor = BuildImportAnalysisVisitor::new(builder, self.insert_preload);
       visitor.visit_program(fields.program);
     });
+
+    let mut codegen = CodeGenerator::new();
+    ast.program().gen(&mut codegen, codegen::Context::default());
     Ok(ast)
   }
 }
@@ -93,6 +94,84 @@ struct BuildImportAnalysisVisitor<'a> {
 impl<'a> BuildImportAnalysisVisitor<'a> {
   pub fn new(builder: AstBuilder<'a>, insert_preload: bool) -> Self {
     Self { builder, need_prepend_helper: false, insert_preload }
+  }
+
+  /// ```js
+  /// (await import('foo')).foo
+  /// ```
+  fn rewrite_paren_member_expr(&mut self, member_expr: &mut StaticMemberExpression<'a>) {
+    let Expression::ParenthesizedExpression(ref mut paren) = member_expr.object else {
+      return;
+    };
+    let Expression::AwaitExpression(ref mut expr) = paren.expression else {
+      return;
+    };
+    let Expression::ImportExpression(ref import_expr) = expr.argument else { return };
+
+    let source = match &import_expr.source {
+      Expression::StringLiteral(lit) => lit.value.clone(),
+      Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 && lit.expressions.is_empty() => {
+        let Some(first) = lit.quasis.first() else {
+          return;
+        };
+        first.value.cooked.clone().unwrap_or(first.value.raw.clone())
+      }
+      _ => return,
+    };
+
+    let property = member_expr.property.name.clone();
+
+    let vite_preload_call =
+      construct_snippet_from_import_then(&self.builder, source, vec![property]);
+    expr.argument = vite_preload_call;
+    self.need_prepend_helper = true;
+  }
+
+  /// ```js
+  /// import('foo').then(({foo})=>{})
+  /// ```
+  fn rewrite_from_import_expr(&mut self, expr: &mut CallExpression<'a>) {
+    let Expression::StaticMemberExpression(ref mut callee) = expr.callee else {
+      return;
+    };
+    let Expression::ImportExpression(ref import_expr) = callee.object else {
+      return;
+    };
+    let source = match &import_expr.source {
+      Expression::StringLiteral(lit) => lit.value.clone(),
+      Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 && lit.expressions.is_empty() => {
+        let Some(first) = lit.quasis.first() else { return };
+        first.value.cooked.clone().unwrap_or(first.value.raw.clone())
+      }
+      _ => return,
+    };
+    if callee.property.name != "then" {
+      return;
+    };
+    let arrow_expr = match expr.arguments.as_slice() {
+      [Argument::ArrowFunctionExpression(arrow)] => arrow,
+      _ => return,
+    };
+    let Some(first_param) = arrow_expr.params.items.first() else {
+      return;
+    };
+
+    let BindingPatternKind::ObjectPattern(ref pat) = first_param.pattern.kind else {
+      return;
+    };
+
+    let decls = pat
+      .properties
+      .iter()
+      .filter_map(|prop| match &prop.key {
+        PropertyKey::StaticIdentifier(id) => Some(id.name.clone()),
+        _ => None,
+      })
+      .collect::<Vec<_>>();
+
+    let vite_preload_call = construct_snippet_from_import_then(&self.builder, source, decls);
+    callee.object = vite_preload_call;
+    self.need_prepend_helper = true;
   }
 }
 
@@ -120,6 +199,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   }
 
   fn visit_variable_declaration(&mut self, decl: &mut VariableDeclaration<'a>) {
+    walk_mut::walk_variable_declaration(self, decl);
     let mut declarators_map = decl
       .declarations
       .iter_mut()
@@ -158,128 +238,29 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         Some((i, (ImportPattern::Decl(source, decls), decl.kind)))
       })
       .collect::<FxHashMap<usize, (ImportPattern<'a>, VariableDeclarationKind)>>();
-
-    let mut ret = vec![];
+    if declarators_map.is_empty() {
+      return;
+    }
     for (i, d) in decl.declarations.iter_mut().enumerate() {
       if let Some((pattern, kind)) = declarators_map.remove(&i) {
         match pattern {
           ImportPattern::Decl(source, decls) => {
             self.need_prepend_helper = true;
-            let decl = construct_snippet_from_await_decl(&self.builder, source, decls, kind);
-            ret.push(decl);
-          }
-          _ => {
-            unreachable!()
+            let mut declarator =
+              construct_snippet_from_await_decl(&self.builder, source, decls, kind);
+            std::mem::swap(d, &mut declarator);
           }
         }
-      } else {
-        let dummy = self.builder.variable_declarator(
-          SPAN,
-          VariableDeclarationKind::Var,
-          self.builder.binding_pattern(
-            self.builder.binding_pattern_kind_binding_identifier(SPAN, "a"),
-            None::<TSTypeAnnotation>,
-            false,
-          ),
-          Some(self.builder.expression_null_literal(SPAN)),
-          false,
-        );
-        ret.push(std::mem::replace(d, dummy))
-      }
-    }
-    decl.declarations = self.builder.vec_from_iter(ret);
-  }
-
-  fn visit_expression_statement(&mut self, it: &mut ExpressionStatement<'a>) {
-    let Some(pat) = extract_from_expr_stmt(it) else {
-      return;
-    };
-
-    match pat {
-      ImportPattern::MemberExpr(_, _) => unreachable!(),
-      ImportPattern::Decl(_, _) => unreachable!(),
-      ImportPattern::ImportExpr(source, decls) => {
-        it.expression = construct_snippet_from_import_then(&self.builder, source, decls);
-        self.need_prepend_helper = true;
       }
     }
   }
-}
 
-fn extract_from_expr_stmt<'a>(stmt: &ExpressionStatement<'a>) -> Option<ImportPattern<'a>> {
-  let expr = &stmt.expression;
-  match expr {
-    Expression::StaticMemberExpression(expr) => extract_from_static_member_expr(expr),
-    Expression::CallExpression(expr) => extract_from_call_expr(expr),
-    _ => return None,
+  fn visit_expression(&mut self, expr: &mut Expression<'a>) {
+    walk_mut::walk_expression(self, expr);
+    match expr {
+      Expression::StaticMemberExpression(expr) => self.rewrite_paren_member_expr(expr),
+      Expression::CallExpression(expr) => self.rewrite_from_import_expr(expr),
+      _ => {}
+    }
   }
-}
-
-/// ```js
-/// import('foo').then(({foo})=>{})
-/// ```
-fn extract_from_call_expr<'a>(expr: &CallExpression<'a>) -> Option<ImportPattern<'a>> {
-  let Expression::StaticMemberExpression(ref callee) = expr.callee else {
-    return None;
-  };
-  let Expression::ImportExpression(ref import_expr) = callee.object else {
-    return None;
-  };
-  let source = match &import_expr.source {
-    Expression::StringLiteral(lit) => lit.value.clone(),
-    Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 && lit.expressions.is_empty() => {
-      let first = lit.quasis.first()?;
-      first.value.cooked.clone().unwrap_or(first.value.raw.clone())
-    }
-    _ => return None,
-  };
-  if callee.property.name != "then" {
-    return None;
-  };
-  let arrow_expr = match expr.arguments.as_slice() {
-    [Argument::ArrowFunctionExpression(arrow)] => arrow,
-    _ => return None,
-  };
-  let first_param = arrow_expr.params.items.first()?;
-
-  let BindingPatternKind::ObjectPattern(ref pat) = first_param.pattern.kind else {
-    return None;
-  };
-
-  let decls = pat
-    .properties
-    .iter()
-    .filter_map(|prop| match &prop.key {
-      PropertyKey::StaticIdentifier(id) => Some(id.name.clone()),
-      _ => None,
-    })
-    .collect::<Vec<_>>();
-  Some(ImportPattern::ImportExpr(source, decls))
-}
-
-/// ```js
-/// const {foo} = await import('foo')
-/// ```
-fn extract_from_static_member_expr<'a>(
-  member_expr: &StaticMemberExpression<'a>,
-) -> Option<ImportPattern<'a>> {
-  let Expression::ParenthesizedExpression(ref paren) = member_expr.object else {
-    return None;
-  };
-  let Expression::AwaitExpression(ref expr) = paren.expression else {
-    return None;
-  };
-  let Expression::ImportExpression(ref import_expr) = expr.argument else { return None };
-
-  let source = match &import_expr.source {
-    Expression::StringLiteral(lit) => lit.value.clone(),
-    Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 && lit.expressions.is_empty() => {
-      let first = lit.quasis.first()?;
-      first.value.cooked.clone().unwrap_or(first.value.raw.clone())
-    }
-    _ => return None,
-  };
-
-  let property = member_expr.property.name.clone();
-  Some(ImportPattern::ImportExpr(source, vec![property]))
 }

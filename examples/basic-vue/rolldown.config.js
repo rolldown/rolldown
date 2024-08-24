@@ -27,7 +27,7 @@ const __VITE_IS_MODERN__ = false;
 		buildImportAnalysisPlugin({
 			preloadCode: `
 export const __vitePreload = (v) => {
-  return v
+  return v()
 };
 `,
 			insertPreload: true,

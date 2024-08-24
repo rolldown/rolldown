@@ -9,6 +9,7 @@ pub fn construct_snippet_from_await_decl<'a>(
   decls: Vec<Atom<'a>>,
   decl_kind: VariableDeclarationKind,
 ) -> VariableDeclarator<'a> {
+  dbg!(&source);
   ast_builder.variable_declarator(
     SPAN,
     decl_kind,
@@ -142,13 +143,19 @@ fn construct_vite_preload_call<'a>(
   )
 }
 
-//transform `(await import('foo')).foo`
-// to `__vitePreload(async () => { const {foo} = (await import('foo')).foo; return { foo }},...)).foo`
-//
-//
 /// transform `import('foo').then(({foo})=>{})`
 /// to `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...).then(({foo})=>{})`
 pub fn construct_snippet_from_import_then<'a>(
+  ast_builder: &AstBuilder<'a>,
+  source: Atom<'a>,
+  decls: Vec<Atom<'a>>,
+) -> Expression<'a> {
+  construct_vite_preload_call(ast_builder, VariableDeclarationKind::Const, decls, source)
+}
+
+///transform `(await import('foo')).foo`
+/// to `__vitePreload(async () => { const {foo} = (await import('foo')); return { foo }},...)).foo`
+pub fn construct_snippet_from_parenthesis_epxr<'a>(
   ast_builder: &AstBuilder<'a>,
   source: Atom<'a>,
   decls: Vec<Atom<'a>>,

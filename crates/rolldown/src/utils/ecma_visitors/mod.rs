@@ -22,6 +22,11 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
     self.ensure_uniqueness(it.span_mut());
     walk_mut::walk_module_declaration(self, it);
   }
+
+  fn visit_import_expression(&mut self, it: &mut oxc::ast::ast::ImportExpression<'a>) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_import_expression(self, it);
+  }
 }
 
 impl EnsureSpanUniqueness {

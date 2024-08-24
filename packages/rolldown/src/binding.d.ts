@@ -115,6 +115,12 @@ export interface BindingAssetSource {
   inner: string | Uint8Array
 }
 
+export interface BindingBuildImportAnalysisPluginConfig {
+  preloadCode: string
+  insertPreload: boolean
+  optimizeModulePreloadRelativePaths: boolean
+}
+
 export interface BindingBuiltinPlugin {
   __name: BindingBuiltinPluginName
   options?: unknown
@@ -130,7 +136,8 @@ export declare enum BindingBuiltinPluginName {
   TransformPlugin = 6,
   WasmFallbackPlugin = 7,
   AliasPlugin = 8,
-  JsonPlugin = 9
+  JsonPlugin = 9,
+  BuildImportAnalysisPlugin = 10
 }
 
 export interface BindingEmittedAsset {

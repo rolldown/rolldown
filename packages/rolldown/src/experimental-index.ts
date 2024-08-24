@@ -14,4 +14,5 @@ export {
   transformPlugin,
   aliasPlugin,
   jsonPlugin,
+  buildImportAnalysisPlugin,
 } from './plugin/builtin-plugin'

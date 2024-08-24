@@ -194,8 +194,10 @@ impl PluginDriver {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
-      args.ast =
-        plugin.call_transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
+      args.ast = plugin.call_transform_ast(
+        ctx,
+        HookTransformAstArgs { cwd: args.cwd, ast: args.ast, id: args.id },
+      )?;
     }
     Ok(args.ast)
   }

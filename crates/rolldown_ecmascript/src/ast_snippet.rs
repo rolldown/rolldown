@@ -339,7 +339,6 @@ impl<'ast> AstSnippet<'ast> {
     commonjs_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
 
     // var require_foo = ...
-
     let var_decl_stmt = self.var_decl_stmt(
       binding_name,
       ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),

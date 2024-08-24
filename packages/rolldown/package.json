@@ -1,6 +1,5 @@
 {
   "name": "rolldown",
-  "type": "commonjs",
   "version": "0.12.2",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",

@@ -10,6 +10,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct EmittedAsset {
   pub name: Option<String>,
+  pub original_file_name: Option<String>,
   pub file_name: Option<String>,
   pub source: AssetSource,
 }
@@ -88,6 +89,7 @@ impl FileEmitter {
         filename: value.file_name.clone().expect("should have file name"),
         source: value.source.clone(),
         name: value.name.clone(),
+        original_file_name: value.original_file_name.clone(),
       })));
     }
   }

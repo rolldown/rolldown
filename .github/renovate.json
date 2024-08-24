@@ -21,7 +21,7 @@
     {
       "groupName": "oxc",
       "matchManagers": ["cargo"],
-      "matchPackageNames": ["oxc", "oxc_transform_napi"],
+      "matchPackagePrefixes": ["oxc"],
       "enabled": false
     },
     {

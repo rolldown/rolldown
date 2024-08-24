@@ -907,6 +907,7 @@ export interface SerializedTimings {
 
 export interface PreRenderedAsset {
   name: string | undefined
+  originalFileName: string | null
   source: string | Uint8Array
   type: 'asset'
 }

@@ -18,6 +18,7 @@ export declare class BindingModuleInfo {
 
 export declare class BindingOutputAsset {
   get fileName(): string
+  get originalFileName(): string | null
   get source(): BindingAssetSource
   set source(source: BindingAssetSource)
   get name(): string | null
@@ -141,6 +142,7 @@ export declare enum BindingBuiltinPluginName {
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
+  originalFileName?: string
   source: BindingAssetSource
 }
 

@@ -13,6 +13,7 @@ import { PluginHookNames } from '../constants/plugin'
 import { AssertNever } from './type-assert'
 import { PrivatePluginContextResolveOptions } from '../plugin/plugin-context'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
+import { isPluginHookName } from './plugin'
 
 const unsupportedHookName = [
   'augmentChunkHash',
@@ -55,11 +56,12 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         )
       }
 
+      if (!isPluginHookName(pluginProp)) {
+        // Not hooks. Just ignore these properties
+        return
+      }
+
       switch (pluginProp) {
-        case 'name':
-        case 'api':
-          // Not hooks. Just ignore these properties
-          break
         case 'buildStart': {
           const handlers = batchedHooks.buildStart ?? []
           batchedHooks.buildStart = handlers
@@ -329,13 +331,12 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
 
   // Check if the plugin has patterns that aren't composable
   const hasNotComposablePattern = R.keys(plugin).some((hookName) => {
-    const OK_TO_COMPOSE = false
-    switch (hookName) {
-      // These props don't affect the composition
-      case 'name':
-      case 'api':
-        return OK_TO_COMPOSE
+    if (!isPluginHookName(hookName)) {
+      // Not hooks. Just ignore these properties since they don't affect the composable pattern
+      return false
     }
+
+    const OK_TO_COMPOSE = false
 
     if (isUnsupportedHooks(hookName)) {
       return !OK_TO_COMPOSE

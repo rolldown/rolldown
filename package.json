@@ -15,7 +15,7 @@
     "lint-prettier:fix": "prettier . '**/*.{js,ts,json,md,yml,yaml,vue}' -w",
     "lint-toml": "taplo format --check",
     "lint-toml:fix": "taplo format",
-    "lint-repo": "npm-run-all --parallel lint-prettier lint-toml lint-spell",
+    "lint-repo": "npm-run-all -l --parallel lint-prettier lint-toml lint-spell",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",

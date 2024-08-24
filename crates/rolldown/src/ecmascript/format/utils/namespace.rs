@@ -27,9 +27,9 @@ use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
 ///    ```js
 ///    this.namespace.module.hello
 ///    ```
-fn generate_namespace_definition(name: &str) -> (String, String) {
+fn generate_namespace_definition(name: &str, base: &str) -> (String, String) {
   let mut initial_code = String::new();
-  let mut final_code = String::from("this");
+  let mut final_code = String::from(base);
 
   let context_len = final_code.len();
   let parts: Vec<&str> = name.split('.').collect();
@@ -40,7 +40,7 @@ fn generate_namespace_definition(name: &str) -> (String, String) {
 
     if i < parts.len() - 1 {
       let callers = &final_code[context_len..];
-      initial_code.push_str(&format!("this{callers} = this{callers} || {{}};\n"));
+      initial_code.push_str(&format!("{base}{callers} = {base}{callers} || {{}};\n"));
     }
   }
 
@@ -72,7 +72,7 @@ pub fn generate_identifier(
     // It is same as Rollup.
     // Namespaced name.
     if name.contains('.') || !is_iife {
-      let (decl, expr) = generate_namespace_definition(name, root, is_iife);
+      let (decl, expr) = generate_namespace_definition(name, root);
       Ok((
         decl,
         // Extend the object if the `extend` option is enabled.
@@ -136,14 +136,14 @@ mod tests {
 
   #[test]
   fn test_generate_namespace_definition() {
-    let result = generate_namespace_definition("a.b.c", "this", true);
+    let result = generate_namespace_definition("a.b.c", "this");
     assert_eq!(result.0, "this.a = this.a || {};\nthis.a.b = this.a.b || {};\n");
     assert_eq!(result.1, "this.a.b.c");
   }
 
   #[test]
   fn test_reserved_identifier_as_name() {
-    let result = generate_namespace_definition("1.2.3", "this", true);
+    let result = generate_namespace_definition("1.2.3", "this");
     assert_eq!(
       result.0,
       "this[\"1\"] = this[\"1\"] || {};\nthis[\"1\"][\"2\"] = this[\"1\"][\"2\"] || {};\n"
@@ -152,9 +152,8 @@ mod tests {
   }
 
   #[test]
-  /// It is related a bug in rollup. Check it out in [rollup/rollup#5603](https://github.com/rollup/rollup/issues/5603).
   fn test_invalid_identifier_as_name() {
-    let result = generate_namespace_definition("toString.valueOf.constructor", "this", true);
+    let result = generate_namespace_definition("toString.valueOf.constructor", "this");
     assert_eq!(result.0, "this.toString = this.toString || {};\nthis.toString.valueOf = this.toString.valueOf || {};\n");
     assert_eq!(result.1, "this.toString.valueOf.constructor");
   }

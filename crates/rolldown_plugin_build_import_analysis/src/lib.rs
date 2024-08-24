@@ -8,6 +8,7 @@ use oxc::ast::ast::{
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{AstBuilder, VisitMut};
 use oxc::codegen::{self, CodeGenerator, Gen};
+use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -15,7 +16,7 @@ use rolldown_plugin::{
 };
 use rustc_hash::FxHashMap;
 
-use self::utils::{construct_snippet_from_await_decl, construct_snippet_from_import_then};
+use self::utils::{construct_snippet_for_expression, construct_snippet_from_await_decl};
 mod utils;
 #[derive(Debug)]
 pub struct BuildImportAnalysisPlugin {
@@ -88,10 +89,22 @@ struct BuildImportAnalysisVisitor<'a> {
   builder: AstBuilder<'a>,
   need_prepend_helper: bool,
   insert_preload: bool,
+  scope_stack: Vec<ScopeFlags>,
+  has_inserted_helper: bool,
 }
 impl<'a> BuildImportAnalysisVisitor<'a> {
   pub fn new(builder: AstBuilder<'a>, insert_preload: bool) -> Self {
-    Self { builder, need_prepend_helper: false, insert_preload }
+    Self {
+      builder,
+      need_prepend_helper: false,
+      insert_preload,
+      scope_stack: vec![],
+      has_inserted_helper: false,
+    }
+  }
+
+  fn is_top_level(&self) -> bool {
+    self.scope_stack.last().map_or(false, |flags| flags.contains(ScopeFlags::Top))
   }
 
   /// ```js
@@ -119,7 +132,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
     let property = member_expr.property.name.clone();
 
-    let vite_preload_call = construct_snippet_from_import_then(self.builder, source, &[property]);
+    let vite_preload_call = construct_snippet_for_expression(self.builder, source, &[property]);
     expr.argument = vite_preload_call;
     self.need_prepend_helper = true;
   }
@@ -165,7 +178,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       })
       .collect::<Vec<_>>();
 
-    let vite_preload_call = construct_snippet_from_import_then(self.builder, source, &decls);
+    let vite_preload_call = construct_snippet_for_expression(self.builder, source, &decls);
     callee.object = vite_preload_call;
     self.need_prepend_helper = true;
   }
@@ -174,8 +187,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
     walk_mut::walk_program(self, it);
-    // TODO: passing scope to detect if the helper is inserted before
-    if self.need_prepend_helper && self.insert_preload {
+    if self.need_prepend_helper && self.insert_preload && !self.has_inserted_helper {
       let helper_stmt = self.builder.statement_module_declaration(
         self.builder.module_declaration_import_declaration(
           SPAN,
@@ -251,6 +263,16 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
     }
   }
 
+  fn visit_variable_declarator(&mut self, it: &mut oxc::ast::ast::VariableDeclarator<'a>) {
+    // Only check if there needs to insert helper function
+    if self.insert_preload && self.is_top_level() {
+      if let BindingPatternKind::BindingIdentifier(id) = &it.id.kind {
+        self.has_inserted_helper = id.name == PRELOAD_METHOD;
+      }
+    }
+    walk_mut::walk_variable_declarator(self, it);
+  }
+
   fn visit_expression(&mut self, expr: &mut Expression<'a>) {
     walk_mut::walk_expression(self, expr);
     match expr {
@@ -258,5 +280,17 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
       Expression::CallExpression(expr) => self.rewrite_import_expr(expr),
       _ => {}
     }
+  }
+
+  fn enter_scope(
+    &mut self,
+    flags: ScopeFlags,
+    _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
+  ) {
+    self.scope_stack.push(flags);
+  }
+
+  fn leave_scope(&mut self) {
+    self.scope_stack.pop();
   }
 }

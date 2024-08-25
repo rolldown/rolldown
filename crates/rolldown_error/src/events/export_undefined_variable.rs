@@ -27,10 +27,6 @@ impl BuildEvent for ExportUndefinedVariable {
 
     let file_id = diagnostic.add_file(filename, self.source.clone());
 
-    diagnostic.add_label(
-      &file_id,
-      self.span.start..self.span.end,
-      "Used `eval` function here.".to_string(),
-    );
+    diagnostic.add_label(&file_id, self.span.start..self.span.end, "".to_string());
   }
 }

@@ -406,11 +406,16 @@ impl<'me> AstScanner<'me> {
       }
     } else {
       decl.specifiers.iter().for_each(|spec| {
-        self.add_local_export(
-          spec.exported.name().as_str(),
-          self.get_root_binding(spec.local.name().as_str()),
-          spec.span,
-        );
+        if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
+          self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
+        } else {
+          self.result.warnings.push(BuildDiagnostic::export_undefined_variable(
+            self.file_path.to_string(),
+            self.source.clone(),
+            spec.local.span(),
+            ArcStr::from(spec.local.name().as_str()),
+          ));
+        }
       });
       if let Some(decl) = decl.declaration.as_ref() {
         match decl {

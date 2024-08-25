@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitepress'
-import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons'
+import {
+  groupIconMdPlugin,
+  groupIconVitePlugin,
+} from 'vitepress-plugin-group-icons'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -127,14 +130,14 @@ export default defineConfig({
     },
   },
 
- vite: {
+  vite: {
     plugins: [
       groupIconVitePlugin({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-        }
-      })
+        },
+      }),
     ],
   },
   markdown: {

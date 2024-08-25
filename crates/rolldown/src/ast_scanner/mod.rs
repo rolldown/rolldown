@@ -205,8 +205,8 @@ impl<'me> AstScanner<'me> {
     self.current_stmt_info.declared_symbols.push((self.idx, id).into());
   }
 
-  fn get_root_binding(&self, name: &str) -> SymbolId {
-    self.scopes.get_root_binding(name).expect("must have")
+  fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
+    self.scopes.get_root_binding(name)
   }
 
   fn add_import_record(

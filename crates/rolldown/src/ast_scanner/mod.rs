@@ -41,6 +41,7 @@ pub struct ScanResult {
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
   pub has_eval: bool,
 }
 
@@ -99,6 +100,7 @@ impl<'me> AstScanner<'me> {
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
       has_eval: false,
+      errors: Vec::new(),
     };
 
     Self {
@@ -409,7 +411,7 @@ impl<'me> AstScanner<'me> {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
         } else {
-          self.result.warnings.push(BuildDiagnostic::export_undefined_variable(
+          self.result.errors.push(BuildDiagnostic::export_undefined_variable(
             self.file_path.to_string(),
             self.source.clone(),
             spec.local.span(),

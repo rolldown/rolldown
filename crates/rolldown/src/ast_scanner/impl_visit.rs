@@ -119,14 +119,13 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
     match &expr.callee {
-      Expression::Identifier(id) if id.name == "eval" => {
+      Expression::Identifier(id_ref) if id_ref.name == "eval" => {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-        let resolved_symbol = self.resolve_identifier_to_top_level_symbol(id);
-        if resolved_symbol.is_none() {
+        if self.resolve_identifier_to_top_level_symbol(id_ref).is_none() {
           self.result.has_eval = true;
           self.result.warnings.push(
-            BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), id.span)
+            BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), id_ref.span)
               .with_severity_warning(),
           );
         }

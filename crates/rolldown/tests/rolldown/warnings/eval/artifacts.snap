@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[main.js:1:13]
    │
- 1 │ console.log(eval)
+ 1 │ console.log(eval('let a = 100'))
    │             ──┬─  
    │               ╰─── Used `eval` function here.
 ───╯
@@ -22,7 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region main.js
-console.log(eval);
+console.log(eval("let a = 100"));
 
 //#endregion
 ```

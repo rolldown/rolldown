@@ -25,6 +25,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
+permissions:
+  pull-requests: write
+
 jobs:
   codspeed-benchmark:
     name: Codspeed Benchmark
@@ -124,9 +127,6 @@ jobs:
       - name: Write a new comment
         uses: peter-evans/create-or-update-comment@v4.0.0
         continue-on-error: true
-        permissions:
-          pull-requests: write
-          issues: write
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}

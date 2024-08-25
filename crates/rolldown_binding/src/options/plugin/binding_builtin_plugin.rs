@@ -11,12 +11,13 @@ use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
+use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use super::types::binding_js_or_regex::BindingStringOrRegex;
 
@@ -54,6 +55,7 @@ pub enum BindingBuiltinPluginName {
   AliasPlugin,
   JsonPlugin,
   BuildImportAnalysisPlugin,
+  ReplacePlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -268,6 +270,33 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
       }
+      BindingBuiltinPluginName::ReplacePlugin => {
+        let config = if let Some(options) = plugin.options {
+          Some(BindingReplacePluginConfig::from_unknown(options)?)
+        } else {
+          None
+        };
+
+        Arc::new(ReplacePlugin::with_options(config.map_or_else(ReplaceOptions::default, |opts| {
+          ReplaceOptions {
+            values: opts.values,
+            delimiters: opts.delimiters.map_or_else(
+              || ReplaceOptions::default().delimiters,
+              |raw| (raw[0].clone(), raw[1].clone()),
+            ),
+          }
+        })))
+      }
     })
   }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingReplacePluginConfig {
+  // It's ok we use `HashMap` here, because we don't care about the order of the keys.
+  pub values: HashMap<String, String>,
+  #[napi(ts_type = "[string, string]")]
+  pub delimiters: Option<Vec<String>>,
 }

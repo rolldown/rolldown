@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## input.mjs
+
+```js
+
+//#region input.js
+console.log(42);
+console.log("object");
+
+//#endregion
+```

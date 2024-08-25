@@ -15,4 +15,5 @@ export {
   aliasPlugin,
   jsonPlugin,
   buildImportAnalysisPlugin,
+  replacePlugin,
 } from './plugin/builtin-plugin'

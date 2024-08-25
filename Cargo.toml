@@ -92,6 +92,7 @@ rolldown_plugin_json                    = { version = "0.1.0", path = "./crates/
 rolldown_plugin_load_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
 rolldown_plugin_manifest                = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
 rolldown_plugin_module_preload_polyfill = { version = "0.1.0", path = "./crates/rolldown_plugin_module_preload_polyfill" }
+rolldown_plugin_replace                 = { version = "0.1.0", path = "./crates/rolldown_plugin_replace" }
 rolldown_plugin_transform               = { version = "0.1.0", path = "./crates/rolldown_plugin_transform" }
 rolldown_plugin_wasm_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_fallback" }
 rolldown_plugin_wasm_helper             = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_helper" }
@@ -116,6 +117,7 @@ daachorse           = "1.0.0"
 dashmap             = "6.0.0"
 derivative          = "2.2.0"
 dunce               = "1.0.4"                                                                        # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+fancy-regex         = "0.13.0"
 futures             = "0.3.30"
 glob                = "0.3.1"
 glob-match          = "0.2.1"
@@ -143,6 +145,7 @@ self_cell           = "1.0.4"
 serde               = { version = "1.0.203", features = ["derive"] }
 serde_json          = "1.0.117"
 smallvec            = "1.13.2"
+string_wizard       = "0.0.22"
 sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
 testing_macros      = "0.2.13"
 tokio               = { version = "1.38.0", default-features = false }

@@ -15,6 +15,7 @@ import {
   BindingModulePreloadPolyfillPluginConfig,
   BindingJsonPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
+  BindingReplacePluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -95,6 +96,12 @@ export class BuildImportAnalysisPlugin extends BuiltinPlugin {
   }
 }
 
+export class ReplacePlugin extends BuiltinPlugin {
+  constructor(config?: BindingReplacePluginConfig) {
+    super(BindingBuiltinPluginName.ReplacePlugin, config)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -141,6 +148,37 @@ export function buildImportAnalysisPlugin(
   config: BindingBuildImportAnalysisPluginConfig,
 ) {
   return new BuildImportAnalysisPlugin(config)
+}
+
+/**
+ * ## Usage
+ *
+ * ```js
+ * replacePlugin({
+ *   'process.env.NODE_ENV': JSON.stringify('production'),
+ *    __buildDate__: () => JSON.stringify(new Date()),
+ *    __buildVersion: 15
+ * })
+ * ```
+ *
+ * ### With options
+ *
+ * ```js
+ * replacePlugin({
+ *   'process.env.NODE_ENV': JSON.stringify('production'),
+ *   __buildDate__: () => JSON.stringify(new Date()),
+ *   __buildVersion: 15
+ * }, {
+ *   preventAssignment: false,
+ * })
+ * ```
+ *
+ */
+export function replacePlugin(
+  values: BindingReplacePluginConfig['values'] = {},
+  options: Omit<BindingReplacePluginConfig, 'values'> = {},
+) {
+  return new ReplacePlugin({ ...options, values })
 }
 
 export function bindingifyBuiltInPlugin(

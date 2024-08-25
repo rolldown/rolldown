@@ -137,7 +137,8 @@ export declare enum BindingBuiltinPluginName {
   WasmFallbackPlugin = 7,
   AliasPlugin = 8,
   JsonPlugin = 9,
-  BuildImportAnalysisPlugin = 10
+  BuildImportAnalysisPlugin = 10,
+  ReplacePlugin = 11
 }
 
 export interface BindingEmittedAsset {
@@ -341,6 +342,11 @@ export interface BindingPluginWithIndex {
 
 export interface BindingRenderedModule {
   code?: string
+}
+
+export interface BindingReplacePluginConfig {
+  values: Record<string, string>
+  delimiters?: [string, string]
 }
 
 export interface BindingResolveOptions {

@@ -2177,7 +2177,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/warnings/eval
 
-- main-!~{000}~.mjs => main-SHxh3snY.mjs
+- main-!~{000}~.mjs => main-Gqn0UTpf.mjs
 
 # tests/rolldown/warnings/missing_global_name
 

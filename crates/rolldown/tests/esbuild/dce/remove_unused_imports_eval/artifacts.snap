@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ eval('foo(a, b, c)')
    │ ──┬─  
-   │   ╰─── Used `eval` function here.
+   │   ╰─── Use `eval` function here.
 ───╯
 
 ```

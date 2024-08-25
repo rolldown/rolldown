@@ -1,1 +1,1 @@
-console.log(eval)
+console.log(eval('let a = 100'))

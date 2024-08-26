@@ -146,6 +146,7 @@
     "sfnt",
     "sharedworker",
     "simd",
+    "simdutf",
     "smallvec",
     "sourcemaps",
     "stackblitz",

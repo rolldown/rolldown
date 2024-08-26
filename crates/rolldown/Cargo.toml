@@ -16,6 +16,7 @@ workspace = true
 
 [dependencies]
 anyhow                   = { workspace = true }
+append-only-vec          = { workspace = true }
 arcstr                   = { workspace = true }
 daachorse                = { workspace = true }
 dunce                    = { workspace = true }

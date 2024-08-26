@@ -106,6 +106,7 @@ rolldown_utils                          = { version = "0.1.0", path = "./crates/
 
 
 anyhow              = "1.0.86"
+append-only-vec     = { version = "0.1.5" }
 arcstr              = "1.2.0"
 ariadne             = "0.4.1"
 async-channel       = "2.3.1"

@@ -152,7 +152,8 @@ impl<'a> GenerateStage<'a> {
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
   ) {
-    let symbols = &Mutex::new(&mut self.link_output.symbols);
+    let symbols = &self.link_output.symbols;
+    let symbol_to_chunk_id_vec = append_only_vec::AppendOnlyVec::new();
 
     let chunks_iter = multizip((
       chunk_graph.chunks.iter_enumerated(),
@@ -213,18 +214,8 @@ impl<'a> GenerateStage<'a> {
             if !stmt_info.is_included {
               return;
             }
-            let mut symbols = symbols.lock().expect("ignore poison error");
             stmt_info.declared_symbols.iter().for_each(|declared| {
-              let symbol = symbols.get_mut(*declared);
-              debug_assert!(
-                symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
-                "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
-                symbol.name,
-                declared,
-                module.id,
-              );
-
-              symbol.chunk_id = Some(chunk_id);
+              symbol_to_chunk_id_vec.push((*declared, chunk_id));
             });
 
             stmt_info.referenced_symbols.iter().for_each(|referenced| {
@@ -243,8 +234,6 @@ impl<'a> GenerateStage<'a> {
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
-            let symbols = symbols.lock().expect("ignore poison error");
-
             for export_ref in entry_meta.resolved_exports.values() {
               let mut canonical_ref = symbols.par_canonical_ref_for(export_ref.symbol_ref);
               let symbol = symbols.get(canonical_ref);
@@ -269,6 +258,19 @@ impl<'a> GenerateStage<'a> {
         }
       },
     );
+    // shadowing previous immutable borrow
+    let symbols = &mut self.link_output.symbols;
+    for (declared, chunk_id) in symbol_to_chunk_id_vec {
+      let symbol = symbols.get_mut(declared);
+      debug_assert!(
+        symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
+        "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
+        symbol.name,
+        declared,
+        self.link_output.module_table.modules[declared.owner].id(),
+      );
+      symbol.chunk_id = Some(chunk_id);
+    }
   }
 
   /// - Filter out depended symbols to come from other chunks

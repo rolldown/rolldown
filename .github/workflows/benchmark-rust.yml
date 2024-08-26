@@ -133,4 +133,3 @@ jobs:
           body: ${{ steps.bench_comparison.outputs.comment }}
           reactions-edit-mode: 'replace'
           edit-mode: replace
-

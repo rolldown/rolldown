@@ -99,7 +99,15 @@ pub fn pre_process_ecma_ast(
   });
 
   // We have to re-create the symbol table and scope tree after the transformation so far to make sure they are up-to-date.
-  let (symbols, scopes) = ast.make_symbol_table_and_scope_tree();
+  // let (symbols, scopes) = ast.make_symbol_table_and_scope_tree();
 
-  Ok((ast, symbols, scopes))
+  // Ok((ast, symbols, scopes))
+  // Err(anyhow::anyhow!("Not implemented"))
+  // ast.make_symbol_table_and_scope_tree().map(|(symbols, scopes)| (ast, symbols, scopes))
+  match ast.make_symbol_table_and_scope_tree() {
+    Ok((symbols, scopes)) => Ok((ast, symbols, scopes)),
+    Err(errors) => {
+      Err(anyhow::anyhow!("Failed to make symbol table and scope tree: {:#?}", errors))
+    }
+  }
 }

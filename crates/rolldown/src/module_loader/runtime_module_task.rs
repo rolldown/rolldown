@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
-use oxc::index::IndexVec;
 use oxc::span::SourceType;
+use oxc::{index::IndexVec, syntax::symbol};
 use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaModule, ExportsKind, ModuleDefFormat,
   ModuleId, ModuleIdx, ModuleType, SymbolRef,
@@ -138,7 +138,18 @@ impl RuntimeModuleTask {
     };
     tweak_ast_for_scanning(&mut ast);
 
-    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
+    let symbol_and_scope = ast.make_symbol_table_and_scope_tree();
+    if symbol_and_scope.is_err() {
+      return Err(anyhow::anyhow!(
+        "Failed to make symbol table and scope tree: {:#?}",
+        symbol_and_scope
+      ));
+    }
+
+    let (mut symbol_table, scope) = symbol_and_scope.unwrap();
+    // let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree().map_err(|erros| {
+    //   Err(anyhow::anyhow!("Failed to make symbol table and scope tree: {:#?}", errors))
+    // })?;
     let ast_scope = AstScopes::new(
       scope,
       std::mem::take(&mut symbol_table.references),

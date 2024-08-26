@@ -18,7 +18,9 @@ use rustc_hash::FxHashMap;
 
 use self::utils::{construct_snippet_for_expression, construct_snippet_from_await_decl};
 mod utils;
+
 #[derive(Debug)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: String,
   pub insert_preload: bool,
@@ -92,13 +94,13 @@ impl Plugin for BuildImportAnalysisPlugin {
   }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 struct BuildImportAnalysisVisitor<'a> {
   builder: AstBuilder<'a>,
   need_prepend_helper: bool,
   insert_preload: bool,
   scope_stack: Vec<ScopeFlags>,
   has_inserted_helper: bool,
-
   pub render_built_url: bool,
   pub is_relative_base: bool,
 }

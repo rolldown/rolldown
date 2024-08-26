@@ -53,6 +53,7 @@ pub fn construct_snippet_from_await_decl<'a>(
   )
 }
 
+#[allow(clippy::too_many_lines)]
 /// generate `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...)`
 fn construct_vite_preload_call<'a>(
   ast_builder: AstBuilder<'a>,

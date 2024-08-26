@@ -133,6 +133,7 @@ pub struct BindingAliasPluginAlias {
 #[napi_derive::napi(object)]
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BindingBuildImportAnalysisPluginConfig {
   pub preload_code: String,
   pub insert_preload: bool,

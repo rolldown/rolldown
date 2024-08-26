@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
 ## EXPORT_UNDEFINED_VARIABLE
 
@@ -14,16 +14,4 @@ source: crates/rolldown_testing/src/integration_test.rs
    │    ╰─── 
 ───╯
 
-```
-# Assets
-
-## main.mjs
-
-```js
-
-//#region main.js
-let foo = 1000;
-
-//#endregion
-export { foo };
 ```

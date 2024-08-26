@@ -26,6 +26,7 @@ pub enum EventKind {
   IoError,
   // Derive from esbuild
   CommonJsVariableInEsm,
+  ExportUndefinedVariable,
 }
 
 impl Display for EventKind {
@@ -51,6 +52,7 @@ impl Display for EventKind {
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::IoError => write!(f, "IO_ERROR"),
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
+      EventKind::ExportUndefinedVariable => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
     }
   }
 }

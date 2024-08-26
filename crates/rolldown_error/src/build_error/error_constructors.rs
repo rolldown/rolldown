@@ -5,6 +5,7 @@ use arcstr::ArcStr;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
+use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -170,5 +171,14 @@ impl BuildDiagnostic {
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
     Self::new_inner(Eval { filename, span, source })
+  }
+
+  pub fn export_undefined_variable(
+    filename: String,
+    source: ArcStr,
+    span: Span,
+    name: ArcStr,
+  ) -> Self {
+    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
   }
 }

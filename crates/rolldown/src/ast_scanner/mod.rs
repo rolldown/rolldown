@@ -41,6 +41,7 @@ pub struct ScanResult {
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
   pub has_eval: bool,
 }
 
@@ -99,6 +100,7 @@ impl<'me> AstScanner<'me> {
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
       has_eval: false,
+      errors: Vec::new(),
     };
 
     Self {
@@ -205,8 +207,8 @@ impl<'me> AstScanner<'me> {
     self.current_stmt_info.declared_symbols.push((self.idx, id).into());
   }
 
-  fn get_root_binding(&self, name: &str) -> SymbolId {
-    self.scopes.get_root_binding(name).expect("must have")
+  fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
+    self.scopes.get_root_binding(name)
   }
 
   fn add_import_record(
@@ -406,11 +408,16 @@ impl<'me> AstScanner<'me> {
       }
     } else {
       decl.specifiers.iter().for_each(|spec| {
-        self.add_local_export(
-          spec.exported.name().as_str(),
-          self.get_root_binding(spec.local.name().as_str()),
-          spec.span,
-        );
+        if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
+          self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
+        } else {
+          self.result.errors.push(BuildDiagnostic::export_undefined_variable(
+            self.file_path.to_string(),
+            self.source.clone(),
+            spec.local.span(),
+            ArcStr::from(spec.local.name().as_str()),
+          ));
+        }
       });
       if let Some(decl) = decl.declaration.as_ref() {
         match decl {

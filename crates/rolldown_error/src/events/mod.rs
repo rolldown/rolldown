@@ -8,6 +8,7 @@ pub mod ambiguous_external_namespace;
 pub mod circular_dependency;
 pub mod commonjs_variable_in_esm;
 pub mod eval;
+pub mod export_undefined_variable;
 pub mod external_entry;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;

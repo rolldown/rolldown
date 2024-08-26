@@ -9,7 +9,8 @@
     "types": [], // Avoid checking unrelated node_modules types
     "noEmit": true,
     "strict": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "resolveJsonModule": true
   },
   "include": [
     // check only package exports

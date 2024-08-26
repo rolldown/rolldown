@@ -4,18 +4,20 @@ use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
+use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
+use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use super::types::binding_js_or_regex::BindingStringOrRegex;
 
@@ -52,6 +54,8 @@ pub enum BindingBuiltinPluginName {
   WasmFallbackPlugin,
   AliasPlugin,
   JsonPlugin,
+  BuildImportAnalysisPlugin,
+  ReplacePlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -124,6 +128,27 @@ pub struct BindingAliasPluginConfig {
 pub struct BindingAliasPluginAlias {
   pub find: BindingStringOrRegex,
   pub replacement: String,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingBuildImportAnalysisPluginConfig {
+  pub preload_code: String,
+  pub insert_preload: bool,
+  pub optimize_module_preload_relative_paths: bool,
+}
+
+impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
+    Ok(BuildImportAnalysisPlugin {
+      preload_code: value.preload_code,
+      insert_preload: value.insert_preload,
+      optimize_module_preload_relative_paths: value.optimize_module_preload_relative_paths,
+    })
+  }
 }
 
 impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
@@ -234,6 +259,44 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           is_build: config.is_build.unwrap_or_default(),
         })
       }
+      BindingBuiltinPluginName::BuildImportAnalysisPlugin => {
+        let config: BindingBuildImportAnalysisPluginConfig = if let Some(options) = plugin.options {
+          BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for BuildImportAnalysisPlugin",
+          ));
+        };
+        Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
+      }
+      BindingBuiltinPluginName::ReplacePlugin => {
+        let config = if let Some(options) = plugin.options {
+          Some(BindingReplacePluginConfig::from_unknown(options)?)
+        } else {
+          None
+        };
+
+        Arc::new(ReplacePlugin::with_options(config.map_or_else(ReplaceOptions::default, |opts| {
+          ReplaceOptions {
+            values: opts.values,
+            delimiters: opts.delimiters.map_or_else(
+              || ReplaceOptions::default().delimiters,
+              |raw| (raw[0].clone(), raw[1].clone()),
+            ),
+          }
+        })))
+      }
     })
   }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingReplacePluginConfig {
+  // It's ok we use `HashMap` here, because we don't care about the order of the keys.
+  pub values: HashMap<String, String>,
+  #[napi(ts_type = "[string, string]")]
+  pub delimiters: Option<Vec<String>>,
 }

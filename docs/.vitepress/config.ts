@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitepress'
-import { groupIconPlugin } from 'vitepress-plugin-group-icons'
+import {
+  groupIconMdPlugin,
+  groupIconVitePlugin,
+} from 'vitepress-plugin-group-icons'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -127,10 +130,19 @@ export default defineConfig({
     },
   },
 
+  vite: {
+    plugins: [
+      groupIconVitePlugin({
+        customIcon: {
+          homebrew: 'logos:homebrew',
+          cargo: 'vscode-icons:file-type-cargo',
+        },
+      }),
+    ],
+  },
   markdown: {
     config(md) {
-      // @ts-ignore wait upstream fix: https://github.com/vuejs/vitepress/issues/4116
-      md.use(groupIconPlugin)
+      md.use(groupIconMdPlugin)
     },
   },
 })

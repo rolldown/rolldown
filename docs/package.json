@@ -10,6 +10,6 @@
   "devDependencies": {
     "@iconify-json/vscode-icons": "^1.1.37",
     "vitepress": "^1.2.3",
-    "vitepress-plugin-group-icons": "^0.0.9"
+    "vitepress-plugin-group-icons": "^1.0.0"
   }
 }

@@ -28,7 +28,7 @@ export const __vitePreload = (v) => {
 `,
         insertPreload: true,
         optimizeModulePreloadRelativePaths: false,
-        renderBuiltUrl: false,
+        renderBuiltUrl: true,
         isRelativeBase: false,
       }),
     ],
@@ -37,7 +37,7 @@ export const __vitePreload = (v) => {
     await import('./assert.mjs')
     output.output.forEach((item) => {
       if (item.type === 'chunk' && item.name === 'main') {
-        expect(item.code).to.not.includes('import.meta.url')
+        expect(item.code).to.includes('import.meta.url')
       }
     })
   },

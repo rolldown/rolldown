@@ -119,6 +119,8 @@ export interface BindingBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
   optimizeModulePreloadRelativePaths: boolean
+  renderBuiltUrl: boolean
+  isRelativeBase: boolean
 }
 
 export interface BindingBuiltinPlugin {

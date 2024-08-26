@@ -153,7 +153,7 @@ impl<'a> GenerateStage<'a> {
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
   ) {
     let symbols = &self.link_output.symbols;
-    let symbol_to_chunk_id_vec = append_only_vec::AppendOnlyVec::new();
+    let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
     let chunks_iter = multizip((
       chunk_graph.chunks.iter_enumerated(),
@@ -257,12 +257,12 @@ impl<'a> GenerateStage<'a> {
             depended_symbols.insert(entry.namespace_object_ref);
           }
         }
-        symbol_to_chunk_id_vec.push((chunk_id, symbol_needs_to_assign));
+        chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );
     // shadowing previous immutable borrow
     let symbols = &mut self.link_output.symbols;
-    for (chunk_id, symbol_list) in symbol_to_chunk_id_vec {
+    for (chunk_id, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let symbol = symbols.get_mut(declared);
         debug_assert!(

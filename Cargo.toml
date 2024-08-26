@@ -166,7 +166,7 @@ oxc_transform_napi = { version = "0.25.0" }
 
 [profile.release]
 codegen-units = 1
-debug         = true     # Set to `true` for debug information
+debug         = true  # Set to `true` for debug information
 lto           = "fat"
 opt-level     = 3
-strip         = false# Set to `false` for debug information
+strip         = false # Set to `false` for debug information

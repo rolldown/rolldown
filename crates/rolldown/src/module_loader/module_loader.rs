@@ -12,7 +12,7 @@ use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
-use rolldown_common::side_effects::DeterminedSideEffects;
+use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
   ModuleIdx, ModuleTable, OutputFormat, ResolvedId,
@@ -150,15 +150,27 @@ impl ModuleLoader {
         if resolved_id.is_external {
           let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(idx);
-          let external_module_side_effects = match self.options.treeshake {
-            rolldown_common::TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
-            rolldown_common::TreeshakeOptions::Boolean(true) => unreachable!(),
-            rolldown_common::TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
-              rolldown_common::ModuleSideEffects::Boolean(false) => {
-                DeterminedSideEffects::UserDefined(false)
+          let external_module_side_effects = if let Some(hook_side_effects) =
+            resolved_id.side_effects
+          {
+            match hook_side_effects {
+              HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+              HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
+              HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
+            }
+          } else {
+            match self.options.treeshake {
+              rolldown_common::TreeshakeOptions::Boolean(false) => {
+                DeterminedSideEffects::NoTreeshake
               }
-              _ => DeterminedSideEffects::NoTreeshake,
-            },
+              rolldown_common::TreeshakeOptions::Boolean(true) => unreachable!(),
+              rolldown_common::TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
+                rolldown_common::ModuleSideEffects::Boolean(false) => {
+                  DeterminedSideEffects::UserDefined(false)
+                }
+                _ => DeterminedSideEffects::NoTreeshake,
+              },
+            }
           };
           let ext =
             ExternalModule::new(idx, ArcStr::clone(&resolved_id.id), external_module_side_effects);

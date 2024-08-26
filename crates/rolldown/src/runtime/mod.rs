@@ -17,7 +17,7 @@ impl RuntimeModuleBrief {
   }
 
   pub fn id(&self) -> ModuleIdx {
-    self.id
+    self.id + 0
   }
 
   pub fn resolve_symbol(&self, name: &str) -> SymbolRef {

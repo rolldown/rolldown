@@ -1,5 +1,5 @@
+use std::borrow::Cow;
 use std::hash::BuildHasherDefault;
-use std::{borrow::Cow, sync::Mutex};
 
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
@@ -169,6 +169,7 @@ impl<'a> GenerateStage<'a> {
         imports_from_external_modules,
         cross_chunk_dynamic_imports,
       )| {
+        let mut symbol_needs_to_assign = vec![];
         chunk.modules.iter().copied().for_each(|module_id| {
           let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
             return;
@@ -215,7 +216,7 @@ impl<'a> GenerateStage<'a> {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {
-              symbol_to_chunk_id_vec.push((*declared, chunk_id));
+              symbol_needs_to_assign.push(*declared);
             });
 
             stmt_info.referenced_symbols.iter().for_each(|referenced| {
@@ -256,20 +257,23 @@ impl<'a> GenerateStage<'a> {
             depended_symbols.insert(entry.namespace_object_ref);
           }
         }
+        symbol_to_chunk_id_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );
     // shadowing previous immutable borrow
     let symbols = &mut self.link_output.symbols;
-    for (declared, chunk_id) in symbol_to_chunk_id_vec {
-      let symbol = symbols.get_mut(declared);
-      debug_assert!(
-        symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
-        "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
-        symbol.name,
-        declared,
-        self.link_output.module_table.modules[declared.owner].id(),
-      );
-      symbol.chunk_id = Some(chunk_id);
+    for (chunk_id, symbol_list) in symbol_to_chunk_id_vec {
+      for declared in symbol_list {
+        let symbol = symbols.get_mut(declared);
+        debug_assert!(
+          symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
+          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
+          symbol.name,
+          declared,
+          self.link_output.module_table.modules[declared.owner].id(),
+        );
+        symbol.chunk_id = Some(chunk_id);
+      }
     }
   }
 

@@ -2,12 +2,9 @@ use oxc::{
   ast::{visit::walk_mut, VisitMut},
   span::{GetSpanMut, Span},
 };
-use rustc_hash::FxHashSet;
 
 /// Make sure there aren't any duplicate spans in the AST.
 pub struct EnsureSpanUniqueness {
-  // visited_spans: FxHashMap</* start */ u32, /* ends */ FxHashSet<u32>>,
-  visited_spans: FxHashSet<Span>,
   next_unique_span_start: u32,
 }
 
@@ -31,23 +28,19 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
 
 impl EnsureSpanUniqueness {
   pub fn new() -> Self {
-    Self { visited_spans: FxHashSet::default(), next_unique_span_start: 1 }
+    Self { next_unique_span_start: u32::MAX }
   }
 
   fn ensure_uniqueness(&mut self, span: &mut Span) {
-    if self.visited_spans.contains(span) {
+    if span.is_empty() {
       *span = self.generate_unique_span();
     }
-    self.visited_spans.insert(*span);
   }
 
   fn generate_unique_span(&mut self) -> Span {
-    let mut span_candidate = Span::new(self.next_unique_span_start, self.next_unique_span_start);
-    while self.visited_spans.contains(&span_candidate) {
-      self.next_unique_span_start += 1;
-      span_candidate = Span::new(self.next_unique_span_start, self.next_unique_span_start);
-    }
-    debug_assert!(span_candidate.is_empty());
-    span_candidate
+    self.next_unique_span_start -= 1;
+    let span_candidate = self.next_unique_span_start;
+    debug_assert_ne!(span_candidate, 0);
+    Span::new(span_candidate, span_candidate)
   }
 }

@@ -17,6 +17,7 @@ pub fn construct_snippet_from_await_decl<'a>(
   source: Atom<'a>,
   decls: &[Atom<'a>],
   decl_kind: VariableDeclarationKind,
+  append_import_meta_url: bool,
 ) -> VariableDeclarator<'a> {
   ast_builder.variable_declarator(
     SPAN,
@@ -44,20 +45,22 @@ pub fn construct_snippet_from_await_decl<'a>(
       None::<TSTypeAnnotation>,
       false,
     ),
-    Some(
-      ast_builder
-        .expression_await(SPAN, construct_vite_preload_call(ast_builder, decl_kind, decls, source)),
-    ),
+    Some(ast_builder.expression_await(
+      SPAN,
+      construct_vite_preload_call(ast_builder, decl_kind, decls, source, append_import_meta_url),
+    )),
     false,
   )
 }
 
+#[allow(clippy::too_many_lines)]
 /// generate `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...)`
 fn construct_vite_preload_call<'a>(
   ast_builder: AstBuilder<'a>,
   decl_kind: VariableDeclarationKind,
   decls: &[Atom<'a>],
   source: Atom<'a>,
+  append_import_meta_url: bool,
 ) -> Expression<'a> {
   ast_builder.expression_call(
     SPAN,
@@ -146,6 +149,20 @@ fn construct_vite_preload_call<'a>(
         ast_builder.expression_identifier_reference(SPAN, "__VITE_PRELOAD__"),
         ast_builder.void_0(),
       )));
+      if append_import_meta_url {
+        items.push(ast_builder.argument_expression(ast_builder.expression_member(
+          ast_builder.member_expression_static(
+            SPAN,
+            ast_builder.expression_meta_property(
+              SPAN,
+              ast_builder.identifier_name(SPAN, "import"),
+              ast_builder.identifier_name(SPAN, "meta"),
+            ),
+            ast_builder.identifier_name(SPAN, "url"),
+            false,
+          ),
+        )));
+      }
       items
     },
     false,
@@ -160,6 +177,13 @@ pub fn construct_snippet_for_expression<'a>(
   ast_builder: AstBuilder<'a>,
   source: Atom<'a>,
   decls: &[Atom<'a>],
+  append_import_meta_url: bool,
 ) -> Expression<'a> {
-  construct_vite_preload_call(ast_builder, VariableDeclarationKind::Const, decls, source)
+  construct_vite_preload_call(
+    ast_builder,
+    VariableDeclarationKind::Const,
+    decls,
+    source,
+    append_import_meta_url,
+  )
 }

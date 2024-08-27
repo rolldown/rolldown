@@ -18,11 +18,15 @@ use rustc_hash::FxHashMap;
 
 use self::utils::{construct_snippet_for_expression, construct_snippet_from_await_decl};
 mod utils;
+
 #[derive(Debug)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: String,
   pub insert_preload: bool,
   pub optimize_module_preload_relative_paths: bool,
+  pub render_built_url: bool,
+  pub is_relative_base: bool,
 }
 
 const PRELOAD_METHOD: &str = "__vitePreload";
@@ -75,7 +79,12 @@ impl Plugin for BuildImportAnalysisPlugin {
     let mut ast = args.ast;
     ast.program.with_mut(|fields| {
       let builder = AstBuilder::new(fields.allocator);
-      let mut visitor = BuildImportAnalysisVisitor::new(builder, self.insert_preload);
+      let mut visitor = BuildImportAnalysisVisitor::new(
+        builder,
+        self.insert_preload,
+        self.render_built_url,
+        self.is_relative_base,
+      );
       visitor.visit_program(fields.program);
     });
 
@@ -85,21 +94,31 @@ impl Plugin for BuildImportAnalysisPlugin {
   }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 struct BuildImportAnalysisVisitor<'a> {
   builder: AstBuilder<'a>,
   need_prepend_helper: bool,
   insert_preload: bool,
   scope_stack: Vec<ScopeFlags>,
   has_inserted_helper: bool,
+  pub render_built_url: bool,
+  pub is_relative_base: bool,
 }
 impl<'a> BuildImportAnalysisVisitor<'a> {
-  pub fn new(builder: AstBuilder<'a>, insert_preload: bool) -> Self {
+  pub fn new(
+    builder: AstBuilder<'a>,
+    insert_preload: bool,
+    render_built_url: bool,
+    is_relative_base: bool,
+  ) -> Self {
     Self {
       builder,
       need_prepend_helper: false,
       insert_preload,
       scope_stack: vec![],
       has_inserted_helper: false,
+      render_built_url,
+      is_relative_base,
     }
   }
 
@@ -132,7 +151,12 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
     let property = member_expr.property.name.clone();
 
-    let vite_preload_call = construct_snippet_for_expression(self.builder, source, &[property]);
+    let vite_preload_call = construct_snippet_for_expression(
+      self.builder,
+      source,
+      &[property],
+      self.is_relative_base || self.render_built_url,
+    );
     expr.argument = vite_preload_call;
     self.need_prepend_helper = true;
   }
@@ -178,7 +202,12 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       })
       .collect::<Vec<_>>();
 
-    let vite_preload_call = construct_snippet_for_expression(self.builder, source, &decls);
+    let vite_preload_call = construct_snippet_for_expression(
+      self.builder,
+      source,
+      &decls,
+      self.render_built_url || self.is_relative_base,
+    );
     callee.object = vite_preload_call;
     self.need_prepend_helper = true;
   }
@@ -254,8 +283,13 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         match pattern {
           ImportPattern::Decl(source, decls) => {
             self.need_prepend_helper = true;
-            let mut declarator =
-              construct_snippet_from_await_decl(self.builder, source, &decls, kind);
+            let mut declarator = construct_snippet_from_await_decl(
+              self.builder,
+              source,
+              &decls,
+              kind,
+              self.render_built_url || self.is_relative_base,
+            );
             std::mem::swap(d, &mut declarator);
           }
         }

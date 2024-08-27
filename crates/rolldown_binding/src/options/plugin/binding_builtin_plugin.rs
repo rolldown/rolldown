@@ -133,10 +133,13 @@ pub struct BindingAliasPluginAlias {
 #[napi_derive::napi(object)]
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BindingBuildImportAnalysisPluginConfig {
   pub preload_code: String,
   pub insert_preload: bool,
   pub optimize_module_preload_relative_paths: bool,
+  pub render_built_url: bool,
+  pub is_relative_base: bool,
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
@@ -147,6 +150,8 @@ impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlug
       preload_code: value.preload_code,
       insert_preload: value.insert_preload,
       optimize_module_preload_relative_paths: value.optimize_module_preload_relative_paths,
+      render_built_url: value.render_built_url,
+      is_relative_base: value.is_relative_base,
     })
   }
 }

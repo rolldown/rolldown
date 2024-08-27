@@ -123,13 +123,14 @@ impl ConcatSource {
 
   pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
-    let mut sourcemap_builder =
-      self.enable_sourcemap.then_some(ConcatSourceMapBuilder::with_capacity(
+    let mut sourcemap_builder = self.enable_sourcemap.then(|| {
+      ConcatSourceMapBuilder::with_capacity(
         self.names_len,
         self.sources_len,
         self.tokens_len,
         self.token_chunks_len,
-      ));
+      )
+    });
     let mut line_offset = 0;
     let source_len = self.prepend_source.len() + self.inner.len();
 

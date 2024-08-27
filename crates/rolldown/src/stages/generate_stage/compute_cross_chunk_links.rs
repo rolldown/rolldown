@@ -154,7 +154,6 @@ impl<'a> GenerateStage<'a> {
   ) {
     let symbols = &self.link_output.symbols;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
-
     let chunks_iter = multizip((
       chunk_graph.chunks.iter_enumerated(),
       index_chunk_depended_symbols.iter_mut(),
@@ -219,13 +218,27 @@ impl<'a> GenerateStage<'a> {
               symbol_needs_to_assign.push(*declared);
             });
 
-            stmt_info.referenced_symbols.iter().for_each(|referenced| {
-              let referenced = referenced.symbol_ref();
-              let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
-              if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
-                canonical_ref = namespace_alias.namespace_ref;
-              }
-              depended_symbols.insert(canonical_ref);
+            stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+              match reference_ref {
+                rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
+                  let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
+                  if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
+                    canonical_ref = namespace_alias.namespace_ref;
+                  }
+                  depended_symbols.insert(canonical_ref);
+                }
+                rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                  if let Some(sym_ref) = member_expr.resolved_symbol_ref(
+                    &self.link_output.metas[module.idx].resolved_member_expr_refs,
+                  ) {
+                    let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
+                    depended_symbols.insert(canonical_ref);
+                  } else {
+                    // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                    // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+                  }
+                }
+              };
             });
           });
         });
@@ -293,8 +306,8 @@ impl<'a> GenerateStage<'a> {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;
         }
-        let import_symbol = self.link_output.symbols.get(import_ref);
 
+        let import_symbol = self.link_output.symbols.get(import_ref);
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);

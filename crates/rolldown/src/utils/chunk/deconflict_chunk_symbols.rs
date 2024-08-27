@@ -23,7 +23,6 @@ pub fn deconflict_chunk_symbols(
       // global names should be reserved
       renamer.reserve(Cow::Owned(name.to_rstr()));
     });
-
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
   // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other
   // statements. Those `import {...} from './other-chunk.js'` will declared these outside symbols in this chunk, so symbols that

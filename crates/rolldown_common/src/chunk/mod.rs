@@ -1,5 +1,8 @@
 // cSpell:disable
-use crate::{ChunkIdx, ChunkKind, ModuleIdx, NamedImport, RollupPreRenderedChunk, SymbolRef};
+use crate::{
+  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
+  RollupPreRenderedChunk, SymbolRef,
+};
 pub mod types;
 
 use arcstr::ArcStr;
@@ -69,5 +72,35 @@ impl Chunk {
     } else {
       format!("./{import_path}")
     }
+  }
+
+  pub async fn filename_template<'a>(
+    &mut self,
+    options: &'a NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+  ) -> anyhow::Result<FilenameTemplate> {
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
+    {
+      options.entry_filenames.call(rollup_pre_rendered_chunk).await?
+    } else {
+      options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
+    };
+
+    Ok(FilenameTemplate::new(ret))
+  }
+
+  pub async fn css_filename_template<'a>(
+    &mut self,
+    options: &'a NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+  ) -> anyhow::Result<FilenameTemplate> {
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
+    {
+      options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
+    } else {
+      options.css_chunk_filenames.call(rollup_pre_rendered_chunk).await?
+    };
+
+    Ok(FilenameTemplate::new(ret))
   }
 }

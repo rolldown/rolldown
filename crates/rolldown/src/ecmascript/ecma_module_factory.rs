@@ -91,7 +91,12 @@ impl ModuleFactory for EcmaModuleFactory {
       ctx.resolved_id.module_def_format,
     )?;
 
-    let resolved_deps = ctx.resolve_dependencies(&scan_result.import_records).await?;
+    let resolved_deps = match ctx.resolve_dependencies(&scan_result.import_records).await? {
+      Ok(deps) => deps,
+      Err(errs) => {
+        return Ok(Err(errs));
+      }
+    };
 
     let ScanResult {
       named_imports,

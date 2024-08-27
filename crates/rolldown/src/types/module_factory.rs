@@ -93,8 +93,8 @@ impl<'a> CreateModuleContext<'a> {
   pub async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
-  ) -> anyhow::Result<IndexVec<ImportRecordIdx, ResolvedId>> {
-    let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
+  ) -> anyhow::Result<Result<IndexVec<ImportRecordIdx, ResolvedId>, Vec<BuildDiagnostic>>> {
+    let jobs = dependencies.iter().map(|item| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(self.options);
       // FIXME(hyf0): should not use `Arc<Resolver>` here
@@ -105,7 +105,7 @@ impl<'a> CreateModuleContext<'a> {
       async move {
         Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
           .await
-          .map(|id| (specifier, idx, id))
+          .map(|id| (specifier, id))
       }
     });
 
@@ -114,7 +114,7 @@ impl<'a> CreateModuleContext<'a> {
     let mut ret = IndexVec::with_capacity(dependencies.len());
     let mut build_errors = vec![];
     for resolved_id in resolved_ids {
-      let (specifier, idx, resolved_id) = resolved_id?;
+      let (specifier, resolved_id) = resolved_id?;
 
       match resolved_id {
         Ok(info) => {
@@ -140,20 +140,19 @@ impl<'a> CreateModuleContext<'a> {
             });
           }
           _ => {
-            build_errors.push((&dependencies[idx], e));
+            build_errors.push(BuildDiagnostic::unresolved_import(
+              specifier.to_string(),
+              self.resolved_id.id.to_string(),
+            ));
           }
         },
       }
     }
 
     if build_errors.is_empty() {
-      Ok(ret)
+      Ok(Ok(ret))
     } else {
-      let resolved_err = anyhow::format_err!(
-        "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
-        importer = self.resolved_id.id,
-      );
-      Err(resolved_err)
+      Ok(Err(build_errors))
     }
   }
 }

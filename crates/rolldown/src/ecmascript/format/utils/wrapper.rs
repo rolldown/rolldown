@@ -1,8 +1,7 @@
-use crate::ecmascript::format::utils::namespace::generate_identifier;
+use crate::ecmascript::format::iife::render_iife_factory;
 use crate::{
   ecmascript::{
-    ecma_generator::RenderedModuleSources,
-    format::{utils::external_module::ExternalModules, AppendRawString},
+    ecma_generator::RenderedModuleSources, format::utils::external_module::ExternalModules,
   },
   types::generator::GenerateContext,
   utils::chunk::{
@@ -23,6 +22,8 @@ use rolldown_utils::ecma_script::legitimize_identifier_name;
 /// The main function for rendering the IIFE format chunks.
 /// The factory, e.g. in UMD, it is the factory function. In iife, it is the declaration / assignment.
 /// The caller, e.g. in UMD and AMD, it should end up immediately; in IIFE, it should be passed with invoke arguments.
+///
+/// In Rollup, it uses `render_interop`, as the `magic_string` supports prepend and append. It is more vivid, but we don't have the functionality for `ConcatSource` yet.
 pub fn render_wrapper_function(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -33,7 +34,7 @@ pub fn render_wrapper_function(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  concat_source.append_optional_raw_string(banner);
+  concat_source.add_optional_raw_string(banner);
 
   // iife wrapper start
 
@@ -60,20 +61,20 @@ pub fn render_wrapper_function(
   let (factory, caller) = render_factory(ctx, &export_mode, has_exports, &externals)?;
 
   concat_source
-    .append_raw_string(format!("{factory}(function({}) {{\n", externals.as_args(named_exports)));
+    .add_raw_string(format!("{factory}(function({}) {{\n", externals.as_args(named_exports)));
 
   if determine_use_strict(ctx) {
-    concat_source.append_raw_string("\"use strict\";".to_string());
+    concat_source.add_raw_string("\"use strict\";".to_string());
   }
 
-  concat_source.append_optional_raw_string(intro);
+  concat_source.add_optional_raw_string(intro);
 
   if named_exports {
     let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
-    concat_source.append_optional_raw_string(marker.map(ToString::to_string));
+    concat_source.add_optional_raw_string(marker.map(ToString::to_string));
   }
 
-  concat_source.append_raw_string(import_code);
+  concat_source.add_raw_string(import_code);
 
   // chunk content
   // TODO indent chunk content for iife format
@@ -86,23 +87,24 @@ pub fn render_wrapper_function(
   });
 
   // iife exports
-  concat_source.append_optional_raw_string(render_chunk_exports(ctx, Some(&export_mode)));
+  concat_source.add_optional_raw_string(render_chunk_exports(ctx, Some(&export_mode)));
 
-  concat_source.append_optional_raw_string(outro);
+  concat_source.add_optional_raw_string(outro);
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-    concat_source.append_raw_string("return exports;".to_string());
+    concat_source.add_raw_string("return exports;".to_string());
   }
 
-  concat_source.append_raw_string(format!("}}){caller};"));
+  concat_source.add_raw_string(format!("}}){caller};"));
 
-  concat_source.append_optional_raw_string(footer);
+  concat_source.add_optional_raw_string(footer);
 
   Ok(concat_source)
 }
 
 /// Handling external imports needs to modify the arguments of the wrapper function.
+/// They share the same logic in iife, umd, and amd.
 fn render_wrapper_chunk_imports(ctx: &GenerateContext<'_>) -> (String, ExternalModules) {
   let render_import_stmts =
     collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
@@ -142,6 +144,7 @@ fn render_wrapper_chunk_imports(ctx: &GenerateContext<'_>) -> (String, ExternalM
   (s, externals)
 }
 
+/// Metadata for the factory function. e.g. In iife, it should be `var ... = (function(exports, ...){`, and the caller should be `})(...);`.
 fn render_factory(
   ctx: &mut GenerateContext<'_>,
   export_mode: &OutputExports,
@@ -149,38 +152,7 @@ fn render_factory(
   args: &ExternalModules,
 ) -> DiagnosableResult<(String, String)> {
   match ctx.options.format {
-    OutputFormat::Iife => {
-      let (definition, assignment) = generate_identifier(ctx, export_mode, has_export, "this")?;
-      let named_export = matches!(&export_mode, OutputExports::Named);
-      let export_invoker = if has_export && named_export {
-        if ctx.options.extend {
-          // If using `output.extend`, the first caller argument should be `name = name || {}`,
-          // then the result will be assigned to `name`.
-          Some(assignment.as_str())
-        } else {
-          // If not using `output.extend`, the first caller argument should be `{}`,
-          // then the result will be assigned to `exports`.
-          Some("{}")
-        }
-      } else {
-        // If there is no export or not using named export,
-        // there shouldn't be an argument shouldn't be related to the export.
-        None
-      };
-      let caller = format!("({})", args.as_iife(ctx, export_invoker.unwrap_or_default()));
-      let assigner = if (ctx.options.extend && named_export) || !has_export || assignment.is_empty()
-      {
-        // If facing following situations, there shouldn't an assignment for the wrapper function:
-        // - Using `output.extend` and named export.
-        // - No export.
-        // - the `assignment` is empty.
-        String::new()
-      } else {
-        format!("{assignment} = ")
-      };
-      let invoker = format!("{definition}{assigner}");
-      Ok((invoker, caller))
-    }
+    OutputFormat::Iife => render_iife_factory(ctx, export_mode, has_export, args),
     _ => unreachable!(),
   }
 }

@@ -1,4 +1,3 @@
-use crate::ecmascript::format::AppendRawString;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -23,11 +22,11 @@ pub fn render_esm(
 ) -> ConcatSource {
   let mut concat_source = ConcatSource::default();
 
-  concat_source.append_optional_raw_string(banner);
+  concat_source.add_optional_raw_string(banner);
 
-  concat_source.append_optional_raw_string(intro);
+  concat_source.add_optional_raw_string(intro);
 
-  concat_source.append_raw_string(render_esm_chunk_imports(ctx));
+  concat_source.add_raw_string(render_esm_chunk_imports(ctx));
 
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
@@ -44,7 +43,7 @@ pub fn render_esm(
           .dedup()
           .for_each(|ext_name| {
             let import_stmt = format!("export * from \"{}\"\n", &ext_name);
-            concat_source.append_raw_string(import_stmt);
+            concat_source.add_raw_string(import_stmt);
           });
       }
     }
@@ -67,14 +66,14 @@ pub fn render_esm(
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        concat_source.append_raw_string(format!("{wrapper_ref_name}();"));
+        concat_source.add_raw_string(format!("{wrapper_ref_name}();"));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        concat_source.append_raw_string(format!("export default {wrapper_ref_name}();\n"));
+        concat_source.add_raw_string(format!("export default {wrapper_ref_name}();\n"));
       }
       WrapKind::None => {}
     }
@@ -82,13 +81,13 @@ pub fn render_esm(
 
   if let Some(exports) = render_chunk_exports(ctx, None) {
     if !exports.is_empty() {
-      concat_source.append_raw_string(exports);
+      concat_source.add_raw_string(exports);
     }
   }
 
-  concat_source.append_optional_raw_string(outro);
+  concat_source.add_optional_raw_string(outro);
 
-  concat_source.append_optional_raw_string(footer);
+  concat_source.add_optional_raw_string(footer);
 
   concat_source
 }

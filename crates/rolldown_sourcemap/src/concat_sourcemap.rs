@@ -107,6 +107,18 @@ impl ConcatSource {
     self.token_chunks_len += 1;
   }
 
+  pub fn add_raw_string(&mut self, content: String) {
+    // Here, we always add a new source in different formats.
+    self.add_source(Box::new(RawSource::new(content)));
+  }
+
+  pub fn add_optional_raw_string(&mut self, content: Option<String>) {
+    // e.g. banner, footer, etc. It is too annoying to write the code following in the same pattern.
+    if let Some(content) = content {
+      self.add_raw_string(content);
+    }
+  }
+
   pub fn add_source(&mut self, source: Box<dyn Source + Send>) {
     if let Some(sourcemap) = source.sourcemap() {
       self.add_sourcemap(sourcemap);

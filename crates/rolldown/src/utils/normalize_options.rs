@@ -84,23 +84,20 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     treeshake: raw_options.treeshake,
     platform,
     name: raw_options.name,
-    entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string()).into(),
+    entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string().into()),
     chunk_filenames: raw_options
       .chunk_filenames
-      .unwrap_or_else(|| "[name]-[hash].js".to_string())
-      .into(),
+      .unwrap_or_else(|| "[name]-[hash].js".to_string().into()),
     asset_filenames: raw_options
       .asset_filenames
       .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string())
       .into(),
     css_entry_filenames: raw_options
       .css_entry_filenames
-      .unwrap_or_else(|| "[name].css".to_string())
-      .into(),
+      .unwrap_or_else(|| "[name].css".to_string().into()),
     css_chunk_filenames: raw_options
       .css_chunk_filenames
-      .unwrap_or_else(|| "[name]-[hash].css".to_string())
-      .into(),
+      .unwrap_or_else(|| "[name]-[hash].css".to_string().into()),
     banner: raw_options.banner,
     footer: raw_options.footer,
     intro: raw_options.intro,

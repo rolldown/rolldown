@@ -93,7 +93,7 @@ impl<'a> CreateModuleContext<'a> {
   pub async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
-  ) -> anyhow::Result<Result<IndexVec<ImportRecordIdx, ResolvedId>, Vec<BuildDiagnostic>>> {
+  ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter().map(|item| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(self.options);

@@ -19,7 +19,8 @@ use crate::{
     module_factory::{CreateModuleArgs, CreateModuleContext, CreateModuleReturn, ModuleFactory},
   },
   utils::{
-    make_ast_symbol_and_scope::make_ast_scopes_and_symbols, parse_to_ecma_ast::parse_to_ecma_ast,
+    make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
+    parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},
   },
 };
 
@@ -75,7 +76,7 @@ impl ModuleFactory for EcmaModuleFactory {
       ctx.replace_global_define_config.as_ref(),
     )?;
 
-    let (mut ast, symbols, scopes) = match parse_result {
+    let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, source } = match parse_result {
       Ok(parse_result) => parse_result,
       Err(errs) => {
         return Ok(Err(errs));
@@ -86,12 +87,12 @@ impl ModuleFactory for EcmaModuleFactory {
       ctx.module_index,
       &ctx.resolved_id.id,
       &mut ast,
-      symbols,
-      scopes,
+      symbol_table,
+      scope_tree,
       ctx.resolved_id.module_def_format,
     )?;
 
-    let resolved_deps = match ctx.resolve_dependencies(&scan_result.import_records).await? {
+    let resolved_deps = match ctx.resolve_dependencies(&scan_result.import_records, source).await? {
       Ok(deps) => deps,
       Err(errs) => {
         return Ok(Err(errs));

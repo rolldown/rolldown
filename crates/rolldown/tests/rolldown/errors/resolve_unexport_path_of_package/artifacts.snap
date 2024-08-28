@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve "test/abc" in main.js
+   ╭─[main.js:1:22]
+   │
+ 1 │ import { test } from "test/abc"
+   │                      ─────┬────  
+   │                           ╰────── Package subpath is not defined by exports
+───╯
+
+```

@@ -1,8 +1,8 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
+use oxc::span::Span;
 use rolldown_common::{
   side_effects::HookSideEffects, ImportKind, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx,
   ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
@@ -12,6 +12,7 @@ use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 use rolldown_sourcemap::SourceMap;
+use std::sync::Arc;
 
 use crate::{runtime::RUNTIME_MODULE_ID, utils::resolve_id, SharedOptions, SharedResolver};
 
@@ -93,8 +94,9 @@ impl<'a> CreateModuleContext<'a> {
   pub async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
+    source: ArcStr,
   ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
-    let jobs = dependencies.iter().map(|item| {
+    let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(self.options);
       // FIXME(hyf0): should not use `Arc<Resolver>` here
@@ -105,7 +107,7 @@ impl<'a> CreateModuleContext<'a> {
       async move {
         Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
           .await
-          .map(|id| (specifier, id))
+          .map(|id| (specifier, idx, id))
       }
     });
 
@@ -114,7 +116,7 @@ impl<'a> CreateModuleContext<'a> {
     let mut ret = IndexVec::with_capacity(dependencies.len());
     let mut build_errors = vec![];
     for resolved_id in resolved_ids {
-      let (specifier, resolved_id) = resolved_id?;
+      let (specifier, idx, resolved_id) = resolved_id?;
 
       match resolved_id {
         Ok(info) => {
@@ -139,10 +141,14 @@ impl<'a> CreateModuleContext<'a> {
               side_effects: None,
             });
           }
-          _ => {
-            build_errors.push(BuildDiagnostic::unresolved_import(
-              specifier.to_string(),
-              self.resolved_id.id.to_string(),
+          e => {
+            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
+            let dep = &dependencies[idx];
+            build_errors.push(BuildDiagnostic::diagnosable_resolve_error(
+              source.clone(),
+              self.resolved_id.id.clone(),
+              Span::new(dep.module_request_start, dep.module_request_end()),
+              reason,
             ));
           }
         },

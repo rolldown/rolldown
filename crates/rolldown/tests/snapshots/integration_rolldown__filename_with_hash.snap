@@ -1429,6 +1429,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/errors/invalid_export_option/none
 
 
+# tests/rolldown/errors/invalid_options/output_format
+
+- main-!~{000}~.mjs => main-i5JCZP5i.mjs
+
 # tests/rolldown/errors/missing_export
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs
@@ -1655,10 +1659,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main--FmiP1j0.mjs
 
-# tests/rolldown/function/format/iife/inline_dynamic_import
-
-- main-!~{000}~.mjs => main--9MFXZs-.mjs
-
 # tests/rolldown/function/format/iife/namespaced_name
 
 - main-!~{000}~.mjs => main-ELPzdqJs.mjs
@@ -1670,6 +1670,32 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/inject
 
 - main-!~{000}~.mjs => main-dKJg0iPO.mjs
+
+# tests/rolldown/function/inline_dynamic_imports/cjs
+
+- chunk-!~{001}~.cjs => chunk-tv4zU2oi.cjs
+- cjs-!~{003}~.cjs => cjs-AV8IRCze.cjs
+- cjs~1-!~{009}~.cjs => cjs~1-2uTcIcCg.cjs
+- esm-!~{005}~.cjs => esm-6uhNKnAh.cjs
+- esm~1-!~{00b}~.cjs => esm~1-lMvG72HV.cjs
+- foo-!~{007}~.cjs => foo-Hl1Rl7Vj.cjs
+- foo~1-!~{00d}~.cjs => foo~1-LindrtaI.cjs
+- main-!~{000}~.cjs => main-4zlLzWj1.cjs
+
+# tests/rolldown/function/inline_dynamic_imports/esm
+
+- chunk-!~{001}~.mjs => chunk-yboxNMa5.mjs
+- cjs-!~{003}~.mjs => cjs-si2Zgku_.mjs
+- cjs~1-!~{009}~.mjs => cjs~1-7D4pNAzX.mjs
+- esm-!~{005}~.mjs => esm-Fep7rO2y.mjs
+- esm~1-!~{00b}~.mjs => esm~1-iPYbO1d0.mjs
+- foo-!~{007}~.mjs => foo-W10t67P8.mjs
+- foo~1-!~{00d}~.mjs => foo~1-mLsgHUWD.mjs
+- main-!~{000}~.mjs => main-G9BfE865.mjs
+
+# tests/rolldown/function/inline_dynamic_imports/iife
+
+- main-!~{000}~.mjs => main--9MFXZs-.mjs
 
 # tests/rolldown/function/intro/cjs
 

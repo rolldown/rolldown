@@ -77,6 +77,11 @@ const outputOptionsSchema = z.strictObject({
     .describe('use external live bindings')
     .default(true)
     .optional(),
+  inlineDynamicImports: z
+    .boolean()
+    .describe('inline dynamic imports')
+    .default(false)
+    .optional(),
 })
 
 const getAddonDescription = (

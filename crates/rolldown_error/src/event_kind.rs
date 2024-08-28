@@ -10,6 +10,7 @@ pub enum EventKind {
   MissingNameOptionForIifeExport,
   IllegalIdentifierAsName,
   ParseError,
+  InvalidOption,
 
   Eval,
   CircularDependency,
@@ -49,6 +50,7 @@ impl Display for EventKind {
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::MissingExport => write!(f, "MISSING_EXPORT"),
       EventKind::InvalidExportOption => write!(f, "INVALID_EXPORT_OPTION"),
+      EventKind::InvalidOption => write!(f, "INVALID_OPTION"),
       // --- Rolldown specific
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::IoError => write!(f, "IO_ERROR"),

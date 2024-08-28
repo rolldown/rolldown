@@ -62,42 +62,47 @@ pub struct LinkStage<'a> {
 
 impl<'a> LinkStage<'a> {
   pub fn new(scan_stage_output: ScanStageOutput, options: &'a SharedOptions) -> Self {
+    let mut errors = scan_stage_output.errors;
+    let metas = scan_stage_output
+      .module_table
+      .modules
+      .iter()
+      .map(|module| LinkingMetadata {
+        dependencies: module
+          .import_records()
+          .iter()
+          .filter_map(|rec| {
+            if options.inline_dynamic_imports || !matches!(rec.kind, ImportKind::DynamicImport) {
+              Some(rec.resolved_module)
+            } else {
+              if matches!(options.format, OutputFormat::Iife) {
+                // Throw an error.
+                errors.push(BuildDiagnostic::invalid_option(
+                  "output.format",
+                  options.format.to_string(),
+                ));
+              }
+              None
+            }
+          })
+          .collect(),
+        star_exports_from_external_modules: module.as_ecma().map_or(vec![], |inner| {
+          inner
+            .star_exports_from_external_modules(&scan_stage_output.module_table.modules)
+            .collect()
+        }),
+        ..LinkingMetadata::default()
+      })
+      .collect::<IndexVec<ModuleIdx, _>>();
     Self {
       sorted_modules: Vec::new(),
-      metas: scan_stage_output
-        .module_table
-        .modules
-        .iter()
-        .map(|module| LinkingMetadata {
-          dependencies: module
-            .import_records()
-            .iter()
-            .filter_map(|rec| match options.format {
-              OutputFormat::Cjs | OutputFormat::App | OutputFormat::Esm => {
-                if matches!(rec.kind, ImportKind::DynamicImport) {
-                  None
-                } else {
-                  Some(rec.resolved_module)
-                }
-              }
-              // IIFE format will inline dynamic imported modules
-              OutputFormat::Iife => Some(rec.resolved_module),
-            })
-            .collect(),
-          star_exports_from_external_modules: module.as_ecma().map_or(vec![], |inner| {
-            inner
-              .star_exports_from_external_modules(&scan_stage_output.module_table.modules)
-              .collect()
-          }),
-          ..LinkingMetadata::default()
-        })
-        .collect::<IndexVec<ModuleIdx, _>>(),
+      metas,
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
-      errors: scan_stage_output.errors,
+      errors,
       ast_table: scan_stage_output.index_ecma_ast,
       options,
       used_symbol_refs: FxHashSet::default(),
@@ -193,7 +198,7 @@ impl<'a> LinkStage<'a> {
             }
           },
           ImportKind::DynamicImport => {
-            if matches!(self.options.format, OutputFormat::Iife) {
+            if self.options.inline_dynamic_imports {
               // For iife, then import() is just a require() that
               // returns a promise, so the imported file must also be wrapped
               match importee.exports_kind {
@@ -375,7 +380,7 @@ impl<'a> LinkStage<'a> {
                     }
                   },
                   ImportKind::DynamicImport => {
-                    if matches!(self.options.format, OutputFormat::Iife) {
+                    if self.options.inline_dynamic_imports {
                       match importee_linking_info.wrap_kind {
                         WrapKind::None => {}
                         WrapKind::Cjs => {

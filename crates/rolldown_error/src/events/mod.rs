@@ -13,6 +13,7 @@ pub mod external_entry;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod invalid_export_option;
+pub mod invalid_option;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;

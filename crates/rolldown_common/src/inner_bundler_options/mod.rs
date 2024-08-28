@@ -128,6 +128,7 @@ pub struct BundlerOptions {
   pub extend: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
+  pub inline_dynamic_imports: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

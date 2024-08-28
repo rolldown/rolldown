@@ -62,7 +62,7 @@ pub struct BindingOutputOptions {
   pub globals: Option<HashMap<String, String>>,
   // hoistTransitiveImports: boolean;
   // indent: true | string;
-  // inlineDynamicImports: boolean;
+  pub inline_dynamic_imports: Option<bool>,
   // interop: GetInterop;
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]

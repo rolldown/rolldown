@@ -31,4 +31,5 @@ export interface NormalizedOutputOptions extends OutputOptions {
   chunkFileNames: ChunkFileNamesOption
   assetFileNames: string
   name: string | undefined
+  inlineDynamicImports: boolean
 }

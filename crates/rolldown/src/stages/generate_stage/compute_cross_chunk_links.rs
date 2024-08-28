@@ -154,6 +154,7 @@ impl<'a> GenerateStage<'a> {
   ) {
     let symbols = &self.link_output.symbols;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
+
     let chunks_iter = multizip((
       chunk_graph.chunks.iter_enumerated(),
       index_chunk_depended_symbols.iter_mut(),
@@ -306,8 +307,8 @@ impl<'a> GenerateStage<'a> {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;
         }
-
         let import_symbol = self.link_output.symbols.get(import_ref);
+
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);

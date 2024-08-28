@@ -3,6 +3,7 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 pub async fn load_source(
@@ -31,13 +32,15 @@ pub async fn load_source(
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (source, None) => {
-      let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
-      let guessed = ext.and_then(|ext| options.module_types.get(ext).cloned());
+      let guessed = loader_from_file_extension(&resolved_id.id, &options.module_types);
       match (source, guessed) {
-        (None, None) => Ok((
-          StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?),
-          ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
-        )),
+        (None, None) => {
+          let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
+          Ok((
+            StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?),
+            ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
+          ))
+        }
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
             StrOrBytes::Bytes({
@@ -67,4 +70,18 @@ pub async fn load_source(
     }
     (None, Some(_)) => unreachable!("Invalid state"),
   }
+}
+
+/// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183
+fn loader_from_file_extension<S: AsRef<str>>(
+  id: S,
+  module_types: &FxHashMap<String, ModuleType>,
+) -> Option<ModuleType> {
+  let id = id.as_ref();
+  for i in memchr::memchr_iter(b'.', id.as_bytes()) {
+    if let Some(ty) = module_types.get(&id[i + 1..]) {
+      return Some(ty.clone());
+    }
+  }
+  None
 }

@@ -1950,6 +1950,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-c_fP-LRz.mjs
 - main-c_fP-LRz.mjs.map
 
+# tests/rolldown/resolve/hash_tag_as_dir_name
+
+- main-!~{000}~.mjs => main-HyurUk3i.mjs
+
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
 - entry-!~{000}~.mjs => entry-QUh6qQIQ.mjs

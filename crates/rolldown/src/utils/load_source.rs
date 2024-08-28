@@ -3,7 +3,6 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::path_ext::clean_url;
 use sugar_path::SugarPath;
 
 pub async fn load_source(
@@ -32,9 +31,7 @@ pub async fn load_source(
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (source, None) => {
-      // Considering path with `?/#`
-      let cleaned_id = clean_url(&resolved_id.id);
-      let ext = cleaned_id.as_path().extension().and_then(|ext| ext.to_str());
+      let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
       let guessed = ext.and_then(|ext| options.module_types.get(ext).cloned());
       match (source, guessed) {
         (None, None) => Ok((

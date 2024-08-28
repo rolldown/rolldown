@@ -177,15 +177,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
 
-  fn call_get_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
     Ok(None)
   }
 
-  fn call_get_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
     Ok(None)
   }
 
-  fn call_get_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
     Ok(None)
   }
 }
@@ -402,15 +402,15 @@ impl<T: Plugin> Pluginable for T {
     Plugin::transform_ast_meta(self)
   }
 
-  fn call_get_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
-    Plugin::get_transform_filter(self)
+  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    Plugin::transform_filter(self)
   }
 
-  fn call_get_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    Plugin::get_resolve_id_filter(self)
+  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+    Plugin::resolve_id_filter(self)
   }
 
-  fn call_get_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
-    Plugin::get_load_filter(self)
+  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    Plugin::load_filter(self)
   }
 }

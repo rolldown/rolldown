@@ -43,9 +43,9 @@ impl PluginDriver {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
         // TODO: Error handling
         index_plugin_filters.push(HookFilterOptions {
-          load: plugin.call_get_load_filter().unwrap(),
-          resolve_id: plugin.call_get_resolve_id_filter().unwrap(),
-          transform: plugin.call_get_transform_filter().unwrap(),
+          load: plugin.call_load_filter().unwrap(),
+          resolve_id: plugin.call_resolve_id_filter().unwrap(),
+          transform: plugin.call_transform_filter().unwrap(),
         });
         index_contexts.push(
           PluginContextImpl {

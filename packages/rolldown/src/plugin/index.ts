@@ -249,9 +249,9 @@ export type ParallelPluginHooks = Exclude<
 export type hookFilterExtension<K extends keyof FunctionPluginHooks> =
   K extends 'transform'
     ? { filter?: BaseHookFilter }
-    : K extends ('load' | 'resolveId')
+    : K extends 'load' | 'resolveId'
       ? { filter?: Omit<BaseHookFilter, 'code' | 'moduleType'> }
-        : {}
+      : {}
 export type BaseHookFilter = {
   id?: {
     include?: (string | RegExp)[]
@@ -269,10 +269,10 @@ export type BaseHookFilter = {
 }
 export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<
-    (K extends AsyncPluginHooks
+    K extends AsyncPluginHooks
       ? MakeAsync<FunctionPluginHooks[K]>
-      : FunctionPluginHooks[K])
-  , hookFilterExtension<K>
+      : FunctionPluginHooks[K],
+    hookFilterExtension<K>
     // eslint-disable-next-line @typescript-eslint/ban-types
     // TODO
     // K extends ParallelPluginHooks ? { sequential?: boolean } : {}

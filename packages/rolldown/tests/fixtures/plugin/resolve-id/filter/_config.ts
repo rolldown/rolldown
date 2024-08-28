@@ -1,15 +1,13 @@
 import { defineTest } from '@tests'
 import { expect, vi } from 'vitest'
 
-
 const resolveIdFn = vi.fn()
 
 export default defineTest({
-  beforeTest() {
-  },
+  beforeTest() {},
   skipComposingJsPlugin: true,
   config: {
-    input: "./main.js",
+    input: './main.js',
     plugins: [
       {
         name: 'test-plugin',
@@ -17,13 +15,12 @@ export default defineTest({
           filter: {
             id: {
               exclude: [/dir\/a\.js$/],
-            }
+            },
           },
-          handler(id, parent) {
+          handler() {
             resolveIdFn()
-            console.log('handl', id, parent)
             return null
-          }
+          },
         },
       },
     ],

@@ -1,19 +1,22 @@
-import { BindingGeneralHookFilter, BindingTransformHookFilter } from "../binding.d";
-import { hookFilterExtension, ModuleType } from ".";
-import { normalizedStringOrRegex } from "../options/utils";
+import {
+  BindingGeneralHookFilter,
+  BindingTransformHookFilter,
+} from '../binding.d'
+import { hookFilterExtension, ModuleType } from '.'
+import { normalizedStringOrRegex } from '../options/utils'
 
 export function bindingifyResolveIdFilter(
   filterOption?: hookFilterExtension<'resolveId'>['filter'],
 ): BindingGeneralHookFilter | undefined {
   if (!filterOption) {
-    return undefined;
+    return undefined
   }
-  const {id}= filterOption;
+  const { id } = filterOption
   if (!id) {
-    return undefined;
+    return undefined
   }
-  let include;
-  let exclude;
+  let include
+  let exclude
   if (id.include) {
     include = normalizedStringOrRegex(id.include)
   }
@@ -21,24 +24,23 @@ export function bindingifyResolveIdFilter(
     exclude = normalizedStringOrRegex(id.exclude)
   }
   return {
-    include,exclude
+    include,
+    exclude,
   }
 }
 
-
-
 export function bindingifyLoadFilter(
   filterOption?: hookFilterExtension<'load'>['filter'],
-):BindingGeneralHookFilter | undefined {
+): BindingGeneralHookFilter | undefined {
   if (!filterOption) {
-    return undefined;
+    return undefined
   }
-  const {id}= filterOption;
+  const { id } = filterOption
   if (!id) {
-    return undefined;
+    return undefined
   }
-  let include;
-  let exclude;
+  let include
+  let exclude
   if (id.include) {
     include = normalizedStringOrRegex(id.include)
   }
@@ -46,25 +48,25 @@ export function bindingifyLoadFilter(
     exclude = normalizedStringOrRegex(id.exclude)
   }
   let ret = {
-    include,exclude
+    include,
+    exclude,
   }
-  return ret;
+  return ret
 }
-
 
 export function bindingifyTransformFilter(
   filterOption?: hookFilterExtension<'transform'>['filter'],
-):BindingTransformHookFilter | undefined {
+): BindingTransformHookFilter | undefined {
   if (!filterOption) {
-    return undefined;
+    return undefined
   }
-  const {id, moduleType, code}= filterOption;
-  let idRet;
-  let moduleTypeRet: ModuleType[] | undefined;
-  let codeRet;
+  const { id, moduleType, code } = filterOption
+  let idRet
+  let moduleTypeRet: ModuleType[] | undefined
+  let codeRet
   if (id) {
-    let include;
-    let exclude;
+    let include
+    let exclude
     if (id.include) {
       include = normalizedStringOrRegex(id.include)
     }
@@ -73,12 +75,12 @@ export function bindingifyTransformFilter(
     }
     idRet = {
       include,
-      exclude
+      exclude,
     }
   }
   if (code) {
-    let include;
-    let exclude;
+    let include
+    let exclude
     if (code.include) {
       include = normalizedStringOrRegex(code.include)
     }
@@ -87,21 +89,20 @@ export function bindingifyTransformFilter(
     }
     codeRet = {
       include,
-      exclude
+      exclude,
     }
   }
   if (moduleType) {
     if (Array.isArray(moduleType)) {
-      moduleTypeRet = moduleType;
+      moduleTypeRet = moduleType
     } else {
-      moduleTypeRet = moduleType.include;
+      moduleTypeRet = moduleType.include
     }
   }
 
   return {
     id: idRet,
     moduleType: moduleTypeRet,
-    code: codeRet
-  };
+    code: codeRet,
+  }
 }
-

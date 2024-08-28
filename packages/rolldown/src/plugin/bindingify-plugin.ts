@@ -34,14 +34,17 @@ export function bindingifyPlugin(
   outputOptions: NormalizedOutputOptions,
   pluginContextData: PluginContextData,
 ): BindingPluginOptions {
-  const { plugin: buildStart, meta: buildStartMeta } =
-    bindingifyBuildStart(plugin, options, pluginContextData)
-
-  const { plugin: resolveId, meta: resolveIdMeta, filter: resolveIdFilter } = bindingifyResolveId(
+  const { plugin: buildStart, meta: buildStartMeta } = bindingifyBuildStart(
     plugin,
     options,
     pluginContextData,
   )
+
+  const {
+    plugin: resolveId,
+    meta: resolveIdMeta,
+    filter: resolveIdFilter,
+  } = bindingifyResolveId(plugin, options, pluginContextData)
 
   const { plugin: resolveDynamicImport, meta: resolveDynamicImportMeta } =
     bindingifyResolveDynamicImport(plugin, options, pluginContextData)
@@ -52,38 +55,53 @@ export function bindingifyPlugin(
     pluginContextData,
   )
 
-  const { plugin: transform, meta: transformMeta, filter: transformFilter } = bindingifyTransform(
-    plugin,
-    options,
-    pluginContextData,
-  )
+  const {
+    plugin: transform,
+    meta: transformMeta,
+    filter: transformFilter,
+  } = bindingifyTransform(plugin, options, pluginContextData)
 
   const { plugin: moduleParsed, meta: moduleParsedMeta } =
     bindingifyModuleParsed(plugin, options, pluginContextData)
 
-  const { plugin: load, meta: loadMeta, filter: loadFilter } = bindingifyLoad(
+  const {
+    plugin: load,
+    meta: loadMeta,
+    filter: loadFilter,
+  } = bindingifyLoad(plugin, options, pluginContextData)
+
+  const { plugin: renderChunk, meta: renderChunkMeta } = bindingifyRenderChunk(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
+
+  const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } =
+    bindingifyAugmentChunkHash(plugin, options, pluginContextData)
+
+  const { plugin: renderStart, meta: renderStartMeta } = bindingifyRenderStart(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
+
+  const { plugin: renderError, meta: renderErrorMeta } = bindingifyRenderError(
     plugin,
     options,
     pluginContextData,
   )
 
-  const { plugin: renderChunk, meta: renderChunkMeta } =
-    bindingifyRenderChunk(plugin, options, outputOptions, pluginContextData)
-
-  const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } =
-    bindingifyAugmentChunkHash(plugin, options, pluginContextData)
-
-  const { plugin: renderStart, meta: renderStartMeta } =
-    bindingifyRenderStart(plugin, options, outputOptions, pluginContextData)
-
-  const { plugin: renderError, meta: renderErrorMeta } =
-    bindingifyRenderError(plugin, options, pluginContextData)
-
   const { plugin: generateBundle, meta: generateBundleMeta } =
     bindingifyGenerateBundle(plugin, options, outputOptions, pluginContextData)
 
-  const { plugin: writeBundle, meta: writeBundleMeta } =
-    bindingifyWriteBundle(plugin, options, outputOptions, pluginContextData)
+  const { plugin: writeBundle, meta: writeBundleMeta } = bindingifyWriteBundle(
+    plugin,
+    options,
+    outputOptions,
+    pluginContextData,
+  )
 
   const { plugin: banner, meta: bannerMeta } = bindingifyBanner(
     plugin,

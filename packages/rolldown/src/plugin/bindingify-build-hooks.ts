@@ -4,7 +4,12 @@ import type {
   BindingPluginOptions,
 } from '../binding'
 
-import type { hookFilterExtension, Plugin, PluginHooks, PrivateResolveIdExtraOptions } from './index'
+import type {
+  hookFilterExtension,
+  Plugin,
+  PluginHooks,
+  PrivateResolveIdExtraOptions,
+} from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
 import { transformModuleInfo } from '../utils/transform-module-info'
@@ -22,7 +27,11 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
-import { bindingifyLoadFilter, bindingifyResolveIdFilter, bindingifyTransformFilter } from './bindingify-hook-filter'
+import {
+  bindingifyLoadFilter,
+  bindingifyResolveIdFilter,
+  bindingifyTransformFilter,
+} from './bindingify-hook-filter'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -72,15 +81,16 @@ export function bindingifyResolveId(
   plugin: Plugin,
   normalizedOptions: NormalizedInputOptions,
   pluginContextData: PluginContextData,
-): PluginHookWithBindingExt<BindingPluginOptions['resolveId'], hookFilterExtension<'transform'>> {
+): PluginHookWithBindingExt<
+  BindingPluginOptions['resolveId'],
+  hookFilterExtension<'transform'>
+> {
   const hook = plugin.resolveId as unknown as PluginHooks['resolveId']
   if (!hook) {
     return {}
   }
   const { handler, meta, options } = normalizeHook(hook)
   console.log(options)
-  
-  
 
   return {
     plugin: async (ctx, specifier, importer, extraOptions) => {
@@ -133,7 +143,7 @@ export function bindingifyResolveId(
     },
     meta: bindingifyPluginHookMeta(meta),
     // @ts-ignore
-    filter: bindingifyResolveIdFilter(options.filter)
+    filter: bindingifyResolveIdFilter(options.filter),
   }
 }
 
@@ -248,7 +258,7 @@ export function bindingifyLoad(
   if (!hook) {
     return {}
   }
-  const { handler, meta , options} = normalizeHook(hook)
+  const { handler, meta, options } = normalizeHook(hook)
 
   // @ts-ignore
   console.log(`options.filter: `, options.filter)
@@ -305,7 +315,7 @@ export function bindingifyLoad(
     },
     meta: bindingifyPluginHookMeta(meta),
     // @ts-ignore
-    filter: bindingifyLoadFilter(options.filter)
+    filter: bindingifyLoadFilter(options.filter),
   }
 }
 

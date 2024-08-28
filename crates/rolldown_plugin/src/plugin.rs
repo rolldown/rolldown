@@ -255,15 +255,15 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  fn get_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+  fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
     Ok(None)
   }
 
-  fn get_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
     Ok(None)
   }
 
-  fn get_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
     Ok(None)
   }
 }

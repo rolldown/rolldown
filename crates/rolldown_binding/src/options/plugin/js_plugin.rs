@@ -394,7 +394,7 @@ impl Plugin for JsPlugin {
     self.write_bundle_meta.as_ref().map(Into::into)
   }
 
-  fn get_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+  fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
     match self.inner.transform_filter {
       Some(ref item) => {
         let filter = TransformHookFilter::try_from(item.clone())?;
@@ -404,7 +404,7 @@ impl Plugin for JsPlugin {
     }
   }
 
-  fn get_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
     match self.inner.resolve_id_filter {
       Some(ref item) => {
         let filter = ResolvedIdHookFilter::try_from(item.clone())?;
@@ -414,7 +414,7 @@ impl Plugin for JsPlugin {
     }
   }
 
-  fn get_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
     match self.inner.load_filter {
       Some(ref item) => {
         let filter = LoadHookFilter::try_from(item.clone())?;

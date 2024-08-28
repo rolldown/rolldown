@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.mjs
+
+```js
+import { result } from "./b.mjs";
+
+//#region a.js
+var a_default = result();
+
+//#endregion
+export { a_default as default };
+```
+## b.mjs
+
+```js
+
+//#region b.js
+function result() {
+	return "result";
+}
+function test() {
+	return "test";
+}
+
+//#endregion
+export { result, test };
+```
+## b~1.mjs
+
+```js
+import { result, test } from "./b.mjs";
+
+export { result, test };
+```
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region main.js
+import("./b~1.mjs").then((mod) => {
+	assert.strictEqual(mod.result(), "result");
+});
+import("./a.mjs").then((mod) => {
+	assert.strictEqual(mod.default, "result");
+});
+
+//#endregion
+```

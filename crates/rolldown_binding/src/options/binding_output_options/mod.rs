@@ -3,13 +3,16 @@ use std::collections::HashMap;
 
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::types::binding_pre_rendered_chunk::PreRenderedChunk;
 use derivative::Derivative;
+use napi::bindgen_prelude::FunctionRef;
 use napi::threadsafe_function::ThreadsafeFunction;
 use napi::Either;
 use napi_derive::napi;
 use serde::Deserialize;
 
 pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
+pub type ChunkFileNamesOutputOption = Either<String, FunctionRef<PreRenderedChunk, String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Derivative)]
@@ -20,9 +23,16 @@ pub struct BindingOutputOptions {
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
   pub name: Option<String>,
-  pub entry_file_names: Option<String>,
-  pub chunk_file_names: Option<String>,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub entry_file_names: Option<ChunkFileNamesOutputOption>,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub chunk_file_names: Option<ChunkFileNamesOutputOption>,
   pub asset_file_names: Option<String>,
+
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
   #[derivative(Debug = "ignore")]

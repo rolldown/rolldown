@@ -7,6 +7,7 @@ use oxc::minifier::InjectGlobalVariablesConfig;
 use rustc_hash::FxHashMap;
 
 use super::experimental_options::ExperimentalOptions;
+use super::output_option::ChunkFilenamesOutputOption;
 use super::treeshake::TreeshakeOptions;
 use super::{
   filename_template::FilenameTemplate, is_external::IsExternal, output_exports::OutputExports,
@@ -31,10 +32,10 @@ pub struct NormalizedBundlerOptions {
   pub module_types: FxHashMap<String, ModuleType>,
   // --- Output
   pub name: Option<String>,
-  pub entry_filenames: FilenameTemplate,
-  pub chunk_filenames: FilenameTemplate,
-  pub css_entry_filenames: FilenameTemplate,
-  pub css_chunk_filenames: FilenameTemplate,
+  pub css_entry_filenames: ChunkFilenamesOutputOption,
+  pub css_chunk_filenames: ChunkFilenamesOutputOption,
+  pub entry_filenames: ChunkFilenamesOutputOption,
+  pub chunk_filenames: ChunkFilenamesOutputOption,
   pub asset_filenames: FilenameTemplate,
   pub dir: String,
   pub format: OutputFormat,

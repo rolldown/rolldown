@@ -1,5 +1,6 @@
 import { buildImportAnalysisPlugin } from 'rolldown/experimental'
 import { defineTest } from '@tests'
+import { expect } from 'vitest'
 
 export default defineTest({
   skipComposingJsPlugin: true,
@@ -27,10 +28,17 @@ export const __vitePreload = (v) => {
 `,
         insertPreload: true,
         optimizeModulePreloadRelativePaths: false,
+        renderBuiltUrl: false,
+        isRelativeBase: false,
       }),
     ],
   },
-  async afterTest() {
+  async afterTest(output) {
     await import('./assert.mjs')
+    output.output.forEach((item) => {
+      if (item.type === 'chunk' && item.name === 'main') {
+        expect(item.code).to.not.includes('import.meta.url')
+      }
+    })
   },
 })

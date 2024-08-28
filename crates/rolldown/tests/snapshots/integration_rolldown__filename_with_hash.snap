@@ -1414,6 +1414,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
 
+# tests/rolldown/errors/export_undefined_variable
+
+
 # tests/rolldown/errors/invalid_export_mode/should_not_be_default
 
 

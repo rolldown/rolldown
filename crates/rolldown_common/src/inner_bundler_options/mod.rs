@@ -17,7 +17,7 @@ use self::types::{
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{ModuleType, SourceMapIgnoreList};
+use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
 
 pub mod types;
 
@@ -41,10 +41,30 @@ pub struct BundlerOptions {
   pub shim_missing_exports: Option<bool>,
   // --- options for output
   pub name: Option<String>,
-  pub entry_filenames: Option<String>,
-  pub chunk_filenames: Option<String>,
-  pub css_entry_filenames: Option<String>,
-  pub css_chunk_filenames: Option<String>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub entry_filenames: Option<ChunkFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub chunk_filenames: Option<ChunkFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub css_entry_filenames: Option<ChunkFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
   pub asset_filenames: Option<String>,
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
@@ -126,6 +146,17 @@ where
 {
   let deserialized = Option::<String>::deserialize(deserializer)?;
   Ok(deserialized.map(|s| AddonOutputOption::String(Some(s))))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_chunk_filenames<'de, D>(
+  deserializer: D,
+) -> Result<Option<ChunkFilenamesOutputOption>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<String>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

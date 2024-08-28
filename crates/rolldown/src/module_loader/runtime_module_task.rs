@@ -73,6 +73,7 @@ impl RuntimeModuleTask {
       exports_kind: _,
       warnings: _,
       has_eval,
+      errors: _,
     } = scan_result;
 
     let module = EcmaModule {

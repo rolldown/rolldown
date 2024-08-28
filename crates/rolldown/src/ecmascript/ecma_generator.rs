@@ -56,9 +56,8 @@ impl Generator for EcmaGenerator {
 
     let rendered_chunk = generate_rendered_chunk(
       ctx.chunk,
-      ctx.link_output,
-      ctx.options,
       rendered_modules,
+      ctx.chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk"),
       ctx.chunk_graph,
     );
 

@@ -24,10 +24,11 @@ use crate::{
   },
   stages::link_stage::LinkStageOutput,
   utils::{
-    chunk::deconflict_chunk_symbols::deconflict_chunk_symbols,
+    chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
     extract_hash_pattern::extract_hash_pattern,
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
-    finalize_normal_module, hash_placeholder::HashPlaceholderGenerator,
+    finalize_normal_module,
+    hash_placeholder::HashPlaceholderGenerator,
   },
   BundleOutput, SharedOptions,
 };
@@ -56,7 +57,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks();
 
-    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph)?;
+    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
@@ -118,7 +119,7 @@ impl<'a> GenerateStage<'a> {
   // - Should generate filenames that are stable cross builds and os.
   // #[tracing::instrument(level = "debug", skip_all)]
   #[allow(clippy::too_many_lines)]
-  fn generate_chunk_name_and_preliminary_filenames(
+  async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
   ) -> anyhow::Result<()> {
@@ -173,12 +174,11 @@ impl<'a> GenerateStage<'a> {
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
     let mut used_name_map: FxHashMap<ArcStr, u32> = FxHashMap::default();
-
-    chunk_graph.sorted_chunk_idx_vec.iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
+    for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunks[*chunk_id];
       if chunk.preliminary_filename.is_some() {
         // Already generated
-        return Ok(());
+        continue;
       }
 
       let chunk_name_info = &mut index_pre_generated_names[*chunk_id];
@@ -200,9 +200,13 @@ impl<'a> GenerateStage<'a> {
         chunk_name
       };
       used_name_map.insert(chunk_name.clone(), 1);
+      chunk.name = Some(chunk_name.clone());
+      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
-      let filename_template = chunk.filename_template(self.options);
-      let css_filename_template = chunk.css_filename_template(self.options);
+      let filename_template = chunk.filename_template(self.options, &pre_rendered_chunk).await?;
+      let css_filename_template =
+        chunk.css_filename_template(self.options, &pre_rendered_chunk).await?;
+      chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
       let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
 
@@ -224,7 +228,6 @@ impl<'a> GenerateStage<'a> {
         ..Default::default()
       });
 
-      chunk.name = Some(chunk_name);
       chunk.absolute_preliminary_filename = Some(
         preliminary.absolutize_with(self.options.cwd.join(&self.options.dir)).expect_into_string(),
       );
@@ -236,10 +239,7 @@ impl<'a> GenerateStage<'a> {
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
       chunk.css_preliminary_filename =
         Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
-
-      Ok(())
-    })?;
-
+    }
     Ok(())
   }
 }

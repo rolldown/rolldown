@@ -1,7 +1,7 @@
 // cSpell:disable
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
-  SymbolRef,
+  RollupPreRenderedChunk, SymbolRef,
 };
 pub mod types;
 
@@ -21,6 +21,7 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub name: Option<ArcStr>,
+  pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub css_preliminary_filename: Option<PreliminaryFilename>,
@@ -50,28 +51,6 @@ impl Chunk {
     }
   }
 
-  pub fn filename_template<'a>(
-    &mut self,
-    options: &'a NormalizedBundlerOptions,
-  ) -> &'a FilenameTemplate {
-    if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
-      &options.entry_filenames
-    } else {
-      &options.chunk_filenames
-    }
-  }
-
-  pub fn css_filename_template<'a>(
-    &mut self,
-    options: &'a NormalizedBundlerOptions,
-  ) -> &'a FilenameTemplate {
-    if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
-      &options.css_entry_filenames
-    } else {
-      &options.css_chunk_filenames
-    }
-  }
-
   pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {
     // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
     if self.modules.len() == 1 && self.modules[0] == runtime_id {
@@ -93,5 +72,35 @@ impl Chunk {
     } else {
       format!("./{import_path}")
     }
+  }
+
+  pub async fn filename_template<'a>(
+    &mut self,
+    options: &'a NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+  ) -> anyhow::Result<FilenameTemplate> {
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
+    {
+      options.entry_filenames.call(rollup_pre_rendered_chunk).await?
+    } else {
+      options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
+    };
+
+    Ok(FilenameTemplate::new(ret))
+  }
+
+  pub async fn css_filename_template<'a>(
+    &mut self,
+    options: &'a NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+  ) -> anyhow::Result<FilenameTemplate> {
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
+    {
+      options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
+    } else {
+      options.css_chunk_filenames.call(rollup_pre_rendered_chunk).await?
+    };
+
+    Ok(FilenameTemplate::new(ret))
   }
 }

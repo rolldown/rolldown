@@ -25,9 +25,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
-permissions:
-  pull-requests: write
-
 jobs:
   codspeed-benchmark:
     name: Codspeed Benchmark
@@ -65,6 +62,8 @@ jobs:
           CARGO_MANIFEST_DIR: ${{ github.workspace }}/target/codspeed
 
   benchmark-rust:
+    permissions:
+      pull-requests: write
     name: Benchmark Rust
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -128,6 +127,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v4.0.0
         continue-on-error: true
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.bench_comparison.outputs.comment }}

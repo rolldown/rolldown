@@ -119,6 +119,8 @@ export interface BindingBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
   optimizeModulePreloadRelativePaths: boolean
+  renderBuiltUrl: boolean
+  isRelativeBase: boolean
 }
 
 export interface BindingBuiltinPlugin {
@@ -261,8 +263,8 @@ export interface BindingModulePreloadPolyfillPluginConfig {
 
 export interface BindingOutputOptions {
   name?: string
-  entryFileNames?: string
-  chunkFileNames?: string
+  entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   assetFileNames?: string
   banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
@@ -419,6 +421,15 @@ export declare function isolatedDeclaration(filename: string, sourceText: string
 export interface IsolatedDeclarationsResult {
   sourceText: string
   errors: Array<string>
+}
+
+export interface PreRenderedChunk {
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId?: string
+  moduleIds: Array<string>
+  exports: Array<string>
 }
 
 /**

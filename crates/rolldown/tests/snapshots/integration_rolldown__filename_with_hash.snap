@@ -1439,6 +1439,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/errors/parse_error/normal
 
 
+# tests/rolldown/errors/resolve_unexport_path_of_package
+
+
 # tests/rolldown/errors/unresolved_entry
 
 

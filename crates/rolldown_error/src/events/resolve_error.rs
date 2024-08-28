@@ -38,7 +38,7 @@ impl BuildEvent for DiagnosableResolveError {
     diagnostic.add_label(
       &importer_file,
       self.importee_span.start..self.importee_span.end,
-      self.reason.to_owned(),
+      self.reason.clone(),
     );
     diagnostic.title = self.message(opts);
   }

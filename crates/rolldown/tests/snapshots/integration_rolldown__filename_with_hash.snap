@@ -1849,6 +1849,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-40SKkhvQ.mjs
 
+# tests/rolldown/issues/2038
+
+- a-!~{005}~.mjs => a-un2hSNF7.mjs
+- b-!~{001}~.mjs => b-gzBZQw6C.mjs
+- b~1-!~{003}~.mjs => b~1-Yhc4kY0m.mjs
+- main-!~{000}~.mjs => main-tyn51vg0.mjs
+
 # tests/rolldown/issues/376
 
 - main-!~{000}~.mjs => main-EXizxPDM.mjs

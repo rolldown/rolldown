@@ -1,4 +1,4 @@
-// test("styled-components", () => import("styled-components").then(assert.ok));
-// test("stylis", () => import("stylis").then(assert.ok));
-import("./b").then(console.log)
-import("./a").then(console.log)
+// MULTIPLE ENTRY MODULES
+import hyperCube from './hyper-cube.js';
+
+console.log(hyperCube(5));

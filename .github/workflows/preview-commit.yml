@@ -1,18 +1,7 @@
 name: Preview Commit
 
 on:
-  push:
-    branches:
-      - '**'
-    tags:
-      - '!**'
-  pull_request:
-    branches:
-      - main
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   build:

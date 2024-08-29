@@ -5,7 +5,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
   WrapKind,
 };
-use rolldown_rstr::Rstr;
+use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
 #[allow(clippy::too_many_lines)]
@@ -22,17 +22,22 @@ pub fn render_chunk_exports(
 
   match options.format {
     OutputFormat::Esm => {
+      // dbg!(&chunk.name, &chunk.canonical_names, &export_items);
       let mut s = String::new();
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbols.par_canonical_ref_for(export_ref);
           let symbol = link_output.symbols.get(canonical_ref);
-          let canonical_name = &chunk.canonical_names[&canonical_ref];
+          dbg!(&symbol);
+
+          let mut canonical_name = &Rstr::from("export_default");
           if let Some(ns_alias) = &symbol.namespace_alias {
             let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
             let property_name = &ns_alias.property_name;
             s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
+          } else {
+            canonical_name = &chunk.canonical_names[&canonical_ref];
           }
 
           if canonical_name == &exported_name {
@@ -165,7 +170,6 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
         .iter()
         .map(|(export_ref, alias)| (alias.clone(), *export_ref))
         .collect::<Vec<_>>();
-
       tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
       tmp

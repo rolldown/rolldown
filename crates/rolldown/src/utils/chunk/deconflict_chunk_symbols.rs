@@ -12,7 +12,6 @@ pub fn deconflict_chunk_symbols(
 ) {
   let mut renamer =
     Renamer::new(&link_output.symbols, link_output.module_table.modules.len(), format);
-
   chunk
     .modules
     .iter()
@@ -24,6 +23,10 @@ pub fn deconflict_chunk_symbols(
       renamer.reserve(Cow::Owned(name.to_rstr()));
     });
 
+  let is_a = chunk.name.as_ref().map(|item| item.as_str()) == Some("a~1");
+  if (is_a) {
+    dbg!(&chunk);
+  }
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
   // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other
   // statements. Those `import {...} from './other-chunk.js'` will declared these outside symbols in this chunk, so symbols that

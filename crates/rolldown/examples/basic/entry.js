@@ -1,4 +1,8 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
+import("./c").then((item) => {
+  console.log('item', item.default())
+});
 
-console.log(hyperCube(5));
+
+
+import("./a").then(console.log);
+

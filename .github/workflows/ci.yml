@@ -156,3 +156,17 @@ jobs:
 
       - name: Lint Toml
         run: pnpm lint-toml
+
+  pkg-preview:
+    name: Pkg Preview
+    runs-on: ubuntu-latest
+    # needs:
+    #   - cargo-deny
+    #   - rust-validation
+    #   - cargo-test
+    #   - node-test
+    #   - wasi-test
+    #   - node-validation
+    #   - repo-validation
+    steps:
+      uses: ./.github/workflows/preview-commit.yml

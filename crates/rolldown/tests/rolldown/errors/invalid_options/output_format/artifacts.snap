@@ -37,7 +37,7 @@ return exports;
 
 
 //#region main.js
-import("./lib").then((x) => {
+import("./lib.mjs").then((x) => {
 	console.log(x.a);
 });
 

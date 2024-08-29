@@ -1841,8 +1841,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-EsBBHJoX.mjs
 - b-!~{001}~.mjs => b-UI2mLxAO.mjs
 - c-!~{002}~.mjs => c-XM1t7ET2.mjs
-- 1-!~{003}~.mjs => 1-j1vD_43o.mjs
 - 2-!~{005}~.mjs => 2-A9GdrBOE.mjs
+- 1-!~{003}~.mjs => 1-j1vD_43o.mjs
 
 # tests/rolldown/issues/1443
 

@@ -1,6 +1,6 @@
 use std::{cmp::Reverse, collections::HashMap};
 
-use fancy_regex::Regex;
+use fancy_regex::{Regex, RegexBuilder};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
@@ -39,7 +39,12 @@ impl ReplacePlugin {
     // https://rustexp.lpil.uk/
     let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}");
     Self {
-      matcher: Regex::new(&pattern).unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
+      matcher: RegexBuilder::new(&pattern)
+        // Give a `usize::MAX` will cause bundle time tripled in some cases, so we need to use sensible limit
+        // to have a balance between performance and correctness.
+        .backtrack_limit(1_000_000)
+        .build()
+        .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
       values: options.values.into_iter().collect(),
     }
   }
@@ -48,23 +53,33 @@ impl ReplacePlugin {
     &'text self,
     code: &'text str,
     magic_string: &mut MagicString<'text>,
-  ) -> bool {
+  ) -> anyhow::Result<bool> {
     let mut changed = false;
     for captures in self.matcher.captures_iter(code) {
-      let Ok(captures) = captures else {
-        continue;
+      // We expect the regex we used will always have one `Captures`.
+
+      let captures = match captures {
+        Ok(inner) => inner,
+        Err(err) => match err {
+          fancy_regex::Error::RuntimeError(_) => {
+            // Mostly due to backtrack limit exceeded. There's nothing we can do about runtime error.
+            // So if we encounter one, we just consider this as a failed match and skip it.
+            break;
+          }
+          _ => return Err(err.into()),
+        },
       };
-      changed = true;
       let Some(matched) = captures.get(1) else {
-        continue;
+        break;
       };
       let Some(replacement) = self.values.get(matched.as_str()) else {
-        continue;
+        break;
       };
+      changed = true;
       magic_string.update(matched.start(), matched.end(), replacement);
     }
 
-    changed
+    Ok(changed)
   }
 }
 
@@ -79,7 +94,7 @@ impl Plugin for ReplacePlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let mut magic_string = MagicString::new(args.code);
-    if self.try_replace(args.code, &mut magic_string) {
+    if self.try_replace(args.code, &mut magic_string)? {
       return Ok(Some(HookTransformOutput {
         code: Some(magic_string.to_string()),
         ..Default::default()
@@ -94,7 +109,7 @@ impl Plugin for ReplacePlugin {
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let mut magic_string = MagicString::new(&args.code);
-    if self.try_replace(&args.code, &mut magic_string) {
+    if self.try_replace(&args.code, &mut magic_string)? {
       return Ok(Some(HookRenderChunkOutput { code: magic_string.to_string(), map: None }));
     }
     Ok(None)

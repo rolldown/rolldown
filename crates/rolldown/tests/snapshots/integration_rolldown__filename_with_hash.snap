@@ -478,7 +478,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_common_js_as_es6
 
-- entry_js-!~{000}~.mjs => entry_js-sIRGNuko.mjs
+- entry_js-!~{000}~.mjs => entry_js-DlURyAqq.mjs
 
 # tests/esbuild/default/re_export_default_external_common_js
 
@@ -1306,11 +1306,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/empty_file_should_be_treated_as_cjs/import
 
-- main-!~{000}~.mjs => main-Rgs3DqId.mjs
+- main-!~{000}~.mjs => main-CwQMZNp-.mjs
 
 # tests/rolldown/cjs_compat/empty_file_should_be_treated_as_cjs/re_export
 
-- main-!~{000}~.mjs => main-Rgs3DqId.mjs
+- main-!~{000}~.mjs => main-CwQMZNp-.mjs
 
 # tests/rolldown/cjs_compat/esm_require_cjs
 
@@ -1342,15 +1342,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 
-- main-!~{000}~.mjs => main-wRSzYKEL.mjs
+- main-!~{000}~.mjs => main-k7_gxWzP.mjs
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_named_reexport
 
-- main-!~{000}~.mjs => main-TqLLZpBX.mjs
+- main-!~{000}~.mjs => main-xWdBSsqR.mjs
 
 # tests/rolldown/cjs_compat/import_the_same_cjs_twice
 
-- main-!~{000}~.mjs => main-O0DU1xs8.mjs
+- main-!~{000}~.mjs => main-ov3oJE64.mjs
 
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
@@ -1365,7 +1365,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
-- main-!~{000}~.mjs => main--It2XZn-.mjs
+- main-!~{000}~.mjs => main-X0w89NrI.mjs
 
 # tests/rolldown/cjs_compat/require/create_require
 
@@ -1406,9 +1406,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
 - main-!~{002}~.mjs => main-0DNH7UhT.mjs
 
+# tests/rolldown/code_splitting/shared_commonjs
+
+- foo-!~{001}~.mjs => foo-KZ9B06Bg.mjs
+- main-!~{000}~.mjs => main-0skovuPv.mjs
+- main~1-!~{002}~.mjs => main~1-vUCeiqYg.mjs
+
 # tests/rolldown/dce/conditional_exports
 
-- main-!~{000}~.mjs => main-QSRhG9S4.mjs
+- main-!~{000}~.mjs => main-h8Y_0-qX.mjs
 
 # tests/rolldown/errors/ambiguous_external_namespace
 

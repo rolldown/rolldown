@@ -37,6 +37,6 @@ assert.equal(foo_ns.foo, undefined);
 assert.equal(Object.keys(foo_ns).length, 2);
 
 //#endregion
-var bar = import_commonjs.bar;
-export { bar };
+var export_default = import_commonjs.bar;
+export { export_default as bar };
 ```

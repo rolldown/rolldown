@@ -1,2 +1,2 @@
-export { default } from "./b.js";
+export { _default  as default } from "./b.js";
 

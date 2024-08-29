@@ -19,7 +19,7 @@ var import_cjs = __toESM(require_cjs());
 var import_cjs$1 = __toESM(require_cjs());
 
 //#endregion
-var a = import_cjs.a;
-var a2 = import_cjs$1.a;
-export { a, a2 };
+var export_default = import_cjs.a;
+var export_default = import_cjs$1.a;
+export { export_default as a, export_default as a2 };
 ```

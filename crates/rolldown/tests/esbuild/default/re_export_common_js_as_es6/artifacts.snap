@@ -18,6 +18,6 @@ var require_foo = __commonJSMin((exports, module) => {
 var import_foo = __toESM(require_foo());
 
 //#endregion
-var bar = import_foo.bar;
-export { bar };
+var export_default = import_foo.bar;
+export { export_default as bar };
 ```

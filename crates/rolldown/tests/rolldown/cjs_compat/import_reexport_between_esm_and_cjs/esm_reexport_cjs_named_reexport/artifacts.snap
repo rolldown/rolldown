@@ -18,6 +18,6 @@ var require_commonjs = __commonJSMin((exports, module) => {
 var import_commonjs = __toESM(require_commonjs());
 
 //#endregion
-var a = import_commonjs.a;
-export { a };
+var export_default = import_commonjs.a;
+export { export_default as a };
 ```

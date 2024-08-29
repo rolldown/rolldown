@@ -1,5 +1,5 @@
 import("./c").then((item) => {
-  console.log('item', item.default())
+  console.log('item', item.default()())
 });
 
 

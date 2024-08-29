@@ -21,6 +21,6 @@ var import_star_empty = __toESM(require_star_empty());
 var import_default_empty = __toESM(require_default_empty());
 
 //#endregion
-var defaultImport = import_default_empty.default;
-export { defaultImport, import_star_empty as staImport };
+var export_default = import_default_empty.default;
+export { export_default as defaultImport, import_star_empty as staImport };
 ```

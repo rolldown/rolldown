@@ -31,16 +31,19 @@ pub fn render_chunk_exports(
           let symbol = link_output.symbols.get(canonical_ref);
           dbg!(&symbol);
 
-          let mut canonical_name = &Rstr::from("export_default");
+          let canonical_name;
           if let Some(ns_alias) = &symbol.namespace_alias {
+            dbg!(&canonical_ref);
+            dbg!(&ns_alias);
             let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+            canonical_name = chunk.canonical_names[&ns_alias.namespace_ref].clone();
             let property_name = &ns_alias.property_name;
             s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
           } else {
-            canonical_name = &chunk.canonical_names[&canonical_ref];
+            canonical_name = chunk.canonical_names[&canonical_ref].clone();
           }
 
-          if canonical_name == &exported_name {
+          if &canonical_name == &exported_name {
             format!("{canonical_name}")
           } else if is_validate_identifier_name(&exported_name) {
             format!("{canonical_name} as {exported_name}")

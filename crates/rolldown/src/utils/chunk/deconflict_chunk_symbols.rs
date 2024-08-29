@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use rolldown_common::{Chunk, ChunkKind, OutputFormat};
-use rolldown_rstr::ToRstr;
+use rolldown_rstr::{Rstr, ToRstr};
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
@@ -22,11 +22,9 @@ pub fn deconflict_chunk_symbols(
       // global names should be reserved
       renamer.reserve(Cow::Owned(name.to_rstr()));
     });
+  // `export_default` is used for create temp variable to export a commonjs import binding
+  renamer.reserve(Cow::Owned(Rstr::from("export_default")));
 
-  let is_a = chunk.name.as_ref().map(|item| item.as_str()) == Some("a~1");
-  if (is_a) {
-    dbg!(&chunk);
-  }
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
   // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other
   // statements. Those `import {...} from './other-chunk.js'` will declared these outside symbols in this chunk, so symbols that

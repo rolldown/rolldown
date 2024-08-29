@@ -29,6 +29,6 @@ var require_lib = __commonJSMin((exports, module) => {
 var import_lib = __toESM(require_lib());
 
 //#endregion
-var lib = import_lib.default;
-export { lib };
+var export_default = import_lib.default;
+export { export_default as lib };
 ```

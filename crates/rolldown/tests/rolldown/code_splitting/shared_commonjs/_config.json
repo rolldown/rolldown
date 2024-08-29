@@ -1,0 +1,25 @@
+{
+  "snapshotOutputStats": true,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "foo",
+        "import": "foo"
+      }
+    ],
+    "resolve": {
+      "alias": [
+        [
+          "foo",
+          [
+            "./main.js"
+          ]
+        ]
+      ]
+    }
+  }
+}

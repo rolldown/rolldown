@@ -12,18 +12,17 @@ pub struct External {
 }
 
 impl External {
-  #[allow(dead_code)]
-  pub fn as_cjs(&self) -> String {
-    // TODO support `options.path`.
-    format!("require('{}')", self.name)
-  }
-
-  #[allow(dead_code)]
-  pub fn as_amd(&self) -> String {
-    // TODO support `options.path`.
-    // We just need to wrap it with the `'`, as we should use the array in module list.
-    format!("'{}'", self.name)
-  }
+  // TODO when we are supporting UMD and AMD, we can simply enable them.
+  // #[allow(dead_code)]
+  // pub fn as_cjs(&self) -> String {
+  //   format!("require('{}')", self.name)
+  // }
+  //
+  // #[allow(dead_code)]
+  // pub fn as_amd(&self) -> String {
+  //   // We just need to wrap it with the `'`, as we should use the array in module list.
+  //   format!("'{}'", self.name)
+  // }
 
   pub fn as_argument(&self) -> Option<String> {
     if self.empty {
@@ -66,22 +65,23 @@ impl ExternalModules {
     self.modules.push(External { name, empty });
   }
 
-  /// Only used in UMD, for generating the list of `require`.
-  #[allow(dead_code)]
-  pub fn as_cjs(&self) -> String {
-    self.modules.iter().map(External::as_cjs).collect::<Vec<String>>().join(", ")
-  }
-
-  #[allow(dead_code)]
-  pub fn as_amd(&self, named_export: bool) -> String {
-    let base = if named_export { vec!["exports".to_string()] } else { Vec::new() };
-    let args = base
-      .into_iter()
-      .chain(self.modules.iter().map(External::as_amd))
-      .collect::<Vec<String>>()
-      .join(", ");
-    format!("[{args}]")
-  }
+  // TODO when we are supporting UMD and AMD, we can simply enable them.
+  // /// Only used in UMD, for generating the list of `require`.
+  // #[allow(dead_code)]
+  // pub fn as_cjs(&self) -> String {
+  //   self.modules.iter().map(External::as_cjs).collect::<Vec<String>>().join(", ")
+  // }
+  //
+  // #[allow(dead_code)]
+  // pub fn as_amd(&self, named_export: bool) -> String {
+  //   let base = if named_export { vec!["exports".to_string()] } else { Vec::new() };
+  //   let args = base
+  //     .into_iter()
+  //     .chain(self.modules.iter().map(External::as_amd))
+  //     .collect::<Vec<String>>()
+  //     .join(", ");
+  //   format!("[{args}]")
+  // }
 
   pub fn as_args(&self, named_export: bool) -> String {
     let base = if named_export { vec!["exports".to_string()] } else { Vec::new() };

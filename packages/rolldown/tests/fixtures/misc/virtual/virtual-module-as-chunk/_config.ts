@@ -25,12 +25,10 @@ export default defineTest({
   },
   afterTest(output) {
     // cSpell:disable
-    expect(getOutputChunkNames(output)).toMatchInlineSnapshot(`
-      [
-        "_module-KtCeJTRH.js",
-        "entry.js",
-        "main.js",
-      ]
-    `)
+    expect(getOutputChunkNames(output)).toStrictEqual([
+      'main.js',
+      'entry.js',
+      '_module-KtCeJTRH.js',
+    ])
   },
 })

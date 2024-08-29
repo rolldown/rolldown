@@ -20,7 +20,7 @@ impl BuildEvent for InvalidOption {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     match &self.invalid_option_types {
       InvalidOptionTypes::UnsupportedCodeSplittingFormat => {
-        format!("Invalid value \"{}\" for option \"format\". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImport` to `true` when using dynamic imports.", self.option)
+        format!("Invalid value \"{}\" for option \"format\". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.", self.option)
       }
     }
   }

@@ -120,6 +120,13 @@ impl<'a> LinkStage<'a> {
       }
     }
 
+    println!(
+      "sorted_modules: {:?}",
+      sorted_modules
+        .iter()
+        .map(|idx| self.module_table.modules[*idx].as_ecma().unwrap().id.to_string())
+        .collect::<Vec<_>>()
+    );
     self.sorted_modules = sorted_modules;
     debug_assert_eq!(
       self.sorted_modules.first().copied(),

@@ -55,7 +55,7 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> Result<BundleOutput> {
-    let mut chunk_graph = self.generate_chunks();
+    let mut chunk_graph = self.generate_chunks()?;
 
     self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
 

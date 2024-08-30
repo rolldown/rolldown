@@ -5,7 +5,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
   WrapKind,
 };
-use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
 #[allow(clippy::too_many_lines)]
@@ -46,7 +46,7 @@ pub fn render_chunk_exports(
             canonical_name = chunk.canonical_names[&canonical_ref].clone();
           }
 
-          if &canonical_name == &exported_name {
+          if canonical_name == exported_name {
             format!("{canonical_name}")
           } else if is_validate_identifier_name(&exported_name) {
             format!("{canonical_name} as {exported_name}")

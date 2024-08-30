@@ -1215,8 +1215,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-Cfj63ou-.mjs
 - c-!~{002}~.mjs => c-typAVFSG.mjs
 - d-!~{003}~.mjs => d-L_kdIPvd.mjs
-- d~1-!~{006}~.mjs => d~1-OHeb9gJw.mjs
 - ab-!~{004}~.mjs => ab-P6qnXG7s.mjs
+- d~1-!~{006}~.mjs => d~1-OHeb9gJw.mjs
 
 # tests/esbuild/splitting/dynamic-commonjs-into-es6
 
@@ -1833,8 +1833,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - entry1-!~{000}~.mjs => entry1-wVgKFI7T.mjs
 - entry2-!~{001}~.mjs => entry2-gO-yPKv_.mjs
 - entry3-!~{002}~.mjs => entry3-xhnBZz_E.mjs
-- c-!~{003}~.mjs => c-LEIv-tYC.mjs
 - b-!~{005}~.mjs => b-gYLSk_ER.mjs
+- c-!~{003}~.mjs => c-LEIv-tYC.mjs
 
 # tests/rolldown/issues/122/b
 
@@ -1856,8 +1856,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-tyn51vg0.mjs
 - a-!~{005}~.mjs => a-un2hSNF7.mjs
-- b~1-!~{003}~.mjs => b~1-Yhc4kY0m.mjs
 - b-!~{001}~.mjs => b-gzBZQw6C.mjs
+- b~1-!~{003}~.mjs => b~1-Yhc4kY0m.mjs
 
 # tests/rolldown/issues/376
 
@@ -1871,6 +1871,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-28ZAM_vI.mjs
 - file-!~{001}~.mjs => file-HtGbT8Bd.mjs
+- file~1-!~{002}~.mjs => file~1-H61Mf_14.mjs
 - file~2-!~{004}~.mjs => file~2-nA_ptaQ9.mjs
 - file~3-!~{006}~.mjs => file~3-Gkv-gnvV.mjs
 - file~4-!~{008}~.mjs => file~4-Nhcoofwl.mjs
@@ -1878,7 +1879,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - file~6-!~{00c}~.mjs => file~6-khaY2HFs.mjs
 - file~7-!~{00e}~.mjs => file~7-2atL45yw.mjs
 - file~8-!~{00g}~.mjs => file~8-rftyyf3M.mjs
-- file~1-!~{002}~.mjs => file~1-H61Mf_14.mjs
 
 # tests/rolldown/misc/banner/cjs
 

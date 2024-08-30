@@ -11,7 +11,6 @@ export function getOutputChunkNames(output: RollupOutput) {
   return output.output
     .filter((chunk) => chunk.type === 'chunk')
     .map((chunk) => chunk.fileName)
-    .sort()
 }
 
 export function getOutputChunk(output: RollupOutput): RolldownOutputChunk[] {

@@ -7,11 +7,6 @@ export default defineTest({
     input: ['main.js', 'entry.js'],
   },
   afterTest: function (output) {
-    expect(getOutputChunkNames(output)).toMatchInlineSnapshot(`
-      [
-        "entry.js",
-        "main.js",
-      ]
-    `)
+    expect(getOutputChunkNames(output)).toStrictEqual(['main.js', 'entry.js'])
   },
 })

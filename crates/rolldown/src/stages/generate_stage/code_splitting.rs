@@ -80,15 +80,6 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn generate_chunks(&mut self) -> ChunkGraph {
-    if matches!(self.options.format, OutputFormat::Iife)
-      && self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count() != 1
-    {
-      self.link_output.errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionTypes::UnsupportedCodeSplittingFormat,
-        self.options.format.to_string(),
-      ));
-      // anyhow::bail!("IIFE format doesn't support code-splitting chunks.")
-    }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
@@ -157,6 +148,13 @@ impl<'a> GenerateStage<'a> {
         module_to_chunk[normal_module.idx] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
+    }
+
+    if matches!(self.options.format, OutputFormat::Iife) && chunks.len() > 1 {
+      self.link_output.errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionTypes::UnsupportedCodeSplittingFormat,
+        self.options.format.to_string(),
+      ));
     }
 
     // Sort modules in each chunk by execution order

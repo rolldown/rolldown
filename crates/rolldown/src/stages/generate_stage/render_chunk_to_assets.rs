@@ -128,7 +128,7 @@ impl<'a> GenerateStage<'a> {
     outputs.sort_by(|a, b| match (a, b) {
       (Output::Asset(a), Output::Asset(b)) => a.filename.cmp(&b.filename),
       // The chunks order using code splitting chunk order, make sure the entry chunk at first.
-      (Output::Chunk(_), Output::Chunk(_)) => std::cmp::Ordering::Greater,
+      (Output::Chunk(_), Output::Chunk(_)) => std::cmp::Ordering::Equal,
       (Output::Asset(_), Output::Chunk(_)) => std::cmp::Ordering::Less,
       (Output::Chunk(_), Output::Asset(_)) => std::cmp::Ordering::Greater,
     });

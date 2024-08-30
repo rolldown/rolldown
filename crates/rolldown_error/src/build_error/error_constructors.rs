@@ -177,14 +177,8 @@ impl BuildDiagnostic {
     Self::new_inner(ForbidConstAssign { filename, source, name, reference_span, re_assign_span })
   }
 
-  pub fn invalid_option(situation: &str, option: String) -> Self {
-    Self::new_inner(InvalidOption {
-      invalid_option_types: match situation {
-        "output.format" => InvalidOptionTypes::UnsupportedCodeSplittingFormat,
-        _ => unreachable!(),
-      },
-      option,
-    })
+  pub fn invalid_option(situation: InvalidOptionTypes, option: String) -> Self {
+    Self::new_inner(InvalidOption { invalid_option_types: situation, option })
   }
 
   pub fn napi_error(status: String, reason: String) -> Self {

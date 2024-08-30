@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 
+use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
 use itertools::Itertools;
 use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
-
-use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
 
 use super::GenerateStage;
 
@@ -79,11 +79,15 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn generate_chunks(&self) -> anyhow::Result<ChunkGraph> {
+  pub fn generate_chunks(&mut self) -> ChunkGraph {
     if matches!(self.options.format, OutputFormat::Iife)
       && self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count() != 1
     {
-      anyhow::bail!("IIFE format doesn't support code-splitting chunks.")
+      self.link_output.errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionTypes::UnsupportedCodeSplittingFormat,
+        self.options.format.to_string(),
+      ));
+      // anyhow::bail!("IIFE format doesn't support code-splitting chunks.")
     }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
@@ -254,6 +258,6 @@ impl<'a> GenerateStage<'a> {
       .map(|(idx, _)| idx)
       .collect::<Vec<_>>();
 
-    Ok(ChunkGraph { chunks, sorted_chunk_idx_vec, module_to_chunk, entry_module_to_entry_chunk })
+    ChunkGraph { chunks, sorted_chunk_idx_vec, module_to_chunk, entry_module_to_entry_chunk }
   }
 }

@@ -1603,9 +1603,21 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- cube-!~{002}~.mjs => cube-UC9SFjeM.mjs
-- main-!~{000}~.mjs => main-soihLkqo.mjs
+- cube-!~{002}~.mjs => cube-nT6NrG50.mjs
+- main-!~{000}~.mjs => main-JcB2G4E9.mjs
 - other-entry-!~{001}~.mjs => other-entry-coajbluq.mjs
+
+# tests/rolldown/function/format/app/rolldown_default_export/class
+
+- main-!~{000}~.mjs => main-9ahc9mkt.mjs
+
+# tests/rolldown/function/format/app/rolldown_default_export/function
+
+- main-!~{000}~.mjs => main-_odkYPWb.mjs
+
+# tests/rolldown/function/format/app/rolldown_default_export/normal
+
+- main-!~{000}~.mjs => main-SuaPG1ab.mjs
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

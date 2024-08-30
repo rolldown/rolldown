@@ -60,8 +60,9 @@ async function bundleInner(
   printBundleOutputPretty(bundleOutput)
 
   logger.log(``)
+  const duration = endTime - startTime
   logger.success(
-    `Finished in ${colors.bold((endTime - startTime).toFixed(2))} ms`,
+    `Finished in ${colors.bold(duration < 1000 ? `${duration.toFixed(2)} ms` : `${(duration / 1000).toFixed(2)} s`)}`,
   )
 }
 

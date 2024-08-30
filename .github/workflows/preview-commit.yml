@@ -1,7 +1,11 @@
+# https://github.com/stackblitz-labs/pkg.pr.new
 name: Preview Commit
 
 on:
   workflow_call:
+  push:
+    branches:
+      - main
 
 jobs:
   build:

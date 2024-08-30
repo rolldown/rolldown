@@ -29,14 +29,12 @@ impl<'a> GenerateStage<'a> {
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
     let (mut preliminary_assets, index_chunk_to_assets) =
       self.render_preliminary_assets(chunk_graph, &mut errors, &mut warnings).await?;
-    println!("222 {:?}", preliminary_assets);
 
     render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
 
     augment_chunk_hash(self.plugin_driver, &mut preliminary_assets).await?;
 
     let mut assets = finalize_assets(chunk_graph, preliminary_assets, &index_chunk_to_assets);
-    println!("3333 {:?}", assets);
 
     self.minify_assets(&mut assets)?;
 
@@ -130,7 +128,12 @@ impl<'a> GenerateStage<'a> {
     // TODO: use `preliminary_filename` on `Output::Asset` instead
     output_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
 
-    // The chunks order using code splitting chunk order, make sure the entry chunk at first.
+    // The chunks order make sure the entry chunk at first, the assets at last, see https://github.com/rollup/rollup/blob/master/src/rollup/rollup.ts#L266
+    output.sort_unstable_by_key(|chunk| match chunk {
+      Output::Chunk(chunk) => !chunk.is_entry,
+      Output::Asset(_) => false,
+    });
+
     output.extend(output_assets);
 
     Ok(BundleOutput { assets: output, errors, warnings })

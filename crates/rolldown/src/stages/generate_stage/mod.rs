@@ -58,7 +58,6 @@ impl<'a> GenerateStage<'a> {
     let mut chunk_graph = self.generate_chunks();
 
     self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
-    println!("111 {:?}", chunk_graph.chunks);
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 

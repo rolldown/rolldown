@@ -217,12 +217,12 @@ impl<'a> GenerateStage<'a> {
     // - static chunks are always before dynamic chunks
     // - other chunks has stable order at per entry chunk level
     let sorted_chunk_idx_vec = chunks
-      .indices()
-      .sorted_unstable_by(|a, b| {
+      .iter_enumerated()
+      .sorted_unstable_by(|(index_a, a), (index_b, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
-        match (&chunks[*a].kind, &chunks[*b].kind) {
+        match (&a.kind, &b.kind) {
           (ChunkKind::EntryPoint { is_user_defined, .. }, ChunkKind::Common) => {
             if *is_user_defined {
               a_should_be_first
@@ -237,9 +237,21 @@ impl<'a> GenerateStage<'a> {
               a_should_be_first
             }
           }
-          _ => chunks[*a].exec_order.cmp(&chunks[*b].exec_order),
+          (
+            ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
+            ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
+          ) => {
+            if *a_is_user_defined && *b_is_user_defined {
+              // Using user specific order of entry
+              index_a.cmp(index_b)
+            } else {
+              a.exec_order.cmp(&b.exec_order)
+            }
+          }
+          _ => a.exec_order.cmp(&b.exec_order),
         }
       })
+      .map(|(idx, _)| idx)
       .collect::<Vec<_>>();
 
     ChunkGraph { chunks, sorted_chunk_idx_vec, module_to_chunk, entry_module_to_entry_chunk }

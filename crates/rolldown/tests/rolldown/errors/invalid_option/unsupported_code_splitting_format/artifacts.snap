@@ -1,7 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Error: Invalid value "iife" for option "format". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.
+
+```# warnings
 
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 

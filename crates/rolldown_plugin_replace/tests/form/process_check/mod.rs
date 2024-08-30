@@ -6,8 +6,8 @@ use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 
 // Handles process type guards in replacements
-// #[tokio::test(flavor = "multi_thread")]
-#[allow(dead_code)]
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "TODO: implement the feature"]
 async fn process_check() {
   let cwd = abs_file_dir!();
 
@@ -20,7 +20,7 @@ async fn process_check() {
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
         values: [("process.env.NODE_ENV".to_string(), "\"production\"".to_string())].into(),
-        // TODO: prevent_assignment: true
+        prevent_assignment: true,
         // TODO: object_guards: true
         ..Default::default()
       }))],

@@ -27,8 +27,7 @@ impl Plugin for TestPlugin {
 }
 
 // doesn't replace lvalue in typescript declare
-// #[tokio::test(flavor = "multi_thread")]
-#[allow(dead_code)]
+#[tokio::test(flavor = "multi_thread")]
 async fn typescript_declare() {
   let cwd = abs_file_dir!();
   let code = Arc::new(Mutex::new(None));
@@ -43,7 +42,7 @@ async fn typescript_declare() {
       vec![
         Arc::new(ReplacePlugin::with_options(ReplaceOptions {
           values: [("NAME".to_string(), "replaced".to_string())].into(),
-          // TODO: prevent_assignment: true
+          prevent_assignment: true,
           ..Default::default()
         })),
         Arc::new(TestPlugin(Arc::clone(&code))),

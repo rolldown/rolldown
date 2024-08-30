@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, collections::HashMap};
+use std::{cmp::Reverse, collections::HashMap, sync::LazyLock};
 
 use fancy_regex::{Regex, RegexBuilder};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
@@ -10,19 +10,28 @@ pub struct ReplaceOptions {
   pub values: HashMap</* Target */ String, /* Replacement */ String>,
   /// Default to `("\\b", "\\b(?!\\.)")`. To prevent `typeof window.document` from being replaced by config item `typeof window` => `"object"`.
   pub delimiters: (String, String),
+  pub prevent_assignment: bool,
 }
 
 impl Default for ReplaceOptions {
   fn default() -> Self {
-    Self { values: HashMap::default(), delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()) }
+    Self {
+      values: HashMap::default(),
+      delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()),
+      prevent_assignment: false,
+    }
   }
 }
 
 #[derive(Debug)]
 pub struct ReplacePlugin {
   matcher: Regex,
+  prevent_assignment: bool,
   values: FxHashMap</* Target */ String, /* Replacement */ String>,
 }
+
+static NON_ASSIGNMENT_MATCHER: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new("\\b(?:const|let|var)\\s+$").expect("Should be valid regex"));
 
 impl ReplacePlugin {
   pub fn new(values: HashMap<String, String>) -> Self {
@@ -34,10 +43,12 @@ impl ReplacePlugin {
     // Sort by length in descending order so that longer targets are matched first.
     keys.sort_by_key(|key| Reverse(key.len()));
 
+    let lookahead = if options.prevent_assignment { "(?!\\s*=[^=])" } else { "" };
+
     let joined_keys = keys.iter().map(|key| fancy_regex::escape(key)).collect::<Vec<_>>().join("|");
     let (delimiter_left, delimiter_right) = &options.delimiters;
     // https://rustexp.lpil.uk/
-    let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}");
+    let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
     Self {
       matcher: RegexBuilder::new(&pattern)
         // Give a `usize::MAX` will cause bundle time tripled in some cases, so we need to use sensible limit
@@ -45,6 +56,7 @@ impl ReplacePlugin {
         .backtrack_limit(1_000_000)
         .build()
         .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
+      prevent_assignment: options.prevent_assignment,
       values: options.values.into_iter().collect(),
     }
   }
@@ -72,6 +84,11 @@ impl ReplacePlugin {
       let Some(matched) = captures.get(1) else {
         break;
       };
+      if self.prevent_assignment
+        && NON_ASSIGNMENT_MATCHER.is_match(&code[0..matched.start()]).unwrap_or(false)
+      {
+        continue;
+      }
       let Some(replacement) = self.values.get(matched.as_str()) else {
         break;
       };

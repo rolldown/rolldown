@@ -349,6 +349,7 @@ export interface BindingRenderedModule {
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
+  preventAssignment?: boolean
 }
 
 export interface BindingResolveOptions {

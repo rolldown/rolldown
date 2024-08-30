@@ -6,8 +6,7 @@ use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 
 // doesn't replace lvalue in assignment
-// #[tokio::test(flavor = "multi_thread")]
-#[allow(dead_code)]
+#[tokio::test(flavor = "multi_thread")]
 async fn assignment() {
   let cwd = abs_file_dir!();
 
@@ -19,8 +18,12 @@ async fn assignment() {
         ..Default::default()
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: [("process.env.DEBUG".to_string(), "replaced".to_string())].into(),
-        // TODO: prevent_assignment: true
+        values: [
+          ("process.env.DEBUG".to_string(), "replaced".to_string()),
+          ("hello".to_string(), "world".to_string()),
+        ]
+        .into(),
+        prevent_assignment: true,
         ..Default::default()
       }))],
     )

@@ -159,7 +159,6 @@ jobs:
 
   pkg-preview:
     name: Pkg Preview
-    runs-on: ubuntu-latest
     needs:
       - cargo-deny
       - rust-validation

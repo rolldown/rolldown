@@ -80,6 +80,11 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn generate_chunks(&mut self) -> ChunkGraph {
+    if matches!(self.options.format, OutputFormat::Iife) {
+      let user_defined_entry_count =
+        self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
+      debug_assert!(user_defined_entry_count == 1, "IIFE format only supports one entry point");
+    }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,

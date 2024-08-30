@@ -24,7 +24,7 @@ async fn ternary_operator() {
           ("exprIfFalse".to_string(), "third".to_string()),
         ]
         .into(),
-        // TODO: prevent_assignment: true
+        prevent_assignment: true,
         ..Default::default()
       }))],
     )

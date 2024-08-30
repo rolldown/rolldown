@@ -131,9 +131,7 @@ impl<'a> GenerateStage<'a> {
     // The chunks order make sure the entry chunk at first, the assets at last, see https://github.com/rollup/rollup/blob/master/src/rollup/rollup.ts#L266
     output.sort_unstable_by(|a, b| match (a, b) {
       (Output::Chunk(a), Output::Chunk(b)) => {
-        if a.is_entry {
-          std::cmp::Ordering::Greater
-        } else if b.is_entry {
+        if a.is_entry || b.is_entry {
           std::cmp::Ordering::Greater
         } else {
           a.filename.cmp(&b.filename)

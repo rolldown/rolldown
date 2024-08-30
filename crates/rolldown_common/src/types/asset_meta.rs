@@ -1,5 +1,7 @@
 use crate::EcmaAssetMeta;
 
+#[derive(Debug)]
+
 pub enum AssetMeta {
   Ecma(Box<EcmaAssetMeta>),
   // Using Variant `None` instead of `Option<AssetMeta>` to make it friendly to use pattern matching.

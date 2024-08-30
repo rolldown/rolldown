@@ -38,7 +38,8 @@ impl<'a> GenerateStage<'a> {
 
     self.minify_assets(&mut assets)?;
 
-    let mut outputs = vec![];
+    let mut output = Vec::with_capacity(assets.len());
+    let mut output_assets = vec![];
     for Asset {
       mut map,
       meta: rendered_chunk,
@@ -87,7 +88,7 @@ impl<'a> GenerateStage<'a> {
           match self.options.sourcemap {
             SourceMapType::File => {
               let source = map.to_json_string();
-              outputs.push(Output::Asset(Box::new(OutputAsset {
+              output_assets.push(Output::Asset(Box::new(OutputAsset {
                 filename: map_filename.clone(),
                 source: source.into(),
                 original_file_name: None,
@@ -104,7 +105,7 @@ impl<'a> GenerateStage<'a> {
         }
         let sourcemap_filename =
           map.as_ref().map(|_| format!("{}.map", rendered_chunk.filename.as_str()));
-        outputs.push(Output::Chunk(Box::new(OutputChunk {
+        output.push(Output::Chunk(Box::new(OutputChunk {
           name: rendered_chunk.name,
           filename: rendered_chunk.filename,
           code,
@@ -125,15 +126,12 @@ impl<'a> GenerateStage<'a> {
 
     // Make sure order of assets are deterministic
     // TODO: use `preliminary_filename` on `Output::Asset` instead
-    outputs.sort_by(|a, b| match (a, b) {
-      (Output::Asset(a), Output::Asset(b)) => a.filename.cmp(&b.filename),
-      // The chunks order using code splitting chunk order, make sure the entry chunk at first.
-      (Output::Chunk(_), Output::Chunk(_)) => std::cmp::Ordering::Equal,
-      (Output::Asset(_), Output::Chunk(_)) => std::cmp::Ordering::Less,
-      (Output::Chunk(_), Output::Asset(_)) => std::cmp::Ordering::Greater,
-    });
+    output_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
 
-    Ok(BundleOutput { assets: outputs, errors, warnings })
+    // The chunks order using code splitting chunk order, make sure the entry chunk at first.
+    output.extend(output_assets);
+
+    Ok(BundleOutput { assets: output, errors, warnings })
   }
 
   async fn render_preliminary_assets(

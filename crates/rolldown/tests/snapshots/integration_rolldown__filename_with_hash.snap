@@ -1354,8 +1354,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
-- main-FCgUAtG5.mjs.map
 - main-!~{000}~.mjs => main-FCgUAtG5.mjs
+- main-FCgUAtG5.mjs.map
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
@@ -1373,13 +1373,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/require/require_cjs
 
-- main-URIuMy8a.mjs.map
 - main-!~{000}~.mjs => main-URIuMy8a.mjs
+- main-URIuMy8a.mjs.map
 
 # tests/rolldown/cjs_compat/require/require_esm
 
-- main-Z2hh72c5.mjs.map
 - main-!~{000}~.mjs => main-Z2hh72c5.mjs
+- main-Z2hh72c5.mjs.map
 
 # tests/rolldown/code_splitting/basic
 
@@ -1685,8 +1685,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/minify/basic
 
-- main-GSae7Hz6.mjs.map
 - main-!~{000}~.mjs => main-GSae7Hz6.mjs
+- main-GSae7Hz6.mjs.map
 
 # tests/rolldown/function/module_types/base64/binary
 
@@ -1890,8 +1890,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/basic
 
-- main-GSae7Hz6.mjs.map
 - main-!~{000}~.mjs => main-GSae7Hz6.mjs
+- main-GSae7Hz6.mjs.map
 
 # tests/rolldown/misc/basic_re_export
 
@@ -1923,8 +1923,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/object_shorthand_property
 
-- main-T6y8-6S0.mjs.map
 - main-!~{000}~.mjs => main-T6y8-6S0.mjs
+- main-T6y8-6S0.mjs.map
 
 # tests/rolldown/misc/reexport_star
 
@@ -1950,8 +1950,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-c_fP-LRz.mjs.map
 - main-!~{000}~.mjs => main-c_fP-LRz.mjs
+- main-c_fP-LRz.mjs.map
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
@@ -1991,13 +1991,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/deconflict/basic_scoped
 
-- main-6UfLvAvI.mjs.map
 - main-!~{000}~.mjs => main-6UfLvAvI.mjs
+- main-6UfLvAvI.mjs.map
 
 # tests/rolldown/topics/deconflict/complex_params_patterns
 
-- main-ryRyplt5.mjs.map
 - main-!~{000}~.mjs => main-ryRyplt5.mjs
+- main-ryRyplt5.mjs.map
 
 # tests/rolldown/topics/deconflict/conflict_between_global_and_local_binding
 
@@ -2009,33 +2009,33 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/deconflict/decl_complex_patterns
 
-- main-oJuF1J6J.mjs.map
 - main-!~{000}~.mjs => main-oJuF1J6J.mjs
+- main-oJuF1J6J.mjs.map
 
 # tests/rolldown/topics/deconflict/decl_nested_assign_pattern
 
-- main-RJIiARpN.mjs.map
 - main-!~{000}~.mjs => main-RJIiARpN.mjs
+- main-RJIiARpN.mjs.map
 
 # tests/rolldown/topics/deconflict/default_function
 
-- main-GgCTcV28.mjs.map
 - main-!~{000}~.mjs => main-GgCTcV28.mjs
+- main-GgCTcV28.mjs.map
 
 # tests/rolldown/topics/deconflict/issue_364
 
-- main-bZCCVE2Y.mjs.map
 - main-!~{000}~.mjs => main-bZCCVE2Y.mjs
+- main-bZCCVE2Y.mjs.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
-- main-SeK2UgGl.mjs.map
 - main-!~{000}~.mjs => main-SeK2UgGl.mjs
+- main-SeK2UgGl.mjs.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_export_named_function
 
-- main-pnopkX4j.mjs.map
 - main-!~{000}~.mjs => main-pnopkX4j.mjs
+- main-pnopkX4j.mjs.map
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 
@@ -2169,8 +2169,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/tree_shaking/multi-declarator
 
-- main-kD2S-dYe.mjs.map
 - main-!~{000}~.mjs => main-kD2S-dYe.mjs
+- main-kD2S-dYe.mjs.map
 
 # tests/rolldown/tree_shaking/pure_annotation
 

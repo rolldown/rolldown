@@ -29,12 +29,14 @@ impl<'a> GenerateStage<'a> {
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
     let (mut preliminary_assets, index_chunk_to_assets) =
       self.render_preliminary_assets(chunk_graph, &mut errors, &mut warnings).await?;
+    println!("222 {:?}", preliminary_assets);
 
     render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
 
     augment_chunk_hash(self.plugin_driver, &mut preliminary_assets).await?;
 
     let mut assets = finalize_assets(chunk_graph, preliminary_assets, &index_chunk_to_assets);
+    println!("3333 {:?}", assets);
 
     self.minify_assets(&mut assets)?;
 

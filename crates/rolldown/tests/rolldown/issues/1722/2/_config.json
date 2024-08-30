@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry1",
+        "import": "./main.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

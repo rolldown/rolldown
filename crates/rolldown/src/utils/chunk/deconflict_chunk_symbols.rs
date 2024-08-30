@@ -39,6 +39,9 @@ pub fn deconflict_chunk_symbols(
   match chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &link_output.metas[module];
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+        renamer.add_top_level_symbol(*symbol_ref);
+      });
       meta
         .require_bindings_for_star_exports
         .iter()

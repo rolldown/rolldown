@@ -1577,7 +1577,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.mjs => main-ijx7NJj3.mjs
+- main-!~{000}~.mjs => main-pm9Xy_bR.mjs
 
 # tests/rolldown/function/external/implicit_import_external
 
@@ -1848,6 +1848,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-RjbZEjrl.mjs
 
+# tests/rolldown/issues/1722/1
+
+- foo-!~{001}~.mjs => foo-vySRc0TI.mjs
+- main-!~{000}~.mjs => main-AkFWuq87.mjs
+- main~1-!~{002}~.mjs => main~1-vUCeiqYg.mjs
+
+# tests/rolldown/issues/1722/2
+
+- entry1-!~{000}~.mjs => entry1-27Ajd683.mjs
+- entry2-!~{001}~.mjs => entry2-_Aj3KyP6.mjs
+- main-!~{002}~.mjs => main-nnhP1Mqc.mjs
+
 # tests/rolldown/issues/1769
 
 - main-!~{000}~.mjs => main-40SKkhvQ.mjs
@@ -1858,6 +1870,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{005}~.mjs => a-un2hSNF7.mjs
 - b-!~{001}~.mjs => b-gzBZQw6C.mjs
 - b~1-!~{003}~.mjs => b~1-Yhc4kY0m.mjs
+
+# tests/rolldown/issues/2085
+
+- a-!~{001}~.mjs => a-jx75PpPL.mjs
+- a~1-!~{003}~.mjs => a~1-m9rW2k8a.mjs
+- c-!~{005}~.mjs => c-idcE24nQ.mjs
+- main-!~{000}~.mjs => main-SfEhkRhf.mjs
 
 # tests/rolldown/issues/376
 

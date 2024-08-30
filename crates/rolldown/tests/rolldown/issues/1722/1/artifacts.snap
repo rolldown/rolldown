@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.mjs
+
+```js
+import { import_sub, main } from "./main~1.mjs";
+
+var sub = import_sub.sub;
+export { main, sub };
+```
+## main.mjs
+
+```js
+import { import_sub, main } from "./main~1.mjs";
+
+var sub = import_sub.sub;
+export { main, sub };
+```
+## main~1.mjs
+
+```js
+
+
+//#region sub.cjs
+var require_sub = __commonJSMin((exports, module) => {
+	module.exports.sub = "sub";
+});
+
+//#endregion
+//#region main.js
+var import_sub = __toESM(require_sub());
+const main = "main";
+
+//#endregion
+export { import_sub, main };
+```

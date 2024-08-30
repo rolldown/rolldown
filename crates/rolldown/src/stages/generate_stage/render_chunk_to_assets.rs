@@ -125,7 +125,7 @@ impl<'a> GenerateStage<'a> {
 
     // Make sure order of assets are deterministic
     // TODO: use `preliminary_filename` on `Output::Asset` instead
-    outputs.sort_unstable_by(|a, b| match (a, b) {
+    outputs.sort_by(|a, b| match (a, b) {
       (Output::Asset(a), Output::Asset(b)) => a.filename.cmp(&b.filename),
       // The chunks order using code splitting chunk order, make sure the entry chunk at first.
       (Output::Chunk(_), Output::Chunk(_)) => std::cmp::Ordering::Greater,

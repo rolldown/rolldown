@@ -1350,7 +1350,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/import_the_same_cjs_twice
 
-- main-!~{000}~.mjs => main-ov3oJE64.mjs
+- main-!~{000}~.mjs => main-fEJLLwH_.mjs
 
 # tests/rolldown/cjs_compat/mix-cjs-esm
 

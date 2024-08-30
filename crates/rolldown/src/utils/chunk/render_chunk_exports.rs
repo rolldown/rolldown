@@ -22,21 +22,24 @@ pub fn render_chunk_exports(
 
   match options.format {
     OutputFormat::Esm => {
-      // dbg!(&chunk.name, &chunk.canonical_names, &export_items);
       let mut s = String::new();
+      let mut export_default_count = 0;
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbols.par_canonical_ref_for(export_ref);
           let symbol = link_output.symbols.get(canonical_ref);
-          dbg!(&symbol);
 
           let canonical_name;
           if let Some(ns_alias) = &symbol.namespace_alias {
-            dbg!(&canonical_ref);
-            dbg!(&ns_alias);
             let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
-            canonical_name = chunk.canonical_names[&ns_alias.namespace_ref].clone();
+            canonical_name = if export_default_count == 0 {
+              Rstr::from("export_default")
+            } else {
+              Rstr::from(format!("export_default{export_default_count}").as_str())
+            };
+            export_default_count += 1;
+
             let property_name = &ns_alias.property_name;
             s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
           } else {
@@ -173,6 +176,7 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
         .iter()
         .map(|(export_ref, alias)| (alias.clone(), *export_ref))
         .collect::<Vec<_>>();
+
       tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
       tmp

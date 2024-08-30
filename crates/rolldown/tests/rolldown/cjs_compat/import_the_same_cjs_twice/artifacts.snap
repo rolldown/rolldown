@@ -20,6 +20,6 @@ var import_cjs$1 = __toESM(require_cjs());
 
 //#endregion
 var export_default = import_cjs.a;
-var export_default = import_cjs$1.a;
-export { export_default as a, export_default as a2 };
+var export_default1 = import_cjs$1.a;
+export { export_default as a, export_default1 as a2 };
 ```

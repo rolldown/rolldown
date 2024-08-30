@@ -22,8 +22,16 @@ pub fn deconflict_chunk_symbols(
       // global names should be reserved
       renamer.reserve(Cow::Owned(name.to_rstr()));
     });
-  // `export_default` is used for create temp variable to export a commonjs import binding
-  renamer.reserve(Cow::Owned(Rstr::from("export_default")));
+  let export_to_other_chunk_len = chunk.exports_to_other_chunks.len();
+  // `export_default${n}` is used for create temp variable to export a commonjs import binding
+  // to other chunk
+  for i in 0..export_to_other_chunk_len {
+    if i == 0 {
+      renamer.reserve(Cow::Owned(Rstr::from("export_default")));
+    } else {
+      renamer.reserve(Cow::Owned(Rstr::from(format!("export_default{i}"))));
+    }
+  }
 
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
   // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other

@@ -67,6 +67,10 @@ export default defineConfig({
     sidebar: {
       '/guide/': [
         {
+          text: 'Guide',
+          items: [{ text: 'Getting Started', link: '/guide/index.md' }],
+        },
+        {
           text: 'Config',
           items: [
             { text: 'Configuration', link: '/guide/config/config.md' },

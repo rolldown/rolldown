@@ -167,4 +167,5 @@ jobs:
       - wasi-test
       - node-validation
       - repo-validation
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     uses: ./.github/workflows/preview-commit.yml

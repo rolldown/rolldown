@@ -10,7 +10,7 @@ use serde::Deserialize;
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleType {
   Js,
   Jsx,
@@ -44,8 +44,8 @@ impl ModuleType {
 
   /// error: method `from_str` can be confused for the standard trait method `std::str::FromStr::from_str`
   /// to avoid conflicting with std
-  pub fn from_str_with_fallback(s: &str) -> Self {
-    match s {
+  pub fn from_str_with_fallback<S: AsRef<str>>(s: S) -> Self {
+    match s.as_ref() {
       "js" => Self::Js,
       "jsx" => Self::Jsx,
       "ts" => Self::Ts,
@@ -56,7 +56,7 @@ impl ModuleType {
       "dataurl" => Self::Dataurl,
       "binary" => Self::Binary,
       "empty" => Self::Empty,
-      _ => Self::Custom(s.to_string()),
+      _ => Self::Custom(s.as_ref().to_string()),
     }
   }
 }

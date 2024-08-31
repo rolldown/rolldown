@@ -4,10 +4,15 @@ use super::plugin_context::PluginContext;
 use crate::{
   plugin_hook_meta::PluginHookMeta,
   transform_plugin_context::TransformPluginContext,
-  types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
+  types::{
+    hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
+    hook_render_error::HookRenderErrorArgs,
+    hook_transform_ast_args::HookTransformAstArgs,
+  },
   HookAddonArgs, HookBuildEndArgs, HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs,
   HookResolveIdArgs, HookTransformArgs, Plugin,
 };
+use anyhow::Ok;
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;
@@ -171,6 +176,18 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   ) -> HookNoopReturn;
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
+
+  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    Ok(None)
+  }
+
+  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+    Ok(None)
+  }
+
+  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    Ok(None)
+  }
 }
 
 #[async_trait::async_trait]
@@ -383,5 +400,17 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Plugin::transform_ast_meta(self)
+  }
+
+  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    Plugin::transform_filter(self)
+  }
+
+  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+    Plugin::resolve_id_filter(self)
+  }
+
+  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    Plugin::load_filter(self)
   }
 }

@@ -14,6 +14,8 @@ use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
+use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
+
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self) -> HookNoopReturn {
@@ -82,6 +84,10 @@ impl PluginDriver {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
+      let filter_option = &self.index_plugin_filters[plugin_idx];
+      if filter_resolve_id(filter_option, args.specifier, ctx.cwd()) == Some(false) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_resolve_id(
           &skipped_resolve_calls.map_or_else(
@@ -140,7 +146,13 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_load_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
+    {
+      let filter_option = &self.index_plugin_filters[plugin_idx];
+      if filter_load(filter_option, args.id, ctx.cwd()) == Some(false) {
+        continue;
+      }
       if let Some(r) = plugin.call_load(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -157,7 +169,13 @@ impl PluginDriver {
     module_type: &mut ModuleType,
   ) -> Result<String> {
     let mut code = args.code.to_string();
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_transform_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
+    {
+      let filter_option = &self.index_plugin_filters[plugin_idx];
+      if !filter_transform(filter_option, args.id, ctx.cwd(), module_type, &code) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(ctx.clone(), sourcemap_chain, original_code, args.id),

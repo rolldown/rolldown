@@ -10,12 +10,13 @@ use rolldown_resolver::Resolver;
 use crate::{
   __inner::SharedPluginable,
   plugin_context::PluginContextImpl,
-  type_aliases::{IndexPluginContext, IndexPluginable},
-  types::plugin_idx::PluginIdx,
+  type_aliases::{IndexPluginContext, IndexPluginFilter, IndexPluginable},
+  types::{hook_filter::HookFilterOptions, plugin_idx::PluginIdx},
   PluginContext, PluginHookMeta, PluginOrder,
 };
 
 mod build_hooks;
+mod hook_filter;
 mod output_hooks;
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -24,6 +25,7 @@ pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
   order_indicates: HookOrderIndicates,
+  index_plugin_filters: IndexPluginFilter,
 }
 
 impl PluginDriver {
@@ -35,9 +37,16 @@ impl PluginDriver {
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(plugins.len());
+      let mut index_plugin_filters = IndexPluginFilter::with_capacity(plugins.len());
 
       plugins.into_iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
+        // TODO: Error handling
+        index_plugin_filters.push(HookFilterOptions {
+          load: plugin.call_load_filter().unwrap(),
+          resolve_id: plugin.call_resolve_id_filter().unwrap(),
+          transform: plugin.call_transform_filter().unwrap(),
+        });
         index_contexts.push(
           PluginContextImpl {
             skipped_resolve_calls: vec![],
@@ -55,6 +64,7 @@ impl PluginDriver {
         order_indicates: HookOrderIndicates::new(&index_plugins),
         plugins: index_plugins,
         contexts: index_contexts,
+        index_plugin_filters,
       }
     })
   }

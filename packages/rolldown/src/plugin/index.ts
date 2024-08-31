@@ -193,7 +193,6 @@ export type PluginOrder = 'pre' | 'post' | null
 export type ObjectHookMeta<O = {}> = { order?: PluginOrder } & O
 
 export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta<O>)
-
 export type SyncPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'onLog'
@@ -247,12 +246,33 @@ export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks
 >
-
+export type hookFilterExtension<K extends keyof FunctionPluginHooks> =
+  K extends 'transform'
+    ? { filter?: BaseHookFilter }
+    : K extends 'load' | 'resolveId'
+      ? { filter?: Omit<BaseHookFilter, 'code' | 'moduleType'> }
+      : {}
+export type BaseHookFilter = {
+  id?: {
+    include?: (string | RegExp)[]
+    exclude?: (string | RegExp)[]
+  }
+  moduleType?:
+    | ModuleType[]
+    | {
+        include?: ModuleType[]
+      }
+  code?: {
+    include?: (string | RegExp)[]
+    exclude?: (string | RegExp)[]
+  }
+}
 export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<
     K extends AsyncPluginHooks
       ? MakeAsync<FunctionPluginHooks[K]>
-      : FunctionPluginHooks[K]
+      : FunctionPluginHooks[K],
+    hookFilterExtension<K>
     // eslint-disable-next-line @typescript-eslint/ban-types
     // TODO
     // K extends ParallelPluginHooks ? { sequential?: boolean } : {}

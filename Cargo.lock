@@ -2341,6 +2341,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
+ "sugar_path",
  "tracing",
  "typedmap",
 ]

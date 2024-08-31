@@ -2,7 +2,10 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
+use rolldown_plugin::{
+  Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, ResolvedIdHookFilter,
+  TransformHookFilter,
+};
 use rolldown_utils::unique_arc::UniqueArc;
 use std::{
   borrow::Cow,
@@ -389,5 +392,35 @@ impl Plugin for JsPlugin {
 
   fn write_bundle_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     self.write_bundle_meta.as_ref().map(Into::into)
+  }
+
+  fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    match self.inner.transform_filter {
+      Some(ref item) => {
+        let filter = TransformHookFilter::try_from(item.clone())?;
+        Ok(Some(filter))
+      }
+      None => Ok(None),
+    }
+  }
+
+  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+    match self.inner.resolve_id_filter {
+      Some(ref item) => {
+        let filter = ResolvedIdHookFilter::try_from(item.clone())?;
+        Ok(Some(filter))
+      }
+      None => Ok(None),
+    }
+  }
+
+  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    match self.inner.load_filter {
+      Some(ref item) => {
+        let filter = LoadHookFilter::try_from(item.clone())?;
+        Ok(Some(filter))
+      }
+      None => Ok(None),
+    }
   }
 }

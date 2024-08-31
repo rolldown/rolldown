@@ -13,6 +13,7 @@ use super::{
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_filter::{BindingGeneralHookFilter, BindingTransformHookFilter},
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
@@ -48,6 +49,7 @@ pub struct BindingPluginOptions {
     >,
   >,
   pub resolve_id_meta: Option<BindingPluginHookMeta>,
+  pub resolve_id_filter: Option<BindingGeneralHookFilter>,
 
   #[serde(skip_deserializing)]
   #[napi(
@@ -68,6 +70,7 @@ pub struct BindingPluginOptions {
   pub load:
     Option<MaybeAsyncJsCallback<(BindingPluginContext, String), Option<BindingHookLoadOutput>>>,
   pub load_meta: Option<BindingPluginHookMeta>,
+  pub load_filter: Option<BindingGeneralHookFilter>,
 
   #[serde(skip_deserializing)]
   #[napi(
@@ -80,6 +83,7 @@ pub struct BindingPluginOptions {
     >,
   >,
   pub transform_meta: Option<BindingPluginHookMeta>,
+  pub transform_filter: Option<BindingTransformHookFilter>,
 
   #[serde(skip_deserializing)]
   #[napi(

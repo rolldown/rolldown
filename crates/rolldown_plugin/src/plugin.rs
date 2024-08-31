@@ -5,7 +5,9 @@ use crate::{
   plugin_hook_meta::PluginHookMeta,
   transform_plugin_context::TransformPluginContext,
   types::{
-    hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
+    hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
+    hook_render_error::HookRenderErrorArgs,
+    hook_transform_ast_args::HookTransformAstArgs,
     hook_transform_output::HookTransformOutput,
   },
   HookAddonArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
@@ -251,5 +253,17 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
     None
+  }
+
+  fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    Ok(None)
+  }
+
+  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
+    Ok(None)
+  }
+
+  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    Ok(None)
   }
 }

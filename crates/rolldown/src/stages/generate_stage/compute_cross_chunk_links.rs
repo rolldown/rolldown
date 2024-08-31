@@ -233,7 +233,6 @@ impl<'a> GenerateStage<'a> {
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
                     let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
-                    dbg!(&canonical_ref);
                     depended_symbols.insert(canonical_ref);
                   } else {
                     // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
@@ -303,22 +302,8 @@ impl<'a> GenerateStage<'a> {
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
   ) {
     chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
-      let is_a = chunk.name.as_deref() == Some("a");
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
-      if is_a {
-        dbg!(&chunk_meta_imports);
-        // dbg!(&chunk);
-      }
       for mut import_ref in chunk_meta_imports.iter().copied() {
-        // if is_unused {
-        //   if is_a {
-        //     let import_symbol = self.link_output.symbols.get(import_ref);
-        //     dbg!(&import_symbol);
-        //     dbg!(&import_ref);
-        //   }
-        //
-        //   continue;
-        // }
         let import_symbol = self.link_output.symbols.get(import_ref);
         let import_symbol = if let Some(ref ns_alias) = import_symbol.namespace_alias {
           import_ref = ns_alias.namespace_ref;
@@ -329,12 +314,6 @@ impl<'a> GenerateStage<'a> {
 
         let is_unused = !self.link_output.used_symbol_refs.contains(&import_ref);
         if is_unused {
-          // if is_a {
-          //   let import_symbol = self.link_output.symbols.get(import_ref);
-          //   dbg!(&import_symbol);
-          //   dbg!(&import_ref);
-          // }
-
           continue;
         }
 
@@ -352,7 +331,6 @@ impl<'a> GenerateStage<'a> {
             .or_default()
             .push(CrossChunkImportItem { import_ref, export_alias: None });
           index_chunk_exported_symbols[importee_chunk_id].insert(import_ref);
-        } else {
         }
       }
 

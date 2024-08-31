@@ -94,7 +94,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut expr = match self.ctx.options.format {
       rolldown_common::OutputFormat::Cjs => {
-        dbg!(&canonical_symbol);
         if canonical_symbol.chunk_id.is_none() {
           // Scoped scopes must belong to its own chunk, so they don't get assigned to a chunk.
           self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)

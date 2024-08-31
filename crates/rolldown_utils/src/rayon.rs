@@ -58,8 +58,8 @@ pub use wasm_shims::{
 
 #[cfg(not(target_family = "wasm"))]
 pub use rayon::iter::{
-  IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
-  IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
+  IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelBridge,
+  ParallelIterator,
 };
 
 fn _usages() {

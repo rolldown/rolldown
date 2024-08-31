@@ -412,8 +412,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         {
           match resolved {
             Some((object_ref, props)) => {
-              dbg!(&object_ref);
-              dbg!(&self.ctx.symbols.get(*object_ref));
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
 
               let replaced_expr =
@@ -426,7 +424,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           }
         };
       }
-      Expression::Identifier(id) => {}
       _ => {}
     };
 

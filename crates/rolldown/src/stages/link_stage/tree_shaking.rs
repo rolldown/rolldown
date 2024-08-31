@@ -114,11 +114,9 @@ fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtI
       include_symbol(ctx, *symbol_ref);
     }
     SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-      dbg!(&member_expr);
       if let Some(symbol) =
         member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
       {
-        dbg!(&symbol);
         include_symbol(ctx, symbol);
       }
     }

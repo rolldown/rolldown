@@ -261,14 +261,12 @@ impl<'link> LinkStage<'link> {
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
-                dbg!(&member_expr_ref);
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref =
                   self.symbols.par_canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner = self.module_table.modules[canonical_ref.owner]
                   .as_ecma()
                   .expect("only ecma module");
-                dbg!(&canonical_ref_owner.exports_kind);
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref;
                 let mut ns_symbol_list = vec![];
@@ -284,7 +282,6 @@ impl<'link> LinkStage<'link> {
                   };
 
                   // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
-                  dbg!(&export_symbol);
                   if !self.module_table.modules[export_symbol.symbol_ref.owner]
                     .as_ecma()
                     .unwrap()
@@ -301,7 +298,6 @@ impl<'link> LinkStage<'link> {
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
                 if cursor > 0 {
-                  dbg!(&member_expr_ref, member_expr_ref.props[cursor..].to_vec());
                   resolved.insert(
                     member_expr_ref.span,
                     Some((canonical_ref, member_expr_ref.props[cursor..].to_vec())),

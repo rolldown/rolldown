@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.mjs
+
+```js
+
+
+//#region b.js
+var require_b = __commonJSMin((exports, module) => {
+	exports._default = function test() {
+		return "f";
+	};
+});
+
+//#endregion
+//#region a.js
+var import_b = __toESM(require_b());
+
+//#endregion
+export { import_b };
+```
+## a~1.mjs
+
+```js
+import { import_b } from "./a.mjs";
+
+var b_default = import_b._default;
+export { b_default as default };
+```
+## c.mjs
+
+```js
+import { import_b } from "./a.mjs";
+
+//#region c.js
+function c_default(tag, options) {
+	return import_b._default;
+}
+
+//#endregion
+export { c_default as default };
+```
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region main.js
+import("./c.mjs").then((mod) => {
+	assert.strictEqual(mod.default()(), "f");
+});
+import("./a~1.mjs").then((mod) => {
+	assert.strictEqual(mod.default(), "f");
+});
+
+//#endregion
+```

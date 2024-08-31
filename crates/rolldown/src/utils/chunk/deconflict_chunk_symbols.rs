@@ -72,4 +72,7 @@ pub fn deconflict_chunk_symbols(
   renamer.rename_non_top_level_symbol(&chunk.modules, &link_output.module_table.modules);
 
   chunk.canonical_names = renamer.into_canonical_names();
+  if chunk.canonical_names.is_empty() {
+    dbg!(&chunk);
+  }
 }

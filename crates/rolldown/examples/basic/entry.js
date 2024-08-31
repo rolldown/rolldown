@@ -1,9 +1,4 @@
-import test from "node:test"
-import assert from "node:assert"
+// MULTIPLE ENTRY MODULES
+import hyperCube from './hyper-cube.js';
 
-
-
-test("@peculiar/webcrypto", () => import("./a").then(assert.ok));
-
-
-test("webcrypto-core", () => import("./b").then(assert.ok));
+console.log(hyperCube(5));

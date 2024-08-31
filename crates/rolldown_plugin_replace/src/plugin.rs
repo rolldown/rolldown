@@ -1,6 +1,6 @@
-use std::{cmp::Reverse, collections::HashMap};
+use std::{cmp::Reverse, collections::HashMap, sync::LazyLock};
 
-use fancy_regex::Regex;
+use fancy_regex::{Regex, RegexBuilder};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
@@ -10,19 +10,28 @@ pub struct ReplaceOptions {
   pub values: HashMap</* Target */ String, /* Replacement */ String>,
   /// Default to `("\\b", "\\b(?!\\.)")`. To prevent `typeof window.document` from being replaced by config item `typeof window` => `"object"`.
   pub delimiters: (String, String),
+  pub prevent_assignment: bool,
 }
 
 impl Default for ReplaceOptions {
   fn default() -> Self {
-    Self { values: HashMap::default(), delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()) }
+    Self {
+      values: HashMap::default(),
+      delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()),
+      prevent_assignment: false,
+    }
   }
 }
 
 #[derive(Debug)]
 pub struct ReplacePlugin {
   matcher: Regex,
+  prevent_assignment: bool,
   values: FxHashMap</* Target */ String, /* Replacement */ String>,
 }
+
+static NON_ASSIGNMENT_MATCHER: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new("\\b(?:const|let|var)\\s+$").expect("Should be valid regex"));
 
 impl ReplacePlugin {
   pub fn new(values: HashMap<String, String>) -> Self {
@@ -34,12 +43,20 @@ impl ReplacePlugin {
     // Sort by length in descending order so that longer targets are matched first.
     keys.sort_by_key(|key| Reverse(key.len()));
 
+    let lookahead = if options.prevent_assignment { "(?!\\s*=[^=])" } else { "" };
+
     let joined_keys = keys.iter().map(|key| fancy_regex::escape(key)).collect::<Vec<_>>().join("|");
     let (delimiter_left, delimiter_right) = &options.delimiters;
     // https://rustexp.lpil.uk/
-    let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}");
+    let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
     Self {
-      matcher: Regex::new(&pattern).unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
+      matcher: RegexBuilder::new(&pattern)
+        // Give a `usize::MAX` will cause bundle time tripled in some cases, so we need to use sensible limit
+        // to have a balance between performance and correctness.
+        .backtrack_limit(1_000_000)
+        .build()
+        .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
+      prevent_assignment: options.prevent_assignment,
       values: options.values.into_iter().collect(),
     }
   }
@@ -48,23 +65,38 @@ impl ReplacePlugin {
     &'text self,
     code: &'text str,
     magic_string: &mut MagicString<'text>,
-  ) -> bool {
+  ) -> anyhow::Result<bool> {
     let mut changed = false;
     for captures in self.matcher.captures_iter(code) {
-      let Ok(captures) = captures else {
+      // We expect the regex we used will always have one `Captures`.
+
+      let captures = match captures {
+        Ok(inner) => inner,
+        Err(err) => match err {
+          fancy_regex::Error::RuntimeError(_) => {
+            // Mostly due to backtrack limit exceeded. There's nothing we can do about runtime error.
+            // So if we encounter one, we just consider this as a failed match and skip it.
+            break;
+          }
+          _ => return Err(err.into()),
+        },
+      };
+      let Some(matched) = captures.get(1) else {
+        break;
+      };
+      if self.prevent_assignment
+        && NON_ASSIGNMENT_MATCHER.is_match(&code[0..matched.start()]).unwrap_or(false)
+      {
         continue;
+      }
+      let Some(replacement) = self.values.get(matched.as_str()) else {
+        break;
       };
       changed = true;
-      let Some(matched) = captures.get(1) else {
-        continue;
-      };
-      let Some(replacement) = self.values.get(matched.as_str()) else {
-        continue;
-      };
       magic_string.update(matched.start(), matched.end(), replacement);
     }
 
-    changed
+    Ok(changed)
   }
 }
 
@@ -79,7 +111,7 @@ impl Plugin for ReplacePlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let mut magic_string = MagicString::new(args.code);
-    if self.try_replace(args.code, &mut magic_string) {
+    if self.try_replace(args.code, &mut magic_string)? {
       return Ok(Some(HookTransformOutput {
         code: Some(magic_string.to_string()),
         ..Default::default()
@@ -94,7 +126,7 @@ impl Plugin for ReplacePlugin {
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let mut magic_string = MagicString::new(&args.code);
-    if self.try_replace(&args.code, &mut magic_string) {
+    if self.try_replace(&args.code, &mut magic_string)? {
       return Ok(Some(HookRenderChunkOutput { code: magic_string.to_string(), map: None }));
     }
     Ok(None)

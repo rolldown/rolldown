@@ -60,9 +60,13 @@ async function bundleInner(
   printBundleOutputPretty(bundleOutput)
 
   logger.log(``)
-  logger.success(
-    `Finished in ${colors.bold((endTime - startTime).toFixed(2))} ms`,
-  )
+  const duration = endTime - startTime
+  // If the build time is more than 1s, we should display it in seconds.
+  const spent =
+    duration < 1000
+      ? `${duration.toFixed(2)} ms`
+      : `${(duration / 1000).toFixed(2)} s`
+  logger.success(`Finished in ${colors.bold(spent)}`)
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

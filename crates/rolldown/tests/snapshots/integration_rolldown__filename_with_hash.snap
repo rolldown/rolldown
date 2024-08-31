@@ -125,35 +125,35 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/multiple_declaration_tree_shaking
 
-- function2_js-!~{002}~.mjs => function2_js-Kq5hd7IL.mjs
-- function3_js-!~{003}~.mjs => function3_js-F1RckUBF.mjs
 - var2_js-!~{000}~.mjs => var2_js-MWROqWbu.mjs
 - var3_js-!~{001}~.mjs => var3_js-Xb9YUCVA.mjs
+- function2_js-!~{002}~.mjs => function2_js-Kq5hd7IL.mjs
+- function3_js-!~{003}~.mjs => function3_js-F1RckUBF.mjs
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-QjhqLgSt.mjs
 - expr-fn_js-!~{000}~.mjs => expr-fn_js--rxcfA_g.mjs
-- stmt-export-default-after-async-fn-anon_js-!~{00i}~.mjs => stmt-export-default-after-async-fn-anon_js-VqiQ4rZ2.mjs
-- stmt-export-default-after-async-fn-name_js-!~{00j}~.mjs => stmt-export-default-after-async-fn-name_js-veIDNMFO.mjs
-- stmt-export-default-after-async-gen-fn-anon_js-!~{00k}~.mjs => stmt-export-default-after-async-gen-fn-anon_js-4tkDg72B.mjs
-- stmt-export-default-after-async-gen-fn-name_js-!~{00l}~.mjs => stmt-export-default-after-async-gen-fn-name_js-OewUjwlN.mjs
-- stmt-export-default-after-fn-anon_js-!~{00e}~.mjs => stmt-export-default-after-fn-anon_js-5BAvLe9p.mjs
-- stmt-export-default-after-fn-name_js-!~{00f}~.mjs => stmt-export-default-after-fn-name_js-6C8jVjN1.mjs
-- stmt-export-default-after-gen-fn-anon_js-!~{00g}~.mjs => stmt-export-default-after-gen-fn-anon_js-HIqHYRxS.mjs
-- stmt-export-default-after-gen-fn-name_js-!~{00h}~.mjs => stmt-export-default-after-gen-fn-name_js-iGWZdGhk.mjs
-- stmt-export-default-before-async-fn-anon_js-!~{00a}~.mjs => stmt-export-default-before-async-fn-anon_js-KlPlY6Zy.mjs
-- stmt-export-default-before-async-fn-name_js-!~{00b}~.mjs => stmt-export-default-before-async-fn-name_js-vYOur1vd.mjs
-- stmt-export-default-before-async-gen-fn-anon_js-!~{00c}~.mjs => stmt-export-default-before-async-gen-fn-anon_js-QzxrgjGw.mjs
-- stmt-export-default-before-async-gen-fn-name_js-!~{00d}~.mjs => stmt-export-default-before-async-gen-fn-name_js--HfYK_48.mjs
+- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-QjhqLgSt.mjs
+- stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
+- stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
+- stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
+- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-uHmpXE13.mjs
 - stmt-export-default-before-fn-anon_js-!~{006}~.mjs => stmt-export-default-before-fn-anon_js-Y3OEMRgq.mjs
 - stmt-export-default-before-fn-name_js-!~{007}~.mjs => stmt-export-default-before-fn-name_js-5N9LZwly.mjs
 - stmt-export-default-before-gen-fn-anon_js-!~{008}~.mjs => stmt-export-default-before-gen-fn-anon_js-4DRYHyMa.mjs
 - stmt-export-default-before-gen-fn-name_js-!~{009}~.mjs => stmt-export-default-before-gen-fn-name_js-pvTIXxqc.mjs
-- stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
-- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-uHmpXE13.mjs
-- stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
-- stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
+- stmt-export-default-before-async-fn-anon_js-!~{00a}~.mjs => stmt-export-default-before-async-fn-anon_js-KlPlY6Zy.mjs
+- stmt-export-default-before-async-fn-name_js-!~{00b}~.mjs => stmt-export-default-before-async-fn-name_js-vYOur1vd.mjs
+- stmt-export-default-before-async-gen-fn-anon_js-!~{00c}~.mjs => stmt-export-default-before-async-gen-fn-anon_js-QzxrgjGw.mjs
+- stmt-export-default-before-async-gen-fn-name_js-!~{00d}~.mjs => stmt-export-default-before-async-gen-fn-name_js--HfYK_48.mjs
+- stmt-export-default-after-fn-anon_js-!~{00e}~.mjs => stmt-export-default-after-fn-anon_js-5BAvLe9p.mjs
+- stmt-export-default-after-fn-name_js-!~{00f}~.mjs => stmt-export-default-after-fn-name_js-6C8jVjN1.mjs
+- stmt-export-default-after-gen-fn-anon_js-!~{00g}~.mjs => stmt-export-default-after-gen-fn-anon_js-HIqHYRxS.mjs
+- stmt-export-default-after-gen-fn-name_js-!~{00h}~.mjs => stmt-export-default-after-gen-fn-name_js-iGWZdGhk.mjs
+- stmt-export-default-after-async-fn-anon_js-!~{00i}~.mjs => stmt-export-default-after-async-fn-anon_js-VqiQ4rZ2.mjs
+- stmt-export-default-after-async-fn-name_js-!~{00j}~.mjs => stmt-export-default-after-async-fn-name_js-veIDNMFO.mjs
+- stmt-export-default-after-async-gen-fn-anon_js-!~{00k}~.mjs => stmt-export-default-after-async-gen-fn-anon_js-4tkDg72B.mjs
+- stmt-export-default-after-async-gen-fn-name_js-!~{00l}~.mjs => stmt-export-default-after-async-gen-fn-name_js-OewUjwlN.mjs
 
 # tests/esbuild/dce/no_side_effects_comment_type_script_declare
 
@@ -193,8 +193,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/package_json_side_effects_false_all_fork
 
-- a_index-!~{001}~.mjs => a_index-pPoU04AR.mjs
 - src_entry_js-!~{000}~.mjs => src_entry_js-NsAv8sjh.mjs
+- a_index-!~{001}~.mjs => a_index-pPoU04AR.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
 
@@ -238,8 +238,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/package_json_side_effects_false_one_fork
 
-- a_index-!~{001}~.mjs => a_index-pPoU04AR.mjs
 - src_entry_js-!~{000}~.mjs => src_entry_js-NsAv8sjh.mjs
+- a_index-!~{001}~.mjs => a_index-pPoU04AR.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6
 
@@ -379,9 +379,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/duplicate_entry_point
 
-- entry-!~{002}~.mjs => entry-kikoR6sj.mjs
-- entry2_js-!~{001}~.mjs => entry2_js-vIJWzSp3.mjs
 - entry_js-!~{000}~.mjs => entry_js-rVoPJbPj.mjs
+- entry2_js-!~{001}~.mjs => entry2_js-vIJWzSp3.mjs
+- entry-!~{002}~.mjs => entry-kikoR6sj.mjs
 
 # tests/esbuild/default/dynamic_import_with_expression_cjs
 
@@ -566,11 +566,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/var_relocating_bundle
 
-- function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
-- function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
-- let_js-!~{002}~.mjs => let_js-lSQgoT-J.mjs
-- nested_js-!~{001}~.mjs => nested_js-9dHTQmah.mjs
 - top-level_js-!~{000}~.mjs => top-level_js-aLnr7tad.mjs
+- nested_js-!~{001}~.mjs => nested_js-9dHTQmah.mjs
+- let_js-!~{002}~.mjs => let_js-lSQgoT-J.mjs
+- function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
+- function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
@@ -1199,9 +1199,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/circular_reference_issue251
 
-- a-!~{001}~.mjs => a-qnEPrCaF.mjs
+- a-!~{000}~.mjs => a-aZpbWwMm.mjs
+- b-!~{001}~.mjs => b-T_YrhAwZ.mjs
 - a~1-!~{002}~.mjs => a~1-W3UJep1D.mjs
-- b-!~{000}~.mjs => b-QcKeEUuj.mjs
 
 # tests/esbuild/splitting/cross_chunk_assignment_dependencies
 
@@ -1212,33 +1212,33 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/splitting/duplicate_chunk_collision
 
 - a-!~{000}~.mjs => a-S8Phwe4_.mjs
-- ab-!~{004}~.mjs => ab-P6qnXG7s.mjs
 - b-!~{001}~.mjs => b-Cfj63ou-.mjs
 - c-!~{002}~.mjs => c-typAVFSG.mjs
 - d-!~{003}~.mjs => d-L_kdIPvd.mjs
+- ab-!~{004}~.mjs => ab-P6qnXG7s.mjs
 - d~1-!~{006}~.mjs => d~1-OHeb9gJw.mjs
 
 # tests/esbuild/splitting/dynamic-commonjs-into-es6
 
-- foo-!~{001}~.mjs => foo-kM_xxysr.mjs
 - main-!~{000}~.mjs => main-Bo_YiqV2.mjs
+- foo-!~{001}~.mjs => foo-kM_xxysr.mjs
 
 # tests/esbuild/splitting/dynamic-es6-into-es6
 
-- foo-!~{001}~.mjs => foo-cYs4pBjO.mjs
 - main-!~{000}~.mjs => main-oEgQx45H.mjs
+- foo-!~{001}~.mjs => foo-cYs4pBjO.mjs
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
 
+- main-!~{002}~.mjs => main-UasOf_IM.mjs
 - foo-!~{000}~.mjs => foo-YWjy4MY8.mjs
 - foo~1-!~{003}~.mjs => foo~1-GHDfbT69.mjs
-- main-!~{002}~.mjs => main-UasOf_IM.mjs
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
 
+- main-!~{002}~.mjs => main-MWgAuO-u.mjs
 - foo-!~{000}~.mjs => foo-JFcyo9H3.mjs
 - foo~1-!~{003}~.mjs => foo~1-NnQaXjY5.mjs
-- main-!~{002}~.mjs => main-MWgAuO-u.mjs
 
 # tests/esbuild/splitting/dynamic_import_issue_272
 
@@ -1252,8 +1252,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 
 - a-!~{000}~.mjs => a-AdX25B1L.mjs
-- a~1-!~{002}~.mjs => a~1-L7tNkCPP.mjs
 - b-!~{001}~.mjs => b-GIojW2cj.mjs
+- a~1-!~{002}~.mjs => a~1-L7tNkCPP.mjs
 
 # tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
 
@@ -1270,8 +1270,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/splitting/re_export_issue273
 
 - a-!~{000}~.mjs => a-TD9yqOZv.mjs
-- a~1-!~{002}~.mjs => a~1-lqlXRJ3p.mjs
 - b-!~{001}~.mjs => b-tQW11lVy.mjs
+- a~1-!~{002}~.mjs => a~1-lqlXRJ3p.mjs
 
 # tests/esbuild/splitting/shared-commonjs-into-es6
 
@@ -1301,8 +1301,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/dynamic_cjs_entry
 
-- cjs-!~{001}~.mjs => cjs-0OhJlkQB.mjs
 - main-!~{000}~.mjs => main-FzbkeuMu.mjs
+- cjs-!~{001}~.mjs => cjs-0OhJlkQB.mjs
 
 # tests/rolldown/cjs_compat/empty_file_should_be_treated_as_cjs/import
 
@@ -1359,9 +1359,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
-- a-!~{001}~.mjs => a-jyZ-yksI.mjs
+- a-!~{000}~.mjs => a-d58Tn43M.mjs
+- b-!~{001}~.mjs => b-II-mJsUp.mjs
 - a~1-!~{002}~.mjs => a~1-vQA8k6Pt.mjs
-- b-!~{000}~.mjs => b-0cHn69-a.mjs
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
@@ -1383,16 +1383,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/basic
 
-- dynamic-!~{004}~.mjs => dynamic-VF2TGUn6.mjs
 - main1-!~{000}~.mjs => main1-rIQjdWv-.mjs
 - main2-!~{001}~.mjs => main2-9lXyDNHK.mjs
+- dynamic-!~{004}~.mjs => dynamic-VF2TGUn6.mjs
 - share-!~{002}~.mjs => share-p7WNRG2n.mjs
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
-- entry-!~{002}~.mjs => entry-miFKemh5.mjs
-- entry2_js-!~{001}~.mjs => entry2_js-tXA3mVMS.mjs
 - entry_js-!~{000}~.mjs => entry_js-isSX6J7O.mjs
+- entry2_js-!~{001}~.mjs => entry2_js-tXA3mVMS.mjs
+- entry-!~{002}~.mjs => entry-miFKemh5.mjs
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed2
 
@@ -1402,9 +1402,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/import_export_unicode
 
+- main-!~{002}~.mjs => main-0DNH7UhT.mjs
 - foo-!~{000}~.mjs => foo-QclHXuut.mjs
 - foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
-- main-!~{002}~.mjs => main-0DNH7UhT.mjs
 
 # tests/rolldown/dce/conditional_exports
 
@@ -1439,6 +1439,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/errors/parse_error/normal
 
 
+# tests/rolldown/errors/resolve_unexport_path_of_package
+
+
 # tests/rolldown/errors/unresolved_entry
 
 
@@ -1452,17 +1455,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/dir/should_generate_correct_relative_import_path
 
-- ./chunks/async.mjs => ./chunks/async.mjs
-- ./chunks/shared.mjs => ./chunks/shared.mjs
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
+- ./chunks/async.mjs => ./chunks/async.mjs
+- ./chunks/shared.mjs => ./chunks/shared.mjs
 
 # tests/rolldown/function/entry_filenames/should_generate_correct_relative_import_path
 
-- ./chunks/async.mjs => ./chunks/async.mjs
-- ./chunks/shared.mjs => ./chunks/shared.mjs
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
+- ./chunks/async.mjs => ./chunks/async.mjs
+- ./chunks/shared.mjs => ./chunks/shared.mjs
 
 # tests/rolldown/function/es_module/always
 
@@ -1490,14 +1493,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
-- lazy-chunk-!~{003}~.mjs => lazy-chunk-3ongZf9V.mjs
 - main-!~{000}~.mjs => main-UWLaSEMt.mjs
+- lazy-chunk-!~{003}~.mjs => lazy-chunk-3ongZf9V.mjs
 - user-lib-!~{001}~.mjs => user-lib-l_QSBI41.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/strict
 
-- lazy-chunk-!~{003}~.mjs => lazy-chunk-yZed9dLJ.mjs
 - main-!~{000}~.mjs => main-eXNjgcmF.mjs
+- lazy-chunk-!~{003}~.mjs => lazy-chunk-yZed9dLJ.mjs
 - user-lib-!~{001}~.mjs => user-lib-_vEPUJmM.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_399/non_strict
@@ -1590,8 +1593,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/external/splitting_with_external_module
 
-- entry-!~{001}~.mjs => entry-dQP7YHi-.mjs
 - main-!~{000}~.mjs => main-91SdaZrf.mjs
+- entry-!~{001}~.mjs => entry-dQP7YHi-.mjs
 - share-!~{002}~.mjs => share-Ak_TT_yj.mjs
 
 # tests/rolldown/function/external_live_bindings
@@ -1600,9 +1603,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- cube-!~{002}~.mjs => cube-UC9SFjeM.mjs
 - main-!~{000}~.mjs => main-soihLkqo.mjs
 - other-entry-!~{001}~.mjs => other-entry-coajbluq.mjs
+- cube-!~{002}~.mjs => cube-UC9SFjeM.mjs
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -1827,19 +1830,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/issues/122/a
 
-- b-!~{005}~.mjs => b-gYLSk_ER.mjs
-- c-!~{003}~.mjs => c-LEIv-tYC.mjs
 - entry1-!~{000}~.mjs => entry1-wVgKFI7T.mjs
 - entry2-!~{001}~.mjs => entry2-gO-yPKv_.mjs
 - entry3-!~{002}~.mjs => entry3-xhnBZz_E.mjs
+- b-!~{005}~.mjs => b-gYLSk_ER.mjs
+- c-!~{003}~.mjs => c-LEIv-tYC.mjs
 
 # tests/rolldown/issues/122/b
 
-- 1-!~{003}~.mjs => 1-j1vD_43o.mjs
-- 2-!~{005}~.mjs => 2-A9GdrBOE.mjs
 - a-!~{000}~.mjs => a-EsBBHJoX.mjs
 - b-!~{001}~.mjs => b-UI2mLxAO.mjs
 - c-!~{002}~.mjs => c-XM1t7ET2.mjs
+- 1-!~{003}~.mjs => 1-j1vD_43o.mjs
+- 2-!~{005}~.mjs => 2-A9GdrBOE.mjs
 
 # tests/rolldown/issues/1443
 
@@ -1848,6 +1851,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/issues/1769
 
 - main-!~{000}~.mjs => main-40SKkhvQ.mjs
+
+# tests/rolldown/issues/2038
+
+- main-!~{000}~.mjs => main-tyn51vg0.mjs
+- a-!~{005}~.mjs => a-un2hSNF7.mjs
+- b-!~{001}~.mjs => b-gzBZQw6C.mjs
+- b~1-!~{003}~.mjs => b~1-Yhc4kY0m.mjs
 
 # tests/rolldown/issues/376
 
@@ -1859,7 +1869,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/assign_chunk_name_order
 
-- file-!~{000}~.mjs => file-Ej3VnrZQ.mjs
+- main-!~{000}~.mjs => main-28ZAM_vI.mjs
+- file-!~{001}~.mjs => file-HtGbT8Bd.mjs
 - file~1-!~{002}~.mjs => file~1-H61Mf_14.mjs
 - file~2-!~{004}~.mjs => file~2-nA_ptaQ9.mjs
 - file~3-!~{006}~.mjs => file~3-Gkv-gnvV.mjs
@@ -1868,7 +1879,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - file~6-!~{00c}~.mjs => file~6-khaY2HFs.mjs
 - file~7-!~{00e}~.mjs => file~7-2atL45yw.mjs
 - file~8-!~{00g}~.mjs => file~8-rftyyf3M.mjs
-- main-!~{001}~.mjs => main-_t3761Dh.mjs
 
 # tests/rolldown/misc/banner/cjs
 
@@ -1889,8 +1899,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/cjs_entry_as_dependency
 
-- main-!~{001}~.mjs => main-vr5xux-s.mjs
-- main2-!~{000}~.mjs => main2-t5NvVlyL.mjs
+- main-!~{000}~.mjs => main-2YMUDaQi.mjs
+- main2-!~{001}~.mjs => main2-pgqlqPLq.mjs
 - main2~1-!~{002}~.mjs => main2~1-VZDqMsnU.mjs
 
 # tests/rolldown/misc/duplicate_entries
@@ -1918,9 +1928,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/reexport_star
 
-- a-!~{002}~.mjs => a-VLP_qSX0.mjs
-- entry-!~{001}~.mjs => entry-owA6NmYM.mjs
 - main-!~{000}~.mjs => main-DQ0-01Fy.mjs
+- entry-!~{001}~.mjs => entry-owA6NmYM.mjs
+- a-!~{002}~.mjs => a-VLP_qSX0.mjs
 
 # tests/rolldown/misc/reexport_star_from_local_named_export
 
@@ -1942,6 +1952,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-c_fP-LRz.mjs
 - main-c_fP-LRz.mjs.map
+
+# tests/rolldown/resolve/hash_tag_as_dir_name
+
+- main-!~{000}~.mjs => main-HyurUk3i.mjs
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
@@ -2033,13 +2047,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks
 
-- async-entry-!~{001}~.mjs => async-entry-Y28H9Ff5.mjs
 - main-!~{000}~.mjs => main-41XdRZn4.mjs
+- async-entry-!~{001}~.mjs => async-entry-Y28H9Ff5.mjs
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks_cjs
 
-- async-entry-!~{001}~.cjs => async-entry-mcIs-nh2.cjs
 - main-!~{000}~.cjs => main-_ihEPCH9.cjs
+- async-entry-!~{001}~.cjs => async-entry-mcIs-nh2.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_expr
 
@@ -2051,13 +2065,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks
 
-- async-entry-!~{001}~.mjs => async-entry-XkZZEAkg.mjs
 - main-!~{000}~.mjs => main-yxqWM9Ln.mjs
+- async-entry-!~{001}~.mjs => async-entry-XkZZEAkg.mjs
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks_cjs
 
-- async-entry-!~{001}~.cjs => async-entry-zT3FQMt7.cjs
 - main-!~{000}~.cjs => main-ZaOd1dbH.cjs
+- async-entry-!~{001}~.cjs => async-entry-zT3FQMt7.cjs
 
 # tests/rolldown/topics/live_bindings/named_exports
 
@@ -2069,14 +2083,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
-- async-entry-!~{003}~.mjs => async-entry-A0foFImR.mjs
 - main-!~{000}~.mjs => main-kQWVEpX7.mjs
+- async-entry-!~{003}~.mjs => async-entry-A0foFImR.mjs
 - shared-!~{001}~.mjs => shared-du7ETDe0.mjs
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- async-entry-!~{003}~.cjs => async-entry-bLPO79el.cjs
 - main-!~{000}~.cjs => main-h7mF_ZsM.cjs
+- async-entry-!~{003}~.cjs => async-entry-bLPO79el.cjs
 - shared-!~{001}~.cjs => shared-PsOvd2ew.cjs
 
 # tests/rolldown/topics/npm_packages/util_deprecate

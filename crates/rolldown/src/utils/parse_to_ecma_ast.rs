@@ -27,6 +27,13 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   pure_esm_js
 }
 
+pub struct ParseToEcmaAstResult {
+  pub ast: EcmaAst,
+  pub symbol_table: SymbolTable,
+  pub scope_tree: ScopeTree,
+  pub source: ArcStr,
+}
+
 pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,
@@ -35,7 +42,7 @@ pub fn parse_to_ecma_ast(
   module_type: &ModuleType,
   source: StrOrBytes,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
-) -> anyhow::Result<DiagnosableResult<(EcmaAst, SymbolTable, ScopeTree)>> {
+) -> anyhow::Result<DiagnosableResult<ParseToEcmaAstResult>> {
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
     ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
@@ -108,5 +115,7 @@ pub fn parse_to_ecma_ast(
     replace_global_define_config,
     options,
   )
-  .map(Ok)
+  .map(|(ast, symbol_table, scope_tree)| {
+    Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, source })
+  })
 }

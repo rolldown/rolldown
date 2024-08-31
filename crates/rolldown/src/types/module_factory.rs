@@ -1,8 +1,8 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
+use oxc::span::Span;
 use rolldown_common::{
   side_effects::HookSideEffects, ImportKind, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx,
   ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
@@ -12,6 +12,7 @@ use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 use rolldown_sourcemap::SourceMap;
+use std::sync::Arc;
 
 use crate::{runtime::RUNTIME_MODULE_ID, utils::resolve_id, SharedOptions, SharedResolver};
 
@@ -93,7 +94,8 @@ impl<'a> CreateModuleContext<'a> {
   pub async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
-  ) -> anyhow::Result<IndexVec<ImportRecordIdx, ResolvedId>> {
+    source: ArcStr,
+  ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(self.options);
@@ -139,21 +141,24 @@ impl<'a> CreateModuleContext<'a> {
               side_effects: None,
             });
           }
-          _ => {
-            build_errors.push((&dependencies[idx], e));
+          e => {
+            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
+            let dep = &dependencies[idx];
+            build_errors.push(BuildDiagnostic::diagnosable_resolve_error(
+              source.clone(),
+              self.resolved_id.id.clone(),
+              Span::new(dep.module_request_start, dep.module_request_end()),
+              reason,
+            ));
           }
         },
       }
     }
 
     if build_errors.is_empty() {
-      Ok(ret)
+      Ok(Ok(ret))
     } else {
-      let resolved_err = anyhow::format_err!(
-        "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
-        importer = self.resolved_id.id,
-      );
-      Err(resolved_err)
+      Ok(Err(build_errors))
     }
   }
 }

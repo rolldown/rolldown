@@ -4,6 +4,7 @@ use rolldown_sourcemap::SourceMap;
 
 use crate::{AssetMeta, ChunkIdx, PreliminaryFilename};
 
+#[derive(Debug)]
 pub struct PreliminaryAsset {
   pub origin_chunk: ChunkIdx,
   pub content: String,
@@ -29,6 +30,7 @@ impl PreliminaryAsset {
   }
 }
 
+#[derive(Debug)]
 /// Assets is final output of the bundling process. Inputs -> Modules -> Chunks -> Assets
 pub struct Asset {
   pub origin_chunk: ChunkIdx,

@@ -2190,6 +2190,7 @@ dependencies = [
  "indexmap",
  "insta",
  "itertools 0.13.0",
+ "memchr",
  "oxc",
  "regex",
  "rolldown_common",
@@ -2439,6 +2440,7 @@ dependencies = [
 name = "rolldown_plugin_replace"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "fancy-regex",
  "rolldown",
  "rolldown_plugin",

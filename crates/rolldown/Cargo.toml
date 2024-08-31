@@ -23,6 +23,7 @@ dunce                    = { workspace = true }
 futures                  = { workspace = true }
 indexmap                 = { workspace = true }
 itertools                = { workspace = true }
+memchr                   = { workspace = true }
 oxc                      = { workspace = true }
 regex                    = { workspace = true }
 rolldown_common          = { workspace = true }

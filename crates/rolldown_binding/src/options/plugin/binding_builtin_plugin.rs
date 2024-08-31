@@ -267,6 +267,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
             delimiters: opts.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
             prevent_assignment: opts.prevent_assignment.unwrap_or(false),
             object_guards: opts.object_guards.unwrap_or(false),
+            sourcemap: opts.sourcemap.unwrap_or(false),
           }
         })))
       }
@@ -284,4 +285,5 @@ pub struct BindingReplacePluginConfig {
   pub delimiters: Option<Vec<String>>,
   pub prevent_assignment: Option<bool>,
   pub object_guards: Option<bool>,
+  pub sourcemap: Option<bool>,
 }

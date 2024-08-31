@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -12,4 +13,20 @@ first ? second : third;
 console.log(first, second, third);
 
 //#endregion
+//# sourceMappingURL=input.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../input.js
+(0:0-0:12) "condition ? " --> (2:0-2:8) "\nfirst ?"
+(0:12-0:25) "exprIfTrue : " --> (2:8-2:17) " second :"
+(0:25-1:0) "exprIfFalse;" --> (2:17-3:0) " third;"
+(1:0-1:8) "\nconsole" --> (3:0-3:8) "\nconsole"
+(1:8-1:12) ".log" --> (3:8-3:12) ".log"
+(1:12-1:23) "(condition," --> (3:12-3:19) "(first,"
+(1:23-1:35) " exprIfTrue," --> (3:19-3:27) " second,"
+(1:35-1:47) " exprIfFalse" --> (3:27-3:33) " third"
+(1:47-2:1) ");\n" --> (3:33-6:34) ");\n\n//#endregion\n//# sourceMappingURL=input.js.map"
 ```

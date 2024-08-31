@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -15,4 +16,15 @@ console.log(`
 `);
 
 //#endregion
+//# sourceMappingURL=input.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../input.js
+(0:0-0:8) "console." --> (2:0-2:8) "\nconsole"
+(0:8-0:13) "log(`" --> (2:8-2:13) ".log("
+(0:13-4:2) "\n  <%original%>\n  <% original%>\n  <%original %>\n`" --> (2:13-6:2) "`\n  <%replaced%>\n  <% original%>\n  <%original %>\n`"
+(4:2-4:4) ");" --> (6:2-9:34) ");\n\n//#endregion\n//# sourceMappingURL=input.js.map"
 ```

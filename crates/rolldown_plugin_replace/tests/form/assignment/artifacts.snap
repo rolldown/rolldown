@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -16,4 +17,34 @@ if (world == "world") {
 }
 
 //#endregion
+//# sourceMappingURL=input.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../input.js
+(0:0-0:8) "process." --> (2:0-2:8) "\nprocess"
+(0:8-0:12) "env." --> (2:8-2:12) ".env"
+(0:12-0:20) "DEBUG = " --> (2:12-2:20) ".DEBUG ="
+(0:20-2:0) "'test';\n" --> (2:20-3:0) " \"test\";"
+(2:0-2:4) "\nif " --> (3:0-3:4) "\nif "
+(2:4-2:26) "(process.env.DEBUG ===" --> (3:4-3:17) "(replaced ==="
+(2:26-3:2) " 'production') {\n " --> (3:17-3:30) " \"production\""
+(3:2-3:10) " console" --> (3:30-3:39) ") console"
+(3:10-3:14) ".log" --> (3:39-3:43) ".log"
+(3:14-3:17) "(''" --> (3:43-3:46) "(\"\""
+(3:17-6:0) ");\n}\n" --> (3:46-4:0) ");"
+(6:0-6:4) "\nif " --> (4:0-4:4) "\nif "
+(6:4-6:13) "(hello ==" --> (4:4-4:13) "(world =="
+(6:13-6:22) " 'world')" --> (4:13-4:22) " \"world\")"
+(6:22-7:2) " {\n " --> (4:22-5:1) " {\n"
+(7:2-7:7) " let " --> (5:1-5:5) "\tlet"
+(7:7-7:15) " hello =" --> (5:5-5:13) " hello ="
+(7:15-8:2) " 'world';\n " --> (5:13-6:0) " \"world\";"
+(8:2-8:10) " console" --> (6:0-6:9) "\n\tconsole"
+(8:10-8:14) ".log" --> (6:9-6:13) ".log"
+(8:14-8:20) "(hello" --> (6:13-6:19) "(world"
+(8:20-9:1) ");\n" --> (6:19-7:0) ");"
+(9:1-10:1) "}\n" --> (7:0-10:34) "\n}\n\n//#endregion\n//# sourceMappingURL=input.js.map"
 ```

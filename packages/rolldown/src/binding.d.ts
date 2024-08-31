@@ -393,6 +393,7 @@ export interface BindingReplacePluginConfig {
   delimiters?: [string, string]
   preventAssignment?: boolean
   objectGuards?: boolean
+  sourcemap?: boolean
 }
 
 export interface BindingResolveOptions {

@@ -1431,8 +1431,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/errors/invalid_option/unsupported_code_splitting_format
 
-- lib-!~{001}~.mjs => lib-ilpmoOa0.mjs
 - main-!~{000}~.mjs => main-4Z5MQ_hd.mjs
+- lib-!~{001}~.mjs => lib-ilpmoOa0.mjs
 
 # tests/rolldown/errors/missing_export
 

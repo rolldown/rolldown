@@ -6,7 +6,9 @@ use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashMap;
 
-use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
+use rolldown_common::{
+  ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename, SharedFileEmitter,
+};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   path_buf_ext::PathBufExt,
@@ -42,6 +44,7 @@ pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
+  file_emitter: &'a SharedFileEmitter,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -49,8 +52,9 @@ impl<'a> GenerateStage<'a> {
     link_output: &'a mut LinkStageOutput,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
+    file_emitter: &'a SharedFileEmitter,
   ) -> Self {
-    Self { link_output, options, plugin_driver }
+    Self { link_output, options, plugin_driver, file_emitter }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -92,6 +96,7 @@ impl<'a> GenerateStage<'a> {
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
               options: self.options,
+              file_emitter: self.file_emitter,
             },
             ast,
           );

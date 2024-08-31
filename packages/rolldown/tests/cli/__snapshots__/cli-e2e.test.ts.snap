@@ -29,6 +29,7 @@ OPTIONS
   --extend                    Extend global variable defined by name in IIFE or UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
   --inject <inject>           Inject import statements on demand.
+  --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.
@@ -122,6 +123,7 @@ OPTIONS
   --extend                    Extend global variable defined by name in IIFE or UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
   --inject <inject>           Inject import statements on demand.
+  --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.

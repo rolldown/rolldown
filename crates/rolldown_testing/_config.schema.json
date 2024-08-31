@@ -194,6 +194,12 @@
             "$ref": "#/definitions/InjectImport"
           }
         },
+        "inlineDynamicImports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "input": {
           "type": [
             "array",

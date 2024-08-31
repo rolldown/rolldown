@@ -1,0 +1,6 @@
+{
+  "config": {
+    "format": "esm",
+    "inlineDynamicImports": true
+  }
+}

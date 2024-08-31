@@ -10,6 +10,7 @@ pub use crate::{
   event_kind::EventKind,
   events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
   events::commonjs_variable_in_esm::CjsExportSpan,
+  events::invalid_option::InvalidOptionTypes,
   events::unloadable_dependency::UnloadableDependencyContext,
   type_aliases::{DiagnosableResult, UnhandleableResult},
   types::diagnostic_options::DiagnosticOptions,

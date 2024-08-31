@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 
+use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
 use itertools::Itertools;
 use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
-
-use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
 
 use super::GenerateStage;
 
@@ -79,7 +79,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn generate_chunks(&self) -> ChunkGraph {
+  pub fn generate_chunks(&mut self) -> ChunkGraph {
     if matches!(self.options.format, OutputFormat::Iife) {
       let user_defined_entry_count =
         self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
@@ -153,6 +153,13 @@ impl<'a> GenerateStage<'a> {
         module_to_chunk[normal_module.idx] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
+    }
+
+    if matches!(self.options.format, OutputFormat::Iife) && chunks.len() > 1 {
+      self.link_output.errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionTypes::UnsupportedCodeSplittingFormat,
+        self.options.format.to_string(),
+      ));
     }
 
     // Sort modules in each chunk by execution order

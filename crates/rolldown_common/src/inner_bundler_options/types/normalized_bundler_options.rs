@@ -56,4 +56,5 @@ pub struct NormalizedBundlerOptions {
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
   pub external_live_bindings: bool,
+  pub inline_dynamic_imports: bool,
 }

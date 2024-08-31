@@ -7,6 +7,7 @@ use rolldown_resolver::ResolveError;
 
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
+use crate::events::invalid_option::{InvalidOption, InvalidOptionTypes};
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use crate::events::resolve_error::DiagnosableResolveError;
@@ -174,6 +175,10 @@ impl BuildDiagnostic {
     re_assign_span: Span,
   ) -> Self {
     Self::new_inner(ForbidConstAssign { filename, source, name, reference_span, re_assign_span })
+  }
+
+  pub fn invalid_option(situation: InvalidOptionTypes, option: String) -> Self {
+    Self::new_inner(InvalidOption { invalid_option_types: situation, option })
   }
 
   pub fn napi_error(status: String, reason: String) -> Self {

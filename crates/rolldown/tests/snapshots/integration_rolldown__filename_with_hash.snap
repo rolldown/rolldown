@@ -1429,6 +1429,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/errors/invalid_export_option/none
 
 
+# tests/rolldown/errors/invalid_option/unsupported_code_splitting_format
+
+- main-!~{000}~.mjs => main-3-q-vRfT.mjs
+- lib-!~{001}~.mjs => lib-DbngpxuJ.mjs
+
 # tests/rolldown/errors/missing_export
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs
@@ -1655,10 +1660,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main--FmiP1j0.mjs
 
-# tests/rolldown/function/format/iife/inline_dynamic_import
-
-- main-!~{000}~.mjs => main--9MFXZs-.mjs
-
 # tests/rolldown/function/format/iife/namespaced_name
 
 - main-!~{000}~.mjs => main-ELPzdqJs.mjs
@@ -1670,6 +1671,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/inject
 
 - main-!~{000}~.mjs => main-dKJg0iPO.mjs
+
+# tests/rolldown/function/inline_dynamic_imports/cjs
+
+- main-!~{000}~.cjs => main-q1pPmrEc.cjs
+
+# tests/rolldown/function/inline_dynamic_imports/esm
+
+- main-!~{000}~.mjs => main-U4B9RsY6.mjs
+
+# tests/rolldown/function/inline_dynamic_imports/iife
+
+- main-!~{000}~.mjs => main--9MFXZs-.mjs
 
 # tests/rolldown/function/intro/cjs
 

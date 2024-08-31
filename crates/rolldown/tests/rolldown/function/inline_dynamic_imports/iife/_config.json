@@ -1,0 +1,7 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "module",
+    "inlineDynamicImports": true
+  }
+}

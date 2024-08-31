@@ -180,6 +180,7 @@ pub fn normalize_binding_options(
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
+    inline_dynamic_imports: output_options.inline_dynamic_imports,
   };
 
   #[cfg(not(target_family = "wasm"))]

@@ -232,7 +232,11 @@ impl<'a> GenerateStage<'a> {
                   if let Some(sym_ref) = member_expr.resolved_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
-                    let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
+                    let mut canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
+                    let symbol = symbols.get(canonical_ref);
+                    if let Some(ref ns_alias) = symbol.namespace_alias {
+                      canonical_ref = ns_alias.namespace_ref;
+                    }
                     depended_symbols.insert(canonical_ref);
                   } else {
                     // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
@@ -308,7 +312,6 @@ impl<'a> GenerateStage<'a> {
           continue;
         }
         let import_symbol = self.link_output.symbols.get(import_ref);
-
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);

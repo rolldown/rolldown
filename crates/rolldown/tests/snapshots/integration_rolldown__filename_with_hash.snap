@@ -1850,8 +1850,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/issues/1722/1
 
-- foo-!~{001}~.mjs => foo-vySRc0TI.mjs
 - main-!~{000}~.mjs => main-AkFWuq87.mjs
+- foo-!~{001}~.mjs => foo-vySRc0TI.mjs
 - main~1-!~{002}~.mjs => main~1-vUCeiqYg.mjs
 
 # tests/rolldown/issues/1722/2
@@ -1873,10 +1873,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/issues/2085
 
+- main-!~{000}~.mjs => main-SfEhkRhf.mjs
 - a-!~{001}~.mjs => a-jx75PpPL.mjs
 - a~1-!~{003}~.mjs => a~1-m9rW2k8a.mjs
 - c-!~{005}~.mjs => c-idcE24nQ.mjs
-- main-!~{000}~.mjs => main-SfEhkRhf.mjs
 
 # tests/rolldown/issues/376
 

@@ -1,4 +1,4 @@
-use rolldown_common::{Chunk, ChunkIdx, NormalizedBundlerOptions, PreliminaryAsset};
+use rolldown_common::{Chunk, ChunkIdx, InstantiatedChunk, NormalizedBundlerOptions};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::SharedPluginDriver;
 
@@ -15,12 +15,12 @@ pub struct GenerateContext<'a> {
 }
 
 pub struct GenerateOutput {
-  pub assets: Vec<PreliminaryAsset>,
+  pub chunks: Vec<InstantiatedChunk>,
   pub warnings: Vec<BuildDiagnostic>,
 }
 
 pub trait Generator {
-  async fn render_preliminary_assets(
+  async fn instantiate_chunk(
     ctx: &mut GenerateContext,
   ) -> anyhow::Result<DiagnosableResult<GenerateOutput>>;
 }

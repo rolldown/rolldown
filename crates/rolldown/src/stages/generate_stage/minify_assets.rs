@@ -11,7 +11,7 @@ impl<'a> GenerateStage<'a> {
     if self.options.minify {
       assets.iter_mut().par_bridge().try_for_each(|asset| -> anyhow::Result<()> {
         match asset.meta {
-          rolldown_common::AssetMeta::Ecma(_) => {
+          rolldown_common::InstantiationKind::Ecma(_) => {
             // TODO: Do we need to ensure `asset.filename` to be absolute path?
             let (minified_content, new_map) =
               EcmaCompiler::minify(&asset.content, asset.map.is_some(), &asset.filename)?;
@@ -25,7 +25,7 @@ impl<'a> GenerateStage<'a> {
               }
             }
           }
-          rolldown_common::AssetMeta::None => {}
+          rolldown_common::InstantiationKind::None => {}
         }
         Ok(())
       })?;

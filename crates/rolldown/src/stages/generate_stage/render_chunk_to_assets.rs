@@ -1,14 +1,14 @@
 use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{Asset, AssetMeta, Output, OutputAsset, OutputChunk, SourceMapType};
+use rolldown_common::{Asset, InstantiationKind, Output, OutputAsset, OutputChunk, SourceMapType};
 use rolldown_error::BuildDiagnostic;
 use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{IndexChunkToAssets, IndexPreliminaryAssets},
+  type_alias::{IndexChunkToAssets, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
@@ -27,14 +27,14 @@ impl<'a> GenerateStage<'a> {
   ) -> anyhow::Result<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
-    let (mut preliminary_assets, index_chunk_to_assets) =
-      self.render_preliminary_assets(chunk_graph, &mut errors, &mut warnings).await?;
+    let (mut instantiated_chunks, index_chunk_to_assets) =
+      self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
 
-    render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
+    render_chunks(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    augment_chunk_hash(self.plugin_driver, &mut preliminary_assets).await?;
+    augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mut assets = finalize_assets(chunk_graph, preliminary_assets, &index_chunk_to_assets);
+    let mut assets = finalize_assets(chunk_graph, instantiated_chunks, &index_chunk_to_assets);
 
     self.minify_assets(&mut assets)?;
 
@@ -49,7 +49,7 @@ impl<'a> GenerateStage<'a> {
       ..
     } in assets
     {
-      if let AssetMeta::Ecma(ecma_meta) = rendered_chunk {
+      if let InstantiationKind::Ecma(ecma_meta) = rendered_chunk {
         let rendered_chunk = ecma_meta.rendered_chunk;
         if let Some(map) = map.as_mut() {
           map.set_file(&rendered_chunk.filename);
@@ -145,15 +145,15 @@ impl<'a> GenerateStage<'a> {
     Ok(BundleOutput { assets: output, errors, warnings })
   }
 
-  async fn render_preliminary_assets(
+  async fn instantiate_chunks(
     &self,
     chunk_graph: &ChunkGraph,
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
-  ) -> anyhow::Result<(IndexPreliminaryAssets, IndexChunkToAssets)> {
+  ) -> anyhow::Result<(IndexInstantiatedChunks, IndexChunkToAssets)> {
     let mut index_chunk_to_assets: IndexChunkToAssets =
       index_vec![IndexSet::default(); chunk_graph.chunks.len()];
-    let mut index_preliminary_assets: IndexPreliminaryAssets =
+    let mut index_preliminary_assets: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunks.len());
     try_join_all(chunk_graph.chunks.iter_enumerated().map(|(chunk_idx, chunk)| async move {
       let mut ctx = GenerateContext {
@@ -165,13 +165,13 @@ impl<'a> GenerateStage<'a> {
         plugin_driver: self.plugin_driver,
         warnings: vec![],
       };
-      EcmaGenerator::render_preliminary_assets(&mut ctx).await
+      EcmaGenerator::instantiate_chunk(&mut ctx).await
     }))
     .await?
     .into_iter()
     .for_each(|result| match result {
       Ok(generate_output) => {
-        generate_output.assets.into_iter().for_each(|asset| {
+        generate_output.chunks.into_iter().for_each(|asset| {
           let origin_chunk = asset.origin_chunk;
           let asset_idx = index_preliminary_assets.push(asset);
           index_chunk_to_assets[origin_chunk].insert(asset_idx);

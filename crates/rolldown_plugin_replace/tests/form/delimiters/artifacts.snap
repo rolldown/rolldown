@@ -15,4 +15,13 @@ console.log(`
 `);
 
 //#endregion
+//# sourceMappingURL=input.mjs.map
 ```
+
+# Sourcemap Visualizer
+
+- ../input.js
+(0:0-0:8) "console." --> (2:0-2:8) "\nconsole"
+(0:8-0:13) "log(`" --> (2:8-2:13) ".log("
+(0:13-4:2) "\n  <%original%>\n  <% original%>\n  <%original %>\n`" --> (2:13-6:2) "`\n  <%replaced%>\n  <% original%>\n  <%original %>\n`"
+(4:2-4:4) ");" --> (6:2-9:35) ");\n\n//#endregion\n//# sourceMappingURL=input.mjs.map"

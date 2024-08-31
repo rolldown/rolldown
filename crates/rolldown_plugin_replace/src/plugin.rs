@@ -1,9 +1,13 @@
-use std::{cmp::Reverse, collections::HashMap, sync::LazyLock};
+use std::{
+  cmp::Reverse,
+  collections::HashMap,
+  sync::{Arc, LazyLock},
+};
 
 use fancy_regex::{Regex, RegexBuilder};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
 use rustc_hash::FxHashMap;
-use string_wizard::MagicString;
+use string_wizard::{MagicString, SourceMapOptions};
 
 #[derive(Debug)]
 pub struct ReplaceOptions {
@@ -11,6 +15,7 @@ pub struct ReplaceOptions {
   /// Default to `("\\b", "\\b(?!\\.)")`. To prevent `typeof window.document` from being replaced by config item `typeof window` => `"object"`.
   pub delimiters: (String, String),
   pub prevent_assignment: bool,
+  pub sourcemap: bool,
 }
 
 impl Default for ReplaceOptions {
@@ -19,6 +24,7 @@ impl Default for ReplaceOptions {
       values: HashMap::default(),
       delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()),
       prevent_assignment: false,
+      sourcemap: false,
     }
   }
 }
@@ -28,6 +34,7 @@ pub struct ReplacePlugin {
   matcher: Regex,
   prevent_assignment: bool,
   values: FxHashMap</* Target */ String, /* Replacement */ String>,
+  sourcemap: bool,
 }
 
 static NON_ASSIGNMENT_MATCHER: LazyLock<Regex> =
@@ -57,6 +64,7 @@ impl ReplacePlugin {
         .build()
         .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
       prevent_assignment: options.prevent_assignment,
+      sourcemap: options.sourcemap,
       values: options.values.into_iter().collect(),
     }
   }
@@ -114,6 +122,15 @@ impl Plugin for ReplacePlugin {
     if self.try_replace(args.code, &mut magic_string)? {
       return Ok(Some(HookTransformOutput {
         code: Some(magic_string.to_string()),
+        map: if self.sourcemap {
+          Some(magic_string.source_map(SourceMapOptions {
+            hires: true,
+            include_content: false,
+            source: Arc::from(args.id),
+          }))
+        } else {
+          None
+        },
         ..Default::default()
       }));
     }
@@ -127,7 +144,18 @@ impl Plugin for ReplacePlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let mut magic_string = MagicString::new(&args.code);
     if self.try_replace(&args.code, &mut magic_string)? {
-      return Ok(Some(HookRenderChunkOutput { code: magic_string.to_string(), map: None }));
+      return Ok(Some(HookRenderChunkOutput {
+        code: magic_string.to_string(),
+        map: if self.sourcemap {
+          Some(magic_string.source_map(SourceMapOptions {
+            hires: true,
+            include_content: false,
+            source: Arc::from(args.chunk.filename.as_str()),
+          }))
+        } else {
+          None
+        },
+      }));
     }
     Ok(None)
   }

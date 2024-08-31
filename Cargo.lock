@@ -2842,6 +2842,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dda97f92b3c192214daba2a9d2e6c046edec247901234636159f2169ee7150a"
 dependencies = [
  "index_vec",
+ "oxc_sourcemap",
  "rustc-hash 1.1.0",
 ]
 

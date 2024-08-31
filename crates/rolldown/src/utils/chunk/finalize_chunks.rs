@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{AssetIdx, AssetMeta, ModuleId};
+use rolldown_common::{AssetIdx, InstantiationKind, ModuleId};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -15,14 +15,14 @@ use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  type_alias::{IndexAssets, IndexChunkToAssets, IndexPreliminaryAssets},
+  type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
   utils::hash_placeholder::{extract_hash_placeholders, replace_facade_hash_replacement},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub fn finalize_assets(
   chunk_graph: &mut ChunkGraph,
-  preliminary_assets: IndexPreliminaryAssets,
+  preliminary_assets: IndexInstantiatedChunks,
   index_chunk_to_assets: &IndexChunkToAssets,
 ) -> IndexAssets {
   let asset_idx_by_placeholder = preliminary_assets
@@ -109,7 +109,7 @@ pub fn finalize_assets(
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
           .into();
 
-      if let AssetMeta::Ecma(ecma_meta) = &mut asset.meta {
+      if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
         ecma_meta.rendered_chunk.filename = filename.clone();
       }
 
@@ -128,7 +128,7 @@ pub fn finalize_assets(
     assets.iter().map(|asset| asset.filename.clone()).collect::<Vec<_>>().into();
 
   assets.iter_mut().par_bridge().for_each(|asset| {
-    if let AssetMeta::Ecma(ecma_meta) = &mut asset.meta {
+    if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
       let chunk = &chunk_graph.chunks[asset.origin_chunk];
       ecma_meta.rendered_chunk.imports = chunk
         .cross_chunk_imports

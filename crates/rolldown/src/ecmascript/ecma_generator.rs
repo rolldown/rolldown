@@ -5,7 +5,8 @@ use crate::{
 
 use anyhow::Result;
 use rolldown_common::{
-  AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
+  EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx, OutputFormat,
+  RenderedModule,
 };
 use rolldown_error::DiagnosableResult;
 use rolldown_plugin::HookAddonArgs;
@@ -22,7 +23,7 @@ pub struct EcmaGenerator;
 
 impl Generator for EcmaGenerator {
   #[allow(clippy::too_many_lines)]
-  async fn render_preliminary_assets<'a>(
+  async fn instantiate_chunk<'a>(
     ctx: &mut GenerateContext<'a>,
   ) -> Result<DiagnosableResult<GenerateOutput>> {
     let mut rendered_modules = FxHashMap::default();
@@ -145,11 +146,11 @@ impl Generator for EcmaGenerator {
     }
 
     Ok(Ok(GenerateOutput {
-      assets: vec![PreliminaryAsset {
+      chunks: vec![InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,
         content,
         map,
-        meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
+        meta: InstantiationKind::from(EcmaAssetMeta { rendered_chunk }),
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx

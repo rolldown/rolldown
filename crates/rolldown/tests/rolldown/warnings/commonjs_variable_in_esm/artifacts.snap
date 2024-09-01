@@ -13,7 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ───┬───  
    │    ╰───── 
    │ 
- 6 │ export const a = 1
+ 7 │ export const a = 1
    │ ───┬──  
    │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
 ───╯
@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ───┬──  
    │    ╰──── 
    │ 
- 6 │ export const a = 1
+ 7 │ export const a = 1
    │ ───┬──  
    │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
 ───╯
@@ -46,6 +46,7 @@ exports.test.res = 1000;
 exports.a = 1000;
 module.test = {};
 module.exports = {};
+let res = typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
 

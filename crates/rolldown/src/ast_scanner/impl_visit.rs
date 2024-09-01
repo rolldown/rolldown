@@ -1,6 +1,9 @@
 use oxc::{
   ast::{
-    ast::{AssignmentTarget, Expression, IdentifierReference, ImportExpression, MemberExpression},
+    ast::{
+      AssignmentExpression, AssignmentTarget, Expression, IdentifierReference, ImportExpression,
+      MemberExpression,
+    },
     visit::walk,
     Visit,
   },
@@ -107,7 +110,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     walk::walk_import_expression(self, expr);
   }
 
-  fn visit_assignment_expression(&mut self, node: &oxc::ast::ast::AssignmentExpression<'ast>) {
+  fn visit_assignment_expression(&mut self, node: &AssignmentExpression<'ast>) {
     match &node.left {
       AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
         self.try_diagnostic_forbid_const_assign(id_ref);

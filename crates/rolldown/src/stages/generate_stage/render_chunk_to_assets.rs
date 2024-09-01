@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
@@ -94,7 +96,13 @@ impl<'a> GenerateStage<'a> {
                 original_file_name: None,
                 name: None,
               })));
-              code.push_str(&format!("\n//# sourceMappingURL={map_filename}"));
+              code.push_str(&format!(
+                "\n//# sourceMappingURL={}",
+                Path::new(&map_filename)
+                  .file_name()
+                  .expect("should have filename")
+                  .to_string_lossy()
+              ));
             }
             SourceMapType::Inline => {
               let data_url = map.to_data_url();

@@ -2016,6 +2016,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry-!~{000}~.cjs => entry-CNbnClbZ.cjs
 
+# tests/rolldown/sourcemap/inline_url_relative_to_file
+
+- assets/main.js => assets/main.js
+- assets/main.js.map
+
 # tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
 
 - main-!~{000}~.cjs => main-H9jCymgm.cjs

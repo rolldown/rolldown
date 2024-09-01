@@ -23,7 +23,7 @@ impl<'a> GenerateStage<'a> {
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
-    let mut chunk_graph = ChunkGraph::default();
+    let mut chunk_graph = ChunkGraph::new(&self.link_output.module_table);
     chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
 
     let mut module_to_bits =
@@ -63,11 +63,6 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>> = oxc::index::index_vec![
-      None;
-      self.link_output.module_table.modules.len()
-    ];
-
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
@@ -81,12 +76,11 @@ impl<'a> GenerateStage<'a> {
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunk_graph.chunk_table[chunk_id].modules.push(normal_module.idx);
-        module_to_chunk[normal_module.idx] = Some(chunk_id);
+        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
-        let chunk = Chunk::new(None, bits.clone(), vec![normal_module.idx], ChunkKind::Common);
+        let chunk = Chunk::new(None, bits.clone(), vec![], ChunkKind::Common);
         let chunk_id = chunk_graph.add_chunk(chunk);
-        module_to_chunk[normal_module.idx] = Some(chunk_id);
+        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
@@ -200,7 +194,6 @@ impl<'a> GenerateStage<'a> {
       .collect::<Vec<_>>();
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
-    chunk_graph.module_to_chunk = module_to_chunk;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
     chunk_graph

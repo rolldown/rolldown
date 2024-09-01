@@ -1,8 +1,6 @@
 use oxc::ast::VisitMut;
-use rolldown_common::{EcmaModule, SymbolRef};
+use rolldown_common::EcmaModule;
 use rolldown_ecmascript::{AstSnippet, EcmaAst};
-use rolldown_rstr::Rstr;
-use rustc_hash::FxHashMap;
 
 use super::module_finalizers::scope_hoisting::{
   ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,
@@ -39,13 +37,4 @@ pub fn finalize_normal_module(
       ScopeHoistingFinalizer { alloc, ctx, scope: &module.scope, snippet: AstSnippet::new(alloc) };
     finalizer.visit_program(oxc_program);
   });
-}
-
-pub fn debug_canonical_names(canonical_names: &FxHashMap<SymbolRef, Rstr>) {
-  for (symbol_ref, name) in canonical_names.iter() {
-    if symbol_ref.owner == 0 {
-      continue;
-    }
-    dbg!(symbol_ref, name);
-  }
 }

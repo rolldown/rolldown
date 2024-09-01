@@ -78,7 +78,6 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   }
 }
 
-#[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
@@ -87,19 +86,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     canonical_ref = namespace_alias.namespace_ref;
     canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
   }
-  // if canonical_ref_owner.idx != ctx.runtime_id {
-  //   dbg!(&std::panic::Location::caller());
-  //   dbg!(&canonical_ref_symbol);
-  //   canonical_ref_owner
-  //     .stmt_infos
-  //     .declared_stmts_by_symbol(&canonical_ref)
-  //     .iter()
-  //     .copied()
-  //     .for_each(|stmt_info_id| {
-  //       let stmt = canonical_ref_owner.stmt_infos.get(stmt_info_id);
-  //       dbg!(&stmt.debug_label);
-  //     });
-  // }
 
   ctx.used_symbol_refs.insert(canonical_ref);
 
@@ -123,9 +109,6 @@ fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtI
   // include the statement itself
   *is_included = true;
 
-  if !module.is_virtual() {
-    dbg!(&stmt_info.debug_label);
-  }
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
     SymbolOrMemberExprRef::Symbol(symbol_ref) => {
       include_symbol(ctx, *symbol_ref);

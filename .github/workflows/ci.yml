@@ -151,6 +151,12 @@ jobs:
       - name: Lint Spell
         run: pnpm lint-spell
 
+      - name: Lint Prettier
+        run: pnpm lint-prettier
+
+      - name: Lint Toml
+        run: pnpm lint-toml
+
   pkg-preview:
     name: Pkg Preview
     needs:

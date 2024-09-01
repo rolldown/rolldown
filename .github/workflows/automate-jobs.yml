@@ -1,4 +1,4 @@
-name: 'Automate labeling'
+name: 'Automate Jobs'
 on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request_target:

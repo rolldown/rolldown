@@ -115,7 +115,10 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       // Detect `module.exports` and `exports.ANY`
       AssignmentTarget::StaticMemberExpression(member_expr) => {
         if let Expression::Identifier(id) = &member_expr.object {
-          if id.name == "module" && self.resolve_identifier_to_top_level_symbol(id).is_none() {
+          if id.name == "module"
+            && self.resolve_identifier_to_top_level_symbol(id).is_none()
+            && member_expr.property.name == "exports"
+          {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
           }
           if id.name == "exports" && self.resolve_identifier_to_top_level_symbol(id).is_none() {

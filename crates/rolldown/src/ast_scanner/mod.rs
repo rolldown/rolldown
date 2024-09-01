@@ -581,23 +581,12 @@ impl<'me> AstScanner<'me> {
     ident: &IdentifierReference,
   ) -> Option<SymbolRef> {
     let symbol_id = self.resolve_symbol_from_reference(ident);
-    match symbol_id {
-      Some(symbol_id) => {
-        if self.is_top_level(symbol_id) {
-          Some((self.idx, symbol_id).into())
-        } else {
-          None
-        }
-      }
-      None => {
-        if ident.name == "module" {
-          self.cjs_module_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 6));
-        }
-        if ident.name == "exports" {
-          self.cjs_exports_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
-        }
+    symbol_id.and_then(|symbol_id| {
+      if self.is_top_level(symbol_id) {
+        Some((self.idx, symbol_id).into())
+      } else {
         None
       }
-    }
+    })
   }
 }

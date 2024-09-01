@@ -1,11 +1,11 @@
 use oxc::{
   ast::{
-    ast::{Expression, IdentifierReference, MemberExpression},
+    ast::{AssignmentTarget, Expression, IdentifierReference, ImportExpression, MemberExpression},
     visit::walk,
     Visit,
   },
   codegen::{self, CodeGenerator, Gen},
-  span::GetSpan,
+  span::{GetSpan, Span},
 };
 use rolldown_common::ImportKind;
 use rolldown_error::BuildDiagnostic;
@@ -95,7 +95,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     walk::walk_statement(self, stmt);
   }
 
-  fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
+  fn visit_import_expression(&mut self, expr: &ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(request) = &expr.source {
       let id = self.add_import_record(
         request.value.as_str(),
@@ -109,8 +109,19 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_assignment_expression(&mut self, node: &oxc::ast::ast::AssignmentExpression<'ast>) {
     match &node.left {
-      oxc::ast::ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
+      AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
         self.try_diagnostic_forbid_const_assign(id_ref);
+      }
+      // Detect `module.exports` and `exports.ANY`
+      AssignmentTarget::StaticMemberExpression(member_expr) => {
+        if let Expression::Identifier(id) = &member_expr.object {
+          if id.name == "module" && self.resolve_identifier_to_top_level_symbol(id).is_none() {
+            self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+          }
+          if id.name == "exports" && self.resolve_identifier_to_top_level_symbol(id).is_none() {
+            self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
+          }
+        }
       }
       _ => {}
     }

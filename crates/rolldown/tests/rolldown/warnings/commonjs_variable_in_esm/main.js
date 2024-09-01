@@ -1,6 +1,6 @@
-exports.test = 1000;
+exports.test.res = 1000;
 exports.a = 1000;
-module.exports = {}
+module.test = {}
 
 export const a = 1
 export const e = 1

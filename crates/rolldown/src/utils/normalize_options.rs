@@ -120,6 +120,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports: raw_options.inline_dynamic_imports.unwrap_or(false),
+    advanced_chunks: raw_options.advanced_chunks,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

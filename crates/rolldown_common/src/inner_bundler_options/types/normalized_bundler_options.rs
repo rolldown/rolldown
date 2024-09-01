@@ -7,6 +7,7 @@ use oxc::minifier::InjectGlobalVariablesConfig;
 use rustc_hash::FxHashMap;
 
 use super::experimental_options::ExperimentalOptions;
+use super::manual_chunks_option::ManualChunksOption;
 use super::output_option::ChunkFilenamesOutputOption;
 use super::treeshake::TreeshakeOptions;
 use super::{
@@ -57,4 +58,5 @@ pub struct NormalizedBundlerOptions {
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
   pub external_live_bindings: bool,
   pub inline_dynamic_imports: bool,
+  pub advanced_chunks: Option<ManualChunksOption>,
 }

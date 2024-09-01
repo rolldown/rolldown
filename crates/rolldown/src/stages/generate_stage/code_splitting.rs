@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::chunk_graph::ChunkGraph;
+use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
@@ -12,7 +13,7 @@ use super::GenerateStage;
 
 impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn generate_chunks(&mut self) -> ChunkGraph {
+  pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
     if matches!(self.options.format, OutputFormat::Iife) {
       let user_defined_entry_count =
         self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
@@ -63,6 +64,9 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
+    let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
+      oxc::index::index_vec![false; self.link_output.module_table.modules.len()];
+
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
@@ -70,11 +74,37 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
+      if module_to_assigned[normal_module.idx] {
+        continue;
+      }
+      module_to_assigned[normal_module.idx] = true;
+
       let bits = &module_to_bits[normal_module.idx];
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
       );
+
+      let mut manual_chunk_by_name = FxHashMap::default();
+
+      if let Some(manual_chunks) = &self.options.advanced_chunks {
+        if let Some(matched) = (manual_chunks)(&normal_module.id).await? {
+          let chunk_name = ArcStr::from(matched.name);
+          if let Some(chunk_idx) = manual_chunk_by_name.get(&chunk_name).copied() {
+            let chunk: &mut Chunk = &mut chunk_graph.chunk_table[chunk_idx];
+            chunk.bits.union(bits);
+            chunk_graph.add_module_to_chunk(normal_module.idx, chunk_idx);
+          } else {
+            let chunk =
+              Chunk::new(Some(chunk_name.clone()), bits.clone(), vec![], ChunkKind::Common);
+            let chunk_id = chunk_graph.add_chunk(chunk);
+            chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+            manual_chunk_by_name.insert(chunk_name, chunk_id);
+          }
+          continue;
+        }
+      }
+
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
@@ -196,7 +226,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
-    chunk_graph
+    Ok(chunk_graph)
   }
 
   fn determine_reachable_modules_for_entry(

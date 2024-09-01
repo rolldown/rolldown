@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
-  Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
+  self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
+  BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
 };
 use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -79,7 +79,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   /// ref: https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2298-L2393
-  fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
+  fn detect_side_effect_of_class(&mut self, cls: &ast::Class) -> bool {
     use oxc::ast::ast::ClassElement;
     if !cls.decorators.is_empty() {
       return true;
@@ -122,7 +122,7 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_member_expr(&self, expr: &oxc::ast::ast::MemberExpression) -> bool {
+  fn detect_side_effect_of_member_expr(&self, expr: &ast::MemberExpression) -> bool {
     // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
     let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
@@ -181,7 +181,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::StringLiteral(_) => false,
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
-          oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
+          ast::ObjectPropertyKind::ObjectProperty(prop) => {
             let key_side_effect = self.detect_side_effect_of_property_key(&prop.key, prop.computed);
             if key_side_effect {
               return true;
@@ -195,7 +195,7 @@ impl<'a> SideEffectDetector<'a> {
             }
             self.detect_side_effect_of_expr(&prop.value)
           }
-          oxc::ast::ast::ObjectPropertyKind::SpreadProperty(_) => {
+          ast::ObjectPropertyKind::SpreadProperty(_) => {
             // ...[expression] is considered as having side effect.
             // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
             true
@@ -291,10 +291,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_var_decl(
-    &mut self,
-    var_decl: &oxc::ast::ast::VariableDeclaration,
-  ) -> bool {
+  fn detect_side_effect_of_var_decl(&mut self, var_decl: &ast::VariableDeclaration) -> bool {
     var_decl.declarations.iter().any(|declarator| {
       // Whether to destructure import.meta
       if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
@@ -314,7 +311,7 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_decl(&mut self, decl: &oxc::ast::ast::Declaration) -> bool {
+  fn detect_side_effect_of_decl(&mut self, decl: &ast::Declaration) -> bool {
     use oxc::ast::ast::Declaration;
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
@@ -333,7 +330,7 @@ impl<'a> SideEffectDetector<'a> {
 
   fn detect_side_effect_of_using_declarators(
     &self,
-    declarators: &[oxc::ast::ast::VariableDeclarator],
+    declarators: &[ast::VariableDeclarator],
   ) -> bool {
     declarators.iter().any(|decl| {
       decl.init.as_ref().map_or(false, |init| match init {
@@ -352,7 +349,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   #[allow(clippy::too_many_lines)]
-  pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {
+  pub fn detect_side_effect_of_stmt(&mut self, stmt: &ast::Statement) -> bool {
     use oxc::ast::ast::Statement;
     match stmt {
       oxc::ast::match_declaration!(Statement) => {
@@ -360,28 +357,28 @@ impl<'a> SideEffectDetector<'a> {
       }
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
       oxc::ast::match_module_declaration!(Statement) => match stmt.to_module_declaration() {
-        oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
-        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_) => {
+        ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
+        ast::ModuleDeclaration::ImportDeclaration(_) => {
           // We consider `import ...` has no side effect. However, `import ...` might be rewritten to other statements by the bundler.
           // In that case, we will mark the statement as having side effect in link stage.
           false
         }
-        oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
+        ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
           use oxc::ast::ast::ExportDefaultDeclarationKind;
           match &default_decl.declaration {
             decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
               self.detect_side_effect_of_expr(decl.to_expression())
             }
-            oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false,
-            oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
+            ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false,
+            ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
               self.detect_side_effect_of_class(decl)
             }
-            oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+            ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
               unreachable!("ts should be transpiled")
             }
           }
         }
-        oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
+        ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
           if named_decl.source.is_some() {
             // `export { ... } from '...'` is considered as side effect.
             true
@@ -392,8 +389,8 @@ impl<'a> SideEffectDetector<'a> {
               .map_or(false, |decl| self.detect_side_effect_of_decl(decl))
           }
         }
-        oxc::ast::ast::ModuleDeclaration::TSExportAssignment(_)
-        | oxc::ast::ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
+        ast::ModuleDeclaration::TSExportAssignment(_)
+        | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
           unreachable!("ts should be transpiled")
         }
       },
@@ -449,7 +446,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_block(&mut self, block: &oxc::ast::ast::BlockStatement) -> bool {
+  fn detect_side_effect_of_block(&mut self, block: &ast::BlockStatement) -> bool {
     block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
   }
 }

@@ -7,8 +7,7 @@ pub fn json_to_esm(json: &str) -> anyhow::Result<String> {
   // TODO: use zero-copy deserialization
   let json_value: Value = serde_json::from_str(json)?;
 
-  match json_value {
-    Value::Object(map) => {
+  match json_value {Value::Object(map) => {
       let mut source = String::new();
       let mut exported_items_for_default_export = Vec::with_capacity(map.len());
       for (idx, (key, value)) in map.iter().enumerate() {

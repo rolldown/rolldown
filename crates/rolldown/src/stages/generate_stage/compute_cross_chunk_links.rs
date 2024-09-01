@@ -369,7 +369,7 @@ impl<'a> GenerateStage<'a> {
         let alias = if *count == 0 {
           original_name.clone()
         } else {
-          format!("{original_name}${count}").into()
+          format!("{original_name}${}", itoa::Buffer::new().format(*count)).into()
         };
         chunk.exports_to_other_chunks.insert(chunk_export, alias.clone());
         *count += 1;

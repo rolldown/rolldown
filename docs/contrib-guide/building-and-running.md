@@ -16,6 +16,7 @@ You could get a list of available commands by running the command `just` only.
 - `just test` - Runs all tests.
 - `just lint` - Lint the codebase.
 - `just fmt` - Fix formatting issues.
+- `just fix` - Fix formatting and linting issues.
 
 > Most of commands will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just check-node`.
 

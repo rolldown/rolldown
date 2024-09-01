@@ -1,12 +1,10 @@
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ModuleIdx};
+use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx};
 use rustc_hash::FxHashMap;
-
-use crate::type_alias::IndexChunks;
 
 #[derive(Debug)]
 pub struct ChunkGraph {
-  pub chunks: IndexChunks,
+  pub chunk_table: ChunkTable,
   pub sorted_chunk_idx_vec: Vec<ChunkIdx>,
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
@@ -16,6 +14,6 @@ pub struct ChunkGraph {
 impl ChunkGraph {
   #[allow(unused)]
   pub fn sorted_chunks(&self) -> impl Iterator<Item = &Chunk> {
-    self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunks[id])
+    self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
   }
 }

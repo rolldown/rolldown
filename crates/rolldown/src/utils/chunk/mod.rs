@@ -63,7 +63,7 @@ pub fn generate_rendered_chunk(
       .cross_chunk_imports
       .iter()
       .map(|id| {
-        chunk_graph.chunks[*id]
+        chunk_graph.chunk_table[*id]
           .preliminary_filename
           .as_deref()
           .expect("should have preliminary_filename")
@@ -74,7 +74,7 @@ pub fn generate_rendered_chunk(
       .cross_chunk_dynamic_imports
       .iter()
       .map(|id| {
-        chunk_graph.chunks[*id]
+        chunk_graph.chunk_table[*id]
           .preliminary_filename
           .as_deref()
           .expect("should have preliminary_filename")

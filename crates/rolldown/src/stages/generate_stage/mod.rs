@@ -61,7 +61,7 @@ impl<'a> GenerateStage<'a> {
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
-    chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
+    chunk_graph.chunk_table.iter_mut().par_bridge().for_each(|chunk| {
       deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
     });
 
@@ -76,7 +76,7 @@ impl<'a> GenerateStage<'a> {
           return;
         };
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
-        let chunk = &chunk_graph.chunks[chunk_id];
+        let chunk = &chunk_graph.chunk_table[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
         if self.options.format.requires_scope_hoisting() {
           finalize_normal_module(
@@ -131,7 +131,7 @@ impl<'a> GenerateStage<'a> {
     let modules = &self.link_output.module_table.modules;
 
     let mut index_pre_generated_names: IndexVec<ChunkIdx, ChunkNameInfo> = chunk_graph
-      .chunks
+      .chunk_table
       .as_vec()
       .par_iter()
       .map(|chunk| {
@@ -175,7 +175,7 @@ impl<'a> GenerateStage<'a> {
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
     let mut used_name_map: FxHashMap<ArcStr, u32> = FxHashMap::default();
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
-      let chunk = &mut chunk_graph.chunks[*chunk_id];
+      let chunk = &mut chunk_graph.chunk_table[*chunk_id];
       if chunk.preliminary_filename.is_some() {
         // Already generated
         continue;

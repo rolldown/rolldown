@@ -3,6 +3,7 @@ use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
   RollupPreRenderedChunk, SymbolRef,
 };
+pub mod chunk_table;
 pub mod types;
 
 use arcstr::ArcStr;

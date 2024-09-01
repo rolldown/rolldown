@@ -2,7 +2,6 @@ use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx};
 use rustc_hash::FxHashMap;
 
-
 #[derive(Debug)]
 pub struct ChunkGraph {
   pub chunk_table: ChunkTable,

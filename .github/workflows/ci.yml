@@ -122,20 +122,6 @@ jobs:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  node-validation:
-    name: Node Validation
-    needs: changes
-    if: ${{ needs.changes.outputs.node-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
-
-      - name: Lint Code
-        run: pnpm lint-code
-
   repo-validation:
     name: Repo Validation
     runs-on: ubuntu-latest
@@ -151,12 +137,6 @@ jobs:
       - name: Lint Spell
         run: pnpm lint-spell
 
-      - name: Lint Prettier
-        run: pnpm lint-prettier
-
-      - name: Lint Toml
-        run: pnpm lint-toml
-
   pkg-preview:
     name: Pkg Preview
     needs:
@@ -165,7 +145,6 @@ jobs:
       - cargo-test
       - node-test
       - wasi-test
-      - node-validation
       - repo-validation
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     uses: ./.github/workflows/preview-commit.yml

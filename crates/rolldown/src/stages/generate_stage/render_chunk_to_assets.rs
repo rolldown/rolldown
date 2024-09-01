@@ -160,10 +160,10 @@ impl<'a> GenerateStage<'a> {
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> anyhow::Result<(IndexInstantiatedChunks, IndexChunkToAssets)> {
     let mut index_chunk_to_assets: IndexChunkToAssets =
-      index_vec![IndexSet::default(); chunk_graph.chunks.len()];
+      index_vec![IndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_preliminary_assets: IndexInstantiatedChunks =
-      IndexVec::with_capacity(chunk_graph.chunks.len());
-    try_join_all(chunk_graph.chunks.iter_enumerated().map(|(chunk_idx, chunk)| async move {
+      IndexVec::with_capacity(chunk_graph.chunk_table.len());
+    try_join_all(chunk_graph.chunk_table.iter_enumerated().map(|(chunk_idx, chunk)| async move {
       let mut ctx = GenerateContext {
         chunk_idx,
         chunk,

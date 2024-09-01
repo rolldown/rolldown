@@ -29,7 +29,7 @@ pub fn collect_render_chunk_imports<'a>(
 
   // render imports from other chunks
   chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &chunk_graph.chunks[*exporter_id];
+    let importee_chunk = &chunk_graph.chunk_table[*exporter_id];
     let mut specifiers = items
       .iter()
       .map(|item| {

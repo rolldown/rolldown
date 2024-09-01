@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ChunkTable, Module, ModuleIdx, OutputFormat};
 use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
@@ -261,6 +261,11 @@ impl<'a> GenerateStage<'a> {
       .map(|(idx, _)| idx)
       .collect::<Vec<_>>();
 
-    ChunkGraph { chunks, sorted_chunk_idx_vec, module_to_chunk, entry_module_to_entry_chunk }
+    ChunkGraph {
+      chunk_table: ChunkTable::new(chunks),
+      sorted_chunk_idx_vec,
+      module_to_chunk,
+      entry_module_to_entry_chunk,
+    }
   }
 }

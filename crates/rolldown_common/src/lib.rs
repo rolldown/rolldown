@@ -4,6 +4,7 @@ mod ecmascript;
 mod file_emitter;
 mod inner_bundler_options;
 mod module;
+mod type_aliases;
 mod types;
 
 /// This module is to help `rolldown` crate could export types related bundler options easily.
@@ -36,6 +37,7 @@ pub mod bundler_options {
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
   chunk::{
+    chunk_table::ChunkTable,
     types::{
       cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
     },

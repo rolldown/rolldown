@@ -69,7 +69,10 @@ impl<'name> Renamer<'name> {
             Entry::Occupied(mut occ) => {
               let next_conflict_index = *occ.get() + 1;
               *occ.get_mut() = next_conflict_index;
-              candidate_name = Cow::Owned(format!("{original_name}${next_conflict_index}",).into());
+              candidate_name = Cow::Owned(
+                format!("{original_name}${}", itoa::Buffer::new().format(next_conflict_index))
+                  .into(),
+              );
             }
             Entry::Vacant(vac) => {
               vac.insert(0);
@@ -93,7 +96,9 @@ impl<'name> Renamer<'name> {
         Entry::Occupied(mut occ) => {
           let next_conflict_index = *occ.get() + 1;
           *occ.get_mut() = next_conflict_index;
-          conflictless_name = Cow::Owned(format!("{hint}${next_conflict_index}",).into());
+          conflictless_name = Cow::Owned(
+            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into(),
+          );
         }
         Entry::Vacant(vac) => {
           vac.insert(0);
@@ -134,7 +139,8 @@ impl<'name> Renamer<'name> {
               .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name));
 
             if is_shadowed {
-              candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
+              candidate_name =
+                Cow::Owned(format!("{binding_name}${}", itoa::Buffer::new().format(count)).into());
               count += 1;
             } else {
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);

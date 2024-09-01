@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 
-use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
+use crate::chunk_graph::ChunkGraph;
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ChunkTable, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
 use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
@@ -23,10 +23,13 @@ impl<'a> GenerateStage<'a> {
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
+    let mut chunk_graph = ChunkGraph::default();
+    chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
+
     let mut module_to_bits =
       oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
-    let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
+
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
@@ -37,7 +40,7 @@ impl<'a> GenerateStage<'a> {
       let Module::Ecma(module) = &self.link_output.module_table.modules[entry_point.id] else {
         continue;
       };
-      let chunk = chunks.push(Chunk::new(
+      let chunk = chunk_graph.add_chunk(Chunk::new(
         entry_point.name.clone(),
         bits.clone(),
         vec![],
@@ -78,17 +81,17 @@ impl<'a> GenerateStage<'a> {
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunks[chunk_id].modules.push(normal_module.idx);
+        chunk_graph.chunk_table[chunk_id].modules.push(normal_module.idx);
         module_to_chunk[normal_module.idx] = Some(chunk_id);
       } else {
         let chunk = Chunk::new(None, bits.clone(), vec![normal_module.idx], ChunkKind::Common);
-        let chunk_id = chunks.push(chunk);
+        let chunk_id = chunk_graph.add_chunk(chunk);
         module_to_chunk[normal_module.idx] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
 
-    if matches!(self.options.format, OutputFormat::Iife) && chunks.len() > 1 {
+    if matches!(self.options.format, OutputFormat::Iife) && chunk_graph.chunk_table.len() > 1 {
       self.link_output.errors.push(BuildDiagnostic::invalid_option(
         InvalidOptionTypes::UnsupportedCodeSplittingFormat,
         self.options.format.to_string(),
@@ -96,13 +99,14 @@ impl<'a> GenerateStage<'a> {
     }
 
     // Sort modules in each chunk by execution order
-    chunks.iter_mut().for_each(|chunk| {
+    chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
       chunk.modules.sort_unstable_by_key(|module_id| {
         self.link_output.module_table.modules[*module_id].exec_order()
       });
     });
 
-    chunks
+    chunk_graph
+      .chunk_table
       .iter_mut()
       .sorted_by(|a, b| {
         let a_should_be_first = Ordering::Less;
@@ -156,7 +160,8 @@ impl<'a> GenerateStage<'a> {
     // - entry chunks are always before other chunks
     // - static chunks are always before dynamic chunks
     // - other chunks has stable order at per entry chunk level
-    let sorted_chunk_idx_vec = chunks
+    let sorted_chunk_idx_vec = chunk_graph
+      .chunk_table
       .iter_enumerated()
       .sorted_unstable_by(|(index_a, a), (index_b, b)| {
         let a_should_be_first = Ordering::Less;
@@ -194,12 +199,11 @@ impl<'a> GenerateStage<'a> {
       .map(|(idx, _)| idx)
       .collect::<Vec<_>>();
 
-    ChunkGraph {
-      chunk_table: ChunkTable::new(chunks),
-      sorted_chunk_idx_vec,
-      module_to_chunk,
-      entry_module_to_entry_chunk,
-    }
+    chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
+    chunk_graph.module_to_chunk = module_to_chunk;
+    chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
+
+    chunk_graph
   }
 
   fn determine_reachable_modules_for_entry(

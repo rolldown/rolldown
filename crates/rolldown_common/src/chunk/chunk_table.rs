@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::type_aliases::IndexChunks;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ChunkTable {
   pub chunks: IndexChunks,
 }

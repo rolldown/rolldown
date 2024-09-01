@@ -80,7 +80,6 @@ _test-node-rollup command="":
     pnpm run --filter rollup-tests test{{ command }}
 
 # Fix formatting issues both for Rust, Node.js and all files in the repository
-
 fmt: fmt-rust fmt-repo
 
 fmt-rust:
@@ -92,7 +91,7 @@ fmt-repo:
     pnpm lint-prettier:fix
     pnpm lint-toml:fix
 
-# lint the codebase
+# Lint the codebase
 lint: lint-rust lint-node lint-repo
 
 lint-rust:
@@ -106,12 +105,12 @@ lint-node:
 lint-repo:
     pnpm lint-repo
 
+# Fix formatting and some linting issues
 fix: fix-rust fix-repo
 
 fix-rust:
     just fmt-rust
     cargo fix --allow-dirty
-    cargo shear --fix
 
 fix-repo:
     pnpm lint-code --fix

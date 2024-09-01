@@ -1,3 +1,4 @@
-// export * from './a'
-import * as test from './a'
-console.log(`test: `, test.test)
+// MULTIPLE ENTRY MODULES
+import hyperCube from './hyper-cube.js';
+
+console.log(hyperCube(5));

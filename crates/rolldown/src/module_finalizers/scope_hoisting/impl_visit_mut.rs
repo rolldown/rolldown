@@ -12,7 +12,7 @@ use oxc::{
 use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
-use crate::utils::{call_expression_ext::CallExpressionExt, debug_canonical_names};
+use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
@@ -63,7 +63,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::Esm => {
                     if importee_linking_info.has_dynamic_exports {
                       let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                      dbg!(&self.ctx.module.id);
                       let importer_namespace_name =
                         self.canonical_name_for(self.ctx.module.namespace_object_ref);
                       // __reExport(exports, otherExports)
@@ -82,7 +81,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                     }
                   }
                   ExportsKind::CommonJs => {
-                    debug_canonical_names(&self.ctx.canonical_names);
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                     let importer_namespace_name =
                       self.canonical_name_for(self.ctx.module.namespace_object_ref);

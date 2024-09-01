@@ -1,4 +1,3 @@
-use arcstr::ArcStr;
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, ModuleTable};
 use rustc_hash::FxHashMap;
@@ -10,7 +9,6 @@ pub struct ChunkGraph {
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
   pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
-  chunk_idx_by_name: FxHashMap<ArcStr, ChunkIdx>,
 }
 
 impl ChunkGraph {
@@ -20,7 +18,6 @@ impl ChunkGraph {
       module_to_chunk: index_vec![None; module_table.modules.len()],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
-      chunk_idx_by_name: FxHashMap::default(),
     }
   }
 
@@ -30,16 +27,7 @@ impl ChunkGraph {
   }
 
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {
-    let idx = self.chunk_table.push(chunk);
-    let chunk = &self.chunk_table.chunks[idx];
-    if let Some(name) = &chunk.name {
-      debug_assert!(
-        !self.chunk_idx_by_name.contains_key(name),
-        "Should not have duplicate chunk name"
-      );
-      self.chunk_idx_by_name.insert(name.clone(), idx);
-    }
-    idx
+    self.chunk_table.push(chunk)
   }
 
   pub fn add_module_to_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {

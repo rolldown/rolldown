@@ -1454,6 +1454,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/errors/unresolved_entry
 
 
+# tests/rolldown/function/advanced_chunks/basic
+
+- a-!~{000}~.mjs => a-SUCnoi0A.mjs
+- b-!~{001}~.mjs => b-SonL6YaA.mjs
+- a~1-!~{002}~.mjs => a~1-tSH6rdht.mjs
+- b~1-!~{004}~.mjs => b~1-xejoaD21.mjs
+
 # tests/rolldown/function/define/node_env
 
 - main-!~{000}~.mjs => main-zmFhpGWu.mjs

@@ -113,7 +113,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         self.try_diagnostic_forbid_const_assign(id_ref);
       }
       // Detect `module.exports` and `exports.ANY`
-      AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
+      ast::AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
         Expression::Identifier(ref id) => {
           if id.name == "module"
             && self.resolve_identifier_to_top_level_symbol(id).is_none()

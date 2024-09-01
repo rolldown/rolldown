@@ -59,8 +59,15 @@ pub struct AstScanner<'me> {
   esm_import_keyword: Option<Span>,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
+  /// cjs ident span used for emit `commonjs_variable_in_esm` warning
   cjs_exports_ident: Option<Span>,
   cjs_module_ident: Option<Span>,
+  /// Whether the module is a commonjs module
+  /// The reason why we can't reuse `cjs_exports_ident` and `cjs_module_ident` is that
+  /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
+  /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
+  /// lhs of AssignmentExpression
+  is_cjs_module: bool,
 }
 
 impl<'me> AstScanner<'me> {
@@ -118,6 +125,7 @@ impl<'me> AstScanner<'me> {
       source,
       file_path,
       trivias,
+      is_cjs_module: false,
     }
   }
 
@@ -151,7 +159,7 @@ impl<'me> AstScanner<'me> {
           .with_severity_warning(),
         );
       }
-    } else if self.cjs_exports_ident.is_some() || self.cjs_module_ident.is_some() {
+    } else if self.is_cjs_module {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
@@ -581,12 +589,20 @@ impl<'me> AstScanner<'me> {
     ident: &IdentifierReference,
   ) -> Option<SymbolRef> {
     let symbol_id = self.resolve_symbol_from_reference(ident);
-    symbol_id.and_then(|symbol_id| {
-      if self.is_top_level(symbol_id) {
-        Some((self.idx, symbol_id).into())
-      } else {
+    match symbol_id {
+      Some(symbol_id) => {
+        if self.is_top_level(symbol_id) {
+          Some((self.idx, symbol_id).into())
+        } else {
+          None
+        }
+      }
+      None => {
+        if !self.is_cjs_module {
+          self.is_cjs_module = ident.name == "module" || ident.name == "exports";
+        }
         None
       }
-    })
+    }
   }
 }

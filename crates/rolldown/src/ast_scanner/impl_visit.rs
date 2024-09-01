@@ -116,8 +116,8 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         self.try_diagnostic_forbid_const_assign(id_ref);
       }
       // Detect `module.exports` and `exports.ANY`
-      AssignmentTarget::StaticMemberExpression(member_expr) => {
-        if let Expression::Identifier(id) = &member_expr.object {
+      AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
+        Expression::Identifier(ref id) => {
           if id.name == "module"
             && self.resolve_identifier_to_top_level_symbol(id).is_none()
             && member_expr.property.name == "exports"
@@ -128,7 +128,19 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
           }
         }
-      }
+        // `module.exports.test` is also considered as commonjs keyword
+        Expression::StaticMemberExpression(ref member_expr) => {
+          if let Expression::Identifier(ref id) = member_expr.object {
+            if id.name == "module"
+              && self.resolve_identifier_to_top_level_symbol(id).is_none()
+              && member_expr.property.name == "exports"
+            {
+              self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+            }
+          }
+        }
+        _ => {}
+      },
       _ => {}
     }
     walk::walk_assignment_expression(self, node);

@@ -266,7 +266,11 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
         // const modules = {
         //   './dir/foo.js': __glob__0,
         // }
-        let name = format!("__glob__{}_{index}_", self.current);
+        let name = format!(
+          "__glob__{}_{}_",
+          itoa::Buffer::new().format(self.current),
+          itoa::Buffer::new().format(index)
+        );
 
         let module_specifier = match opts.import.as_deref() {
           Some("default") => {

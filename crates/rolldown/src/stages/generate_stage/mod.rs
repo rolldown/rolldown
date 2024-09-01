@@ -193,7 +193,7 @@ impl<'a> GenerateStage<'a> {
           Entry::Occupied(mut occ) => {
             let next_count = *occ.get();
             occ.insert(next_count + 1);
-            ArcStr::from(format!("{}~{next_count}", occ.key()))
+            ArcStr::from(format!("{}~{}", occ.key(), itoa::Buffer::new().format(next_count)))
           }
           Entry::Vacant(vac) => vac.key().clone(),
         };

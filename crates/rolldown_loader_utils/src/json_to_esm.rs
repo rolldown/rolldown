@@ -17,7 +17,7 @@ pub fn json_to_esm(json: &str) -> anyhow::Result<String> {
             .push_str(&format!("export const {key} = {};\n", serde_json::to_string_pretty(value)?));
           exported_items_for_default_export.push(key.to_string());
         } else {
-          let valid_id = format!("key_{idx}");
+          let valid_id = format!("key_{}", itoa::Buffer::new().format(idx));
           source.push_str(&format!(
             "const {} = {};\n",
             valid_id,

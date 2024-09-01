@@ -232,8 +232,11 @@ impl<'me> AstScanner<'me> {
     let namespace_ref: SymbolRef = (
       self.idx,
       self.symbols.create_symbol(
-        format!("#LOCAL_NAMESPACE_IN_{}#", self.current_stmt_info.stmt_idx.unwrap_or_default())
-          .into(),
+        format!(
+          "#LOCAL_NAMESPACE_IN_{}#",
+          itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default())
+        )
+        .into(),
         self.scopes.root_scope_id(),
       ),
     )

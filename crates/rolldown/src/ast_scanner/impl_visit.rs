@@ -1,9 +1,6 @@
 use oxc::{
   ast::{
-    ast::{
-      AssignmentExpression, AssignmentTarget, Expression, IdentifierReference, ImportExpression,
-      MemberExpression,
-    },
+    ast::{self, Argument, AssignmentTarget, Expression, IdentifierReference, MemberExpression},
     visit::walk,
     Visit,
   },
@@ -18,7 +15,7 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
-  fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
+  fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
@@ -36,7 +33,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     }
   }
 
-  fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
+  fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unwrap();
     if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
@@ -91,15 +88,15 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     }
   }
 
-  fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
+  fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
     if let Some(decl) = stmt.as_module_declaration() {
       self.scan_module_decl(decl);
     }
     walk::walk_statement(self, stmt);
   }
 
-  fn visit_import_expression(&mut self, expr: &ImportExpression<'ast>) {
-    if let oxc::ast::ast::Expression::StringLiteral(request) = &expr.source {
+  fn visit_import_expression(&mut self, expr: &ast::ImportExpression<'ast>) {
+    if let Expression::StringLiteral(request) = &expr.source {
       let id = self.add_import_record(
         request.value.as_str(),
         ImportKind::DynamicImport,
@@ -110,7 +107,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     walk::walk_import_expression(self, expr);
   }
 
-  fn visit_assignment_expression(&mut self, node: &AssignmentExpression<'ast>) {
+  fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
       AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
         self.try_diagnostic_forbid_const_assign(id_ref);
@@ -146,7 +143,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     walk::walk_assignment_expression(self, node);
   }
 
-  fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
+  fn visit_call_expression(&mut self, expr: &ast::CallExpression<'ast>) {
     match &expr.callee {
       Expression::Identifier(id_ref) if id_ref.name == "eval" => {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
@@ -162,7 +159,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       _ => {}
     }
     if expr.is_global_require_call(self.scopes) {
-      if let Some(oxc::ast::ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
+      if let Some(Argument::StringLiteral(request)) = &expr.arguments.first() {
         let id =
           self.add_import_record(request.value.as_str(), ImportKind::Require, request.span().start);
         self.result.imports.insert(expr.span, id);

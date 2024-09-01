@@ -1,8 +1,11 @@
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern, BindingPatternKind,
-  CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
+  CallExpression, ChainElement, Expression, IdentifierReference, ModuleDeclaration,
+  ObjectPropertyKind, PropertyKey,
 };
-use oxc::ast::{match_expression, match_member_expression, Trivias};
+use oxc::ast::{
+  match_declaration, match_expression, match_member_expression, match_module_declaration, Trivias,
+};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
@@ -181,7 +184,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::StringLiteral(_) => false,
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
-          oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
+          ObjectPropertyKind::ObjectProperty(prop) => {
             let key_side_effect = self.detect_side_effect_of_property_key(&prop.key, prop.computed);
             if key_side_effect {
               return true;
@@ -195,7 +198,7 @@ impl<'a> SideEffectDetector<'a> {
             }
             self.detect_side_effect_of_expr(&prop.value)
           }
-          oxc::ast::ast::ObjectPropertyKind::SpreadProperty(_) => {
+          ObjectPropertyKind::SpreadProperty(_) => {
             // ...[expression] is considered as having side effect.
             // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
             true
@@ -355,33 +358,31 @@ impl<'a> SideEffectDetector<'a> {
   pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {
     use oxc::ast::ast::Statement;
     match stmt {
-      oxc::ast::match_declaration!(Statement) => {
-        self.detect_side_effect_of_decl(stmt.to_declaration())
-      }
+      match_declaration!(Statement) => self.detect_side_effect_of_decl(stmt.to_declaration()),
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
-      oxc::ast::match_module_declaration!(Statement) => match stmt.to_module_declaration() {
-        oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
-        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_) => {
+      match_module_declaration!(Statement) => match stmt.to_module_declaration() {
+        ModuleDeclaration::ExportAllDeclaration(_) => true,
+        ModuleDeclaration::ImportDeclaration(_) => {
           // We consider `import ...` has no side effect. However, `import ...` might be rewritten to other statements by the bundler.
           // In that case, we will mark the statement as having side effect in link stage.
           false
         }
-        oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
+        ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
           use oxc::ast::ast::ExportDefaultDeclarationKind;
           match &default_decl.declaration {
             decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
               self.detect_side_effect_of_expr(decl.to_expression())
             }
-            oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false,
-            oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
+            ExportDefaultDeclarationKind::FunctionDeclaration(_) => false,
+            ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
               self.detect_side_effect_of_class(decl)
             }
-            oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+            ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
               unreachable!("ts should be transpiled")
             }
           }
         }
-        oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
+        ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
           if named_decl.source.is_some() {
             // `export { ... } from '...'` is considered as side effect.
             true
@@ -392,8 +393,8 @@ impl<'a> SideEffectDetector<'a> {
               .map_or(false, |decl| self.detect_side_effect_of_decl(decl))
           }
         }
-        oxc::ast::ast::ModuleDeclaration::TSExportAssignment(_)
-        | oxc::ast::ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
+        ModuleDeclaration::TSExportAssignment(_)
+        | ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
           unreachable!("ts should be transpiled")
         }
       },

@@ -7,13 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `exports` variable is treated as a global variable in an ECMAScript module and may not work as expected
-   ╭─[main.js:1:1]
+   ╭─[main.js:2:1]
    │
- 1 │ exports.test = 1000;
+ 2 │ exports.a = 1000;
    │ ───┬───  
    │    ╰───── 
    │ 
- 5 │ export const a = 1
+ 7 │ export const a = 1
    │ ───┬──  
    │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
 ───╯
@@ -23,13 +23,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
-   ╭─[main.js:3:1]
+   ╭─[main.js:4:1]
    │
- 3 │ module.exports = {}
+ 4 │ module.exports = {}
    │ ───┬──  
    │    ╰──── 
    │ 
- 5 │ export const a = 1
+ 7 │ export const a = 1
    │ ───┬──  
    │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
 ───╯
@@ -42,9 +42,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region main.js
-exports.test = 1000;
+exports.test.res = 1000;
 exports.a = 1000;
+module.test = {};
 module.exports = {};
+let res = typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
 

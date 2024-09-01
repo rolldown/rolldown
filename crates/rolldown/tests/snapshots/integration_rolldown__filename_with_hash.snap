@@ -2233,7 +2233,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/warnings/commonjs_variable_in_esm
 
-- main-!~{000}~.mjs => main-hHhgdFpM.mjs
+- main-!~{000}~.mjs => main-U4FnvgcT.mjs
 
 # tests/rolldown/warnings/eval
 

@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+
+
+//#region c.js
+var require_c = __commonJSMin((exports, module) => {
+	exports.test = 1000;
+});
+
+//#endregion
+//#region b.js
+var b_ns = {};
+__reExport(b_ns, __toESM(require_c()));
+
+//#endregion
+//#region a.js
+var a_ns = {};
+__reExport(a_ns, b_ns);
+
+//#endregion
+//#region main.js
+var main_ns = {};
+__reExport(main_ns, a_ns);
+
+//#endregion
+```

@@ -7,8 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
 //#region foo.js
 const value = 1;
+
+//#endregion
+//#region main.js
+var main_ns = {};
+__export(main_ns, { foo: () => value });
 
 //#endregion
 export { value as foo };

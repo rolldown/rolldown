@@ -7,9 +7,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
 //#region c.js
 let x = 1;
 let y = 2;
+
+//#endregion
+//#region a.js
+var a_ns = {};
+__export(a_ns, {
+	x: () => x,
+	y: () => y
+});
+
+//#endregion
+//#region entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	x: () => x,
+	y: () => y
+});
 
 //#endregion
 export { x, y };

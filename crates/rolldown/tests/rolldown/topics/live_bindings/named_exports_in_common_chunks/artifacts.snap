@@ -27,7 +27,14 @@ assert.strictEqual(count, count);
 ```js
 import { count, inc, reset } from "./shared.mjs";
 
+
 //#region main.js
+var main_ns = {};
+__export(main_ns, {
+	count: () => count,
+	inc: () => inc,
+	reset: () => reset
+});
 import("./async-entry.mjs");
 
 //#endregion

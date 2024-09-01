@@ -22,11 +22,22 @@ export { p, q };
 
 ```js
 
+
 //#region b.js
+var b_ns = {};
+__export(b_ns, {
+	p: () => p,
+	q: () => q
+});
 var q = 6;
 
 //#endregion
 //#region a.js
+var a_ns = {};
+__export(a_ns, {
+	p: () => p,
+	q: () => q
+});
 var p = 5;
 
 //#endregion

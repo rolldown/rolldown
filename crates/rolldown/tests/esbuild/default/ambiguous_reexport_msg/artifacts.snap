@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
 //#region a.js
 let a = 1;
 
@@ -17,6 +18,15 @@ let b = 3;
 //#endregion
 //#region c.js
 let c = 4;
+
+//#endregion
+//#region entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	a: () => a,
+	b: () => b,
+	c: () => c
+});
 
 //#endregion
 export { a, b, c };

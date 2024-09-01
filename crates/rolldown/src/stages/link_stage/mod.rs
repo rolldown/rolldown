@@ -302,8 +302,20 @@ impl<'a> LinkStage<'a> {
                     let is_reexport_all = importer.star_exports.contains(rec_id);
                     match importee_linking_info.wrap_kind {
                       WrapKind::None => {
+                        // for case:
+                        // ```js
+                        // // index.js
+                        // export * from './foo'; /* importee wrap kind is `none`, but since `foo` has dynamic_export, we need to preserve the `__reExport(index_ns, foo_ns)` */
+                        //
+                        // // foo.js
+                        // export * from './bar' /* importee wrap kind is `cjs`, preserve by
+                        // default*/
+                        //
+                        // // bar.js
+                        // module.exports = 1000
+                        // ```
                         if is_reexport_all {
-                          let meta = &self.metas[importer.idx];
+                          let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
                             stmt_info.side_effect = true;
                             stmt_info

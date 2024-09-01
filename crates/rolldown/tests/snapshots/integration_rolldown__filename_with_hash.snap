@@ -1324,6 +1324,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-l0tl7Svn.mjs
 
+# tests/rolldown/cjs_compat/exoprt_star_of_cjs
+
+- main-!~{000}~.mjs => main-0tuf-UDS.mjs
+
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
 - main-!~{000}~.mjs => main--NqEbfmk.mjs

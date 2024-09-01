@@ -11,73 +11,6 @@ use rustc_hash::FxHashMap;
 use super::GenerateStage;
 
 impl<'a> GenerateStage<'a> {
-  fn determine_reachable_modules_for_entry(
-    &self,
-    module_id: ModuleIdx,
-    entry_index: u32,
-    module_to_bits: &mut IndexVec<ModuleIdx, BitSet>,
-  ) {
-    let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
-      return;
-    };
-    let meta = &self.link_output.metas[module_id];
-
-    if !module.is_included {
-      return;
-    }
-
-    if module_to_bits[module_id].has_bit(entry_index) {
-      return;
-    }
-
-    module_to_bits[module_id].set_bit(entry_index);
-
-    meta.dependencies.iter().copied().for_each(|dep_idx| {
-      self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
-    });
-
-    // Symbols from runtime are referenced by bundler not import statements.
-    meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-      let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
-      self.determine_reachable_modules_for_entry(canonical_ref.owner, entry_index, module_to_bits);
-    });
-
-    module.stmt_infos.iter().for_each(|stmt_info| {
-      if !stmt_info.is_included {
-        return;
-      }
-
-      // We need this step to include the runtime module, if there are symbols of it.
-      // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
-      stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-        match reference_ref {
-          rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
-            let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*sym_ref);
-            self.determine_reachable_modules_for_entry(
-              canonical_ref.owner,
-              entry_index,
-              module_to_bits,
-            );
-          }
-          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-            if let Some(sym_ref) = member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs)
-            {
-              let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
-              self.determine_reachable_modules_for_entry(
-                canonical_ref.owner,
-                entry_index,
-                module_to_bits,
-              );
-            } else {
-              // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-              // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
-            }
-          }
-        };
-      });
-    });
-  }
-
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn generate_chunks(&mut self) -> ChunkGraph {
     if matches!(self.options.format, OutputFormat::Iife) {
@@ -267,5 +200,72 @@ impl<'a> GenerateStage<'a> {
       module_to_chunk,
       entry_module_to_entry_chunk,
     }
+  }
+
+  fn determine_reachable_modules_for_entry(
+    &self,
+    module_id: ModuleIdx,
+    entry_index: u32,
+    module_to_bits: &mut IndexVec<ModuleIdx, BitSet>,
+  ) {
+    let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
+      return;
+    };
+    let meta = &self.link_output.metas[module_id];
+
+    if !module.is_included {
+      return;
+    }
+
+    if module_to_bits[module_id].has_bit(entry_index) {
+      return;
+    }
+
+    module_to_bits[module_id].set_bit(entry_index);
+
+    meta.dependencies.iter().copied().for_each(|dep_idx| {
+      self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
+    });
+
+    // Symbols from runtime are referenced by bundler not import statements.
+    meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+      let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
+      self.determine_reachable_modules_for_entry(canonical_ref.owner, entry_index, module_to_bits);
+    });
+
+    module.stmt_infos.iter().for_each(|stmt_info| {
+      if !stmt_info.is_included {
+        return;
+      }
+
+      // We need this step to include the runtime module, if there are symbols of it.
+      // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
+      stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+        match reference_ref {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
+            let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*sym_ref);
+            self.determine_reachable_modules_for_entry(
+              canonical_ref.owner,
+              entry_index,
+              module_to_bits,
+            );
+          }
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            if let Some(sym_ref) = member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs)
+            {
+              let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
+              self.determine_reachable_modules_for_entry(
+                canonical_ref.owner,
+                entry_index,
+                module_to_bits,
+              );
+            } else {
+              // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+              // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+            }
+          }
+        };
+      });
+    });
   }
 }

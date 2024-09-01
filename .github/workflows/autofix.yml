@@ -1,4 +1,4 @@
-name: 'Automate Labeling'
+name: 'autofix.ci'
 on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request_target:

@@ -1,0 +1,24 @@
+name: autofix.ci # needed to securely identify the workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          tools: just, taplo-cli, cargo-shear
+          cache-key: debug-build
+          components: clippy rustfmt
+
+      - run: just fix
+
+      - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a

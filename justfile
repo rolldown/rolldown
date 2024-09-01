@@ -109,7 +109,7 @@ fix: fix-rust fix-repo
 
 fix-rust:
     just fmt-rust
-    cargo fix --allow-dirty
+    cargo fix --allow-dirty --allow-staged
     cargo shear --fix
 
 fix-repo:

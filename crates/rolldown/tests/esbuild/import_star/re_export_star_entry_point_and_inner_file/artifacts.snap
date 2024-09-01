@@ -26,14 +26,5 @@ __export(inner_ns, {
 });
 
 //#endregion
-//#region entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	A: () => A,
-	B: () => B,
-	inner: () => inner_ns
-});
-
-//#endregion
 export { A, B, inner_ns as inner };
 ```

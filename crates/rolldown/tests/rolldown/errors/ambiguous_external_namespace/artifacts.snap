@@ -38,11 +38,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
-//#region foo.js
-var foo_ns = {};
-
-//#endregion
 //#region main.js
 console.log(value);
 

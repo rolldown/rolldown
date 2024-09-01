@@ -19,18 +19,6 @@ const xyz = null;
 
 //#endregion
 //#region entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	C: () => Class,
-	Class: () => Class,
-	Fn: () => Fn,
-	abc: () => abc,
-	b: () => b_ns,
-	c: () => c,
-	default: () => entry_default,
-	l: () => l,
-	v: () => v
-});
 var entry_default = 123;
 var v = 234;
 let l = 234;

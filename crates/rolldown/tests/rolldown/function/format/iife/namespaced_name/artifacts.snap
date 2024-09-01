@@ -14,14 +14,8 @@ this.namespace.module = (function(exports) {
 
 "use strict";
 
-
 //#region foo.js
 const value = 1;
-
-//#endregion
-//#region main.js
-var main_ns = {};
-__export(main_ns, { value: () => value });
 
 //#endregion
 Object.defineProperty(exports, 'value', {

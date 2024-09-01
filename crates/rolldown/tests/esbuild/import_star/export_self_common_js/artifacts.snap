@@ -16,10 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 "use strict";
 
-
 //#region entry.js
-var entry_ns = {};
-__export(entry_ns, { foo: () => foo });
 const foo = 123;
 
 //#endregion

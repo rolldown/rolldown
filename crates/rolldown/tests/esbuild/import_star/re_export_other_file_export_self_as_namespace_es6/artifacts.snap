@@ -25,13 +25,5 @@ __export(foo_ns, {
 const foo = 123;
 
 //#endregion
-//#region entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	foo: () => foo,
-	ns: () => foo_ns
-});
-
-//#endregion
 export { foo, foo_ns as ns };
 ```

@@ -7,21 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region src/a.js
 const A = 42;
 
 //#endregion
 //#region src/b.js
 const B = async () => (await import("./index.mjs")).A;
-
-//#endregion
-//#region src/index.js
-var src_index_ns = {};
-__export(src_index_ns, {
-	A: () => A,
-	B: () => B
-});
 
 //#endregion
 export { A, B };

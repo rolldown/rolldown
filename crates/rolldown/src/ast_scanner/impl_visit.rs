@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    ast::{self, Argument, AssignmentTarget, Expression, IdentifierReference, MemberExpression},
+    ast::{self, Expression, IdentifierReference, MemberExpression},
     visit::walk,
     Visit,
   },
@@ -96,7 +96,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_import_expression(&mut self, expr: &ast::ImportExpression<'ast>) {
-    if let Expression::StringLiteral(request) = &expr.source {
+    if let ast::Expression::StringLiteral(request) = &expr.source {
       let id = self.add_import_record(
         request.value.as_str(),
         ImportKind::DynamicImport,
@@ -109,7 +109,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
-      AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
+      ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
         self.try_diagnostic_forbid_const_assign(id_ref);
       }
       // Detect `module.exports` and `exports.ANY`
@@ -159,7 +159,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       _ => {}
     }
     if expr.is_global_require_call(self.scopes) {
-      if let Some(Argument::StringLiteral(request)) = &expr.arguments.first() {
+      if let Some(ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
         let id =
           self.add_import_record(request.value.as_str(), ImportKind::Require, request.span().start);
         self.result.imports.insert(expr.span, id);

@@ -85,7 +85,6 @@ fmt: fmt-rust fmt-repo
 fmt-rust:
     cargo fmt --all -- --emit=files
     taplo fmt
-    cargo shear --fix
 
 fmt-repo:
     pnpm lint-prettier:fix
@@ -111,6 +110,7 @@ fix: fix-rust fix-repo
 fix-rust:
     just fmt-rust
     cargo fix --allow-dirty
+    cargo shear --fix
 
 fix-repo:
     pnpm lint-code --fix

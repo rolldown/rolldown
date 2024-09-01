@@ -3,7 +3,8 @@ import { expect, vi } from 'vitest'
 
 const transformFn = vi.fn()
 
-export default defineTest({config: {
+export default defineTest({
+  config: {
     plugins: [
       {
         name: 'test-plugin',

@@ -27,16 +27,16 @@ import "./ab.mjs";
 ## c.mjs
 
 ```js
-import "./d~1.mjs";
+import "./d2.mjs";
 
 ```
 ## d.mjs
 
 ```js
-import "./d~1.mjs";
+import "./d2.mjs";
 
 ```
-## d~1.mjs
+## d2.mjs
 
 ```js
 

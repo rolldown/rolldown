@@ -14,11 +14,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.mjs
 
 ```js
-import { p, q } from "./a~1.mjs";
+import { p, q } from "./a2.mjs";
 
 export { p, q };
 ```
-## a~1.mjs
+## a2.mjs
 
 ```js
 
@@ -35,7 +35,7 @@ export { p, q };
 ## b.mjs
 
 ```js
-import { p, q } from "./a~1.mjs";
+import { p, q } from "./a2.mjs";
 
 export { p, q };
 ```

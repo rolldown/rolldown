@@ -164,7 +164,7 @@ impl<'a> GenerateStage<'a> {
       .into();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
-    let mut used_name_map: FxHashMap<ArcStr, u32> = FxHashMap::default();
+    let mut used_name_counts: FxHashMap<ArcStr, u32> = FxHashMap::default();
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
       if chunk.preliminary_filename.is_some() {
@@ -172,9 +172,9 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
-      let chunk_name = &mut index_pre_generated_names[*chunk_id];
+      let pre_generated_name = &mut index_pre_generated_names[*chunk_id];
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
-      chunk.name = Some(chunk_name.clone());
+      chunk.name = Some(pre_generated_name.clone());
 
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
@@ -187,18 +187,29 @@ impl<'a> GenerateStage<'a> {
 
       let need_to_ensure_unique =
         extracted_hash_pattern.is_none() || extracted_css_hash_pattern.is_none();
-
-      if need_to_ensure_unique {
-        *chunk_name = match used_name_map.entry(chunk_name.clone()) {
-          Entry::Occupied(mut occ) => {
-            let next_count = *occ.get();
-            occ.insert(next_count + 1);
-            ArcStr::from(format!("{}~{}", occ.key(), itoa::Buffer::new().format(next_count)))
-          }
-          Entry::Vacant(vac) => vac.key().clone(),
-        };
-      }
-      used_name_map.insert(chunk_name.clone(), 1);
+      let chunk_name = if need_to_ensure_unique {
+        let mut candidate = pre_generated_name.clone();
+        loop {
+          match used_name_counts.entry(candidate.clone()) {
+            Entry::Occupied(mut occ) => {
+              // This name is already used
+              let next_count = *occ.get();
+              occ.insert(next_count + 1);
+              candidate =
+                ArcStr::from(format!("{}{}", occ.key(), itoa::Buffer::new().format(next_count)));
+            }
+            Entry::Vacant(vac) => {
+              // This is the first time we see this name
+              let name = vac.key().clone();
+              vac.insert(2);
+              break name;
+            }
+          };
+        }
+      } else {
+        used_name_counts.insert(pre_generated_name.clone(), 2);
+        pre_generated_name.clone()
+      };
 
       let hash_placeholder =
         extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
@@ -207,13 +218,13 @@ impl<'a> GenerateStage<'a> {
         extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
       let preliminary = filename_template.render(&FileNameRenderOptions {
-        name: Some(chunk_name),
+        name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
         ..Default::default()
       });
 
       let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
-        name: Some(chunk_name),
+        name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
         ..Default::default()
       });

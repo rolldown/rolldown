@@ -6,12 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.mjs
 
 ```js
-import { foo, init_a } from "./a~1.mjs";
+import { foo, init_a } from "./a2.mjs";
 
 init_a();
 export { foo };
 ```
-## a~1.mjs
+## a2.mjs
 
 ```js
 
@@ -29,7 +29,7 @@ export { __toCommonJS, a_ns, foo, init_a };
 ## b.mjs
 
 ```js
-import { __toCommonJS, a_ns, init_a } from "./a~1.mjs";
+import { __toCommonJS, a_ns, init_a } from "./a2.mjs";
 
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_ns));

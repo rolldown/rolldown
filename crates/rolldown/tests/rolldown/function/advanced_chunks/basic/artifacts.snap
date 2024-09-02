@@ -13,7 +13,7 @@ export { a };
 ## b.mjs
 
 ```js
-import { b } from "./common~1.mjs";
+import { b } from "./common2.mjs";
 
 export { b };
 ```
@@ -27,7 +27,7 @@ const a = "a";
 //#endregion
 export { a };
 ```
-## common~1.mjs
+## common2.mjs
 
 ```js
 

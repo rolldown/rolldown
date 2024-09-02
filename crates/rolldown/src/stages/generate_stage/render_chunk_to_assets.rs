@@ -4,7 +4,9 @@ use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{Asset, InstantiationKind, Output, OutputAsset, OutputChunk, SourceMapType};
+use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildDiagnostic;
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use sugar_path::SugarPath;
 
 use crate::{
@@ -163,18 +165,49 @@ impl<'a> GenerateStage<'a> {
       index_vec![IndexSet::default(); chunk_graph.chunks.len()];
     let mut index_preliminary_assets: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunks.len());
-    try_join_all(chunk_graph.chunks.iter_enumerated().map(|(chunk_idx, chunk)| async move {
-      let mut ctx = GenerateContext {
-        chunk_idx,
-        chunk,
-        options: self.options,
-        link_output: self.link_output,
-        chunk_graph,
-        plugin_driver: self.plugin_driver,
-        warnings: vec![],
-      };
-      EcmaGenerator::instantiate_chunk(&mut ctx).await
-    }))
+    let chunk_to_codegen_ret = chunk_graph
+      .chunks
+      .raw
+      .par_iter()
+      .map(|item| {
+        item
+          .modules
+          .par_iter()
+          .map(|&module_idx| {
+            if let Some(module) = self.link_output.module_table.modules[module_idx].as_ecma() {
+              let enable_sourcemap = !self.options.sourcemap.is_hidden() && !module.is_virtual();
+
+              // Because oxc codegen sourcemap is last of sourcemap chain,
+              // If here no extra sourcemap need remapping, we using it as final module sourcemap.
+              // So here make sure using correct `source_name` and `source_content.
+              let render_output = EcmaCompiler::print(
+                &self.link_output.ast_table[module.ecma_ast_idx()].0,
+                &module.id,
+                enable_sourcemap,
+              );
+              Some(render_output)
+            } else {
+              None
+            }
+          })
+          .collect::<Vec<_>>()
+      })
+      .collect::<Vec<_>>();
+    try_join_all(chunk_graph.chunks.iter_enumerated().zip(chunk_to_codegen_ret.into_iter()).map(
+      |((chunk_idx, chunk), codegen_ret_map)| async move {
+        let mut ctx = GenerateContext {
+          chunk_idx,
+          chunk,
+          options: self.options,
+          link_output: self.link_output,
+          chunk_graph,
+          plugin_driver: self.plugin_driver,
+          warnings: vec![],
+          module_id_to_codegen_ret: codegen_ret_map,
+        };
+        EcmaGenerator::instantiate_chunk(&mut ctx).await
+      },
+    ))
     .await?
     .into_iter()
     .for_each(|result| match result {

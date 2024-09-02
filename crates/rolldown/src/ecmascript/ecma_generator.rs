@@ -4,6 +4,7 @@ use crate::{
 };
 
 use anyhow::Result;
+use oxc::codegen::CodegenReturn;
 use rolldown_common::{
   EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx, OutputFormat,
   RenderedModule,
@@ -11,7 +12,9 @@ use rolldown_common::{
 use rolldown_error::DiagnosableResult;
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rayon::{
+  IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -27,24 +30,22 @@ impl Generator for EcmaGenerator {
     ctx: &mut GenerateContext<'a>,
   ) -> Result<DiagnosableResult<GenerateOutput>> {
     let mut rendered_modules = FxHashMap::default();
-
+    let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources = ctx
       .chunk
       .modules
       .par_iter()
       .copied()
-      .filter_map(|id| ctx.link_output.module_table.modules[id].as_ecma())
-      .map(|m| {
-        (
-          m.idx,
-          m.id.clone(),
-          render_ecma_module(
-            m,
-            &ctx.link_output.ast_table[m.ecma_ast_idx()].0,
-            m.id.as_ref(),
-            ctx.options,
-          ),
-        )
+      .zip(module_id_to_codegen_ret)
+      .filter_map(|(id, codegen_ret)| {
+        if let Some(m) = ctx.link_output.module_table.modules[id].as_ecma() {
+          Some((m, codegen_ret.expect("should have codege")))
+        } else {
+          None
+        }
+      })
+      .map(|(m, codegen_ret)| {
+        (m.idx, m.id.clone(), render_ecma_module(m, ctx.options, codegen_ret))
       })
       .collect::<Vec<_>>();
 

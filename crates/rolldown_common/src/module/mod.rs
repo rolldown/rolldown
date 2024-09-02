@@ -102,6 +102,14 @@ impl Module {
       Module::External(_) => panic!("set_ecma_ast_idx should be called on EcmaModule"),
     }
   }
+
+  /// Returns `true` if the module is [`Ecma`].
+  ///
+  /// [`Ecma`]: Module::Ecma
+  #[must_use]
+  pub fn is_ecma(&self) -> bool {
+    matches!(self, Self::Ecma(..))
+  }
 }
 
 impl From<EcmaModule> for Module {

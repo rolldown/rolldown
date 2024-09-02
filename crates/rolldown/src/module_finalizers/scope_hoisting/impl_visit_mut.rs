@@ -249,7 +249,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             ast::Statement::FunctionDeclaration(_) => {
               fn_stmts.push(stmt);
             }
-            ast::Statement::UsingDeclaration(_) => unimplemented!(),
             ast::match_module_declaration!(Statement) => {
               if stmt.is_typescript_syntax() {
                 unreachable!(

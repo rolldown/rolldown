@@ -1,0 +1,27 @@
+name: 'Automation Labeled'
+on:
+  # https://github.com/actions/labeler?tab=readme-ov-file#permissions
+  pull_request_target:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  convert_stale_PR_to_draft:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target' && github.event.label.name == 'stale'
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v7
+        name: 'Convert Stale PR to Draft'
+        with:
+          script: |
+            github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{ github.event.pull_request.number }},
+              state: 'draft',
+            });

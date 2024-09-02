@@ -2,6 +2,8 @@ name: 'Automation Labeled'
 on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request_target:
+    types: [labeled]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -10,9 +12,9 @@ concurrency:
 jobs:
   convert_stale_PR_to_draft:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
     permissions:
       pull-requests: write
-      contents: write
     steps:
       - uses: actions/checkout@v4
 

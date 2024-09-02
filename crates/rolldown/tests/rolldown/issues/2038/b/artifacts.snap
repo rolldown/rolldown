@@ -32,7 +32,7 @@ var import_c = __toESM(require_c());
 //#endregion
 export { import_c };
 ```
-## b~1.mjs
+## b2.mjs
 
 ```js
 import { import_c } from "./b.mjs";
@@ -49,7 +49,7 @@ import { default as assert } from "node:assert";
 import("./a.mjs").then((mod) => {
 	assert.strictEqual(mod.a, 1000);
 });
-import("./b~1.mjs").then((mod) => {
+import("./b2.mjs").then((mod) => {
 	assert.strictEqual(mod.test, 1000);
 });
 

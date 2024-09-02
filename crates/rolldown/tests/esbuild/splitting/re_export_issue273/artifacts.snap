@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.mjs
 
 ```js
-import { a } from "./a~1.mjs";
+import { a } from "./a2.mjs";
 
 export { a };
 ```
-## a~1.mjs
+## a2.mjs
 
 ```js
 
@@ -23,7 +23,7 @@ export { a };
 ## b.mjs
 
 ```js
-import { a } from "./a~1.mjs";
+import { a } from "./a2.mjs";
 
 export { a };
 ```

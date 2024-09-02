@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM, require_main2 } from "./main2~1.mjs";
+import { __commonJSMin, __toESM, require_main2 } from "./main22.mjs";
 
 //#region main.js
 var require_main = __commonJSMin((exports, module) => {
@@ -21,12 +21,12 @@ export default require_main();
 ## main2.mjs
 
 ```js
-import { require_main2 } from "./main2~1.mjs";
+import { require_main2 } from "./main22.mjs";
 
 export default require_main2();
 
 ```
-## main2~1.mjs
+## main22.mjs
 
 ```js
 

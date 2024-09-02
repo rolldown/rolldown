@@ -29,7 +29,7 @@ function test() {
 //#endregion
 export { result, test };
 ```
-## b~1.mjs
+## b2.mjs
 
 ```js
 import { result, test } from "./b.mjs";
@@ -42,7 +42,7 @@ export { result, test };
 import { default as assert } from "node:assert";
 
 //#region main.js
-import("./b~1.mjs").then((mod) => {
+import("./b2.mjs").then((mod) => {
 	assert.strictEqual(mod.result(), "result");
 });
 import("./a.mjs").then((mod) => {

@@ -21,7 +21,7 @@ pub fn deconflict_chunk_symbols(
     .flat_map(|m| m.scope.root_unresolved_references().keys().map(Cow::Borrowed))
     .for_each(|name| {
       // global names should be reserved
-      renamer.reserve(Cow::Owned(name.to_rstr()));
+      renamer.reserve(name.to_rstr());
     });
 
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave

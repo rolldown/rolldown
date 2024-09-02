@@ -28,7 +28,7 @@ pub struct Renamer<'name> {
   ///                       // so we rename `a` to `a$2`
   /// ```
   ///
-  used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
+  used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   symbols: &'name Symbols,
 }
@@ -48,19 +48,18 @@ impl<'name> Renamer<'name> {
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (Cow::Owned(Rstr::new(s)), 0))
+        .map(|s| (Rstr::new(s), 0))
         .collect(),
     }
   }
 
-  pub fn reserve(&mut self, name: Cow<'name, Rstr>) {
+  pub fn reserve(&mut self, name: Rstr) {
     self.used_canonical_names.insert(name, 0);
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
-    let original_name: Cow<'_, Rstr> =
-      Cow::Owned(self.symbols.get_original_name(canonical_ref).to_rstr());
+    let original_name = self.symbols.get_original_name(canonical_ref).to_rstr();
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
@@ -69,10 +68,9 @@ impl<'name> Renamer<'name> {
             Entry::Occupied(mut occ) => {
               let next_conflict_index = *occ.get() + 1;
               *occ.get_mut() = next_conflict_index;
-              candidate_name = Cow::Owned(
+              candidate_name =
                 format!("{original_name}${}", itoa::Buffer::new().format(next_conflict_index))
-                  .into(),
-              );
+                  .into();
             }
             Entry::Vacant(vac) => {
               vac.insert(0);
@@ -80,7 +78,7 @@ impl<'name> Renamer<'name> {
             }
           }
         }
-        vacant.insert(candidate_name.into_owned());
+        vacant.insert(candidate_name);
       }
       Entry::Occupied(_) => {
         // The symbol is already renamed
@@ -89,16 +87,15 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn create_conflictless_top_level_name(&mut self, hint: &str) -> String {
-    let hint: Cow<Rstr> = Cow::Owned(Rstr::new(hint));
+    let hint = Rstr::new(hint);
     let mut conflictless_name = hint.clone();
     loop {
       match self.used_canonical_names.entry(conflictless_name.clone()) {
         Entry::Occupied(mut occ) => {
           let next_conflict_index = *occ.get() + 1;
           *occ.get_mut() = next_conflict_index;
-          conflictless_name = Cow::Owned(
-            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into(),
-          );
+          conflictless_name =
+            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into();
         }
         Entry::Vacant(vac) => {
           vac.insert(0);
@@ -106,7 +103,7 @@ impl<'name> Renamer<'name> {
         }
       }
     }
-    conflictless_name.into_owned().to_string()
+    conflictless_name.to_string()
   }
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
@@ -120,18 +117,18 @@ impl<'name> Renamer<'name> {
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name EcmaModule,
       scope_id: ScopeId,
-      stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
+      stack: &mut Vec<Cow<FxHashMap<Rstr, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
       let bindings = module.scope.get_bindings(scope_id);
       let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
       bindings.iter().for_each(|(binding_name, symbol_id)| {
-        used_canonical_names_for_this_scope.insert(Cow::Owned(binding_name.to_rstr()), 0);
+        used_canonical_names_for_this_scope.insert(binding_name.to_rstr(), 0);
         let binding_ref: SymbolRef = (module.idx, *symbol_id).into();
 
         let mut count = 1;
-        let mut candidate_name = Cow::Owned(binding_name.to_rstr());
+        let mut candidate_name = binding_name.to_rstr();
         match canonical_names.entry(binding_ref) {
           Entry::Vacant(slot) => loop {
             let is_shadowed = stack
@@ -140,11 +137,11 @@ impl<'name> Renamer<'name> {
 
             if is_shadowed {
               candidate_name =
-                Cow::Owned(format!("{binding_name}${}", itoa::Buffer::new().format(count)).into());
+                format!("{binding_name}${}", itoa::Buffer::new().format(count)).into();
               count += 1;
             } else {
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
-              slot.insert(candidate_name.into_owned());
+              slot.insert(candidate_name);
               break;
             }
           },

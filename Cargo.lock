@@ -2190,6 +2190,7 @@ dependencies = [
  "indexmap",
  "insta",
  "itertools 0.13.0",
+ "itoa",
  "memchr",
  "oxc",
  "regex",
@@ -2323,6 +2324,7 @@ name = "rolldown_loader_utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "itoa",
  "rolldown_common",
  "rolldown_utils",
  "serde_json",
@@ -2393,6 +2395,7 @@ name = "rolldown_plugin_import_glob"
 version = "0.1.0"
 dependencies = [
  "glob",
+ "itoa",
  "oxc",
  "rolldown_plugin",
  "rustc-hash 2.0.0",

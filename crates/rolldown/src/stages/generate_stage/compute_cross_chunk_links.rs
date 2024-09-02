@@ -31,17 +31,16 @@ impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
-      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
+      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
-      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
-    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules =
-      index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
+      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
 
-    let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
+    let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
-      index_vec![FxHashSet::default(); chunk_graph.chunks.len()];
+      index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
-      index_vec![IndexSet::default(); chunk_graph.chunks.len()];
+      index_vec![IndexSet::default(); chunk_graph.chunk_table.len()];
 
     self.collect_depended_symbols(
       chunk_graph,
@@ -71,7 +70,7 @@ impl<'a> GenerateStage<'a> {
       .map(|cross_chunk_imports| {
         let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
         cross_chunk_imports.sort_by_cached_key(|chunk_id| {
-          let mut module_ids = chunk_graph.chunks[*chunk_id]
+          let mut module_ids = chunk_graph.chunk_table[*chunk_id]
             .modules
             .iter()
             .map(|id| self.link_output.module_table.modules[*id].id())
@@ -84,10 +83,10 @@ impl<'a> GenerateStage<'a> {
       .collect::<Vec<_>>();
 
     index_imports_from_other_chunks.iter_enumerated().for_each(|(chunk_id, importee_map)| {
-      chunk_graph.chunks[chunk_id].require_binding_names_for_other_chunks = importee_map
+      chunk_graph.chunk_table[chunk_id].require_binding_names_for_other_chunks = importee_map
         .keys()
         .map(|id| {
-          let chunk = &chunk_graph.chunks[*id];
+          let chunk = &chunk_graph.chunk_table[*id];
           (*id, chunk.name.clone().unwrap().to_string())
         })
         .collect();
@@ -100,7 +99,9 @@ impl<'a> GenerateStage<'a> {
       .map(|(_chunk_id, importee_map)| {
         importee_map
           .into_iter()
-          .sorted_by_key(|(importee_chunk_id, _)| chunk_graph.chunks[*importee_chunk_id].exec_order)
+          .sorted_by_key(|(importee_chunk_id, _)| {
+            chunk_graph.chunk_table[*importee_chunk_id].exec_order
+          })
           .collect_vec()
       })
       .collect::<Vec<_>>();
@@ -118,7 +119,7 @@ impl<'a> GenerateStage<'a> {
       .collect::<Vec<_>>();
 
     multizip((
-      chunk_graph.chunks.iter_mut(),
+      chunk_graph.chunk_table.iter_mut(),
       index_sorted_imports_from_other_chunks,
       index_sorted_imports_from_external_modules,
       index_sorted_cross_chunk_imports,
@@ -156,7 +157,7 @@ impl<'a> GenerateStage<'a> {
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
     let chunks_iter = multizip((
-      chunk_graph.chunks.iter_enumerated(),
+      chunk_graph.chunk_table.iter_enumerated(),
       index_chunk_depended_symbols.iter_mut(),
       index_chunk_imports_from_external_modules.iter_mut(),
       index_cross_chunk_dynamic_imports.iter_mut(),
@@ -305,7 +306,7 @@ impl<'a> GenerateStage<'a> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
   ) {
-    chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
+    chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
@@ -332,7 +333,7 @@ impl<'a> GenerateStage<'a> {
       // If this is an entry point, make sure we import all chunks belonging to this entry point, even if there are no imports. We need to make sure these chunks are evaluated for their side effects too.
       if let ChunkKind::EntryPoint { bit: importer_chunk_bit, .. } = &chunk.kind {
         chunk_graph
-          .chunks
+          .chunk_table
           .iter_enumerated()
           .filter(|(id, _)| *id != chunk_id)
           .filter(|(_, importee_chunk)| {
@@ -360,7 +361,7 @@ impl<'a> GenerateStage<'a> {
     let mut name_count =
       FxHashMap::with_capacity(index_chunk_exported_symbols.iter().map(FxHashSet::len).sum());
 
-    for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
+    for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
       for chunk_export in index_chunk_exported_symbols[chunk_id].iter().copied() {
         let original_name: rolldown_rstr::Rstr =
           self.link_output.symbols.get_original_name(chunk_export).to_rstr();
@@ -369,18 +370,19 @@ impl<'a> GenerateStage<'a> {
         let alias = if *count == 0 {
           original_name.clone()
         } else {
-          format!("{original_name}${count}").into()
+          format!("{original_name}${}", itoa::Buffer::new().format(*count)).into()
         };
         chunk.exports_to_other_chunks.insert(chunk_export, alias.clone());
         *count += 1;
       }
     }
 
-    for chunk_id in chunk_graph.chunks.indices() {
+    for chunk_id in chunk_graph.chunk_table.indices() {
       for (importee_chunk_id, import_items) in &mut index_imports_from_other_chunks[chunk_id] {
         for item in import_items {
-          if let Some(alias) =
-            chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)
+          if let Some(alias) = chunk_graph.chunk_table[*importee_chunk_id]
+            .exports_to_other_chunks
+            .get(&item.import_ref)
           {
             item.export_alias = Some(alias.clone().into());
           }

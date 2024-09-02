@@ -162,11 +162,11 @@ impl<'a> GenerateStage<'a> {
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> anyhow::Result<(IndexInstantiatedChunks, IndexChunkToAssets)> {
     let mut index_chunk_to_assets: IndexChunkToAssets =
-      index_vec![IndexSet::default(); chunk_graph.chunks.len()];
+      index_vec![IndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_preliminary_assets: IndexInstantiatedChunks =
-      IndexVec::with_capacity(chunk_graph.chunks.len());
+      IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_to_codegen_ret = chunk_graph
-      .chunks
+      .chunk_table
       .raw
       .par_iter()
       .map(|item| {
@@ -193,21 +193,23 @@ impl<'a> GenerateStage<'a> {
           .collect::<Vec<_>>()
       })
       .collect::<Vec<_>>();
-    try_join_all(chunk_graph.chunks.iter_enumerated().zip(chunk_to_codegen_ret.into_iter()).map(
-      |((chunk_idx, chunk), codegen_ret_map)| async move {
-        let mut ctx = GenerateContext {
-          chunk_idx,
-          chunk,
-          options: self.options,
-          link_output: self.link_output,
-          chunk_graph,
-          plugin_driver: self.plugin_driver,
-          warnings: vec![],
-          module_id_to_codegen_ret: codegen_ret_map,
-        };
-        EcmaGenerator::instantiate_chunk(&mut ctx).await
-      },
-    ))
+    try_join_all(
+      chunk_graph.chunk_table.iter_enumerated().zip(chunk_to_codegen_ret.into_iter()).map(
+        |((chunk_idx, chunk), codegen_ret_map)| async move {
+          let mut ctx = GenerateContext {
+            chunk_idx,
+            chunk,
+            options: self.options,
+            link_output: self.link_output,
+            chunk_graph,
+            plugin_driver: self.plugin_driver,
+            warnings: vec![],
+            module_id_to_codegen_ret: codegen_ret_map,
+          };
+          EcmaGenerator::instantiate_chunk(&mut ctx).await
+        },
+      ),
+    )
     .await?
     .into_iter()
     .for_each(|result| match result {

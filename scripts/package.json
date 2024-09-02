@@ -24,6 +24,6 @@
     "follow-redirects": "^1.15.6"
   },
   "devDependencies": {
-    "web-tree-sitter": "^0.22.6"
+    "web-tree-sitter": "^0.23.0"
   }
 }

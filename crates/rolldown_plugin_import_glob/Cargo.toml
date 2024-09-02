@@ -16,6 +16,7 @@ workspace = true
 
 [dependencies]
 glob            = { workspace = true }
+itoa            = { workspace = true }
 oxc             = { workspace = true }
 rolldown_plugin = { workspace = true }
 rustc-hash      = { workspace = true }

@@ -52,6 +52,15 @@
     "BundlerOptions": {
       "type": "object",
       "properties": {
+        "advancedChunks": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/ManualChunksDescriptor"
+          }
+        },
         "assetFilenames": {
           "type": [
             "string",
@@ -409,6 +418,36 @@
           ]
         }
       }
+    },
+    "ManualChunksDescriptor": {
+      "type": "object",
+      "required": [
+        "filter",
+        "name"
+      ],
+      "properties": {
+        "filter": {
+          "type": "string"
+        },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "priority": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
     },
     "ModuleType": {
       "oneOf": [

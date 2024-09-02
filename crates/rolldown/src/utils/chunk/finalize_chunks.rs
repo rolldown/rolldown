@@ -86,7 +86,7 @@ pub fn finalize_assets(
     .into();
 
   let final_hashes_by_placeholder = chunk_graph
-    .chunks
+    .chunk_table
     .iter()
     .zip(&index_final_hashes)
     .filter_map(|(chunk, hash)| {
@@ -129,7 +129,7 @@ pub fn finalize_assets(
 
   assets.iter_mut().par_bridge().for_each(|asset| {
     if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
-      let chunk = &chunk_graph.chunks[asset.origin_chunk];
+      let chunk = &chunk_graph.chunk_table[asset.origin_chunk];
       ecma_meta.rendered_chunk.imports = chunk
         .cross_chunk_imports
         .iter()

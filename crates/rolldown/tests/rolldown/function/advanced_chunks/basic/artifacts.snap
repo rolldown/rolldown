@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.mjs
+
+```js
+import { a } from "./a~1.mjs";
+
+export { a };
+```
+## a~1.mjs
+
+```js
+
+//#region a.js
+const a = "a";
+
+//#endregion
+export { a };
+```
+## b.mjs
+
+```js
+import { b } from "./b~1.mjs";
+
+export { b };
+```
+## b~1.mjs
+
+```js
+
+//#region b.js
+const b = "a";
+
+//#endregion
+export { b };
+```

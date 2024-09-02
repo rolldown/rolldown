@@ -21,6 +21,12 @@ impl BitSet {
   pub fn is_empty(&self) -> bool {
     self.entries.iter().all(|&e| e == 0)
   }
+
+  pub fn union(&mut self, other: &Self) {
+    for (i, &e) in other.entries.iter().enumerate() {
+      self.entries[i] |= e;
+    }
+  }
 }
 
 impl Display for BitSet {
@@ -61,6 +67,23 @@ mod tests {
     bs.set_bit(8);
     assert_eq!(bs.to_string(), "10000011_00000001");
     bs.set_bit(15);
+    assert_eq!(bs.to_string(), "10000011_10000001");
+  }
+
+  #[test]
+  fn union() {
+    let mut bs = BitSet::new(9);
+    assert_eq!(bs.to_string(), "00000000_00000000");
+    let mut bs2 = bs.clone();
+    bs.set_bit(0);
+    bs.set_bit(1);
+    bs.set_bit(7);
+    assert_eq!(bs.to_string(), "10000011_00000000");
+    bs2.set_bit(8);
+    bs2.set_bit(15);
+    assert_eq!(bs2.to_string(), "00000000_10000001");
+    //
+    bs.union(&bs2);
     assert_eq!(bs.to_string(), "10000011_10000001");
   }
 }

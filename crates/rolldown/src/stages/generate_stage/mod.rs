@@ -188,6 +188,7 @@ impl<'a> GenerateStage<'a> {
       let need_to_ensure_unique =
         extracted_hash_pattern.is_none() || extracted_css_hash_pattern.is_none();
       let chunk_name = if need_to_ensure_unique {
+        let original_name = &pre_generated_name;
         let mut candidate = pre_generated_name.clone();
         loop {
           match used_name_counts.entry(candidate.clone()) {
@@ -195,8 +196,11 @@ impl<'a> GenerateStage<'a> {
               // This name is already used
               let next_count = *occ.get();
               occ.insert(next_count + 1);
-              candidate =
-                ArcStr::from(format!("{}{}", occ.key(), itoa::Buffer::new().format(next_count)));
+              candidate = ArcStr::from(format!(
+                "{}{}",
+                original_name,
+                itoa::Buffer::new().format(next_count)
+              ));
             }
             Entry::Vacant(vac) => {
               // This is the first time we see this name

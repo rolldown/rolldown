@@ -123,49 +123,40 @@ impl<'a> GenerateStage<'a> {
     &self,
     chunk_graph: &mut ChunkGraph,
   ) -> anyhow::Result<()> {
-    struct ChunkNameInfo {
-      pub name: ArcStr,
-      pub explicit: bool,
-    }
-
     let modules = &self.link_output.module_table.modules;
 
-    let mut index_pre_generated_names: IndexVec<ChunkIdx, ChunkNameInfo> = chunk_graph
+    let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> = chunk_graph
       .chunk_table
       .as_vec()
       .par_iter()
       .map(|chunk| {
+        if let Some(name) = &chunk.name {
+          return name.clone();
+        }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
-            if let Some(name) = &chunk.name {
-              ChunkNameInfo { name: name.clone(), explicit: true }
+            let module = &modules[entry_module_id];
+            let generated = if is_user_defined {
+              try_extract_meaningful_input_name_from_path(module.id())
+                .map(ArcStr::from)
+                .unwrap_or(arcstr::literal!("input"))
             } else {
-              let module = &modules[entry_module_id];
-              let generated = if is_user_defined {
-                try_extract_meaningful_input_name_from_path(module.id())
-                  .map(ArcStr::from)
-                  .unwrap_or(arcstr::literal!("input"))
-              } else {
-                ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
-              };
-              ChunkNameInfo { name: generated, explicit: false }
-            }
+              ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
+            };
+            generated
           }
           ChunkKind::Common => {
             // - rollup use the first entered/last executed module as the `[name]` of common chunks.
             // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
             let first_executed_non_runtime_module =
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id());
-            ChunkNameInfo {
-              name: first_executed_non_runtime_module.map_or_else(
-                || arcstr::literal!("chunk"),
-                |module_id| {
-                  let module = &modules[*module_id];
-                  ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
-                },
-              ),
-              explicit: false,
-            }
+            first_executed_non_runtime_module.map_or_else(
+              || arcstr::literal!("chunk"),
+              |module_id| {
+                let module = &modules[*module_id];
+                ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
+              },
+            )
           }
         }
       })
@@ -181,26 +172,10 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
-      let chunk_name_info = &mut index_pre_generated_names[*chunk_id];
-
-      let chunk_name = if chunk_name_info.explicit {
-        if used_name_map.contains_key(&chunk_name_info.name) {
-          return Err(anyhow::anyhow!("Chunk name `{}` is already used", chunk_name_info.name));
-        }
-        chunk_name_info.name.clone()
-      } else {
-        let chunk_name = match used_name_map.entry(chunk_name_info.name.clone()) {
-          Entry::Occupied(mut occ) => {
-            let next_count = *occ.get();
-            occ.insert(next_count + 1);
-            ArcStr::from(format!("{}~{}", occ.key(), itoa::Buffer::new().format(next_count)))
-          }
-          Entry::Vacant(vac) => vac.key().clone(),
-        };
-        chunk_name
-      };
-      used_name_map.insert(chunk_name.clone(), 1);
+      let chunk_name = &mut index_pre_generated_names[*chunk_id];
+      // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
       chunk.name = Some(chunk_name.clone());
+
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
       let filename_template = chunk.filename_template(self.options, &pre_rendered_chunk).await?;
@@ -210,6 +185,21 @@ impl<'a> GenerateStage<'a> {
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
       let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
 
+      let need_to_ensure_unique =
+        extracted_hash_pattern.is_none() || extracted_css_hash_pattern.is_none();
+
+      if need_to_ensure_unique {
+        *chunk_name = match used_name_map.entry(chunk_name.clone()) {
+          Entry::Occupied(mut occ) => {
+            let next_count = *occ.get();
+            occ.insert(next_count + 1);
+            ArcStr::from(format!("{}~{}", occ.key(), itoa::Buffer::new().format(next_count)))
+          }
+          Entry::Vacant(vac) => vac.key().clone(),
+        };
+      }
+      used_name_map.insert(chunk_name.clone(), 1);
+
       let hash_placeholder =
         extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
@@ -217,13 +207,13 @@ impl<'a> GenerateStage<'a> {
         extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
       let preliminary = filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
+        name: Some(chunk_name),
         hash: hash_placeholder.as_deref(),
         ..Default::default()
       });
 
       let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
+        name: Some(chunk_name),
         hash: hash_placeholder.as_deref(),
         ..Default::default()
       });

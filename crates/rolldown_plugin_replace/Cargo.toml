@@ -11,7 +11,7 @@ anyhow          = { workspace = true }
 fancy-regex     = { workspace = true }
 rolldown_plugin = { path = "../rolldown_plugin" }
 rustc-hash      = { workspace = true }
-string_wizard   = { workspace = true }
+string_wizard   = { workspace = true, features = ["source_map"] }
 
 [dev-dependencies]
 rolldown         = { workspace = true }

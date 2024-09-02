@@ -1,6 +1,6 @@
 name: "\U0001F41E Bug report"
 title: '[Bug]: '
-labels: ['bug', 'needs-triage']
+labels: ['needs-triage', 'bug']
 description: Create a report to help us improve
 body:
   - type: markdown

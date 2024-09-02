@@ -19,9 +19,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Authenticate GitHub CLI
-        run: 
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
       - name: Convert Stale PR to Draft
         run: |
-          gh pr ready ${{ github.event.pull_request.number }} --undo 
+          gh pr ready ${{ github.event.pull_request.number }} --undo

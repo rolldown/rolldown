@@ -5,12 +5,15 @@ use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
+use crate::utils::expand_typeof_replacements;
+
 #[derive(Debug)]
 pub struct ReplaceOptions {
   pub values: HashMap</* Target */ String, /* Replacement */ String>,
   /// Default to `("\\b", "\\b(?!\\.)")`. To prevent `typeof window.document` from being replaced by config item `typeof window` => `"object"`.
   pub delimiters: (String, String),
   pub prevent_assignment: bool,
+  pub object_guards: bool,
 }
 
 impl Default for ReplaceOptions {
@@ -19,6 +22,7 @@ impl Default for ReplaceOptions {
       values: HashMap::default(),
       delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()),
       prevent_assignment: false,
+      object_guards: false,
     }
   }
 }
@@ -39,7 +43,12 @@ impl ReplacePlugin {
   }
 
   pub fn with_options(options: ReplaceOptions) -> Self {
-    let mut keys = options.values.keys().collect::<Vec<_>>();
+    let values = if options.object_guards {
+      expand_typeof_replacements(&options.values).into_iter().chain(options.values).collect()
+    } else {
+      options.values
+    };
+    let mut keys = values.keys().collect::<Vec<_>>();
     // Sort by length in descending order so that longer targets are matched first.
     keys.sort_by_key(|key| Reverse(key.len()));
 
@@ -57,7 +66,7 @@ impl ReplacePlugin {
         .build()
         .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
       prevent_assignment: options.prevent_assignment,
-      values: options.values.into_iter().collect(),
+      values: values.into_iter().collect(),
     }
   }
 

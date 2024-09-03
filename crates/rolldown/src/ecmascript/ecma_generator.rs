@@ -11,7 +11,9 @@ use rolldown_common::{
 use rolldown_error::DiagnosableResult;
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
-use rolldown_utils::rayon::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 

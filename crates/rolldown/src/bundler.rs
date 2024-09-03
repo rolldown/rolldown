@@ -30,9 +30,9 @@ pub struct Bundler {
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
-  pub(crate) last_module_table: ModuleTable,
-  pub(crate) last_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
-  pub(crate) last_index_ecma_ast: IndexEcmaAst,
+  pub(crate) previous_module_table: ModuleTable,
+  pub(crate) previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
+  pub(crate) pervious_index_ecma_ast: IndexEcmaAst,
 }
 
 impl Bundler {
@@ -134,9 +134,9 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-      std::mem::take(&mut self.last_module_id_to_modules),
-      std::mem::take(&mut self.last_module_table),
-      std::mem::take(&mut self.last_index_ecma_ast),
+      std::mem::take(&mut self.previous_module_id_to_modules),
+      std::mem::take(&mut self.previous_module_table),
+      std::mem::take(&mut self.pervious_index_ecma_ast),
     )?;
 
     let output = match hmr_module_loader.fetch_changed_modules(changed_files).await? {
@@ -147,9 +147,9 @@ impl Bundler {
     };
 
     // store last build modules info
-    self.last_module_table = output.module_table;
-    self.last_module_id_to_modules = output.module_id_to_modules;
-    self.last_index_ecma_ast = output.index_ecma_ast;
+    self.previous_module_table = output.module_table;
+    self.previous_module_id_to_modules = output.module_id_to_modules;
+    self.pervious_index_ecma_ast = output.index_ecma_ast;
 
     Ok(HmrOutput { warnings: output.warnings, errors: vec![] })
   }
@@ -198,9 +198,9 @@ impl Bundler {
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
     // store last build modules info
-    self.last_module_table = link_stage_output.module_table;
-    self.last_module_id_to_modules = link_stage_output.module_id_to_modules;
-    self.last_index_ecma_ast = link_stage_output.ast_table;
+    self.previous_module_table = link_stage_output.module_table;
+    self.previous_module_id_to_modules = link_stage_output.module_id_to_modules;
+    self.pervious_index_ecma_ast = link_stage_output.ast_table;
 
     Ok(output)
   }

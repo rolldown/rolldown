@@ -43,9 +43,9 @@ impl BundlerBuilder {
       options,
       fs: OsFileSystem,
       _log_guard: maybe_guard,
-      last_module_table: ModuleTable::default(),
-      last_module_id_to_modules: FxHashMap::default(),
-      last_index_ecma_ast: IndexVec::default(),
+      previous_module_table: ModuleTable::default(),
+      previous_module_id_to_modules: FxHashMap::default(),
+      pervious_index_ecma_ast: IndexVec::default(),
     }
   }
 

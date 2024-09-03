@@ -27,9 +27,9 @@ pub struct HmrIntermediateNormalModules {
 }
 
 impl HmrIntermediateNormalModules {
-  pub fn new(last_module_table: ModuleTable, index_ecma_ast: IndexEcmaAst) -> Self {
+  pub fn new(previous_module_table: ModuleTable, index_ecma_ast: IndexEcmaAst) -> Self {
     Self {
-      modules: last_module_table.modules.into_iter().map(Some).collect::<IndexVec<_, _>>(),
+      modules: previous_module_table.modules.into_iter().map(Some).collect::<IndexVec<_, _>>(),
       index_ecma_ast,
     }
   }
@@ -66,9 +66,9 @@ impl HmrModuleLoader {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-    last_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
-    last_module_table: ModuleTable,
-    last_index_ecma_ast: IndexEcmaAst,
+    previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
+    previous_module_table: ModuleTable,
+    pervious_index_ecma_ast: IndexEcmaAst,
   ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -99,14 +99,14 @@ impl HmrModuleLoader {
     });
 
     let intermediate_normal_modules =
-      HmrIntermediateNormalModules::new(last_module_table, last_index_ecma_ast);
+      HmrIntermediateNormalModules::new(previous_module_table, pervious_index_ecma_ast);
     let symbols = Symbols::default();
 
     Ok(Self {
       shared_context: common_data,
       rx,
       options,
-      visited: last_module_id_to_modules,
+      visited: previous_module_id_to_modules,
       remaining: 0,
       intermediate_normal_modules,
       symbols,

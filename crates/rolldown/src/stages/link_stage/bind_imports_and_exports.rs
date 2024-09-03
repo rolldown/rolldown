@@ -6,10 +6,12 @@ use rolldown_common::{
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{
-  IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge,
-  ParallelIterator,
+  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
 };
+
 use rustc_hash::FxHashMap;
 
 use crate::{

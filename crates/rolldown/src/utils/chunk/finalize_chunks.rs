@@ -7,7 +7,9 @@ use rolldown_common::{AssetIdx, InstantiationKind, ModuleId};
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
-  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+  rayon::{
+    IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+  },
   xxhash::xxhash_base64_url,
 };
 use rustc_hash::FxHashMap;
@@ -123,7 +125,7 @@ pub fn finalize_assets(
   let index_asset_to_filename: IndexVec<AssetIdx, String> =
     assets.iter().map(|asset| asset.filename.clone()).collect::<Vec<_>>().into();
 
-  assets.iter_mut().par_bridge().for_each(|asset| {
+  assets.par_iter_mut().for_each(|asset| {
     if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
       let chunk = &chunk_graph.chunk_table[asset.origin_chunk];
       ecma_meta.rendered_chunk.imports = chunk

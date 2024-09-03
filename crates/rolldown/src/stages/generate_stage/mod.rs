@@ -11,7 +11,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
-  rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
   sanitize_file_name::sanitize_file_name,
 };
 use sugar_path::SugarPath;
@@ -61,13 +61,12 @@ impl<'a> GenerateStage<'a> {
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
-    chunk_graph.chunk_table.iter_mut().par_bridge().for_each(|chunk| {
+    chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
       deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
     });
 
-    let ast_table_iter = self.link_output.ast_table.iter_mut();
+    let ast_table_iter = self.link_output.ast_table.par_iter_mut();
     ast_table_iter
-      .par_bridge()
       .filter(|(_ast, owner)| {
         self.link_output.module_table.modules[*owner].as_ecma().map_or(false, |m| m.is_included)
       })

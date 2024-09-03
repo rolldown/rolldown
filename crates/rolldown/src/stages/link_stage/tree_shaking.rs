@@ -6,7 +6,7 @@ use rolldown_common::{
   EcmaModule, IndexModules, Module, ModuleIdx, ModuleType, StmtInfoIdx, SymbolOrMemberExprRef,
   SymbolRef,
 };
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;
 
 use super::LinkStage;
@@ -169,14 +169,12 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
-    self.module_table.modules.iter_mut().par_bridge().filter_map(Module::as_ecma_mut).for_each(
-      |module| {
-        module.is_included = is_module_included_vec[module.idx];
-        is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-          module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
-        });
-      },
-    );
+    self.module_table.modules.par_iter_mut().filter_map(Module::as_ecma_mut).for_each(|module| {
+      module.is_included = is_module_included_vec[module.idx];
+      is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
+        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+      });
+    });
 
     tracing::trace!(
       "included statements {:#?}",

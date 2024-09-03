@@ -65,8 +65,11 @@ export function bindingifyRenderChunk(
         return { code: ret }
       }
 
-      if (!ret.map) {
-        return { code: ret.code }
+      if (ret.map === undefined) {
+        return {
+          code: ret.code,
+          map: { inner: { missing: true, pluginName: plugin.name } },
+        }
       }
 
       return {

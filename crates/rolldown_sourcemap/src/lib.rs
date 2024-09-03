@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, Source, SourceMapSource};
 pub use oxc::sourcemap::SourceMapBuilder;
@@ -8,6 +10,17 @@ pub use lines_count::lines_count;
 mod concat_sourcemap;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
+
+#[derive(Debug)]
+pub struct MissingSourceMap {
+  pub plugin_name: Option<Arc<str>>,
+}
+
+#[derive(Debug)]
+pub enum SourceMapOrMissing {
+  Missing(MissingSourceMap),
+  SourceMap(SourceMap),
+}
 
 #[allow(clippy::from_iter_instead_of_collect, clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {

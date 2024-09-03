@@ -238,7 +238,10 @@ export function bindingifyTransform(
 
       return {
         code: ret.code,
-        map: bindingifySourcemap(ret.map),
+        map:
+          ret.map === undefined
+            ? { inner: { missing: true, pluginName: plugin.name } }
+            : bindingifySourcemap(ret.map),
         sideEffects: bindingifySideEffects(ret.moduleSideEffects),
         moduleType: ret.moduleType,
       }
@@ -273,8 +276,15 @@ export function bindingifyLoad(
         return
       }
 
-      if (typeof ret === 'string') {
-        return { code: ret }
+      if (typeof ret === 'string' || ret.map === null) {
+        return { code: typeof ret === 'string' ? ret : ret.code }
+      }
+
+      if (!ret.map) {
+        return {
+          code: ret.code,
+          map: { inner: { missing: true, pluginName: plugin.name } },
+        }
       }
 
       if (!ret.map) {

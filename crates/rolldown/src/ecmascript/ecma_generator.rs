@@ -35,11 +35,9 @@ impl Generator for EcmaGenerator {
       .copied()
       .zip(module_id_to_codegen_ret)
       .filter_map(|(id, codegen_ret)| {
-        if let Some(m) = ctx.link_output.module_table.modules[id].as_ecma() {
-          Some((m, codegen_ret.expect("should have codegen_ret")))
-        } else {
-          None
-        }
+        ctx.link_output.module_table.modules[id]
+          .as_ecma()
+          .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
       })
       .map(|(m, codegen_ret)| {
         (m.idx, m.id.clone(), render_ecma_module(m, ctx.options, codegen_ret))

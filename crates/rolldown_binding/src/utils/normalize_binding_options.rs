@@ -1,5 +1,8 @@
-use crate::options::binding_inject_import::normalize_binding_inject_import;
 use crate::options::ChunkFileNamesOutputOption;
+use crate::{
+  options::binding_inject_import::normalize_binding_inject_import,
+  types::js_callback::JsCallbackExt,
+};
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
@@ -48,8 +51,12 @@ fn normalize_chunk_file_names_option(
     .map(move |value| match value {
       Either::A(str) => Ok(ChunkFilenamesOutputOption::String(str)),
       Either::B(func) => {
-        let func =
-          func.borrow_back(&env)?.build_threadsafe_function().callee_handled::<false>().build()?;
+        let func = func
+          .borrow_back(&env)?
+          .build_threadsafe_function()
+          .callee_handled::<false>()
+          .weak::<true>()
+          .build()?;
         Ok(ChunkFilenamesOutputOption::Fn(Box::new(move |chunk| {
           let func = func.clone();
           let chunk = chunk.clone();
@@ -80,7 +87,7 @@ pub fn normalize_binding_options(
       let ts_fn = ts_fn.clone();
       Box::pin(async move {
         ts_fn
-          .call_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved))
+          .invoke_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved))
           .await
           .map_err(anyhow::Error::from)
       })
@@ -93,7 +100,7 @@ pub fn normalize_binding_options(
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
-        ts_fn.call_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
+        ts_fn.invoke_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
       })
     }))
   });
@@ -104,7 +111,7 @@ pub fn normalize_binding_options(
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
-        ts_fn.call_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
+        ts_fn.invoke_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
       })
     }))
   });

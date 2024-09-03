@@ -44,5 +44,6 @@
     "temp": true,
     "tmp": true
   },
-  "editor.wordWrap": "on"
+  "editor.wordWrap": "on",
+  "rust-analyzer.procMacro.ignored": { "napi-derive": ["napi"] }
 }

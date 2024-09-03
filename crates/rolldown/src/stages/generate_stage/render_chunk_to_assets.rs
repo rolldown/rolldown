@@ -220,8 +220,6 @@ impl<'a> GenerateStage<'a> {
   ) -> Vec<Vec<Option<oxc::codegen::CodegenReturn>>> {
     let chunk_to_codegen_ret = chunk_graph
       .chunk_table
-      .raw
-      // TODO: don't use `.raw` when `oxc_index` support rayon related trait
       .par_iter()
       .map(|item| {
         item

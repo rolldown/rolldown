@@ -14,14 +14,13 @@ jobs:
     if: github.event_name == 'pull_request_target' && github.event.label.name == 'stale'
     permissions:
       pull-requests: write
+      contents: write
     steps:
-      - uses: actions/github-script@v7
-        name: 'Convert Stale PR to Draft'
-        with:
-          script: |
-            github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: ${{ github.event.pull_request.number }},
-              state: 'draft',
-            });
+      - uses: actions/checkout@v4
+
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Convert Stale PR to Draft
+        run: |
+          gh pr ready ${{ github.event.pull_request.number }} --undo

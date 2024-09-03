@@ -10,11 +10,13 @@
         "import": "./b.js"
       }
     ],
-    "advancedChunks": [
-      {
-        "filter": ".js",
-        "name": "common"
-      }
-    ]
+    "advancedChunks": {
+      "groups": [
+        {
+          "test": ".js",
+          "name": "common"
+        }
+      ]
+    }
   }
 }

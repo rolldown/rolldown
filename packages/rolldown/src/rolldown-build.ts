@@ -45,6 +45,10 @@ export class RolldownBuild {
     await stopWorkers?.()
     await bundler.close()
   }
+
+  async experimental_hmr_rebuild(changedFiles: string[]): Promise<void> {
+    await this.#bundler!.hmrRebuild(changedFiles)
+  }
 }
 
 function _assert() {

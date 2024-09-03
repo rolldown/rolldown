@@ -71,7 +71,16 @@ export declare class Bundler {
   generate(): Promise<BindingOutputs>
   scan(): Promise<void>
   close(): Promise<void>
-  watch(): Promise<BindingWatcher>
+  hmrRebuild(changedFiles: Array<string>): Promise<void>
+}
+
+/**
+ * The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.
+ * TODO find a way to export it gracefully.
+ */
+export declare class FinalBindingOutputs {
+  get chunks(): Array<BindingOutputChunk>
+  get assets(): Array<BindingOutputAsset>
 }
 
 export declare class ParallelJsPluginRegistry {

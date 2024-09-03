@@ -94,6 +94,12 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
+  pub async fn hmr_rebuild(&self, changed_files: Vec<String>) -> napi::Result<()> {
+    self.hmr_rebuild_impl(changed_files).await
+  }
+
+  #[napi]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> napi::Result<()> {
     self.close_impl().await
   }

@@ -1,6 +1,5 @@
 use oxc::codegen::CodegenReturn;
 use rolldown_common::{EcmaModule, NormalizedBundlerOptions};
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
 pub fn render_ecma_module(

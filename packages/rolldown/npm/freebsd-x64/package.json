@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-freebsd-x64",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "cpu": [
     "x64"
   ],

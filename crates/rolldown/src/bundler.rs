@@ -120,6 +120,11 @@ impl Bundler {
     Ok(Ok(scan_stage_output))
   }
 
+  #[allow(clippy::unused_async)]
+  pub async fn hmr_rebuild(&mut self, _changed_files: Vec<String>) -> Result<()> {
+    unimplemented!()
+  }
+
   async fn try_build(&mut self) -> Result<DiagnosableResult<LinkStageOutput>> {
     let build_info = match self.scan().await? {
       Ok(scan_stage_output) => scan_stage_output,

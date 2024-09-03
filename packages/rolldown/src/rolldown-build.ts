@@ -41,8 +41,16 @@ export class RolldownBuild {
     return transformToRollupOutput(output)
   }
 
+<<<<<<< HEAD
   async close(): Promise<void> {
     const bundler = await this.#getBundler({})
+=======
+  async experimental_hmr_rebuild(changedFiles: string[]): Promise<void> {
+    await this.#bundler!.hmrRebuild(changedFiles)
+  }
+
+  async destroy(): Promise<void> {
+>>>>>>> a6a9ca8d (feat: add hmr_rebuild api (#2137))
     await this.#stopWorkers?.()
     await bundler.close()
   }

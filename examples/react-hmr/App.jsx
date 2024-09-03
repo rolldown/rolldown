@@ -1,10 +1,4 @@
 import { useState } from 'react'
-import Button from 'jsx-entry'
-import Dummy from './components/Dummy?qs-should-not-break-plugin-react'
-import Parent from './hmr/parent'
-import { JsxImportRuntime } from './hmr/jsx-import-runtime'
-import { CountProvider } from './context/CountProvider'
-import { ContextButton } from './context/ContextButton'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -21,9 +15,6 @@ function App() {
           </button>
         </p>
         <p>
-          <ContextButton />
-        </p>
-        <p>
           Edit <code>App.jsx</code> and save to test HMR updates.
         </p>
         <a
@@ -35,21 +26,8 @@ function App() {
           Learn React
         </a>
       </header>
-
-      <Dummy />
-      <Parent />
-      <JsxImportRuntime />
-      <Button>button</Button>
     </div>
   )
 }
 
-function AppWithProviders() {
-  return (
-    <CountProvider>
-      <App />
-    </CountProvider>
-  )
-}
-
-export default AppWithProviders
+export default App

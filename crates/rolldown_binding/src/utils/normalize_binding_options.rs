@@ -51,8 +51,12 @@ fn normalize_chunk_file_names_option(
     .map(move |value| match value {
       Either::A(str) => Ok(ChunkFilenamesOutputOption::String(str)),
       Either::B(func) => {
-        let func =
-          func.borrow_back(&env)?.build_threadsafe_function().callee_handled::<false>().build()?;
+        let func = func
+          .borrow_back(&env)?
+          .build_threadsafe_function()
+          .callee_handled::<false>()
+          .weak::<true>()
+          .build()?;
         Ok(ChunkFilenamesOutputOption::Fn(Box::new(move |chunk| {
           let func = func.clone();
           let chunk = chunk.clone();

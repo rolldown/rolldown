@@ -6,12 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.mjs
 
 ```js
-import { require_foo } from "./foo~1.mjs";
+import { require_foo } from "./foo2.mjs";
 
 export default require_foo();
 
 ```
-## foo~1.mjs
+## foo2.mjs
 
 ```js
 
@@ -27,7 +27,7 @@ export { __toESM, require_foo };
 ## main.mjs
 
 ```js
-import { __toESM, require_foo } from "./foo~1.mjs";
+import { __toESM, require_foo } from "./foo2.mjs";
 import { default as assert } from "node:assert";
 
 //#region main.js

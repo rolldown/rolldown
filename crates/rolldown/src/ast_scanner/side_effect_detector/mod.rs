@@ -1,6 +1,7 @@
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
   BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
+  VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -292,23 +293,29 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_var_decl(&mut self, var_decl: &ast::VariableDeclaration) -> bool {
-    var_decl.declarations.iter().any(|declarator| {
-      // Whether to destructure import.meta
-      if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
-        if !obj_pat.properties.is_empty() {
-          if let Some(Expression::MetaProperty(_)) = declarator.init {
-            return true;
+    match var_decl.kind {
+      VariableDeclarationKind::AwaitUsing => true,
+      VariableDeclarationKind::Using => {
+        self.detect_side_effect_of_using_declarators(&var_decl.declarations)
+      }
+      _ => var_decl.declarations.iter().any(|declarator| {
+        // Whether to destructure import.meta
+        if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
+          if !obj_pat.properties.is_empty() {
+            if let Some(Expression::MetaProperty(_)) = declarator.init {
+              return true;
+            }
           }
         }
-      }
-      let is_destructuring = matches!(
-        declarator.id.kind,
-        BindingPatternKind::ArrayPattern(_) | BindingPatternKind::ObjectPattern(_)
-      );
+        let is_destructuring = matches!(
+          declarator.id.kind,
+          BindingPatternKind::ArrayPattern(_) | BindingPatternKind::ObjectPattern(_)
+        );
 
-      is_destructuring
-        || declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
-    })
+        is_destructuring
+          || declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+      }),
+    }
   }
 
   fn detect_side_effect_of_decl(&mut self, decl: &ast::Declaration) -> bool {
@@ -317,9 +324,6 @@ impl<'a> SideEffectDetector<'a> {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => false,
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
-      Declaration::UsingDeclaration(decl) => {
-        decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
-      }
       Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)

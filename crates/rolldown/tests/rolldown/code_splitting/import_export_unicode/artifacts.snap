@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.mjs
 
 ```js
-import { devil } from "./foo~1.mjs";
+import { devil } from "./foo2.mjs";
 
 export { devil as '😈' };
 ```
-## foo~1.mjs
+## foo2.mjs
 
 ```js
 
@@ -23,7 +23,7 @@ export { devil };
 ## main.mjs
 
 ```js
-import { devil } from "./foo~1.mjs";
+import { devil } from "./foo2.mjs";
 
 //#region main.js
 const moduleFoo = import("./foo.mjs");

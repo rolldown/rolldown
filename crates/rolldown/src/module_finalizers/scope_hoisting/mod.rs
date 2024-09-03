@@ -206,9 +206,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Function declaration itself as a whole will be hoisted, so we don't need to convert it to an assignment.
         None
       }
-      ast::Declaration::UsingDeclaration(_) => {
-        todo!("`using` declaration is not supported yet")
-      }
       _ => unreachable!("TypeScript code should be preprocessed"),
     }
   }

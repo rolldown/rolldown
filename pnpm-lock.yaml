@@ -39,8 +39,8 @@ importers:
         specifier: ^4.1.5
         version: 4.1.5
       oxlint:
-        specifier: 0.9.1
-        version: 0.9.1
+        specifier: 0.9.2
+        version: 0.9.2
       prettier:
         specifier: ^3.3.1
         version: 3.3.3
@@ -67,7 +67,7 @@ importers:
         version: 1.3.4(@algolia/client-search@4.24.0)(@types/node@22.5.2)(change-case@5.4.4)(postcss@8.4.41)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.31.6)(typescript@5.5.4)
       vitepress-plugin-group-icons:
         specifier: ^1.0.0
-        version: 1.0.4
+        version: 1.1.0
 
   examples/basic-typescript:
     devDependencies:
@@ -2345,43 +2345,43 @@ packages:
   '@octokit/types@13.5.0':
     resolution: {integrity: sha512-HdqWTf5Z3qwDVlzCrP8UJquMwunpDiMPt5er+QjGzL4hqr/vBVY/MauQgS1xWxCDT1oMx1EULyqxncdCY/NVSQ==}
 
-  '@oxlint/darwin-arm64@0.9.1':
-    resolution: {integrity: sha512-SzYTggt2eJqMhemijEv9AszSdc8Vv1OBQbmAZpDNPHmwlDzPKEopSrDURwt/Jq56FYsJC/jhzBzrJLXSK55i1A==}
+  '@oxlint/darwin-arm64@0.9.2':
+    resolution: {integrity: sha512-1h1LiwGRGhFlvVoXx+VfUr9ucOuUaFkglQYP57VlU35vtnc4k0fOklrwbrq25ynGeZhVyKY1Prq5Fq8Yham0pg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@oxlint/darwin-x64@0.9.1':
-    resolution: {integrity: sha512-IDgjpNdtt2XkEcWDIhFyZCkIIonqlBQf3jQ2L1voGQxQFwjl+cP9+hdpFp/m89qGO708MULeegCH+MGq28xWbg==}
+  '@oxlint/darwin-x64@0.9.2':
+    resolution: {integrity: sha512-KSkmX9uIf2D68wPe0VOhWwYSW1vkrbICOkDxw4Jg6+C8A9yNbWVSfpFI1poi1ldIv5I+HTgyRfhnCZbL5N6SiQ==}
     cpu: [x64]
     os: [darwin]
 
-  '@oxlint/linux-arm64-gnu@0.9.1':
-    resolution: {integrity: sha512-kEGN/CNdUB11So4c3OpTIJi0YvPgu5i9gvUcWX+CxEkeACRPj8dq7/Rm1FgfIqky6oYY5QjXDioZ+yKt+Xw1rQ==}
+  '@oxlint/linux-arm64-gnu@0.9.2':
+    resolution: {integrity: sha512-nNMpUDx/0TV/GZuclsKgzj7s2dB8BnrOJINtMYr4ZSY7buYAtBVFhr0nnQQYW1bmKFHg/XwsuBudBFOXXWOy9g==}
     cpu: [arm64]
     os: [linux]
 
-  '@oxlint/linux-arm64-musl@0.9.1':
-    resolution: {integrity: sha512-US5UVB7JDwNuQa2+RZyWzEtgjEOA9wAvwUy8oUmgqomo02cpCrZo3wOQAvAckE5KxJCskr7T6pGW9eA8y3IhsQ==}
+  '@oxlint/linux-arm64-musl@0.9.2':
+    resolution: {integrity: sha512-qgi60ytLBmk+rEnTRgWnYqsxZQ4WxG1q9DQAZhV6+rB++ungJAaHtsh44cAnukywl79iDvmOxBUAt/t0WgxJcg==}
     cpu: [arm64]
     os: [linux]
 
-  '@oxlint/linux-x64-gnu@0.9.1':
-    resolution: {integrity: sha512-w2Sz/WevEa6FxDjwwg9xbmpebDmLXO9YCvUUs5K4emKhzh05xEwuXrD2kJuQUdFapiHHQUMTQ5/iBF0NOPb9Uw==}
+  '@oxlint/linux-x64-gnu@0.9.2':
+    resolution: {integrity: sha512-l0WfE4II/azZeL8zbg6OESPdTbBqCnwxg/Ohys4U8+z7Env2X8c36N1AP5GMbrHrnWjAdmKR/lZSjM9A8Hbqmg==}
     cpu: [x64]
     os: [linux]
 
-  '@oxlint/linux-x64-musl@0.9.1':
-    resolution: {integrity: sha512-hSukTLTn+wKyJUbR3934bOmWNoDaJv4yJwumE6QqBQZWoFNyd3seiYJLPWD+7aMJx6nOnot8uqjnvYO1QZsccA==}
+  '@oxlint/linux-x64-musl@0.9.2':
+    resolution: {integrity: sha512-XnEPOjKQnuPcYzTU6xExI6XTPQILUzDovQrt96CUdEZen9lZoizk1yv9cmI+sj36QeUrwBo1f7PnV7hkz0hcNQ==}
     cpu: [x64]
     os: [linux]
 
-  '@oxlint/win32-arm64@0.9.1':
-    resolution: {integrity: sha512-9Y7RuvnulhZyxLdsDrGRaojxytzcBTGHpl7AxED41G/IXGPOs+dE1q2NFyHWB6Gfzi/MJZ6plXYIOKx/e/3t/g==}
+  '@oxlint/win32-arm64@0.9.2':
+    resolution: {integrity: sha512-uiWf8L9zDVNG9No/B+toYs11L7VNJhsv8DbrV4cuvqPvPlq2ArxqLdrxfKEofyZBeFQOHB/Q5r+McMx8dXuR8Q==}
     cpu: [arm64]
     os: [win32]
 
-  '@oxlint/win32-x64@0.9.1':
-    resolution: {integrity: sha512-51wrzMDGFyCYZbhSczU9VS7EYe1N0tNlDfdne6VCKgpPPJX0+XLZHybgUFZNYVyf7/W5t1/gpyOTFErVYRP0pw==}
+  '@oxlint/win32-x64@0.9.2':
+    resolution: {integrity: sha512-tzi+gN0ca+2jGK+NNTJNJp3AnWdddAqezeOhOVahN6sNc5DcwlA/F9q5zYwkB977u4PIZyfDMyUxuUKsxQg40Q==}
     cpu: [x64]
     os: [win32]
 
@@ -4652,8 +4652,8 @@ packages:
     resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
     engines: {node: '>=0.10.0'}
 
-  oxlint@0.9.1:
-    resolution: {integrity: sha512-77v9YVkaVOWguxUttiJ31yfWkG/Yo7kIzY0CrKHxM6p0xiUqN0LVF4IVgjcE6vevyd9bBVphtOgJOJUq4To/+w==}
+  oxlint@0.9.2:
+    resolution: {integrity: sha512-8PhwvI6PBG2HYx37znUmbWMT22Z8z67BBoqnv8EgzqUHPXdItK+NtwR80qqNVTm0vPyw8g2X5K19ZyS++WdFSg==}
     engines: {node: '>=14.*'}
     hasBin: true
 
@@ -5658,8 +5658,8 @@ packages:
       terser:
         optional: true
 
-  vitepress-plugin-group-icons@1.0.4:
-    resolution: {integrity: sha512-edzTG3mmvow7GUIebQt2hSDpa+Tfbtz35JL5d64Hg3M4g+f6chDtLwf+07zni5+mF69gvgHGVpLYIeEtBKIzIQ==}
+  vitepress-plugin-group-icons@1.1.0:
+    resolution: {integrity: sha512-hKf/imrMxa63kAXJlztsb8l6DZYBNZiVSZpJ15rNTeqAL1Hhbuf/DC87Q2r4b/mGKHUusEOI5ogt/jrJ8JoeUw==}
 
   vitepress@1.3.4:
     resolution: {integrity: sha512-I1/F6OW1xl3kW4PaIMC6snxjWgf3qfziq2aqsDoFc/Gt41WbcRv++z8zjw8qGRIJ+I4bUW7ZcKFDHHN/jkH9DQ==}
@@ -7733,28 +7733,28 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 22.2.0
 
-  '@oxlint/darwin-arm64@0.9.1':
+  '@oxlint/darwin-arm64@0.9.2':
     optional: true
 
-  '@oxlint/darwin-x64@0.9.1':
+  '@oxlint/darwin-x64@0.9.2':
     optional: true
 
-  '@oxlint/linux-arm64-gnu@0.9.1':
+  '@oxlint/linux-arm64-gnu@0.9.2':
     optional: true
 
-  '@oxlint/linux-arm64-musl@0.9.1':
+  '@oxlint/linux-arm64-musl@0.9.2':
     optional: true
 
-  '@oxlint/linux-x64-gnu@0.9.1':
+  '@oxlint/linux-x64-gnu@0.9.2':
     optional: true
 
-  '@oxlint/linux-x64-musl@0.9.1':
+  '@oxlint/linux-x64-musl@0.9.2':
     optional: true
 
-  '@oxlint/win32-arm64@0.9.1':
+  '@oxlint/win32-arm64@0.9.2':
     optional: true
 
-  '@oxlint/win32-x64@0.9.1':
+  '@oxlint/win32-x64@0.9.2':
     optional: true
 
   '@parcel/watcher-android-arm64@2.4.1':
@@ -10316,16 +10316,16 @@ snapshots:
 
   os-tmpdir@1.0.2: {}
 
-  oxlint@0.9.1:
+  oxlint@0.9.2:
     optionalDependencies:
-      '@oxlint/darwin-arm64': 0.9.1
-      '@oxlint/darwin-x64': 0.9.1
-      '@oxlint/linux-arm64-gnu': 0.9.1
-      '@oxlint/linux-arm64-musl': 0.9.1
-      '@oxlint/linux-x64-gnu': 0.9.1
-      '@oxlint/linux-x64-musl': 0.9.1
-      '@oxlint/win32-arm64': 0.9.1
-      '@oxlint/win32-x64': 0.9.1
+      '@oxlint/darwin-arm64': 0.9.2
+      '@oxlint/darwin-x64': 0.9.2
+      '@oxlint/linux-arm64-gnu': 0.9.2
+      '@oxlint/linux-arm64-musl': 0.9.2
+      '@oxlint/linux-x64-gnu': 0.9.2
+      '@oxlint/linux-x64-musl': 0.9.2
+      '@oxlint/win32-arm64': 0.9.2
+      '@oxlint/win32-x64': 0.9.2
 
   p-defer@1.0.0: {}
 
@@ -11320,9 +11320,10 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.31.6
 
-  vitepress-plugin-group-icons@1.0.4:
+  vitepress-plugin-group-icons@1.1.0:
     dependencies:
       '@iconify-json/logos': 1.2.0
+      '@iconify-json/vscode-icons': 1.2.0
       '@iconify/utils': 2.1.32
     transitivePeerDependencies:
       - supports-color

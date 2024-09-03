@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.mjs
 
 ```js
-import { import_sub, main } from "./main~1.mjs";
+import { import_sub, main } from "./main2.mjs";
 
 var sub = import_sub.sub;
 export { main, sub };
@@ -14,12 +14,12 @@ export { main, sub };
 ## main.mjs
 
 ```js
-import { import_sub, main } from "./main~1.mjs";
+import { import_sub, main } from "./main2.mjs";
 
 var sub = import_sub.sub;
 export { main, sub };
 ```
-## main~1.mjs
+## main2.mjs
 
 ```js
 

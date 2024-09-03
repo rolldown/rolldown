@@ -14,12 +14,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.mjs
 
 ```js
-import { require_a } from "./a~1.mjs";
+import { require_a } from "./a2.mjs";
 
 export default require_a();
 
 ```
-## a~1.mjs
+## a2.mjs
 
 ```js
 
@@ -43,7 +43,7 @@ export { require_a, require_b };
 ## b.mjs
 
 ```js
-import { require_b } from "./a~1.mjs";
+import { require_b } from "./a2.mjs";
 
 export default require_b();
 

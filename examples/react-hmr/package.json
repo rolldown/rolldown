@@ -1,0 +1,17 @@
+{
+  "name": "@vitejs/test-react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown --config ./rolldown.config.js"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "7.24.8",
+    "@rollup/plugin-babel": "6.0.4",
+    "babel": "6.23.0"
+  }
+}

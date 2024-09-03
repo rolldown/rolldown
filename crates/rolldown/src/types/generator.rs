@@ -13,7 +13,7 @@ pub struct GenerateContext<'a> {
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub warnings: Vec<BuildDiagnostic>,
-  pub moduleid_to_codegen_ret: Vec<Option<CodegenReturn>>,
+  pub module_id_to_codegen_ret: Vec<Option<CodegenReturn>>,
 }
 
 pub struct GenerateOutput {

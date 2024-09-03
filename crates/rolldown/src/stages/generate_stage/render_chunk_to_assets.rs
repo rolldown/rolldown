@@ -168,7 +168,7 @@ impl<'a> GenerateStage<'a> {
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
     try_join_all(
       chunk_graph.chunk_table.iter_enumerated().zip(chunk_index_to_codegen_rets.into_iter()).map(
-        |((chunk_idx, chunk), moduleid_to_codegen_ret)| async move {
+        |((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
           let mut ctx = GenerateContext {
             chunk_idx,
             chunk,
@@ -177,7 +177,7 @@ impl<'a> GenerateStage<'a> {
             chunk_graph,
             plugin_driver: self.plugin_driver,
             warnings: vec![],
-            moduleid_to_codegen_ret,
+            module_id_to_codegen_ret,
           };
           EcmaGenerator::instantiate_chunk(&mut ctx).await
         },

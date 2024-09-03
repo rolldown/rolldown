@@ -29,7 +29,7 @@ impl Generator for EcmaGenerator {
     ctx: &mut GenerateContext<'a>,
   ) -> Result<DiagnosableResult<GenerateOutput>> {
     let mut rendered_modules = FxHashMap::default();
-    let module_id_to_codegen_ret = std::mem::take(&mut ctx.moduleid_to_codegen_ret);
+    let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources = ctx
       .chunk
       .modules

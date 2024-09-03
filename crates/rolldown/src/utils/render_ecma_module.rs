@@ -1,14 +1,13 @@
+use oxc::codegen::CodegenReturn;
 use rolldown_common::{EcmaModule, NormalizedBundlerOptions};
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
 pub fn render_ecma_module(
   module: &EcmaModule,
-  ast: &EcmaAst,
-  source_name: &str,
   options: &NormalizedBundlerOptions,
+  render_output: CodegenReturn,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
-  if ast.is_body_empty() {
+  if render_output.source_text.is_empty() {
     None
   } else {
     let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send>> = vec![];
@@ -22,7 +21,6 @@ pub fn render_ecma_module(
     // Because oxc codegen sourcemap is last of sourcemap chain,
     // If here no extra sourcemap need remapping, we using it as final module sourcemap.
     // So here make sure using correct `source_name` and `source_content.
-    let render_output = EcmaCompiler::print(ast, source_name, enable_sourcemap);
 
     if enable_sourcemap {
       let sourcemap = if module.sourcemap_chain.is_empty() {

@@ -16,12 +16,12 @@ async function main() {
   if ('input' in cliOptions.input) {
     // If input is specified, we will bundle with the input options
     await bundleWithCliOptions(cliOptions)
-    process.exit(0)
+    return
   }
 
   if (cliOptions.version) {
     logger.log(`rolldown v${version}`)
-    process.exit(0)
+    return
   }
 
   showHelp()

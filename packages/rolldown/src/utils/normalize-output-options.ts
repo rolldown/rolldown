@@ -71,6 +71,10 @@ function getFormat(
       return 'iife'
     }
 
+    case 'app': {
+      return 'app'
+    }
+
     default:
       unimplemented(`output.format: ${format}`)
   }

@@ -90,7 +90,6 @@ export function bindingifyResolveId(
     return {}
   }
   const { handler, meta, options } = normalizeHook(hook)
-  console.log(options)
 
   return {
     plugin: async (ctx, specifier, importer, extraOptions) => {

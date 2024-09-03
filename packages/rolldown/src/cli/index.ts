@@ -10,7 +10,7 @@ async function main() {
 
   if (cliOptions.config) {
     await bundleWithConfig(cliOptions.config, cliOptions)
-    process.exit(0)
+    return
   }
 
   if ('input' in cliOptions.input) {

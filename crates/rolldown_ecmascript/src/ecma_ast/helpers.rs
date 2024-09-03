@@ -16,7 +16,8 @@ impl EcmaAst {
     program: &'_ Program<'ast>,
     ty: SourceType,
   ) -> Semantic<'ast> {
-    let semantic = SemanticBuilder::new(source, ty).build(program).semantic;
+    let semantic =
+      SemanticBuilder::new(source, ty).with_scope_tree_child_ids(true).build(program).semantic;
     semantic
   }
 

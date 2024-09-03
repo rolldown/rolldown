@@ -66,11 +66,46 @@ use rolldown_utils::debug::pretty_type_name;
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
 pub type JsCallback<Args, Ret> =
-  ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, false>;
+  ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, false, true>;
 
 /// Shortcut for `JsCallback<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<..., Ret>`.
-pub type MaybeAsyncJsCallback<Args, Ret> =
-  ThreadsafeFunction<Args, Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>, Args, false>;
+pub type MaybeAsyncJsCallback<Args, Ret> = ThreadsafeFunction<
+  Args,
+  Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>,
+  Args,
+  false,
+  true,
+>;
+
+pub trait JsCallbackExt<Args, Ret> {
+  fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
+}
+
+impl<Args, Ret> JsCallbackExt<Args, Ret> for JsCallback<Args, Ret>
+where
+  Args: 'static + Send + JsValuesTupleIntoVec,
+  Ret: 'static + Send + FromNapiValue,
+  napi::Either<Ret, UnknownReturnValue>: FromNapiValue,
+{
+  async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
+    match self.call_async(args).await? {
+      Either::A(ret) => Ok(ret),
+      Either::B(_unknown) => {
+        // TODO: should provide more information about the unknown return value
+        let js_type = "unknown";
+        let expected_rust_type = pretty_type_name::<Ret>();
+
+        Err(napi::Error::new(
+          napi::Status::InvalidArg,
+          format!(
+            "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
+            pretty_type_name::<Self>(),
+          ),
+        ))
+      }
+    }
+  }
+}
 
 pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
   /// Call Js function asynchronously in rust. If the Js function returns `Promise<T>`, it will unwrap/await the promise and return `T`.

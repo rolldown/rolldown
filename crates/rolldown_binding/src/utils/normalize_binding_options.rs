@@ -1,5 +1,8 @@
-use crate::options::binding_inject_import::normalize_binding_inject_import;
 use crate::options::ChunkFileNamesOutputOption;
+use crate::{
+  options::binding_inject_import::normalize_binding_inject_import,
+  types::js_callback::JsCallbackExt,
+};
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
@@ -80,7 +83,7 @@ pub fn normalize_binding_options(
       let ts_fn = ts_fn.clone();
       Box::pin(async move {
         ts_fn
-          .call_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved))
+          .invoke_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved))
           .await
           .map_err(anyhow::Error::from)
       })
@@ -93,7 +96,7 @@ pub fn normalize_binding_options(
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
-        ts_fn.call_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
+        ts_fn.invoke_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
       })
     }))
   });
@@ -104,7 +107,7 @@ pub fn normalize_binding_options(
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
-        ts_fn.call_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
+        ts_fn.invoke_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
       })
     }))
   });

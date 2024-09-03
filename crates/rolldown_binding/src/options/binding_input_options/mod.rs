@@ -2,10 +2,11 @@
 
 use std::collections::HashMap;
 
-use crate::types::{binding_log::BindingLog, binding_log_level::BindingLogLevel};
+use crate::types::{
+  binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
+};
 use binding_inject_import::BindingInjectImport;
 use derivative::Derivative;
-use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
@@ -37,9 +38,7 @@ pub struct BindingInputOptions {
   #[napi(
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
-  pub external: Option<
-    ThreadsafeFunction<(String, Option<String>, bool), bool, (String, Option<String>, bool), false>,
-  >,
+  pub external: Option<JsCallback<(String, Option<String>, bool), bool>>,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */
@@ -82,5 +81,4 @@ pub struct BindingInputOptions {
   pub inject: Option<Vec<BindingInjectImport>>,
 }
 
-pub type BindingOnLog =
-  Option<ThreadsafeFunction<(String, BindingLog), (), (String, BindingLog), false>>;
+pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

@@ -1,1 +1,1 @@
-const foo = console.assert
+const foo = String

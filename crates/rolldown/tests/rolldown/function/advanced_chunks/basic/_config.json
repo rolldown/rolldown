@@ -13,7 +13,7 @@
     "advancedChunks": {
       "groups": [
         {
-          "test": ".js",
+          "test": "[ab]\\.js",
           "name": "common"
         }
       ]

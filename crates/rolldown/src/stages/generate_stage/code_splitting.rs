@@ -313,9 +313,13 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
+      if module_to_assigned[normal_module.idx] {
+        continue;
+      }
+
       for match_group in match_groups.iter().copied() {
         let is_matched =
-          match_group.test.as_ref().map_or(true, |test| normal_module.id.contains(test));
+          match_group.test.as_ref().map_or(true, |test| test.matches(&normal_module.id));
 
         if !is_matched {
           continue;
@@ -327,6 +331,8 @@ impl<'a> GenerateStage<'a> {
           .entry(group_name.clone())
           .or_insert_with(|| ModuleGroup { modules: Vec::new() });
         module_group.modules.push(normal_module.idx);
+        // Include the module's dependencies recursively to the group.
+        break;
       }
     }
 

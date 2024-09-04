@@ -8,4 +8,7 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  moduleTypes: {
+    ".vue": "js"
+  }
 })

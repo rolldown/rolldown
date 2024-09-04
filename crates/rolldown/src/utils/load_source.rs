@@ -35,11 +35,10 @@ pub async fn load_source(
       let guessed = loader_from_file_extension(&resolved_id.id, &options.module_types);
       match (source, guessed) {
         (None, None) => {
-          let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
-          Ok((
-            StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?),
-            ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
-          ))
+          // - Unknown module type,
+          // - No loader to load corresponding module
+          // - User don't specify moduleTypeMapping, we treated it as JS
+          Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), ModuleType::Js))
         }
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
@@ -62,7 +61,7 @@ pub async fn load_source(
             StrOrBytes::Str(
               source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,
             ),
-            guessed,
+            ModuleType::Js,
           )),
         },
         (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
@@ -78,6 +77,7 @@ fn loader_from_file_extension<S: AsRef<str>>(
   module_types: &FxHashMap<String, ModuleType>,
 ) -> Option<ModuleType> {
   let id = id.as_ref();
+  dbg!(&id);
   for i in memchr::memchr_iter(b'.', id.as_bytes()) {
     if let Some(ty) = module_types.get(&id[i + 1..]) {
       return Some(ty.clone());

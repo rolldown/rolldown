@@ -1,3 +1,3 @@
-import { createApp } from 'vue'
+import test from './index.vue'
 
-export default createApp({})
+console.log(`test: `, test)

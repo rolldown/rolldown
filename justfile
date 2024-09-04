@@ -109,11 +109,11 @@ fix: fix-rust fix-repo
 
 fix-rust:
     just fmt-rust
-    cargo fix --allow-dirty
+    cargo fix --allow-dirty --allow-staged
     cargo shear --fix
 
 fix-repo:
-    pnpm lint-code --fix
+    pnpm lint-code -- --fix
     just fmt-repo
 
 # Support `just build [native|wasi] [debug|release]`

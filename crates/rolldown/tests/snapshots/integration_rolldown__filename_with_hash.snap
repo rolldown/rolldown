@@ -1414,6 +1414,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-QSRhG9S4.mjs
 
+# tests/rolldown/dce/defined_expr_in_paren_expr
+
+- main-!~{000}~.mjs => main-HB-iqb-W.mjs
+
 # tests/rolldown/errors/ambiguous_external_namespace
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs

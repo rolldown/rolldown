@@ -92,7 +92,12 @@ pub fn pre_process_ecma_ast(
     }
 
     // Perform dead code elimination.
-    let options = CompressOptions::dead_code_elimination();
+    let options = CompressOptions {
+      fold_constants: true,
+      remove_dead_code: true,
+      remove_syntax: true,
+      ..CompressOptions::all_false()
+    };
     let compressor = Compressor::new(allocator, options);
     if ast_changed {
       // This method recreates symbols and scopes.

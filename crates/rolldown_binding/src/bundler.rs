@@ -157,8 +157,13 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let _ = bundler_core.hmr_rebuild(changed_files).await;
+    let output = bundler_core.hmr_rebuild(changed_files).await?;
 
+    if !output.errors.is_empty() {
+      return Err(self.handle_errors(output.errors));
+    }
+
+    self.handle_warnings(output.warnings).await;
     Ok(())
   }
 

@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use rolldown_common::FileEmitter;
+use oxc::index::IndexVec;
+use rolldown_common::{FileEmitter, ModuleTable};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
+use rustc_hash::FxHashMap;
 
 use crate::{
   utils::{
@@ -41,6 +43,9 @@ impl BundlerBuilder {
       options,
       fs: OsFileSystem,
       _log_guard: maybe_guard,
+      previous_module_table: ModuleTable::default(),
+      previous_module_id_to_modules: FxHashMap::default(),
+      pervious_index_ecma_ast: IndexVec::default(),
     }
   }
 

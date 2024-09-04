@@ -1,6 +1,11 @@
 import { BindingStringOrRegex } from '../binding.d'
 import { isRegExp } from 'node:util/types'
 
+/*
+ * Normalize single or multiple string or regex patterns to an array of BindingStringOrRegex
+ * convert a type that is dx friendly to a type that is friendly for binding usage
+ *
+ * */
 export function normalizedStringOrRegex(
   pattern?: Array<string | RegExp> | (string | RegExp),
 ): BindingStringOrRegex[] | undefined {

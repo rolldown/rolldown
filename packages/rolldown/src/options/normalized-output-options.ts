@@ -6,7 +6,7 @@ import type { OutputOptions } from './output-options'
 import type { RolldownPlugin } from '../plugin'
 import type { PreRenderedChunk, RenderedChunk } from '../binding'
 
-export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd'
+export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'app' | 'umd'
 
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 type ChunkFileNamesOption =

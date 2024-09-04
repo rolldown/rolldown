@@ -37,6 +37,8 @@ export function bindingifyOutputOptions(
           return 'iife'
         case 'umd':
           return 'umd'
+        case 'app':
+          return 'app'
       }
     })(),
     exports,

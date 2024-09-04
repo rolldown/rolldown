@@ -74,6 +74,10 @@ function getFormat(
       return 'iife'
     }
 
+    case 'app': {
+      return 'app'
+    }
+
     case 'umd': {
       return 'umd'
     }

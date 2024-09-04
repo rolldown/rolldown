@@ -4,10 +4,10 @@ use oxc::{
     visit::walk,
     Visit,
   },
-  codegen::{self, CodeGenerator, Gen},
   span::{GetSpan, Span},
 };
 use rolldown_common::ImportKind;
+use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -23,9 +23,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
-        let mut codegen = CodeGenerator::new();
-        stmt.gen(&mut codegen, codegen::Context::default());
-        self.current_stmt_info.debug_label = Some(codegen.into_source_text());
+        self.current_stmt_info.debug_label = Some(stmt.to_source_string());
       }
 
       self.visit_statement(stmt);

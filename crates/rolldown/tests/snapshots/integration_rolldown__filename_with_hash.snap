@@ -1414,6 +1414,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-QSRhG9S4.mjs
 
+# tests/rolldown/dce/defined_expr_in_paren_expr
+
+- main-!~{000}~.mjs => main-HB-iqb-W.mjs
+
 # tests/rolldown/errors/ambiguous_external_namespace
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
@@ -1456,10 +1460,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/advanced_chunks/basic
 
-- a-!~{000}~.mjs => a-A_gsbJjW.mjs
-- b-!~{001}~.mjs => b-tp82H2Rv.mjs
-- common-!~{004}~.mjs => common-2bOggOQV.mjs
-- common-!~{002}~.mjs => common-OdNJRAZl.mjs
+- a-!~{000}~.mjs => a-tW-iNKZc.mjs
+- b-!~{001}~.mjs => b--_DvZU4q.mjs
+- common-!~{002}~.mjs => common-FR5ObYUG.mjs
 
 # tests/rolldown/function/define/node_env
 

@@ -286,10 +286,11 @@ impl<'a> GenerateStage<'a> {
         let symbol = symbols.get_mut(declared);
         debug_assert!(
           symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
-          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
+          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}", 
           symbol.name,
           declared,
           self.link_output.module_table.modules[declared.owner].id(),
+          symbol.chunk_id,
         );
         symbol.chunk_id = Some(chunk_id);
       }

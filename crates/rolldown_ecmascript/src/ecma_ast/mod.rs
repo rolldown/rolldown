@@ -7,8 +7,10 @@ use oxc::{allocator::Allocator, ast::ast::Program, span::SourceType};
 
 use self::program_cell::ProgramCell;
 
+mod gen;
 mod helpers;
 pub mod program_cell;
+pub use gen::ToSourceString;
 
 /// - To access `&mut ast::Program`, use `ast.program.with_mut(|fields| { fields.program; })`.
 

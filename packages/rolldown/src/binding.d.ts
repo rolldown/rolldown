@@ -274,7 +274,7 @@ export interface BindingOutputOptions {
   extend?: boolean
   externalLiveBindings?: boolean
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'es' | 'cjs' | 'iife'
+  format?: 'es' | 'cjs' | 'iife' | 'app'
   globals?: Record<string, string>
   inlineDynamicImports?: boolean
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>

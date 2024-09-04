@@ -15,6 +15,7 @@ use crate::ast_scanner::side_effect_detector::utils::{
 use self::utils::{known_primitive_type, PrimitiveType};
 
 mod annotation;
+mod global;
 mod utils;
 
 // Probably we should generate this using macros.
@@ -132,7 +133,7 @@ impl<'a> SideEffectDetector<'a> {
     if !self.scope.is_unresolved(ref_id) {
       return true;
     }
-    match chains.as_slice() {
+    match &chains[..] {
       [a, b] => !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(a.as_str(), b.as_str())),
       [a, b, c] => !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(a.as_str(), b.as_str(), c.as_str())),
       _ => true,

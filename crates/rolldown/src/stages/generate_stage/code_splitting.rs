@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
 
 use crate::chunk_graph::ChunkGraph;
 use arcstr::ArcStr;
@@ -67,6 +67,8 @@ impl<'a> GenerateStage<'a> {
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
       oxc::index::index_vec![false; self.link_output.module_table.modules.len()];
 
+    self.apply_advanced_chunks(&module_to_bits, &mut module_to_assigned, &mut chunk_graph);
+
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
@@ -77,6 +79,7 @@ impl<'a> GenerateStage<'a> {
       if module_to_assigned[normal_module.idx] {
         continue;
       }
+
       module_to_assigned[normal_module.idx] = true;
 
       let bits = &module_to_bits[normal_module.idx];
@@ -84,26 +87,6 @@ impl<'a> GenerateStage<'a> {
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
       );
-
-      let mut manual_chunk_by_name = FxHashMap::default();
-
-      if let Some(manual_chunks) = &self.options.advanced_chunks {
-        if let Some(matched) = (manual_chunks)(&normal_module.id).await? {
-          let chunk_name = ArcStr::from(matched.name);
-          if let Some(chunk_idx) = manual_chunk_by_name.get(&chunk_name).copied() {
-            let chunk: &mut Chunk = &mut chunk_graph.chunk_table[chunk_idx];
-            chunk.bits.union(bits);
-            chunk_graph.add_module_to_chunk(normal_module.idx, chunk_idx);
-          } else {
-            let chunk =
-              Chunk::new(Some(chunk_name.clone()), bits.clone(), vec![], ChunkKind::Common);
-            let chunk_id = chunk_graph.add_chunk(chunk);
-            chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
-            manual_chunk_by_name.insert(chunk_name, chunk_id);
-          }
-          continue;
-        }
-      }
 
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
@@ -292,6 +275,78 @@ impl<'a> GenerateStage<'a> {
             }
           }
         };
+      });
+    });
+  }
+
+  fn apply_advanced_chunks(
+    &mut self,
+    module_to_bits: &IndexVec<ModuleIdx, BitSet>,
+    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+    chunk_graph: &mut ChunkGraph,
+  ) {
+    // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
+    struct ModuleGroup {
+      modules: Vec<ModuleIdx>,
+    }
+    let Some(chunking_options) = &self.options.advanced_chunks else {
+      return;
+    };
+
+    let Some(mut match_groups) =
+      chunking_options.groups.as_ref().map(|inner| inner.iter().collect::<Vec<_>>())
+    else {
+      return;
+    };
+
+    if match_groups.is_empty() {
+      return;
+    }
+
+    // Higher priority group goes first.
+    match_groups.sort_by_key(|group| Reverse(group.priority));
+
+    let mut name_to_module_group: FxHashMap<ArcStr, ModuleGroup> = FxHashMap::default();
+
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
+      if !normal_module.is_included {
+        continue;
+      }
+
+      for match_group in match_groups.iter().copied() {
+        let is_matched =
+          match_group.test.as_ref().map_or(true, |test| normal_module.id.contains(test));
+
+        if !is_matched {
+          continue;
+        }
+
+        let group_name = ArcStr::from(&match_group.name);
+
+        let module_group = name_to_module_group
+          .entry(group_name.clone())
+          .or_insert_with(|| ModuleGroup { modules: Vec::new() });
+        module_group.modules.push(normal_module.idx);
+      }
+    }
+
+    name_to_module_group.into_iter().for_each(|(group_name, module_group)| {
+      if module_group.modules.is_empty() {
+        return;
+      }
+      let chunk = Chunk::new(
+        Some(group_name),
+        module_to_bits[module_group.modules[0]].clone(),
+        vec![],
+        ChunkKind::Common,
+      );
+
+      let chunk_idx = chunk_graph.add_chunk(chunk);
+
+      module_group.modules.iter().for_each(|module_idx| {
+        chunk_graph.chunk_table[chunk_idx].bits.union(&module_to_bits[*module_idx]);
+        chunk_graph.add_module_to_chunk(*module_idx, chunk_idx);
+        module_to_assigned[*module_idx] = true;
       });
     });
   }

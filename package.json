@@ -52,11 +52,10 @@
     "arrowParens": "always"
   },
   "lint-staged": {
-    "*.rs": "rustfmt --edition 2021",
     "*.toml": "pnpx @taplo/cli format",
     "*.{js,ts,json,md,yml,yaml,vue}": [
-      "pnpm lint-prettier:fix",
-      "pnpm lint-code --fix"
+      "prettier --write",
+      "pnpm lint-code -- --fix"
     ]
   }
 }

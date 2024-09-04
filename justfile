@@ -113,7 +113,7 @@ fix-rust:
     cargo shear --fix
 
 fix-repo:
-    pnpm lint-code --fix
+    pnpm lint-code -- --fix
     just fmt-repo
 
 # Support `just build [native|wasi] [debug|release]`

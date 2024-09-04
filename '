@@ -4,6 +4,7 @@ use oxc::{
     visit::walk,
     Visit,
   },
+  codegen::{self, CodeGenerator, Gen},
   span::{GetSpan, Span},
 };
 use rolldown_common::ImportKind;

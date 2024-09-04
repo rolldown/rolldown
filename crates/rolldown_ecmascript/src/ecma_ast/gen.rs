@@ -1,6 +1,5 @@
 use oxc::codegen::{self, CodeGenerator, Gen};
 
-/// Only used for debugging.
 pub trait ToSourceString {
   fn to_source_string(&self) -> String;
 }

@@ -1464,6 +1464,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b--_DvZU4q.mjs
 - common-!~{002}~.mjs => common-FR5ObYUG.mjs
 
+# tests/rolldown/function/advanced_chunks/split_node_modules
+
+- main-!~{000}~.mjs => main-M6jfBy0m.mjs
+- other-libs-!~{003}~.mjs => other-libs-U1jz6W1o.mjs
+- ui-!~{001}~.mjs => ui-a1Jazfmy.mjs
+
 # tests/rolldown/function/define/node_env
 
 - main-!~{000}~.mjs => main-zmFhpGWu.mjs

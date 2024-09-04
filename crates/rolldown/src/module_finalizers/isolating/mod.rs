@@ -9,12 +9,14 @@ use rustc_hash::FxHashSet;
 
 mod impl_visit_mut;
 
+#[allow(dead_code)]
 pub struct IsolatingModuleFinalizerContext<'me> {
   pub module: &'me NormalModule,
   pub modules: &'me IndexModules,
   pub symbol_db: &'me SymbolRefDb,
 }
 
+#[allow(dead_code)]
 pub struct IsolatingModuleFinalizer<'me, 'ast> {
   pub ctx: &'me IsolatingModuleFinalizerContext<'me>,
   pub scope: &'me AstScopes,

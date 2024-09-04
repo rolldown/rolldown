@@ -1,8 +1,22 @@
-use oxc::ast::VisitMut;
+use oxc::ast::{ast, visit::walk_mut, VisitMut};
+
+use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::IsolatingModuleFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
+  fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
+    if expr.is_global_require_call(self.scope) {
+      if let Some(ast::Argument::StringLiteral(request)) = expr.arguments.first_mut() {
+        let rec_id = self.ctx.module.imports[&expr.span];
+        let resolved_module = self.ctx.module.import_records[rec_id].resolved_module;
+        request.value = self.snippet.atom(self.ctx.modules[resolved_module].stable_id());
+      }
+    }
+
+    walk_mut::walk_call_expression(self, expr);
+  }
+
   // fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
   //   let original_body = program.body.take_in(self.alloc);
 

@@ -100,7 +100,7 @@ impl<'a> GenerateStage<'a> {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {
               alloc,
-              // scope: &module.scope,
+              scope: &module.scope,
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.modules,

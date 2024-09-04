@@ -6,12 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cube.mjs
 
 ```js
+rolldown_runtime.define('square.js',function(require, module, exports){
+
 //#region square.js
 export default function square(x) {
 	return x * x;
 }
 
 //#endregion
+});
+rolldown_runtime.define('cube.js',function(require, module, exports){
+
 //#region cube.js
 import square from "./square.js";
 export default function cube(x) {
@@ -19,10 +24,13 @@ export default function cube(x) {
 }
 
 //#endregion
+});
 ```
 ## main.mjs
 
 ```js
+rolldown_runtime.define('hyper-cube.js',function(require, module, exports){
+
 //#region hyper-cube.js
 import cube from "./cube.js";
 export default function hyperCube(x) {
@@ -30,18 +38,27 @@ export default function hyperCube(x) {
 }
 
 //#endregion
+});
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 import hyperCube from "./hyper-cube.js";
 console.log(hyperCube(5));
 
 //#endregion
+});
+rolldown_runtime.run('main.js');
 ```
 ## other-entry.mjs
 
 ```js
+rolldown_runtime.define('other-entry.js',function(require, module, exports){
+
 //#region other-entry.js
 import cube from "./cube.js";
 console.log(cube(5));
 
 //#endregion
+});
+rolldown_runtime.run('other-entry.js');
 ```

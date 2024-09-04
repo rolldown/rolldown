@@ -1619,9 +1619,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- main-!~{000}~.mjs => main-uX480VUe.mjs
-- other-entry-!~{001}~.mjs => other-entry-rTdGOMZR.mjs
-- cube-!~{002}~.mjs => cube-loSBOAvt.mjs
+- main-!~{000}~.mjs => main-lE-CsZar.mjs
+- other-entry-!~{001}~.mjs => other-entry-cL10WWA7.mjs
+- cube-!~{002}~.mjs => cube-ql8lOQly.mjs
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

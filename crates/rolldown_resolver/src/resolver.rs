@@ -157,26 +157,19 @@ impl<F: FileSystem + Default> Resolver<F> {
     };
     let resolution = if let Some(importer) = importer {
       let context = importer.parent().expect("Should have a parent dir");
-      selected_resolver.resolve(context, specifier)
+
+      if context.to_str().map_or(true, str::is_empty) {
+        self.resolve_with_cwd(selected_resolver, specifier)
+      } else {
+        selected_resolver.resolve(context, specifier)
+      }
     } else {
       // If the importer is `None`, it means that the specifier is provided by the user in `input`. In this case, we can't call `resolver.resolve` with
       // `{ context: cwd, specifier: specifier }` due to rollup's default resolve behavior. For specifier `main`, rollup will try to resolve it as
       // `{ context: cwd, specifier: cwd.join(main) }`, which will resolve to `<cwd>/main.{js,mjs}`. To align with this behavior, we should also
       // concat the CWD with the specifier.
       // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
-      let joined_specifier = self.cwd.join(specifier).normalize();
-
-      let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
-
-      let resolution = selected_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
-      if resolution.is_ok() {
-        resolution
-      } else if !is_path_like {
-        // If the specifier is not path-like, we should try to resolve it as a bare specifier. This allows us to resolve modules from node_modules.
-        selected_resolver.resolve(&self.cwd, specifier)
-      } else {
-        resolution
-      }
+      self.resolve_with_cwd(selected_resolver, specifier)
     };
 
     match resolution {
@@ -190,6 +183,26 @@ impl<F: FileSystem + Default> Resolver<F> {
         )))
       }
       Err(err) => Ok(Err(err)),
+    }
+  }
+
+  fn resolve_with_cwd(
+    &self,
+    selected_resolver: &ResolverGeneric<F>,
+    specifier: &str,
+  ) -> Result<Resolution, ResolveError> {
+    let joined_specifier = self.cwd.join(specifier).normalize();
+
+    let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
+
+    let resolution = selected_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
+    if resolution.is_ok() {
+      resolution
+    } else if !is_path_like {
+      // If the specifier is not path-like, we should try to resolve it as a bare specifier. This allows us to resolve modules from node_modules.
+      selected_resolver.resolve(&self.cwd, specifier)
+    } else {
+      resolution
     }
   }
 

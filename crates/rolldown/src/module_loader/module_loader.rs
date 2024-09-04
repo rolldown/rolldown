@@ -62,6 +62,7 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
+  pub module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub index_ecma_ast: IndexEcmaAst,
   pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
@@ -344,6 +345,7 @@ impl ModuleLoader {
 
     Ok(Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
+      module_id_to_modules: self.visited,
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       entry_points,

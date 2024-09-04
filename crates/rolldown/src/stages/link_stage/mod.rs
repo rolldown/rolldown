@@ -1,6 +1,7 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use append_only_vec::AppendOnlyVec;
+use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
@@ -12,7 +13,7 @@ use rolldown_utils::{
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   runtime::RuntimeModuleBrief,
@@ -34,6 +35,7 @@ mod wrapping;
 #[derive(Debug)]
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
+  pub module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub entries: Vec<EntryPoint>,
   pub ast_table: IndexEcmaAst,
   // pub sorted_modules: Vec<NormalModuleId>,
@@ -48,6 +50,7 @@ pub struct LinkStageOutput {
 #[derive(Debug)]
 pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
+  pub module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub entries: Vec<EntryPoint>,
   pub symbols: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
@@ -89,6 +92,7 @@ impl<'a> LinkStage<'a> {
         })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
+      module_id_to_modules: scan_stage_output.module_id_to_modules,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
@@ -116,6 +120,7 @@ impl<'a> LinkStage<'a> {
 
     LinkStageOutput {
       module_table: self.module_table,
+      module_id_to_modules: self.module_id_to_modules,
       entries: self.entries,
       // sorted_modules: self.sorted_modules,
       metas: self.metas,

@@ -10,7 +10,7 @@ use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 
 use rolldown_common::NormalizedBundlerOptions;
-use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rolldown_ecmascript::{EcmaAst, ToSourceString, WithMutFields};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -77,11 +77,12 @@ pub fn pre_process_ecma_ast(
 
   ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
     // Use built-in define plugin.
-    if let Some(replace_global_define_config) = replace_global_define_config {
-      ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone()).build(program);
-      ast_changed = true;
-    }
+    // if let Some(replace_global_define_config) = replace_global_define_config {
+    //   ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone()).build(program);
+    //   ast_changed = true;
+    // }
 
+    println!("{}", program.to_source_string());
     if !bundle_options.inject.is_empty() {
       InjectGlobalVariables::new(
         allocator,
@@ -92,7 +93,12 @@ pub fn pre_process_ecma_ast(
     }
 
     // Perform dead code elimination.
-    let options = CompressOptions::dead_code_elimination();
+    let options = CompressOptions {
+      fold_constants: true,
+      remove_dead_code: true,
+      remove_syntax: true,
+      ..CompressOptions::all_false()
+    };
     let compressor = Compressor::new(allocator, options);
     if ast_changed {
       // This method recreates symbols and scopes.
@@ -100,6 +106,7 @@ pub fn pre_process_ecma_ast(
     } else {
       compressor.build_with_symbols_and_scopes(symbols, scopes, program);
     }
+    println!("{}", program.to_source_string());
 
     Ok(())
   })?;

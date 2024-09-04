@@ -1,4 +1,5 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
-
-console.log(hyperCube(5));
+if (!!('production' === 'production')) {
+  console.log('production')
+} else {
+  console.log('development')
+}

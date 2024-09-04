@@ -32,7 +32,7 @@ pub async fn load_source(
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (source, None) => {
-      let guessed = loader_from_file_extension(&resolved_id.id, &options.module_types);
+      let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
       match (source, guessed) {
         (None, None) => {
           // - Unknown module type,
@@ -61,7 +61,7 @@ pub async fn load_source(
             StrOrBytes::Str(
               source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,
             ),
-            ModuleType::Js,
+            guessed,
           )),
         },
         (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
@@ -72,12 +72,11 @@ pub async fn load_source(
 }
 
 /// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183
-fn loader_from_file_extension<S: AsRef<str>>(
+fn get_module_loader_from_file_extension<S: AsRef<str>>(
   id: S,
   module_types: &FxHashMap<String, ModuleType>,
 ) -> Option<ModuleType> {
   let id = id.as_ref();
-  dbg!(&id);
   for i in memchr::memchr_iter(b'.', id.as_bytes()) {
     if let Some(ty) = module_types.get(&id[i + 1..]) {
       return Some(ty.clone());

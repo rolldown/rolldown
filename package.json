@@ -52,14 +52,8 @@
     "arrowParens": "always"
   },
   "lint-staged": {
-    "*.rs": [
-      "cargo fix --allow-dirty --allow-staged",
-      "cargo fmt --all -- --emit=files"
-    ],
-    "Cargo.toml": [
-      "cargo shear --fix",
-      "taplo fmt"
-    ],
+    "*.rs": "rustfmt --edition 2021",
+    "*.toml": "pnpx @taplo/cli format",
     "*.{js,ts,json,md,yml,yaml,vue}": [
       "pnpm lint-prettier:fix",
       "pnpm lint-code --fix"

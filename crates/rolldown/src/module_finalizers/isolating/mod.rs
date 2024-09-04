@@ -11,12 +11,14 @@ use crate::types::symbols::Symbols;
 
 mod impl_visit_mut;
 
+#[allow(dead_code)]
 pub struct IsolatingModuleFinalizerContext<'me> {
   pub module: &'me EcmaModule,
   pub modules: &'me IndexModules,
   pub symbols: &'me Symbols,
 }
 
+#[allow(dead_code)]
 pub struct IsolatingModuleFinalizer<'me, 'ast> {
   pub ctx: &'me IsolatingModuleFinalizerContext<'me>,
   pub scope: &'me AstScopes,

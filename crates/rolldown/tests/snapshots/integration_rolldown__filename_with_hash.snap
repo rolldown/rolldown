@@ -1674,9 +1674,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
+<<<<<<< HEAD
 - main-!~{000}~.mjs => main-OEIxNKs9.mjs
 - other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
 - cube-!~{002}~.mjs => cube-r9ltmWJC.mjs
+=======
+- main-!~{000}~.mjs => main-uX480VUe.mjs
+- other-entry-!~{001}~.mjs => other-entry-rTdGOMZR.mjs
+- cube-!~{002}~.mjs => cube-loSBOAvt.mjs
+>>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

@@ -1,4 +1,4 @@
-use std::cmp::{Ordering, Reverse};
+use std::cmp::Ordering;
 
 use crate::chunk_graph::ChunkGraph;
 use arcstr::ArcStr;
@@ -7,7 +7,7 @@ use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
 use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::GenerateStage;
 
@@ -287,13 +287,31 @@ impl<'a> GenerateStage<'a> {
   ) {
     // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
     struct ModuleGroup {
-      modules: Vec<ModuleIdx>,
+      name: ArcStr,
+      match_group_index: usize,
+      modules: FxHashSet<ModuleIdx>,
+      priority: u32,
     }
+
+    oxc::index::define_index_type! {
+      pub struct ModuleGroupIdx = u32;
+    }
+
+    impl ModuleGroup {
+      pub fn add_module(&mut self, module_idx: ModuleIdx) {
+        self.modules.insert(module_idx);
+      }
+
+      pub fn remove_module(&mut self, module_idx: ModuleIdx) {
+        self.modules.remove(&module_idx);
+      }
+    }
+
     let Some(chunking_options) = &self.options.advanced_chunks else {
       return;
     };
 
-    let Some(mut match_groups) =
+    let Some(match_groups) =
       chunking_options.groups.as_ref().map(|inner| inner.iter().collect::<Vec<_>>())
     else {
       return;
@@ -303,10 +321,8 @@ impl<'a> GenerateStage<'a> {
       return;
     }
 
-    // Higher priority group goes first.
-    match_groups.sort_by_key(|group| Reverse(group.priority));
-
-    let mut name_to_module_group: FxHashMap<ArcStr, ModuleGroup> = FxHashMap::default();
+    let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
+    let mut name_to_module_group: FxHashMap<ArcStr, ModuleGroupIdx> = FxHashMap::default();
 
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
       if !normal_module.is_included {
@@ -317,7 +333,7 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
-      for match_group in match_groups.iter().copied() {
+      for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
         let is_matched =
           match_group.test.as_ref().map_or(true, |test| test.matches(&normal_module.id));
 
@@ -327,33 +343,49 @@ impl<'a> GenerateStage<'a> {
 
         let group_name = ArcStr::from(&match_group.name);
 
-        let module_group = name_to_module_group
-          .entry(group_name.clone())
-          .or_insert_with(|| ModuleGroup { modules: Vec::new() });
-        module_group.modules.push(normal_module.idx);
-        // Include the module's dependencies recursively to the group.
-        break;
+        let module_group_idx =
+          name_to_module_group.entry(group_name.clone()).or_insert_with(|| {
+            index_module_groups.push(ModuleGroup {
+              modules: FxHashSet::default(),
+              match_group_index,
+              priority: match_group.priority.unwrap_or(0),
+              name: group_name.clone(),
+            })
+          });
+
+        index_module_groups[*module_group_idx].add_module(normal_module.idx);
       }
     }
 
-    name_to_module_group.into_iter().for_each(|(group_name, module_group)| {
-      if module_group.modules.is_empty() {
-        return;
+    let mut module_groups = index_module_groups.raw;
+    module_groups.sort_unstable_by_key(|item| item.match_group_index);
+    module_groups.sort_by_key(|item| item.priority);
+    module_groups.reverse();
+    // These two sort ensure higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
+
+    while let Some(this_module_group) = module_groups.pop() {
+      if this_module_group.modules.is_empty() {
+        continue;
       }
+
       let chunk = Chunk::new(
-        Some(group_name),
-        module_to_bits[module_group.modules[0]].clone(),
+        Some(this_module_group.name.clone()),
+        module_to_bits[this_module_group.modules.iter().next().copied().expect("must have one")]
+          .clone(),
         vec![],
         ChunkKind::Common,
       );
 
       let chunk_idx = chunk_graph.add_chunk(chunk);
 
-      module_group.modules.iter().for_each(|module_idx| {
-        chunk_graph.chunk_table[chunk_idx].bits.union(&module_to_bits[*module_idx]);
-        chunk_graph.add_module_to_chunk(*module_idx, chunk_idx);
-        module_to_assigned[*module_idx] = true;
+      this_module_group.modules.iter().copied().for_each(|module_idx| {
+        module_groups.iter_mut().for_each(|group| {
+          group.remove_module(module_idx);
+        });
+        chunk_graph.chunk_table[chunk_idx].bits.union(&module_to_bits[module_idx]);
+        chunk_graph.add_module_to_chunk(module_idx, chunk_idx);
+        module_to_assigned[module_idx] = true;
       });
-    });
+    }
   }
 }

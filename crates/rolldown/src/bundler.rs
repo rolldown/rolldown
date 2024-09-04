@@ -6,17 +6,21 @@ use super::stages::{
 };
 use crate::{
   bundler_builder::BundlerBuilder,
+  module_loader::hmr_module_loader::HmrModuleLoader,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
-  types::bundle_output::BundleOutput,
+  type_alias::IndexEcmaAst,
+  types::{bundle_output::BundleOutput, hmr_output::HmrOutput},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
-use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
+use arcstr::ArcStr;
+use rolldown_common::{ModuleIdx, ModuleTable, NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
+use rustc_hash::FxHashMap;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -27,6 +31,9 @@ pub struct Bundler {
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
+  pub(crate) previous_module_table: ModuleTable,
+  pub(crate) previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
+  pub(crate) pervious_index_ecma_ast: IndexEcmaAst,
 }
 
 impl Bundler {
@@ -136,8 +143,30 @@ impl Bundler {
   }
 
   #[allow(clippy::unused_async)]
-  pub async fn hmr_rebuild(&mut self, _changed_files: Vec<String>) -> Result<()> {
-    unimplemented!()
+  pub async fn hmr_rebuild(&mut self, changed_files: Vec<String>) -> Result<HmrOutput> {
+    let hmr_module_loader = HmrModuleLoader::new(
+      Arc::clone(&self.options),
+      Arc::clone(&self.plugin_driver),
+      self.fs,
+      Arc::clone(&self.resolver),
+      std::mem::take(&mut self.previous_module_id_to_modules),
+      std::mem::take(&mut self.previous_module_table),
+      std::mem::take(&mut self.pervious_index_ecma_ast),
+    )?;
+
+    let output = match hmr_module_loader.fetch_changed_modules(changed_files).await? {
+      Ok(output) => output,
+      Err(errors) => {
+        return Ok(HmrOutput { warnings: vec![], errors });
+      }
+    };
+
+    // store last build modules info
+    self.previous_module_table = output.module_table;
+    self.previous_module_id_to_modules = output.module_id_to_modules;
+    self.pervious_index_ecma_ast = output.index_ecma_ast;
+
+    Ok(HmrOutput { warnings: output.warnings, errors: vec![] })
   }
 
   async fn try_build(&mut self) -> Result<DiagnosableResult<LinkStageOutput>> {
@@ -188,6 +217,11 @@ impl Bundler {
     self.file_emitter.add_additional_files(&mut output.assets);
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
+
+    // store last build modules info
+    self.previous_module_table = link_stage_output.module_table;
+    self.previous_module_id_to_modules = link_stage_output.module_id_to_modules;
+    self.pervious_index_ecma_ast = link_stage_output.ast_table;
 
     Ok(output)
   }

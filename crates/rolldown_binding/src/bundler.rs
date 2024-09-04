@@ -158,6 +158,16 @@ impl Bundler {
     Ok(FinalBindingOutputs::new(outputs.assets))
   }
 
+  pub async fn hmr_rebuild_impl(&self, changed_files: Vec<String>) -> napi::Result<()> {
+    let mut bundler_core = self.inner.try_lock().map_err(|_| {
+      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
+    })?;
+
+    let _ = bundler_core.hmr_rebuild(changed_files).await;
+
+    Ok(())
+  }
+
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
     result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }

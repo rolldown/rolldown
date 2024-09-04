@@ -753,4 +753,12 @@ mod test {
     assert!(get_statements_side_effect("let a = Object.prototype.two"));
     assert!(get_statements_side_effect("let a = Reflect.something"));
   }
+
+  #[test]
+  fn test_object_expression() {
+    assert!(!get_statements_side_effect("const of = { [1]: 'hi'}"));
+    assert!(!get_statements_side_effect("const of = { [-1]: 'hi'}"));
+    assert!(!get_statements_side_effect("const of = { [+1]: 'hi'}"));
+    assert!(get_statements_side_effect("const of = { [{}]: 'hi'}"));
+  }
 }

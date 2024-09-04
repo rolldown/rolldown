@@ -52,7 +52,6 @@
     "arrowParens": "always"
   },
   "lint-staged": {
-    "*.toml": "pnpx @taplo/cli format",
     "*.{js,ts,json,md,yml,yaml,vue}": [
       "prettier --write",
       "pnpm lint-code -- --fix"

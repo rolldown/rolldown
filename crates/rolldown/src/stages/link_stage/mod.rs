@@ -110,6 +110,7 @@ impl<'a> LinkStage<'a> {
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
     self.include_statements();
+    self.patch_module_dependencies();
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
@@ -494,6 +495,48 @@ impl<'a> LinkStage<'a> {
         };
         ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
       }
+    });
+  }
+
+  fn patch_module_dependencies(&mut self) {
+    self.metas.iter_mut_enumerated().for_each(|(module_idx, meta)| {
+      // Symbols from runtime are referenced by bundler not import statements.
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+        let canonical_ref = self.symbols.par_canonical_ref_for(*symbol_ref);
+        meta.dependencies.push(canonical_ref.owner);
+      });
+
+      let Module::Ecma(module) = &self.module_table.modules[module_idx] else {
+        return;
+      };
+
+      module.stmt_infos.iter().for_each(|stmt_info| {
+        if !stmt_info.is_included {
+          return;
+        }
+
+        // We need this step to include the runtime module, if there are symbols of it.
+        // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
+        stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+          match reference_ref {
+            rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
+              let canonical_ref = self.symbols.par_canonical_ref_for(*sym_ref);
+              meta.dependencies.push(canonical_ref.owner);
+            }
+            rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+              if let Some(sym_ref) =
+                member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs)
+              {
+                let canonical_ref = self.symbols.par_canonical_ref_for(sym_ref);
+                meta.dependencies.push(canonical_ref.owner);
+              } else {
+                // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+              }
+            }
+          };
+        });
+      });
     });
   }
 }

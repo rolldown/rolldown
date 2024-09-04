@@ -236,47 +236,6 @@ impl<'a> GenerateStage<'a> {
     meta.dependencies.iter().copied().for_each(|dep_idx| {
       self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
     });
-
-    // Symbols from runtime are referenced by bundler not import statements.
-    meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-      let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
-      self.determine_reachable_modules_for_entry(canonical_ref.owner, entry_index, module_to_bits);
-    });
-
-    module.stmt_infos.iter().for_each(|stmt_info| {
-      if !stmt_info.is_included {
-        return;
-      }
-
-      // We need this step to include the runtime module, if there are symbols of it.
-      // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
-      stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-        match reference_ref {
-          rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
-            let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*sym_ref);
-            self.determine_reachable_modules_for_entry(
-              canonical_ref.owner,
-              entry_index,
-              module_to_bits,
-            );
-          }
-          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-            if let Some(sym_ref) = member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs)
-            {
-              let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
-              self.determine_reachable_modules_for_entry(
-                canonical_ref.owner,
-                entry_index,
-                module_to_bits,
-              );
-            } else {
-              // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-              // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
-            }
-          }
-        };
-      });
-    });
   }
 
   fn apply_advanced_chunks(

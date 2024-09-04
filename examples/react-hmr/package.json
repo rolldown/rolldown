@@ -11,7 +11,9 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-modules-commonjs": "7.24.8",
+    "@babel/preset-react": "7.24.7",
     "@rollup/plugin-babel": "6.0.4",
-    "babel": "6.23.0"
+    "babel": "6.23.0",
+    "@vitejs/plugin-react": "4.3.1"
   }
 }

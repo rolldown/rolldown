@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cube.mjs
 
 ```js
+rolldown_runtime.define('square.js',function(require, module, exports){
+
 //#region square.js
 __toCommonJS(exports);
 __export(exports, { default: () => square });
@@ -14,6 +16,9 @@ function square(x) {
 };
 
 //#endregion
+});
+rolldown_runtime.define('cube.js',function(require, module, exports){
+
 //#region cube.js
 <<<<<<< HEAD
 __toCommonJS(exports);
@@ -30,10 +35,13 @@ export default function cube(x) {
 >>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
 
 //#endregion
+});
 ```
 ## main.mjs
 
 ```js
+rolldown_runtime.define('hyper-cube.js',function(require, module, exports){
+
 //#region hyper-cube.js
 <<<<<<< HEAD
 __toCommonJS(exports);
@@ -55,16 +63,23 @@ export default function hyperCube(x) {
 }
 
 //#endregion
+});
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 import hyperCube from "./hyper-cube.js";
 console.log(hyperCube(5));
 >>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
 
 //#endregion
+});
+rolldown_runtime.run('main.js');
 ```
 ## other-entry.mjs
 
 ```js
+rolldown_runtime.define('other-entry.js',function(require, module, exports){
+
 //#region other-entry.js
 <<<<<<< HEAD
 __toCommonJS(exports);
@@ -76,4 +91,6 @@ console.log(cube(5));
 >>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
 
 //#endregion
+});
+rolldown_runtime.run('other-entry.js');
 ```

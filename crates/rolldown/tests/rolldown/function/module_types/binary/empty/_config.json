@@ -3,5 +3,6 @@
     "moduleTypes": {
       ".data": "binary"
     }
-  }
+  },
+  "expectError": true
 }

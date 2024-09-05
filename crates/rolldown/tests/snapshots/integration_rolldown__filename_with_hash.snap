@@ -1726,19 +1726,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/module_types/binary/binary
 
-- main-!~{000}~.mjs => main-lFkAWa7s.mjs
+- main-!~{000}~.mjs => main-djVHgm4n.mjs
 
 # tests/rolldown/function/module_types/binary/empty
 
-- main-!~{000}~.mjs => main-MNw0OkcG.mjs
+- main-!~{000}~.mjs => main-R6tM0dYc.mjs
 
 # tests/rolldown/function/module_types/binary/node
 
-- main-!~{000}~.mjs => main-aCthQ2At.mjs
+- main-!~{000}~.mjs => main-_4kHFcFC.mjs
 
 # tests/rolldown/function/module_types/binary/text
 
-- main-!~{000}~.mjs => main-YNsEPKxL.mjs
+- main-!~{000}~.mjs => main-LFadhsZS.mjs
 
 # tests/rolldown/function/module_types/dataurl/binary
 

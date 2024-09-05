@@ -1464,6 +1464,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b--_DvZU4q.mjs
 - common-!~{002}~.mjs => common-FR5ObYUG.mjs
 
+# tests/rolldown/function/advanced_chunks/min_share_count
+
+- a-!~{000}~.mjs => a-rxcY539f.mjs
+- b-!~{001}~.mjs => b-HYaDE4h7.mjs
+- c-!~{002}~.mjs => c-LLIBCnUa.mjs
+- at_least_share_by_2-!~{003}~.mjs => at_least_share_by_2-ieNXnL-H.mjs
+
 # tests/rolldown/function/advanced_chunks/min_size
 
 - main-!~{000}~.mjs => main-HJ4ta7pq.mjs

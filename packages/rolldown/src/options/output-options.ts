@@ -90,6 +90,8 @@ const outputOptionsSchema = z.strictObject({
             name: z.string(),
             test: z.string().optional(),
             priority: z.number().optional(),
+            minSize: z.number().optional(),
+            minShareCount: z.number().optional(),
           }),
         )
         .optional(),

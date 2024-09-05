@@ -24,14 +24,19 @@ pub fn render_app(
   // chunk content
   module_sources.into_iter().for_each(|(module_idx, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
-      concat_source.add_source(Box::new(RawSource::new(format!(
-        "rolldown_runtime.define('{}',function(require, module, exports){{\n",
-        ctx.link_output.module_table.modules[module_idx].stable_id()
-      ))));
+      let is_runtime = ctx.link_output.runtime.id() == module_idx;
+      if !is_runtime {
+        concat_source.add_source(Box::new(RawSource::new(format!(
+          "rolldown_runtime.define('{}',function(require, module, exports){{\n",
+          ctx.link_output.module_table.modules[module_idx].stable_id()
+        ))));
+      }
       for source in emitted_sources {
         concat_source.add_source(source);
       }
-      concat_source.add_source(Box::new(RawSource::new("});".to_string())));
+      if !is_runtime {
+        concat_source.add_source(Box::new(RawSource::new("});".to_string())));
+      }
     }
   });
 

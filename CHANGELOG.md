@@ -1,3 +1,31 @@
+## [0.13.1](https://github.com/rolldown/rolldown/compare/v0.13.0...v0.13.1) (2024-09-05)
+
+
+### Bug Fixes
+
+* `process.env.NODE_ENV` inside paren expr ([#2153](https://github.com/rolldown/rolldown/issues/2153)) ([fddb2f5](https://github.com/rolldown/rolldown/commit/fddb2f58a52c79c30d83b9b1c542bb816df5ef49))
+* 🐛 make `examples/rollup-plugin-esbuild` build successfully ([#2164](https://github.com/rolldown/rolldown/issues/2164)) ([49f2d83](https://github.com/rolldown/rolldown/commit/49f2d8359069c96611aece143c602a4b9b1230d8)), closes [#2163](https://github.com/rolldown/rolldown/issues/2163)
+* mark knownGlobals global ident and global member access as side effects free ([#2154](https://github.com/rolldown/rolldown/issues/2154)) ([00ff45d](https://github.com/rolldown/rolldown/commit/00ff45dc7833cb8b0ad4dd6c526bb1acd50c8ad9)), closes [/github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/config/globals.go#L30-L850](https://github.com//github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/config/globals.go/issues/L30-L850) [/github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/config/globals.go#L940-L961](https://github.com//github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/config/globals.go/issues/L940-L961)
+* module type mapping ([#2151](https://github.com/rolldown/rolldown/issues/2151)) ([c2e77b5](https://github.com/rolldown/rolldown/commit/c2e77b5aa5a64c03c397ce55e9bc0356426b9aad))
+* **rolldown:** remove `console.log` ([#2145](https://github.com/rolldown/rolldown/issues/2145)) ([d24c337](https://github.com/rolldown/rolldown/commit/d24c3371798831915a1c5ae51c49c5664dbf7d6a))
+* **rolldown:** side effect detector mark `+1` `-1` as number literal ([#2162](https://github.com/rolldown/rolldown/issues/2162)) ([40ae24d](https://github.com/rolldown/rolldown/commit/40ae24d59711599e8fb23ae5f3619144eb001cec))
+
+
+### Features
+
+* **node/rolldown:** support `OutputOptions#advancedChunks` ([#2167](https://github.com/rolldown/rolldown/issues/2167)) ([851475d](https://github.com/rolldown/rolldown/commit/851475d9d318ddab904d38eb6bfabc118d2707e8))
+* **rust/advance-chunks:** A module could be catched by multiple match groups ([#2155](https://github.com/rolldown/rolldown/issues/2155)) ([071efd8](https://github.com/rolldown/rolldown/commit/071efd83bc24148c4a8aadac287f7c150be0d88d))
+* **rust/advance-chunks:** rework with new API deisgn ([#2146](https://github.com/rolldown/rolldown/issues/2146)) ([6339062](https://github.com/rolldown/rolldown/commit/6339062a086570e6e5d6a3f6b8e4e13b379a3957))
+* **rust/advance-chunks:** should include matched module's dependencies too ([#2161](https://github.com/rolldown/rolldown/issues/2161)) ([a557b51](https://github.com/rolldown/rolldown/commit/a557b512605b5722a7653c5d27e75abbdd0e90ec))
+* **rust/advance-chunks:** support `test` using regex ([#2152](https://github.com/rolldown/rolldown/issues/2152)) ([b7b2ac5](https://github.com/rolldown/rolldown/commit/b7b2ac541145b9f974e049a9077df136eda34323))
+
+
+### Performance Improvements
+
+* codegen in multiple chunks ([#2122](https://github.com/rolldown/rolldown/issues/2122)) ([ee878c8](https://github.com/rolldown/rolldown/commit/ee878c8a97ce8841dc2bd9337da422752a683a71))
+
+
+
 # [0.13.0](https://github.com/rolldown/rolldown/compare/v0.12.2...v0.13.0) (2024-09-03)
 
 

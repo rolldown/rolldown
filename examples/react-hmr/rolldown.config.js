@@ -1,17 +1,16 @@
 import { defineConfig } from 'rolldown'
 import { babel } from '@rollup/plugin-babel'
-import react from '@vitejs/plugin-react'
+import reactRefresh from './plugin-react-refresh/index.cjs'
 
 export default defineConfig({
   input: './main.js',
   plugins: [
-    react(),
+    reactRefresh(),
     babel({
       extensions: ['.js', '.jsx', ''],
       include: ['/@react-refresh', '*.js', '*.jsx'],
       babelHelpers: 'inline',
       skipPreflightCheck: true,
-      presets: ['@babel/preset-react'],
       plugins: ['@babel/plugin-transform-modules-commonjs'],
     }),
   ],

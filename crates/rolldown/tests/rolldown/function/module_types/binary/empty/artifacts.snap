@@ -1,13 +1,25 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "__toBinary" is not exported by "rolldown:runtime".
+   ╭─[example.data:1:9]
+   │
+ 1 │ import {__toBinary} from 'rolldown:runtime'; export default __toBinary('')
+   │         ─────┬────  
+   │              ╰────── Missing export
+───╯
+
+```# Assets
 
 ## main.js
 
 ```js
 import assert from "node:assert";
-
 
 //#region example.data
 var example_default = __toBinary("");

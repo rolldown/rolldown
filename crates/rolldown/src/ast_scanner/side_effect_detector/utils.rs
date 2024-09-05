@@ -227,7 +227,7 @@ pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
     | Expression::NumericLiteral(_)
     | Expression::StringLiteral(_)
     | Expression::BigIntLiteral(_) => true,
-    // oxc number literal did not included `+1` and `-1`
+    // Include `+1` / `-1`.
     Expression::UnaryExpression(e)
       if matches!(e.operator, |UnaryOperator::UnaryNegation| UnaryOperator::UnaryPlus) =>
     {

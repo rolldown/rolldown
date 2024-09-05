@@ -229,7 +229,8 @@ pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
     | Expression::BigIntLiteral(_) => true,
     // Include `+1` / `-1`.
     Expression::UnaryExpression(e)
-      if matches!(e.operator, |UnaryOperator::UnaryNegation| UnaryOperator::UnaryPlus) =>
+      if matches!(e.operator, |UnaryOperator::UnaryNegation| UnaryOperator::UnaryPlus)
+        && matches!(e.argument, Expression::NumericLiteral(_)) =>
     {
       true
     }

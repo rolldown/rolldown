@@ -11,7 +11,8 @@ use serde::{Deserialize, Deserializer};
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct AdvancedChunksOptions {
-  // pub share_count: Option<u32>,
+  pub min_share_count: Option<u32>,
+  pub min_size: Option<f64>,
   pub groups: Option<Vec<MatchGroup>>,
 }
 

@@ -349,7 +349,9 @@ impl<'a> GenerateStage<'a> {
           continue;
         }
 
-        if let Some(allow_min_share_count) = match_group.min_share_count {
+        if let Some(allow_min_share_count) =
+          match_group.min_share_count.map_or(chunking_options.min_share_count, Some)
+        {
           if splitting_info.share_count < allow_min_share_count {
             continue;
           }
@@ -389,7 +391,10 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
-      if let Some(allow_min_size) = match_groups[this_module_group.match_group_index].min_size {
+      if let Some(allow_min_size) = match_groups[this_module_group.match_group_index]
+        .min_size
+        .map_or(chunking_options.min_size, Some)
+      {
         if this_module_group.sizes < allow_min_size {
           continue;
         }

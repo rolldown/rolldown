@@ -84,6 +84,8 @@ const outputOptionsSchema = z.strictObject({
     .optional(),
   advancedChunks: z
     .strictObject({
+      minSize: z.number().optional(),
+      minShareCount: z.number().optional(),
       groups: z
         .array(
           z.strictObject({

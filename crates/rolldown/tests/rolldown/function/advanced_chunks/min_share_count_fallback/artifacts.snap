@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.mjs
+
+```js
+import "./at_least_share_by_2.mjs";
+
+//#region share-by-1.js
+console.log("share-by-1");
+
+//#endregion
+```
+## at_least_share_by_2.mjs
+
+```js
+
+//#region share-by-2.js
+console.log("share-by-2");
+
+//#endregion
+//#region share-by-3.js
+console.log("share-by-3");
+
+//#endregion
+```
+## b.mjs
+
+```js
+import "./at_least_share_by_2.mjs";
+
+```
+## c.mjs
+
+```js
+import "./at_least_share_by_2.mjs";
+
+```

@@ -4,5 +4,6 @@
       ".data": "binary"
     },
     "platform": "node"
-  }
+  },
+  "expectError": true
 }

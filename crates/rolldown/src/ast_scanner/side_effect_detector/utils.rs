@@ -227,6 +227,13 @@ pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
     | Expression::NumericLiteral(_)
     | Expression::StringLiteral(_)
     | Expression::BigIntLiteral(_) => true,
+    // Include `+1` / `-1`.
+    Expression::UnaryExpression(e)
+      if matches!(e.operator, |UnaryOperator::UnaryNegation| UnaryOperator::UnaryPlus)
+        && matches!(e.argument, Expression::NumericLiteral(_)) =>
+    {
+      true
+    }
     Expression::Identifier(id)
       if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap()) =>
     {

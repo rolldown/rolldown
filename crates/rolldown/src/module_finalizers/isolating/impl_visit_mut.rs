@@ -1,4 +1,11 @@
-use oxc::ast::{ast, visit::walk_mut, VisitMut};
+use oxc::{
+  ast::{
+    ast::{self, Expression},
+    visit::walk_mut,
+    VisitMut,
+  },
+  span::SPAN,
+};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -15,6 +22,17 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
     }
 
     walk_mut::walk_call_expression(self, expr);
+  }
+
+  fn visit_static_member_expression(&mut self, expr: &mut ast::StaticMemberExpression<'ast>) {
+    // replace `import.meta.hot` -> `module.hot`
+    if let Expression::MetaProperty(meta) = &expr.object {
+      if expr.property.name == "hot" && meta.meta.name == "import" && meta.property.name == "meta" {
+        expr.object = self.snippet.id_ref_expr("module", SPAN);
+      }
+    }
+
+    walk_mut::walk_static_member_expression(self, expr);
   }
 
   // fn visit_program(&mut self, program: &mut ast::Program<'ast>) {

@@ -24,7 +24,8 @@
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
     "/crates/rolldown_utils/src/light_guess.rs",
     "/pnpm-lock.yaml",
-    "*.wasm"
+    "*.wasm",
+    "examples/react-hmr/plugin-react-refresh/index.cjs"
   ],
   "languageSettings": [
     {

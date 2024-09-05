@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "serve": "http-server -c-1",
     "build": "rolldown --config ./rolldown.config.js"
   },
   "dependencies": {
@@ -14,6 +15,9 @@
     "@babel/preset-react": "7.24.7",
     "@rollup/plugin-babel": "6.0.4",
     "babel": "6.23.0",
-    "@vitejs/plugin-react": "4.3.1"
+    "http-server": "14.1.1",
+    "@babel/core": "^7.12.10",
+    "@babel/plugin-syntax-import-meta": "^7.10.4",
+    "react-refresh": "^0.9.0"
   }
 }

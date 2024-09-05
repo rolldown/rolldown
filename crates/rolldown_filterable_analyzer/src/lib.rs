@@ -1,5 +1,8 @@
 use oxc::allocator::Allocator;
+use oxc::ast::ast::Program;
+use oxc::ast::Visit;
 use oxc::parser::{ParseOptions, Parser, ParserReturn};
+use oxc::semantic::{Semantic, SemanticBuilder};
 use oxc::span::SourceType;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 
@@ -7,8 +10,9 @@ pub fn parse<'a>(
   filename: &str,
   source: &'a str,
   alloc: &'a Allocator,
+  ty: SourceType,
 ) -> DiagnosableResult<ParserReturn<'a>> {
-  let parser = Parser::new(alloc, source, SourceType::default())
+  let parser = Parser::new(alloc, source, ty)
     .with_options(ParseOptions { allow_return_outside_function: true, ..ParseOptions::default() });
   let ret = parser.parse();
   if ret.panicked || !ret.errors.is_empty() {
@@ -31,4 +35,40 @@ pub fn parse<'a>(
     Ok(ret)
   }
 }
+struct AstWithSemantic<'a> {
+  program: Program<'a>,
+  semantic: Semantic<'a>,
+}
 
+pub fn ast_with_semantic_builder<'a>(
+  filename: &str,
+  source: &'a str,
+  alloc: &'a Allocator,
+  ty: SourceType,
+) -> DiagnosableResult<AstWithSemantic<'a>> {
+  let ParserReturn { program, .. } = parse(filename, source, alloc, ty)?;
+  let semantic_ret = SemanticBuilder::new(source, ty).with_cfg(true).build(&program);
+  Ok(AstWithSemantic { program, semantic: semantic_ret.semantic })
+}
+
+pub fn filterable<'a>(ast_ext: &AstWithSemantic<'a>) -> bool {}
+
+struct FilterableAnaalyzer<'a> {
+  ast_ext: &'a AstWithSemantic<'a>,
+}
+
+impl<'a> FilterableAnaalyzer<'a> {
+  pub fn new(ast_ext: &'a AstWithSemantic<'a>) -> Self {
+    Self { ast_ext }
+  }
+}
+
+impl<'a> Visit<'a> for FilterableAnaalyzer<'a> {
+  fn visit_program(&mut self, it: &Program<'a>) {}
+  fn visit_function(&mut self, it: &oxc::ast::ast::Function<'a>, flags: oxc::semantic::ScopeFlags) {
+    if let Some(cfg) = self.ast_ext.semantic.cfg() {
+      cfg.is_reachable_filtered(jk, to, filter);
+    }
+  }
+  fn enter_node(&mut self, kind: oxc::ast::AstKind<'a>) {}
+}

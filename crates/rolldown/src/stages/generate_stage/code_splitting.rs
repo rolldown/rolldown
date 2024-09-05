@@ -1,6 +1,6 @@
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
 
-use crate::chunk_graph::ChunkGraph;
+use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::IndexVec;
@@ -238,12 +238,33 @@ impl<'a> GenerateStage<'a> {
     });
   }
 
+  #[allow(clippy::too_many_lines)] // TODO(hyf0): refactor
   fn apply_advanced_chunks(
     &mut self,
     module_to_bits: &IndexVec<ModuleIdx, BitSet>,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
   ) {
+    fn add_module_and_dependencies_to_group_recursively(
+      module_group: &mut ModuleGroup,
+      module: ModuleIdx,
+      module_metas: &LinkingMetadataVec,
+      visited: &mut FxHashSet<ModuleIdx>,
+    ) {
+      let is_visited = !visited.insert(module);
+
+      if is_visited {
+        return;
+      }
+
+      visited.insert(module);
+
+      module_group.add_module(module);
+
+      for dep in &module_metas[module].dependencies {
+        add_module_and_dependencies_to_group_recursively(module_group, *dep, module_metas, visited);
+      }
+    }
     // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
     struct ModuleGroup {
       name: ArcStr,
@@ -312,13 +333,18 @@ impl<'a> GenerateStage<'a> {
             })
           });
 
-        index_module_groups[*module_group_idx].add_module(normal_module.idx);
+        add_module_and_dependencies_to_group_recursively(
+          &mut index_module_groups[*module_group_idx],
+          normal_module.idx,
+          &self.link_output.metas,
+          &mut FxHashSet::default(),
+        );
       }
     }
 
     let mut module_groups = index_module_groups.raw;
     module_groups.sort_unstable_by_key(|item| item.match_group_index);
-    module_groups.sort_by_key(|item| item.priority);
+    module_groups.sort_by_key(|item| Reverse(item.priority));
     module_groups.reverse();
     // These two sort ensure higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
 

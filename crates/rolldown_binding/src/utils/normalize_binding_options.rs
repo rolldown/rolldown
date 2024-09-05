@@ -200,6 +200,7 @@ pub fn normalize_binding_options(
               .map(|inner| HybridRegex::new(&inner).expect("Invalid regex pass to test")),
             priority: item.priority,
             min_size: item.min_size,
+            min_share_count: item.min_share_count,
           })
           .collect::<Vec<_>>()
       }),

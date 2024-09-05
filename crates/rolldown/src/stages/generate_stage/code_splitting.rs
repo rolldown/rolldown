@@ -11,6 +11,14 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::GenerateStage;
 
+#[derive(Clone)]
+pub struct SplittingInfo {
+  bits: BitSet,
+  share_count: u32,
+}
+
+pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
+
 impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
@@ -27,8 +35,10 @@ impl<'a> GenerateStage<'a> {
     let mut chunk_graph = ChunkGraph::new(&self.link_output.module_table);
     chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
 
-    let mut module_to_bits =
-      oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.modules.len()];
+    let mut index_splitting_info: IndexSplittingInfo = oxc::index::index_vec![SplittingInfo {
+        bits: BitSet::new(entries_len),
+        share_count: 0
+      }; self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
 
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
@@ -60,14 +70,14 @@ impl<'a> GenerateStage<'a> {
       self.determine_reachable_modules_for_entry(
         entry_point.id,
         i.try_into().expect("Too many entries, u32 overflowed."),
-        &mut module_to_bits,
+        &mut index_splitting_info,
       );
     });
 
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
       oxc::index::index_vec![false; self.link_output.module_table.modules.len()];
 
-    self.apply_advanced_chunks(&module_to_bits, &mut module_to_assigned, &mut chunk_graph);
+    self.apply_advanced_chunks(&index_splitting_info, &mut module_to_assigned, &mut chunk_graph);
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
@@ -82,7 +92,7 @@ impl<'a> GenerateStage<'a> {
 
       module_to_assigned[normal_module.idx] = true;
 
-      let bits = &module_to_bits[normal_module.idx];
+      let bits = &index_splitting_info[normal_module.idx].bits;
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
@@ -216,7 +226,7 @@ impl<'a> GenerateStage<'a> {
     &self,
     module_id: ModuleIdx,
     entry_index: u32,
-    module_to_bits: &mut IndexVec<ModuleIdx, BitSet>,
+    index_splitting_info: &mut IndexSplittingInfo,
   ) {
     let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
       return;
@@ -227,21 +237,22 @@ impl<'a> GenerateStage<'a> {
       return;
     }
 
-    if module_to_bits[module_id].has_bit(entry_index) {
+    if index_splitting_info[module_id].bits.has_bit(entry_index) {
       return;
     }
 
-    module_to_bits[module_id].set_bit(entry_index);
+    index_splitting_info[module_id].bits.set_bit(entry_index);
+    index_splitting_info[module_id].share_count += 1;
 
     meta.dependencies.iter().copied().for_each(|dep_idx| {
-      self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
+      self.determine_reachable_modules_for_entry(dep_idx, entry_index, index_splitting_info);
     });
   }
 
   #[allow(clippy::too_many_lines)] // TODO(hyf0): refactor
   fn apply_advanced_chunks(
     &mut self,
-    module_to_bits: &IndexVec<ModuleIdx, BitSet>,
+    index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
   ) {
@@ -328,12 +339,20 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
+      let splitting_info = &index_splitting_info[normal_module.idx];
+
       for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
         let is_matched =
           match_group.test.as_ref().map_or(true, |test| test.matches(&normal_module.id));
 
         if !is_matched {
           continue;
+        }
+
+        if let Some(allow_min_share_count) = match_group.min_share_count {
+          if splitting_info.share_count < allow_min_share_count {
+            continue;
+          }
         }
 
         let group_name = ArcStr::from(&match_group.name);
@@ -378,8 +397,10 @@ impl<'a> GenerateStage<'a> {
 
       let chunk = Chunk::new(
         Some(this_module_group.name.clone()),
-        module_to_bits[this_module_group.modules.iter().next().copied().expect("must have one")]
-          .clone(),
+        index_splitting_info
+          [this_module_group.modules.iter().next().copied().expect("must have one")]
+        .bits
+        .clone(),
         vec![],
         ChunkKind::Common,
       );
@@ -390,7 +411,7 @@ impl<'a> GenerateStage<'a> {
         module_groups.iter_mut().for_each(|group| {
           group.remove_module(module_idx, &self.link_output.module_table);
         });
-        chunk_graph.chunk_table[chunk_idx].bits.union(&module_to_bits[module_idx]);
+        chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[module_idx].bits);
         chunk_graph.add_module_to_chunk(module_idx, chunk_idx);
         module_to_assigned[module_idx] = true;
       });

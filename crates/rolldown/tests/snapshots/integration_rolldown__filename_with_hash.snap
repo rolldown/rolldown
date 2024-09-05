@@ -4238,6 +4238,7 @@ snapshot_kind: text
 # tests/rolldown/function/format/app/multiple_entry_modules
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - main-!~{000}~.js => main-gMSufccO.js
 - other-entry-!~{001}~.js => other-entry-_m87DosR.js
 - cube-!~{002}~.js => cube-VxKWZvg0.js
@@ -4246,6 +4247,8 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-gFBfIluz.js
 =======
+=======
+>>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
 <<<<<<< HEAD
 - main-!~{000}~.mjs => main-OEIxNKs9.mjs
 - other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
@@ -4255,7 +4258,15 @@ snapshot_kind: text
 - other-entry-!~{001}~.mjs => other-entry-rTdGOMZR.mjs
 - cube-!~{002}~.mjs => cube-loSBOAvt.mjs
 >>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
+<<<<<<< HEAD
 >>>>>>> ebd1b0c55 (chore: disable IsolatingModuleFinalizer (#2149))
+=======
+=======
+- main-!~{000}~.mjs => main-lE-CsZar.mjs
+- other-entry-!~{001}~.mjs => other-entry-cL10WWA7.mjs
+- cube-!~{002}~.mjs => cube-ql8lOQly.mjs
+>>>>>>> ebc7a043 (feat: render app chunk and replace require module id to stable id (#2156))
+>>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

@@ -1464,6 +1464,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b--_DvZU4q.mjs
 - common-!~{002}~.mjs => common-FR5ObYUG.mjs
 
+# tests/rolldown/function/advanced_chunks/min_size
+
+- main-!~{000}~.mjs => main-HJ4ta7pq.mjs
+- common_b-!~{001}~.mjs => common_b-a9EnhroC.mjs
+
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
 - main-!~{000}~.mjs => main-M6jfBy0m.mjs

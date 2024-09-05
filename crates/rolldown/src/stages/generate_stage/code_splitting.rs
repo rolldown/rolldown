@@ -4,7 +4,7 @@ use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, ModuleTable, OutputFormat};
 use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -249,6 +249,7 @@ impl<'a> GenerateStage<'a> {
       module_group: &mut ModuleGroup,
       module: ModuleIdx,
       module_metas: &LinkingMetadataVec,
+      module_table: &ModuleTable,
       visited: &mut FxHashSet<ModuleIdx>,
     ) {
       let is_visited = !visited.insert(module);
@@ -259,10 +260,16 @@ impl<'a> GenerateStage<'a> {
 
       visited.insert(module);
 
-      module_group.add_module(module);
+      module_group.add_module(module, module_table);
 
       for dep in &module_metas[module].dependencies {
-        add_module_and_dependencies_to_group_recursively(module_group, *dep, module_metas, visited);
+        add_module_and_dependencies_to_group_recursively(
+          module_group,
+          *dep,
+          module_metas,
+          module_table,
+          visited,
+        );
       }
     }
     // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
@@ -271,6 +278,7 @@ impl<'a> GenerateStage<'a> {
       match_group_index: usize,
       modules: FxHashSet<ModuleIdx>,
       priority: u32,
+      sizes: f64,
     }
 
     oxc::index::define_index_type! {
@@ -278,12 +286,19 @@ impl<'a> GenerateStage<'a> {
     }
 
     impl ModuleGroup {
-      pub fn add_module(&mut self, module_idx: ModuleIdx) {
-        self.modules.insert(module_idx);
+      #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+      pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
+        if self.modules.insert(module_idx) {
+          self.sizes += module_table.modules[module_idx].size() as f64;
+        }
       }
 
-      pub fn remove_module(&mut self, module_idx: ModuleIdx) {
-        self.modules.remove(&module_idx);
+      #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+      pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
+        if self.modules.remove(&module_idx) {
+          self.sizes -= module_table.modules[module_idx].size() as f64;
+          self.sizes = f64::max(self.sizes, 0.0);
+        }
       }
     }
 
@@ -330,6 +345,7 @@ impl<'a> GenerateStage<'a> {
               match_group_index,
               priority: match_group.priority.unwrap_or(0),
               name: group_name.clone(),
+              sizes: 0.0,
             })
           });
 
@@ -337,6 +353,7 @@ impl<'a> GenerateStage<'a> {
           &mut index_module_groups[*module_group_idx],
           normal_module.idx,
           &self.link_output.metas,
+          &self.link_output.module_table,
           &mut FxHashSet::default(),
         );
       }
@@ -353,6 +370,12 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
+      if let Some(allow_min_size) = match_groups[this_module_group.match_group_index].min_size {
+        if this_module_group.sizes < allow_min_size {
+          continue;
+        }
+      }
+
       let chunk = Chunk::new(
         Some(this_module_group.name.clone()),
         module_to_bits[this_module_group.modules.iter().next().copied().expect("must have one")]
@@ -365,7 +388,7 @@ impl<'a> GenerateStage<'a> {
 
       this_module_group.modules.iter().copied().for_each(|module_idx| {
         module_groups.iter_mut().for_each(|group| {
-          group.remove_module(module_idx);
+          group.remove_module(module_idx, &self.link_output.module_table);
         });
         chunk_graph.chunk_table[chunk_idx].bits.union(&module_to_bits[module_idx]);
         chunk_graph.add_module_to_chunk(module_idx, chunk_idx);

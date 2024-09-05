@@ -110,6 +110,13 @@ impl Module {
   pub fn is_ecma(&self) -> bool {
     matches!(self, Self::Ecma(..))
   }
+
+  pub fn size(&self) -> usize {
+    match self {
+      Module::Ecma(v) => v.source.len(),
+      Module::External(_) => 0,
+    }
+  }
 }
 
 impl From<EcmaModule> for Module {

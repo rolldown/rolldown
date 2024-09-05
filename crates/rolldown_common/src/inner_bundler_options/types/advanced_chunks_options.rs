@@ -31,6 +31,7 @@ pub struct MatchGroup {
   pub test: Option<HybridRegex>,
   // pub share_count: Option<u32>,
   pub priority: Option<u32>,
+  pub min_size: Option<f64>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

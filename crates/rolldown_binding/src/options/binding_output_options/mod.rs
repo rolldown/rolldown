@@ -1,3 +1,5 @@
+mod types;
+
 use crate::types::js_callback::{JsCallback, MaybeAsyncJsCallback};
 use std::collections::HashMap;
 
@@ -9,6 +11,7 @@ use napi::bindgen_prelude::FunctionRef;
 use napi::Either;
 use napi_derive::napi;
 use serde::Deserialize;
+use types::binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 
 pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 pub type ChunkFileNamesOutputOption = Either<String, FunctionRef<PreRenderedChunk, String>>;
@@ -101,4 +104,5 @@ pub struct BindingOutputOptions {
 
   // --- Enhanced options
   pub minify: Option<bool>,
+  pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
 }

@@ -10,11 +10,12 @@ use crate::{
 };
 use napi::{bindgen_prelude::Either, Env};
 use rolldown::{
-  AddonOutputOption, BundlerOptions, ChunkFilenamesOutputOption, IsExternal, ModuleType,
-  OutputExports, OutputFormat, Platform,
+  AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption, IsExternal,
+  MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::js_regex::HybridRegex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -188,7 +189,20 @@ pub fn normalize_binding_options(
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
     inline_dynamic_imports: output_options.inline_dynamic_imports,
-    advanced_chunks: None,
+    advanced_chunks: output_options.advanced_chunks.map(|inner| AdvancedChunksOptions {
+      groups: inner.groups.map(|inner| {
+        inner
+          .into_iter()
+          .map(|item| MatchGroup {
+            name: item.name,
+            test: item
+              .test
+              .map(|inner| HybridRegex::new(&inner).expect("Invalid regex pass to test")),
+            priority: item.priority,
+          })
+          .collect::<Vec<_>>()
+      }),
+    }),
   };
 
   #[cfg(not(target_family = "wasm"))]

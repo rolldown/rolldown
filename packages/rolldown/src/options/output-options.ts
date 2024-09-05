@@ -82,6 +82,19 @@ const outputOptionsSchema = z.strictObject({
     .describe('inline dynamic imports')
     .default(false)
     .optional(),
+  advancedChunks: z
+    .strictObject({
+      groups: z
+        .array(
+          z.strictObject({
+            name: z.string(),
+            test: z.string().optional(),
+            priority: z.number().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
 })
 
 const getAddonDescription = (

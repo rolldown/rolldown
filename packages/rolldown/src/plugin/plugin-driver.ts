@@ -44,7 +44,7 @@ export class PluginDriver {
               name,
               logLevel,
             ),
-            // meta: { rollupVersion, watchMode },
+            meta: { rollupVersion: '' /* watchMode */ },
             warn: getLogHandler(
               LOG_LEVEL_WARN,
               'PLUGIN_WARNING',

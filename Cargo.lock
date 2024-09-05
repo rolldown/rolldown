@@ -2310,6 +2310,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_filterable_analyzer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arcstr",
+ "oxc",
+ "rolldown_error",
+]
+
+[[package]]
 name = "rolldown_fs"
 version = "0.1.0"
 dependencies = [

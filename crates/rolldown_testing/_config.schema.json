@@ -60,6 +60,21 @@
           "items": {
             "$ref": "#/definitions/MatchGroup"
           }
+        },
+        "minShareCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "minSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       },
       "additionalProperties": false

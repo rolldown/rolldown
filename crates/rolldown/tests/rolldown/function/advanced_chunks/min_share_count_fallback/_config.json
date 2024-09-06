@@ -15,9 +15,9 @@
       }
     ],
     "advancedChunks": {
-      "minShareCount": 2,
       "groups": [
         {
+          "minShareCount": 2,
           "name": "at_least_share_by_2"
         }
       ]

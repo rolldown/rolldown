@@ -103,6 +103,8 @@ export interface ArrowFunctionsBindingOptions {
 }
 
 export interface BindingAdvancedChunksOptions {
+  minSize?: number
+  minShareCount?: number
   groups?: Array<BindingMatchGroup>
 }
 
@@ -265,6 +267,8 @@ export interface BindingMatchGroup {
   name: string
   test?: string
   priority?: number
+  minSize?: number
+  minShareCount?: number
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {

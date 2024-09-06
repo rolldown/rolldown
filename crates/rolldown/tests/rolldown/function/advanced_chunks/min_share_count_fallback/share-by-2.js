@@ -1,0 +1,1 @@
+console.log('share-by-2')

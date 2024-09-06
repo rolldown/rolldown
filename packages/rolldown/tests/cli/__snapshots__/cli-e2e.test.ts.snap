@@ -19,6 +19,8 @@ OPTIONS
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
   --version -v,               Show version number.
   --advanced-chunks.groups <advanced-chunks.groups>.
+  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>.
+  --advanced-chunks.min-size <advanced-chunks.min-size>.
   --asset-file-names <name>   .
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
   --chunk-file-names <name>   .
@@ -114,6 +116,8 @@ OPTIONS
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
   --version -v,               Show version number.
   --advanced-chunks.groups <advanced-chunks.groups>.
+  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>.
+  --advanced-chunks.min-size <advanced-chunks.min-size>.
   --asset-file-names <name>   .
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
   --chunk-file-names <name>   .

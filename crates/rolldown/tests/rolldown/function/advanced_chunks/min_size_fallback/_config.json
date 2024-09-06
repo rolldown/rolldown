@@ -1,0 +1,19 @@
+{
+  "config": {
+    "advancedChunks": {
+      "minSize": 1024,
+      "groups": [
+        {
+          // Should split failed
+          "test": "a\\.js",
+          "name": "common_a"
+        },
+        {
+          // Should split successfully
+          "test": "b\\.js",
+          "name": "common_b"
+        }
+      ]
+    }
+  }
+}

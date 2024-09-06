@@ -1471,7 +1471,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - c-!~{002}~.mjs => c-LLIBCnUa.mjs
 - at_least_share_by_2-!~{003}~.mjs => at_least_share_by_2-ieNXnL-H.mjs
 
+# tests/rolldown/function/advanced_chunks/min_share_count_fallback
+
+- a-!~{000}~.mjs => a-rxcY539f.mjs
+- b-!~{001}~.mjs => b-HYaDE4h7.mjs
+- c-!~{002}~.mjs => c-LLIBCnUa.mjs
+- at_least_share_by_2-!~{003}~.mjs => at_least_share_by_2-ieNXnL-H.mjs
+
 # tests/rolldown/function/advanced_chunks/min_size
+
+- main-!~{000}~.mjs => main-HJ4ta7pq.mjs
+- common_b-!~{001}~.mjs => common_b-a9EnhroC.mjs
+
+# tests/rolldown/function/advanced_chunks/min_size_fallback
 
 - main-!~{000}~.mjs => main-HJ4ta7pq.mjs
 - common_b-!~{001}~.mjs => common_b-a9EnhroC.mjs

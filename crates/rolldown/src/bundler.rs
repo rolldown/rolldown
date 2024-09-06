@@ -5,9 +5,12 @@ use super::stages::{
 use crate::{
   bundler_builder::BundlerBuilder,
   module_loader::hmr_module_loader::HmrModuleLoader,
-  stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
+  stages::{
+    generate_stage::{render_hmr_chunk::render_hmr_chunk, GenerateStage},
+    scan_stage::ScanStage,
+  },
   type_alias::IndexEcmaAst,
-  types::{bundle_output::BundleOutput, hmr_output::HmrOutput},
+  types::bundle_output::BundleOutput,
   watcher::watcher::{wait_for_change, Watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
@@ -52,26 +55,9 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> Result<BundleOutput> {
-    let dir = self.options.cwd.join(&self.options.dir);
-
     let mut output = self.bundle_up(/* is_write */ true).await?;
 
-    self.fs.create_dir_all(&dir).map_err(|err| {
-      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
-    })?;
-
-    for chunk in &output.assets {
-      let dest = dir.join(chunk.filename());
-      if let Some(p) = dest.parent() {
-        if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).unwrap();
-        }
-      };
-      self
-        .fs
-        .write(&dest, chunk.content_as_bytes())
-        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
-    }
+    self.write_file_to_disk(&output)?;
 
     self.plugin_driver.write_bundle(&mut output.assets).await?;
 
@@ -146,7 +132,7 @@ impl Bundler {
   }
 
   #[allow(clippy::unused_async)]
-  pub async fn hmr_rebuild(&mut self, changed_files: Vec<String>) -> Result<HmrOutput> {
+  pub async fn hmr_rebuild(&mut self, changed_files: Vec<String>) -> Result<BundleOutput> {
     let hmr_module_loader = HmrModuleLoader::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
@@ -157,19 +143,47 @@ impl Bundler {
       std::mem::take(&mut self.pervious_index_ecma_ast),
     )?;
 
-    let output = match hmr_module_loader.fetch_changed_modules(changed_files).await? {
-      Ok(output) => output,
-      Err(errors) => {
-        return Ok(HmrOutput { warnings: vec![], errors });
-      }
-    };
+    let mut hmr_module_loader_output =
+      match hmr_module_loader.fetch_changed_files(changed_files).await? {
+        Ok(output) => output,
+        Err(errors) => {
+          return Ok(BundleOutput { warnings: vec![], errors, assets: vec![] });
+        }
+      };
+
+    let output = render_hmr_chunk(&self.options, &mut hmr_module_loader_output);
+
+    self.write_file_to_disk(&output)?;
 
     // store last build modules info
-    self.previous_module_table = output.module_table;
-    self.previous_module_id_to_modules = output.module_id_to_modules;
-    self.pervious_index_ecma_ast = output.index_ecma_ast;
+    self.previous_module_table = hmr_module_loader_output.module_table;
+    self.previous_module_id_to_modules = hmr_module_loader_output.module_id_to_modules;
+    self.pervious_index_ecma_ast = hmr_module_loader_output.index_ecma_ast;
 
-    Ok(HmrOutput { warnings: output.warnings, errors: vec![] })
+    Ok(output)
+  }
+
+  fn write_file_to_disk(&self, output: &BundleOutput) -> Result<()> {
+    let dir = self.options.cwd.join(&self.options.dir);
+
+    self.fs.create_dir_all(&dir).map_err(|err| {
+      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
+    })?;
+
+    for chunk in &output.assets {
+      let dest = dir.join(chunk.filename());
+      if let Some(p) = dest.parent() {
+        if !self.fs.exists(p) {
+          self.fs.create_dir_all(p).unwrap();
+        }
+      };
+      self
+        .fs
+        .write(&dest, chunk.content_as_bytes())
+        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
+    }
+
+    Ok(())
   }
 
   async fn try_build(&mut self) -> Result<BuildResult<LinkStageOutput>> {

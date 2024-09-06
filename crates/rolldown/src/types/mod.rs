@@ -5,7 +5,6 @@
 pub mod bundle_output;
 pub mod bundler_fs;
 pub mod generator;
-pub mod hmr_output;
 pub mod linking_metadata;
 pub mod module_factory;
 pub mod oxc_parse_type;

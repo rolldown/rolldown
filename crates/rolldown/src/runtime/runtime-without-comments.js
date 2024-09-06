@@ -66,9 +66,9 @@ var __require = /* @__PURE__ */ (x =>
   throw Error('Dynamic require of "' + x + '" is not supported')
 })
 
-var rolldown_runtime = {
+var rolldown_runtime = self.rolldown_runtime = {
   patching: false,
-  patchedModuleFactoryMap: [],
+  patchedModuleFactoryMap: {},
   executeModuleStack: [],
   moduleCache: {},
   moduleFactoryMap: {},
@@ -110,6 +110,8 @@ var rolldown_runtime = {
   patch: function(updateModuleIds, callback) {
     self.patching = true;
 
+    callback();
+
     var boundaries = [];
     var invalidModuleIds = [];
 
@@ -120,8 +122,12 @@ var rolldown_runtime = {
     for (var i = 0; i < invalidModuleIds.length; i++) {
       var id = invalidModuleIds[i];
       delete this.moduleCache[id];
+    }
+
+    for (var id in this.patchedModuleFactoryMap) {
       this.moduleFactoryMap[id] = this.patchedModuleFactoryMap[id];
     }
+    this.patchedModuleFactoryMap = {}
 
     for (var i = 0; i < boundaries.length; i++) {
       this.require(boundaries[i]);

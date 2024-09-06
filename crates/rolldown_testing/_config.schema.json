@@ -441,6 +441,13 @@
         "name"
       ],
       "properties": {
+        "minSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
         "name": {
           "type": "string"
         },

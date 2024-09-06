@@ -57,21 +57,108 @@ var __toBinary = /* @__PURE__ */ (() => {
 })()
 
 var rolldown_runtime = {
+  patching: false,
+  patchedModuleFactoryMap: [],
+  executeModuleStack: [],
   moduleCache: {},
   moduleFactoryMap: {},
   define: function (id, factory) {
-    this.moduleFactoryMap[id] = factory;
+    if (self.patching) {
+      this.patchedModuleFactoryMap[id] = factory;
+    } else {
+      this.moduleFactoryMap[id] = factory;
+    }
   },
   require: function (id) {
+    const parent = this.executeModuleStack.length > 1 ? this.executeModuleStack[this.executeModuleStack.length - 1] : null;
     if (this.moduleCache[id]) {
-      return this.moduleCache[id].exports;
+      var module = this.moduleCache[id];
+      if(module.parents.indexOf(parent) === -1) {
+        module.parents.push(parent);
+      }
+      return module.exports;
     }
-    const factory = this.moduleFactoryMap[id];
+    var factory = this.moduleFactoryMap[id];
     if (!factory) {
       throw new Error('Module not found: ' + id);
     }
-    const module = this.moduleCache[id] = { exports: {} };
+    var module = this.moduleCache[id] = { 
+      exports: {},
+      parents: [parent],
+      hot: {
+        selfAccept: false,
+        accept: function() {
+          this.selfAccept = true;
+        }
+      }
+    };
+    this.executeModuleStack.push(id);
     factory(this.require.bind(this), module, module.exports);
+    this.executeModuleStack.pop();
     return module.exports;
   },
+  patch: function(updateModuleIds, callback) {
+    self.patching = true;
+
+    var boundaries = [];
+    var invalidModuleIds = [];
+
+    for (var i = 0; i < updateModuleIds.length; i++) {
+      foundBoundariesAndInvalidModuleIds(updateModuleIds[i], boundaries, invalidModuleIds)
+    }
+
+    for (var i = 0; i < invalidModuleIds.length; i++) {
+      var id = invalidModuleIds[i];
+      delete this.moduleCache[id];
+      this.moduleFactoryMap[id] = this.patchedModuleFactoryMap[id];
+    }
+
+    for (var i = 0; i < boundaries.length; i++) {
+      this.require(boundaries[i]);
+    }
+
+    self.patching = false;
+
+    function foundBoundariesAndInvalidModuleIds(updateModuleId, boundaries, invalidModuleIds) {
+      var queue = [ { moduleId: updateModuleId, chain: [updateModuleId] }];
+      var visited = {};
+     
+
+      while (queue.length > 0) {
+        var item = queue.pop();
+        var moduleId = item.moduleId;
+        var chain = item.chain;
+
+        if (visited[moduleId]) {
+          continue;
+        }
+
+        if (module.selfAccept) {
+          if(boundaries.indexOf(moduleId) === -1) {
+            boundaries.push(moduleId);
+          }
+          for (var i = 0; index < chain.length; index++) {
+            if(invalidModuleIds.indexOf(chain[i]) === -1) {
+              invalidModuleIds.push(chain[i]);
+            }
+          }
+          continue;
+        }
+
+        var module = rolldown_runtime.moduleCache[moduleId];
+
+        for(var i = 0; i < module.parents.length; i++) {
+          var parent = module.parents[i];
+          queue.push({
+            moduleId: parent,
+            chain: chain.concat([parent])
+          });
+        }
+
+        visited[moduleId] = true;
+      }
+
+      
+    }
+  }
 }

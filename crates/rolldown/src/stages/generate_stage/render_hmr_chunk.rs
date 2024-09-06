@@ -3,22 +3,54 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
+use oxc::ast::VisitMut;
 use rolldown_common::{
-  FileNameRenderOptions, FilenameTemplate, NormalizedBundlerOptions, Output, OutputAsset,
+  FileNameRenderOptions, FilenameTemplate, Module, NormalizedBundlerOptions, Output, OutputAsset,
   SourceMapType,
 };
+use rolldown_ecmascript::AstSnippet;
 use rolldown_sourcemap::{ConcatSource, RawSource};
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
 use crate::{
+  module_finalizers::isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
   module_loader::hmr_module_loader::HmrModuleLoaderOutput,
-  utils::render_ecma_module::render_ecma_module, BundleOutput,
+  utils::render_ecma_module::render_ecma_module,
+  BundleOutput,
 };
 
+#[allow(clippy::too_many_lines)]
 pub fn render_hmr_chunk(
   options: &NormalizedBundlerOptions,
   hmr_module_loader_output: &mut HmrModuleLoaderOutput,
 ) -> BundleOutput {
+  hmr_module_loader_output
+    .index_ecma_ast
+    .iter_mut()
+    .par_bridge()
+    .filter(|(_ast, owner)| {
+      hmr_module_loader_output.module_table.modules[*owner].as_ecma().is_some()
+        && hmr_module_loader_output.diff_modules.contains(owner)
+    })
+    .for_each(|(ast, owner)| {
+      let Module::Ecma(module) = &hmr_module_loader_output.module_table.modules[*owner] else {
+        return;
+      };
+      ast.program.with_mut(|fields| {
+        let (oxc_program, alloc) = (fields.program, fields.allocator);
+        let mut finalizer = IsolatingModuleFinalizer {
+          alloc,
+          scope: &module.scope,
+          ctx: &IsolatingModuleFinalizerContext {
+            module,
+            modules: &hmr_module_loader_output.module_table.modules,
+          },
+          snippet: AstSnippet::new(alloc),
+        };
+        finalizer.visit_program(oxc_program);
+      });
+    });
+
   let module_sources = hmr_module_loader_output
     .diff_modules
     .par_iter()

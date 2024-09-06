@@ -1,4 +1,4 @@
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 
 use crate::types::hook_filter::HookFilterOptions;
 use crate::{__inner::SharedPluginable, types::plugin_idx::PluginIdx, PluginContext};

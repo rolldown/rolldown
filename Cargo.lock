@@ -2337,7 +2337,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-trait",
- "oxc_index",
+ "oxc",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_resolver",

@@ -1,6 +1,7 @@
 use oxc::allocator::Allocator;
 use oxc::ast::ast::Program;
 use oxc::ast::Visit;
+use oxc::cfg::graph::visit::Dfs;
 use oxc::parser::{ParseOptions, Parser, ParserReturn};
 use oxc::semantic::{Semantic, SemanticBuilder};
 use oxc::span::SourceType;
@@ -51,7 +52,9 @@ pub fn ast_with_semantic_builder<'a>(
   Ok(AstWithSemantic { program, semantic: semantic_ret.semantic })
 }
 
-pub fn filterable<'a>(ast_ext: &AstWithSemantic<'a>) -> bool {}
+pub fn filterable<'a>(ast_ext: &AstWithSemantic<'a>) -> bool {
+  todo!()
+}
 
 struct FilterableAnaalyzer<'a> {
   ast_ext: &'a AstWithSemantic<'a>,
@@ -64,11 +67,16 @@ impl<'a> FilterableAnaalyzer<'a> {
 }
 
 impl<'a> Visit<'a> for FilterableAnaalyzer<'a> {
-  fn visit_program(&mut self, it: &Program<'a>) {}
+  fn visit_program(&mut self, it: &Program<'a>) {
+    let Some(cfg) = self.ast_ext.semantic.cfg() else {
+      return;
+    };
+    let g = cfg.graph();
+    let mut dfs = Dfs::new(&g, oxc::cfg::graph::graph::NodeIndex::from(0));
+    while let Some(nx) = dfs.next(&g) {}
+  }
   fn visit_function(&mut self, it: &oxc::ast::ast::Function<'a>, flags: oxc::semantic::ScopeFlags) {
-    if let Some(cfg) = self.ast_ext.semantic.cfg() {
-      cfg.is_reachable_filtered(jk, to, filter);
-    }
+    if let Some(cfg) = self.ast_ext.semantic.cfg() {}
   }
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'a>) {}
 }

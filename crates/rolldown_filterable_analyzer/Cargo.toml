@@ -9,7 +9,7 @@ version              = "0.1.0"
 [dependencies]
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }
-oxc            = { workspace = true }
+oxc            = { workspace = true, features = ["cfg"] }
 rolldown_error = { workspace = true }
 
 [lints]

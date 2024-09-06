@@ -161,9 +161,16 @@ vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
 
 # oxc crates share the same version
-oxc                = { version = "0.26.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
-oxc_index          = { version = "0.26.0" }
-oxc_transform_napi = { version = "0.26.0" }
+oxc = { path = "/home/victor/Documents/oxc/oxc/crates/oxc", version = "0.26.0", features = [
+  "sourcemap_concurrent",
+  "transformer",
+  "minifier",
+  "semantic",
+  "codegen",
+  "cfg",
+] }
+oxc_index = { path = "/home/victor/Documents/oxc/oxc/crates/oxc_index", version = "0.26.0" }
+oxc_transform_napi = { path = "/home/victor/Documents/oxc/oxc/napi/transform", version = "0.26.0" }
 
 [profile.release]
 codegen-units = 1

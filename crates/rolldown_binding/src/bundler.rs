@@ -92,7 +92,7 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn hmr_rebuild(&self, changed_files: Vec<String>) -> napi::Result<()> {
+  pub async fn hmr_rebuild(&self, changed_files: Vec<String>) -> napi::Result<FinalBindingOutputs> {
     self.hmr_rebuild_impl(changed_files).await
   }
 }
@@ -152,7 +152,10 @@ impl Bundler {
     Ok(FinalBindingOutputs::new(outputs.assets))
   }
 
-  pub async fn hmr_rebuild_impl(&self, changed_files: Vec<String>) -> napi::Result<()> {
+  pub async fn hmr_rebuild_impl(
+    &self,
+    changed_files: Vec<String>,
+  ) -> napi::Result<FinalBindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -164,7 +167,8 @@ impl Bundler {
     }
 
     self.handle_warnings(output.warnings).await;
-    Ok(())
+
+    Ok(FinalBindingOutputs::new(output.assets))
   }
 
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {

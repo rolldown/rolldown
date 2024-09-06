@@ -1676,6 +1676,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - main-!~{000}~.mjs => main-OEIxNKs9.mjs
 - other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
 - cube-!~{002}~.mjs => cube-r9ltmWJC.mjs
@@ -1687,6 +1688,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 =======
 - main-!~{000}~.mjs => main-lE-CsZar.mjs
 - other-entry-!~{001}~.mjs => other-entry-cL10WWA7.mjs
+=======
+- main-!~{000}~.mjs => main-ASwzPJTD.mjs
+- other-entry-!~{001}~.mjs => other-entry-8oGJqUMX.mjs
+>>>>>>> 5c89389e (feat: implement rolldown_runtime and fix react-refresh make react-example run (#2159))
 - cube-!~{002}~.mjs => cube-ql8lOQly.mjs
 >>>>>>> ebc7a043 (feat: render app chunk and replace require module id to stable id (#2156))
 

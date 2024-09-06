@@ -43,7 +43,7 @@ pub fn render_app(
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       concat_source.add_source(Box::new(RawSource::new(format!(
-        "rolldown_runtime.run('{}');",
+        "rolldown_runtime.require('{}');",
         entry_module.stable_id
       ))));
     }

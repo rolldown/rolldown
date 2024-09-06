@@ -73,7 +73,7 @@ console.log(hyperCube(5));
 
 //#endregion
 });
-rolldown_runtime.run('main.js');
+rolldown_runtime.require('main.js');
 ```
 ## other-entry.mjs
 
@@ -92,5 +92,5 @@ console.log(cube(5));
 
 //#endregion
 });
-rolldown_runtime.run('other-entry.js');
+rolldown_runtime.require('other-entry.js');
 ```

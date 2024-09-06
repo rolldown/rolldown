@@ -7,7 +7,7 @@ const runtimePublicPath = '/@react-refresh'
 const runtimeFilePath = require.resolve(
   'react-refresh/cjs/react-refresh-runtime.development.js',
 )
-
+const refreshEntry = 'react-refresh-entry.js'
 const runtimeCode = `
 const exports = {}
 ${fs.readFileSync(runtimeFilePath, 'utf-8')}
@@ -40,15 +40,24 @@ function reactRefreshPlugin() {
       if (id === runtimePublicPath) {
         return id
       }
+      if (id === refreshEntry) {
+        return id
+      }
     },
 
     load(id) {
       if (id === runtimePublicPath) {
         return runtimeCode
       }
+      if (id === refreshEntry) {
+        return preambleCode
+      }
     },
 
     transform(code, id, ssr) {
+      if (id === runtimePublicPath || id === refreshEntry) {
+        return
+      }
       if (!/\.(t|j)sx?$/.test(id) || id.includes('node_modules')) {
         return
       }
@@ -120,20 +129,6 @@ function reactRefreshPlugin() {
         code: `${header}${result.code}${footer}`,
         map: result.map,
       }
-    },
-
-    transformIndexHtml() {
-      if (shouldSkip) {
-        return
-      }
-
-      return [
-        {
-          tag: 'script',
-          attrs: { type: 'module' },
-          children: preambleCode,
-        },
-      ]
     },
   }
 }

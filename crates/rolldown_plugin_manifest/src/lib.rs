@@ -108,7 +108,7 @@ impl Plugin for ManifestPlugin {
     // let outputLength = Array.isArray(output) ? output.length : 1
     // if output_count >= outputLength {
     ctx.emit_file(EmittedAsset {
-      file_name: Some(self.config.out_path.clone()),
+      file_name: Some(self.config.out_path.as_str().into()),
       name: None,
       original_file_name: None,
       source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),

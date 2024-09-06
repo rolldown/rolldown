@@ -29,6 +29,13 @@ export function getOutputFileNames(output: RollupOutput) {
   return output.output.map((chunk) => chunk.fileName).sort()
 }
 
+export function getOutputAssetNames(output: RollupOutput) {
+  return output.output
+    .filter((chunk) => chunk.type === 'asset')
+    .map((chunk) => chunk.fileName)
+    .sort()
+}
+
 /**
  *
  * @returns The absolute path to the `${WORKSPACE}/packages/rolldown` directory

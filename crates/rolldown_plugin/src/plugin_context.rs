@@ -4,6 +4,7 @@ use std::{
   sync::{Arc, OnceLock, Weak},
 };
 
+use arcstr::ArcStr;
 use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
@@ -101,15 +102,15 @@ impl PluginContextImpl {
     .await
   }
 
-  pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> String {
+  pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> ArcStr {
     self.file_emitter.emit_file(file)
   }
 
-  pub fn try_get_file_name(&self, reference_id: &str) -> Result<String, String> {
+  pub fn try_get_file_name(&self, reference_id: &str) -> Result<ArcStr, String> {
     self.file_emitter.try_get_file_name(reference_id)
   }
 
-  pub fn get_file_name(&self, reference_id: &str) -> String {
+  pub fn get_file_name(&self, reference_id: &str) -> ArcStr {
     self.file_emitter.get_file_name(reference_id)
   }
 

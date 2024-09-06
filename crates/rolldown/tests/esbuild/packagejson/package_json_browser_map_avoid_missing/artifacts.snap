@@ -19,9 +19,15 @@ var require_component_indexof = __commonJS({ "node_modules/component-indexof/ind
 //#endregion
 //#region node_modules/component-classes/index.js
 try {
+<<<<<<< HEAD:crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_avoid_missing/artifacts.snap
 	var index = require_component_indexof();
 } catch (err) {
 	var index = require_component_indexof();
+=======
+	var index$1 = require_component_indexof_index();
+} catch (err) {
+	var index$1 = require_component_indexof_index();
+>>>>>>> b6bdba8f3 (feat: implement hmr runtime (#2172)):crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_map_avoid_missing/artifacts.snap
 }
 
 //#endregion

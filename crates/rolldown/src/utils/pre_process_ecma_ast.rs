@@ -92,13 +92,8 @@ pub fn pre_process_ecma_ast(
     }
 
     // Perform dead code elimination.
-    let options = CompressOptions {
-      fold_constants: true,
-      remove_dead_code: true,
-      remove_syntax: true,
-      ..CompressOptions::all_false()
-    };
-    let compressor = Compressor::new(allocator, options);
+    // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
+    let compressor = Compressor::new(allocator, CompressOptions::dead_code_elimination());
     if ast_changed {
       // This method recreates symbols and scopes.
       compressor.build(program);

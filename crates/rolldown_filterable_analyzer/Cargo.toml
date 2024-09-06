@@ -9,7 +9,8 @@ version              = "0.1.0"
 [dependencies]
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }
-oxc            = { workspace = true, features = ["cfg"] }
+oxc            = { workspace = true }
+oxc_cfg        = { path = "/home/victor/Documents/oxc/oxc/crates/oxc_cfg/", version = "0.26.0" }
 rolldown_error = { workspace = true }
 
 [lints]

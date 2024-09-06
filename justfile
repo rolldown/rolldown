@@ -2,7 +2,8 @@ set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 _default:
-    just --list -u
+    cargo r --bin rolldown_filterable_analyzer
+
 
 setup:
     # Rust related setup

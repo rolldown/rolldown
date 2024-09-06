@@ -1,10 +1,14 @@
 use oxc::allocator::Allocator;
 use oxc::ast::ast::Program;
-use oxc::ast::Visit;
-use oxc::cfg::graph::visit::Dfs;
+use oxc::ast::{AstKind, Visit};
 use oxc::parser::{ParseOptions, Parser, ParserReturn};
 use oxc::semantic::{Semantic, SemanticBuilder};
 use oxc::span::SourceType;
+use oxc_cfg::graph::csr::IndexType;
+use oxc_cfg::graph::graph::NodeIndex;
+use oxc_cfg::graph::visit::{Control, DfsEvent, EdgeRef, IntoEdges};
+use oxc_cfg::visit::set_depth_first_search;
+use oxc_cfg::{EdgeType, InstructionKind};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 
 pub fn parse<'a>(
@@ -52,31 +56,80 @@ pub fn ast_with_semantic_builder<'a>(
   Ok(AstWithSemantic { program, semantic: semantic_ret.semantic })
 }
 
-pub fn filterable<'a>(ast_ext: &AstWithSemantic<'a>) -> bool {
-  todo!()
+pub fn filterable(source: &str) -> bool {
+  let alloc = Allocator::default();
+  let ast_ext = ast_with_semantic_builder("test", source, &alloc, SourceType::ts()).unwrap();
+  let mut analyzer = FilterableAnalyzer::new(&ast_ext);
+  analyzer.visit_program(&ast_ext.program);
+  true
 }
 
-struct FilterableAnaalyzer<'a> {
-  ast_ext: &'a AstWithSemantic<'a>,
+struct FilterableAnalyzer<'b, 'a: 'b> {
+  ast_ext: &'b AstWithSemantic<'a>,
 }
 
-impl<'a> FilterableAnaalyzer<'a> {
-  pub fn new(ast_ext: &'a AstWithSemantic<'a>) -> Self {
+impl<'b, 'a> FilterableAnalyzer<'b, 'a> {
+  pub fn new(ast_ext: &'b AstWithSemantic<'a>) -> Self {
     Self { ast_ext }
   }
 }
 
-impl<'a> Visit<'a> for FilterableAnaalyzer<'a> {
+impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
   fn visit_program(&mut self, it: &Program<'a>) {
     let Some(cfg) = self.ast_ext.semantic.cfg() else {
       return;
     };
     let g = cfg.graph();
-    let mut dfs = Dfs::new(&g, oxc::cfg::graph::graph::NodeIndex::from(0));
-    while let Some(nx) = dfs.next(&g) {}
+    let mut function_index = None;
+    let mut caller_index = NodeIndex::new(0);
+    let ret = set_depth_first_search(g, Some(NodeIndex::new(1)), |e| match e {
+      DfsEvent::Discover(_, _) => Control::<bool>::Continue,
+      DfsEvent::TreeEdge(s, e) => {
+        dbg!(&s, &e);
+
+        if let Some(index) = function_index {
+          'outer: for b in cfg.basic_block(e).instructions() {
+            if matches!(b.kind, InstructionKind::Unreachable) {
+              return Control::Prune;
+            }
+            if matches!(b.kind, InstructionKind::Return(_) | InstructionKind::ImplicitReturn) {
+              return Control::Break(true);
+            }
+            let node = b.node_id.map(|id| self.ast_ext.semantic.nodes().get_node(id).kind());
+            match node {
+              Some(AstKind::IfStatement(_) | AstKind::BlockStatement(_)) => {
+                continue;
+              }
+              Some(kind) => {
+                if matches!(b.kind, InstructionKind::Condition) {
+                  continue;
+                }
+                return Control::Prune;
+              }
+              // Must be unreachable
+              None => {
+                return Control::Continue;
+              }
+            }
+          }
+        } else {
+          for e in g.edges_connecting(s, e) {
+            if matches!(g.edge_weight(e.id()), Some(oxc_cfg::EdgeType::NewFunction)) {
+              function_index = Some(e.target());
+              caller_index = s;
+            }
+          }
+        }
+        Control::Continue
+      }
+      DfsEvent::BackEdge(..) | DfsEvent::CrossForwardEdge(..) => Control::Continue,
+      DfsEvent::Finish(s, _) => {
+        if Some(s) == function_index {
+          return Control::Break(false);
+        }
+        Control::Continue
+      }
+    });
+    dbg!(&ret);
   }
-  fn visit_function(&mut self, it: &oxc::ast::ast::Function<'a>, flags: oxc::semantic::ScopeFlags) {
-    if let Some(cfg) = self.ast_ext.semantic.cfg() {}
-  }
-  fn enter_node(&mut self, kind: oxc::ast::AstKind<'a>) {}
 }

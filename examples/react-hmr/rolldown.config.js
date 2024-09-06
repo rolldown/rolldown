@@ -21,4 +21,5 @@ export default defineConfig({
   output: {
     format: 'app',
   },
+  dev: true,
 })

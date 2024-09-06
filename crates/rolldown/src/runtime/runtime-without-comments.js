@@ -55,6 +55,7 @@ var __toBinary = /* @__PURE__ */ (() => {
     return bytes
   }
 })()
+
 var __require = /* @__PURE__ */ (x =>
   typeof require !== 'undefined' ? require :
     typeof Proxy !== 'undefined' ? new Proxy(x, {
@@ -64,3 +65,23 @@ var __require = /* @__PURE__ */ (x =>
   if (typeof require !== 'undefined') return require.apply(this, arguments)
   throw Error('Dynamic require of "' + x + '" is not supported')
 })
+
+var rolldown_runtime = {
+  moduleCache: {},
+  moduleFactoryMap: {},
+  define: function (id, factory) {
+    this.moduleFactoryMap[id] = factory;
+  },
+  require: function (id) {
+    if (this.moduleCache[id]) {
+      return this.moduleCache[id].exports;
+    }
+    const factory = this.moduleFactoryMap[id];
+    if (!factory) {
+      throw new Error('Module not found: ' + id);
+    }
+    const module = this.moduleCache[id] = { exports: {} };
+    factory(this.require.bind(this), module, module.exports);
+    return module.exports;
+  },
+}

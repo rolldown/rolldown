@@ -4239,6 +4239,7 @@ snapshot_kind: text
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - main-!~{000}~.js => main-gMSufccO.js
 - other-entry-!~{001}~.js => other-entry-_m87DosR.js
 - cube-!~{002}~.js => cube-VxKWZvg0.js
@@ -4249,6 +4250,8 @@ snapshot_kind: text
 =======
 =======
 >>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
+=======
+>>>>>>> 332ebbe1d (feat: implement rolldown_runtime and fix react-refresh make react-example run (#2159))
 <<<<<<< HEAD
 - main-!~{000}~.mjs => main-OEIxNKs9.mjs
 - other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
@@ -4264,6 +4267,10 @@ snapshot_kind: text
 =======
 - main-!~{000}~.mjs => main-lE-CsZar.mjs
 - other-entry-!~{001}~.mjs => other-entry-cL10WWA7.mjs
+=======
+- main-!~{000}~.mjs => main-ASwzPJTD.mjs
+- other-entry-!~{001}~.mjs => other-entry-8oGJqUMX.mjs
+>>>>>>> 5c89389e (feat: implement rolldown_runtime and fix react-refresh make react-example run (#2159))
 - cube-!~{002}~.mjs => cube-ql8lOQly.mjs
 >>>>>>> ebc7a043 (feat: render app chunk and replace require module id to stable id (#2156))
 >>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))

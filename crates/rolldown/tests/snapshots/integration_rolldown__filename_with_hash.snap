@@ -982,7 +982,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/packagejson/test_package_json_browser_map_avoid_missing
 
-- entry-!~{000}~.mjs => entry-Jxn77t-m.mjs
+- entry-!~{000}~.mjs => entry-NqLgVvPa.mjs
 
 # tests/esbuild/packagejson/test_package_json_browser_map_module_disabled
 

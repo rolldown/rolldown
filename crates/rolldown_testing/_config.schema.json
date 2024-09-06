@@ -441,6 +441,14 @@
         "name"
       ],
       "properties": {
+        "minShareCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
         "minSize": {
           "type": [
             "number",

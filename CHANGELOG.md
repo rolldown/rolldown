@@ -1,3 +1,15 @@
+## [0.13.2](https://github.com/rolldown/rolldown/compare/v0.13.1...v0.13.2) (2024-09-06)
+
+
+### Features
+
+* **node/advance-chunks:** support global fallback for `minSize`, `minShareCount` ([#2178](https://github.com/rolldown/rolldown/issues/2178)) ([78c7750](https://github.com/rolldown/rolldown/commit/78c7750f186391d145f5b317a9ff6e5fbb2ba508))
+* **node/advance-chunks:** support passing `minSize`, `minShareCount` ([#2177](https://github.com/rolldown/rolldown/issues/2177)) ([3c95d30](https://github.com/rolldown/rolldown/commit/3c95d308a849ef6485410ef3248935198f3fcec0))
+* **rust/advance-chunks:** support `min_share_count` option ([#2176](https://github.com/rolldown/rolldown/issues/2176)) ([689cbc2](https://github.com/rolldown/rolldown/commit/689cbc23b43b3df99c9819d2a89911dcc80fac1b))
+* **rust/advance-chunks:** support `min_size` option ([#2175](https://github.com/rolldown/rolldown/issues/2175)) ([1e9c2d9](https://github.com/rolldown/rolldown/commit/1e9c2d9bf8195df869186f11a9c73539408ca067))
+
+
+
 ## [0.13.1](https://github.com/rolldown/rolldown/compare/v0.13.0...v0.13.1) (2024-09-05)
 
 

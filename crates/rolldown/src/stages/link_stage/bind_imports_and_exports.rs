@@ -6,7 +6,12 @@ use rolldown_common::{
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
+use rolldown_utils::rayon::{
+  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
+};
+
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -152,7 +157,7 @@ impl<'link> LinkStage<'link> {
     self.errors.extend(binding_ctx.errors);
     self.warnings.extend(binding_ctx.warnings);
 
-    self.metas.iter_mut().par_bridge().for_each(|meta| {
+    self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
         if let Some(potentially_ambiguous_symbol_refs) =
@@ -314,11 +319,9 @@ impl<'link> LinkStage<'link> {
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_maps.len());
-    self.metas.as_mut_vec().iter_mut().zip(resolved_maps).par_bridge().for_each(
-      |(meta, resolved_map)| {
-        meta.resolved_member_expr_refs = resolved_map;
-      },
-    );
+    self.metas.par_iter_mut().zip(resolved_maps).for_each(|(meta, resolved_map)| {
+      meta.resolved_member_expr_refs = resolved_map;
+    });
   }
 }
 

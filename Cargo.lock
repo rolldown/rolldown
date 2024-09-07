@@ -1523,6 +1523,9 @@ name = "oxc_index"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15c56c7fe9c3d99df968c5d0b3129eb373228c09915e22fc91d24e80c262e0d"
+dependencies = [
+ "rayon",
+]
 
 [[package]]
 name = "oxc_isolated_declarations"

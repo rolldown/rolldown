@@ -8,7 +8,6 @@ use oxc::{
     AstBuilder,
   },
   span::{Atom, CompactStr, Span, SPAN},
-  syntax::operator::UnaryOperator,
 };
 
 use crate::allocator_helpers::take_in::TakeIn;
@@ -448,13 +447,10 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
+  #[inline]
   /// `undefined` is acting like identifier, it might be shadowed by user code.
   pub fn void_zero(&self) -> ast::Expression<'ast> {
-    ast::Expression::UnaryExpression(self.builder.alloc_unary_expression(
-      SPAN,
-      UnaryOperator::Void,
-      self.number_expr(0.0, "0"),
-    ))
+    self.builder.void_0()
   }
 
   pub fn alloc_string_literal(

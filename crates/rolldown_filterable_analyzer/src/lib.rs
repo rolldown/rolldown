@@ -7,7 +7,7 @@ use oxc::span::SourceType;
 use oxc_cfg::graph::graph::NodeIndex;
 use oxc_cfg::graph::visit::{Control, DfsEvent, EdgeRef};
 use oxc_cfg::visit::set_depth_first_search;
-use oxc_cfg::{EdgeType, InstructionKind};
+use oxc_cfg::InstructionKind;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 
 pub fn parse<'a>(
@@ -39,7 +39,7 @@ pub fn parse<'a>(
     Ok(ret)
   }
 }
-struct AstWithSemantic<'a> {
+pub struct AstWithSemantic<'a> {
   program: Program<'a>,
   semantic: Semantic<'a>,
 }
@@ -51,7 +51,7 @@ pub fn ast_with_semantic_builder<'a>(
   ty: SourceType,
 ) -> DiagnosableResult<AstWithSemantic<'a>> {
   let ParserReturn { program, .. } = parse(filename, source, alloc, ty)?;
-  let semantic_ret = SemanticBuilder::new(source, ty).with_cfg(true).build(&program);
+  let semantic_ret = SemanticBuilder::new(source).with_cfg(true).build(&program);
   Ok(AstWithSemantic { program, semantic: semantic_ret.semantic })
 }
 
@@ -60,21 +60,22 @@ pub fn filterable(source: &str) -> bool {
   let ast_ext = ast_with_semantic_builder("test", source, &alloc, SourceType::ts()).unwrap();
   let mut analyzer = FilterableAnalyzer::new(&ast_ext);
   analyzer.visit_program(&ast_ext.program);
-  true
+  analyzer.ret
 }
 
 struct FilterableAnalyzer<'b, 'a: 'b> {
   ast_ext: &'b AstWithSemantic<'a>,
+  ret: bool,
 }
 
 impl<'b, 'a> FilterableAnalyzer<'b, 'a> {
   pub fn new(ast_ext: &'b AstWithSemantic<'a>) -> Self {
-    Self { ast_ext }
+    Self { ast_ext, ret: false }
   }
 }
 
 impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
-  fn visit_program(&mut self, it: &Program<'a>) {
+  fn visit_program(&mut self, _it: &Program<'a>) {
     let Some(cfg) = self.ast_ext.semantic.cfg() else {
       return;
     };
@@ -84,10 +85,8 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
     let ret = set_depth_first_search(g, Some(NodeIndex::new(1)), |e| match e {
       DfsEvent::Discover(_, _) => Control::<bool>::Continue,
       DfsEvent::TreeEdge(s, e) => {
-        dbg!(&s, &e);
-
-        if let Some(index) = function_index {
-          'outer: for b in cfg.basic_block(e).instructions() {
+        if function_index.is_some() {
+          for b in cfg.basic_block(e).instructions() {
             if matches!(b.kind, InstructionKind::Unreachable) {
               return Control::Prune;
             }
@@ -99,7 +98,7 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
               Some(AstKind::IfStatement(_) | AstKind::BlockStatement(_)) => {
                 continue;
               }
-              Some(kind) => {
+              Some(_) => {
                 if matches!(b.kind, InstructionKind::Condition) {
                   continue;
                 }
@@ -128,6 +127,6 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
         Control::Continue
       }
     });
-    dbg!(&ret);
+    self.ret = ret.break_value().unwrap_or_default();
   }
 }

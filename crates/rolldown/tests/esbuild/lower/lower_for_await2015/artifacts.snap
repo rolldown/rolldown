@@ -16,7 +16,7 @@ var entry_default = [async () => {
 	for  await(let x$1 of y) z(x$1);
 }, async () => {
 	for  await(const x$1 of y) z(x$1);
-},];
+}];
 
 //#endregion
 export { entry_default as default };

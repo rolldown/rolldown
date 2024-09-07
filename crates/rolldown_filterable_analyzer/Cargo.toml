@@ -10,7 +10,7 @@ version              = "0.1.0"
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }
 oxc            = { workspace = true }
-oxc_cfg        = { path = "/home/victor/Documents/oxc/oxc/crates/oxc_cfg/", version = "0.26.0" }
+oxc_cfg        = { git = "https://github.com/oxc-project/oxc", branch = "feat/add-implicit-return-inst", version = "0.27.0" }
 rolldown_error = { workspace = true }
 
 [lints]

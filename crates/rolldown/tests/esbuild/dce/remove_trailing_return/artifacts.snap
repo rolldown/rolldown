@@ -28,7 +28,7 @@ var entry_default = [foo, bar, function() {
 }, () => {
 	if (a) b();
 	return KEEP_ME;
-},];
+}];
 
 //#endregion
 export { entry_default as default };

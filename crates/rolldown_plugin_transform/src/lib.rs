@@ -67,7 +67,7 @@ impl Plugin for TransformPlugin {
         }
       }
 
-      let (symbols, scopes) = SemanticBuilder::new(fields.source, source_type)
+      let (symbols, scopes) = SemanticBuilder::new(fields.source)
         .build(fields.program)
         .semantic
         .into_symbol_table_and_scope_tree();

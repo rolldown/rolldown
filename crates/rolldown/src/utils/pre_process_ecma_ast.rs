@@ -31,9 +31,9 @@ pub fn pre_process_ecma_ast(
   let mut ast_changed = false;
 
   // Build initial semantic data and check for semantic errors.
-  let semantic_ret = ast.program.with_mut(|WithMutFields { program, source, .. }| {
-    SemanticBuilder::new(source, source_type).build(program)
-  });
+  let semantic_ret = ast
+    .program
+    .with_mut(|WithMutFields { program, source, .. }| SemanticBuilder::new(source).build(program));
 
   // TODO:
   // if !semantic_ret.errors.is_empty() {

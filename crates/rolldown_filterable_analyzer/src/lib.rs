@@ -1,5 +1,5 @@
 use oxc::allocator::Allocator;
-use oxc::ast::ast::Program;
+use oxc::ast::ast::{Expression, Program};
 use oxc::ast::{AstKind, Visit};
 use oxc::parser::{ParseOptions, Parser, ParserReturn};
 use oxc::semantic::{Semantic, SemanticBuilder};
@@ -9,7 +9,8 @@ use oxc_cfg::graph::visit::{Control, DfsEvent, EdgeRef};
 use oxc_cfg::visit::set_depth_first_search;
 use oxc_cfg::InstructionKind;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
-
+#[cfg(test)]
+mod test;
 pub fn parse<'a>(
   filename: &str,
   source: &'a str,
@@ -90,11 +91,22 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
             if matches!(b.kind, InstructionKind::Unreachable) {
               return Control::Prune;
             }
-            if matches!(b.kind, InstructionKind::Return(_) | InstructionKind::ImplicitReturn) {
+            if matches!(b.kind, InstructionKind::ImplicitReturn) {
               return Control::Break(true);
             }
             let node = b.node_id.map(|id| self.ast_ext.semantic.nodes().get_node(id).kind());
             match node {
+              Some(AstKind::ReturnStatement(stmt)) => match stmt.argument {
+                Some(Expression::Identifier(ref id)) if id.name == "undefined" => {
+                  return Control::Break(true);
+                }
+                None => {
+                  return Control::Break(true);
+                }
+                _ => {
+                  return Control::Prune;
+                }
+              },
               Some(AstKind::IfStatement(_) | AstKind::BlockStatement(_)) => {
                 continue;
               }

@@ -4,9 +4,8 @@ use oxc::ast::{AstKind, Visit};
 use oxc::parser::{ParseOptions, Parser, ParserReturn};
 use oxc::semantic::{Semantic, SemanticBuilder};
 use oxc::span::SourceType;
-use oxc_cfg::graph::csr::IndexType;
 use oxc_cfg::graph::graph::NodeIndex;
-use oxc_cfg::graph::visit::{Control, DfsEvent, EdgeRef, IntoEdges};
+use oxc_cfg::graph::visit::{Control, DfsEvent, EdgeRef};
 use oxc_cfg::visit::set_depth_first_search;
 use oxc_cfg::{EdgeType, InstructionKind};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
@@ -106,7 +105,6 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
                 }
                 return Control::Prune;
               }
-              // Must be unreachable
               None => {
                 return Control::Continue;
               }

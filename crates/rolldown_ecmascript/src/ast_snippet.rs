@@ -8,7 +8,6 @@ use oxc::{
     AstBuilder,
   },
   span::{Atom, CompactStr, Span, SPAN},
-  syntax::operator::UnaryOperator,
 };
 
 use crate::allocator_helpers::take_in::TakeIn;

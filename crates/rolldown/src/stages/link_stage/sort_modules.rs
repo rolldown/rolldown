@@ -50,21 +50,23 @@ impl<'a> LinkStage<'a> {
       match status {
         Status::ToBeExecuted(id) => {
           if executed_ids.contains(&id) {
-            if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
-              // Executing
-              let cycles = execution_stack[index..]
-                .iter()
-                .filter_map(|action| match action {
-                  // Only modules with `Status::WaitForExit` are on the execution chain
-                  Status::ToBeExecuted(_) => None,
-                  Status::WaitForExit(id) => Some(*id),
-                })
-                .chain(iter::once(id))
-                .collect::<Box<[_]>>();
-              circular_dependencies.insert(cycles);
-            } else {
-              // It's already executed in other import chain, no need to execute again
+            if self.options.checks.circular_dependency.unwrap_or(false) {
+              // Try to check if there is a circular dependency
+              if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
+                // Executing
+                let cycles = execution_stack[index..]
+                  .iter()
+                  .filter_map(|action| match action {
+                    // Only modules with `Status::WaitForExit` are on the execution chain
+                    Status::ToBeExecuted(_) => None,
+                    Status::WaitForExit(id) => Some(*id),
+                  })
+                  .chain(iter::once(id))
+                  .collect::<Box<[_]>>();
+                circular_dependencies.insert(cycles);
+              }
             }
+            // It's already executed in other import chain, no need to execute again
           } else {
             executed_ids.insert(id);
             execution_stack.push(Status::WaitForExit(id));
@@ -107,8 +109,7 @@ impl<'a> LinkStage<'a> {
       }
     }
 
-    if self.options.checks.circular_dependency.unwrap_or(true) && !circular_dependencies.is_empty()
-    {
+    if !circular_dependencies.is_empty() {
       let cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
       for cycle in cycles {
         let paths = cycle

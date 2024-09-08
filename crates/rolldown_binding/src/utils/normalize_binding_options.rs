@@ -207,6 +207,7 @@ pub fn normalize_binding_options(
           .collect::<Vec<_>>()
       }),
     }),
+    checks: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

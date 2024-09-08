@@ -1,6 +1,7 @@
 use rolldown_utils::indexmap::FxIndexMap;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
+use types::checks_options::ChecksOptions;
 use types::inject_import::InjectImport;
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -131,6 +132,7 @@ pub struct BundlerOptions {
   pub external_live_bindings: Option<bool>,
   pub inline_dynamic_imports: Option<bool>,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub checks: Option<ChecksOptions>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

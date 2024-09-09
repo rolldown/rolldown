@@ -149,19 +149,19 @@ var rolldown_runtime = self.rolldown_runtime = {
           continue;
         }
 
-        if (module.selfAccept) {
+        var module = rolldown_runtime.moduleCache[moduleId];
+
+        if (module.hot.selfAccept) {
           if(boundaries.indexOf(moduleId) === -1) {
             boundaries.push(moduleId);
           }
-          for (var i = 0; index < chain.length; index++) {
+          for (var i = 0; i < chain.length; i++) {
             if(invalidModuleIds.indexOf(chain[i]) === -1) {
               invalidModuleIds.push(chain[i]);
             }
           }
           continue;
         }
-
-        var module = rolldown_runtime.moduleCache[moduleId];
 
         for(var i = 0; i < module.parents.length; i++) {
           var parent = module.parents[i];

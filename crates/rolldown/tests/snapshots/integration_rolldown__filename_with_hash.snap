@@ -2934,10 +2934,14 @@ snapshot_kind: text
 # tests/esbuild/lower/ts_lower_private_field_optional_chain2015_no_bundle
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - entry-!~{000}~.js => entry-jF2aLy7c.js
 =======
 - entry-!~{000}~.mjs => entry-NqLgVvPa.mjs
 >>>>>>> b6bdba8f3 (feat: implement hmr runtime (#2172))
+=======
+- entry-!~{000}~.mjs => entry-Jxn77t-m.mjs
+>>>>>>> c5604e468 (fix: diff modules ast should be mutate by IsolatingModuleFinalizer (#2184))
 
 # tests/esbuild/lower/ts_lower_private_static_members2015_no_bundle
 

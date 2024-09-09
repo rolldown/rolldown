@@ -119,6 +119,11 @@ async function bundleInner(
   const duration = endTime - startTime
   // If the build time is more than 1s, we should display it in seconds.
   logger.success(`Finished in ${colors.bold(ms(duration))}`)
+
+  if (options.dev) {
+    logger.log(`Watching for changes...`)
+    await build.experimental_hmr()
+  }
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

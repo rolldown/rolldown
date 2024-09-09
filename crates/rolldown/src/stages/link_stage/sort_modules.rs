@@ -107,7 +107,8 @@ impl<'a> LinkStage<'a> {
       }
     }
 
-    if !circular_dependencies.is_empty() {
+    if self.options.checks.circular_dependency.unwrap_or(true) && !circular_dependencies.is_empty()
+    {
       let cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
       for cycle in cycles {
         let paths = cycle

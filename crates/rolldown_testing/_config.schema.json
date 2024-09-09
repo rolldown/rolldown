@@ -104,6 +104,16 @@
             "null"
           ]
         },
+        "checks": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ChecksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "chunkFilenames": {
           "type": [
             "string",
@@ -321,6 +331,18 @@
         },
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChecksOptions": {
+      "type": "object",
+      "properties": {
+        "circularDependency": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

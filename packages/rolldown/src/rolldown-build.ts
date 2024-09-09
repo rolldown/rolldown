@@ -1,7 +1,6 @@
 import type { OutputOptions } from './options/output-options'
 import { transformToRollupOutput } from './utils/transform-to-rollup-output'
 import { BundlerWithStopWorker, createBundler } from './utils/create-bundler'
-import chokidar from 'chokidar'
 
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'

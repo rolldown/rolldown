@@ -66,6 +66,8 @@ impl FileEmitter {
         })
         .as_bytes(),
     )
+    // The reference id can be used for import.meta.ROLLUP_FILE_URL_referenceId and therefore needs to be a valid identifier.
+    .replace('-', "$")
     .into()
   }
 

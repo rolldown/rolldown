@@ -67,6 +67,11 @@ async function bundleInner(
       ? `${duration.toFixed(2)} ms`
       : `${(duration / 1000).toFixed(2)} s`
   logger.success(`Finished in ${colors.bold(spent)}`)
+
+  if (options.dev) {
+    logger.log(`Watching for changes...`)
+    await build.experimental_hmr()
+  }
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

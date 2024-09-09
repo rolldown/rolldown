@@ -41,8 +41,10 @@ export class RolldownBuild {
     return transformToRollupOutput(output)
   }
 
-  async destroy(): Promise<void> {
+  async close(): Promise<void> {
+    const bundler = await this.#getBundler({})
     await this.#stopWorkers?.()
+    await bundler.close()
   }
 }
 

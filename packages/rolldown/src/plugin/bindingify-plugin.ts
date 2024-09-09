@@ -20,6 +20,7 @@ import {
   bindingifyFooter,
   bindingifyIntro,
   bindingifyOutro,
+  bindingifyCloseBundle,
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
@@ -103,6 +104,12 @@ export function bindingifyPlugin(
     pluginContextData,
   )
 
+  const { plugin: closeBundle, meta: closeBundleMeta } = bindingifyCloseBundle(
+    plugin,
+    options,
+    pluginContextData,
+  )
+
   const { plugin: banner, meta: bannerMeta } = bindingifyBanner(
     plugin,
     options,
@@ -157,6 +164,8 @@ export function bindingifyPlugin(
     generateBundleMeta,
     writeBundle,
     writeBundleMeta,
+    closeBundle,
+    closeBundleMeta,
     banner,
     bannerMeta,
     footer,

@@ -177,6 +177,10 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
 
+  async fn call_close_bundle(&self, _ctx: &PluginContext) -> HookNoopReturn;
+
+  fn call_close_bundle_meta(&self) -> Option<PluginHookMeta>;
+
   fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
     Ok(None)
   }
@@ -388,6 +392,14 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta> {
     Plugin::write_bundle_meta(self)
+  }
+
+  async fn call_close_bundle(&self, ctx: &PluginContext) -> HookNoopReturn {
+    Plugin::close_bundle(self, ctx).await
+  }
+
+  fn call_close_bundle_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::close_bundle_meta(self)
   }
 
   fn call_transform_ast(

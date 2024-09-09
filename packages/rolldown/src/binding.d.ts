@@ -68,6 +68,7 @@ export declare class Bundler {
   write(): Promise<FinalBindingOutputs>
   generate(): Promise<FinalBindingOutputs>
   scan(): Promise<void>
+  close(): Promise<void>
 }
 
 /**
@@ -346,6 +347,8 @@ export interface BindingPluginOptions {
   generateBundleMeta?: BindingPluginHookMeta
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   writeBundleMeta?: BindingPluginHookMeta
+  closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  closeBundleMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   bannerMeta?: BindingPluginHookMeta
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void

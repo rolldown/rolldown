@@ -170,6 +170,27 @@ export function bindingifyWriteBundle(
   }
 }
 
+export function bindingifyCloseBundle(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
+  const hook = plugin.closeBundle
+  if (!hook) {
+    return {}
+  }
+  const { handler, meta } = normalizeHook(hook)
+
+  return {
+    plugin: async (ctx) => {
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+      )
+    },
+    meta: bindingifyPluginHookMeta(meta),
+  }
+}
+
 export function bindingifyBanner(
   plugin: Plugin,
   options: NormalizedInputOptions,

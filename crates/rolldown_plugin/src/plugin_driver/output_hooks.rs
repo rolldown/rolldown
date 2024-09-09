@@ -132,4 +132,12 @@ impl PluginDriver {
     }
     Ok(())
   }
+
+  pub async fn close_bundle(&self) -> HookNoopReturn {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
+    {
+      plugin.call_close_bundle(ctx).await?;
+    }
+    Ok(())
+  }
 }

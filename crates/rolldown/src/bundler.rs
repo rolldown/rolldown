@@ -20,6 +20,7 @@ use rolldown_plugin::{
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
+  pub(crate) closed: bool,
   pub(crate) options: SharedOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: OsFileSystem,
@@ -72,6 +73,18 @@ impl Bundler {
     self.bundle_up(/* is_write */ false).await
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub async fn close(&mut self) -> Result<()> {
+    if self.closed {
+      return Ok(());
+    }
+
+    self.closed = true;
+    self.plugin_driver.close_bundle().await?;
+
+    Ok(())
+  }
+
   pub async fn scan(&mut self) -> Result<DiagnosableResult<ScanStageOutput>> {
     self.plugin_driver.build_start().await?;
 
@@ -94,6 +107,7 @@ impl Bundler {
           .plugin_driver
           .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
           .await?;
+        self.plugin_driver.close_bundle().await?;
         return Err(err);
       }
     };
@@ -108,6 +122,7 @@ impl Bundler {
           .plugin_driver
           .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
           .await?;
+        self.plugin_driver.close_bundle().await?;
         return Ok(Err(errs));
       }
     };
@@ -130,6 +145,12 @@ impl Bundler {
 
   #[allow(clippy::missing_transmute_annotations)]
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
+    if self.closed {
+      return Err(anyhow::anyhow!(
+        "Bundle is already closed, no more calls to 'generate' or 'write' are allowed."
+      ));
+    }
+
     let mut link_stage_output = match self.try_build().await? {
       Ok(v) => v,
       Err(errors) => return Ok(BundleOutput { assets: vec![], warnings: vec![], errors }),

@@ -89,6 +89,12 @@ impl Bundler {
   pub async fn scan(&self) -> napi::Result<()> {
     self.scan_impl().await
   }
+
+  #[napi]
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub async fn close(&self) -> napi::Result<()> {
+    self.close_impl().await
+  }
 }
 
 impl Bundler {
@@ -144,6 +150,17 @@ impl Bundler {
     self.handle_warnings(outputs.warnings).await;
 
     Ok(FinalBindingOutputs::new(outputs.assets))
+  }
+
+  #[allow(clippy::significant_drop_tightening)]
+  pub async fn close_impl(&self) -> napi::Result<()> {
+    let mut bundler_core = self.inner.try_lock().map_err(|_| {
+      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
+    })?;
+
+    Self::handle_result(bundler_core.close().await)?;
+
+    Ok(())
   }
 
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {

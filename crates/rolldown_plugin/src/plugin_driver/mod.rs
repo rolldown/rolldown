@@ -114,6 +114,7 @@ pub struct HookOrderIndicates {
   pub order_by_render_error_meta: Vec<PluginIdx>,
   pub order_by_generate_bundle_meta: Vec<PluginIdx>,
   pub order_by_write_bundle_meta: Vec<PluginIdx>,
+  pub order_by_close_bundle_meta: Vec<PluginIdx>,
   pub order_by_transform_ast_meta: Vec<PluginIdx>,
 }
 
@@ -164,6 +165,9 @@ impl HookOrderIndicates {
       }),
       order_by_write_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |p| {
         p.call_write_bundle_meta()
+      }),
+      order_by_close_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |p| {
+        p.call_close_bundle_meta()
       }),
       order_by_transform_ast_meta: Self::sort_plugins_by_hook_meta(index_plugins, |p| {
         p.call_transform_ast_meta()

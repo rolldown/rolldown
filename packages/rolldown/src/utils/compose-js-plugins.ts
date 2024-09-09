@@ -123,6 +123,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
+        case 'closeBundle': {
+          const handlers = batchedHooks.closeBundle ?? []
+          batchedHooks.closeBundle = handlers
+          if (plugin.closeBundle) {
+            handlers.push([plugin.closeBundle, plugin])
+          }
+          break
+        }
         default: {
           // All known hooks should be handled above.
           // User-defined custom properties will hit this branch and it's ok. Just ignore them.
@@ -362,6 +370,20 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               }
             }
             return ret.join('\n')
+          }
+        }
+        break
+      }
+      case 'closeBundle': {
+        if (batchedHooks.closeBundle) {
+          const batchedHandlers = batchedHooks.closeBundle
+          composed.closeBundle = async function () {
+            await Promise.all(
+              batchedHandlers.map(([handler, plugin]) => {
+                const { handler: handlerFn } = normalizeHook(handler)
+                return handlerFn.call(applyFixedPluginResolveFn(this, plugin))
+              }),
+            )
           }
         }
         break

@@ -186,6 +186,8 @@ export interface FunctionPluginHooks {
     outputOptions: NormalizedOutputOptions,
     bundle: OutputBundle,
   ) => void
+
+  [DEFINED_HOOK_NAMES.closeBundle]: (this: PluginContext) => void
 }
 
 export type PluginOrder = 'pre' | 'post' | null

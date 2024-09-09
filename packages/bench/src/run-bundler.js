@@ -41,7 +41,7 @@ export async function runRolldown(suite) {
     dir: path.join(PROJECT_ROOT, `./dist/rolldown/${suite.title}`),
     ...outputOptions,
   })
-  await build.destroy()
+  await build.close()
 }
 
 /**

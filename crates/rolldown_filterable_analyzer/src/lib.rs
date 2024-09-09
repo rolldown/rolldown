@@ -83,60 +83,72 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
     let g = cfg.graph();
     let mut function_index = None;
     let mut caller_index = NodeIndex::new(0);
-    let ret = set_depth_first_search(g, Some(NodeIndex::new(1)), |e| match e {
-      DfsEvent::Discover(_, _) => Control::<bool>::Continue,
-      DfsEvent::TreeEdge(s, e) => {
-        if function_index.is_some() {
-          for b in cfg.basic_block(e).instructions() {
-            if matches!(b.kind, InstructionKind::Unreachable) {
-              return Control::Prune;
-            }
-            if matches!(b.kind, InstructionKind::ImplicitReturn) {
-              return Control::Break(true);
-            }
-            let node = b.node_id.map(|id| self.ast_ext.semantic.nodes().get_node(id).kind());
-            match node {
-              Some(AstKind::ReturnStatement(stmt)) => match stmt.argument {
-                Some(Expression::Identifier(ref id)) if id.name == "undefined" => {
-                  return Control::Break(true);
-                }
-                None => {
-                  return Control::Break(true);
-                }
-                _ => {
-                  return Control::Prune;
-                }
-              },
-              Some(AstKind::IfStatement(_) | AstKind::BlockStatement(_)) => {
-                continue;
-              }
-              Some(_) => {
-                if matches!(b.kind, InstructionKind::Condition) {
-                  continue;
-                }
+    let ret = set_depth_first_search(g, Some(NodeIndex::new(1)), |e| {
+      dbg!(&e);
+      match e {
+        DfsEvent::Discover(n, _) => {
+          dbg!(&n);
+          Control::<bool>::Continue
+        }
+        DfsEvent::TreeEdge(s, e) => {
+          if function_index.is_some() {
+            for b in cfg.basic_block(e).instructions() {
+              if matches!(b.kind, InstructionKind::Unreachable) {
+                dbg!(&s);
                 return Control::Prune;
               }
-              None => {
-                return Control::Continue;
+              if matches!(b.kind, InstructionKind::ImplicitReturn) {
+                return Control::Break(true);
+              }
+              let node = b.node_id.map(|id| self.ast_ext.semantic.nodes().get_node(id).kind());
+              match node {
+                Some(AstKind::ReturnStatement(stmt)) => match stmt.argument {
+                  // `return undefined;`
+                  Some(Expression::Identifier(ref id)) if id.name == "undefined" => {
+                    return Control::Break(true);
+                  }
+                  // `return;`
+                  None => {
+                    return Control::Break(true);
+                  }
+                  _ => {
+                    dbg!(&s);
+                    return Control::Prune;
+                  }
+                },
+                Some(AstKind::IfStatement(_) | AstKind::BlockStatement(_)) => {
+                  continue;
+                }
+                Some(_) => {
+                  if matches!(b.kind, InstructionKind::Condition) {
+                    continue;
+                  }
+                  dbg!(&s);
+                  return Control::Prune;
+                }
+                None => {
+                  return Control::Continue;
+                }
+              }
+            }
+          } else {
+            for e in g.edges_connecting(s, e) {
+              if matches!(g.edge_weight(e.id()), Some(oxc_cfg::EdgeType::NewFunction)) {
+                function_index = Some(e.target());
+                caller_index = s;
               }
             }
           }
-        } else {
-          for e in g.edges_connecting(s, e) {
-            if matches!(g.edge_weight(e.id()), Some(oxc_cfg::EdgeType::NewFunction)) {
-              function_index = Some(e.target());
-              caller_index = s;
-            }
+          Control::Continue
+        }
+        DfsEvent::BackEdge(..) | DfsEvent::CrossForwardEdge(..) => Control::Continue,
+        DfsEvent::Finish(s, _) => {
+          dbg!(&s);
+          if Some(s) == function_index {
+            return Control::Break(false);
           }
+          Control::Continue
         }
-        Control::Continue
-      }
-      DfsEvent::BackEdge(..) | DfsEvent::CrossForwardEdge(..) => Control::Continue,
-      DfsEvent::Finish(s, _) => {
-        if Some(s) == function_index {
-          return Control::Break(false);
-        }
-        Control::Continue
       }
     });
     self.ret = ret.break_value().unwrap_or_default();

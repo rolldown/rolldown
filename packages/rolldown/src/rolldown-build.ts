@@ -2,7 +2,6 @@ import { Bundler } from './binding'
 import type { OutputOptions } from './options/output-options'
 import { transformToRollupOutput } from './utils/transform-to-rollup-output'
 import { createBundler } from './utils/create-bundler'
-import chokidar from 'chokidar'
 
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
@@ -42,11 +41,8 @@ export class RolldownBuild {
     return transformToRollupOutput(output)
   }
 
-<<<<<<< HEAD
-  async close(): Promise<void> {
-    const bundler = await this.#getBundler({})
-=======
-  async experimental_hmr(): Promise<void> {
+
+  async experimental_hmr_rebuild(): Promise<void> {
     const cwd = this.#inputOptions.cwd ?? process.cwd()
     const watcher = chokidar.watch([cwd])
     watcher.on('change', async (file) => {
@@ -56,8 +52,8 @@ export class RolldownBuild {
     })
   }
 
-  async destroy(): Promise<void> {
->>>>>>> a6a9ca8d (feat: add hmr_rebuild api (#2137))
+  async close(): Promise<void> {
+      const bundler = await this.#getBundler({})
     await this.#stopWorkers?.()
     await bundler.close()
   }

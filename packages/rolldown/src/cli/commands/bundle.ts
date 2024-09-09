@@ -5,6 +5,11 @@ import { arraify } from '../../utils/misc'
 import { ensureConfig, logger } from '../utils'
 import * as colors from '../colors'
 import { NormalizedCliOptions } from '../arguments/normalize'
+import { createServer } from 'node:http'
+import { WebSocketServer, WebSocket } from 'ws'
+import chokidar from 'chokidar'
+import connect from 'connect'
+import ServerStatic from 'serve-static'
 
 export async function bundleWithConfig(
   configPath: string,
@@ -69,8 +74,31 @@ async function bundleInner(
   logger.success(`Finished in ${colors.bold(spent)}`)
 
   if (options.dev) {
+    const cwd = options.cwd ?? process.cwd()
+    const app = connect()
+    app.use(ServerStatic(cwd))
+    const server = createServer(app)
+    const wsServer = new WebSocketServer({ server })
+    let socket: WebSocket
+    wsServer.on('connection', function connection(ws) {
+      socket = ws
+      logger.log(`Ws connected`)
+      ws.on('error', console.error)
+    })
+    logger.log(`Dev server running at`, colors.cyan('http:://localhost::8080'))
+
+    server.listen(8080)
+
     logger.log(`Watching for changes...`)
-    await build.experimental_hmr()
+    const watcher = chokidar.watch([cwd])
+    watcher.on('change', async (file) => {
+      if (file) {
+        await build.experimental_hmr_rebuild([file])
+        if (socket) {
+          socket.send('something')
+        }
+      }
+    })
   }
 }
 

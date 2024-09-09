@@ -1,5 +1,3 @@
-use std::ops::DerefMut;
-
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
@@ -39,7 +37,7 @@ impl EcmaCompiler {
               .errors
               .into_iter()
               .map(|mut error| {
-                let error = error.deref_mut();
+                let error = &mut *error;
                 BuildDiagnostic::oxc_parse_error(
                   source.clone(),
                   filename.to_string(),

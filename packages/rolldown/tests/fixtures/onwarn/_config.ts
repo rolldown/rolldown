@@ -5,6 +5,7 @@ import { expect, vi } from 'vitest'
 const fn = vi.fn()
 
 export default defineTest({
+  skip: true, // TODO: enable this test when `InputOptions.checks` is implemented
   config: {
     onwarn(warning) {
       fn()

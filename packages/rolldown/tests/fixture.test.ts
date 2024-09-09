@@ -39,7 +39,7 @@ function main() {
     const dirPath = nodePath.dirname(testConfigPath)
     const testName = dirPath.replace('./fixtures/', '')
 
-    test.skipIf(testConfig.skipComposingJsPlugin)(
+    test.skipIf(testConfig.skip || testConfig.skipComposingJsPlugin)(
       `${testName}-composing-js-plugin`,
       async () => {
         testConfig.config = testConfig.config ?? {}

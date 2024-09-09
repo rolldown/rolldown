@@ -100,7 +100,8 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\n"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "chokidar": "3.6.0"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.60",

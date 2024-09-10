@@ -1,5 +1,7 @@
-use oxc::ast::ast::{self, Statement};
+use oxc::ast::ast::{self, Expression, Statement};
+use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
+use oxc::span::SPAN;
 use rolldown_common::Module;
 use rolldown_ecmascript::TakeIn;
 
@@ -9,55 +11,25 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let original_body = program.body.take_in(self.alloc);
 
-    for stmt in original_body {
+    for mut stmt in original_body {
       match &stmt {
-        // // rewrite:
-        // - `import { default, a, b as b2 } from 'xxx'` to `const { default, a, b: b2 } = __static_import('xxx')`
-        // - `import foo from 'xxx'` to `const { default: foo } = __static_import('xxx')`
-        // - `import * as star from 'xxx'` to `const star = __static_import_star('xxx')`
         Statement::ImportDeclaration(import_decl) => {
           let rec_id = self.ctx.module.imports[&import_decl.span];
           let rec = &self.ctx.module.import_records[rec_id];
-          let mut named_specifiers = vec![];
-          let mut star_specifier = None;
           match &self.ctx.modules[rec.resolved_module] {
             Module::Ecma(importee) => {
-              if let Some(specifiers) = &import_decl.specifiers {
-                for specifier in specifiers {
-                  match specifier {
-                    ast::ImportDeclarationSpecifier::ImportSpecifier(s) => {
-                      named_specifiers.push((s.imported.name().as_str(), s.local.name.as_str()));
-                    }
-                    ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => {
-                      named_specifiers.push(("default", s.local.name.as_str()));
-                    }
-                    ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(s) => {
-                      star_specifier = Some(s);
-                    }
-                  }
-                }
-              }
-              let is_plain_import =
-                import_decl.specifiers.as_ref().map_or(false, |specifiers| specifiers.is_empty());
-              let importee = &self.ctx.modules[importee.idx];
-              if is_plain_import {
-                program.body.push(
-                  self
-                    .snippet
-                    .app_static_import_call_multiple_specifiers_stmt(&[], importee.stable_id()),
-                );
-                continue;
-              } else if let Some(star_spec) = star_specifier {
-                program.body.push(
-                  self
-                    .snippet
-                    .app_static_import_star_call_stmt(&star_spec.local.name, importee.stable_id()),
-                );
+              if self.generated_imports.contains(&importee.namespace_object_ref) {
                 continue;
               }
-              program.body.push(self.snippet.app_static_import_call_multiple_specifiers_stmt(
-                &named_specifiers,
-                importee.stable_id(),
+              // TODO deconflict namespace_ref
+              let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
+
+              self.generated_imports.insert(importee.namespace_object_ref);
+
+              program.body.push(self.snippet.variable_declarator_require_call_stmt(
+                import_decl.source.as_ref(),
+                namespace_ref,
+                import_decl.span,
               ));
               continue;
             }
@@ -68,7 +40,46 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
         ast::Statement::ExportDefaultDeclaration(_default_decl) => {}
         _ => {}
       }
+      walk_mut::walk_statement(self, &mut stmt);
       program.body.push(stmt);
     }
+  }
+
+  fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
+    if let Expression::Identifier(ident) = expr {
+      if let Some(named_import) = ident
+        .reference_id
+        .get()
+        .and_then(|reference_id| self.scope.symbol_id_for(reference_id))
+        .map(|symbol_id| (self.ctx.module.idx, symbol_id).into())
+        .and_then(|symbol_ref| self.ctx.module.named_imports.get(&symbol_ref))
+      {
+        let rec = &self.ctx.module.import_records[named_import.record_id];
+        match &self.ctx.modules[rec.resolved_module] {
+          Module::Ecma(importee) => {
+            // TODO deconflict namespace_ref
+            let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
+
+            match &named_import.imported {
+              rolldown_common::Specifier::Star => {
+                ident.name = self.snippet.atom(namespace_ref.as_str());
+              }
+              rolldown_common::Specifier::Literal(imported) => {
+                *expr = Expression::StaticMemberExpression(
+                  self.snippet.builder.alloc_static_member_expression(
+                    ident.span,
+                    self.snippet.id_ref_expr(namespace_ref, SPAN),
+                    self.snippet.builder.identifier_name(SPAN, imported.as_str()),
+                    false,
+                  ),
+                );
+              }
+            }
+          }
+          Module::External(_) => {}
+        }
+      };
+    }
+    walk_mut::walk_expression(self, expr);
   }
 }

@@ -7,12 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region square.js
+__toCommonJS(exports);
 export default function square(x) {
 	return x * x;
 }
 
 //#endregion
 //#region cube.js
+__toCommonJS(exports);
 var square_ns = require("./square.js");
 export default function cube(x) {
 	return square_ns.default(x) * x;
@@ -24,6 +26,7 @@ export default function cube(x) {
 
 ```js
 //#region hyper-cube.js
+__toCommonJS(exports);
 var cube_ns = require("./cube.js");
 export default function hyperCube(x) {
 	return cube_ns.default(x) * x;
@@ -31,6 +34,7 @@ export default function hyperCube(x) {
 
 //#endregion
 //#region main.js
+__toCommonJS(exports);
 var hyper_cube_ns = require("./hyper-cube.js");
 console.log(hyper_cube_ns.default(5));
 
@@ -40,6 +44,7 @@ console.log(hyper_cube_ns.default(5));
 
 ```js
 //#region other-entry.js
+__toCommonJS(exports);
 var cube_ns = require("./cube.js");
 console.log(cube_ns.default(5));
 

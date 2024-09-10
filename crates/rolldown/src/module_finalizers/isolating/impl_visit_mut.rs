@@ -11,6 +11,14 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let original_body = program.body.take_in(self.alloc);
 
+    // Add __esModule flag for esm module
+    if self.ctx.module.exports_kind.is_esm() {
+      program.body.push(self.snippet.builder.statement_expression(
+        SPAN,
+        self.snippet.call_expr_with_arg_expr("__toCommonJS", "exports"),
+      ));
+    }
+
     for mut stmt in original_body {
       match &stmt {
         Statement::ImportDeclaration(import_decl) => {

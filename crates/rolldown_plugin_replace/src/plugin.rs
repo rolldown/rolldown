@@ -60,9 +60,11 @@ impl ReplacePlugin {
     let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
     Self {
       matcher: RegexBuilder::new(&pattern)
-        // Give a `usize::MAX` will cause bundle time tripled in some cases, so we need to use sensible limit
-        // to have a balance between performance and correctness.
-        .backtrack_limit(1_000_000)
+        // Set `backtrack_limit` for `delimiters` and `lookahead` because they contain backtracking pattern `!?` and `*`.
+        // Cannot set the number too low or it will be ignored by `fancy_regex::Error::RuntimeError` in `try_replace`.
+        // Setting `backtrack_limit` to a large number will cause huge performance regression.
+        // See <https://github.com/fancy-regex/fancy-regex/blob/main/PERFORMANCE.md#fancy-regex>.
+        .backtrack_limit(1000)
         .build()
         .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
       prevent_assignment: options.prevent_assignment,

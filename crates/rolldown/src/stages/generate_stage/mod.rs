@@ -4,7 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
 use rolldown_plugin::SharedPluginDriver;
@@ -99,12 +99,14 @@ impl<'a> GenerateStage<'a> {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {
               alloc,
-              // scope: &module.scope,
+              scope: &module.scope,
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.modules,
+                symbols: &self.link_output.symbols,
               },
               snippet: AstSnippet::new(alloc),
+              generated_imports: FxHashSet::default(),
             };
             finalizer.visit_program(oxc_program);
           });

@@ -2,8 +2,9 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, BindingIdentifier, BindingRestElement, ImportOrExportKind, Statement,
-      TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+      self, Argument, BindingIdentifier, BindingRestElement, Expression, ImportOrExportKind,
+      Statement, TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration,
+      TSTypeParameterInstantiation, VariableDeclarationKind,
     },
     AstBuilder,
   },
@@ -553,6 +554,42 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       declarations,
+      false,
+    ))
+  }
+
+  pub fn require_call_expr(&self, source: &str) -> Expression<'ast> {
+    self.builder.expression_call(
+      SPAN,
+      self.builder.expression_identifier_reference(SPAN, "require"),
+      None::<TSTypeParameterInstantiation>,
+      self.builder.vec1(
+        self.builder.argument_expression(self.builder.expression_string_literal(SPAN, source)),
+      ),
+      false,
+    )
+  }
+
+  pub fn variable_declarator_require_call_stmt(
+    &self,
+    source: &str,
+    assignee: &str,
+    span: Span,
+  ) -> Statement<'ast> {
+    self.builder.statement_declaration(self.builder.declaration_variable(
+      span,
+      VariableDeclarationKind::Var,
+      self.builder.vec1(self.builder.variable_declarator(
+        SPAN,
+        VariableDeclarationKind::Var,
+        self.builder.binding_pattern(
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, assignee),
+          None::<TSTypeAnnotation>,
+          false,
+        ),
+        Some(self.require_call_expr(source)),
+        false,
+      )),
       false,
     ))
   }

@@ -9,15 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region square.js
 __toCommonJS(exports);
 __export(exports, { default: () => square });
-<<<<<<< HEAD
-<<<<<<< HEAD
 function square(x) {
-=======
-var square = function square(x) {
->>>>>>> ac0d9bf3 (feat(app): rewrite export default declaration)
-=======
-function square(x) {
->>>>>>> 4057e91a (chore: avoid generate var decl for export default decl)
 	return x * x;
 };
 
@@ -26,15 +18,7 @@ function square(x) {
 __toCommonJS(exports);
 __export(exports, { default: () => cube });
 var square_ns = require("./square.js");
-<<<<<<< HEAD
-<<<<<<< HEAD
 function cube(x) {
-=======
-var cube = function cube(x) {
->>>>>>> ac0d9bf3 (feat(app): rewrite export default declaration)
-=======
-function cube(x) {
->>>>>>> 4057e91a (chore: avoid generate var decl for export default decl)
 	return square_ns.default(x) * x;
 };
 
@@ -47,15 +31,7 @@ function cube(x) {
 __toCommonJS(exports);
 __export(exports, { default: () => hyperCube });
 var cube_ns = require("./cube.js");
-<<<<<<< HEAD
-<<<<<<< HEAD
 function hyperCube(x) {
-=======
-var hyperCube = function hyperCube(x) {
->>>>>>> ac0d9bf3 (feat(app): rewrite export default declaration)
-=======
-function hyperCube(x) {
->>>>>>> 4057e91a (chore: avoid generate var decl for export default decl)
 	return cube_ns.default(x) * x;
 };
 

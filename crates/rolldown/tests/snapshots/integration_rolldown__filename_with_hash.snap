@@ -132,8 +132,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-fn_js-!~{000}~.mjs => expr-fn_js--rxcfA_g.mjs
-- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-QjhqLgSt.mjs
+- expr-fn_js-!~{000}~.mjs => expr-fn_js-W9Gtn0zV.mjs
+- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-2ogAwbDJ.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
@@ -279,7 +279,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/remove_trailing_return
 
-- entry_js-!~{000}~.mjs => entry_js-FBg8hdTP.mjs
+- entry_js-!~{000}~.mjs => entry_js-kCyuwIxL.mjs
 
 # tests/esbuild/dce/remove_unused_import_meta
 
@@ -802,7 +802,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry_js-!~{000}~.mjs => entry_js-BtufIxnU.mjs
+- entry_js-!~{000}~.mjs => entry_js-21clhaXx.mjs
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -862,11 +862,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/lower/lower_for_await2015
 
-- entry_js-!~{000}~.mjs => entry_js-DE2I7oH2.mjs
+- entry_js-!~{000}~.mjs => entry_js-d5SxpGMh.mjs
 
 # tests/esbuild/lower/lower_for_await2017
 
-- entry_js-!~{000}~.mjs => entry_js-DE2I7oH2.mjs
+- entry_js-!~{000}~.mjs => entry_js-d5SxpGMh.mjs
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 

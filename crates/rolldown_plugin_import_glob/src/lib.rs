@@ -5,7 +5,7 @@ use oxc::{
     ast::{
       Argument, ArrayExpressionElement, BindingRestElement, Expression, FormalParameterKind,
       ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
-      TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+      TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation, WithClause,
     },
     visit::walk_mut,
     AstBuilder, VisitMut,
@@ -298,7 +298,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
             self.ast_builder.string_literal(Span::default(), formatted_file.as_str()),
-            None,
+            None::<WithClause>,
             ImportOrExportKind::Value,
           ),
         ));

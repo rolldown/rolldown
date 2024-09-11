@@ -5,6 +5,7 @@ use oxc::{
       self, Argument, BindingIdentifier, BindingRestElement, Expression, ImportOrExportKind,
       ObjectPropertyKind, PropertyKind, Statement, TSThisParameter, TSTypeAnnotation,
       TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
+      WithClause,
     },
     AstBuilder,
   },
@@ -474,7 +475,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       Some(specifiers),
       self.builder.string_literal(SPAN, source),
-      None,
+      None::<WithClause>,
       ImportOrExportKind::Value,
     ))
   }

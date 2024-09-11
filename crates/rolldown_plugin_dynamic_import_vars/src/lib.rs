@@ -1,6 +1,9 @@
 use oxc::{
   ast::{
-    ast::{Expression, ImportOrExportKind, PropertyKind, Statement, TSTypeParameterInstantiation},
+    ast::{
+      Expression, ImportOrExportKind, PropertyKind, Statement, TSTypeParameterInstantiation,
+      WithClause,
+    },
     AstBuilder, VisitMut,
   },
   span::{Span, SPAN},
@@ -212,7 +215,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
           ),
         )),
         self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER),
-        None,
+        None::<WithClause>,
         ImportOrExportKind::Value,
       ),
     )

@@ -1,5 +1,6 @@
 import { defineTest } from '@tests'
 import { expect } from 'vitest'
+import nodePath from 'node:path'
 
 export default defineTest({
   config: {
@@ -8,7 +9,8 @@ export default defineTest({
     },
   },
   afterTest: function (output) {
-    expect(output.output[0].code).not.includes('process.env.NODE_ENV')
-    expect(output.output[0].code).includes('production')
+    expect(output.output[0].code).toMatchFileSnapshot(
+      nodePath.join(import.meta.dirname, 'output.snap'),
+    )
   },
 })

@@ -659,16 +659,21 @@ impl<'ast> AstSnippet<'ast> {
     &self,
     key: PassedStr,
     expr: ast::Expression<'ast>,
+    computed: bool,
   ) -> ObjectPropertyKind<'ast> {
     self.builder.object_property_kind_object_property(
       SPAN,
       PropertyKind::Init,
-      self.builder.property_key_expression(self.id_ref_expr(key, SPAN)),
+      if computed {
+        self.builder.property_key_expression(self.builder.expression_string_literal(SPAN, key))
+      } else {
+        self.builder.property_key_identifier_name(SPAN, key)
+      },
       self.only_return_arrow_expr(expr),
       None,
       true,
       false,
-      false,
+      computed,
     )
   }
 }

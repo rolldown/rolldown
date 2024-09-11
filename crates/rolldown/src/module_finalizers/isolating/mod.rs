@@ -1,5 +1,5 @@
-use oxc::{allocator::Allocator, ast::ast::ObjectPropertyKind};
-use rolldown_common::{AstScopes, EcmaModule, IndexModules, SymbolRef};
+use oxc::{allocator::Allocator, ast::ast::ObjectPropertyKind, span::CompactStr};
+use rolldown_common::{AstScopes, EcmaModule, IndexModules};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashSet;
 
@@ -18,6 +18,6 @@ pub struct IsolatingModuleFinalizer<'me, 'ast> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
-  pub generated_imports: FxHashSet<SymbolRef>,
+  pub generated_imports: FxHashSet<CompactStr>,
   pub generated_exports: oxc::allocator::Vec<'ast, ObjectPropertyKind<'ast>>,
 }

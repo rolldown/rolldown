@@ -1,9 +1,10 @@
 use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
-use oxc::span::SPAN;
+use oxc::span::{CompactStr, Span, SPAN};
 use rolldown_common::Module;
 use rolldown_ecmascript::TakeIn;
+use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 use super::IsolatingModuleFinalizer;
 
@@ -47,6 +48,9 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
       }
       ast::Statement::ExportDefaultDeclaration(export_default_decl) => {
         *stmt = self.transform_export_default_declaration(export_default_decl);
+      }
+      ast::Statement::ExportNamedDeclaration(export_named_decl) => {
+        *stmt = self.transform_named_declaration(export_named_decl);
       }
       _ => {}
     };
@@ -97,28 +101,15 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     &mut self,
     import_decl: &ast::ImportDeclaration<'ast>,
   ) -> Statement<'ast> {
-    let rec_id = self.ctx.module.imports[&import_decl.span];
-    let rec = &self.ctx.module.import_records[rec_id];
-    match &self.ctx.modules[rec.resolved_module] {
-      Module::Ecma(importee) => {
-        if self.generated_imports.contains(&importee.namespace_object_ref) {
-          return Statement::EmptyStatement(
-            self.snippet.builder.alloc_empty_statement(import_decl.span),
-          );
-        }
-        // TODO deconflict namespace_ref
-        let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
+    // The specifiers rewrite with reference the namespace object, see `IsolatingModuleFinalizer#visit_expression`
 
-        self.generated_imports.insert(importee.namespace_object_ref);
-
-        self.snippet.variable_declarator_require_call_stmt(
-          import_decl.source.as_ref(),
-          namespace_ref,
-          import_decl.span,
-        )
-      }
-      Module::External(_) => unimplemented!(),
-    }
+    // Create a require call statement for import declaration
+    let namespace_object_ref = self.create_namespace_object_ref_for_import(import_decl.span);
+    self.create_require_call_stmt(
+      import_decl.source.value.as_str(),
+      &namespace_object_ref,
+      import_decl.span,
+    )
   }
 
   pub fn transform_export_default_declaration(
@@ -133,6 +124,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
         self.generated_exports.push(self.snippet.object_property_kind_object_property(
           "default",
           self.snippet.id_ref_expr(default_export_ref, SPAN),
+          false,
         ));
         self
           .snippet
@@ -142,11 +134,11 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
         let from =
           func.id.as_ref().map_or(default_export_ref.as_str(), |ident| ident.name.as_str());
-        self.generated_exports.push(
-          self
-            .snippet
-            .object_property_kind_object_property("default", self.snippet.id_ref_expr(from, SPAN)),
-        );
+        self.generated_exports.push(self.snippet.object_property_kind_object_property(
+          "default",
+          self.snippet.id_ref_expr(from, SPAN),
+          false,
+        ));
         self
           .snippet
           .builder
@@ -155,11 +147,11 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
       ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let from =
           class.id.as_ref().map_or(default_export_ref.as_str(), |ident| ident.name.as_str());
-        self.generated_exports.push(
-          self
-            .snippet
-            .object_property_kind_object_property("default", self.snippet.id_ref_expr(from, SPAN)),
-        );
+        self.generated_exports.push(self.snippet.object_property_kind_object_property(
+          "default",
+          self.snippet.id_ref_expr(from, SPAN),
+          false,
+        ));
         self
           .snippet
           .builder
@@ -167,6 +159,113 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
       }
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
         unreachable!("ExportDefaultDeclaration TSInterfaceDeclaration should be removed")
+      }
+    }
+  }
+
+  pub fn transform_named_declaration(
+    &mut self,
+    export_named_decl: &mut ast::ExportNamedDeclaration<'ast>,
+  ) -> Statement<'ast> {
+    match &export_named_decl.source {
+      Some(source) => {
+        let namespace_object_ref =
+          self.create_namespace_object_ref_for_import(export_named_decl.span);
+
+        self.generated_exports.extend(export_named_decl.specifiers.iter().map(|specifier| {
+          self.snippet.object_property_kind_object_property(
+            &specifier.exported.name(),
+            match &specifier.local {
+              ast::ModuleExportName::IdentifierName(ident) => {
+                Expression::StaticMemberExpression(
+                  self.snippet.builder.alloc_static_member_expression(
+                    SPAN,
+                    self.snippet.id_ref_expr(&namespace_object_ref, SPAN),
+                    self.snippet.builder.identifier_name(SPAN, ident.name.as_str()),
+                    false,
+                  ),
+                )
+              }
+              ast::ModuleExportName::StringLiteral(str) => {
+                Expression::ComputedMemberExpression(
+                  self.snippet.builder.alloc_computed_member_expression(
+                    SPAN,
+                    self.snippet.id_ref_expr(&namespace_object_ref, SPAN),
+                    self.snippet.builder.expression_from_string_literal(
+                      self.snippet.builder.string_literal(SPAN, str.value.as_str()),
+                    ),
+                    false,
+                  ),
+                )
+              }
+              ast::ModuleExportName::IdentifierReference(_) => {
+                unreachable!(
+                  "ModuleExportName IdentifierReference is invalid in ExportNamedDeclaration with source"
+                )
+              }
+            },
+            matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_))
+          )
+        }));
+
+        self.create_require_call_stmt(
+          source.value.as_str(),
+          &namespace_object_ref,
+          export_named_decl.span,
+        )
+      }
+      None => {
+        self.generated_exports.extend(export_named_decl.specifiers.iter().map(|specifier| {
+          self.snippet.object_property_kind_object_property(
+            &specifier.exported.name(),
+            match &specifier.local {
+              ast::ModuleExportName::IdentifierName(ident) => {
+                self.snippet.id_ref_expr(ident.name.as_str(), SPAN)
+              }
+              ast::ModuleExportName::StringLiteral(_) => {
+                unreachable!("ModuleExportName StringLiteral is invalid in ExportNamedDeclaration without source")
+              }
+              ast::ModuleExportName::IdentifierReference(ident) => {
+                self.snippet.id_ref_expr(ident.name.as_str(), SPAN)
+              }
+            },
+            matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)
+          ))
+        }));
+
+        Statement::EmptyStatement(
+          self.snippet.builder.alloc_empty_statement(export_named_decl.span),
+        )
+      }
+    }
+  }
+
+  fn create_require_call_stmt(
+    &mut self,
+    source: &str,
+    namespace_object_ref: &CompactStr,
+    span: Span,
+  ) -> Statement<'ast> {
+    if self.generated_imports.contains(namespace_object_ref) {
+      return Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(span));
+    }
+
+    self.generated_imports.insert(namespace_object_ref.clone());
+
+    self.snippet.variable_declarator_require_call_stmt(source.as_ref(), namespace_object_ref, span)
+  }
+
+  fn create_namespace_object_ref_for_import(&self, span: Span) -> CompactStr {
+    let rec_id = self.ctx.module.imports[&span];
+    let rec = &self.ctx.module.import_records[rec_id];
+    match &self.ctx.modules[rec.resolved_module] {
+      Module::Ecma(importee) => {
+        // TODO deconflict namespace_ref
+        self.ctx.symbols.get_original_name(importee.namespace_object_ref).clone()
+      }
+      Module::External(external_module) => {
+        // TODO need to generate one symbol and deconflict it
+        legitimize_identifier_name(&external_module.name).to_string().into()
       }
     }
   }

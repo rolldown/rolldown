@@ -9,6 +9,8 @@ use super::IsolatingModuleFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
+    walk_mut::walk_program(self, program);
+
     let original_body = program.body.take_in(self.alloc);
 
     // Add __esModule flag for esm module
@@ -19,38 +21,18 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
       ));
     }
 
-    for mut stmt in original_body {
-      match &stmt {
-        Statement::ImportDeclaration(import_decl) => {
-          let rec_id = self.ctx.module.imports[&import_decl.span];
-          let rec = &self.ctx.module.import_records[rec_id];
-          match &self.ctx.modules[rec.resolved_module] {
-            Module::Ecma(importee) => {
-              if self.generated_imports.contains(&importee.namespace_object_ref) {
-                continue;
-              }
-              // TODO deconflict namespace_ref
-              let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
+    program.body.extend(original_body);
+  }
 
-              self.generated_imports.insert(importee.namespace_object_ref);
-
-              program.body.push(self.snippet.variable_declarator_require_call_stmt(
-                import_decl.source.as_ref(),
-                namespace_ref,
-                import_decl.span,
-              ));
-              continue;
-            }
-            Module::External(_) => unimplemented!(),
-          }
-        }
-        // TODO: rewrite `export default xxx` to `var __rolldown_default_export__ = xxx`
-        ast::Statement::ExportDefaultDeclaration(_default_decl) => {}
-        _ => {}
+  fn visit_statement(&mut self, stmt: &mut Statement<'ast>) {
+    match &stmt {
+      Statement::ImportDeclaration(import_decl) => {
+        *stmt = self.transform_import_declaration(import_decl);
       }
-      walk_mut::walk_statement(self, &mut stmt);
-      program.body.push(stmt);
-    }
+      ast::Statement::ExportDefaultDeclaration(_default_decl) => {}
+      _ => {}
+    };
+    walk_mut::walk_statement(self, stmt);
   }
 
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
@@ -89,5 +71,35 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
       };
     }
     walk_mut::walk_expression(self, expr);
+  }
+}
+
+impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
+  pub fn transform_import_declaration(
+    &mut self,
+    import_decl: &ast::ImportDeclaration<'ast>,
+  ) -> Statement<'ast> {
+    let rec_id = self.ctx.module.imports[&import_decl.span];
+    let rec = &self.ctx.module.import_records[rec_id];
+    match &self.ctx.modules[rec.resolved_module] {
+      Module::Ecma(importee) => {
+        if self.generated_imports.contains(&importee.namespace_object_ref) {
+          return Statement::EmptyStatement(
+            self.snippet.builder.alloc_empty_statement(import_decl.span),
+          );
+        }
+        // TODO deconflict namespace_ref
+        let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
+
+        self.generated_imports.insert(importee.namespace_object_ref);
+
+        self.snippet.variable_declarator_require_call_stmt(
+          import_decl.source.as_ref(),
+          namespace_ref,
+          import_decl.span,
+        )
+      }
+      Module::External(_) => unimplemented!(),
+    }
   }
 }

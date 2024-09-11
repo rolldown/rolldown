@@ -1496,11 +1496,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/define/node_env
 
-- main-!~{000}~.mjs => main-zmFhpGWu.mjs
+- main-!~{000}~.mjs => main-SlP9BuWO.mjs
 
 # tests/rolldown/function/define/patterns
 
-- main-!~{000}~.mjs => main-alEkff5H.mjs
+- main-!~{000}~.mjs => main-vILvUyca.mjs
 
 # tests/rolldown/function/dir/should_generate_correct_relative_import_path
 

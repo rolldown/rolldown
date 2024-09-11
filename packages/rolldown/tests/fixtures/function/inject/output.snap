@@ -22,5 +22,12 @@ assert.strictEqual(Promise, "promise-shim");
 assert.strictEqual(jquery_default, "jquery");
 assert.strictEqual(node_fs_default, "node-fs");
 assert.strictEqual(object_assign_shim_default, "object-assign-shim");
+(function(Promise$1, P, $, fs, Object) {
+	assert.strictEqual(Promise$1, undefined);
+	assert.strictEqual(P, undefined);
+	assert.strictEqual($, undefined);
+	assert.strictEqual(fs.default, undefined);
+	assert.strictEqual(Object.assign, undefined);
+})(undefined, undefined, undefined, {}, {});
 
 //#endregion

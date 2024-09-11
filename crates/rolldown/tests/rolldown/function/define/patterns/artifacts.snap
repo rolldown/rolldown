@@ -13,6 +13,10 @@ const id = "ok";
 const objProp = "ok";
 assert.strictEqual(id, "ok");
 assert.strictEqual(objProp, "ok");
+(function(Id, Obj) {
+	assert.strictEqual(Id, undefined);
+	assert.strictEqual(Obj.prop, undefined);
+})(undefined, {});
 
 //#endregion
 ```

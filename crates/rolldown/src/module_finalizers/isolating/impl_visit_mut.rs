@@ -1,4 +1,4 @@
-use oxc::ast::ast::{self, Expression, Statement};
+use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
 use oxc::span::SPAN;
@@ -21,15 +21,33 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
       ));
     }
 
+    // Generate export statements, using `Object.defineProperty`
+    if !self.generated_exports.is_empty() {
+      program.body.push(self.snippet.builder.statement_expression(
+        SPAN,
+        self.snippet.alloc_call_expr_with_2arg_expr_expr(
+          "__export",
+          self.snippet.id_ref_expr("exports", SPAN),
+          Expression::ObjectExpression(self.snippet.builder.alloc_object_expression(
+            SPAN,
+            self.snippet.builder.vec_from_iter(self.generated_exports.drain(..)),
+            None,
+          )),
+        ),
+      ));
+    }
+
     program.body.extend(original_body);
   }
 
   fn visit_statement(&mut self, stmt: &mut Statement<'ast>) {
-    match &stmt {
+    match stmt {
       Statement::ImportDeclaration(import_decl) => {
         *stmt = self.transform_import_declaration(import_decl);
       }
-      ast::Statement::ExportDefaultDeclaration(_default_decl) => {}
+      ast::Statement::ExportDefaultDeclaration(export_default_decl) => {
+        *stmt = self.transform_export_default_declaration(export_default_decl);
+      }
       _ => {}
     };
     walk_mut::walk_statement(self, stmt);
@@ -100,6 +118,56 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
         )
       }
       Module::External(_) => unimplemented!(),
+    }
+  }
+
+  pub fn transform_export_default_declaration(
+    &mut self,
+    export_default_decl: &mut ast::ExportDefaultDeclaration<'ast>,
+  ) -> Statement<'ast> {
+    // TODO deconflict default_export_ref
+    let default_export_ref = self.ctx.symbols.get_original_name(self.ctx.module.default_export_ref);
+
+    match &mut export_default_decl.declaration {
+      decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+        self.generated_exports.push(self.snippet.object_property_kind_object_property(
+          "default",
+          self.snippet.id_ref_expr(default_export_ref, SPAN),
+        ));
+        self
+          .snippet
+          .builder
+          .statement_expression(SPAN, decl.to_expression_mut().take_in(self.alloc))
+      }
+      ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+        let from =
+          func.id.as_ref().map_or(default_export_ref.as_str(), |ident| ident.name.as_str());
+        self.generated_exports.push(
+          self
+            .snippet
+            .object_property_kind_object_property("default", self.snippet.id_ref_expr(from, SPAN)),
+        );
+        self
+          .snippet
+          .builder
+          .statement_expression(SPAN, Expression::FunctionExpression(func.take_in(self.alloc)))
+      }
+      ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+        let from =
+          class.id.as_ref().map_or(default_export_ref.as_str(), |ident| ident.name.as_str());
+        self.generated_exports.push(
+          self
+            .snippet
+            .object_property_kind_object_property("default", self.snippet.id_ref_expr(from, SPAN)),
+        );
+        self
+          .snippet
+          .builder
+          .statement_expression(SPAN, Expression::ClassExpression(class.take_in(self.alloc)))
+      }
+      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+        unreachable!("ExportDefaultDeclaration TSInterfaceDeclaration should be removed")
+      }
     }
   }
 }

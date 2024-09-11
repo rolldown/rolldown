@@ -3,8 +3,8 @@ use oxc::{
   ast::{
     ast::{
       self, Argument, BindingIdentifier, BindingRestElement, Expression, ImportOrExportKind,
-      Statement, TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration,
-      TSTypeParameterInstantiation, VariableDeclarationKind,
+      ObjectPropertyKind, PropertyKind, Statement, TSThisParameter, TSTypeAnnotation,
+      TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
     },
     AstBuilder,
   },
@@ -651,6 +651,24 @@ impl<'ast> AstSnippet<'ast> {
     ast::Statement::ReturnStatement(
       ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc()) }
         .into_in(self.alloc()),
+    )
+  }
+
+  // create `a: () => expr` for  `{ a: () => expr }``
+  pub fn object_property_kind_object_property(
+    &self,
+    key: PassedStr,
+    expr: ast::Expression<'ast>,
+  ) -> ObjectPropertyKind<'ast> {
+    self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      self.builder.property_key_expression(self.id_ref_expr(key, SPAN)),
+      self.only_return_arrow_expr(expr),
+      None,
+      true,
+      false,
+      false,
     )
   }
 }

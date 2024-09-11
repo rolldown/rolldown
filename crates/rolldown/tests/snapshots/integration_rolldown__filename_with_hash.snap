@@ -1653,6 +1653,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/format/app/multiple_entry_modules
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - main-!~{000}~.mjs => main-f0bilmlc.mjs
 - other-entry-!~{001}~.mjs => other-entry-_h9L-_ju.mjs
 - cube-!~{002}~.mjs => cube-3Z6fb5GF.mjs
@@ -1661,6 +1662,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - other-entry-!~{001}~.mjs => other-entry-_h9L-_ju.mjs
 - cube-!~{002}~.mjs => cube-eS0g6Lf2.mjs
 >>>>>>> ac0d9bf3 (feat(app): rewrite export default declaration)
+=======
+- main-!~{000}~.mjs => main-f0bilmlc.mjs
+- other-entry-!~{001}~.mjs => other-entry-_h9L-_ju.mjs
+- cube-!~{002}~.mjs => cube-3Z6fb5GF.mjs
+>>>>>>> 4057e91a (chore: avoid generate var decl for export default decl)
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

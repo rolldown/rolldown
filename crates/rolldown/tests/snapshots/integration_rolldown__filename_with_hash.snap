@@ -1650,6 +1650,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-gvGF4Vpz.cjs
 
+# tests/rolldown/function/format/app/export-named
+
+- main-!~{000}~.mjs => main-Q-mN_1Ua.mjs
+
+# tests/rolldown/function/format/app/export-named-from
+
+- main-!~{000}~.mjs => main-ixmQiC-s.mjs
+
 # tests/rolldown/function/format/app/multiple_entry_modules
 
 - main-!~{000}~.mjs => main-f0bilmlc.mjs

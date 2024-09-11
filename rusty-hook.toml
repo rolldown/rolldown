@@ -1,5 +1,0 @@
-[hooks]
-pre-commit = "just check-typo && just fmt && just lint"
-
-[logging]
-verbose = true

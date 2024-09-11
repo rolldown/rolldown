@@ -31,9 +31,9 @@ pub fn pre_process_ecma_ast(
   let mut ast_changed = false;
 
   // Build initial semantic data and check for semantic errors.
-  let semantic_ret = ast.program.with_mut(|WithMutFields { program, source, .. }| {
-    SemanticBuilder::new(source, source_type).build(program)
-  });
+  let semantic_ret = ast
+    .program
+    .with_mut(|WithMutFields { program, source, .. }| SemanticBuilder::new(source).build(program));
 
   // TODO:
   // if !semantic_ret.errors.is_empty() {
@@ -78,16 +78,19 @@ pub fn pre_process_ecma_ast(
   ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
     // Use built-in define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
-      ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone()).build(program);
+      ReplaceGlobalDefines::new(allocator, &mut symbols, replace_global_define_config.clone())
+        .build(program);
       ast_changed = true;
     }
 
     if !bundle_options.inject.is_empty() {
       InjectGlobalVariables::new(
         allocator,
+        &mut symbols,
+        &mut scopes,
         bundle_options.oxc_inject_global_variables_config.clone(),
       )
-      .build(&mut symbols, &mut scopes, program);
+      .build(program);
       ast_changed = true;
     }
 

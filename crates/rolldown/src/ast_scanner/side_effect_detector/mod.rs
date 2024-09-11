@@ -442,14 +442,10 @@ mod test {
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
   fn get_statements_side_effect(code: &str) -> bool {
-    let source_type = SourceType::default()
-      .with_always_strict(true)
-      .with_module(true)
-      .with_jsx(true)
-      .with_typescript(false);
+    let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let ast_scope = {
-      let semantic = EcmaAst::make_semantic(ast.source(), ast.program(), source_type);
+      let semantic = EcmaAst::make_semantic(ast.source(), ast.program());
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
       AstScopes::new(
         scope,

@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use anyhow::Ok;
 use oxc::ast::ast::{
   Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ImportOrExportKind,
-  PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
+  PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind, WithClause,
 };
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{AstBuilder, VisitMut};
@@ -227,7 +227,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
             ImportOrExportKind::Value,
           ))),
           self.builder.string_literal(SPAN, PRELOAD_HELPER_ID),
-          None,
+          None::<WithClause>,
           ImportOrExportKind::Value,
         ),
       );

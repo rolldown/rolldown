@@ -233,9 +233,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
           ))
         }));
 
-        Statement::EmptyStatement(
-          self.snippet.builder.alloc_empty_statement(export_named_decl.span),
-        )
+        self.snippet.builder.statement_empty(export_named_decl.span)
       }
     }
   }
@@ -247,7 +245,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     span: Span,
   ) -> Statement<'ast> {
     if self.generated_imports.contains(namespace_object_ref) {
-      return Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(span));
+      return self.snippet.builder.statement_empty(span);
     }
 
     self.generated_imports.insert(namespace_object_ref.clone());

@@ -8,17 +8,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region square.js
 __toCommonJS(exports);
-export default function square(x) {
+__export(exports, { default: () => square });
+var square = function square(x) {
 	return x * x;
-}
+};
 
 //#endregion
 //#region cube.js
 __toCommonJS(exports);
+__export(exports, { default: () => cube });
 var square_ns = require("./square.js");
-export default function cube(x) {
+var cube = function cube(x) {
 	return square_ns.default(x) * x;
-}
+};
 
 //#endregion
 ```
@@ -27,10 +29,11 @@ export default function cube(x) {
 ```js
 //#region hyper-cube.js
 __toCommonJS(exports);
+__export(exports, { default: () => hyperCube });
 var cube_ns = require("./cube.js");
-export default function hyperCube(x) {
+var hyperCube = function hyperCube(x) {
 	return cube_ns.default(x) * x;
-}
+};
 
 //#endregion
 //#region main.js

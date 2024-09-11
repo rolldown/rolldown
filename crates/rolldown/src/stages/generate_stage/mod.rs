@@ -107,6 +107,7 @@ impl<'a> GenerateStage<'a> {
               },
               snippet: AstSnippet::new(alloc),
               generated_imports: FxHashSet::default(),
+              generated_exports: oxc::allocator::Vec::new_in(alloc),
             };
             finalizer.visit_program(oxc_program);
           });

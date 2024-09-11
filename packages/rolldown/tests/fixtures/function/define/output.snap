@@ -5,6 +5,6 @@ console.log("production");
 assert.strictEqual("production", "production");
 (function(process) {
 	assert.strictEqual(process.env.NODE_ENV, undefined);
-})({ process: { env: {} } });
+})({ env: {} });
 
 //#endregion

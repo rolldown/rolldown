@@ -134,7 +134,10 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
           "default",
           self.snippet.id_ref_expr(default_export_ref, SPAN),
         ));
-        self.snippet.var_decl_stmt(default_export_ref, decl.to_expression_mut().take_in(self.alloc))
+        self
+          .snippet
+          .builder
+          .statement_expression(SPAN, decl.to_expression_mut().take_in(self.alloc))
       }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
         let from =
@@ -144,7 +147,10 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
             .snippet
             .object_property_kind_object_property("default", self.snippet.id_ref_expr(from, SPAN)),
         );
-        self.snippet.var_decl_stmt(from, Expression::FunctionExpression(func.take_in(self.alloc)))
+        self
+          .snippet
+          .builder
+          .statement_expression(SPAN, Expression::FunctionExpression(func.take_in(self.alloc)))
       }
       ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let from =
@@ -154,7 +160,10 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
             .snippet
             .object_property_kind_object_property("default", self.snippet.id_ref_expr(from, SPAN)),
         );
-        self.snippet.var_decl_stmt(from, Expression::ClassExpression(class.take_in(self.alloc)))
+        self
+          .snippet
+          .builder
+          .statement_expression(SPAN, Expression::ClassExpression(class.take_in(self.alloc)))
       }
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
         unreachable!("ExportDefaultDeclaration TSInterfaceDeclaration should be removed")

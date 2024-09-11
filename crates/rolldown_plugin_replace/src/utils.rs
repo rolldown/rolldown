@@ -16,14 +16,14 @@ pub(crate) fn expand_typeof_replacements(
     if let Ok(matched) = OBJECT_RE.captures(key) {
       let capture_str = matched.unwrap().get(0).unwrap().as_str();
 
-      let capture_vec: Vec<&str> = capture_str.split(".").collect::<Vec<&str>>();
+      let capture_vec: Vec<&str> = capture_str.split('.').collect::<Vec<&str>>();
 
       let capture_arr = capture_vec.as_slice();
 
       let replaces: Vec<(String, String)> = capture_arr[0..capture_arr.len() - 1]
-        .into_iter()
-        .map(|x| {
-          return vec![
+        .iter()
+        .flat_map(|x| {
+          vec![
             (format!("typeof {} ===", *x), "\"object\" ===".to_string()),
             (format!("typeof {}===", *x), "\"object\"===".to_string()),
             (format!("typeof {} !==", *x), "\"object\" !==".to_string()),
@@ -32,9 +32,8 @@ pub(crate) fn expand_typeof_replacements(
             (format!("typeof {}==", *x), "\"object\"===".to_string()),
             (format!("typeof {}!=", *x), "\"object\"!==".to_string()),
             (format!("typeof {} !=", *x), "\"object\" !==".to_string()),
-          ];
+          ]
         })
-        .flatten()
         .collect();
       replacements.extend(replaces);
     };

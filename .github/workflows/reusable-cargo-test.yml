@@ -31,7 +31,7 @@ jobs:
         run: just setup-bench
 
       - name: Build
-        run: cargo test --no-run
+        run: cargo test --workspace --exclude rolldown_binding --no-run
 
       - name: Run Test
         run: just test-rust

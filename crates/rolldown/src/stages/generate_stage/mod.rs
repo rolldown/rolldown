@@ -106,7 +106,8 @@ impl<'a> GenerateStage<'a> {
                 symbols: &self.link_output.symbols,
               },
               snippet: AstSnippet::new(alloc),
-              generated_imports: FxHashSet::default(),
+              generated_imports_set: FxHashSet::default(),
+              generated_imports: oxc::allocator::Vec::new_in(alloc),
               generated_exports: oxc::allocator::Vec::new_in(alloc),
             };
             finalizer.visit_program(oxc_program);

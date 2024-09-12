@@ -24,6 +24,9 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
         ast::Statement::ExportNamedDeclaration(export_named_decl) => {
           self.transform_named_declaration(export_named_decl);
         }
+        ast::Statement::ExportAllDeclaration(export_all_decl) => {
+          self.transform_export_all_declaration(export_all_decl);
+        }
         _ => stmts.push(stmt),
       };
     }
@@ -230,6 +233,34 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
             matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)
           ))
         }));
+      }
+    }
+  }
+
+  pub fn transform_export_all_declaration(
+    &mut self,
+    export_all_decl: &ast::ExportAllDeclaration<'ast>,
+  ) {
+    let namespace_object_ref = self.create_namespace_object_ref_for_import(export_all_decl.span);
+
+    match &export_all_decl.exported {
+      Some(exported) => {
+        self.generated_exports.push(self.snippet.object_property_kind_object_property(
+          &exported.name(),
+          self.snippet.id_ref_expr(&namespace_object_ref, SPAN),
+          matches!(exported, ast::ModuleExportName::StringLiteral(_)),
+        ));
+      }
+      None => {
+        self.create_require_call_stmt(
+          export_all_decl.source.value.as_str(),
+          &namespace_object_ref,
+          export_all_decl.span,
+        );
+        self.generated_imports.push(self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.call_expr_with_2arg_expr("__reExport", "exports", &namespace_object_ref),
+        ));
       }
     }
   }

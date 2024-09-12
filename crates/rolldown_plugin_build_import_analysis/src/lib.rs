@@ -24,7 +24,6 @@ mod utils;
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: String,
   pub insert_preload: bool,
-  pub optimize_module_preload_relative_paths: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
 }

@@ -109,10 +109,10 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     // Create a require call statement for import declaration
     let module = self.get_importee_module(import_decl.span);
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
-    let inter_op = calculate_interop_from_module(module);
+    let interop = calculate_interop_from_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      inter_op,
+      interop,
       &namespace_object_ref,
       import_decl.span,
     );
@@ -277,7 +277,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
   fn create_require_call_stmt(
     &mut self,
     module_stable_id: &CompactStr,
-    inter_op: Option<Interop>,
+    interop: Option<Interop>,
     namespace_object_ref: &CompactStr,
     span: Span,
   ) {
@@ -289,7 +289,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
 
     let require_call = self.snippet.require_call_expr(module_stable_id.as_str());
 
-    let init_expr = match inter_op {
+    let init_expr = match interop {
       None => require_call,
       Some(interop) => match interop {
         Interop::Babel => self.snippet.call_expr_with_arg_expr_expr("__toESM", require_call),

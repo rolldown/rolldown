@@ -1367,6 +1367,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-QJZ7k4FX.mjs
 - a-!~{002}~.mjs => a-P3oI68KE.mjs
 
+# tests/rolldown/cjs_compat/node_module_commonjs
+
+- main-!~{000}~.mjs => main-ghlcWAL_.mjs
+- entry-!~{001}~.mjs => entry-wpwuDKy4.mjs
+- commonjs-!~{002}~.mjs => commonjs-hYeKntuE.mjs
+
 # tests/rolldown/cjs_compat/reexport_commonjs
 
 - main-!~{000}~.mjs => main--It2XZn-.mjs

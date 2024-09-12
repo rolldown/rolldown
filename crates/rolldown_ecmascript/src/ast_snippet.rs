@@ -3,7 +3,7 @@ use oxc::{
   ast::{
     ast::{
       self, Argument, BindingIdentifier, BindingRestElement, Expression, ImportOrExportKind,
-      ObjectPropertyKind, PropertyKind, Statement, TSThisParameter, TSTypeAnnotation,
+      NumberBase, ObjectPropertyKind, PropertyKind, Statement, TSThisParameter, TSTypeAnnotation,
       TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
       WithClause,
     },
@@ -11,6 +11,7 @@ use oxc::{
   },
   span::{Atom, CompactStr, Span, SPAN},
 };
+use rolldown_common::Interop;
 
 use crate::allocator_helpers::take_in::TakeIn;
 
@@ -677,5 +678,31 @@ impl<'ast> AstSnippet<'ast> {
       false,
       computed,
     )
+  }
+
+  // If interop is None, using `require_foo()`
+  // If interop is babel, using __toESM(require_foo())
+  // If interop is node, using __toESM(require_foo(), 1)
+  #[allow(clippy::needless_pass_by_value)]
+  pub fn to_esm_call_with_interop(
+    &self,
+    to_esm_fn_name: PassedStr,
+    call_expr: Expression<'ast>,
+    interop: Option<Interop>,
+  ) -> Expression<'ast> {
+    match interop {
+      None => call_expr,
+      Some(Interop::Babel) => self.call_expr_with_arg_expr_expr(to_esm_fn_name, call_expr),
+      Some(Interop::Node) => self.alloc_call_expr_with_2arg_expr_expr(
+        to_esm_fn_name,
+        call_expr,
+        self.builder.expression_from_numeric_literal(self.builder.numeric_literal(
+          SPAN,
+          1.0,
+          "1",
+          NumberBase::Decimal,
+        )),
+      ),
+    }
   }
 }

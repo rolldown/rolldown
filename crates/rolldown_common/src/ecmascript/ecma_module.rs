@@ -6,7 +6,7 @@ use crate::{
   ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, NamedImport,
   StmtInfo, StmtInfos, SymbolRef,
 };
-use crate::{EcmaAstIdx, IndexModules, Module, ModuleType};
+use crate::{EcmaAstIdx, IndexModules, Interop, Module, ModuleType};
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::Span;
@@ -163,6 +163,18 @@ impl EcmaModule {
         Module::Ecma(_) => None,
       }
     })
+  }
+
+  pub fn interop(&self) -> Option<Interop> {
+    if matches!(self.exports_kind, ExportsKind::CommonJs) {
+      if self.def_format.is_esm() {
+        Some(Interop::Node)
+      } else {
+        Some(Interop::Babel)
+      }
+    } else {
+      None
+    }
   }
 }
 

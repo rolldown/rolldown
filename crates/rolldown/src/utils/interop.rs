@@ -1,4 +1,4 @@
-use rolldown_common::{ExportsKind, Module};
+use rolldown_common::{ExportsKind, Interop, Module};
 
 pub fn calculate_interop_from_module(module: &Module) -> Option<Interop> {
   match module {
@@ -15,9 +15,4 @@ pub fn calculate_interop_from_module(module: &Module) -> Option<Interop> {
       }
     }
   }
-}
-
-pub enum Interop {
-  Babel,
-  Node,
 }

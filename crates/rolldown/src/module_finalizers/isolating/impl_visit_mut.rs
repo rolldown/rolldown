@@ -1,12 +1,12 @@
-use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, NumberBase, Statement};
+use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
 use oxc::span::{CompactStr, Span, SPAN};
-use rolldown_common::Module;
+use rolldown_common::{Interop, Module};
 use rolldown_ecmascript::TakeIn;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
-use crate::utils::interop::{calculate_interop_from_module, Interop};
+use crate::utils::interop::calculate_interop_from_module;
 
 use super::IsolatingModuleFinalizer;
 
@@ -289,23 +289,9 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
 
     let require_call = self.snippet.require_call_expr(module_stable_id.as_str());
 
-    let init_expr = match interop {
-      None => require_call,
-      Some(interop) => match interop {
-        Interop::Babel => self.snippet.call_expr_with_arg_expr_expr("__toESM", require_call),
-        Interop::Node => self.snippet.alloc_call_expr_with_2arg_expr_expr(
-          "__toESM",
-          require_call,
-          self.snippet.builder.expression_from_numeric_literal(
-            self.snippet.builder.numeric_literal(SPAN, 1.0, "1", NumberBase::Decimal),
-          ),
-        ),
-      },
-    };
-
     self.generated_imports.push(self.snippet.variable_declarator_require_call_stmt(
       namespace_object_ref,
-      init_expr,
+      self.snippet.to_esm_call_with_interop("__toESM", require_call, interop),
       span,
     ));
   }

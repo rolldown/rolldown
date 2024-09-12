@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## commonjs.mjs
+
+```js
+
+
+//#region commonjs.js
+var require_commonjs = __commonJSMin((exports, module) => {
+	module.exports = 1;
+});
+
+//#endregion
+export { __reExport, __toESM, require_commonjs };
+```
+## entry.mjs
+
+```js
+import { __toESM, require_commonjs } from "./commonjs.mjs";
+
+//#region entry.js
+var import_commonjs = __toESM(require_commonjs(), 1);
+console.log(import_commonjs.default);
+
+//#endregion
+```
+## main.mjs
+
+```js
+import { __reExport, __toESM, require_commonjs } from "./commonjs.mjs";
+
+//#region star-export.js
+var star_export_ns = {};
+__reExport(star_export_ns, __toESM(require_commonjs(), 1));
+
+//#endregion
+//#region main.mjs
+var import_commonjs = __toESM(require_commonjs(), 1);
+console.log(import_commonjs.default, star_export_ns);
+
+//#endregion
+```

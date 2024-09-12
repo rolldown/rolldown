@@ -66,6 +66,7 @@ pub use crate::{
   },
   types::importer_record::ImporterRecord,
   types::instantiated_chunk::InstantiatedChunk,
+  types::interop::Interop,
   types::member_expr_ref::MemberExprRef,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,

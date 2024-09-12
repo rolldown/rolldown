@@ -59,7 +59,7 @@ check-node:
 test: test-rust test-node
 
 test-rust:
-    cargo test # --no-fail-fast
+    cargo test --workspace --exclude rolldown_binding
 
 # Supported presets: all, rolldown, rollup
 test-node preset="all" *args="": _build-native-debug

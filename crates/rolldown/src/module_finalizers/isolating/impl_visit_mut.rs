@@ -6,8 +6,6 @@ use rolldown_common::{Interop, Module};
 use rolldown_ecmascript::TakeIn;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
-use crate::utils::interop::calculate_interop_from_module;
-
 use super::IsolatingModuleFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
@@ -109,10 +107,9 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     // Create a require call statement for import declaration
     let module = self.get_importee_module(import_decl.span);
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
-    let interop = calculate_interop_from_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      interop,
+      module.interop(),
       &namespace_object_ref,
       import_decl.span,
     );
@@ -177,10 +174,9 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
       Some(_) => {
         let module = self.get_importee_module(export_named_decl.span);
         let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
-        let interop = calculate_interop_from_module(module);
         self.create_require_call_stmt(
           &module.stable_id().into(),
-          interop,
+          module.interop(),
           &namespace_object_ref,
           export_named_decl.span,
         );
@@ -249,10 +245,9 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
   ) {
     let module = self.get_importee_module(export_all_decl.span);
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
-    let interop = calculate_interop_from_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      interop,
+      module.interop(),
       &namespace_object_ref,
       export_all_decl.span,
     );

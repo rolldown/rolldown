@@ -2,7 +2,9 @@ pub mod external_module;
 
 use oxc::index::IndexVec;
 
-use crate::{EcmaAstIdx, EcmaModule, ExternalModule, ImportRecord, ImportRecordIdx, ModuleIdx};
+use crate::{
+  types::interop, EcmaAstIdx, EcmaModule, ExternalModule, ImportRecord, ImportRecordIdx, ModuleIdx,
+};
 
 #[derive(Debug)]
 pub enum Module {
@@ -115,6 +117,13 @@ impl Module {
     match self {
       Module::Ecma(v) => v.source.len(),
       Module::External(_) => 0,
+    }
+  }
+
+  pub fn interop(&self) -> Option<interop::Interop> {
+    match self {
+      Module::Ecma(v) => v.interop(),
+      Module::External(_) => None,
     }
   }
 }

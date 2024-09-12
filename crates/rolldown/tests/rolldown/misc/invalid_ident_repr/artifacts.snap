@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+
+//#region 1aaa.js
+var _aaa_ns = {};
+__export(_aaa_ns, { default: () => _aaa_default });
+const a$1 = "shared.js";
+var _aaa_default = a$1;
+
+//#endregion
+//#region main.js
+const a = "index.js";
+assert.equal(a, "index.js");
+console.log(_aaa_ns);
+
+//#endregion
+```

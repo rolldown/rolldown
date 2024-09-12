@@ -2026,6 +2026,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-Nnl0Ev65.mjs
 
+# tests/rolldown/misc/invalid_ident_repr
+
+- main-!~{000}~.mjs => main-r-fid2FS.mjs
+
 # tests/rolldown/misc/object_shorthand_property
 
 - main-!~{000}~.mjs => main-T6y8-6S0.mjs

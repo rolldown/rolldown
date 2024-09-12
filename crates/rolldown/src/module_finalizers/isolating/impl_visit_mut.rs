@@ -1,10 +1,12 @@
-use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
+use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, NumberBase, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
 use oxc::span::{CompactStr, Span, SPAN};
 use rolldown_common::Module;
 use rolldown_ecmascript::TakeIn;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
+
+use crate::utils::interop::{calculate_interop_from_module, Interop};
 
 use super::IsolatingModuleFinalizer;
 
@@ -105,9 +107,12 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     // The specifiers rewrite with reference the namespace object, see `IsolatingModuleFinalizer#visit_expression`
 
     // Create a require call statement for import declaration
-    let namespace_object_ref = self.create_namespace_object_ref_for_import(import_decl.span);
+    let module = self.get_importee_module(import_decl.span);
+    let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
+    let inter_op = calculate_interop_from_module(module);
     self.create_require_call_stmt(
-      import_decl.source.value.as_str(),
+      &module.stable_id().into(),
+      inter_op,
       &namespace_object_ref,
       import_decl.span,
     );
@@ -169,9 +174,16 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     export_named_decl: &mut ast::ExportNamedDeclaration<'ast>,
   ) {
     match &export_named_decl.source {
-      Some(source) => {
-        let namespace_object_ref =
-          self.create_namespace_object_ref_for_import(export_named_decl.span);
+      Some(_) => {
+        let module = self.get_importee_module(export_named_decl.span);
+        let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
+        let interop = calculate_interop_from_module(module);
+        self.create_require_call_stmt(
+          &module.stable_id().into(),
+          interop,
+          &namespace_object_ref,
+          export_named_decl.span,
+        );
 
         self.generated_exports.extend(export_named_decl.specifiers.iter().map(|specifier| {
           self.snippet.object_property_kind_object_property(
@@ -208,12 +220,6 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
             matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_))
           )
         }));
-
-        self.create_require_call_stmt(
-          source.value.as_str(),
-          &namespace_object_ref,
-          export_named_decl.span,
-        );
       }
       None => {
         self.generated_exports.extend(export_named_decl.specifiers.iter().map(|specifier| {
@@ -241,7 +247,15 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     &mut self,
     export_all_decl: &ast::ExportAllDeclaration<'ast>,
   ) {
-    let namespace_object_ref = self.create_namespace_object_ref_for_import(export_all_decl.span);
+    let module = self.get_importee_module(export_all_decl.span);
+    let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
+    let interop = calculate_interop_from_module(module);
+    self.create_require_call_stmt(
+      &module.stable_id().into(),
+      interop,
+      &namespace_object_ref,
+      export_all_decl.span,
+    );
 
     match &export_all_decl.exported {
       Some(exported) => {
@@ -252,11 +266,6 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
         ));
       }
       None => {
-        self.create_require_call_stmt(
-          export_all_decl.source.value.as_str(),
-          &namespace_object_ref,
-          export_all_decl.span,
-        );
         self.generated_imports.push(self.snippet.builder.statement_expression(
           SPAN,
           self.snippet.call_expr_with_2arg_expr("__reExport", "exports", &namespace_object_ref),
@@ -267,7 +276,8 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
 
   fn create_require_call_stmt(
     &mut self,
-    source: &str,
+    module_stable_id: &CompactStr,
+    inter_op: Option<Interop>,
     namespace_object_ref: &CompactStr,
     span: Span,
   ) {
@@ -277,17 +287,31 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
 
     self.generated_imports_set.insert(namespace_object_ref.clone());
 
+    let require_call = self.snippet.require_call_expr(module_stable_id.as_str());
+
+    let init_expr = match inter_op {
+      None => require_call,
+      Some(interop) => match interop {
+        Interop::Babel => self.snippet.call_expr_with_arg_expr_expr("__toESM", require_call),
+        Interop::Node => self.snippet.alloc_call_expr_with_2arg_expr_expr(
+          "__toESM",
+          require_call,
+          self.snippet.builder.expression_from_numeric_literal(
+            self.snippet.builder.numeric_literal(SPAN, 1.0, "1", NumberBase::Decimal),
+          ),
+        ),
+      },
+    };
+
     self.generated_imports.push(self.snippet.variable_declarator_require_call_stmt(
-      source.as_ref(),
       namespace_object_ref,
+      init_expr,
       span,
     ));
   }
 
-  fn create_namespace_object_ref_for_import(&self, span: Span) -> CompactStr {
-    let rec_id = self.ctx.module.imports[&span];
-    let rec = &self.ctx.module.import_records[rec_id];
-    match &self.ctx.modules[rec.resolved_module] {
+  fn create_namespace_object_ref_for_module(&self, module: &Module) -> CompactStr {
+    match module {
       Module::Ecma(importee) => {
         // TODO deconflict namespace_ref
         self.ctx.symbols.get_original_name(importee.namespace_object_ref).clone()
@@ -297,5 +321,11 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
         legitimize_identifier_name(&external_module.name).to_string().into()
       }
     }
+  }
+
+  fn get_importee_module(&self, span: Span) -> &Module {
+    let rec_id = self.ctx.module.imports[&span];
+    let rec = &self.ctx.module.import_records[rec_id];
+    &self.ctx.modules[rec.resolved_module]
   }
 }

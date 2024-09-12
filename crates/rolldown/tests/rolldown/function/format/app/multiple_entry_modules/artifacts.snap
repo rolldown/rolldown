@@ -17,7 +17,7 @@ function square(x) {
 //#region cube.js
 __toCommonJS(exports);
 __export(exports, { default: () => cube });
-var square_ns = require("./square.js");
+var square_ns = require("square.js");
 function cube(x) {
 	return square_ns.default(x) * x;
 };
@@ -30,7 +30,7 @@ function cube(x) {
 //#region hyper-cube.js
 __toCommonJS(exports);
 __export(exports, { default: () => hyperCube });
-var cube_ns = require("./cube.js");
+var cube_ns = require("cube.js");
 function hyperCube(x) {
 	return cube_ns.default(x) * x;
 };
@@ -38,7 +38,7 @@ function hyperCube(x) {
 //#endregion
 //#region main.js
 __toCommonJS(exports);
-var hyper_cube_ns = require("./hyper-cube.js");
+var hyper_cube_ns = require("hyper-cube.js");
 console.log(hyper_cube_ns.default(5));
 
 //#endregion
@@ -48,7 +48,7 @@ console.log(hyper_cube_ns.default(5));
 ```js
 //#region other-entry.js
 __toCommonJS(exports);
-var cube_ns = require("./cube.js");
+var cube_ns = require("cube.js");
 console.log(cube_ns.default(5));
 
 //#endregion

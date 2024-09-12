@@ -571,10 +571,11 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
+  /// var [assignee] = require([source]);
   pub fn variable_declarator_require_call_stmt(
     &self,
-    source: &str,
     assignee: &str,
+    init: ast::Expression<'ast>,
     span: Span,
   ) -> Statement<'ast> {
     self.builder.statement_declaration(self.builder.declaration_variable(
@@ -588,7 +589,7 @@ impl<'ast> AstSnippet<'ast> {
           None::<TSTypeAnnotation>,
           false,
         ),
-        Some(self.require_call_expr(source)),
+        Some(init),
         false,
       )),
       false,

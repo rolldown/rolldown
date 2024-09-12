@@ -1,0 +1,7 @@
+{
+  "config": {
+    "format": "app",
+    "external": ["external"]
+  },
+  "expectExecuted": false
+}

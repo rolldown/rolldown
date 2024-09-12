@@ -13,6 +13,7 @@ pub mod ecma_visitors;
 pub mod extract_hash_pattern;
 pub mod extract_meaningful_input_name_from_path;
 pub mod hash_placeholder;
+pub mod interop;
 pub mod load_source;
 pub mod make_ast_symbol_and_scope;
 pub mod normalize_options;

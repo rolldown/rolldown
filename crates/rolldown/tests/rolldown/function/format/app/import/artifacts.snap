@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 module.exports = 1;
 
 //#endregion
-//#region cjs.mjs
+//#region commonjs.mjs
 module.exports = 1;
 
 //#endregion
@@ -19,6 +19,7 @@ module.exports = 1;
 __toCommonJS(exports);
 var external = require("external");
 var cjs_ns = __toESM(require("cjs.js"));
+var commonjs_ns = __toESM(require("commonjs.mjs"), 1);
 
 //#endregion
 ```

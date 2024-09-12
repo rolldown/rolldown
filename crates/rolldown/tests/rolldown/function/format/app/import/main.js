@@ -1,3 +1,3 @@
 import 'external';
 import "./cjs.js";
-import "./cjs.mjs";
+import "./commonjs.mjs";

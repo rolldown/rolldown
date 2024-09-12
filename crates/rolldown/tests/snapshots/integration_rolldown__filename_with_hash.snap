@@ -1664,7 +1664,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-I4ki5DbL.mjs
+- main-!~{000}~.mjs => main-paHSsqpb.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 

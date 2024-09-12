@@ -1652,7 +1652,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/export-named
 
-- main-!~{000}~.mjs => main-Q-mN_1Ua.mjs
+- main-!~{000}~.mjs => main-ozdsIjSL.mjs
 
 # tests/rolldown/function/format/app/export-named-from
 

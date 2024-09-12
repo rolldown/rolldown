@@ -94,9 +94,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                         .alloc_call_expr_with_2arg_expr_expr(
                           re_export_fn_name,
                           self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                          self.snippet.call_expr_with_arg_expr_expr(
+                          self.snippet.to_esm_call_with_interop(
                             to_esm_fn_name,
                             self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                            importee.interop(),
                           ),
                         )
                         .into_in(self.alloc),
@@ -462,9 +463,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 *expr = self.snippet.promise_resolve_then_call_expr(
                   expr.span(),
                   self.snippet.builder.vec1(self.snippet.return_stmt(
-                    self.snippet.call_expr_with_arg_expr_expr(
+                    self.snippet.to_esm_call_with_interop(
                       to_esm_fn_name,
                       self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                      importee.interop(),
                     ),
                   )),
                 );

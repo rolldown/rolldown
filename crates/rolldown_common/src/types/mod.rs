@@ -13,6 +13,7 @@ pub mod external_module_idx;
 pub mod import_record;
 pub mod importer_record;
 pub mod instantiated_chunk;
+pub mod interop;
 pub mod member_expr_ref;
 pub mod module_def_format;
 pub mod module_id;

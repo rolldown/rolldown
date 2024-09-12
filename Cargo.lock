@@ -2351,6 +2351,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "oxc",
+ "rolldown_common",
  "rolldown_error",
  "self_cell",
  "smallvec",

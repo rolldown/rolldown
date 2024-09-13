@@ -6,6 +6,8 @@ use rolldown_common::{Interop, Module};
 use rolldown_ecmascript::TakeIn;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
+use crate::utils::call_expression_ext::CallExpressionExt;
+
 use super::IsolatingModuleFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
@@ -109,6 +111,18 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
 
     walk_mut::walk_static_member_expression(self, expr);
   }
+
+  fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
+    if expr.is_global_require_call(self.scope) {
+      if let Some(ast::Argument::StringLiteral(request)) = expr.arguments.first_mut() {
+        let rec_id = self.ctx.module.imports[&expr.span];
+        let resolved_module = self.ctx.module.import_records[rec_id].resolved_module;
+        request.value = self.snippet.atom(self.ctx.modules[resolved_module].stable_id());
+      }
+    }
+
+    walk_mut::walk_call_expression(self, expr);
+  }
 }
 
 impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
@@ -140,10 +154,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
           self.snippet.id_ref_expr(default_export_ref, SPAN),
           false,
         ));
-        self
-          .snippet
-          .builder
-          .statement_expression(SPAN, decl.to_expression_mut().take_in(self.alloc))
+        self.snippet.var_decl_stmt(default_export_ref, decl.to_expression_mut().take_in(self.alloc))
       }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
         let from =

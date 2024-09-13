@@ -8,8 +8,8 @@ const runtimeFilePath = require.resolve(
   'react-refresh/cjs/react-refresh-runtime.development.js',
 )
 const refreshEntry = 'react-refresh-entry.js'
+// TODO the mix cjs and esm should be tranformed to cjs correctly
 const runtimeCode = `
-const exports = {}
 ${fs.readFileSync(runtimeFilePath, 'utf-8')}
 function debounce(fn, delay) {
   let handle
@@ -19,7 +19,6 @@ function debounce(fn, delay) {
   }
 }
 exports.performReactRefresh = debounce(exports.performReactRefresh, 16)
-export default exports
 `
 
 const preambleCode = `

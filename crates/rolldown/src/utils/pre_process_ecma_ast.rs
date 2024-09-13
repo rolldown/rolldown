@@ -7,7 +7,7 @@ use oxc::minifier::{
 };
 use oxc::semantic::{ScopeTree, SemanticBuilder, SymbolTable};
 use oxc::span::SourceType;
-use oxc::transformer::{TransformOptions, Transformer};
+use oxc::transformer::{ReactRefreshOptions, TransformOptions, Transformer};
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
@@ -51,6 +51,7 @@ pub fn pre_process_ecma_ast(
         OxcParseType::Js => unreachable!("Should not reach here"),
         OxcParseType::Jsx | OxcParseType::Tsx => {
           transformer_options.react.jsx_plugin = true;
+          transformer_options.react.refresh = Some(ReactRefreshOptions::default());
         }
         OxcParseType::Ts => {}
       }

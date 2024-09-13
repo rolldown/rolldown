@@ -11,6 +11,7 @@ use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
+use rolldown_plugin_react::ReactPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
@@ -56,6 +57,7 @@ pub enum BindingBuiltinPluginName {
   JsonPlugin,
   BuildImportAnalysisPlugin,
   ReplacePlugin,
+  ReactPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -293,6 +295,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           }
         })))
       }
+      BindingBuiltinPluginName::ReactPlugin => Arc::new(ReactPlugin {}),
     })
   }
 }

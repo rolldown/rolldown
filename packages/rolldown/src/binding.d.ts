@@ -148,7 +148,8 @@ export declare enum BindingBuiltinPluginName {
   AliasPlugin = 8,
   JsonPlugin = 9,
   BuildImportAnalysisPlugin = 10,
-  ReplacePlugin = 11
+  ReplacePlugin = 11,
+  ReactPlugin = 12
 }
 
 export interface BindingEmittedAsset {

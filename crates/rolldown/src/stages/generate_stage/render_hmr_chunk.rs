@@ -17,7 +17,6 @@ use rustc_hash::FxHashSet;
 use crate::{
   module_finalizers::isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
   module_loader::hmr_module_loader::HmrModuleLoaderOutput,
-  types::symbols::Symbols,
   utils::render_ecma_module::render_ecma_module,
   BundleOutput,
 };
@@ -47,7 +46,7 @@ pub fn render_hmr_chunk(
           ctx: &IsolatingModuleFinalizerContext {
             module,
             modules: &hmr_module_loader_output.module_table.modules,
-            symbols: &Symbols::default(), // TODO
+            symbols: &hmr_module_loader_output.symbols,
           },
           snippet: AstSnippet::new(alloc),
           generated_imports_set: FxHashSet::default(),

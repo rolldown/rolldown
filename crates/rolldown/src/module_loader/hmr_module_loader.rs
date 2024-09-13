@@ -4,6 +4,7 @@ use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
+use crate::types::symbols::Symbols;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
@@ -33,7 +34,8 @@ impl HmrIntermediateNormalModules {
     }
   }
 
-  pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
+  pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> ModuleIdx {
+    symbols.alloc_one();
     self.modules.push(None)
   }
 }
@@ -45,6 +47,7 @@ pub struct HmrModuleLoader {
   visited: FxHashMap<ArcStr, ModuleIdx>,
   remaining: u32,
   intermediate_normal_modules: HmrIntermediateNormalModules,
+  symbols: Symbols,
 }
 
 pub struct HmrModuleLoaderOutput {
@@ -52,13 +55,14 @@ pub struct HmrModuleLoaderOutput {
   pub module_table: ModuleTable,
   pub module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub index_ecma_ast: IndexEcmaAst,
-  //   pub symbols: Symbols,
+  pub symbols: Symbols,
   pub warnings: Vec<BuildDiagnostic>,
   pub changed_modules: Vec<ModuleIdx>,
   pub diff_modules: Vec<ModuleIdx>,
 }
 
 impl HmrModuleLoader {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     options: SharedOptions,
     plugin_driver: SharedPluginDriver,
@@ -67,6 +71,7 @@ impl HmrModuleLoader {
     previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
     previous_module_table: ModuleTable,
     pervious_index_ecma_ast: IndexEcmaAst,
+    pervious_symbols: Symbols,
   ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -106,6 +111,7 @@ impl HmrModuleLoader {
       visited: previous_module_id_to_modules,
       remaining: 0,
       intermediate_normal_modules,
+      symbols: pervious_symbols,
     })
   }
 
@@ -118,7 +124,7 @@ impl HmrModuleLoader {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if resolved_id.is_external {
-          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(idx);
           let external_module_side_effects = if let Some(hook_side_effects) =
             resolved_id.side_effects
@@ -147,7 +153,7 @@ impl HmrModuleLoader {
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx
         } else {
-          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(idx);
           self.remaining += 1;
 
@@ -248,9 +254,10 @@ impl HmrModuleLoader {
               .collect::<IndexVec<ImportRecordIdx, _>>();
 
           module.set_import_records(import_records);
-          if let Some((ast, _ast_symbol)) = ecma_related {
+          if let Some((ast, ast_symbol)) = ecma_related {
             let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx()));
             module.set_ecma_ast_idx(ast_idx);
+            self.symbols.add_ast_symbols(module_idx, ast_symbol);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
           diff_modules.push(module_idx);
@@ -289,7 +296,7 @@ impl HmrModuleLoader {
     Ok(Ok(HmrModuleLoaderOutput {
       module_table: ModuleTable { modules },
       module_id_to_modules: self.visited,
-      //   symbols: self.symbols,
+      symbols: self.symbols,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       warnings: all_warnings,
       changed_modules,

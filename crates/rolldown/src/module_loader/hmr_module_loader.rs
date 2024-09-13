@@ -255,8 +255,19 @@ impl HmrModuleLoader {
 
           module.set_import_records(import_records);
           if let Some((ast, ast_symbol)) = ecma_related {
-            let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx()));
-            module.set_ecma_ast_idx(ast_idx);
+            if module_idx < self.intermediate_normal_modules.modules.len() {
+              if let Some(ast_idx) = self.intermediate_normal_modules.modules[module_idx]
+                .as_ref()
+                .and_then(|m| m.as_ecma())
+                .and_then(|m| m.ecma_ast_idx)
+              {
+                self.intermediate_normal_modules.index_ecma_ast[ast_idx] = (ast, module_idx);
+                module.set_ecma_ast_idx(ast_idx);
+              }
+            } else {
+              let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module_idx));
+              module.set_ecma_ast_idx(ast_idx);
+            }
             self.symbols.add_ast_symbols(module_idx, ast_symbol);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);

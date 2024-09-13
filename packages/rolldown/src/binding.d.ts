@@ -68,11 +68,8 @@ export declare class Bundler {
   write(): Promise<FinalBindingOutputs>
   generate(): Promise<FinalBindingOutputs>
   scan(): Promise<void>
-<<<<<<< HEAD
-  close(): Promise<void>
-=======
   hmrRebuild(changedFiles: Array<string>): Promise<void>
->>>>>>> a6a9ca8d (feat: add hmr_rebuild api (#2137))
+  close(): Promise<void>
 }
 
 /**

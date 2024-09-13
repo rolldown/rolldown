@@ -41,19 +41,12 @@ export class RolldownBuild {
     return transformToRollupOutput(output)
   }
 
-
-  async experimental_hmr_rebuild(): Promise<void> {
-    const cwd = this.#inputOptions.cwd ?? process.cwd()
-    const watcher = chokidar.watch([cwd])
-    watcher.on('change', async (file) => {
-      if (file) {
-        await this.#bundler!.hmrRebuild([file])
-      }
-    })
+  async experimental_hmr_rebuild(changedFiles: string[]): Promise<void> {
+    await this.#bundler!.hmrRebuild(changedFiles)
   }
 
   async close(): Promise<void> {
-      const bundler = await this.#getBundler({})
+    const bundler = await this.#getBundler({})
     await this.#stopWorkers?.()
     await bundler.close()
   }

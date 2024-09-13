@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 __toCommonJS(exports);
 __export(exports, {
@@ -17,4 +19,6 @@ __export(exports, {
 var external = require("external");
 
 //#endregion
+});
+rolldown_runtime.require('main.js');
 ```

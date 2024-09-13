@@ -173,6 +173,17 @@ impl Bundler {
     Ok(())
   }
 
+  #[allow(clippy::significant_drop_tightening)]
+  pub async fn close_impl(&self) -> napi::Result<()> {
+    let mut bundler_core = self.inner.try_lock().map_err(|_| {
+      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
+    })?;
+
+    Self::handle_result(bundler_core.close().await)?;
+
+    Ok(())
+  }
+
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
     result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }

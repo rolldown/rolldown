@@ -20,19 +20,12 @@ function square(x) {
 rolldown_runtime.define('cube.js',function(require, module, exports){
 
 //#region cube.js
-<<<<<<< HEAD
 __toCommonJS(exports);
 __export(exports, { default: () => cube });
 var square_ns = require("square.js");
 function cube(x) {
 	return square_ns.default(x) * x;
 };
-=======
-import square from "./square.js";
-export default function cube(x) {
-	return square(x) * x;
-}
->>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
 
 //#endregion
 });
@@ -43,7 +36,6 @@ export default function cube(x) {
 rolldown_runtime.define('hyper-cube.js',function(require, module, exports){
 
 //#region hyper-cube.js
-<<<<<<< HEAD
 __toCommonJS(exports);
 __export(exports, { default: () => hyperCube });
 var cube_ns = require("cube.js");
@@ -52,24 +44,13 @@ function hyperCube(x) {
 };
 
 //#endregion
-//#region main.js
-__toCommonJS(exports);
-var hyper_cube_ns = require("hyper-cube.js");
-console.log(hyper_cube_ns.default(5));
-=======
-import cube from "./cube.js";
-export default function hyperCube(x) {
-	return cube(x) * x;
-}
-
-//#endregion
 });
 rolldown_runtime.define('main.js',function(require, module, exports){
 
 //#region main.js
-import hyperCube from "./hyper-cube.js";
-console.log(hyperCube(5));
->>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
+__toCommonJS(exports);
+var hyper_cube_ns = require("hyper-cube.js");
+console.log(hyper_cube_ns.default(5));
 
 //#endregion
 });
@@ -81,14 +62,9 @@ rolldown_runtime.require('main.js');
 rolldown_runtime.define('other-entry.js',function(require, module, exports){
 
 //#region other-entry.js
-<<<<<<< HEAD
 __toCommonJS(exports);
 var cube_ns = require("cube.js");
 console.log(cube_ns.default(5));
-=======
-import cube from "./cube.js";
-console.log(cube(5));
->>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
 
 //#endregion
 });

@@ -68,7 +68,7 @@ export declare class Bundler {
   write(): Promise<FinalBindingOutputs>
   generate(): Promise<FinalBindingOutputs>
   scan(): Promise<void>
-  hmrRebuild(changedFiles: Array<string>): Promise<void>
+  hmrRebuild(changedFiles: Array<string>): Promise<FinalBindingOutputs>
   close(): Promise<void>
 }
 

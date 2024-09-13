@@ -167,4 +167,22 @@ var rolldown_runtime = self.rolldown_runtime = {
       
     }
   }
+  ,
+  loadScript: function (url) {
+    var script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+      console.error('Failed to load script: ' + url);
+    }    
+    document.body.appendChild(script);
+  }
+}
+
+const socket = new WebSocket(`http://localhost:8080`)
+
+socket.onmessage = function(event) {
+  const data = JSON.parse(event.data)
+  if (data.type === 'update') {
+    rolldown_runtime.loadScript(data.url)
+  }
 }

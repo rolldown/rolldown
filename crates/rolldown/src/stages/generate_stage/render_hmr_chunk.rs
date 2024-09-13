@@ -3,18 +3,21 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
+use arcstr::ArcStr;
 use oxc::ast::VisitMut;
 use rolldown_common::{
   FileNameRenderOptions, FilenameTemplate, Module, NormalizedBundlerOptions, Output, OutputAsset,
   SourceMapType,
 };
-use rolldown_ecmascript::AstSnippet;
+use rolldown_ecmascript::{AstSnippet, EcmaCompiler};
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use crate::{
   module_finalizers::isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
   module_loader::hmr_module_loader::HmrModuleLoaderOutput,
+  types::symbols::Symbols,
   utils::render_ecma_module::render_ecma_module,
   BundleOutput,
 };
@@ -44,8 +47,12 @@ pub fn render_hmr_chunk(
           ctx: &IsolatingModuleFinalizerContext {
             module,
             modules: &hmr_module_loader_output.module_table.modules,
+            symbols: &Symbols::default(), // TODO
           },
           snippet: AstSnippet::new(alloc),
+          generated_imports_set: FxHashSet::default(),
+          generated_imports: oxc::allocator::Vec::new_in(alloc),
+          generated_exports: oxc::allocator::Vec::new_in(alloc),
         };
         finalizer.visit_program(oxc_program);
       });
@@ -54,18 +61,16 @@ pub fn render_hmr_chunk(
   let module_sources = hmr_module_loader_output
     .diff_modules
     .par_iter()
-    .filter_map(|id| hmr_module_loader_output.module_table.modules[*id].as_ecma())
-    .map(|m| {
-      (
-        m.idx,
-        m.id.clone(),
-        render_ecma_module(
-          m,
-          &hmr_module_loader_output.index_ecma_ast[m.ecma_ast_idx()].0,
-          m.id.as_ref(),
-          options,
-        ),
-      )
+    .copied()
+    .filter_map(|id| hmr_module_loader_output.module_table.modules[id].as_ecma())
+    .map(|module| {
+      let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual();
+      let render_output = EcmaCompiler::print(
+        &hmr_module_loader_output.index_ecma_ast[module.ecma_ast_idx()].0,
+        &module.id,
+        enable_sourcemap,
+      );
+      (module.idx, module.id.clone(), render_ecma_module(module, options, render_output))
     })
     .collect::<Vec<_>>();
 
@@ -113,7 +118,7 @@ pub fn render_hmr_chunk(
     });
 
   if let Some(map) = map {
-    let map_filename = format!("{filename}.map",);
+    let map_filename: ArcStr = format!("{filename}.map",).into();
     match options.sourcemap {
       SourceMapType::File => {
         let source = map.to_json_string();
@@ -125,7 +130,10 @@ pub fn render_hmr_chunk(
         })));
         content.push_str(&format!(
           "\n//# sourceMappingURL={}",
-          Path::new(&map_filename).file_name().expect("should have filename").to_string_lossy()
+          Path::new(map_filename.as_str())
+            .file_name()
+            .expect("should have filename")
+            .to_string_lossy()
         ));
       }
       SourceMapType::Inline => {
@@ -137,7 +145,7 @@ pub fn render_hmr_chunk(
   }
 
   assets.push(Output::Asset(Box::new(OutputAsset {
-    filename,
+    filename: filename.into(),
     source: content.into(),
     original_file_name: None,
     name: None,

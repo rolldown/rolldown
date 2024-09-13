@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 __toCommonJS(exports);
 __export(exports, {
@@ -22,4 +24,6 @@ class A {};
 const abc = 1;
 
 //#endregion
+});
+rolldown_runtime.require('main.js');
 ```

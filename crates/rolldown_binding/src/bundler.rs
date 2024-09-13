@@ -189,6 +189,17 @@ impl Bundler {
     Ok(())
   }
 
+  #[allow(clippy::significant_drop_tightening)]
+  pub async fn close_impl(&self) -> napi::Result<()> {
+    let mut bundler_core = self.inner.try_lock().map_err(|_| {
+      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
+    })?;
+
+    Self::handle_result(bundler_core.close().await)?;
+
+    Ok(())
+  }
+
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {
     errs.into_iter().for_each(|err| {
       eprintln!(

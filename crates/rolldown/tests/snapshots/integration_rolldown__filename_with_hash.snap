@@ -4217,6 +4217,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/export-all
 
+<<<<<<< HEAD
 - main-!~{000}~.js => main--pSlkPVu.js
 
 # tests/rolldown/function/format/app/export-default-class
@@ -4282,6 +4283,27 @@ snapshot_kind: text
 - cube-!~{002}~.mjs => cube-ql8lOQly.mjs
 >>>>>>> ebc7a043 (feat: render app chunk and replace require module id to stable id (#2156))
 >>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
+=======
+- main-!~{000}~.mjs => main-K6QmF0kO.mjs
+
+# tests/rolldown/function/format/app/export-named
+
+- main-!~{000}~.mjs => main-MOyfuQsk.mjs
+
+# tests/rolldown/function/format/app/export-named-from
+
+- main-!~{000}~.mjs => main-DuEm7JfO.mjs
+
+# tests/rolldown/function/format/app/import
+
+- main-!~{000}~.mjs => main-KK1IFzeY.mjs
+
+# tests/rolldown/function/format/app/multiple_entry_modules
+
+- main-!~{000}~.mjs => main-B1VCcyOD.mjs
+- other-entry-!~{001}~.mjs => other-entry-EZYP3cGv.mjs
+- cube-!~{002}~.mjs => cube-bpLihKnj.mjs
+>>>>>>> d901ab068 (chore(hmr): rebase main branch)
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

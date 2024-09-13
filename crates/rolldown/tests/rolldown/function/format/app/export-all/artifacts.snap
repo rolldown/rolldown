@@ -7,6 +7,8 @@ snapshot_kind: text
 ## main.js
 
 ```js
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 __toCommonJS(exports);
 __export(exports, { external: () => external });
@@ -14,4 +16,6 @@ var external = require("external");
 __reExport(exports, external);
 
 //#endregion
+});
+rolldown_runtime.require('main.js');
 ```

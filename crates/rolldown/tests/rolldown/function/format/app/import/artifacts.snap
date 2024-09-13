@@ -7,14 +7,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+rolldown_runtime.define('cjs.js',function(require, module, exports){
+
 //#region cjs.js
 module.exports = 1;
 
 //#endregion
+});
+rolldown_runtime.define('commonjs.mjs',function(require, module, exports){
+
 //#region commonjs.mjs
 module.exports = 1;
 
 //#endregion
+});
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 __toCommonJS(exports);
 var external = require("external");
@@ -23,4 +31,6 @@ var commonjs_exports = __toESM(require("commonjs.mjs"), 1);
 console.log(external.external, cjs_exports.foo, cjs_exports.bar);
 
 //#endregion
+});
+rolldown_runtime.require('main.js');
 ```

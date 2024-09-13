@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -22,7 +22,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let old_body = self.alloc.take(&mut program.body);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.stmt_infos[0].is_included;
+      && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
 
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
     // Skip the first statement info, which is the namespace variable declaration

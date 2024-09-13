@@ -161,9 +161,9 @@ vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
 
 # oxc crates share the same version
-oxc                = { version = "0.28.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
-oxc_index          = { version = "0.28.0", features = ["rayon"] }
-oxc_transform_napi = { version = "0.28.0" }
+oxc                = { version = "0.29.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
+oxc_index          = { version = "0.29.0", features = ["rayon"] }
+oxc_transform_napi = { version = "0.29.0" }
 
 [profile.release]
 codegen-units = 1

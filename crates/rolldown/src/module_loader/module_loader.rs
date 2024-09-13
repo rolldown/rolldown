@@ -324,6 +324,7 @@ impl ModuleLoader {
       .flatten()
       .enumerate()
       .map(|(id, mut module)| {
+        let id = ModuleIdx::from(id);
         if let Some(module) = module.as_ecma_mut() {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.

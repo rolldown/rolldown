@@ -78,19 +78,21 @@ pub fn pre_process_ecma_ast(
   ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
     // Use built-in define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
-      ReplaceGlobalDefines::new(allocator, &mut symbols, replace_global_define_config.clone())
-        .build(program);
+      let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
+        .build(symbols, scopes, program);
+      symbols = ret.symbols;
+      scopes = ret.scopes;
       ast_changed = true;
     }
 
     if !bundle_options.inject.is_empty() {
-      InjectGlobalVariables::new(
+      let ret = InjectGlobalVariables::new(
         allocator,
-        &mut symbols,
-        &mut scopes,
         bundle_options.oxc_inject_global_variables_config.clone(),
       )
-      .build(program);
+      .build(symbols, scopes, program);
+      symbols = ret.symbols;
+      scopes = ret.scopes;
       ast_changed = true;
     }
 

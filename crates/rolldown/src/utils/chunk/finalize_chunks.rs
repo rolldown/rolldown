@@ -63,6 +63,7 @@ pub fn finalize_assets(
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut hasher)| {
+      let asset_idx = AssetIdx::from(asset_idx);
       // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
 

@@ -522,7 +522,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/require_resolve
 
-- entry_js-!~{000}~.mjs => entry_js-nQ38baFz.mjs
+- entry_js-!~{000}~.mjs => entry_js-EZ1rTO5t.mjs
 
 # tests/esbuild/default/require_with_call_inside_try
 

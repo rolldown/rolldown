@@ -50,7 +50,6 @@ export const options = Object.fromEntries(
 export type ParseArgsOptions = typeof options
 
 export function parseCliArguments() {
-  const args = process.argv.slice(2)
   const { values, tokens, positionals } = parseArgs({
     options,
     tokens: true,

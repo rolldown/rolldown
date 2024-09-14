@@ -10,7 +10,6 @@ export interface OptionConfig {
 export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   config: {
     abbreviation: 'c',
-    description: 'Use config file',
     hint: 'filename',
     default: 'rolldown.config.js',
   },

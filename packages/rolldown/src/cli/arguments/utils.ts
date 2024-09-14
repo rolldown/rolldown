@@ -3,10 +3,6 @@ import type { Schema } from './types'
 export function getSchemaType(
   schema: Schema,
 ): 'string' | 'boolean' | 'object' | 'number' | 'array' {
-  if ('type' in schema) {
-    return schema.type as 'string' | 'boolean' | 'object' | 'number' | 'array'
-  }
-
   if ('anyOf' in schema) {
     const types = schema.anyOf.map((s) => getSchemaType(s))
     // Order: object > array > string > number > boolean
@@ -15,6 +11,10 @@ export function getSchemaType(
     else if (types.includes('string')) return 'string'
     else if (types.includes('number')) return 'number'
     else if (types.includes('boolean')) return 'boolean'
+  }
+
+  if ('type' in schema) {
+    return schema.type as 'string' | 'boolean' | 'object' | 'number' | 'array'
   }
 
   return 'object'

@@ -5,7 +5,7 @@ use oxc::minifier::{
   CompressOptions, Compressor, InjectGlobalVariables, ReplaceGlobalDefines,
   ReplaceGlobalDefinesConfig,
 };
-use oxc::semantic::{ScopeTree, SemanticBuilder, SymbolTable};
+use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 
@@ -21,6 +21,9 @@ use super::tweak_ast_for_scanning::tweak_ast_for_scanning;
 pub struct PreProcessEcmaAst {
   /// Only recreate semantic data if ast is changed.
   ast_changed: bool,
+
+  /// Semantic statistics.
+  stats: Stats,
 }
 
 impl PreProcessEcmaAst {
@@ -45,6 +48,7 @@ impl PreProcessEcmaAst {
     // return Err(anyhow::anyhow!("Semantic Error: {:#?}", semantic_ret.errors));
     // }
 
+    self.stats = semantic_ret.semantic.stats();
     let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
 
     // Transform TypeScript and jsx.
@@ -80,7 +84,7 @@ impl PreProcessEcmaAst {
       self.ast_changed = true;
     }
 
-    ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
+    ast.program.with_mut(|WithMutFields { allocator, program, source }| -> anyhow::Result<()> {
       // Use built-in define plugin.
       if let Some(replace_global_define_config) = replace_global_define_config {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
@@ -105,11 +109,10 @@ impl PreProcessEcmaAst {
       // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
       let compressor = Compressor::new(allocator, CompressOptions::dead_code_elimination());
       if self.ast_changed {
-        // This method recreates symbols and scopes.
-        compressor.build(program);
-      } else {
-        compressor.build_with_symbols_and_scopes(symbols, scopes, program);
+        let semantic_ret = SemanticBuilder::new(source).with_stats(self.stats).build(program);
+        (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
       }
+      compressor.build_with_symbols_and_scopes(symbols, scopes, program);
 
       Ok(())
     })?;
@@ -121,7 +124,16 @@ impl PreProcessEcmaAst {
     });
 
     // NOTE: Recreate semantic data because AST is changed in the transformations above.
-    let (symbols, scopes) = ast.make_symbol_table_and_scope_tree();
+    (symbols, scopes) = ast.program.with_dependent(|owner, dep| {
+      SemanticBuilder::new(&owner.source)
+        // Required by `module.scope.get_child_ids` in `crates/rolldown/src/utils/renamer.rs`.
+        .with_scope_tree_child_ids(true)
+        // Preallocate memory for the underlying data structures.
+        .with_stats(self.stats)
+        .build(&dep.program)
+        .semantic
+        .into_symbol_table_and_scope_tree()
+    });
 
     Ok((ast, symbols, scopes))
   }

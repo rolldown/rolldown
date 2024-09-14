@@ -76,13 +76,25 @@ export function parseCliArguments() {
       option.name = kebabCaseToCamelCase(option.name)
       let originalType = flattenedSchema[option.name]
       if (!originalType) {
-        logger.warn(
+        logger.error(
           `Invalid option: ${option.rawName}. We will ignore this option.`,
         )
-        return
+        // We will refuse to handle the invalid option, as it may cause unexpected behavior.
+        process.exit(1)
       }
       let type = getSchemaType(originalType)
-      if (type === 'object' && typeof option.value === 'string') {
+      if (type === 'string' && typeof option.value !== 'string') {
+        let opt = option as { name: string }
+        // We should use the default value.
+        let defaultValue = Object.getOwnPropertyDescriptor(alias, opt.name)
+          ?.value as OptionConfig
+        Object.defineProperty(values, opt.name, {
+          value: defaultValue.default ?? '',
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        })
+      } else if (type === 'object' && typeof option.value === 'string') {
         const [key, value] = option.value
           ?.split(',')
           .map((x) => x.split('='))[0]

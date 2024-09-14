@@ -31,7 +31,7 @@ export function normalizeCliOptions(
   if (!parsed.success) {
     parsed.error.errors.forEach((error) => {
       logger.error(
-        `Invalid value for option: ${error.path.join(', ')}. ${error.message}. You can use \`rolldown -h\` to see the help.`,
+        `Invalid value for option ${error.path.join(', ')}. You can use \`rolldown -h\` to see the help.`,
       )
     })
     process.exit(1)

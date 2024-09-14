@@ -70,6 +70,8 @@ function bindingifySourcemap(
 
     case false:
     case undefined:
+      return undefined
+
     case 'hidden':
       return 'hidden'
 

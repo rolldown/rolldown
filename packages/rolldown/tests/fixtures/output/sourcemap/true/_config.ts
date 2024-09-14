@@ -11,12 +11,7 @@ export default defineTest({
     },
   },
   afterTest: function (output) {
-    expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
-      [
-        "main.js",
-        "main.js.map",
-      ]
-    `)
+    expect(getOutputFileNames(output)).toStrictEqual(['main.js', 'main.js.map'])
     // include map comment
     expect(output.output[0].code).contains('//# sourceMappingURL=main.js.map')
     expect(output.output[0].sourcemapFileName).toBe('main.js.map')

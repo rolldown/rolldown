@@ -89,32 +89,40 @@ impl<'a> GenerateStage<'a> {
             map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
           map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
 
-          match self.options.sourcemap {
-            SourceMapType::File => {
-              let source = map.to_json_string();
-              output_assets.push(Output::Asset(Box::new(OutputAsset {
-                filename: map_filename.as_str().into(),
-                source: source.into(),
-                original_file_name: None,
-                name: None,
-              })));
-              code.push_str(&format!(
-                "\n//# sourceMappingURL={}",
-                Path::new(&map_filename)
-                  .file_name()
-                  .expect("should have filename")
-                  .to_string_lossy()
-              ));
+          if let Some(sourcemap) = &self.options.sourcemap {
+            match sourcemap {
+              SourceMapType::File | SourceMapType::Hidden => {
+                let source = map.to_json_string();
+                output_assets.push(Output::Asset(Box::new(OutputAsset {
+                  filename: map_filename.as_str().into(),
+                  source: source.into(),
+                  original_file_name: None,
+                  name: None,
+                })));
+                if matches!(sourcemap, SourceMapType::File) {
+                  code.push_str(&format!(
+                    "\n//# sourceMappingURL={}",
+                    Path::new(&map_filename)
+                      .file_name()
+                      .expect("should have filename")
+                      .to_string_lossy()
+                  ));
+                }
+              }
+              SourceMapType::Inline => {
+                let data_url = map.to_data_url();
+                code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
+              }
             }
-            SourceMapType::Inline => {
-              let data_url = map.to_data_url();
-              code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
-            }
-            SourceMapType::Hidden => {}
           }
         }
+
         let sourcemap_filename =
-          map.as_ref().map(|_| format!("{}.map", rendered_chunk.filename.as_str()));
+          if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
+            None
+          } else {
+            Some(format!("{}.map", rendered_chunk.filename.as_str()))
+          };
         output.push(Output::Chunk(Box::new(OutputChunk {
           name: rendered_chunk.name,
           filename: rendered_chunk.filename,
@@ -227,7 +235,7 @@ impl<'a> GenerateStage<'a> {
           .par_iter()
           .map(|&module_idx| {
             if let Some(module) = self.link_output.module_table.modules[module_idx].as_ecma() {
-              let enable_sourcemap = !self.options.sourcemap.is_hidden() && !module.is_virtual();
+              let enable_sourcemap = self.options.sourcemap.is_some() && !module.is_virtual();
 
               // Because oxc codegen sourcemap is last of sourcemap chain,
               // If here no extra sourcemap need remapping, we using it as final module sourcemap.

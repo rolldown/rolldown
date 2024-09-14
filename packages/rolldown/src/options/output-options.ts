@@ -131,14 +131,15 @@ export const outputCliOptionsSchema = outputOptionsSchema
         'always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable).',
       )
       .optional(),
-    advancedChunks: z.strictObject({
-      minSize: z.number()
-        .describe('minimum size of the chunk')
-        .optional(),
-      minShareCount: z.number()
-        .describe('minimum share count of the chunk')
-        .optional(),
-    }).optional()
+    advancedChunks: z
+      .strictObject({
+        minSize: z.number().describe('minimum size of the chunk').optional(),
+        minShareCount: z
+          .number()
+          .describe('minimum share count of the chunk')
+          .optional(),
+      })
+      .optional(),
   })
   .omit({
     sourcemapPathTransform: true,

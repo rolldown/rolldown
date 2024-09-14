@@ -87,15 +87,15 @@ export function parseCliArguments() {
       if (type === 'string' && typeof option.value !== 'string') {
         let opt = option as { name: string }
         // We should use the default value.
-        let defaultValue = Object.getOwnPropertyDescriptor(alias, opt.name)?.value as OptionConfig
+        let defaultValue = Object.getOwnPropertyDescriptor(alias, opt.name)
+          ?.value as OptionConfig
         Object.defineProperty(values, opt.name, {
           value: defaultValue.default ?? '',
           enumerable: true,
           configurable: true,
           writable: true,
         })
-      } else
-      if (type === 'object' && typeof option.value === 'string') {
+      } else if (type === 'object' && typeof option.value === 'string') {
         const [key, value] = option.value
           ?.split(',')
           .map((x) => x.split('='))[0]

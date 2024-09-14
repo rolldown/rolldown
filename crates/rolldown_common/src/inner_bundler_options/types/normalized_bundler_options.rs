@@ -44,7 +44,7 @@ pub struct NormalizedBundlerOptions {
   pub exports: OutputExports,
   pub es_module: EsModuleFlag,
   pub globals: FxHashMap<String, String>,
-  pub sourcemap: SourceMapType,
+  pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,
   pub intro: Option<AddonOutputOption>,

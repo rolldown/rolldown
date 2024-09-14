@@ -7,7 +7,7 @@ export default defineTest({
   config: {
     input: ['main.js'],
     output: {
-      sourcemap: true,
+      sourcemap: 'hidden',
     },
   },
   afterTest: function (output) {
@@ -17,17 +17,9 @@ export default defineTest({
         "main.js.map",
       ]
     `)
-    // include map comment
-    expect(output.output[0].code).contains('//# sourceMappingURL=main.js.map')
+    // not include map comment
+    expect(output.output[0].code).not.contains('//# sourceMappingURL=')
     expect(output.output[0].sourcemapFileName).toBe('main.js.map')
     expect(output.output[0].map).toBeDefined()
-
-    if (output.output[1].type === 'asset') {
-      const map = JSON.parse(output.output[1].source.toString())
-      expect(map.file).toMatchInlineSnapshot(`"main.js"`)
-      expect(map.mappings).toMatchInlineSnapshot(
-        `";;AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`,
-      )
-    }
   },
 })

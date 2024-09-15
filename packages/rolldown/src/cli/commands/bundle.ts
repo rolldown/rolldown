@@ -11,6 +11,7 @@ import chokidar from 'chokidar'
 import connect from 'connect'
 import ServerStatic from 'serve-static'
 import path from 'node:path'
+import path from 'node:path'
 import { onExit } from 'signal-exit'
 
 export async function bundleWithConfig(
@@ -127,6 +128,7 @@ async function bundleInner(
 
   if (options.dev) {
     const cwd = options.cwd ?? process.cwd()
+    const outputDir = options.output?.dir ?? 'dist'
     const app = connect()
     app.use(ServerStatic(cwd))
     const server = createServer(app)
@@ -137,7 +139,7 @@ async function bundleInner(
       logger.log(`Ws connected`)
       ws.on('error', console.error)
     })
-    logger.log(`Dev server running at`, colors.cyan('http:://localhost::8080'))
+    logger.log(`Dev server running at`, colors.cyan('http://localhost:8080'))
 
     server.listen(8080)
 
@@ -145,9 +147,15 @@ async function bundleInner(
     const watcher = chokidar.watch([cwd])
     watcher.on('change', async (file) => {
       if (file) {
-        await build.experimental_hmr_rebuild([file])
+        logger.log(`Found change in ${file}`)
+        const fileName = await build.experimental_hmr_rebuild([file])
         if (socket) {
-          socket.send('something')
+          socket.send(
+            JSON.stringify({
+              type: 'update',
+              url: path.join(outputDir, fileName),
+            }),
+          )
         }
       }
     })

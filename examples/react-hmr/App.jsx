@@ -1,19 +1,12 @@
-import React, { useState } from 'react'
+import React from 'react'
+import Button from './Button'
 
 function App() {
-  const [count, setCount] = useState(0)
   return (
     <div className="App">
       <header className="App-header">
         <h1>Hello Rolldown + React</h1>
-        <p>
-          <button
-            id="state-button"
-            onClick={() => setCount((count) => count + 1)}
-          >
-            count is: {count}
-          </button>
-        </p>
+        <Button />
         <p>
           Edit <code>App.jsx</code> and save to test HMR updates.
         </p>

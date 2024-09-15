@@ -1,3 +1,6 @@
+use regex::{Captures, Regex};
+use std::sync::LazyLock;
+
 #[derive(Debug)]
 pub struct FilenameTemplate {
   template: String,
@@ -27,6 +30,9 @@ pub struct FileNameRenderOptions<'me> {
   pub ext: Option<&'me str>,
 }
 
+static HASH_PLACEHOLDER: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\[hash(:(\d*))?]").expect("Invalid hash regex"));
+
 impl FilenameTemplate {
   pub fn render(&self, options: &FileNameRenderOptions) -> String {
     let mut tmp = self.template.clone();
@@ -46,4 +52,16 @@ impl FilenameTemplate {
 #[test]
 fn basic() {
   FilenameTemplate::new("[name]-[hash:8].js".to_string());
+}
+
+#[test]
+fn hash_with_len() {
+  let file_template = FilenameTemplate::new("[name]-[hash:3].js".to_string());
+  let str = file_template.render(&FileNameRenderOptions {
+    name: Some("hello"),
+    hash: Some("abcdefgh"),
+    ext: None,
+  });
+
+  assert_eq!(str, "hello-abc.js");
 }

@@ -1670,7 +1670,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-VQ84SppL.mjs
+- main-!~{000}~.mjs => main-uRVVcs4c.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 

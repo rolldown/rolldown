@@ -115,6 +115,10 @@ impl<'a> GenerateStage<'a> {
             ast,
           );
         } else {
+          // TODO: The runtime module need to hoisted temporarily.
+          if *owner == self.link_output.runtime.id() {
+            return;
+          }
           ast.program.with_mut(|fields| {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {

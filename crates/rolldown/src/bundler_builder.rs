@@ -8,6 +8,7 @@ use rolldown_resolver::Resolver;
 use rustc_hash::FxHashMap;
 
 use crate::{
+  types::symbols::Symbols,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
     normalize_options::{normalize_options, NormalizeOptionsReturn},
@@ -47,6 +48,7 @@ impl BundlerBuilder {
       previous_module_table: ModuleTable::default(),
       previous_module_id_to_modules: FxHashMap::default(),
       pervious_index_ecma_ast: IndexVec::default(),
+      pervious_symbols: Symbols::default(),
     }
   }
 

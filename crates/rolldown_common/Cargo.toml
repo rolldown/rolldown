@@ -24,6 +24,7 @@ dashmap            = { workspace = true }
 glob-match         = { workspace = true }
 lightningcss       = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
+regex              = { workspace = true }
 rolldown_fs        = { workspace = true }
 rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }

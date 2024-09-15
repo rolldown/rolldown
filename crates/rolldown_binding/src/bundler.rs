@@ -55,7 +55,6 @@ impl Bundler {
       if worker_count > 0 { Some(WorkerManager::new(worker_count)) } else { None };
 
     let ret = normalize_binding_options(
-      env,
       input_options,
       output_options,
       #[cfg(not(target_family = "wasm"))]

@@ -1515,6 +1515,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - ./chunks/async.mjs => ./chunks/async.mjs
 - ./chunks/shared.mjs => ./chunks/shared.mjs
 
+# tests/rolldown/function/entry_filenames/should_generate_correct_hash_with_len
+
+- ./entries/a-!~{0}~.mjs => ./entries/a-bdg6SR.mjs
+- ./entries/b-!~{1}~.mjs => ./entries/b-ojL73E.mjs
+- ./chunks/async-!~{04}~.mjs => ./chunks/async-zkTaGmM.mjs
+- ./chunks/shared-!~{02}~.mjs => ./chunks/shared-XckrVUV.mjs
+
 # tests/rolldown/function/entry_filenames/should_generate_correct_relative_import_path
 
 - ./entries/a.mjs => ./entries/a.mjs

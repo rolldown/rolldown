@@ -99,6 +99,7 @@ impl FileEmitter {
           name: name.as_deref(),
           hash: Some(hash.as_str()[..8].as_ref()),
           ext: extension,
+          ..Default::default()
         })
         .into();
       // deconflict file name

@@ -218,21 +218,25 @@ impl<'a> GenerateStage<'a> {
         pre_generated_name.clone()
       };
 
-      let hash_placeholder =
-        extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+      let hash_placeholder = extracted_hash_pattern
+        .as_ref()
+        .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
-      let css_hash_placeholder =
-        extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+      let css_hash_placeholder = extracted_css_hash_pattern
+        .as_ref()
+        .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
       let preliminary = filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
+        hash_pattern: extracted_hash_pattern.map(|p| p.pattern),
         ..Default::default()
       });
 
       let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
+        hash_pattern: extracted_css_hash_pattern.map(|p| p.pattern),
         ..Default::default()
       });
 

@@ -10,7 +10,7 @@ use crate::{
     scan_stage::ScanStage,
   },
   type_alias::IndexEcmaAst,
-  types::bundle_output::BundleOutput,
+  types::{bundle_output::BundleOutput, symbols::Symbols},
   watcher::watcher::{wait_for_change, Watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
@@ -40,6 +40,7 @@ pub struct Bundler {
   pub(crate) previous_module_table: ModuleTable,
   pub(crate) previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub(crate) pervious_index_ecma_ast: IndexEcmaAst,
+  pub(crate) pervious_symbols: Symbols,
 }
 
 impl Bundler {
@@ -141,6 +142,7 @@ impl Bundler {
       std::mem::take(&mut self.previous_module_id_to_modules),
       std::mem::take(&mut self.previous_module_table),
       std::mem::take(&mut self.pervious_index_ecma_ast),
+      std::mem::take(&mut self.pervious_symbols),
     )?;
 
     let mut hmr_module_loader_output =
@@ -159,6 +161,7 @@ impl Bundler {
     self.previous_module_table = hmr_module_loader_output.module_table;
     self.previous_module_id_to_modules = hmr_module_loader_output.module_id_to_modules;
     self.pervious_index_ecma_ast = hmr_module_loader_output.index_ecma_ast;
+    self.pervious_symbols = hmr_module_loader_output.symbols;
 
     Ok(output)
   }
@@ -246,6 +249,7 @@ impl Bundler {
     self.previous_module_table = link_stage_output.module_table;
     self.previous_module_id_to_modules = link_stage_output.module_id_to_modules;
     self.pervious_index_ecma_ast = link_stage_output.ast_table;
+    self.pervious_symbols = link_stage_output.symbols;
 
     output.watch_files = {
       let mut files = link_stage_output

@@ -8,7 +8,7 @@ export default defineTest({
     plugins: [
       transformPlugin({
         exclude: ['node_modules/**'],
-        targets: 'chrome 49'
+        targets: 'chrome 49',
       }),
     ],
   },

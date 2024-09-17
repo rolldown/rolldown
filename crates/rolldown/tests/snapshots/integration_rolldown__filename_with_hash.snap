@@ -2102,6 +2102,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/topics/css/basic
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
+- main.css
 
 # tests/rolldown/topics/deconflict/basic
 

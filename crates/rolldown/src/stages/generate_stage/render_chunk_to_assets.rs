@@ -11,6 +11,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{IndexChunkToAssets, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
@@ -50,6 +51,7 @@ impl<'a> GenerateStage<'a> {
       content: mut code,
       file_dir,
       preliminary_filename,
+      filename,
       ..
     } in assets
     {
@@ -139,6 +141,13 @@ impl<'a> GenerateStage<'a> {
           sourcemap_filename,
           preliminary_filename: preliminary_filename.to_string(),
         })));
+      } else {
+        output.push(Output::Asset(Box::new(OutputAsset {
+          filename: filename.clone().into(),
+          source: code.into(),
+          original_file_name: None,
+          name: None,
+        })));
       }
     }
 
@@ -155,7 +164,7 @@ impl<'a> GenerateStage<'a> {
           a.filename.cmp(&b.filename)
         }
       }
-      _ => unreachable!("here only sort chunks"),
+      _ => std::cmp::Ordering::Equal,
     });
 
     output.extend(output_assets);
@@ -174,6 +183,7 @@ impl<'a> GenerateStage<'a> {
     let mut index_preliminary_assets: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
+
     try_join_all(
       chunk_graph.chunk_table.iter_enumerated().zip(chunk_index_to_codegen_rets.into_iter()).map(
         |((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
@@ -187,12 +197,28 @@ impl<'a> GenerateStage<'a> {
             warnings: vec![],
             module_id_to_codegen_ret,
           };
-          EcmaGenerator::instantiate_chunk(&mut ctx).await
+          let ecma_chunks = EcmaGenerator::instantiate_chunk(&mut ctx).await;
+
+          let mut ctx = GenerateContext {
+            chunk_idx,
+            chunk,
+            options: self.options,
+            link_output: self.link_output,
+            chunk_graph,
+            plugin_driver: self.plugin_driver,
+            warnings: vec![],
+            // FIXME: module_id_to_codegen_ret is currently not used in CssGenerator. But we need to pass it to satisfy the args.
+            module_id_to_codegen_ret: vec![],
+          };
+          let css_chunks = CssGenerator::instantiate_chunk(&mut ctx).await;
+
+          ecma_chunks.and_then(|ecma_chunks| css_chunks.map(|css_chunks| [ecma_chunks, css_chunks]))
         },
       ),
     )
     .await?
     .into_iter()
+    .flatten()
     .for_each(|result| match result {
       Ok(generate_output) => {
         generate_output.chunks.into_iter().for_each(|asset| {

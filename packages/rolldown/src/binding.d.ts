@@ -162,6 +162,11 @@ export interface BindingGeneralHookFilter {
   exclude?: Array<BindingStringOrRegex>
 }
 
+export interface BindingGeneratedCodeOptions {
+  symbols?: boolean
+  constBindings?: boolean
+}
+
 export interface BindingGlobImportPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
@@ -289,6 +294,7 @@ export interface BindingOutputOptions {
   externalLiveBindings?: boolean
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife'
+  generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string>
   inlineDynamicImports?: boolean
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>

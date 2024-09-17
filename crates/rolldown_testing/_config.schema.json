@@ -226,6 +226,16 @@
             }
           ]
         },
+        "generatedCode": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GeneratedCodeOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "globals": {
           "type": [
             "object",
@@ -377,6 +387,24 @@
       "type": "object",
       "properties": {
         "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "GeneratedCodeOptions": {
+      "type": "object",
+      "properties": {
+        "constBindings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "symbols": {
           "type": [
             "boolean",
             "null"

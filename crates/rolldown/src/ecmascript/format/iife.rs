@@ -127,9 +127,11 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
+  let symbols = ctx.options.generated_code.as_ref().and_then(|x| x.symbols).unwrap_or(false);
+
   if named_exports {
     if let Some(marker) =
-      render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+      render_namespace_markers(&ctx.options.es_module, has_default_export, symbols)
     {
       concat_source.add_source(Box::new(RawSource::new(marker.into())));
     }

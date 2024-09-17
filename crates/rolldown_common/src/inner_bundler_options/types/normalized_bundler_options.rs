@@ -17,7 +17,7 @@ use super::{
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{EsModuleFlag, InjectImport, InputItem, ModuleType};
+use crate::{EsModuleFlag, GeneratedCodeOptions, InjectImport, InputItem, ModuleType};
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
 #[derive(Debug)]
@@ -60,5 +60,6 @@ pub struct NormalizedBundlerOptions {
   pub external_live_bindings: bool,
   pub inline_dynamic_imports: bool,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub generated_code: Option<GeneratedCodeOptions>,
   pub checks: ChecksOptions,
 }

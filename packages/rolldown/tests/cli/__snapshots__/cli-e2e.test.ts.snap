@@ -30,6 +30,8 @@ OPTIONS
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
+  --generated-code.const-bindings Allow the use of Symbol in generated code snippets, e.g. \`toStringTag\`.
+  --generated-code.symbols    Use \`const\` instead of \`var\` for wrapper functions.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
@@ -125,6 +127,8 @@ OPTIONS
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
+  --generated-code.const-bindings Allow the use of Symbol in generated code snippets, e.g. \`toStringTag\`.
+  --generated-code.symbols    Use \`const\` instead of \`var\` for wrapper functions.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).

@@ -1,0 +1,10 @@
+{
+  "config": {
+    "exports": "auto",
+    "format": "iife",
+    "name": "module",
+    "generatedCode": {
+      "symbols": true
+    }
+  }
+}

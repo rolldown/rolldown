@@ -201,6 +201,7 @@ impl ModuleFactory for EcmaModuleFactory {
       side_effects,
       module_type: ctx.module_type.clone(),
       has_eval,
+      css_view: None,
     };
 
     Ok(Ok(CreateModuleReturn {

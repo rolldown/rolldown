@@ -107,6 +107,7 @@ impl RuntimeModuleTask {
       side_effects: DeterminedSideEffects::Analyzed(false),
       module_type: ModuleType::Js,
       has_eval,
+      css_view: None,
     };
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {

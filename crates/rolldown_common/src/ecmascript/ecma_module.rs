@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::css::css_view::CssView;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
   types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
@@ -55,6 +56,7 @@ pub struct EcmaModule {
   pub dynamically_imported_ids: Vec<ModuleId>,
   pub side_effects: DeterminedSideEffects,
   pub module_type: ModuleType,
+  pub css_view: Option<CssView>,
 }
 
 impl EcmaModule {

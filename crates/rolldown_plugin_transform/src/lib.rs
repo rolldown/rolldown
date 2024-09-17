@@ -7,6 +7,7 @@ use oxc::{
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 
+use oxc::transformer::{EnvOptions, Targets};
 use rolldown_plugin::Plugin;
 use rolldown_utils::pattern_filter::{self, StringOrRegex};
 use std::borrow::Cow;
@@ -18,7 +19,9 @@ pub struct TransformPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   pub jsx_inject: Option<String>,
-  // TODO: support transform options
+
+  // TODO: support specific transform options. Firstly we can use `targets` but we'd better allowing user to pass more options.
+  pub targets: Option<String>,
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
@@ -56,7 +59,15 @@ impl Plugin for TransformPlugin {
     };
     let trivias = ast.trivias.clone();
     let ret = ast.program.with_mut(move |fields| {
-      let mut transformer_options = TransformOptions::default();
+      let mut transformer_options = if let Some(targets) = &self.targets {
+        TransformOptions::from_preset_env(&EnvOptions {
+          targets: Targets::from_query(targets),
+          ..EnvOptions::default()
+        })
+        .expect("Failed to create transform options")
+      } else {
+        TransformOptions::default()
+      };
       match args.module_type {
         ModuleType::Jsx | ModuleType::Tsx => {
           transformer_options.react.jsx_plugin = true;
@@ -124,5 +135,9 @@ impl TransformPlugin {
       pattern_filter::filter(Some(&self.exclude), Some(&self.include), id, &normalized_id).inner()
         && pattern_filter::filter(Some(&self.exclude), Some(&self.include), id, cleaned_id).inner()
     }
+  }
+
+  pub fn from_targets(targets: Option<String>) -> Self {
+    Self { targets, ..Default::default() }
   }
 }

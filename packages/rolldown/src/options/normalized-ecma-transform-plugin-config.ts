@@ -21,6 +21,7 @@ export function normalizeEcmaTransformPluginConfig(
     jsxInject: config?.jsxInject,
     exclude: normalizedStringOrRegex(config.exclude),
     include: normalizedStringOrRegex(config.include),
+    targets: config.targets,
   }
 
   return normalizedConfig

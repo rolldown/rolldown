@@ -4,7 +4,7 @@ use oxc::{
       Expression, ImportOrExportKind, PropertyKind, Statement, TSTypeParameterInstantiation,
       WithClause,
     },
-    AstBuilder, VisitMut,
+    AstBuilder, VisitMut, NONE,
   },
   span::{Span, SPAN},
   syntax::number::NumberBase,
@@ -120,7 +120,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
       self
         .ast_builder
         .expression_identifier_reference(SPAN, "__variableDynamicImportRuntimeHelper"),
-      None::<TSTypeParameterInstantiation>,
+      NONE,
       {
         let mut items = self.ast_builder.vec();
         items.push(self.ast_builder.argument_expression(
@@ -138,7 +138,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                 self.ast_builder.identifier_name(SPAN, "glob"),
                 false,
               )),
-              None::<TSTypeParameterInstantiation>,
+              NONE,
               {
                 let mut arguments =
                   self.ast_builder.vec1(self.ast_builder.argument_expression(
@@ -215,7 +215,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
           ),
         )),
         self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER),
-        None::<WithClause>,
+        NONE,
         ImportOrExportKind::Value,
       ),
     )

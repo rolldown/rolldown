@@ -8,7 +8,7 @@ use oxc::{
       TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation, WithClause,
     },
     visit::walk_mut,
-    AstBuilder, VisitMut,
+    AstBuilder, VisitMut, NONE,
   },
   span::{Span, SPAN},
 };
@@ -298,7 +298,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
             self.ast_builder.string_literal(Span::default(), formatted_file.as_str()),
-            None::<WithClause>,
+            NONE,
             ImportOrExportKind::Value,
           ),
         ));
@@ -323,7 +323,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                 self.ast_builder.identifier_name(SPAN, "then"),
                 false,
               )),
-              None::<TSTypeParameterInstantiation>,
+              NONE,
               self.ast_builder.vec1(
                 self
                   .ast_builder
@@ -331,7 +331,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                     SPAN,
                     true,
                     false,
-                    None::<TSTypeParameterDeclaration>,
+                    NONE,
                     self.ast_builder.formal_parameters(
                       SPAN,
                       FormalParameterKind::ArrowFormalParameters,
@@ -340,16 +340,16 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                         self.ast_builder.vec(),
                         self.ast_builder.binding_pattern(
                           self.ast_builder.binding_pattern_kind_binding_identifier(SPAN, "m"),
-                          None::<TSTypeAnnotation>,
+                          NONE,
                           false,
                         ),
                         None,
                         false,
                         false,
                       )),
-                      None::<BindingRestElement>,
+                      NONE,
                     ),
-                    None::<TSTypeAnnotation>,
+                    NONE,
                     self.ast_builder.function_body(
                       SPAN,
                       self.ast_builder.vec(),
@@ -378,14 +378,14 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           SPAN,
           true,
           false,
-          None::<TSTypeParameterDeclaration>,
+          NONE,
           self.ast_builder.formal_parameters(
             SPAN,
             FormalParameterKind::ArrowFormalParameters,
             self.ast_builder.vec(),
-            None::<BindingRestElement>,
+            NONE,
           ),
-          None::<TSTypeAnnotation>,
+          NONE,
           self.ast_builder.function_body(
             SPAN,
             self.ast_builder.vec(),

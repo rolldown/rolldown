@@ -6,7 +6,7 @@ use oxc::ast::ast::{
   PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind, WithClause,
 };
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{AstBuilder, VisitMut};
+use oxc::ast::{AstBuilder, VisitMut, NONE};
 use oxc::codegen::{self, CodeGenerator, Gen};
 use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
@@ -226,7 +226,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
             ImportOrExportKind::Value,
           ))),
           self.builder.string_literal(SPAN, PRELOAD_HELPER_ID),
-          None::<WithClause>,
+          NONE,
           ImportOrExportKind::Value,
         ),
       );

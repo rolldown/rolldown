@@ -103,7 +103,7 @@ const outputOptionsSchema = z.strictObject({
     .strictObject({
       symbols: z
         .boolean()
-        .describe('use `const` instead of `var` in helper functions.')
+        .describe('use `const` instead of `var` for wrapper functions.')
         .optional(),
       constBindings: z
         .boolean()

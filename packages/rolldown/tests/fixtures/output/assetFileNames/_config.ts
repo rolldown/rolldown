@@ -11,7 +11,7 @@ export default defineTest({
       {
         name: 'test-plugin',
         async buildStart() {
-          // the asset file name should be deconflict
+          // deduplicate assets if an explicit fileName is not provided
           this.emitFile({
             type: 'asset',
             name: 'emitted.txt',
@@ -21,6 +21,12 @@ export default defineTest({
             type: 'asset',
             name: 'emitted.txt',
             source: 'emitted',
+          })
+          // the asset file name should be deconflict
+          this.emitFile({
+            type: 'asset',
+            name: 'emitted.txt',
+            source: 'foo',
           })
         },
       },

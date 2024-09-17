@@ -18,6 +18,7 @@ pub struct EmittedAsset {
 
 #[derive(Debug)]
 pub struct FileEmitter {
+  source_hash_to_reference_id: DashMap<ArcStr, ArcStr>,
   names: DashMap<ArcStr, u32>,
   files: DashMap<ArcStr, EmittedAsset>,
   base_reference_id: AtomicUsize,
@@ -29,6 +30,7 @@ pub struct FileEmitter {
 impl FileEmitter {
   pub fn new(options: Arc<NormalizedBundlerOptions>) -> Self {
     Self {
+      source_hash_to_reference_id: DashMap::default(),
       names: DashMap::default(),
       files: DashMap::default(),
       base_reference_id: AtomicUsize::new(0),
@@ -38,8 +40,20 @@ impl FileEmitter {
   }
 
   pub fn emit_file(&self, mut file: EmittedAsset) -> ArcStr {
+    let hash: ArcStr = xxhash_base64_url(file.source.as_bytes()).into();
+    // Deduplicate assets if an explicit fileName is not provided
+    if file.file_name.is_none() {
+      if let Some(reference_id) = self.source_hash_to_reference_id.get(&hash) {
+        return reference_id.value().clone();
+      }
+    }
+
     let reference_id = self.assign_reference_id(file.file_name.clone());
-    self.generate_file_name(&mut file);
+    if file.file_name.is_none() {
+      self.source_hash_to_reference_id.insert(hash.clone(), reference_id.clone());
+    }
+
+    self.generate_file_name(&mut file, &hash);
     self.files.insert(reference_id.clone(), file);
     reference_id
   }
@@ -71,7 +85,7 @@ impl FileEmitter {
     .into()
   }
 
-  pub fn generate_file_name(&self, file: &mut EmittedAsset) {
+  pub fn generate_file_name(&self, file: &mut EmittedAsset, hash: &ArcStr) {
     if file.file_name.is_none() {
       let path = file.name.as_deref().map(Path::new);
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
@@ -83,7 +97,7 @@ impl FileEmitter {
         .asset_filenames
         .render(&FileNameRenderOptions {
           name: name.as_deref(),
-          hash: Some(&xxhash_base64_url(file.source.as_bytes()).as_str()[..8]),
+          hash: Some(hash.as_str()[..8].as_ref()),
           ext: extension,
         })
         .into();

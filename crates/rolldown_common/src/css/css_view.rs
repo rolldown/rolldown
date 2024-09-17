@@ -5,6 +5,6 @@ use crate::{ImportRecord, ImportRecordIdx};
 
 #[derive(Debug)]
 pub struct CssView {
-  pub source: Option<ArcStr>,
+  pub source: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ImportRecord>,
 }

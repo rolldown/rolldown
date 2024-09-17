@@ -1,4 +1,5 @@
-use std::{borrow::Cow, path::Path, process::Command};
+use core::str;
+use std::{borrow::Cow, ffi::OsStr, path::Path, process::Command};
 
 use anyhow::Context;
 use rolldown::{
@@ -199,19 +200,44 @@ impl IntegrationTest {
       assets.sort_by_key(|c| c.filename().to_string());
       let artifacts = assets
         .iter()
-        .filter(|asset| {
-          !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_))
-        })
-        .flat_map(|asset| {
-          let content = std::str::from_utf8(asset.content_as_bytes()).unwrap();
+        .filter_map(|asset| {
+          let content = match asset {
+            Output::Chunk(inner) => &inner.code,
+            Output::Asset(inner) => match &inner.source {
+              rolldown_common::AssetSource::String(inner) => inner,
+              // Snapshot buffer is meaningless
+              rolldown_common::AssetSource::Buffer(_) => return None,
+            },
+          };
           let content = if self.test_meta.hidden_runtime_module {
             RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
           } else {
-            Cow::Borrowed(content)
+            Cow::Borrowed(content.as_str())
           };
 
-          [Cow::Owned(format!("## {}\n", asset.filename())), "```js".into(), content, "```".into()]
+          let filename = asset.filename();
+
+          let file_ext = filename.as_path().extension().and_then(OsStr::to_str).map_or(
+            "unknown",
+            |ext| match ext {
+              "mjs" | "cjs" => "js",
+              _ => ext,
+            },
+          );
+
+          if file_ext == "map" {
+            // Skip sourcemap for now
+            return None;
+          }
+
+          Some([
+            Cow::Owned(format!("## {}\n", asset.filename())),
+            Cow::Owned(format!("```{file_ext}")),
+            content,
+            "```".into(),
+          ])
         })
+        .flatten()
         .collect::<Vec<_>>()
         .join("\n");
       snapshot.push_str(&artifacts);

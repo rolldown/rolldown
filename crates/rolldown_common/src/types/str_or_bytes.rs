@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub enum StrOrBytes {
   Str(String),
   Bytes(Vec<u8>),

@@ -9,6 +9,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
+  extract_hash_pattern::extract_hash_pattern,
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
@@ -25,7 +26,6 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   utils::{
     chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
-    extract_hash_pattern::extract_hash_pattern,
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
     hash_placeholder::HashPlaceholderGenerator,
@@ -218,25 +218,21 @@ impl<'a> GenerateStage<'a> {
         pre_generated_name.clone()
       };
 
-      let hash_placeholder = extracted_hash_pattern
-        .as_ref()
-        .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+      let hash_placeholder =
+        extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
-      let css_hash_placeholder = extracted_css_hash_pattern
-        .as_ref()
-        .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+      let css_hash_placeholder =
+        extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
       let preliminary = filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
-        hash_pattern: extracted_hash_pattern.map(|p| p.pattern),
         ..Default::default()
       });
 
       let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
-        hash_pattern: extracted_css_hash_pattern.map(|p| p.pattern),
         ..Default::default()
       });
 

@@ -26,7 +26,6 @@ impl From<String> for FilenameTemplate {
 pub struct FileNameRenderOptions<'me> {
   pub name: Option<&'me str>,
   pub hash: Option<&'me str>,
-  pub hash_pattern: Option<&'me str>,
   pub ext: Option<&'me str>,
 }
 
@@ -40,7 +39,11 @@ impl FilenameTemplate {
       tmp = tmp.replace("[name]", name);
     }
     if let Some(hash) = options.hash {
-      tmp = tmp.replace(options.hash_pattern.unwrap_or("[hash]"), hash);
+      if let Some(start) = tmp.find("[hash") {
+        if let Some(end) = tmp[start..].find(']') {
+          tmp.replace_range(start..=end, hash);
+        }
+      }
     }
     if let Some(ext) = options.ext {
       tmp = tmp.replace("[ext]", ext).replace("[extname]", &format!(".{ext}"));

@@ -25,6 +25,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       ("tsx".to_string(), ModuleType::Tsx),
       ("json".to_string(), ModuleType::Json),
       ("txt".to_string(), ModuleType::Text),
+      ("css".to_string(), ModuleType::Css),
     ]
     .into_iter()
     .collect(),

@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+const module = (function() {
+
+"use strict";
+
+//#region main.js
+console.log("none");
+var main_default = "a";
+
+//#endregion
+return main_default;
+})();
+```

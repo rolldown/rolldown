@@ -55,6 +55,7 @@ export function bindingifyOutputOptions(
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
     advancedChunks: outputOptions.advancedChunks,
+    generatedCode: outputOptions.generatedCode,
   }
 }
 

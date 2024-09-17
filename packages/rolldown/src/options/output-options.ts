@@ -99,6 +99,20 @@ const outputOptionsSchema = z.strictObject({
         .optional(),
     })
     .optional(),
+  generatedCode: z
+    .strictObject({
+      symbols: z
+        .boolean()
+        .describe('use `const` instead of `var` in helper functions.')
+        .optional(),
+      constBindings: z
+        .boolean()
+        .describe(
+          'allow the use of Symbol in generated code snippets, e.g. `toStringTag`',
+        )
+        .optional(),
+    })
+    .optional(),
 })
 
 const getAddonDescription = (

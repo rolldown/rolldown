@@ -1734,6 +1734,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-i2p4fCcn.mjs
 
+# tests/rolldown/function/generated_code/const_bindings
+
+- main-!~{000}~.mjs => main-19QptDPL.mjs
+
+# tests/rolldown/function/generated_code/symbols
+
+- main-!~{000}~.mjs => main-E6euhv2Q.mjs
+
+# tests/rolldown/function/generated_code/symbols_with_es_module
+
+- main-!~{000}~.mjs => main-AmuQ1mZa.mjs
+
 # tests/rolldown/function/inject
 
 - main-!~{000}~.mjs => main-dKJg0iPO.mjs

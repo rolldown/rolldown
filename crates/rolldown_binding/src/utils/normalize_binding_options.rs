@@ -21,6 +21,7 @@ use std::path::PathBuf;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
+use rolldown_common::GeneratedCodeOptions;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
 
@@ -208,6 +209,10 @@ pub fn normalize_binding_options(
       }),
     }),
     checks: None,
+    generated_code: output_options.generated_code.map(|inner| GeneratedCodeOptions {
+      symbols: inner.symbols,
+      const_bindings: inner.const_bindings,
+    }),
   };
 
   #[cfg(not(target_family = "wasm"))]

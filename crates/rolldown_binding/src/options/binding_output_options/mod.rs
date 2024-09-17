@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::options::binding_output_options::types::binding_generated_code_options::BindingGeneratedCodeOptions;
 use crate::types::binding_pre_rendered_chunk::PreRenderedChunk;
 use derivative::Derivative;
 use napi::bindgen_prelude::FunctionRef;
@@ -60,7 +61,7 @@ pub struct BindingOutputOptions {
   #[napi(ts_type = "'es' | 'cjs' | 'iife'")]
   pub format: Option<String>,
   // freeze: boolean;
-  // generatedCode: NormalizedGeneratedCodeOptions;
+  pub generated_code: Option<BindingGeneratedCodeOptions>,
   pub globals: Option<HashMap<String, String>>,
   // hoistTransitiveImports: boolean;
   // indent: true | string;

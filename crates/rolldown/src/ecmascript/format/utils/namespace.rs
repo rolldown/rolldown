@@ -94,7 +94,10 @@ pub fn generate_identifier(
       }
     } else if is_validate_assignee_identifier_name(name) {
       // If valid, we can use the `var` statement to declare the variable.
-      Ok((String::new(), format!("var {name}")))
+      // or we can use `const` if `const_bindings` is enabled.
+      let const_bindings =
+        ctx.options.generated_code.as_ref().and_then(|x| x.const_bindings).unwrap_or(false);
+      Ok((String::new(), format!("{} {name}", if const_bindings { "const" } else { "var" })))
     } else {
       // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.
       let name = ArcStr::from(name);

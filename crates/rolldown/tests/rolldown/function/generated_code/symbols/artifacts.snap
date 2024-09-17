@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+var module = (function(exports) {
+
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+
+//#region main.js
+console.log("none");
+const a = 1;
+
+//#endregion
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+return exports;
+})({});
+```

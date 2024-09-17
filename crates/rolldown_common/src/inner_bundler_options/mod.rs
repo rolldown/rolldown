@@ -14,9 +14,10 @@ use types::experimental_options::ExperimentalOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  es_module_flag::EsModuleFlag, input_item::InputItem, is_external::IsExternal,
-  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
-  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  es_module_flag::EsModuleFlag, generated_code_options::GeneratedCodeOptions,
+  input_item::InputItem, is_external::IsExternal, output_exports::OutputExports,
+  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
+  resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
@@ -133,6 +134,7 @@ pub struct BundlerOptions {
   pub inline_dynamic_imports: Option<bool>,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: Option<ChecksOptions>,
+  pub generated_code: Option<GeneratedCodeOptions>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

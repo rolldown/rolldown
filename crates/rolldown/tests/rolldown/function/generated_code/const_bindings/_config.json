@@ -1,0 +1,9 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "module",
+    "generatedCode": {
+      "constBindings": true
+    }
+  }
+}

@@ -16,6 +16,7 @@ use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
+#[allow(clippy::too_many_lines)]
 pub fn render_cjs(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -47,10 +48,12 @@ pub fn render_cjs(
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
         let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
+        let symbols =
+          ctx.options.generated_code.as_ref().and_then(|options| options.symbols).unwrap_or(false);
         // Only `named` export can we render the namespace markers.
         if matches!(&export_mode, OutputExports::Named) {
           if let Some(marker) =
-            render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+            render_namespace_markers(&ctx.options.es_module, has_default_export, symbols)
           {
             concat_source.add_source(Box::new(RawSource::new(marker.into())));
           }

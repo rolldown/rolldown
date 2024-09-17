@@ -2335,7 +2335,6 @@ dependencies = [
  "glob-match",
  "lightningcss",
  "oxc",
- "regex",
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",

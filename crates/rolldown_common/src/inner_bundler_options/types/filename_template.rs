@@ -1,6 +1,3 @@
-use regex::{Captures, Regex};
-use std::sync::LazyLock;
-
 #[derive(Debug)]
 pub struct FilenameTemplate {
   template: String,
@@ -28,9 +25,6 @@ pub struct FileNameRenderOptions<'me> {
   pub hash: Option<&'me str>,
   pub ext: Option<&'me str>,
 }
-
-static HASH_PLACEHOLDER: LazyLock<Regex> =
-  LazyLock::new(|| Regex::new(r"\[hash(:(\d*))?]").expect("Invalid hash regex"));
 
 impl FilenameTemplate {
   pub fn render(&self, options: &FileNameRenderOptions) -> String {

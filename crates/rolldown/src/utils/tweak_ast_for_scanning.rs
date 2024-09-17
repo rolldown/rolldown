@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use oxc::allocator::Allocator;
-use oxc::ast::ast::{BindingPatternKind, Declaration, Statement, WithClause};
+use oxc::ast::ast::{BindingPatternKind, Declaration, Statement};
 use oxc::ast::{AstBuilder, NONE};
 use oxc::span::SPAN;
 use rolldown_ecmascript::{EcmaAst, StatementExt, TakeIn, WithMutFields};

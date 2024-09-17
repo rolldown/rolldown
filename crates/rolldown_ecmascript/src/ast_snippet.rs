@@ -2,10 +2,8 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, BindingIdentifier, BindingRestElement, Expression, ImportOrExportKind,
-      NumberBase, ObjectPropertyKind, PropertyKind, Statement, TSThisParameter, TSTypeAnnotation,
-      TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
-      WithClause,
+      self, Argument, BindingIdentifier, Expression, ImportOrExportKind,
+      NumberBase, ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
     AstBuilder, NONE,
   },

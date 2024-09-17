@@ -1,8 +1,7 @@
 use oxc::{
   ast::{
     ast::{
-      Expression, ImportOrExportKind, PropertyKind, Statement, TSTypeParameterInstantiation,
-      WithClause,
+      Expression, ImportOrExportKind, PropertyKind, Statement,
     },
     AstBuilder, VisitMut, NONE,
   },

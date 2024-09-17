@@ -1,8 +1,7 @@
 use oxc::{
   ast::{
     ast::{
-      Atom, BindingRestElement, Expression, FormalParameterKind, PropertyKind, TSTypeAnnotation,
-      TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
+      Atom, Expression, FormalParameterKind, PropertyKind, VariableDeclarationKind,
       VariableDeclarator,
     },
     AstBuilder, NONE,

@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use anyhow::Ok;
 use oxc::ast::ast::{
   Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ImportOrExportKind,
-  PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind, WithClause,
+  PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{AstBuilder, VisitMut, NONE};

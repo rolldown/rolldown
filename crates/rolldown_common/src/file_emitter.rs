@@ -94,7 +94,6 @@ impl FileEmitter {
         .and_then(|x| x.file_stem().and_then(OsStr::to_str))
         .map(|x| sanitize_file_name(x.into()));
       let extract_hash_pattern = extract_hash_pattern(self.options.asset_filenames.template());
-      let hash = xxhash_base64_url(file.source.as_bytes());
       let mut file_name: ArcStr = self
         .options
         .asset_filenames

@@ -34,8 +34,8 @@ impl FilenameTemplate {
     }
     if let Some(hash) = options.hash {
       if let Some(start) = tmp.find("[hash") {
-        if let Some(end) = tmp[start..].find(']') {
-          tmp.replace_range(start..=end, hash);
+        if let Some(end) = tmp[start + 5..].find(']') {
+          tmp.replace_range(start..=start + end + 5, hash);
         }
       }
     }
@@ -56,7 +56,7 @@ fn hash_with_len() {
   let file_template = FilenameTemplate::new("[name]-[hash:3].js".to_string());
   let str = file_template.render(&FileNameRenderOptions {
     name: Some("hello"),
-    hash: Some("abcdefgh"),
+    hash: Some("abc"),
     ext: None,
   });
 

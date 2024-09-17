@@ -1,11 +1,10 @@
 use oxc::{
   ast::{
     ast::{
-      Atom, BindingRestElement, Expression, FormalParameterKind, PropertyKind, TSTypeAnnotation,
-      TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind,
+      Atom, Expression, FormalParameterKind, PropertyKind, VariableDeclarationKind,
       VariableDeclarator,
     },
-    AstBuilder,
+    AstBuilder, NONE,
   },
   span::SPAN,
 };
@@ -33,16 +32,16 @@ pub fn construct_snippet_from_await_decl<'a>(
             ast_builder.property_key_identifier_name(SPAN, name),
             ast_builder.binding_pattern(
               ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
-              None::<TSTypeAnnotation>,
+              NONE,
               false,
             ),
             true,
             false,
           )
         })),
-        None::<BindingRestElement>,
+        NONE,
       ),
-      None::<TSTypeAnnotation>,
+      NONE,
       false,
     ),
     Some(ast_builder.expression_await(
@@ -65,21 +64,21 @@ fn construct_vite_preload_call<'a>(
   ast_builder.expression_call(
     SPAN,
     ast_builder.expression_identifier_reference(SPAN, "__vitePreload"),
-    None::<TSTypeParameterInstantiation>,
+    NONE,
     {
       let mut items = ast_builder.vec();
       items.push(ast_builder.argument_expression(ast_builder.expression_arrow_function(
         SPAN,
         false,
         true,
-        None::<TSTypeParameterDeclaration>,
+        NONE,
         ast_builder.formal_parameters(
           SPAN,
           FormalParameterKind::ArrowFormalParameters,
           ast_builder.vec(),
-          None::<BindingRestElement>,
+          NONE,
         ),
-        None::<TSTypeAnnotation>,
+        NONE,
         ast_builder.function_body(SPAN, ast_builder.vec(), {
           let mut items = ast_builder.vec();
           items.push(ast_builder.statement_declaration(ast_builder.declaration_variable(
@@ -97,16 +96,16 @@ fn construct_vite_preload_call<'a>(
                       ast_builder.property_key_identifier_name(SPAN, name),
                       ast_builder.binding_pattern(
                         ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
-                        None::<TSTypeAnnotation>,
+                        NONE,
                         false,
                       ),
                       true,
                       false,
                     )
                   })),
-                  None::<BindingRestElement>,
+                  NONE,
                 ),
-                None::<TSTypeAnnotation>,
+                NONE,
                 false,
               ),
               Some(ast_builder.expression_await(

@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use oxc::allocator::Allocator;
-use oxc::ast::ast::{BindingPatternKind, Declaration, Statement, WithClause};
-use oxc::ast::AstBuilder;
+use oxc::ast::ast::{BindingPatternKind, Declaration, Statement};
+use oxc::ast::{AstBuilder, NONE};
 use oxc::span::SPAN;
 use rolldown_ecmascript::{EcmaAst, StatementExt, TakeIn, WithMutFields};
 
@@ -84,7 +84,7 @@ fn split_top_level_variable_declaration<'a>(
               // Since it is `export a = 1, b = 2;`, source should be `None`
               None,
               named_decl_export_kind,
-              None::<WithClause>,
+              NONE,
             ))
           })
           .collect_vec()

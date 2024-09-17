@@ -22,6 +22,7 @@ pub enum ModuleType {
   Dataurl,
   Binary,
   Empty,
+  Css,
   Custom(String),
 }
 
@@ -74,6 +75,7 @@ impl Display for ModuleType {
       ModuleType::Dataurl => write!(f, "dataurl"),
       ModuleType::Binary => write!(f, "binary"),
       ModuleType::Empty => write!(f, "empty"),
+      ModuleType::Css => write!(f, "css"),
       ModuleType::Custom(custom_type) => write!(f, "{custom_type}"),
     }
   }

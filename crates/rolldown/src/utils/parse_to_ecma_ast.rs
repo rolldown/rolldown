@@ -49,6 +49,10 @@ pub fn parse_to_ecma_ast(
     ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
     ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
     ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
+    ModuleType::Css => {
+      let content = "export {}".to_string();
+      (content, OxcParseType::Js)
+    }
     ModuleType::Json => {
       let content = json_to_esm(&source.try_into_string()?)?;
       (content, OxcParseType::Js)

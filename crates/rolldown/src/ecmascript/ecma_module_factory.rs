@@ -5,7 +5,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, ModuleDefFormat, ModuleId, ModuleIdx, SymbolRef, TreeshakeOptions,
+  AstScopes, EcmaModule, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, SymbolRef,
+  TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{DiagnosableResult, UnhandleableResult};
@@ -135,6 +136,10 @@ impl ModuleFactory for EcmaModuleFactory {
     // 3. Analyzed side effects
     // We should skip the `check_side_effects_for` if the hook side effects is not `None`.
     let lazy_check_side_effects = || {
+      if matches!(ctx.module_type, ModuleType::Css) {
+        // CSS modules are considered to have side effects by default
+        return DeterminedSideEffects::Analyzed(true);
+      }
       ctx
         .resolved_id
         .package_json

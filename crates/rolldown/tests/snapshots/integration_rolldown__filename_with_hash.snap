@@ -2099,6 +2099,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-HEXq7EWu.cjs
 
+# tests/rolldown/topics/css/basic
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
+
 # tests/rolldown/topics/deconflict/basic
 
 - main-!~{000}~.mjs => main-3RXPquuH.mjs

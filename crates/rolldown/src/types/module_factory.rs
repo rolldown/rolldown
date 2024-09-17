@@ -4,8 +4,8 @@ use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
 use rolldown_common::{
-  side_effects::HookSideEffects, ImportKind, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx,
-  ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
+  side_effects::HookSideEffects, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleIdx,
+  ModuleType, ModuleView, RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
@@ -163,22 +163,22 @@ impl<'a> CreateModuleContext<'a> {
   }
 }
 
-pub struct CreateModuleArgs {
+pub struct CreateModuleViewArgs {
   pub source: StrOrBytes,
   pub sourcemap_chain: Vec<SourceMap>,
   pub hook_side_effects: Option<HookSideEffects>,
 }
 
-pub struct CreateModuleReturn {
-  pub module: Module,
+pub struct CreateModuleViewReturn {
+  pub view: ModuleView,
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub ecma_related: Option<(EcmaAst, AstSymbols)>,
 }
 
-pub trait ModuleFactory {
-  async fn create_module(
+pub trait ModuleViewFactory {
+  async fn create_module_view(
     ctx: &mut CreateModuleContext,
-    args: CreateModuleArgs,
-  ) -> anyhow::Result<DiagnosableResult<CreateModuleReturn>>;
+    args: CreateModuleViewArgs,
+  ) -> anyhow::Result<DiagnosableResult<CreateModuleViewReturn>>;
 }

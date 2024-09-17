@@ -3,8 +3,8 @@ use oxc::{
   allocator::Vec,
   ast::{
     ast::{
-      Argument, ArrayExpressionElement, Expression, FormalParameterKind,
-      ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
+      ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
     },
     visit::walk_mut,
     AstBuilder, VisitMut, NONE,

@@ -1,8 +1,6 @@
 use oxc::{
   ast::{
-    ast::{
-      Expression, ImportOrExportKind, PropertyKind, Statement,
-    },
+    ast::{Expression, ImportOrExportKind, PropertyKind, Statement},
     AstBuilder, VisitMut, NONE,
   },
   span::{Span, SPAN},

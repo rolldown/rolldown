@@ -2,6 +2,7 @@
 source: crates/rolldown/tests/integration_rolldown.rs
 expression: output
 ---
+```
 # tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
 
 - entry_ts-!~{000}~.mjs => entry_ts-4Cc0ZJV3.mjs
@@ -2358,3 +2359,5 @@ expression: output
 # tests/rollup/simplify-with-destructuring
 
 - main-!~{000}~.mjs => main-nQ2H1lM0.mjs
+
+```

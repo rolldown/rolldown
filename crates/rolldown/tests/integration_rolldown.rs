@@ -61,6 +61,6 @@ async fn filename_with_hash() {
 
     snapshot_outputs.push(snapshot_output);
   }
-  let output = snapshot_outputs.join("\n");
+  let output = format!("```\n{}\n```", snapshot_outputs.join("\n"));
   insta::assert_snapshot!(output);
 }

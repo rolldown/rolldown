@@ -427,6 +427,7 @@ export interface BindingTransformPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxInject?: string
+  reactRefresh: boolean
 }
 
 export interface BindingTreeshake {

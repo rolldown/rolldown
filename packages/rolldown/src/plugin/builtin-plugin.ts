@@ -196,7 +196,6 @@ export function bindingifyBuiltInPlugin(
   }
 }
 
-export function reactPlugin(
-) {
+export function reactPlugin() {
   return new ReactPlugin()
 }

@@ -14,8 +14,4 @@ workspace = true
 [dependencies]
 arcstr          = { workspace = true }
 oxc             = { workspace = true }
-rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rustc-hash      = { workspace = true }
-serde           = { workspace = true, features = ["rc"] }
-serde_json      = { workspace = true }

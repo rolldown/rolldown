@@ -115,6 +115,7 @@ pub struct BindingTransformPluginConfig {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub jsx_inject: Option<String>,
+  pub react_refresh: bool,
 }
 
 #[napi_derive::napi(object)]
@@ -199,6 +200,7 @@ impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
       include: normalized_include,
       exclude: normalized_exclude,
       jsx_inject: value.jsx_inject,
+      react_refresh: value.react_refresh,
     })
   }
 }

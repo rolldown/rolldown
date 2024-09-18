@@ -2,17 +2,20 @@ use arcstr::ArcStr;
 use oxc::{
   ast::{
     ast::{
-      BinaryOperator, BindingRestElement, FormalParameterKind, FunctionType, ImportOrExportKind,
-      Program, TSAccessibility, TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration,
-      TSTypeParameterInstantiation, WithClause,
+      Program,
+      // BinaryOperator, BindingRestElement, FormalParameterKind, FunctionType, ImportOrExportKind,
+      //  TSAccessibility, TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration,
+      // TSTypeParameterInstantiation, WithClause,
     },
     visit::walk_mut,
     AstBuilder, VisitMut,
   },
-  span::{Span, SPAN},
+  // span::{Span, SPAN},
 };
 use rolldown_plugin::{
-  HookLoadOutput, HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext,
+  HookLoadOutput,
+  Plugin,
+  PluginContext, // HookTransformAstArgs, HookTransformAstReturn,
 };
 use std::borrow::Cow;
 
@@ -24,38 +27,35 @@ impl Plugin for ReactPlugin {
     Cow::Borrowed("builtin:react")
   }
 
-  fn resolve_id(
+  async fn resolve_id(
     &self,
     ctx: &PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
-  ) -> impl std::future::Future<Output = rolldown_plugin::HookResolveIdReturn> + Send {
-    async {
-      if args.specifier == "react-refresh-entry.js" {
-        return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-          id: args.specifier.to_string(),
-          ..Default::default()
-        }));
-      }
-      if args.specifier == "react-refresh/runtime" {
-        let id = ctx.resolve(args.specifier, None, None).await??;
-        return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-          id: id.id.to_string(),
-          ..Default::default()
-        }));
-      }
-      Ok(None)
+  ) -> rolldown_plugin::HookResolveIdReturn {
+    if args.specifier == "react-refresh-entry.js" {
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+        id: args.specifier.to_string(),
+        ..Default::default()
+      }));
     }
+    if args.specifier == "react-refresh/runtime" {
+      let id = ctx.resolve(args.specifier, None, None).await??;
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+        id: id.id.to_string(),
+        ..Default::default()
+      }));
+    }
+    Ok(None)
   }
 
-  fn load(
+  async fn load(
     &self,
     _ctx: &PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
-  ) -> impl std::future::Future<Output = rolldown_plugin::HookLoadReturn> + Send {
-    async {
-      if args.id == "react-refresh-entry.js" {
-        return Ok(Some(HookLoadOutput {
-          code: r#"
+  ) -> rolldown_plugin::HookLoadReturn {
+    if args.id == "react-refresh-entry.js" {
+      return Ok(Some(HookLoadOutput {
+        code: r#"
   import RefreshRuntime from "react-refresh/runtime"
   RefreshRuntime.injectIntoGlobalHook(window);
   function debounce(fn, delay) {
@@ -66,24 +66,23 @@ impl Plugin for ReactPlugin {
     }
   }
   RefreshRuntime.performReactRefresh = debounce(RefreshRuntime.performReactRefresh, 16);"#
-            .to_string(),
-          ..Default::default()
-        }));
-      }
-      Ok(None)
+          .to_string(),
+        ..Default::default()
+      }));
     }
+    Ok(None)
   }
 
-  fn transform(
+  #[allow(clippy::case_sensitive_file_extension_comparisons)]
+  async fn transform(
     &self,
     _ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs<'_>,
-  ) -> impl std::future::Future<Output = rolldown_plugin::HookTransformReturn> + Send {
-    async {
-      if args.id.ends_with(".jsx") {
-        let mut content = args.code.to_string();
-        content.push_str(&format!(
-          r#"
+  ) -> rolldown_plugin::HookTransformReturn {
+    if args.id.ends_with(".jsx") {
+      let mut content = args.code.to_string();
+      content.push_str(&format!(
+        r#"
 import RefreshRuntime from 'react-refresh/runtime';
 function $RefreshSig$() {{
   return RefreshRuntime.createSignatureFunctionForTransform();
@@ -96,15 +95,14 @@ if (import.meta.hot) {{
   RefreshRuntime.performReactRefresh();
 }}
         "#,
-          args.id
-        ));
-        return Ok(Some(rolldown_plugin::HookTransformOutput {
-          code: Some(content),
-          ..Default::default()
-        }));
-      }
-      Ok(None)
+        args.id
+      ));
+      return Ok(Some(rolldown_plugin::HookTransformOutput {
+        code: Some(content),
+        ..Default::default()
+      }));
     }
+    Ok(None)
   }
 
   // fn transform_ast(
@@ -125,7 +123,7 @@ if (import.meta.hot) {{
   // }
 }
 
-#[warn(dead_code)]
+#[allow(dead_code)]
 struct ReactHmrVisit<'ast> {
   ast_builder: AstBuilder<'ast>,
   found_refresh_usage: bool,

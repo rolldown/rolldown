@@ -24,6 +24,7 @@ var cjs = require_cjs();
 
 # Sourcemap Visualizer
 
+```
 - ../cjs.js
 (0:0-0:7) "module." --> (6:0-7:8) "\nvar require_cjs = __commonJSMin((exports, module) => {\n\tmodule"
 (0:7-0:17) "exports = " --> (7:8-7:18) ".exports ="
@@ -35,3 +36,4 @@ var cjs = require_cjs();
 (1:0-1:4) "\nvar" --> (13:0-13:4) "\nvar"
 (1:4-0:0) "" --> (13:4-13:10) " cjs ="
 (0:0-2:1) "require('./cjs.js');\nvar cjs = require('./cjs.js');\n" --> (13:10-16:34) " require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

@@ -30,6 +30,7 @@ assert.strictEqual(typeof foo, "function");
 
 # Sourcemap Visualizer
 
+```
 - ../foo.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
@@ -63,3 +64,4 @@ assert.strictEqual(typeof foo, "function");
 (7:26-7:31) " foo," --> (16:26-16:31) " foo,"
 (7:31-7:42) " 'function'" --> (16:31-16:42) " \"function\""
 (7:42-7:43) ")" --> (16:42-19:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

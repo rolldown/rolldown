@@ -24,6 +24,7 @@ export { baz, baz$1 as baz2 };
 
 # Sourcemap Visualizer
 
+```
 - ../names.js
 (0:7-0:13) "const " --> (3:0-3:6) "\nconst"
 (0:13-0:15) "{ " --> (3:6-3:8) " {"
@@ -86,3 +87,4 @@ export { baz, baz$1 as baz2 };
 (4:19-4:25) "(baz2," --> (9:19-9:26) "(baz$1,"
 (4:25-4:32) " 'baz2'" --> (9:26-9:33) " \"baz2\""
 (4:32-7:1) ")\n\nexport { baz, baz2 }\n" --> (9:33-13:34) ");\n\n//#endregion\nexport { baz, baz$1 as baz2 };\n//# sourceMappingURL=main.mjs.map"
+```

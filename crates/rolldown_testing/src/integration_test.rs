@@ -266,6 +266,7 @@ impl IntegrationTest {
 
     if self.test_meta.visualize_sourcemap {
       snapshot.push_str("\n\n# Sourcemap Visualizer\n\n");
+      snapshot.push_str("```\n");
       let visualizer_result = assets
         .iter()
         .filter_map(|asset| match asset {
@@ -277,6 +278,7 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join("\n");
       snapshot.push_str(&visualizer_result);
+      snapshot.push_str("```");
     }
 
     // Configure insta to use the fixture path as the snapshot path

@@ -42,6 +42,7 @@ init_foo(), __toCommonJS(foo_ns);
 
 # Sourcemap Visualizer
 
+```
 - ../foo.js
 (2:7-2:16) " function" --> (27:0-27:9) "\nfunction"
 (2:16-2:22) " foo()" --> (27:9-27:15) " foo()"
@@ -78,3 +79,4 @@ init_foo(), __toCommonJS(foo_ns);
 (4:28-0:0) "" --> (47:14-48:0) "{};"
 (0:0-8:1) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport function foo() { }\nexport class bar { }\nexport default class baz { }\n\n\nexport { }\n" --> (48:0-52:0) "\n});\n\n//#endregion\n//#region main.js"
 (0:0-1:1) "require('./foo')\n" --> (52:0-55:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

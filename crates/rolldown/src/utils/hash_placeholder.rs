@@ -36,7 +36,7 @@ fn to_base64(mut value: u32) -> String {
     }
   }
 
-  std::str::from_utf8(&buffer[..index]).unwrap().to_string()
+  String::from_utf8_lossy(&buffer[..index]).into_owned()
 }
 
 #[derive(Debug, Default)]
@@ -54,7 +54,8 @@ impl HashPlaceholderGenerator {
     // TODO(hyf0): improve this
     assert!(seed_base64.len() <= allow_middle_len, "seed is too large");
 
-    let mut placeholder = String::with_capacity(len + 5);
+    let mut placeholder =
+      String::with_capacity(len + HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len());
     placeholder.push_str(HASH_PLACEHOLDER_LEFT);
     placeholder.extend(std::iter::repeat('0').take(allow_middle_len - seed_base64.len()));
     placeholder.push_str(&seed_base64);

@@ -1,6 +1,6 @@
 ---
 source: crates/rolldown/tests/integration_rolldown.rs
-expression: "snapshot_outputs.join(\"\\n\")"
+expression: output
 ---
 # tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
 

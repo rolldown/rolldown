@@ -1,18 +1,23 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::{index::IndexVec, span::Span};
 use rolldown_rstr::Rstr;
+use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use std::sync::Arc;
+use sugar_path::SugarPath;
 
 use anyhow::Result;
-use rolldown_common::{Module, ModuleIdx, ModuleType, ResolvedId, StrOrBytes};
+use rolldown_common::{
+  EcmaModule, ModuleId, ModuleIdx, ModuleType, ModuleView, ResolvedId, StrOrBytes,
+};
 use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
-  ecmascript::ecma_module_factory::EcmaModuleFactory,
+  css::create_css_view,
+  ecmascript::ecma_module_view_factory::EcmaModuleViewFactory,
   module_loader::NormalModuleTaskResult,
   types::module_factory::{
-    CreateModuleArgs, CreateModuleContext, CreateModuleReturn, ModuleFactory,
+    CreateModuleContext, CreateModuleViewArgs, CreateModuleViewReturn, ModuleViewFactory,
   },
   utils::{load_source::load_source, transform_source::transform_source},
 };
@@ -63,6 +68,7 @@ impl ModuleTask {
     }
   }
 
+  #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> Result<()> {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
@@ -94,7 +100,7 @@ impl ModuleTask {
       }
     };
 
-    let source = match source {
+    let mut source = match source {
       StrOrBytes::Str(source) => {
         // Run plugin transform.
         let source = transform_source(
@@ -122,7 +128,22 @@ impl ModuleTask {
       ));
     };
 
-    let ret = EcmaModuleFactory::create_module(
+    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = legitimize_identifier_name(&repr_name);
+
+    let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
+    let stable_id = id.stabilize(&self.ctx.options.cwd);
+
+    let css_view = if matches!(module_type, ModuleType::Css) {
+      let css_source: ArcStr = source.try_into_string()?.into();
+      // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
+      source = StrOrBytes::Str(String::new());
+      Some(create_css_view(&css_source))
+    } else {
+      None
+    };
+
+    let ret = EcmaModuleViewFactory::create_module_view(
       &mut CreateModuleContext {
         module_index: self.module_idx,
         plugin_driver: &self.ctx.plugin_driver,
@@ -134,11 +155,12 @@ impl ModuleTask {
         is_user_defined_entry: self.is_user_defined_entry,
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
-      CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
+      CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
     )
     .await?;
 
-    let CreateModuleReturn { module, resolved_deps, ecma_related, raw_import_records } = match ret {
+    let CreateModuleViewReturn { view, resolved_deps, ecma_related, raw_import_records } = match ret
+    {
       Ok(ret) => ret,
       Err(errs) => {
         self.errors.extend(errs);
@@ -146,9 +168,45 @@ impl ModuleTask {
       }
     };
 
-    if let Module::Ecma(module) = &module {
-      self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
-    }
+    let ecma_view = match view {
+      ModuleView::Ecma(view) => view,
+      ModuleView::Css(_) => unreachable!(),
+    };
+
+    let module = EcmaModule {
+      repr_name: repr_name.into_owned(),
+      stable_id,
+      id,
+      debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
+      sourcemap_chain: ecma_view.sourcemap_chain,
+      source: ecma_view.source,
+      ecma_ast_idx: None,
+      idx: self.module_idx,
+      named_imports: ecma_view.named_imports,
+      named_exports: ecma_view.named_exports,
+      stmt_infos: ecma_view.stmt_infos,
+      imports: ecma_view.imports,
+      star_exports: ecma_view.star_exports,
+      default_export_ref: ecma_view.default_export_ref,
+      scope: ecma_view.scope,
+      exports_kind: ecma_view.exports_kind,
+      namespace_object_ref: ecma_view.namespace_object_ref,
+      def_format: ecma_view.def_format,
+      exec_order: u32::MAX,
+      is_user_defined_entry: self.is_user_defined_entry,
+      import_records: IndexVec::default(),
+      is_included: false,
+      importers: vec![],
+      dynamic_importers: vec![],
+      imported_ids: ecma_view.imported_ids,
+      dynamically_imported_ids: ecma_view.dynamically_imported_ids,
+      side_effects: ecma_view.side_effects,
+      module_type: module_type.clone(),
+      has_eval: ecma_view.has_eval,
+      css_view,
+    };
+
+    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
 
     if let Err(_err) = self
       .ctx
@@ -158,7 +216,7 @@ impl ModuleTask {
         module_idx: self.module_idx,
         warnings,
         ecma_related,
-        module,
+        module: module.into(),
         raw_import_records,
       }))
       .await

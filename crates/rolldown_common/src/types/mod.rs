@@ -20,6 +20,7 @@ pub mod module_id;
 pub mod module_idx;
 pub mod module_info;
 pub mod module_table;
+pub mod module_view;
 pub mod named_export;
 pub mod named_import;
 pub mod output;

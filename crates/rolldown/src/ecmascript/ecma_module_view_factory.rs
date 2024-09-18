@@ -5,7 +5,7 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, SymbolRef,
+  AstScopes, EcmaView, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, ModuleView, SymbolRef,
   TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -15,10 +15,11 @@ use sugar_path::SugarPath;
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  css::create_css_view,
   types::{
     ast_symbols::AstSymbols,
-    module_factory::{CreateModuleArgs, CreateModuleContext, CreateModuleReturn, ModuleFactory},
+    module_factory::{
+      CreateModuleContext, CreateModuleViewArgs, CreateModuleViewReturn, ModuleViewFactory,
+    },
   },
   utils::{
     make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
@@ -26,9 +27,9 @@ use crate::{
   },
 };
 
-pub struct EcmaModuleFactory;
+pub struct EcmaModuleViewFactory;
 
-impl EcmaModuleFactory {
+impl EcmaModuleViewFactory {
   fn scan_ast(
     module_idx: ModuleIdx,
     id: &ArcStr,
@@ -46,7 +47,7 @@ impl EcmaModuleFactory {
       module_idx,
       &ast_scopes,
       &mut ast_symbols,
-      repr_name.into_owned(),
+      &repr_name,
       module_def_format,
       ast.source(),
       &module_id,
@@ -59,12 +60,12 @@ impl EcmaModuleFactory {
   }
 }
 
-impl ModuleFactory for EcmaModuleFactory {
+impl ModuleViewFactory for EcmaModuleViewFactory {
   #[allow(clippy::too_many_lines)]
-  async fn create_module<'any>(
+  async fn create_module_view<'any>(
     ctx: &mut CreateModuleContext<'any>,
-    args: CreateModuleArgs,
-  ) -> anyhow::Result<DiagnosableResult<CreateModuleReturn>> {
+    args: CreateModuleViewArgs,
+  ) -> anyhow::Result<DiagnosableResult<CreateModuleViewReturn>> {
     let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));
     let stable_id = id.stabilize(&ctx.options.cwd);
 
@@ -110,7 +111,6 @@ impl ModuleFactory for EcmaModuleFactory {
       default_export_ref,
       imports,
       exports_kind,
-      repr_name,
       warnings: scan_warnings,
       has_eval,
       errors,
@@ -172,20 +172,10 @@ impl ModuleFactory for EcmaModuleFactory {
       },
     };
 
-    let css_view = if matches!(ctx.module_type, ModuleType::Css) {
-      Some(create_css_view(&args.source.try_into_string()?.into()))
-    } else {
-      None
-    };
-
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-    let module = EcmaModule {
+    let module = EcmaView {
       source: ast.source().clone(),
       ecma_ast_idx: None,
-      idx: ctx.module_index,
-      repr_name,
-      stable_id,
-      id,
       named_imports,
       named_exports,
       stmt_infos,
@@ -196,9 +186,7 @@ impl ModuleFactory for EcmaModuleFactory {
       exports_kind,
       namespace_object_ref,
       def_format: ctx.resolved_id.module_def_format,
-      debug_id: ctx.resolved_id.debug_id(&ctx.options.cwd),
       sourcemap_chain: args.sourcemap_chain,
-      exec_order: u32::MAX,
       is_user_defined_entry: ctx.is_user_defined_entry,
       import_records: IndexVec::default(),
       is_included: false,
@@ -207,13 +195,11 @@ impl ModuleFactory for EcmaModuleFactory {
       imported_ids,
       dynamically_imported_ids,
       side_effects,
-      module_type: ctx.module_type.clone(),
       has_eval,
-      css_view,
     };
 
-    Ok(Ok(CreateModuleReturn {
-      module: module.into(),
+    Ok(Ok(CreateModuleViewReturn {
+      view: ModuleView::Ecma(module),
       resolved_deps,
       raw_import_records: import_records,
       ecma_related: Some((ast, ast_symbol)),

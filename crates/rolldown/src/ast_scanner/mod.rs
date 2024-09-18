@@ -32,7 +32,6 @@ use super::types::ast_symbols::AstSymbols;
 
 #[derive(Debug)]
 pub struct ScanResult {
-  pub repr_name: String,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
@@ -77,14 +76,14 @@ impl<'me> AstScanner<'me> {
     idx: ModuleIdx,
     scope: &'me AstScopes,
     symbols: &'me mut AstSymbols,
-    repr_name: String,
+    repr_name: &'me str,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
     file_path: &'me ModuleId,
     trivias: &'me Trivias,
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
-    let legitimized_repr_name = legitimize_identifier_name(&repr_name);
+    let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let symbol_id_for_default_export_ref = symbols
       .create_symbol(format!("{legitimized_repr_name}_default").into(), scope.root_scope_id());
 
@@ -93,7 +92,6 @@ impl<'me> AstScanner<'me> {
       (idx, symbols.create_symbol(name.into(), scope.root_scope_id())).into();
 
     let result = ScanResult {
-      repr_name,
       named_imports: FxHashMap::default(),
       named_exports: FxHashMap::default(),
       stmt_infos: {

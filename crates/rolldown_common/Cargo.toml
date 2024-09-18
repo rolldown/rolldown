@@ -21,7 +21,7 @@ anyhow             = { workspace = true }
 arcstr             = { workspace = true }
 bitflags           = { workspace = true }
 dashmap            = { workspace = true }
-glob-match         = { workspace = true }
+fast-glob          = { workspace = true }
 lightningcss       = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 rolldown_fs        = { workspace = true }

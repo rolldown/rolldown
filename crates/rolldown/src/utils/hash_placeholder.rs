@@ -22,16 +22,21 @@ const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU
 const BASE: u32 = 64;
 
 fn to_base64(mut value: u32) -> String {
-  let mut out_string = String::new();
+  let mut buffer = [0u8; 6];
+  let mut index = 0;
+
   loop {
     let current_digit = value % BASE;
+    buffer[index] = CHARS[current_digit as usize];
     value /= BASE;
-    out_string.push(CHARS[current_digit as usize] as char);
+    index += 1;
+
     if value == 0 {
       break;
     }
   }
-  out_string
+
+  String::from_utf8_lossy(&buffer[..index]).into_owned()
 }
 
 #[derive(Debug, Default)]
@@ -42,20 +47,21 @@ pub struct HashPlaceholderGenerator {
 impl HashPlaceholderGenerator {
   pub fn generate(&mut self, len: usize) -> String {
     debug_assert!((HASH_PLACEHOLDER_OVERHEAD..=MAX_HASH_SIZE).contains(&len));
+
     let allow_middle_len = len - HASH_PLACEHOLDER_OVERHEAD;
-    let mut seed_base64 = to_base64(self.seed);
-    if seed_base64.len() > allow_middle_len {
-      // TODO(hyf0): improve this
-      panic!("seed is too large")
-    } else {
-      let mut padding = String::new();
-      for _ in 0..(allow_middle_len - seed_base64.len()) {
-        padding.push('0');
-      }
-      seed_base64 = [padding, seed_base64].concat();
-    }
+    let seed_base64 = to_base64(self.seed);
+
+    // TODO(hyf0): improve this
+    assert!(seed_base64.len() <= allow_middle_len, "seed is too large");
+
+    let mut placeholder =
+      String::with_capacity(len + HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len());
+    placeholder.push_str(HASH_PLACEHOLDER_LEFT);
+    placeholder.extend(std::iter::repeat('0').take(allow_middle_len - seed_base64.len()));
+    placeholder.push_str(&seed_base64);
+    placeholder.push_str(HASH_PLACEHOLDER_RIGHT);
+
     self.seed += 1;
-    let placeholder = format!("{HASH_PLACEHOLDER_LEFT}{seed_base64}{HASH_PLACEHOLDER_RIGHT}");
 
     placeholder
   }

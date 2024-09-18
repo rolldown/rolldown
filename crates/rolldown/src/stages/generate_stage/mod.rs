@@ -9,6 +9,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
+  extract_hash_pattern::extract_hash_pattern,
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
@@ -25,7 +26,6 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   utils::{
     chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
-    extract_hash_pattern::extract_hash_pattern,
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
     hash_placeholder::HashPlaceholderGenerator,

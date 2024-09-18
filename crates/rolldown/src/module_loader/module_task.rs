@@ -100,7 +100,7 @@ impl ModuleTask {
       }
     };
 
-    let source = match source {
+    let mut source = match source {
       StrOrBytes::Str(source) => {
         // Run plugin transform.
         let source = transform_source(
@@ -134,6 +134,15 @@ impl ModuleTask {
     let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
+    let css_view = if matches!(module_type, ModuleType::Css) {
+      let css_source: ArcStr = source.try_into_string()?.into();
+      // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
+      source = StrOrBytes::Str(String::new());
+      Some(create_css_view(&css_source))
+    } else {
+      None
+    };
+
     let ret = EcmaModuleViewFactory::create_module_view(
       &mut CreateModuleContext {
         module_index: self.module_idx,
@@ -146,7 +155,7 @@ impl ModuleTask {
         is_user_defined_entry: self.is_user_defined_entry,
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
-      CreateModuleViewArgs { source: source.clone(), sourcemap_chain, hook_side_effects },
+      CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
     )
     .await?;
 
@@ -162,12 +171,6 @@ impl ModuleTask {
     let ecma_view = match view {
       ModuleView::Ecma(view) => view,
       ModuleView::Css(_) => unreachable!(),
-    };
-
-    let css_view = if matches!(module_type, ModuleType::Css) {
-      Some(create_css_view(&source.try_into_string()?.into()))
-    } else {
-      None
     };
 
     let module = EcmaModule {

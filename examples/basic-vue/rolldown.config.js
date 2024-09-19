@@ -2,17 +2,6 @@ import { defineConfig } from 'rolldown'
 
 export default defineConfig({
   input: './index.js',
-  plugins: [
-    {
-      transform: {
-        filter: {
-          id: {
-          }
-        },
-        handler(code, id){}
-      }
-    }
-  ],
   resolve: {
     // This needs to be explicitly set for now because oxc resolver doesn't
     // assume default exports conditions. Rolldown will ship with a default that

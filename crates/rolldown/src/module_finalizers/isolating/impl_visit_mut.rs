@@ -24,7 +24,9 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
           stmts.push(self.transform_export_default_declaration(export_default_decl));
         }
         ast::Statement::ExportNamedDeclaration(export_named_decl) => {
-          self.transform_named_declaration(export_named_decl);
+          if let Some(stmt) = self.transform_named_declaration(export_named_decl) {
+            stmts.push(stmt);
+          }
         }
         ast::Statement::ExportAllDeclaration(export_all_decl) => {
           self.transform_export_all_declaration(export_all_decl);
@@ -188,10 +190,11 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     }
   }
 
+  #[allow(clippy::too_many_lines)]
   pub fn transform_named_declaration(
     &mut self,
     export_named_decl: &mut ast::ExportNamedDeclaration<'ast>,
-  ) {
+  ) -> Option<Statement<'ast>> {
     match &export_named_decl.source {
       Some(_) => {
         let module = self.get_importee_module(export_named_decl.span);
@@ -238,8 +241,63 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
             matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_))
           )
         }));
+        None
       }
       None => {
+        if let Some(decl) = &mut export_named_decl.declaration {
+          match decl {
+            ast::Declaration::VariableDeclaration(var_decl) => {
+              self.generated_exports.extend(var_decl.declarations.iter().filter_map(|decl| {
+                decl.id.get_identifier().map(|ident| {
+                  self.snippet.object_property_kind_object_property(
+                    ident.as_str(),
+                    self.snippet.id_ref_expr(ident.as_str(), SPAN),
+                    false,
+                  )
+                })
+              }));
+
+              return Some(self.snippet.builder.statement_declaration(
+                self.snippet.builder.declaration_from_variable(
+                  self.snippet.builder.variable_declaration(
+                    SPAN,
+                    var_decl.kind,
+                    var_decl.declarations.take_in(self.alloc),
+                    false,
+                  ),
+                ),
+              ));
+            }
+            ast::Declaration::FunctionDeclaration(func_decl) => {
+              let from =
+                func_decl.id.as_ref().expect("FunctionDeclaration should have ident").name.as_str();
+              self.generated_exports.push(self.snippet.object_property_kind_object_property(
+                from,
+                self.snippet.id_ref_expr(from, SPAN),
+                false,
+              ));
+              return Some(self.snippet.builder.statement_expression(
+                SPAN,
+                Expression::FunctionExpression(func_decl.take_in(self.alloc)),
+              ));
+            }
+            ast::Declaration::ClassDeclaration(class_decl) => {
+              let from =
+                class_decl.id.as_ref().expect("ClassDeclaration should have ident").name.as_str();
+              self.generated_exports.push(self.snippet.object_property_kind_object_property(
+                from,
+                self.snippet.id_ref_expr(from, SPAN),
+                false,
+              ));
+              return Some(self.snippet.builder.statement_expression(
+                SPAN,
+                Expression::ClassExpression(class_decl.take_in(self.alloc)),
+              ));
+            }
+            _ => {}
+          }
+        }
+
         self.generated_exports.extend(export_named_decl.specifiers.iter().map(|specifier| {
           self.snippet.object_property_kind_object_property(
             &specifier.exported.name(),
@@ -257,6 +315,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
             matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)
           ))
         }));
+        None
       }
     }
   }

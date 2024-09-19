@@ -20,8 +20,16 @@ let nospace_num_no = /*#__PURE__*/ foo(bar());
 let nospace_new_num_no = /*#__PURE__*/ new foo(bar());
 let dot_no = /* @__PURE__ */ foo(sideEffect()).dot(bar());
 let new_dot_no = /* @__PURE__ */ new foo(sideEffect()).dot(bar());
-let nested_no = [1, /* @__PURE__ */ foo(bar()), 2];
-let new_nested_no = [1, /* @__PURE__ */ new foo(bar()), 2];
+let nested_no = [
+	1,
+	/* @__PURE__ */ foo(bar()),
+	2
+];
+let new_nested_no = [
+	1,
+	/* @__PURE__ */ new foo(bar()),
+	2
+];
 let single_at_no = // @__PURE__
 foo(bar());
 let new_single_at_no = // @__PURE__

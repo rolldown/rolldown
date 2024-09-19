@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-import {default as assert} from "node:assert";const b="shared.js",c="index.js";assert.equal(c,"index.js");assert.equal(b,"shared.js");
+import {default as assert} from "node:assert";const a$1="shared.js",a="index.js";assert.equal(a,"index.js");assert.equal(a$1,"shared.js");
 //# sourceMappingURL=main.mjs.map
 ```
 
@@ -15,19 +15,19 @@ import {default as assert} from "node:assert";const b="shared.js",c="index.js";a
 ```
 - ../shared.js
 (0:0-0:6) "const " --> (0:46-0:52) "const "
-(0:6-0:10) "a = " --> (0:52-0:54) "b="
-(0:10-2:13) "'shared.js'\n\nexport { a }" --> (0:54-0:66) "\"shared.js\","
+(0:6-0:10) "a = " --> (0:52-0:56) "a$1="
+(0:10-2:13) "'shared.js'\n\nexport { a }" --> (0:56-0:68) "\"shared.js\","
 - ../main.js
-(2:6-2:10) " a =" --> (0:66-0:68) "c="
-(2:10-3:0) " 'index.js'" --> (0:68-0:79) "\"index.js\";"
-(3:0-3:7) "\nassert" --> (0:79-0:86) "assert."
-(3:7-3:13) ".equal" --> (0:86-0:92) "equal("
-(3:13-3:16) "(a," --> (0:92-0:94) "c,"
-(3:16-3:27) " 'index.js'" --> (0:94-0:105) "\"index.js\")"
-(3:27-4:0) ")" --> (0:105-0:106) ";"
-(4:0-4:7) "\nassert" --> (0:106-0:113) "assert."
-(4:7-4:13) ".equal" --> (0:113-0:119) "equal("
-(4:13-4:17) "(a2," --> (0:119-0:121) "b,"
-(4:17-4:29) " 'shared.js'" --> (0:121-0:133) "\"shared.js\")"
-(4:29-6:1) ")\n\n" --> (0:133-1:34) ";\n//# sourceMappingURL=main.mjs.map"
+(2:6-2:10) " a =" --> (0:68-0:70) "a="
+(2:10-3:0) " 'index.js'" --> (0:70-0:81) "\"index.js\";"
+(3:0-3:7) "\nassert" --> (0:81-0:88) "assert."
+(3:7-3:13) ".equal" --> (0:88-0:94) "equal("
+(3:13-3:16) "(a," --> (0:94-0:96) "a,"
+(3:16-3:27) " 'index.js'" --> (0:96-0:107) "\"index.js\")"
+(3:27-4:0) ")" --> (0:107-0:108) ";"
+(4:0-4:7) "\nassert" --> (0:108-0:115) "assert."
+(4:7-4:13) ".equal" --> (0:115-0:121) "equal("
+(4:13-4:17) "(a2," --> (0:121-0:125) "a$1,"
+(4:17-4:29) " 'shared.js'" --> (0:125-0:137) "\"shared.js\")"
+(4:29-6:1) ")\n\n" --> (0:137-1:34) ";\n//# sourceMappingURL=main.mjs.map"
 ```

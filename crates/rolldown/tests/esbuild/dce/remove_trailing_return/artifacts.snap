@@ -16,19 +16,26 @@ function bar() {
 	if (a) b();
 	return KEEP_ME;
 }
-var entry_default = [foo, bar, function() {
-	if (a) b();
-	return;
-}, function() {
-	if (a) b();
-	return KEEP_ME;
-}, () => {
-	if (a) b();
-	return;
-}, () => {
-	if (a) b();
-	return KEEP_ME;
-}];
+var entry_default = [
+	foo,
+	bar,
+	function() {
+		if (a) b();
+		return;
+	},
+	function() {
+		if (a) b();
+		return KEEP_ME;
+	},
+	() => {
+		if (a) b();
+		return;
+	},
+	() => {
+		if (a) b();
+		return KEEP_ME;
+	}
+];
 
 //#endregion
 export { entry_default as default };

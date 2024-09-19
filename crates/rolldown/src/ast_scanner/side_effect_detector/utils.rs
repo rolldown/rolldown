@@ -38,8 +38,8 @@ impl<'a> SideEffectDetector<'a> {
     // we treat the `comment` not belongs to the `span`.
     let range_text = Span::new(comment.span.end, span.start).source_text(self.source);
     let only_whitespace = match comment.kind {
-      CommentKind::SingleLine => range_text.trim().is_empty(),
-      CommentKind::MultiLine => {
+      CommentKind::Line => range_text.trim().is_empty(),
+      CommentKind::Block => {
         range_text
           .strip_prefix("*/") // for multi-line comment
           .is_some_and(|s| s.trim().is_empty())

@@ -74,6 +74,9 @@ importers:
       rolldown:
         specifier: workspace:*
         version: link:../../packages/rolldown
+      vite:
+        specifier: ^5.2.13
+        version: 5.4.3(@types/node@22.5.2)(terser@5.31.6)
 
   examples/basic-vue:
     dependencies:

@@ -40,6 +40,7 @@ export { a, a$1 as a2, b, b$1 as b2, c, c$1 as c2, d, d$1 as d2, e, e$1 as e2 };
 
 # Sourcemap Visualizer
 
+```
 - ../names.js
 (0:7-0:13) "const " --> (3:0-3:6) "\nconst"
 (0:13-0:14) "[" --> (3:6-3:7) " "
@@ -178,3 +179,4 @@ export { a, a$1 as a2, b, b$1 as b2, c, c$1 as c2, d, d$1 as d2, e, e$1 as e2 };
 (18:13-18:17) "(e2," --> (25:13-25:18) "(e$1,"
 (18:17-18:22) " 'e2'" --> (25:18-25:23) " \"e2\""
 (18:22-20:1) ")\n\n" --> (25:23-29:34) ");\n\n//#endregion\nexport { a, a$1 as a2, b, b$1 as b2, c, c$1 as c2, d, d$1 as d2, e, e$1 as e2 };\n//# sourceMappingURL=main.mjs.map"
+```

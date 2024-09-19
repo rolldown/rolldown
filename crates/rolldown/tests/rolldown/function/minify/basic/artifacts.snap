@@ -12,6 +12,7 @@ import {default as assert} from "node:assert";const b="shared.js",c="index.js";a
 
 # Sourcemap Visualizer
 
+```
 - ../shared.js
 (0:0-0:6) "const " --> (0:46-0:52) "const "
 (0:6-0:10) "a = " --> (0:52-0:54) "b="
@@ -29,3 +30,4 @@ import {default as assert} from "node:assert";const b="shared.js",c="index.js";a
 (4:13-4:17) "(a2," --> (0:119-0:121) "b,"
 (4:17-4:29) " 'shared.js'" --> (0:121-0:133) "\"shared.js\")"
 (4:29-6:1) ")\n\n" --> (0:133-1:34) ";\n//# sourceMappingURL=main.mjs.map"
+```

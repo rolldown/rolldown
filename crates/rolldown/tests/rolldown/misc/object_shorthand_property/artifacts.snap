@@ -22,6 +22,7 @@ assert.strictEqual(value.foo, "foo");
 
 # Sourcemap Visualizer
 
+```
 - ../foo.js
 (0:0-0:15) "export default " --> (3:0-3:18) "\nvar foo_default ="
 (0:15-0:20) "'foo'" --> (3:18-7:0) " \"foo\";\n\n//#endregion\n//#region main.js"
@@ -37,3 +38,4 @@ assert.strictEqual(value.foo, "foo");
 (5:25-5:30) ".foo," --> (8:25-8:30) ".foo,"
 (5:30-5:36) " 'foo'" --> (8:30-8:36) " \"foo\""
 (5:36-5:37) ")" --> (8:36-11:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

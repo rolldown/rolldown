@@ -2302,6 +2302,7 @@ dependencies = [
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
+ "rolldown_plugin_react",
  "rolldown_plugin_replace",
  "rolldown_plugin_transform",
  "rolldown_plugin_wasm_fallback",
@@ -2497,6 +2498,15 @@ name = "rolldown_plugin_module_preload_polyfill"
 version = "0.1.0"
 dependencies = [
  "rolldown_common",
+ "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_react"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "oxc",
  "rolldown_plugin",
 ]
 

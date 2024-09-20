@@ -16,4 +16,5 @@ export {
   jsonPlugin,
   buildImportAnalysisPlugin,
   replacePlugin,
+  reactPlugin,
 } from './plugin/builtin-plugin'

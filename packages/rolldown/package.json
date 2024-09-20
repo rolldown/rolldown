@@ -70,7 +70,7 @@
     "build-wasi:debug": "run-s build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding:wasi:release build-node",
     "# Scrips for checking #": "_",
-    "test": "cross-env ROLLDOWN_TEST=1 vitest run --reporter verbose --hideSkippedTests",
+    "test": "cross-env RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --reporter verbose --hideSkippedTests",
     "test:update": "vitest run -u",
     "type-check": "tsc"
   },

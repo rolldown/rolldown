@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use dashmap::DashSet;
 use oxc::{
   ast::{
     ast::{
@@ -20,7 +21,9 @@ use rolldown_plugin::{
 use std::borrow::Cow;
 
 #[derive(Debug, Default)]
-pub struct ReactPlugin {}
+pub struct ReactPlugin {
+  entries: DashSet<ArcStr>,
+}
 
 impl Plugin for ReactPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -45,6 +48,10 @@ impl Plugin for ReactPlugin {
         ..Default::default()
       }));
     }
+    if args.is_entry {
+      let id = ctx.resolve(args.specifier, None, None).await??;
+      self.entries.insert(id.id.clone());
+    }
     Ok(None)
   }
 
@@ -67,6 +74,13 @@ impl Plugin for ReactPlugin {
   }
   RefreshRuntime.performReactRefresh = debounce(RefreshRuntime.performReactRefresh, 16);"#
           .to_string(),
+        ..Default::default()
+      }));
+    }
+    if self.entries.contains(args.id) {
+      let content = std::fs::read_to_string(args.id)?;
+      return Ok(Some(HookLoadOutput {
+        code: format!("import 'react-refresh-entry.js';\n{content}"),
         ..Default::default()
       }));
     }

@@ -180,12 +180,18 @@ importers:
 
   packages/rolldown:
     dependencies:
+      '@parcel/watcher':
+        specifier: 2.4.1
+        version: 2.4.1
       chokidar:
         specifier: 3.6.0
         version: 3.6.0
       connect:
         specifier: 3.7.0
         version: 3.7.0
+      watchpack:
+        specifier: 2.4.2
+        version: 2.4.2
       ws:
         specifier: 8.18.0
         version: 8.18.0
@@ -248,6 +254,9 @@ importers:
       '@types/serve-static':
         specifier: 1.13.6
         version: 1.13.6
+      '@types/watchpack':
+        specifier: 2.4.2
+        version: 2.4.2
       '@types/ws':
         specifier: 8.5.12
         version: 8.5.12
@@ -2897,6 +2906,9 @@ packages:
   '@types/glob@8.1.0':
     resolution: {integrity: sha512-IO+MJPVhoqz+28h1qLAcBEH2+xHMK6MTyHJc7MTnnYb6wsoLR29POVGJ7LycmVXIqyy/4/2ShP5sUwTXuOwb/w==}
 
+  '@types/graceful-fs@4.1.9':
+    resolution: {integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==}
+
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
@@ -2963,6 +2975,9 @@ packages:
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
+
+  '@types/watchpack@2.4.2':
+    resolution: {integrity: sha512-7zMmkqksRvI+9GE/GbXUUsIkyqLwfaKvp1ovgci5slNdf4RiuYVjR7Nqa4qFuB61chOva13I87gd4R8syqf4kA==}
 
   '@types/web-bluetooth@0.0.20':
     resolution: {integrity: sha512-g9gZnnXVq7gM7v3tJCWV/qw7w+KeOlSHAhgF9RytFyifW6AF61hdT2ucrYhPq9hLs5JIryeupHV3qGk95dH9ow==}
@@ -4047,6 +4062,9 @@ packages:
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
+
+  glob-to-regexp@0.4.1:
+    resolution: {integrity: sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==}
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
@@ -5835,6 +5853,10 @@ packages:
 
   wasm-sjlj@1.0.5:
     resolution: {integrity: sha512-Z/MHJeOkAvJJVWnGX3/YZGYldGaawZbYHX4ldYG9kLhcdB8H31F5x66M7Zc4BP/7pg0aLsusQj1629m2B3Rilg==}
+
+  watchpack@2.4.2:
+    resolution: {integrity: sha512-TnbFSbcOCcDgjZ4piURLCbJ3nJhznVh9kw6F6iokjiFPl8ONxe9A6nMDVXDiNbrSfLILs6vB07F7wLBrwPYzJw==}
+    engines: {node: '>=10.13.0'}
 
   web-tree-sitter@0.23.0:
     resolution: {integrity: sha512-p1T+ju2H30fpVX2q5yr+Wv/NfdMMWMjQp9Q+4eEPrHAJpPFh9DPfI2Yr9L1f5SA5KPE+g1cNUqPbpihxUDzmVw==}
@@ -8395,6 +8417,10 @@ snapshots:
       '@types/minimatch': 5.1.2
       '@types/node': 22.5.2
 
+  '@types/graceful-fs@4.1.9':
+    dependencies:
+      '@types/node': 22.5.2
+
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -8463,6 +8489,11 @@ snapshots:
       '@types/node': 22.5.2
 
   '@types/unist@3.0.3': {}
+
+  '@types/watchpack@2.4.2':
+    dependencies:
+      '@types/graceful-fs': 4.1.9
+      '@types/node': 22.5.2
 
   '@types/web-bluetooth@0.0.20': {}
 
@@ -9820,6 +9851,8 @@ snapshots:
   glob-parent@5.1.2:
     dependencies:
       is-glob: 4.0.3
+
+  glob-to-regexp@0.4.1: {}
 
   glob@10.4.5:
     dependencies:
@@ -11619,6 +11652,11 @@ snapshots:
       minimatch: 3.1.2
 
   wasm-sjlj@1.0.5: {}
+
+  watchpack@2.4.2:
+    dependencies:
+      glob-to-regexp: 0.4.1
+      graceful-fs: 4.2.11
 
   web-tree-sitter@0.23.0: {}
 

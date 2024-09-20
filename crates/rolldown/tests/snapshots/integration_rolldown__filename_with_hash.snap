@@ -1663,7 +1663,7 @@ expression: output
 
 # tests/rolldown/function/format/app/export-named
 
-- main-!~{000}~.mjs => main-ozdsIjSL.mjs
+- main-!~{000}~.mjs => main-oltTnqxz.mjs
 
 # tests/rolldown/function/format/app/export-named-from
 
@@ -1671,7 +1671,7 @@ expression: output
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-paHSsqpb.mjs
+- main-!~{000}~.mjs => main-cfGohS4N.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
@@ -1681,7 +1681,7 @@ expression: output
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.mjs => main-3BAuHMgI.mjs
+- main-!~{000}~.mjs => main-dM7pALhW.mjs
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 

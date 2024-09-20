@@ -11,6 +11,7 @@ use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
+use rolldown_plugin_react::ReactPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
@@ -55,6 +56,7 @@ pub enum BindingBuiltinPluginName {
   JsonPlugin,
   BuildImportAnalysisPlugin,
   ReplacePlugin,
+  ReactPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -112,6 +114,7 @@ pub struct BindingTransformPluginConfig {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub jsx_inject: Option<String>,
+  pub react_refresh: Option<bool>,
   pub targets: Option<String>,
 }
 
@@ -176,6 +179,7 @@ impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
       include: value.include.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
       exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
       jsx_inject: value.jsx_inject,
+      react_refresh: value.react_refresh.unwrap_or_default(),
       targets: value.targets,
     })
   }
@@ -270,6 +274,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           }
         })))
       }
+      BindingBuiltinPluginName::ReactPlugin => Arc::new(ReactPlugin {}),
     })
   }
 }

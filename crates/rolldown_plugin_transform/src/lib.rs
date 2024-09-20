@@ -2,7 +2,7 @@ use oxc::{
   codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
   semantic::SemanticBuilder,
   span::SourceType,
-  transformer::{TransformOptions, Transformer},
+  transformer::{ReactRefreshOptions, TransformOptions, Transformer},
 };
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
@@ -19,6 +19,7 @@ pub struct TransformPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   pub jsx_inject: Option<String>,
+  pub react_refresh: bool,
 
   // TODO: support specific transform options. Firstly we can use `targets` but we'd better allowing user to pass more options.
   pub targets: Option<String>,
@@ -70,6 +71,9 @@ impl Plugin for TransformPlugin {
       match args.module_type {
         ModuleType::Jsx | ModuleType::Tsx => {
           transformer_options.jsx.jsx_plugin = true;
+          if self.react_refresh {
+            transformer_options.react.refresh = Some(ReactRefreshOptions::default());
+          }
         }
         ModuleType::Ts => {}
         _ => {

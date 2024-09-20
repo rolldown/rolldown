@@ -98,6 +98,12 @@ export class ReplacePlugin extends BuiltinPlugin {
   }
 }
 
+export class ReactPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.ReactPlugin)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -184,4 +190,8 @@ export function bindingifyBuiltInPlugin(
     __name: plugin.name,
     options: plugin.options,
   }
+}
+
+export function reactPlugin() {
+  return new ReactPlugin()
 }

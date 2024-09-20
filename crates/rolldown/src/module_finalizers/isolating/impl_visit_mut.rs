@@ -6,6 +6,8 @@ use rolldown_common::{Interop, Module};
 use rolldown_ecmascript::TakeIn;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
+use crate::utils::call_expression_ext::CallExpressionExt;
+
 use super::IsolatingModuleFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
@@ -97,6 +99,16 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
       };
     }
     walk_mut::walk_expression(self, expr);
+  }
+
+  fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
+    if expr.is_global_require_call(self.scope) {
+      if let Some(ast::Argument::StringLiteral(request)) = expr.arguments.first_mut() {
+        request.value = self.snippet.atom(self.get_importee_module(expr.span).stable_id());
+      }
+    }
+
+    walk_mut::walk_call_expression(self, expr);
   }
 }
 

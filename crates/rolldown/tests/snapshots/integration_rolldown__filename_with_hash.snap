@@ -1679,6 +1679,10 @@ expression: output
 - other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
 - cube-!~{002}~.mjs => cube-r9ltmWJC.mjs
 
+# tests/rolldown/function/format/app/require
+
+- main-!~{000}~.mjs => main-3BAuHMgI.mjs
+
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
 - main-!~{000}~.cjs => main-MV9F9603.cjs

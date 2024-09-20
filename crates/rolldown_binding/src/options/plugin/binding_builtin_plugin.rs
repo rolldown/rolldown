@@ -274,7 +274,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           }
         })))
       }
-      BindingBuiltinPluginName::ReactPlugin => Arc::new(ReactPlugin {}),
+      BindingBuiltinPluginName::ReactPlugin => Arc::new(ReactPlugin::default()),
     })
   }
 }

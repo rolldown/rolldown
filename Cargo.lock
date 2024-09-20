@@ -2780,6 +2780,7 @@ name = "rolldown_plugin_react"
 version = "0.1.0"
 dependencies = [
  "arcstr",
+ "dashmap 6.0.1",
  "oxc",
  "rolldown_plugin",
 ]

@@ -130,7 +130,7 @@ async function bundleInner(
     const cwd = options.cwd ?? process.cwd()
     const outputDir = options.output?.dir ?? 'dist'
     const app = connect()
-    app.use(ServerStatic(cwd))
+    app.use(ServerStatic(path.join(cwd, outputDir)))
     const server = createServer(app)
     const wsServer = new WebSocketServer({ server })
     let socket: WebSocket
@@ -153,7 +153,7 @@ async function bundleInner(
           socket.send(
             JSON.stringify({
               type: 'update',
-              url: path.join(outputDir, fileName),
+              url: fileName,
             }),
           )
         }

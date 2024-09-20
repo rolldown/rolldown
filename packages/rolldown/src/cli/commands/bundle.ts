@@ -114,7 +114,22 @@ async function bundleInner(
 
     logger.log(`Watching for changes...`)
     const watcher = chokidar.watch([cwd], {
-      ignored: [path.join(cwd, outputDir)],
+      ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/test-results/**',
+        path.join(cwd, outputDir),
+      ],
+      ignoreInitial: true,
+      ignorePermissionErrors: true,
+      // for windows and macos, we need to wait for the file to be written
+      awaitWriteFinish:
+        process.platform === 'linux'
+          ? undefined
+          : {
+              stabilityThreshold: 10,
+              pollInterval: 10,
+            },
     })
     watcher.on('change', async (file) => {
       if (file) {

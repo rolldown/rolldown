@@ -44,6 +44,7 @@ impl Plugin for DataUrlPlugin {
         let module_type = match parsed.mime {
           "text/javascript" => ModuleType::Js,
           "application/json" => ModuleType::Json,
+          "text/css" => ModuleType::Css,
           _ => {
             return Ok(None);
           }

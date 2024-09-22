@@ -1,0 +1,3032 @@
+TestBase64LoaderRemoveUnused
+---------- /out.js ----------
+// entry.js
+console.log("unused import");
+
+================================================================================
+TestConstValueInliningBundle
+---------- /out/exported-entry.js ----------
+// exported-entry.js
+var y_keep = 2;
+console.log(
+  1,
+  2
+);
+export {
+  y_keep
+};
+
+---------- /out/re-exported-entry.js ----------
+// re-exported-constants.js
+var y_keep = 2;
+
+// re-exported-entry.js
+console.log(1, 2);
+export {
+  y_keep
+};
+
+---------- /out/re-exported-2-entry.js ----------
+// re-exported-2-constants.js
+var y_keep = 2;
+export {
+  y_keep
+};
+
+---------- /out/re-exported-star-entry.js ----------
+// re-exported-star-constants.js
+var x_keep = 1, y_keep = 2;
+export {
+  x_keep,
+  y_keep
+};
+
+---------- /out/cross-module-entry.js ----------
+// cross-module-constants.js
+foo();
+var y_keep = 1;
+function foo() {
+  return [1, y_keep];
+}
+
+// cross-module-entry.js
+console.log(1, y_keep);
+
+---------- /out/print-shorthand-entry.js ----------
+// print-shorthand-entry.js
+console.log({ foo: 123, a: -321 });
+
+---------- /out/circular-import-entry.js ----------
+// circular-import-cycle.js
+console.log(bar());
+
+// circular-import-constants.js
+var foo = 123;
+function bar() {
+  return foo;
+}
+
+---------- /out/circular-re-export-entry.js ----------
+// circular-re-export-cycle.js
+var baz = 0;
+console.log(bar());
+
+// circular-re-export-constants.js
+var foo = 123;
+function bar() {
+  return foo;
+}
+
+// circular-re-export-entry.js
+console.log(baz);
+
+---------- /out/circular-re-export-star-entry.js ----------
+// circular-re-export-star-cycle.js
+console.log(bar());
+
+// circular-re-export-star-constants.js
+var foo = 123;
+function bar() {
+  return foo;
+}
+
+---------- /out/non-circular-export-entry.js ----------
+// non-circular-export-constants.js
+function bar() {
+  return 123;
+}
+
+// non-circular-export-entry.js
+console.log(123, bar());
+
+================================================================================
+TestConstValueInliningDirectEval
+---------- /out/top-level-no-eval.js ----------
+const x = 1;
+console.log(1, evil("x"));
+
+---------- /out/top-level-eval.js ----------
+const x = 1;
+console.log(1, eval("x"));
+
+---------- /out/nested-no-eval.js ----------
+console.log(1, evil("x"));
+
+---------- /out/nested-eval.js ----------
+(() => {
+  const x = 1;
+  console.log(1, eval("x"));
+})();
+
+---------- /out/ts-namespace-no-eval.js ----------
+var y;
+((y2) => (y2.x = 1, console.log(1, evil("x"))))(y ||= {});
+
+---------- /out/ts-namespace-eval.js ----------
+var z;
+((z) => (z.x = 1, console.log(1, eval("x"))))(z ||= {});
+
+================================================================================
+TestConstValueInliningNoBundle
+---------- /out/top-level.js ----------
+const n_keep = null, u_keep = void 0, i_keep = 1234567, f_keep = 123.456, s_keep = "";
+console.log(
+  // These are doubled to avoid the "inline const/let into next statement if used once" optimization
+  null,
+  null,
+  void 0,
+  void 0,
+  1234567,
+  1234567,
+  123.456,
+  123.456,
+  s_keep,
+  s_keep
+);
+
+---------- /out/nested-block.js ----------
+{
+  const s_keep = "";
+  console.log(
+    // These are doubled to avoid the "inline const/let into next statement if used once" optimization
+    null,
+    null,
+    void 0,
+    void 0,
+    1234567,
+    1234567,
+    123.456,
+    123.456,
+    s_keep,
+    s_keep
+  );
+}
+
+---------- /out/nested-function.js ----------
+function nested() {
+  const s_keep = "";
+  console.log(
+    // These are doubled to avoid the "inline const/let into next statement if used once" optimization
+    null,
+    null,
+    void 0,
+    void 0,
+    1234567,
+    1234567,
+    123.456,
+    123.456,
+    s_keep,
+    s_keep
+  );
+}
+
+---------- /out/namespace-export.js ----------
+var ns;
+((ns2) => (ns2.y_keep = 2, console.log(
+  1,
+  1,
+  2,
+  2
+)))(ns ||= {});
+
+---------- /out/comment-before.js ----------
+{
+  //! comment
+  x = [1, 1];
+}
+
+---------- /out/directive-before.js ----------
+function nested() {
+  "directive";
+  x = [1, 1];
+}
+
+---------- /out/semicolon-before.js ----------
+x = [1, 1];
+
+---------- /out/debugger-before.js ----------
+{
+  debugger;
+  x = [1, 1];
+}
+
+---------- /out/type-before.js ----------
+x = [1, 1];
+
+---------- /out/exprs-before.js ----------
+function nested() {
+  const x = [, "", {}, 0n, /./, function() {
+  }, () => {
+  }];
+  function foo() {
+    return 1;
+  }
+}
+
+---------- /out/disabled-tdz.js ----------
+foo();
+const x_keep = 1;
+function foo() {
+  return x_keep;
+}
+
+---------- /out/backwards-reference-top-level.js ----------
+const x = y, y = 1;
+console.log(
+  x,
+  x,
+  y,
+  y
+);
+
+---------- /out/backwards-reference-nested-function.js ----------
+function foo() {
+  const x = y, y = 1;
+  console.log(
+    x,
+    x,
+    y,
+    y
+  );
+}
+
+---------- /out/issue-3125.js ----------
+function foo() {
+  const f = () => x, x = 0;
+  return f();
+}
+
+================================================================================
+TestCrossModuleConstantFoldingNumber
+---------- /out/enum-entry.js ----------
+// enum-entry.ts
+console.log([
+  6,
+  -6,
+  -7,
+  !6 /* b */,
+  typeof 6 /* b */
+], [
+  9,
+  -3,
+  3 /* a */ * 6 /* b */,
+  3 /* a */ / 6 /* b */,
+  3 /* a */ % 6 /* b */,
+  3 /* a */ ** 6 /* b */
+], [
+  !0,
+  !1,
+  !0,
+  !1,
+  !1,
+  !0,
+  !1,
+  !0
+], [
+  12,
+  3,
+  3
+], [
+  2,
+  7,
+  5
+], [
+  6 /* b */,
+  3 /* a */,
+  3 /* a */,
+  "y",
+  "n"
+]);
+
+---------- /out/const-entry.js ----------
+// const-entry.js
+console.log([
+  6,
+  -6,
+  -7,
+  !6,
+  typeof 6
+], [
+  9,
+  -3,
+  3 * 6,
+  3 / 6,
+  3 % 6,
+  3 ** 6
+], [
+  !0,
+  !1,
+  !0,
+  !1,
+  !1,
+  !0,
+  !1,
+  !0
+], [
+  12,
+  3,
+  3
+], [
+  2,
+  7,
+  5
+], [
+  6,
+  3,
+  3,
+  "y",
+  "n"
+]);
+
+---------- /out/nested-entry.js ----------
+// nested-entry.ts
+console.log({
+  "should be 4": 4,
+  "should be 32": 32
+});
+
+================================================================================
+TestCrossModuleConstantFoldingString
+---------- /out/enum-entry.js ----------
+// enum-entry.ts
+console.log([
+  typeof "bar" /* b */
+], [
+  "foobar"
+], [
+  !1,
+  !0,
+  !1,
+  !0,
+  !1,
+  !0,
+  !1,
+  !0
+], [
+  "bar" /* b */,
+  "foo" /* a */,
+  "foo" /* a */,
+  "y",
+  "n"
+]);
+
+---------- /out/const-entry.js ----------
+// const-constants.js
+var a = "foo", b = "bar";
+
+// const-entry.js
+console.log([
+  typeof b
+], [
+  a + b
+], [
+  a < b,
+  a > b,
+  a <= b,
+  a >= b,
+  a == b,
+  a != b,
+  a === b,
+  a !== b
+], [
+  a && b,
+  a || b,
+  a ?? b,
+  a ? "y" : "n",
+  b ? "n" : "y"
+]);
+
+---------- /out/nested-entry.js ----------
+// nested-constants.ts
+var a = "foo", b = "bar", c = "baz";
+
+// nested-entry.ts
+console.log({
+  "should be foobarbaz": a + b + c,
+  "should be FOOBARBAZ": "FOOBARBAZ"
+});
+
+================================================================================
+TestDCEClassStaticBlocks
+---------- /out.js ----------
+// entry.ts
+var A_keep = class {
+  static {
+    foo;
+  }
+};
+var B_keep = class {
+  static {
+    this.foo;
+  }
+};
+var C_keep = class {
+  static {
+    try {
+      foo;
+    } catch {
+    }
+  }
+};
+var D_keep = class {
+  static {
+    try {
+    } finally {
+      foo;
+    }
+  }
+};
+
+================================================================================
+TestDCEClassStaticBlocksMinifySyntax
+---------- /out.js ----------
+// entry.ts
+var A_keep = class {
+  static {
+    foo;
+  }
+}, B_keep = class {
+  static {
+    this.foo;
+  }
+}, C_keep = class {
+  static {
+    try {
+      foo;
+    } catch {
+    }
+  }
+}, D_keep = class {
+  static {
+    try {
+    } finally {
+      foo;
+    }
+  }
+};
+
+================================================================================
+TestDCEOfDecorators
+---------- /out/keep-these.js ----------
+// decorator.js
+var fn = () => {
+  console.log("side effect");
+};
+
+// keep-these.js
+var Class = @fn class {
+};
+var Field = class {
+  @fn field;
+};
+var Method = class {
+  @fn method() {
+  }
+};
+var Accessor = class {
+  @fn accessor accessor;
+};
+var StaticField = class {
+  @fn static field;
+};
+var StaticMethod = class {
+  @fn static method() {
+  }
+};
+var StaticAccessor = class {
+  @fn static accessor accessor;
+};
+
+================================================================================
+TestDCEOfDestructuring
+---------- /out/entry.js ----------
+// entry.js
+var KEEP1 = x;
+var [KEEP2] = [x];
+var [KEEP3] = [...{}];
+var { KEEP4 } = {};
+
+================================================================================
+TestDCEOfExperimentalDecorators
+---------- /out/keep-these.js ----------
+// decorator.ts
+var fn = () => {
+  console.log("side effect");
+};
+
+// keep-these.ts
+var Class = class {
+};
+Class = __decorateClass([
+  fn
+], Class);
+var Field = class {
+  field;
+};
+__decorateClass([
+  fn
+], Field.prototype, "field", 2);
+var Method = class {
+  method() {
+  }
+};
+__decorateClass([
+  fn
+], Method.prototype, "method", 1);
+var Accessor = class {
+  accessor accessor;
+};
+__decorateClass([
+  fn
+], Accessor.prototype, "accessor", 1);
+var Parameter = class {
+  foo(bar) {
+  }
+};
+__decorateClass([
+  __decorateParam(0, fn)
+], Parameter.prototype, "foo", 1);
+var StaticField = class {
+  static field;
+};
+__decorateClass([
+  fn
+], StaticField, "field", 2);
+var StaticMethod = class {
+  static method() {
+  }
+};
+__decorateClass([
+  fn
+], StaticMethod, "method", 1);
+var StaticAccessor = class {
+  static accessor accessor;
+};
+__decorateClass([
+  fn
+], StaticAccessor, "accessor", 1);
+var StaticParameter = class {
+  static foo(bar) {
+  }
+};
+__decorateClass([
+  __decorateParam(0, fn)
+], StaticParameter, "foo", 1);
+
+================================================================================
+TestDCEOfExprAfterKeepNamesIssue3195
+---------- /out.js ----------
+(() => {
+  function f() {
+  }
+  __name(f, "f"), firstImportantSideEffect(void 0);
+})(), (() => {
+  function g() {
+  }
+  __name(g, "g");
+  debugger;
+  secondImportantSideEffect(void 0);
+})();
+
+================================================================================
+TestDCEOfIIFE
+---------- /out/remove-these.js ----------
+keepThisButRemoveTheIIFE;
+
+---------- /out/keep-these.js ----------
+undef = void 0;
+keepMe();
+((x = keepMe()) => {
+})();
+var someVar;
+(([y]) => {
+})(someVar);
+(({ z }) => {
+})(someVar);
+var keepThis = stuff();
+keepThis();
+((_ = keepMe()) => {
+})();
+var isPure = /* @__PURE__ */ ((x, y) => 123)();
+use(isPure);
+var isNotPure = ((x = foo, y = bar) => 123)();
+use(isNotPure);
+(async () => ({ get then() {
+  notPure();
+} }))();
+(async function() {
+  return { get then() {
+    notPure();
+  } };
+})();
+
+================================================================================
+TestDCEOfSymbolInstances
+---------- /out/class.js ----------
+// class.js
+var Keep1 = class {
+  *[Symbol.iterator]() {
+  }
+  [keep];
+};
+var Keep2 = class {
+  [keep];
+  *[Symbol.iterator]() {
+  }
+};
+var Keep3 = class {
+  *[Symbol.wtf]() {
+  }
+};
+
+---------- /out/object.js ----------
+// object.js
+var keep1 = { *[Symbol.iterator]() {
+}, [keep]: null };
+var keep2 = { [keep]: null, *[Symbol.iterator]() {
+} };
+var keep3 = { *[Symbol.wtf]() {
+} };
+
+================================================================================
+TestDCEOfUsingDeclarations
+---------- /out/entry.js ----------
+// entry.js
+using null_keep = null;
+await using await_null_keep = null;
+using throw_keep = {};
+using dispose_keep = { [Symbol.dispose]() {
+  console.log("side effect");
+} };
+await using await_asyncDispose_keep = { [Symbol.asyncDispose]() {
+  console.log("side effect");
+} };
+using undef_keep = void 0;
+await using await_undef_keep = void 0;
+console.log(
+  null_keep,
+  undef_keep
+);
+
+================================================================================
+TestDCETemplateLiteral
+---------- /out/entry.js ----------
+// entry.js
+var alsoKeep;
+var a = `${keep}`;
+var c = `${keep ? 1 : 2n}`;
+var e = `${alsoKeep}`;
+
+================================================================================
+TestDCETypeOf
+---------- /out.js ----------
+
+================================================================================
+TestDCETypeOfCompareStringGuardCondition
+---------- /out.js ----------
+(() => {
+  // entry.js
+  var keep_1 = typeof x <= "u" ? y : null;
+  var keep_1 = typeof x < "u" ? y : null;
+  var keep_1 = typeof x >= "u" ? null : y;
+  var keep_1 = typeof x > "u" ? null : y;
+  var keep_1 = typeof x <= "u" && y;
+  var keep_1 = typeof x < "u" && y;
+  var keep_1 = typeof x >= "u" || y;
+  var keep_1 = typeof x > "u" || y;
+  var keep_1 = "u" >= typeof x ? y : null;
+  var keep_1 = "u" > typeof x ? y : null;
+  var keep_1 = "u" <= typeof x ? null : y;
+  var keep_1 = "u" < typeof x ? null : y;
+  var keep_1 = "u" >= typeof x && y;
+  var keep_1 = "u" > typeof x && y;
+  var keep_1 = "u" <= typeof x || y;
+  var keep_1 = "u" < typeof x || y;
+  var keep_2 = typeof x <= "u" ? null : x;
+  var keep_2 = typeof x < "u" ? null : x;
+  var keep_2 = typeof x >= "u" ? x : null;
+  var keep_2 = typeof x > "u" ? x : null;
+  var keep_2 = typeof x <= "u" || x;
+  var keep_2 = typeof x < "u" || x;
+  var keep_2 = typeof x >= "u" && x;
+  var keep_2 = typeof x > "u" && x;
+  var keep_2 = "u" >= typeof x ? null : x;
+  var keep_2 = "u" > typeof x ? null : x;
+  var keep_2 = "u" <= typeof x ? x : null;
+  var keep_2 = "u" < typeof x ? x : null;
+  var keep_2 = "u" >= typeof x || x;
+  var keep_2 = "u" > typeof x || x;
+  var keep_2 = "u" <= typeof x && x;
+  var keep_2 = "u" < typeof x && x;
+})();
+
+================================================================================
+TestDCETypeOfEqualsString
+---------- /out.js ----------
+(() => {
+  // entry.js
+  if (false) console.log(hasBar);
+})();
+
+================================================================================
+TestDCETypeOfEqualsStringGuardCondition
+---------- /out.js ----------
+(() => {
+  // entry.js
+  var keep_1 = typeof x !== "object" ? x : null;
+  var keep_1 = typeof x != "object" ? x : null;
+  var keep_1 = typeof x === "object" ? null : x;
+  var keep_1 = typeof x == "object" ? null : x;
+  var keep_1 = typeof x !== "object" && x;
+  var keep_1 = typeof x != "object" && x;
+  var keep_1 = typeof x === "object" || x;
+  var keep_1 = typeof x == "object" || x;
+  var keep_1 = "object" !== typeof x ? x : null;
+  var keep_1 = "object" != typeof x ? x : null;
+  var keep_1 = "object" === typeof x ? null : x;
+  var keep_1 = "object" == typeof x ? null : x;
+  var keep_1 = "object" !== typeof x && x;
+  var keep_1 = "object" != typeof x && x;
+  var keep_1 = "object" === typeof x || x;
+  var keep_1 = "object" == typeof x || x;
+  var keep_2 = typeof x !== "undefined" ? y : null;
+  var keep_2 = typeof x != "undefined" ? y : null;
+  var keep_2 = typeof x === "undefined" ? null : y;
+  var keep_2 = typeof x == "undefined" ? null : y;
+  var keep_2 = typeof x !== "undefined" && y;
+  var keep_2 = typeof x != "undefined" && y;
+  var keep_2 = typeof x === "undefined" || y;
+  var keep_2 = typeof x == "undefined" || y;
+  var keep_2 = "undefined" !== typeof x ? y : null;
+  var keep_2 = "undefined" != typeof x ? y : null;
+  var keep_2 = "undefined" === typeof x ? null : y;
+  var keep_2 = "undefined" == typeof x ? null : y;
+  var keep_2 = "undefined" !== typeof x && y;
+  var keep_2 = "undefined" != typeof x && y;
+  var keep_2 = "undefined" === typeof x || y;
+  var keep_2 = "undefined" == typeof x || y;
+  var keep_3 = typeof x !== "undefined" ? null : x;
+  var keep_3 = typeof x != "undefined" ? null : x;
+  var keep_3 = typeof x === "undefined" ? x : null;
+  var keep_3 = typeof x == "undefined" ? x : null;
+  var keep_3 = typeof x !== "undefined" || x;
+  var keep_3 = typeof x != "undefined" || x;
+  var keep_3 = typeof x === "undefined" && x;
+  var keep_3 = typeof x == "undefined" && x;
+  var keep_3 = "undefined" !== typeof x ? null : x;
+  var keep_3 = "undefined" != typeof x ? null : x;
+  var keep_3 = "undefined" === typeof x ? x : null;
+  var keep_3 = "undefined" == typeof x ? x : null;
+  var keep_3 = "undefined" !== typeof x || x;
+  var keep_3 = "undefined" != typeof x || x;
+  var keep_3 = "undefined" === typeof x && x;
+  var keep_3 = "undefined" == typeof x && x;
+})();
+
+================================================================================
+TestDCETypeOfEqualsStringMangle
+---------- /out.js ----------
+(() => {
+})();
+
+================================================================================
+TestDCEVarExports
+---------- /out/a.js ----------
+// a.js
+var require_a = __commonJS({
+  "a.js"(exports, module) {
+    var foo = { bar: 123 };
+    module.exports = foo;
+  }
+});
+export default require_a();
+
+---------- /out/b.js ----------
+// b.js
+var require_b = __commonJS({
+  "b.js"(exports, module) {
+    var exports = { bar: 123 };
+    module.exports = exports;
+  }
+});
+export default require_b();
+
+---------- /out/c.js ----------
+// c.js
+var require_c = __commonJS({
+  "c.js"(exports, module) {
+    var module = { bar: 123 };
+    exports.foo = module;
+  }
+});
+export default require_c();
+
+================================================================================
+TestDataURLLoaderRemoveUnused
+---------- /out.js ----------
+// entry.js
+console.log("unused import");
+
+================================================================================
+TestDeadCodeFollowingJump
+---------- /out.js ----------
+// entry.js
+function testReturn() {
+  return y + z();
+  if (x)
+    var y;
+  function z() {
+    KEEP_ME();
+  }
+}
+function testThrow() {
+  throw y + z();
+  if (x)
+    var y;
+  function z() {
+    KEEP_ME();
+  }
+}
+function testBreak() {
+  for (; ; ) {
+    let z2 = function() {
+      KEEP_ME();
+    };
+    var z = z2;
+    y + z2();
+    break;
+    if (x)
+      var y;
+  }
+}
+function testContinue() {
+  for (; ; ) {
+    let z2 = function() {
+      KEEP_ME();
+    };
+    var z = z2;
+    y + z2();
+    continue;
+    if (x)
+      var y;
+  }
+}
+function testStmts() {
+  return [a, b, c, d, e, f, g, h, i];
+  for (; x; )
+    var a;
+  do
+    var b;
+  while (x);
+  for (var c; ; ) ;
+  for (var d in x) ;
+  for (var e of x) ;
+  if (x)
+    var f;
+  if (!x) var g;
+  var h, i;
+}
+testReturn();
+testThrow();
+testBreak();
+testContinue();
+testStmts();
+
+================================================================================
+TestDisableTreeShaking
+---------- /out.js ----------
+// keep-me/index.js
+console.log("side effects");
+
+// entry.jsx
+function KeepMe1() {
+}
+var keepMe2 = React.createElement(KeepMe1, null);
+function keepMe3() {
+  console.log("side effects");
+}
+var keepMe4 = keepMe3();
+var keepMe5 = pure();
+var keepMe6 = some.fn();
+
+================================================================================
+TestDropLabelTreeShakingBugIssue3311
+---------- /out.js ----------
+// entry.js
+var myFunc = () => {
+  console.log("keep");
+};
+var entry_default = myFunc;
+export {
+  entry_default as default
+};
+
+================================================================================
+TestDropLabels
+---------- /out.js ----------
+// entry.js
+keep_1: require("foo1");
+exports.bar = function() {
+  if (x) ;
+  if (y) keep_2: require("bar2");
+};
+
+================================================================================
+TestFileLoaderRemoveUnused
+---------- /out.js ----------
+// entry.js
+console.log("unused import");
+
+================================================================================
+TestImportReExportOfNamespaceImport
+---------- /out.js ----------
+// Users/user/project/node_modules/pkg/foo.js
+var require_foo = __commonJS({
+  "Users/user/project/node_modules/pkg/foo.js"(exports, module) {
+    module.exports = 123;
+  }
+});
+
+// Users/user/project/node_modules/pkg/index.js
+var import_foo = __toESM(require_foo());
+
+// Users/user/project/entry.js
+console.log(import_foo.default);
+
+================================================================================
+TestInlineEmptyFunctionCalls
+---------- /out/empty.js ----------
+// empty.js
+console.log((foo(), bar(), void 0));
+console.log((foo(), void 0));
+console.log((foo(), void 0));
+console.log(void 0);
+console.log(void 0);
+foo(), bar();
+foo();
+foo();
+
+---------- /out/empty-comma.js ----------
+// empty-comma.js
+console.log(foo());
+console.log((foo(), void 0));
+console.log((foo(), void 0));
+for (; void 0; ) ;
+foo();
+foo();
+foo();
+
+---------- /out/empty-if-else.js ----------
+// empty-if-else.js
+if (foo) {
+  let bar = baz();
+  bar(), bar();
+}
+
+---------- /out/empty-last.js ----------
+// empty-last.js
+console.log(void 0);
+
+---------- /out/empty-cross-module.js ----------
+// empty-cross-module.js
+console.log(void 0);
+
+---------- /out/empty-first.js ----------
+// empty-first.js
+function keep() {
+  return x;
+}
+console.log(keep());
+keep(foo());
+keep(1);
+
+---------- /out/empty-generator.js ----------
+// empty-generator.js
+function* keep() {
+}
+console.log(keep());
+keep(foo());
+keep(1);
+
+---------- /out/empty-async.js ----------
+// empty-async.js
+async function keep() {
+}
+console.log(keep());
+keep(foo());
+keep(1);
+
+---------- /out/reassign.js ----------
+// reassign.js
+function keep() {
+}
+keep = reassigned;
+console.log(keep());
+keep(foo());
+keep(1);
+
+---------- /out/reassign-inc.js ----------
+// reassign-inc.js
+function keep() {
+}
+keep++;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-div.js ----------
+// reassign-div.js
+function keep() {
+}
+keep /= reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-array.js ----------
+// reassign-array.js
+function keep() {
+}
+[keep] = reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-object.js ----------
+// reassign-object.js
+function keep() {
+}
+({ keep } = reassigned);
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+================================================================================
+TestInlineFunctionCallBehaviorChanges
+---------- /out/entry.js ----------
+function empty() {
+}
+function id(x) {
+  return x;
+}
+export let shouldBeWrapped = [
+  (0, foo.bar)(),
+  (0, foo[bar])(),
+  (0, foo?.bar)(),
+  (0, foo?.[bar])(),
+  (0, foo.bar)(),
+  (0, foo[bar])(),
+  (0, foo?.bar)(),
+  (0, foo?.[bar])(),
+  (0, eval)(),
+  (0, eval)?.(),
+  (0, eval)(),
+  (0, eval)?.(),
+  (0, foo.bar)``,
+  (0, foo[bar])``,
+  (0, foo?.bar)``,
+  (0, foo?.[bar])``,
+  (0, foo.bar)``,
+  (0, foo[bar])``,
+  (0, foo?.bar)``,
+  (0, foo?.[bar])``,
+  delete (0, foo),
+  delete (0, foo.bar),
+  delete (0, foo[bar]),
+  delete (0, foo?.bar),
+  delete (0, foo?.[bar]),
+  delete (0, foo),
+  delete (0, foo.bar),
+  delete (0, foo[bar]),
+  delete (0, foo?.bar),
+  delete (0, foo?.[bar]),
+  delete (0, void 0)
+], shouldNotBeWrapped = [
+  foo(),
+  foo(),
+  foo``,
+  foo``
+], shouldNotBeDoubleWrapped = [
+  delete (foo(), bar()),
+  delete (foo(), bar())
+];
+
+================================================================================
+TestInlineFunctionCallForInitDecl
+---------- /out/entry.js ----------
+// entry.js
+for (y = void 0; !1; ) ;
+var y;
+for (z = 123; !1; ) ;
+var z;
+
+================================================================================
+TestInlineIdentityFunctionCalls
+---------- /out/identity.js ----------
+// identity.js
+console.log(1);
+foo();
+
+---------- /out/identity-last.js ----------
+// identity-last.js
+console.log(1);
+foo();
+
+---------- /out/identity-first.js ----------
+// identity-first.js
+function keep(x) {
+  return [x];
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/identity-generator.js ----------
+// identity-generator.js
+function* keep(x) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/identity-async.js ----------
+// identity-async.js
+async function keep(x) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/identity-cross-module.js ----------
+// identity-cross-module.js
+console.log(1);
+foo();
+
+---------- /out/identity-no-args.js ----------
+// identity-no-args.js
+function keep(x) {
+  return x;
+}
+console.log(keep());
+keep();
+
+---------- /out/identity-two-args.js ----------
+// identity-two-args.js
+function keep(x) {
+  return x;
+}
+console.log(keep(1, 2));
+keep(1, 2);
+
+---------- /out/reassign.js ----------
+// reassign.js
+function keep(x) {
+  return x;
+}
+keep = reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-inc.js ----------
+// reassign-inc.js
+function keep(x) {
+  return x;
+}
+keep++;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-div.js ----------
+// reassign-div.js
+function keep(x) {
+  return x;
+}
+keep /= reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-array.js ----------
+// reassign-array.js
+function keep(x) {
+  return x;
+}
+[keep] = reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/reassign-object.js ----------
+// reassign-object.js
+function keep(x) {
+  return x;
+}
+({ keep } = reassigned);
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/not-identity-two-args.js ----------
+// not-identity-two-args.js
+function keep(x, y) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/not-identity-default.js ----------
+// not-identity-default.js
+function keep(x = foo()) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/not-identity-array.js ----------
+// not-identity-array.js
+function keep([x]) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/not-identity-object.js ----------
+// not-identity-object.js
+function keep({ x }) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/not-identity-rest.js ----------
+// not-identity-rest.js
+function keep(...x) {
+  return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+---------- /out/not-identity-return.js ----------
+// not-identity-return.js
+function keep(x) {
+  return [x];
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+================================================================================
+TestJSONLoaderRemoveUnused
+---------- /out.js ----------
+// entry.js
+console.log("unused import");
+
+================================================================================
+TestMultipleDeclarationTreeShaking
+---------- /out/var2.js ----------
+// var2.js
+var x = 1;
+console.log(x);
+var x = 2;
+
+---------- /out/var3.js ----------
+// var3.js
+var x = 1;
+console.log(x);
+var x = 2;
+console.log(x);
+var x = 3;
+
+---------- /out/function2.js ----------
+// function2.js
+function x() {
+  return 1;
+}
+console.log(x());
+function x() {
+  return 2;
+}
+
+---------- /out/function3.js ----------
+// function3.js
+function x() {
+  return 1;
+}
+console.log(x());
+function x() {
+  return 2;
+}
+console.log(x());
+function x() {
+  return 3;
+}
+
+================================================================================
+TestMultipleDeclarationTreeShakingMinifySyntax
+---------- /out/var2.js ----------
+// var2.js
+var x = 1;
+console.log(x);
+var x = 2;
+
+---------- /out/var3.js ----------
+// var3.js
+var x = 1;
+console.log(x);
+var x = 2;
+console.log(x);
+var x = 3;
+
+---------- /out/function2.js ----------
+// function2.js
+console.log(x());
+function x() {
+  return 2;
+}
+
+---------- /out/function3.js ----------
+// function3.js
+console.log(x());
+console.log(x());
+function x() {
+  return 3;
+}
+
+================================================================================
+TestNestedFunctionInliningWithSpread
+---------- /out/entry.js ----------
+// entry.js
+function identity1(x) {
+  return x;
+}
+function identity3(x) {
+  return x;
+}
+check(
+  void 0,
+  (args, void 0),
+  ([...args], void 0),
+  identity1(),
+  args,
+  identity3(...args)
+);
+
+---------- /out/entry-outer.js ----------
+// inner.js
+function identity1(x) {
+  return x;
+}
+function identity3(x) {
+  return x;
+}
+
+// entry-outer.js
+check(
+  void 0,
+  (args, void 0),
+  ([...args], void 0),
+  identity1(),
+  args,
+  identity3(...args)
+);
+
+================================================================================
+TestNoSideEffectsComment
+---------- /out/expr-fn.js ----------
+//! These should all have "no side effects"
+x([
+  /* @__NO_SIDE_EFFECTS__ */ function() {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ function y() {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ function* () {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ function* y2() {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ async function() {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ async function y3() {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ async function* () {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ async function* y4() {
+  }
+]);
+
+---------- /out/expr-arrow.js ----------
+//! These should all have "no side effects"
+x([
+  /* @__NO_SIDE_EFFECTS__ */ (y) => y,
+  /* @__NO_SIDE_EFFECTS__ */ () => {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ (y) => y,
+  /* @__NO_SIDE_EFFECTS__ */ async (y) => y,
+  /* @__NO_SIDE_EFFECTS__ */ async () => {
+  },
+  /* @__NO_SIDE_EFFECTS__ */ async (y) => y
+]);
+
+---------- /out/stmt-fn.js ----------
+//! These should all have "no side effects"
+// @__NO_SIDE_EFFECTS__
+function a() {
+}
+// @__NO_SIDE_EFFECTS__
+function* b() {
+}
+// @__NO_SIDE_EFFECTS__
+async function c() {
+}
+// @__NO_SIDE_EFFECTS__
+async function* d() {
+}
+
+---------- /out/stmt-export-fn.js ----------
+//! These should all have "no side effects"
+// @__NO_SIDE_EFFECTS__
+export function a() {
+}
+// @__NO_SIDE_EFFECTS__
+export function* b() {
+}
+// @__NO_SIDE_EFFECTS__
+export async function c() {
+}
+// @__NO_SIDE_EFFECTS__
+export async function* d() {
+}
+
+---------- /out/stmt-local.js ----------
+//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
+var v0 = function() {
+}, v1 = function() {
+};
+let l0 = function() {
+}, l1 = function() {
+};
+const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {
+}, c1 = function() {
+};
+var v2 = () => {
+}, v3 = () => {
+};
+let l2 = () => {
+}, l3 = () => {
+};
+const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
+}, c3 = () => {
+};
+
+---------- /out/stmt-export-local.js ----------
+//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
+export var v0 = function() {
+}, v1 = function() {
+};
+export let l0 = function() {
+}, l1 = function() {
+};
+export const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {
+}, c1 = function() {
+};
+export var v2 = () => {
+}, v3 = () => {
+};
+export let l2 = () => {
+}, l3 = () => {
+};
+export const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
+}, c3 = () => {
+};
+
+---------- /out/ns-export-fn.js ----------
+var ns;
+((ns2) => {
+  //! These should all have "no side effects"
+  // @__NO_SIDE_EFFECTS__
+  function a() {
+  }
+  ns2.a = a;
+  // @__NO_SIDE_EFFECTS__
+  function* b() {
+  }
+  ns2.b = b;
+  // @__NO_SIDE_EFFECTS__
+  async function c() {
+  }
+  ns2.c = c;
+  // @__NO_SIDE_EFFECTS__
+  async function* d() {
+  }
+  ns2.d = d;
+})(ns || (ns = {}));
+
+---------- /out/ns-export-local.js ----------
+var ns;
+((ns2) => {
+  //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
+  ns2.v0 = function() {
+  };
+  ns2.v1 = function() {
+  };
+  ns2.l0 = function() {
+  };
+  ns2.l1 = function() {
+  };
+  ns2.c0 = /* @__NO_SIDE_EFFECTS__ */ function() {
+  };
+  ns2.c1 = function() {
+  };
+  ns2.v2 = () => {
+  };
+  ns2.v3 = () => {
+  };
+  ns2.l2 = () => {
+  };
+  ns2.l3 = () => {
+  };
+  ns2.c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
+  };
+  ns2.c3 = () => {
+  };
+})(ns || (ns = {}));
+
+---------- /out/stmt-export-default-before-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function() {
+}
+
+---------- /out/stmt-export-default-before-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function f() {
+}
+
+---------- /out/stmt-export-default-before-gen-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function* () {
+}
+
+---------- /out/stmt-export-default-before-gen-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function* f() {
+}
+
+---------- /out/stmt-export-default-before-async-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function() {
+}
+
+---------- /out/stmt-export-default-before-async-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function f() {
+}
+
+---------- /out/stmt-export-default-before-async-gen-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function* () {
+}
+
+---------- /out/stmt-export-default-before-async-gen-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function* f() {
+}
+
+---------- /out/stmt-export-default-after-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function() {
+}
+
+---------- /out/stmt-export-default-after-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function f() {
+}
+
+---------- /out/stmt-export-default-after-gen-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function* () {
+}
+
+---------- /out/stmt-export-default-after-gen-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default function* f() {
+}
+
+---------- /out/stmt-export-default-after-async-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function() {
+}
+
+---------- /out/stmt-export-default-after-async-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function f() {
+}
+
+---------- /out/stmt-export-default-after-async-gen-fn-anon.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function* () {
+}
+
+---------- /out/stmt-export-default-after-async-gen-fn-name.js ----------
+/*! This should have "no side effects" */
+// @__NO_SIDE_EFFECTS__
+export default async function* f() {
+}
+
+================================================================================
+TestNoSideEffectsCommentIgnoreAnnotations
+---------- /out/expr-fn.js ----------
+x([
+  function() {
+  },
+  function y() {
+  },
+  function* () {
+  },
+  function* y2() {
+  },
+  async function() {
+  },
+  async function y3() {
+  },
+  async function* () {
+  },
+  async function* y4() {
+  }
+]);
+
+---------- /out/expr-arrow.js ----------
+x([
+  (y) => y,
+  () => {
+  },
+  (y) => y,
+  async (y) => y,
+  async () => {
+  },
+  async (y) => y
+]);
+
+---------- /out/stmt-fn.js ----------
+function a() {
+}
+function* b() {
+}
+async function c() {
+}
+async function* d() {
+}
+
+---------- /out/stmt-export-fn.js ----------
+export function a() {
+}
+export function* b() {
+}
+export async function c() {
+}
+export async function* d() {
+}
+
+---------- /out/stmt-local.js ----------
+var v0 = function() {
+}, v1 = function() {
+};
+let l0 = function() {
+}, l1 = function() {
+};
+const c0 = function() {
+}, c1 = function() {
+};
+var v2 = () => {
+}, v3 = () => {
+};
+let l2 = () => {
+}, l3 = () => {
+};
+const c2 = () => {
+}, c3 = () => {
+};
+
+---------- /out/stmt-export-local.js ----------
+export var v0 = function() {
+}, v1 = function() {
+};
+export let l0 = function() {
+}, l1 = function() {
+};
+export const c0 = function() {
+}, c1 = function() {
+};
+export var v2 = () => {
+}, v3 = () => {
+};
+export let l2 = () => {
+}, l3 = () => {
+};
+export const c2 = () => {
+}, c3 = () => {
+};
+
+---------- /out/ns-export-fn.js ----------
+var ns;
+((ns2) => {
+  function a() {
+  }
+  ns2.a = a;
+  function* b() {
+  }
+  ns2.b = b;
+  async function c() {
+  }
+  ns2.c = c;
+  async function* d() {
+  }
+  ns2.d = d;
+})(ns || (ns = {}));
+
+---------- /out/ns-export-local.js ----------
+var ns;
+((ns2) => {
+  ns2.v0 = function() {
+  };
+  ns2.v1 = function() {
+  };
+  ns2.l0 = function() {
+  };
+  ns2.l1 = function() {
+  };
+  ns2.c0 = function() {
+  };
+  ns2.c1 = function() {
+  };
+  ns2.v2 = () => {
+  };
+  ns2.v3 = () => {
+  };
+  ns2.l2 = () => {
+  };
+  ns2.l3 = () => {
+  };
+  ns2.c2 = () => {
+  };
+  ns2.c3 = () => {
+  };
+})(ns || (ns = {}));
+
+---------- /out/stmt-export-default-before-fn-anon.js ----------
+export default function() {
+}
+
+---------- /out/stmt-export-default-before-fn-name.js ----------
+export default function f() {
+}
+
+---------- /out/stmt-export-default-before-gen-fn-anon.js ----------
+export default function* () {
+}
+
+---------- /out/stmt-export-default-before-gen-fn-name.js ----------
+export default function* f() {
+}
+
+---------- /out/stmt-export-default-before-async-fn-anon.js ----------
+export default async function() {
+}
+
+---------- /out/stmt-export-default-before-async-fn-name.js ----------
+export default async function f() {
+}
+
+---------- /out/stmt-export-default-before-async-gen-fn-anon.js ----------
+export default async function* () {
+}
+
+---------- /out/stmt-export-default-before-async-gen-fn-name.js ----------
+export default async function* f() {
+}
+
+---------- /out/stmt-export-default-after-fn-anon.js ----------
+export default function() {
+}
+
+---------- /out/stmt-export-default-after-fn-name.js ----------
+export default function f() {
+}
+
+---------- /out/stmt-export-default-after-gen-fn-anon.js ----------
+export default function* () {
+}
+
+---------- /out/stmt-export-default-after-gen-fn-name.js ----------
+export default function* f() {
+}
+
+---------- /out/stmt-export-default-after-async-fn-anon.js ----------
+export default async function() {
+}
+
+---------- /out/stmt-export-default-after-async-fn-name.js ----------
+export default async function f() {
+}
+
+---------- /out/stmt-export-default-after-async-gen-fn-anon.js ----------
+export default async function* () {
+}
+
+---------- /out/stmt-export-default-after-async-gen-fn-name.js ----------
+export default async function* f() {
+}
+
+================================================================================
+TestNoSideEffectsCommentMinifyWhitespace
+---------- /out/expr-fn.js ----------
+x([function(){},function y(){},function*(){},function*y2(){},async function(){},async function y3(){},async function*(){},async function*y4(){}]);
+
+---------- /out/expr-arrow.js ----------
+x([y=>y,()=>{},y=>y,async y=>y,async()=>{},async y=>y]);
+
+---------- /out/stmt-fn.js ----------
+function a(){}function*b(){}async function c(){}async function*d(){}
+
+---------- /out/stmt-export-fn.js ----------
+export function a(){}export function*b(){}export async function c(){}export async function*d(){}
+
+---------- /out/stmt-local.js ----------
+var v0=function(){},v1=function(){};let l0=function(){},l1=function(){};const c0=function(){},c1=function(){};var v2=()=>{},v3=()=>{};let l2=()=>{},l3=()=>{};const c2=()=>{},c3=()=>{};
+
+---------- /out/stmt-export-local.js ----------
+export var v0=function(){},v1=function(){};export let l0=function(){},l1=function(){};export const c0=function(){},c1=function(){};export var v2=()=>{},v3=()=>{};export let l2=()=>{},l3=()=>{};export const c2=()=>{},c3=()=>{};
+
+---------- /out/ns-export-fn.js ----------
+var ns;(ns2=>{function a(){}ns2.a=a;function*b(){}ns2.b=b;async function c(){}ns2.c=c;async function*d(){}ns2.d=d})(ns||(ns={}));
+
+---------- /out/ns-export-local.js ----------
+var ns;(ns2=>{ns2.v0=function(){};ns2.v1=function(){};ns2.l0=function(){};ns2.l1=function(){};ns2.c0=function(){};ns2.c1=function(){};ns2.v2=()=>{};ns2.v3=()=>{};ns2.l2=()=>{};ns2.l3=()=>{};ns2.c2=()=>{};ns2.c3=()=>{}})(ns||(ns={}));
+
+---------- /out/stmt-export-default-before-fn-anon.js ----------
+export default function(){}
+
+---------- /out/stmt-export-default-before-fn-name.js ----------
+export default function f(){}
+
+---------- /out/stmt-export-default-before-gen-fn-anon.js ----------
+export default function*(){}
+
+---------- /out/stmt-export-default-before-gen-fn-name.js ----------
+export default function*f(){}
+
+---------- /out/stmt-export-default-before-async-fn-anon.js ----------
+export default async function(){}
+
+---------- /out/stmt-export-default-before-async-fn-name.js ----------
+export default async function f(){}
+
+---------- /out/stmt-export-default-before-async-gen-fn-anon.js ----------
+export default async function*(){}
+
+---------- /out/stmt-export-default-before-async-gen-fn-name.js ----------
+export default async function*f(){}
+
+---------- /out/stmt-export-default-after-fn-anon.js ----------
+export default function(){}
+
+---------- /out/stmt-export-default-after-fn-name.js ----------
+export default function f(){}
+
+---------- /out/stmt-export-default-after-gen-fn-anon.js ----------
+export default function*(){}
+
+---------- /out/stmt-export-default-after-gen-fn-name.js ----------
+export default function*f(){}
+
+---------- /out/stmt-export-default-after-async-fn-anon.js ----------
+export default async function(){}
+
+---------- /out/stmt-export-default-after-async-fn-name.js ----------
+export default async function f(){}
+
+---------- /out/stmt-export-default-after-async-gen-fn-anon.js ----------
+export default async function*(){}
+
+---------- /out/stmt-export-default-after-async-gen-fn-name.js ----------
+export default async function*f(){}
+
+================================================================================
+TestNoSideEffectsCommentTypeScriptDeclare
+---------- /out/entry.js ----------
+var ns;
+((ns2) => {
+})(ns || (ns = {}));
+
+================================================================================
+TestNoSideEffectsCommentUnusedCalls
+---------- /out/stmt-fn.js ----------
+// @__NO_SIDE_EFFECTS__
+function f(y) {
+  sideEffect(y);
+}
+// @__NO_SIDE_EFFECTS__
+function* g(y) {
+  sideEffect(y);
+}
+onlyKeepThisIdentifier;
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+x(/* @__PURE__ */ g("keepThisCall"));
+
+---------- /out/stmt-local.js ----------
+const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
+  sideEffect(y);
+}, g = /* @__NO_SIDE_EFFECTS__ */ function* (y) {
+  sideEffect(y);
+};
+onlyKeepThisIdentifier;
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+x(/* @__PURE__ */ g("keepThisCall"));
+
+---------- /out/expr-fn.js ----------
+const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
+  sideEffect(y);
+}, g = /* @__NO_SIDE_EFFECTS__ */ function* (y) {
+  sideEffect(y);
+};
+onlyKeepThisIdentifier;
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+x(/* @__PURE__ */ g("keepThisCall"));
+
+---------- /out/stmt-export-default-fn.js ----------
+// @__NO_SIDE_EFFECTS__
+export default function f(y) {
+  sideEffect(y);
+}
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+
+================================================================================
+TestPackageJsonSideEffectsArrayGlob
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/keep/this/file.js
+console.log("this should be kept");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeep
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+console.log("hello");
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepMainImplicitMain
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index-main.js
+var index_main_exports = {};
+__export(index_main_exports, {
+  foo: () => foo
+});
+var foo;
+var init_index_main = __esm({
+  "Users/user/project/node_modules/demo-pkg/index-main.js"() {
+    foo = 123;
+    console.log("this should be kept");
+  }
+});
+
+// Users/user/project/src/entry.js
+init_index_main();
+
+// Users/user/project/src/require-demo-pkg.js
+init_index_main();
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepMainImplicitModule
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepMainUseMain
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index-main.js
+console.log("this should be kept");
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepMainUseModule
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepModuleImplicitMain
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index-main.js
+var index_main_exports = {};
+__export(index_main_exports, {
+  foo: () => foo
+});
+var foo;
+var init_index_main = __esm({
+  "Users/user/project/node_modules/demo-pkg/index-main.js"() {
+    foo = 123;
+    console.log("this should be kept");
+  }
+});
+
+// Users/user/project/src/require-demo-pkg.js
+init_index_main();
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepModuleImplicitModule
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index-module.js
+console.log("this should be kept");
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepModuleUseMain
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayKeepModuleUseModule
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index-module.js
+console.log("this should be kept");
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsArrayRemove
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseAllFork
+---------- /out.js ----------
+// Users/user/project/node_modules/c/index.js
+var foo;
+var init_c = __esm({
+  "Users/user/project/node_modules/c/index.js"() {
+    foo = "foo";
+  }
+});
+
+// Users/user/project/node_modules/b/index.js
+var init_b = __esm({
+  "Users/user/project/node_modules/b/index.js"() {
+    init_c();
+  }
+});
+
+// Users/user/project/node_modules/a/index.js
+var a_exports = {};
+__export(a_exports, {
+  foo: () => foo
+});
+var init_a = __esm({
+  "Users/user/project/node_modules/a/index.js"() {
+    init_b();
+  }
+});
+
+// Users/user/project/src/entry.js
+Promise.resolve().then(() => (init_a(), a_exports)).then((x) => assert(x.foo === "foo"));
+
+================================================================================
+TestPackageJsonSideEffectsFalseCrossPlatformSlash
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/foo.js
+console.log("foo");
+
+// Users/user/project/node_modules/demo-pkg/bar/index.js
+console.log("bar");
+
+================================================================================
+TestPackageJsonSideEffectsFalseIntermediateFilesChainAll
+---------- /out.js ----------
+// Users/user/project/node_modules/d/index.js
+var foo = 123;
+
+// Users/user/project/node_modules/b/index.js
+throw "keep this";
+
+// Users/user/project/src/entry.js
+console.log(foo);
+
+================================================================================
+TestPackageJsonSideEffectsFalseIntermediateFilesChainOne
+---------- /out.js ----------
+// Users/user/project/node_modules/d/index.js
+var foo = 123;
+
+// Users/user/project/node_modules/b/index.js
+throw "keep this";
+
+// Users/user/project/src/entry.js
+console.log(foo);
+
+================================================================================
+TestPackageJsonSideEffectsFalseIntermediateFilesDiamond
+---------- /out.js ----------
+// Users/user/project/node_modules/d/index.js
+var foo = 123;
+
+// Users/user/project/node_modules/b1/index.js
+throw "keep this 1";
+
+// Users/user/project/node_modules/b2/index.js
+throw "keep this 2";
+
+// Users/user/project/src/entry.js
+console.log(foo);
+
+================================================================================
+TestPackageJsonSideEffectsFalseIntermediateFilesUnused
+---------- /out.js ----------
+
+================================================================================
+TestPackageJsonSideEffectsFalseIntermediateFilesUsed
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/foo.js
+var foo = 123;
+
+// Users/user/project/node_modules/demo-pkg/index.js
+throw "keep this";
+
+// Users/user/project/src/entry.js
+console.log(foo);
+
+================================================================================
+TestPackageJsonSideEffectsFalseKeepBareImportAndRequireCommonJS
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var require_demo_pkg = __commonJS({
+  "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
+    exports.foo = 123;
+    console.log("hello");
+  }
+});
+
+// Users/user/project/src/entry.js
+require_demo_pkg();
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseKeepBareImportAndRequireES6
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var demo_pkg_exports = {};
+__export(demo_pkg_exports, {
+  foo: () => foo
+});
+var foo;
+var init_demo_pkg = __esm({
+  "Users/user/project/node_modules/demo-pkg/index.js"() {
+    foo = 123;
+    console.log("hello");
+  }
+});
+
+// Users/user/project/src/entry.js
+init_demo_pkg();
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseKeepNamedImportCommonJS
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var require_demo_pkg = __commonJS({
+  "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
+    exports.foo = 123;
+    console.log("hello");
+  }
+});
+
+// Users/user/project/src/entry.js
+var import_demo_pkg = __toESM(require_demo_pkg());
+console.log(import_demo_pkg.foo);
+
+================================================================================
+TestPackageJsonSideEffectsFalseKeepNamedImportES6
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var foo = 123;
+console.log("hello");
+
+// Users/user/project/src/entry.js
+console.log(foo);
+
+================================================================================
+TestPackageJsonSideEffectsFalseKeepStarImportCommonJS
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var require_demo_pkg = __commonJS({
+  "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
+    exports.foo = 123;
+    console.log("hello");
+  }
+});
+
+// Users/user/project/src/entry.js
+var ns = __toESM(require_demo_pkg());
+console.log(ns);
+
+================================================================================
+TestPackageJsonSideEffectsFalseKeepStarImportES6
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var demo_pkg_exports = {};
+__export(demo_pkg_exports, {
+  foo: () => foo
+});
+var foo = 123;
+console.log("hello");
+
+// Users/user/project/src/entry.js
+console.log(demo_pkg_exports);
+
+================================================================================
+TestPackageJsonSideEffectsFalseNoWarningInNodeModulesIssue999
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+console.log("unused import");
+
+// Users/user/project/src/entry.js
+console.log("used import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseOneFork
+---------- /out.js ----------
+// Users/user/project/node_modules/c/index.js
+var foo;
+var init_c = __esm({
+  "Users/user/project/node_modules/c/index.js"() {
+    foo = "foo";
+  }
+});
+
+// Users/user/project/node_modules/d/index.js
+var init_d = __esm({
+  "Users/user/project/node_modules/d/index.js"() {
+  }
+});
+
+// Users/user/project/node_modules/b/index.js
+var init_b = __esm({
+  "Users/user/project/node_modules/b/index.js"() {
+    init_c();
+    init_d();
+  }
+});
+
+// Users/user/project/node_modules/a/index.js
+var a_exports = {};
+__export(a_exports, {
+  foo: () => foo
+});
+var init_a = __esm({
+  "Users/user/project/node_modules/a/index.js"() {
+    init_b();
+  }
+});
+
+// Users/user/project/src/entry.js
+Promise.resolve().then(() => (init_a(), a_exports)).then((x) => assert(x.foo === "foo"));
+
+================================================================================
+TestPackageJsonSideEffectsFalseRemoveBareImportCommonJS
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseRemoveBareImportES6
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseRemoveNamedImportCommonJS
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseRemoveNamedImportES6
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseRemoveStarImportCommonJS
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsFalseRemoveStarImportES6
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsKeepExportDefaultExpr
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var demo_pkg_default = exprWithSideEffects();
+
+// Users/user/project/src/entry.js
+console.log(demo_pkg_default);
+
+================================================================================
+TestPackageJsonSideEffectsNestedDirectoryRemove
+---------- /out.js ----------
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsTrueKeepCommonJS
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var require_demo_pkg = __commonJS({
+  "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
+    exports.foo = 123;
+    console.log("hello");
+  }
+});
+
+// Users/user/project/src/entry.js
+var import_demo_pkg = __toESM(require_demo_pkg());
+console.log("unused import");
+
+================================================================================
+TestPackageJsonSideEffectsTrueKeepES6
+---------- /out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+console.log("hello");
+
+// Users/user/project/src/entry.js
+console.log("unused import");
+
+================================================================================
+TestPreserveDirectivesMinifyBundle
+---------- /out.js ----------
+"use 1";
+"use 2";
+"use 3";
+(() => {
+  // nested.js
+  //! A
+  //! B
+  //! C
+  nested();
+  //! D
+  //! E
+  //! F
+
+  // entry.js
+  //! 1
+  //! 2
+  //! 3
+  entry();
+  //! 4
+  //! 5
+  //! 6
+})();
+
+================================================================================
+TestPreserveDirectivesMinifyIIFE
+---------- /out.js ----------
+"use 1";
+"use 2";
+"use 3";
+(() => {
+  //! 1
+  //! 2
+  //! 3
+  entry();
+  //! 4
+  //! 5
+  //! 6
+})();
+
+================================================================================
+TestPreserveDirectivesMinifyPassThrough
+---------- /out.js ----------
+"use 1";
+"use 2";
+"use 3";
+//! 1
+//! 2
+//! 3
+entry();
+//! 4
+//! 5
+//! 6
+
+================================================================================
+TestPureCallsWithSpread
+---------- /out.js ----------
+// entry.js
+[...args];
+[...args];
+
+================================================================================
+TestRemoveCodeAfterLabelWithReturn
+---------- /out.js ----------
+function earlyReturn() {
+  onlyWithKeep();
+}
+function loop() {
+  if (foo()) {
+    bar();
+    return;
+  }
+}
+
+================================================================================
+TestRemoveTrailingReturn
+---------- /out.js ----------
+// entry.js
+function foo() {
+  a && b();
+}
+function bar() {
+  return a && b(), KEEP_ME;
+}
+var entry_default = [
+  foo,
+  bar,
+  function() {
+    a && b();
+  },
+  function() {
+    return a && b(), KEEP_ME;
+  },
+  () => {
+    a && b();
+  },
+  () => (a && b(), KEEP_ME)
+];
+export {
+  entry_default as default
+};
+
+================================================================================
+TestRemoveUnusedImportMeta
+---------- /out.js ----------
+// entry.js
+console.log("foo is unused");
+
+================================================================================
+TestRemoveUnusedImports
+---------- /out.js ----------
+import "a";
+import "b";
+import "c";
+
+================================================================================
+TestRemoveUnusedImportsEval
+---------- /out.js ----------
+import a from "a";
+import * as b from "b";
+import { c } from "c";
+eval("foo(a, b, c)");
+
+================================================================================
+TestRemoveUnusedImportsEvalTS
+---------- /out.js ----------
+eval("foo(a, b, c)");
+
+================================================================================
+TestRemoveUnusedNoSideEffectsTaggedTemplates
+---------- /out.js ----------
+// entry.js
+// @__NO_SIDE_EFFECTS__
+function foo() {
+}
+use(foo`keep`);
+keep, alsoKeep;
+`${keep}${alsoKeep}`;
+
+================================================================================
+TestRemoveUnusedPureCommentCalls
+---------- /out.js ----------
+// entry.js
+function bar() {
+}
+var bare = foo(bar);
+var at_no = /* @__PURE__ */ foo(bar());
+var new_at_no = /* @__PURE__ */ new foo(bar());
+var nospace_at_no = /* @__PURE__ */ foo(bar());
+var nospace_new_at_no = /* @__PURE__ */ new foo(bar());
+var num_no = /* @__PURE__ */ foo(bar());
+var new_num_no = /* @__PURE__ */ new foo(bar());
+var nospace_num_no = /* @__PURE__ */ foo(bar());
+var nospace_new_num_no = /* @__PURE__ */ new foo(bar());
+var dot_no = /* @__PURE__ */ foo(sideEffect()).dot(bar());
+var new_dot_no = /* @__PURE__ */ new foo(sideEffect()).dot(bar());
+var nested_no = [1, /* @__PURE__ */ foo(bar()), 2];
+var new_nested_no = [1, /* @__PURE__ */ new foo(bar()), 2];
+var single_at_no = /* @__PURE__ */ foo(bar());
+var new_single_at_no = /* @__PURE__ */ new foo(bar());
+var single_num_no = /* @__PURE__ */ foo(bar());
+var new_single_num_no = /* @__PURE__ */ new foo(bar());
+var bad_no = (
+  /* __PURE__ */
+  foo(bar)
+);
+var new_bad_no = (
+  /* __PURE__ */
+  new foo(bar)
+);
+var parens_no = foo(bar);
+var new_parens_no = new foo(bar);
+var exp_no = /* @__PURE__ */ foo() ** foo();
+var new_exp_no = /* @__PURE__ */ new foo() ** foo();
+
+================================================================================
+TestTextLoaderRemoveUnused
+---------- /out.js ----------
+// entry.js
+console.log("unused import");
+
+================================================================================
+TestTopLevelFunctionInliningWithSpread
+---------- /out/entry.js ----------
+// entry.js
+function identity1(x) {
+  return x;
+}
+function identity3(x) {
+  return x;
+}
+args;
+[...args];
+identity1();
+args;
+identity3(...args);
+
+---------- /out/entry-outer.js ----------
+// inner.js
+function identity1(x) {
+  return x;
+}
+function identity3(x) {
+  return x;
+}
+
+// entry-outer.js
+args;
+[...args];
+identity1();
+args;
+identity3(...args);
+
+================================================================================
+TestTreeShakingBinaryOperators
+---------- /out.js ----------
+// entry.js
+var keep;
+var keep2;
+keep + keep2;
+keep - keep2;
+keep * keep2;
+keep / keep2;
+keep % keep2;
+keep ** keep2;
+keep < keep2;
+keep <= keep2;
+keep > keep2;
+keep >= keep2;
+keep in keep2;
+keep instanceof keep2;
+keep << keep2;
+keep >> keep2;
+keep >>> keep2;
+keep == keep2;
+keep != keep2;
+keep | keep2;
+keep & keep2;
+keep ^ keep2;
+keep = keep2;
+keep += keep2;
+keep -= keep2;
+keep *= keep2;
+keep /= keep2;
+keep %= keep2;
+keep **= keep2;
+keep <<= keep2;
+keep >>= keep2;
+keep >>>= keep2;
+keep |= keep2;
+keep &= keep2;
+keep ^= keep2;
+keep ??= keep2;
+keep ||= keep2;
+keep &&= keep2;
+
+================================================================================
+TestTreeShakingClassProperty
+---------- /out.js ----------
+let keep1 = class {
+  [x] = "x";
+};
+let keep2 = class {
+  [x]() {
+  }
+};
+let keep3 = class {
+  get [x]() {
+  }
+};
+let keep4 = class {
+  set [x](_) {
+  }
+};
+let keep5 = class {
+  async [x]() {
+  }
+};
+let keep6 = class {
+  [{ toString() {
+  } }] = "x";
+};
+
+================================================================================
+TestTreeShakingClassStaticProperty
+---------- /out.js ----------
+let keep1 = class {
+  static x = x;
+};
+let keep2 = class {
+  static ["x"] = x;
+};
+let keep3 = class {
+  static [x] = "x";
+};
+let keep4 = class {
+  static [x]() {
+  }
+};
+let keep5 = class {
+  static get [x]() {
+  }
+};
+let keep6 = class {
+  static set [x](_) {
+  }
+};
+let keep7 = class {
+  static async [x]() {
+  }
+};
+let keep8 = class {
+  static [{ toString() {
+  } }] = "x";
+};
+
+================================================================================
+TestTreeShakingImportIdentifier
+---------- /out.js ----------
+// b.js
+var Base = class {
+};
+
+// a.js
+var Keep = class extends Base {
+};
+
+// entry.js
+new Keep();
+
+================================================================================
+TestTreeShakingInESMWrapper
+---------- /out.js ----------
+// lib.js
+var keep1, keep2;
+var init_lib = __esm({
+  "lib.js"() {
+    keep1 = () => "keep1";
+    keep2 = () => "keep2";
+  }
+});
+
+// cjs.js
+var cjs_exports = {};
+__export(cjs_exports, {
+  default: () => cjs_default
+});
+var cjs_default;
+var init_cjs = __esm({
+  "cjs.js"() {
+    init_lib();
+    cjs_default = keep2();
+  }
+});
+
+// entry.js
+init_lib();
+console.log(keep1(), (init_cjs(), __toCommonJS(cjs_exports)));
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSS
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.js
+var Button;
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/button.css */
+button {
+  color: red;
+}
+
+/* project/node_modules/pkg/menu.css */
+menu {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSSExportStarSideEffectsFalse
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.css
+var require_button = __commonJS({
+  "project/node_modules/pkg/button.css"(exports, module) {
+    module.exports = {};
+  }
+});
+
+// project/node_modules/pkg/components.jsx
+require_button();
+var Button = () => /* @__PURE__ */ React.createElement("button", null);
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/button.css */
+button {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSSExportStarSideEffectsFalseOnlyJS
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.css
+var require_button = __commonJS({
+  "project/node_modules/pkg/button.css"(exports, module) {
+    module.exports = {};
+  }
+});
+
+// project/node_modules/pkg/components.jsx
+require_button();
+var Button = () => /* @__PURE__ */ React.createElement("button", null);
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/button.css */
+button {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSSReExportSideEffectsFalse
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.css
+var require_button = __commonJS({
+  "project/node_modules/pkg/button.css"(exports, module) {
+    module.exports = {};
+  }
+});
+
+// project/node_modules/pkg/components.jsx
+require_button();
+var Button = () => /* @__PURE__ */ React.createElement("button", null);
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/button.css */
+button {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSSReExportSideEffectsFalseOnlyJS
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.css
+var require_button = __commonJS({
+  "project/node_modules/pkg/button.css"(exports, module) {
+    module.exports = {};
+  }
+});
+
+// project/node_modules/pkg/components.jsx
+require_button();
+var Button = () => /* @__PURE__ */ React.createElement("button", null);
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/button.css */
+button {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSSUnusedNestedImportSideEffectsFalse
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.jsx
+var Button = () => /* @__PURE__ */ React.createElement("button", null);
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/styles.css */
+button {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingJSWithAssociatedCSSUnusedNestedImportSideEffectsFalseOnlyJS
+---------- /out/test.js ----------
+// project/node_modules/pkg/button.jsx
+var Button = () => /* @__PURE__ */ React.createElement("button", null);
+
+// project/test.jsx
+render(/* @__PURE__ */ React.createElement(Button, null));
+
+---------- /out/test.css ----------
+/* project/node_modules/pkg/styles.css */
+button {
+  color: red;
+}
+
+================================================================================
+TestTreeShakingLoweredClassStaticField
+---------- /out/entry.js ----------
+// entry.js
+var KeepMe1 = class {
+};
+__publicField(KeepMe1, "x", "x");
+__publicField(KeepMe1, "y", sideEffects());
+__publicField(KeepMe1, "z", "z");
+var KeepMe2 = class {
+};
+__publicField(KeepMe2, "x", "x");
+__publicField(KeepMe2, "y", "y");
+__publicField(KeepMe2, "z", "z");
+new KeepMe2();
+
+================================================================================
+TestTreeShakingLoweredClassStaticFieldAssignment
+---------- /out/entry.js ----------
+// entry.ts
+var KeepMe1 = class {
+};
+KeepMe1.x = "x";
+KeepMe1.y = "y";
+KeepMe1.z = "z";
+var KeepMe2 = class {
+};
+KeepMe2.x = "x";
+KeepMe2.y = sideEffects();
+KeepMe2.z = "z";
+var KeepMe3 = class {
+};
+KeepMe3.x = "x";
+KeepMe3.y = "y";
+KeepMe3.z = "z";
+new KeepMe3();
+
+================================================================================
+TestTreeShakingLoweredClassStaticFieldMinified
+---------- /out/entry.js ----------
+// entry.js
+var KeepMe1 = class {
+};
+__publicField(KeepMe1, "x", "x"), __publicField(KeepMe1, "y", sideEffects()), __publicField(KeepMe1, "z", "z");
+var KeepMe2 = class {
+};
+__publicField(KeepMe2, "x", "x"), __publicField(KeepMe2, "y", "y"), __publicField(KeepMe2, "z", "z");
+new KeepMe2();
+
+================================================================================
+TestTreeShakingNoBundleCJS
+---------- /out.js ----------
+function keep() {
+}
+function unused() {
+}
+keep();
+
+================================================================================
+TestTreeShakingNoBundleESM
+---------- /out.js ----------
+function keep() {
+}
+function unused() {
+}
+keep();
+
+================================================================================
+TestTreeShakingNoBundleIIFE
+---------- /out.js ----------
+(() => {
+  function keep() {
+  }
+  keep();
+})();
+
+================================================================================
+TestTreeShakingObjectProperty
+---------- /out.js ----------
+let keep1 = { x };
+let keep2 = { x };
+let keep3 = { ...x };
+let keep4 = { [x]: "x" };
+let keep5 = { [x]() {
+} };
+let keep6 = { get [x]() {
+} };
+let keep7 = { set [x](_) {
+} };
+let keep8 = { async [x]() {
+} };
+let keep9 = { [{ toString() {
+} }]: "x" };
+
+================================================================================
+TestTreeShakingReactElements
+---------- /out.js ----------
+// entry.jsx
+function Foo() {
+}
+var d = /* @__PURE__ */ React.createElement("div", null);
+var e = /* @__PURE__ */ React.createElement(Foo, null, d);
+var f = /* @__PURE__ */ React.createElement(React.Fragment, null, e);
+console.log(f);
+
+================================================================================
+TestTreeShakingUnaryOperators
+---------- /out.js ----------
+(() => {
+  // entry.js
+  var keep;
+  +keep;
+  -keep;
+  ~keep;
+  delete keep;
+  ++keep;
+  --keep;
+  keep++;
+  keep--;
+})();

@@ -1,0 +1,247 @@
+TestTSImportStarAndCommonJS
+---------- /out.js ----------
+// foo.ts
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+var foo;
+var init_foo = __esm({
+  "foo.ts"() {
+    foo = 123;
+  }
+});
+
+// entry.js
+init_foo();
+var ns2 = (init_foo(), __toCommonJS(foo_exports));
+console.log(foo, ns2.foo);
+
+================================================================================
+TestTSImportStarCapture
+---------- /out.js ----------
+// foo.ts
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo_exports, foo, foo2);
+
+================================================================================
+TestTSImportStarCommonJSCapture
+---------- /out.js ----------
+// foo.ts
+var require_foo = __commonJS({
+  "foo.ts"(exports) {
+    exports.foo = 123;
+  }
+});
+
+// entry.ts
+var ns = __toESM(require_foo());
+var foo2 = 234;
+console.log(ns, ns.foo, foo2);
+
+================================================================================
+TestTSImportStarCommonJSNoCapture
+---------- /out.js ----------
+// foo.ts
+var require_foo = __commonJS({
+  "foo.ts"(exports) {
+    exports.foo = 123;
+  }
+});
+
+// entry.ts
+var ns = __toESM(require_foo());
+var foo2 = 234;
+console.log(ns.foo, ns.foo, foo2);
+
+================================================================================
+TestTSImportStarCommonJSUnused
+---------- /out.js ----------
+// entry.ts
+var foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSImportStarExportImportStarCapture
+---------- /out.js ----------
+// foo.ts
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo_exports, foo_exports.foo, foo2);
+
+================================================================================
+TestTSImportStarExportImportStarNoCapture
+---------- /out.js ----------
+// foo.ts
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo_exports.foo, foo_exports.foo, foo2);
+
+================================================================================
+TestTSImportStarExportImportStarUnused
+---------- /out.js ----------
+// entry.ts
+var foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSImportStarExportStarAsCapture
+---------- /out.js ----------
+// foo.ts
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo_exports, foo_exports.foo, foo2);
+
+================================================================================
+TestTSImportStarExportStarAsNoCapture
+---------- /out.js ----------
+// foo.ts
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo_exports.foo, foo_exports.foo, foo2);
+
+================================================================================
+TestTSImportStarExportStarAsUnused
+---------- /out.js ----------
+// entry.ts
+var foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSImportStarExportStarCapture
+---------- /out.js ----------
+// bar.ts
+var bar_exports = {};
+__export(bar_exports, {
+  foo: () => foo
+});
+
+// foo.ts
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(bar_exports, foo, foo2);
+
+================================================================================
+TestTSImportStarExportStarNoCapture
+---------- /out.js ----------
+// foo.ts
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo, foo, foo2);
+
+================================================================================
+TestTSImportStarExportStarUnused
+---------- /out.js ----------
+// entry.ts
+var foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSImportStarMangleNoBundleCapture
+---------- /out.js ----------
+import * as ns from "./foo";
+let foo = 234;
+console.log(ns, ns.foo, foo);
+
+================================================================================
+TestTSImportStarMangleNoBundleNoCapture
+---------- /out.js ----------
+import * as ns from "./foo";
+let foo = 234;
+console.log(ns.foo, ns.foo, foo);
+
+================================================================================
+TestTSImportStarMangleNoBundleUnused
+---------- /out.js ----------
+let foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSImportStarNoBundleCapture
+---------- /out.js ----------
+import * as ns from "./foo";
+let foo = 234;
+console.log(ns, ns.foo, foo);
+
+================================================================================
+TestTSImportStarNoBundleNoCapture
+---------- /out.js ----------
+import * as ns from "./foo";
+let foo = 234;
+console.log(ns.foo, ns.foo, foo);
+
+================================================================================
+TestTSImportStarNoBundleUnused
+---------- /out.js ----------
+let foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSImportStarNoCapture
+---------- /out.js ----------
+// foo.ts
+var foo = 123;
+
+// entry.ts
+var foo2 = 234;
+console.log(foo, foo, foo2);
+
+================================================================================
+TestTSImportStarUnused
+---------- /out.js ----------
+// entry.ts
+var foo = 234;
+console.log(foo);
+
+================================================================================
+TestTSReExportTypeOnlyFileES6
+---------- /out.js ----------
+// types1.ts
+console.log("some code");
+
+// types2.ts
+console.log("some code");
+
+// types3.ts
+console.log("some code");
+
+// values.ts
+var foo = 123;
+
+// entry.ts
+console.log(foo);

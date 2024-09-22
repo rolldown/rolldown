@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::{index::IndexVec, span::Span};
+use oxc::span::Span;
 use rolldown_rstr::Rstr;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use std::sync::Arc;
@@ -152,7 +152,6 @@ impl ModuleTask {
         warnings: &mut warnings,
         module_type: module_type.clone(),
         resolver: &self.ctx.resolver,
-        is_user_defined_entry: self.is_user_defined_entry,
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
       CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
@@ -178,31 +177,11 @@ impl ModuleTask {
       stable_id,
       id,
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
-      sourcemap_chain: ecma_view.sourcemap_chain,
-      source: ecma_view.source,
-      ecma_ast_idx: None,
       idx: self.module_idx,
-      named_imports: ecma_view.named_imports,
-      named_exports: ecma_view.named_exports,
-      stmt_infos: ecma_view.stmt_infos,
-      imports: ecma_view.imports,
-      star_exports: ecma_view.star_exports,
-      default_export_ref: ecma_view.default_export_ref,
-      scope: ecma_view.scope,
-      exports_kind: ecma_view.exports_kind,
-      namespace_object_ref: ecma_view.namespace_object_ref,
-      def_format: ecma_view.def_format,
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,
-      import_records: IndexVec::default(),
-      is_included: false,
-      importers: vec![],
-      dynamic_importers: vec![],
-      imported_ids: ecma_view.imported_ids,
-      dynamically_imported_ids: ecma_view.dynamically_imported_ids,
-      side_effects: ecma_view.side_effects,
       module_type: module_type.clone(),
-      has_eval: ecma_view.has_eval,
+      ecma_view,
       css_view,
     };
 

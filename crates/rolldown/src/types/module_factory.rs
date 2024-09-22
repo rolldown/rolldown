@@ -26,7 +26,6 @@ pub struct CreateModuleContext<'a> {
   pub module_type: ModuleType,
   pub warnings: &'a mut Vec<BuildDiagnostic>,
   pub resolver: &'a SharedResolver,
-  pub is_user_defined_entry: bool,
   pub replace_global_define_config: Option<ReplaceGlobalDefinesConfig>,
 }
 

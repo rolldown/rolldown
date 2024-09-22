@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, ExportsKind, ModuleDefFormat,
-  ModuleId, ModuleIdx, ModuleType, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaView, ExportsKind,
+  ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
@@ -76,36 +76,41 @@ impl RuntimeModuleTask {
     } = scan_result;
 
     let module = EcmaModule {
-      source,
       idx: self.module_id,
-      ecma_ast_idx: None,
       repr_name: "rolldown_runtime".to_string(),
       stable_id: RUNTIME_MODULE_ID.to_string(),
       id: ModuleId::new(RUNTIME_MODULE_ID),
-      named_imports,
-      named_exports,
-      stmt_infos,
-      imports,
-      star_exports,
-      default_export_ref,
-      scope: ast_scope,
-      exports_kind: ExportsKind::Esm,
-      namespace_object_ref,
-      def_format: ModuleDefFormat::EsmMjs,
+
       debug_id: RUNTIME_MODULE_ID.to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
-      import_records: IndexVec::default(),
-      is_included: false,
-      sourcemap_chain: vec![],
-      // The internal runtime module `importers/imported` should be skip.
-      importers: vec![],
-      dynamic_importers: vec![],
-      imported_ids: vec![],
-      dynamically_imported_ids: vec![],
-      side_effects: DeterminedSideEffects::Analyzed(false),
       module_type: ModuleType::Js,
-      has_eval,
+
+      ecma_view: EcmaView {
+        ecma_ast_idx: None,
+        source,
+
+        import_records: IndexVec::default(),
+        is_included: false,
+        sourcemap_chain: vec![],
+        // The internal runtime module `importers/imported` should be skip.
+        importers: vec![],
+        dynamic_importers: vec![],
+        imported_ids: vec![],
+        dynamically_imported_ids: vec![],
+        side_effects: DeterminedSideEffects::Analyzed(false),
+        has_eval,
+        named_imports,
+        named_exports,
+        stmt_infos,
+        imports,
+        star_exports,
+        default_export_ref,
+        scope: ast_scope,
+        exports_kind: ExportsKind::Esm,
+        namespace_object_ref,
+        def_format: ModuleDefFormat::EsmMjs,
+      },
       css_view: None,
     };
 

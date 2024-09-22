@@ -187,7 +187,6 @@ impl ModuleViewFactory for EcmaModuleViewFactory {
       namespace_object_ref,
       def_format: ctx.resolved_id.module_def_format,
       sourcemap_chain: args.sourcemap_chain,
-      is_user_defined_entry: ctx.is_user_defined_entry,
       import_records: IndexVec::default(),
       is_included: false,
       importers: vec![],

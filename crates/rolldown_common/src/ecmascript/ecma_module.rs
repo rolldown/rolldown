@@ -1,68 +1,36 @@
 use std::fmt::Debug;
+use std::ops::{Deref, DerefMut};
 
 use crate::css::css_view::CssView;
-use crate::side_effects::DeterminedSideEffects;
 use crate::{
-  types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
-  ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, NamedImport,
-  StmtInfo, StmtInfos, SymbolRef,
+  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ModuleId, ModuleIdx, ModuleInfo,
+  StmtInfo,
 };
-use crate::{EcmaAstIdx, IndexModules, Interop, Module, ModuleType};
-use arcstr::ArcStr;
-use oxc::index::IndexVec;
-use oxc::span::Span;
+use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
+
 use rolldown_rstr::Rstr;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 #[derive(Debug)]
 pub struct EcmaModule {
   pub exec_order: u32,
-  pub source: ArcStr,
   pub idx: ModuleIdx,
-  pub ecma_ast_idx: Option<EcmaAstIdx>,
   pub is_user_defined_entry: bool,
-  pub has_eval: bool,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
   pub stable_id: String,
   // Pretty resource id for debug
   pub debug_id: String,
   pub repr_name: String,
-  pub def_format: ModuleDefFormat,
-  /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
-  pub namespace_object_ref: SymbolRef,
-  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
-  pub named_exports: FxHashMap<Rstr, LocalExport>,
-  /// `stmt_infos[0]` represents the namespace binding statement
-  pub stmt_infos: StmtInfos,
-  pub import_records: IndexVec<ImportRecordIdx, ImportRecord>,
-  /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
-  /// and `CallExpression`(only when the callee is `require`).
-  pub imports: FxHashMap<Span, ImportRecordIdx>,
-  // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
-  pub star_exports: Vec<ImportRecordIdx>,
-  pub exports_kind: ExportsKind,
-  pub scope: AstScopes,
-  pub default_export_ref: SymbolRef,
-  pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
-  pub is_included: bool,
-  // the ids of all modules that statically import this module
-  pub importers: Vec<ModuleId>,
-  // the ids of all modules that import this module via dynamic import()
-  pub dynamic_importers: Vec<ModuleId>,
-  // the module ids statically imported by this module
-  pub imported_ids: Vec<ModuleId>,
-  // the module ids imported by this module via dynamic import()
-  pub dynamically_imported_ids: Vec<ModuleId>,
-  pub side_effects: DeterminedSideEffects,
   pub module_type: ModuleType,
+  pub ecma_view: EcmaView,
   pub css_view: Option<CssView>,
 }
 
 impl EcmaModule {
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    self.star_exports.iter().map(|rec_id| {
-      let rec = &self.import_records[*rec_id];
+    self.ecma_view.star_exports.iter().map(|rec_id| {
+      let rec = &self.ecma_view.import_records[*rec_id];
       rec.resolved_module
     })
   }
@@ -70,8 +38,9 @@ impl EcmaModule {
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.to_string(),
-      is_included: self.is_included,
+      is_included: self.ecma_view.is_included,
       stmt_infos: self
+        .ecma_view
         .stmt_infos
         .iter()
         .map(StmtInfo::to_debug_stmt_info_for_tree_shaking)
@@ -81,21 +50,21 @@ impl EcmaModule {
 
   pub fn to_module_info(&self) -> ModuleInfo {
     ModuleInfo {
-      code: Some(self.source.clone()),
+      code: Some(self.ecma_view.source.clone()),
       id: self.id.clone(),
       is_entry: self.is_user_defined_entry,
       importers: {
-        let mut value = self.importers.clone();
+        let mut value = self.ecma_view.importers.clone();
         value.sort_unstable();
         value
       },
       dynamic_importers: {
-        let mut value = self.dynamic_importers.clone();
+        let mut value = self.ecma_view.dynamic_importers.clone();
         value.sort_unstable();
         value
       },
-      imported_ids: self.imported_ids.clone(),
-      dynamically_imported_ids: self.dynamically_imported_ids.clone(),
+      imported_ids: self.ecma_view.imported_ids.clone(),
+      dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
     }
   }
 
@@ -123,9 +92,9 @@ impl EcmaModule {
       .filter_map(|id| modules[id].as_ecma())
       .for_each(|module| module.get_exported_names(export_star_set, modules, false, ret));
     if include_default {
-      ret.extend(self.named_exports.keys());
+      ret.extend(self.ecma_view.named_exports.keys());
     } else {
-      ret.extend(self.named_exports.keys().filter(|name| name.as_str() != "default"));
+      ret.extend(self.ecma_view.named_exports.keys().filter(|name| name.as_str() != "default"));
     }
   }
 
@@ -151,15 +120,15 @@ impl EcmaModule {
   // }
 
   pub fn ecma_ast_idx(&self) -> EcmaAstIdx {
-    self.ecma_ast_idx.expect("ecma_ast_idx should be set in this stage")
+    self.ecma_view.ecma_ast_idx.expect("ecma_ast_idx should be set in this stage")
   }
 
   pub fn star_exports_from_external_modules<'me>(
     &'me self,
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
-    self.star_exports.iter().filter_map(move |rec_id| {
-      let rec = &self.import_records[*rec_id];
+    self.ecma_view.star_exports.iter().filter_map(move |rec_id| {
+      let rec = &self.ecma_view.import_records[*rec_id];
       match modules[rec.resolved_module] {
         Module::External(_) => Some(*rec_id),
         Module::Ecma(_) => None,
@@ -168,8 +137,8 @@ impl EcmaModule {
   }
 
   pub fn interop(&self) -> Option<Interop> {
-    if matches!(self.exports_kind, ExportsKind::CommonJs) {
-      if self.def_format.is_esm() {
+    if matches!(self.ecma_view.exports_kind, ExportsKind::CommonJs) {
+      if self.ecma_view.def_format.is_esm() {
         Some(Interop::Node)
       } else {
         Some(Interop::Babel)
@@ -185,4 +154,18 @@ pub struct DebugNormalModuleForTreeShaking {
   pub id: String,
   pub is_included: bool,
   pub stmt_infos: Vec<DebugStmtInfoForTreeShaking>,
+}
+
+impl Deref for EcmaModule {
+  type Target = EcmaView;
+
+  fn deref(&self) -> &Self::Target {
+    &self.ecma_view
+  }
+}
+
+impl DerefMut for EcmaModule {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.ecma_view
+  }
 }

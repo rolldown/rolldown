@@ -12,7 +12,6 @@ use crate::{
 pub struct EcmaView {
   pub source: ArcStr,
   pub ecma_ast_idx: Option<EcmaAstIdx>,
-  pub is_user_defined_entry: bool,
   pub has_eval: bool,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)

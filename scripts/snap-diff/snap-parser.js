@@ -82,10 +82,13 @@ console.log('testj')
 \`\`\`
 `;
 /**
- * @param {string} source
+ * @param {string | undefined} source
  *
  */
 export function parseRolldownSnap(source) {
+  if (!source) {
+    return undefined
+  }
 	let match;
 	// strip `---source---` block
 	while ((match = /---\n([\s\S]+?)\n---/.exec(source))) {

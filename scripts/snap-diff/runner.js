@@ -1,8 +1,8 @@
 // @ts-check
 import * as path from "path";
 import * as fs from "fs";
-import { parseEsbuildSnap } from "./snap-parser.js";
-import { functions } from "lodash-es";
+import { parseEsbuildSnap, parseRolldownSnap } from "./snap-parser.js";
+import { diffCase } from "./diff.js";
 const esbuildTestDir = path.join(
 	import.meta.dirname,
 	"../../crates/rolldown/tests/esbuild",
@@ -34,18 +34,52 @@ export function getEsbuildSnapFile(includeList) {
  */
 export function run(includeList) {
 	let snapfileList = getEsbuildSnapFile(includeList);
-  // snapshot_x.txt
+	// esbuild snapshot_x.txt
 	for (let snapFile of snapfileList) {
-		let { normalizedName: snapType, content } = snapFile;
+		let { normalizedName: snapCategory, content } = snapFile;
 		let parsedEsbuildSnap = parseEsbuildSnap(content);
-    // singleSnapshot
-    for (let snap of parsedEsbuildSnap) {
-      let rolldownTestPath  = path.join(esbuildTestDir, snapType, snap.name)
-      console.log(`testRelativePath: `, rolldownTestPath)
-    }
+		// singleEsbuildSnapshot
+		let diffList = [];
+		for (let snap of parsedEsbuildSnap) {
+			let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name);
+			let rolldownSnap = getRolldownSnap(rolldownTestPath);
+			let parsedRolldownSnap = parseRolldownSnap(rolldownSnap);
+			let diffResult = diffCase(snap, parsedRolldownSnap);
+			diffList.push({ diffResult, name: snap.name });
+		}
+		diffList.sort((a, b) => {
+			return a.name.localeCompare(b.name);
+		});
+		let summaryMarkdown = getSummaryMarkdown(diffList);
+    fs.writeFileSync(path.join(import.meta.dirname, "./summary/", `${snapCategory}.md`), summaryMarkdown)
 	}
 }
 
-function getRolldownSnap() {
+/**
+ * @param {string} caseDir
+ *
+ */
+function getRolldownSnap(caseDir) {
+	let artifactsPath = path.join(caseDir, "artifacts.snap");
+	if (fs.existsSync(artifactsPath)) {
+		return fs.readFileSync(artifactsPath, "utf-8");
+	}
+}
 
+/**
+ * @param {Array<{diffResult: ReturnType<diffCase>, name: string}>} diffList
+ */
+function getSummaryMarkdown(diffList) {
+	let markdown = `# Failed Cases\n`;
+	for (let diff of diffList) {
+		if (diff.diffResult === "missing") {
+			markdown += `## ${diff.name}\n`;
+			markdown += `  missing\n`;
+		}
+		if (diff.diffResult !== "same") {
+			markdown += `## ${diff.name}\n`;
+			markdown += `  diff\n`;
+		}
+	}
+	return markdown;
 }

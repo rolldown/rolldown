@@ -1,7 +1,8 @@
 import { trimStart } from "lodash-es";
 import { snakeCase } from "change-case";
 import markdown from "markdown-it";
-import assert from 'assert'
+import assert from "assert";
+
 /**
  * @param {string} source
  *
@@ -15,14 +16,40 @@ export function parseEsbuildSnap(source) {
 
 /**
  * @param {string} source
- * @returns {{name: string, source: string}}
+ * @returns {{name: string, sourceList: {name: string, content: string}[]}}
  * */
 function parseEsbuildCase(source) {
 	let lines = source.trimStart().split("\n");
 	let [name, ...rest] = lines;
 	let normalizedName = snakeCase(trimStart(name, "Test"));
-	return { name: normalizedName, source: rest.join("\n") };
-};
+	let content = rest.join("\n");
+	return { name: normalizedName, sourceList: parseContent(content) };
+}
+
+/**
+ * @param {string} content
+ */
+function parseContent(content) {
+	// Define a regex pattern to match the filename and its content
+	const regex = /----------\s*(.+?)\s*----------\s*([\s\S]*?)(?=----------|$)/g;
+
+	const result = [];
+	let match;
+
+	// Use regex to find all matches in the input
+	while ((match = regex.exec(content)) !== null) {
+		const filename = match[1].trim(); // Extract the filename
+		const content = match[2].trim(); // Extract the content
+
+		// Push an object with filename and content into the result array
+		result.push({
+			name: filename,
+			content: content,
+		});
+	}
+
+	return result;
+}
 
 const rolldownSnap = `
 ---
@@ -60,7 +87,7 @@ console.log('testj')
  */
 export function parseRolldownSnap(source) {
 	let match;
-  // strip `---source---` block
+	// strip `---source---` block
 	while ((match = /---\n([\s\S]+?)\n---/.exec(source))) {
 		source = source.slice(match.index + match[0].length);
 	}
@@ -84,19 +111,5 @@ export function parseRolldownSnap(source) {
 		}
 		i++;
 	}
-  return ret
-
+	return ret;
 }
-
-import * as fs from "fs";
-import * as path from "path";
-
-const file = fs.readFileSync(
-	path.resolve(
-		import.meta.dirname,
-		"./esbuild-snapshots/snapshots_importstar.txt",
-	),
-	"utf-8",
-);
-console.log(`parse(file): `, parseEsbuildSnap(file));
-console.log(`parseRolldownSnap(rolldownSnap): `, parseRolldownSnap(rolldownSnap))

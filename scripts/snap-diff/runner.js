@@ -78,6 +78,7 @@ function getSummaryMarkdown(diffList) {
     if (diff.diffResult === 'missing') {
       markdown += `## ${diff.name}\n`
       markdown += `  missing\n`
+      continue
     }
     if (diff.diffResult !== 'same') {
       markdown += `## ${diff.name}\n`

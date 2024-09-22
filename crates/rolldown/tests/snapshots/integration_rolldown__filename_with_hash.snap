@@ -521,219 +521,219 @@ expression: output
 - function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
 - function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
 
-# tests/esbuild/import_star/export_other_as_namespace_common_js
+# tests/esbuild/importstar/export_other_as_namespace_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-hv-uu-4A.cjs
 
-# tests/esbuild/import_star/export_other_common_js
+# tests/esbuild/importstar/export_other_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-R7RFZmNQ.cjs
 
-# tests/esbuild/import_star/export_other_nested_common_js
+# tests/esbuild/importstar/export_other_nested_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-YGOj8nbf.cjs
 
-# tests/esbuild/import_star/export_self_as_namespace_common_js
+# tests/esbuild/importstar/export_self_as_namespace_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-krfd71h4.cjs
 
-# tests/esbuild/import_star/export_self_as_namespace_es6
+# tests/esbuild/importstar/export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Ci9jf2Vl.mjs
 
-# tests/esbuild/import_star/export_self_common_js
+# tests/esbuild/importstar/export_self_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-mKIoiJrd.cjs
 
-# tests/esbuild/import_star/export_self_es6
+# tests/esbuild/importstar/export_self_es6
 
 - entry_js-!~{000}~.mjs => entry_js-_WUmd7Ck.mjs
 
-# tests/esbuild/import_star/import_export_other_as_namespace_common_js
+# tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-zk2aMjWa.mjs
 
-# tests/esbuild/import_star/import_export_self_as_namespace_es6
+# tests/esbuild/importstar/import_export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Ci9jf2Vl.mjs
 
-# tests/esbuild/import_star/import_export_star_ambiguous_warning
+# tests/esbuild/importstar/import_export_star_ambiguous_warning
 
 - entry_js-!~{000}~.mjs => entry_js-E-ikmnlw.mjs
 
-# tests/esbuild/import_star/import_of_export_star
+# tests/esbuild/importstar/import_of_export_star
 
 - entry_js-!~{000}~.mjs => entry_js-H0kDSDFN.mjs
 
-# tests/esbuild/import_star/import_of_export_star_of_import
+# tests/esbuild/importstar/import_of_export_star_of_import
 
 - entry_js-!~{000}~.mjs => entry_js-mzIYfNek.mjs
 
-# tests/esbuild/import_star/import_self_common_js
+# tests/esbuild/importstar/import_self_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-aJIS-FgI.mjs
 
-# tests/esbuild/import_star/import_star_and_common_js
+# tests/esbuild/importstar/import_star_and_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-eIHCfSy-.mjs
 
-# tests/esbuild/import_star/import_star_capture
+# tests/esbuild/importstar/import_star_capture
 
 - entry_js-!~{000}~.mjs => entry_js-jeNB7gUK.mjs
 
-# tests/esbuild/import_star/import_star_common_js_capture
+# tests/esbuild/importstar/import_star_common_js_capture
 
 - entry_js-!~{000}~.mjs => entry_js-tDRdEgO1.mjs
 
-# tests/esbuild/import_star/import_star_common_js_no_capture
+# tests/esbuild/importstar/import_star_common_js_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-yBFn7023.mjs
 
-# tests/esbuild/import_star/import_star_common_js_unused
+# tests/esbuild/importstar/import_star_common_js_unused
 
 - entry_js-!~{000}~.mjs => entry_js-rY5t4XFn.mjs
 
-# tests/esbuild/import_star/import_star_export_import_star_capture
+# tests/esbuild/importstar/import_star_export_import_star_capture
 
 - entry_js-!~{000}~.mjs => entry_js-j6rCJzbs.mjs
 
-# tests/esbuild/import_star/import_star_export_import_star_no_capture
+# tests/esbuild/importstar/import_star_export_import_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
 
-# tests/esbuild/import_star/import_star_export_import_star_unused
+# tests/esbuild/importstar/import_star_export_import_star_unused
 
 - entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
-# tests/esbuild/import_star/import_star_export_star_as_capture
+# tests/esbuild/importstar/import_star_export_star_as_capture
 
 - entry_js-!~{000}~.mjs => entry_js-jeNB7gUK.mjs
 
-# tests/esbuild/import_star/import_star_export_star_as_no_capture
+# tests/esbuild/importstar/import_star_export_star_as_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-mv1AdNog.mjs
 
-# tests/esbuild/import_star/import_star_export_star_as_unused
+# tests/esbuild/importstar/import_star_export_star_as_unused
 
 - entry_js-!~{000}~.mjs => entry_js-XjoLyWPj.mjs
 
-# tests/esbuild/import_star/import_star_export_star_capture
+# tests/esbuild/importstar/import_star_export_star_capture
 
 - entry_js-!~{000}~.mjs => entry_js--k6TbpWz.mjs
 
-# tests/esbuild/import_star/import_star_export_star_no_capture
+# tests/esbuild/importstar/import_star_export_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
 
-# tests/esbuild/import_star/import_star_export_star_omit_ambiguous
+# tests/esbuild/importstar/import_star_export_star_omit_ambiguous
 
 - entry_js-!~{000}~.mjs => entry_js-8PO_fo2V.mjs
 
-# tests/esbuild/import_star/import_star_export_star_unused
+# tests/esbuild/importstar/import_star_export_star_unused
 
 - entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
-# tests/esbuild/import_star/import_star_no_capture
+# tests/esbuild/importstar/import_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
 
-# tests/esbuild/import_star/import_star_of_export_star_as
+# tests/esbuild/importstar/import_star_of_export_star_as
 
 - entry_js-!~{000}~.mjs => entry_js-W7zmJGUu.mjs
 
-# tests/esbuild/import_star/import_star_unused
+# tests/esbuild/importstar/import_star_unused
 
 - entry_js-!~{000}~.mjs => entry_js-mfGmejp1.mjs
 
-# tests/esbuild/import_star/issue176
+# tests/esbuild/importstar/issue176
 
 - entry_js-!~{000}~.mjs => entry_js--2X9MJcv.mjs
 
-# tests/esbuild/import_star/namespace_import_missing_common_js
+# tests/esbuild/importstar/namespace_import_missing_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-yZtp5QwF.mjs
 
-# tests/esbuild/import_star/namespace_import_missing_es6
+# tests/esbuild/importstar/namespace_import_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-vUBXB_-Q.mjs
 
-# tests/esbuild/import_star/namespace_import_re_export_star_missing_es6
+# tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-YNk6SGbc.mjs
 
-# tests/esbuild/import_star/namespace_import_re_export_star_unused_missing_es6
+# tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-ZRfn5jSM.mjs
 
-# tests/esbuild/import_star/namespace_import_unused_missing_common_js
+# tests/esbuild/importstar/namespace_import_unused_missing_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-nsbMxosn.mjs
 
-# tests/esbuild/import_star/namespace_import_unused_missing_es6
+# tests/esbuild/importstar/namespace_import_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-gToj8462.mjs
 
-# tests/esbuild/import_star/other_file_export_self_as_namespace_unused_es6
+# tests/esbuild/importstar/other_file_export_self_as_namespace_unused_es6
 
 - entry_js-!~{000}~.mjs => entry_js-EqHrIcuQ.mjs
 
-# tests/esbuild/import_star/other_file_import_export_self_as_namespace_unused_es6
+# tests/esbuild/importstar/other_file_import_export_self_as_namespace_unused_es6
 
 - entry_js-!~{000}~.mjs => entry_js-EqHrIcuQ.mjs
 
-# tests/esbuild/import_star/re_export_namespace_import_missing_es6
+# tests/esbuild/importstar/re_export_namespace_import_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Llcqy5LG.mjs
 
-# tests/esbuild/import_star/re_export_namespace_import_unused_missing_es6
+# tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-nONTu2qq.mjs
 
-# tests/esbuild/import_star/re_export_other_file_export_self_as_namespace_es6
+# tests/esbuild/importstar/re_export_other_file_export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-eDDu2hYN.mjs
 
-# tests/esbuild/import_star/re_export_other_file_import_export_self_as_namespace_es6
+# tests/esbuild/importstar/re_export_other_file_import_export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-eDDu2hYN.mjs
 
-# tests/esbuild/import_star/re_export_star_as_external_common_js
+# tests/esbuild/importstar/re_export_star_as_external_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-k_XF-EgE.cjs
 
-# tests/esbuild/import_star/re_export_star_as_external_es6
+# tests/esbuild/importstar/re_export_star_as_external_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Hh289cnx.mjs
 
-# tests/esbuild/import_star/re_export_star_entry_point_and_inner_file
+# tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
 - entry_js-!~{000}~.mjs => entry_js-Dui1A2mX.mjs
 
-# tests/esbuild/import_star/re_export_star_external_common_js
+# tests/esbuild/importstar/re_export_star_external_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-ELPoWxMr.cjs
 
-# tests/esbuild/import_star/re_export_star_external_es6
+# tests/esbuild/importstar/re_export_star_external_es6
 
 - entry_js-!~{000}~.mjs => entry_js-f7yUzi-B.mjs
 
-# tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
+# tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
 - entry_js-!~{000}~.mjs => entry_js-U6_C9pII.mjs
 
-# tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
+# tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import
 
 - entry_js-!~{000}~.mjs => entry_js-5FiuY4N2.mjs
 
-# tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
+# tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous
 
 - entry_js-!~{000}~.mjs => entry_js-_Iu81E_Q.mjs
 
-# tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
+# tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous_re_export
 
 - entry_js-!~{000}~.mjs => entry_js-vjVClo_b.mjs
 
-# tests/esbuild/import_star_ts/ts_import_star_and_common_js
+# tests/esbuild/importstar_ts/ts_import_star_and_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-4ruieXoW.mjs
 

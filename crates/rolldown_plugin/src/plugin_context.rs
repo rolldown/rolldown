@@ -117,7 +117,7 @@ impl PluginContextImpl {
   pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
     self.module_table.get().as_ref().and_then(|module_table| {
       for normal_module in &module_table.modules {
-        if let Some(ecma_module) = normal_module.as_ecma() {
+        if let Some(ecma_module) = normal_module.as_normal() {
           if ecma_module.id.as_str() == module_id {
             return Some(ecma_module.to_module_info());
           }

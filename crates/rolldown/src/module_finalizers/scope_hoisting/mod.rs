@@ -47,7 +47,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     rec_id: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_id];
-    let Module::Ecma(importee) = &self.ctx.modules[rec.resolved_module] else {
+    let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];

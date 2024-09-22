@@ -68,7 +68,7 @@ pub fn render_iife(
 
   let entry_module = match ctx.chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
-      &ctx.link_output.module_table.modules[module].as_ecma().expect("should be ecma module")
+      &ctx.link_output.module_table.modules[module].as_normal().expect("should be normal module")
     }
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };

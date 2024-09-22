@@ -68,10 +68,10 @@ impl<'a> GenerateStage<'a> {
     let ast_table_iter = self.link_output.ast_table.par_iter_mut();
     ast_table_iter
       .filter(|(_ast, owner)| {
-        self.link_output.module_table.modules[*owner].as_ecma().map_or(false, |m| m.is_included)
+        self.link_output.module_table.modules[*owner].as_normal().map_or(false, |m| m.is_included)
       })
       .for_each(|(ast, owner)| {
-        let Module::Ecma(module) = &self.link_output.module_table.modules[*owner] else {
+        let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {
           return;
         };
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();

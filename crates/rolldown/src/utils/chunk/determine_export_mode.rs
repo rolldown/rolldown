@@ -1,13 +1,13 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
-use rolldown_common::{EcmaModule, OutputExports, SymbolRef};
+use rolldown_common::{NormalModule, OutputExports, SymbolRef};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_rstr::Rstr;
 
 // Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
 pub fn determine_export_mode(
   ctx: &mut GenerateContext<'_>,
-  module: &EcmaModule,
+  module: &NormalModule,
   exports: &[(Rstr, SymbolRef)],
 ) -> DiagnosableResult<OutputExports> {
   let export_mode = &ctx.options.exports;

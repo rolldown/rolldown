@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{ObjectPropertyKind, Statement},
   span::CompactStr,
 };
-use rolldown_common::{AstScopes, EcmaModule, IndexModules};
+use rolldown_common::{AstScopes, IndexModules, NormalModule};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashSet;
 
@@ -12,7 +12,7 @@ use crate::types::symbols::Symbols;
 mod impl_visit_mut;
 
 pub struct IsolatingModuleFinalizerContext<'me> {
-  pub module: &'me EcmaModule,
+  pub module: &'me NormalModule,
   pub modules: &'me IndexModules,
   pub symbols: &'me Symbols,
 }

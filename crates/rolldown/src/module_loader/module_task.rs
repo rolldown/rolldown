@@ -7,7 +7,7 @@ use sugar_path::SugarPath;
 
 use anyhow::Result;
 use rolldown_common::{
-  EcmaModule, ModuleId, ModuleIdx, ModuleType, ModuleView, ResolvedId, StrOrBytes,
+  ModuleId, ModuleIdx, ModuleType, ModuleView, NormalModule, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
@@ -172,7 +172,7 @@ impl ModuleTask {
       ModuleView::Css(_) => unreachable!(),
     };
 
-    let module = EcmaModule {
+    let module = NormalModule {
       repr_name: repr_name.into_owned(),
       stable_id,
       id,

@@ -42,7 +42,7 @@ pub fn render_cjs(
   // We also need to get the export mode for rendering the namespace markers.
   // So we determine the export mode (from auto) here and use it in the following code.
   let export_mode = if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
-    if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+    if let Module::Normal(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");

@@ -31,7 +31,7 @@ impl SymbolRef {
       return false;
     }
 
-    let Module::Ecma(owner) = &modules[self.owner] else { return false };
+    let Module::Normal(owner) = &modules[self.owner] else { return false };
 
     let Some(named_import) = owner.named_imports.get(&self) else {
       return false;
@@ -40,11 +40,11 @@ impl SymbolRef {
     let rec = &owner.import_records[named_import.record_id];
 
     match &modules[rec.resolved_module] {
-      Module::Ecma(ecma) => {
+      Module::Normal(normal) => {
         let Specifier::Literal(imported) = &named_import.imported else {
           return false;
         };
-        let Some(named_export) = ecma.named_exports.get(imported) else {
+        let Some(named_export) = normal.named_exports.get(imported) else {
           return false;
         };
         named_export.referenced.is_created_by_import_from_external(modules)

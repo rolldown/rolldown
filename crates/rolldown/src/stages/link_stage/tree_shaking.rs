@@ -3,7 +3,7 @@ use crate::types::symbols::Symbols;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
-  EcmaModule, IndexModules, Module, ModuleIdx, ModuleType, StmtInfoIdx, SymbolOrMemberExprRef,
+  IndexModules, Module, ModuleIdx, ModuleType, NormalModule, StmtInfoIdx, SymbolOrMemberExprRef,
   SymbolRef,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
@@ -23,8 +23,8 @@ struct Context<'a> {
 }
 
 /// if no export is used, and the module has no side effects, the module should not be included
-fn include_module(ctx: &mut Context, module: &EcmaModule) {
-  fn forcefully_include_all_statements(ctx: &mut Context, module: &EcmaModule) {
+fn include_module(ctx: &mut Context, module: &NormalModule) {
+  fn forcefully_include_all_statements(ctx: &mut Context, module: &NormalModule) {
     // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
     // tree shaking is enabled or not.
     module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, _stmt_info)| {
@@ -63,7 +63,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   // Include imported modules for its side effects
   module_meta.dependencies.iter().copied().for_each(|dependency_idx| {
     match &ctx.modules[dependency_idx] {
-      Module::Ecma(importee) => {
+      Module::Normal(importee) => {
         if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
           include_module(ctx, importee);
         }
@@ -81,10 +81,10 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-  let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+  let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_normal().unwrap();
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
-    canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+    canonical_ref_owner = ctx.modules[canonical_ref.owner].as_normal().unwrap();
   }
 
   ctx.used_symbol_refs.insert(canonical_ref);
@@ -97,7 +97,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   );
 }
 
-fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtInfoIdx) {
+fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoIdx) {
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
   if *is_included {
@@ -133,7 +133,7 @@ impl LinkStage<'_> {
       .modules
       .iter()
       .map(|m| {
-        m.as_ecma().map_or(IndexVec::default(), |m| {
+        m.as_normal().map_or(IndexVec::default(), |m| {
           m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoIdx, _>>()
         })
       })
@@ -156,7 +156,7 @@ impl LinkStage<'_> {
 
     self.entries.iter().for_each(|entry| {
       let module = match &self.module_table.modules[entry.id] {
-        Module::Ecma(module) => module,
+        Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
           return;
@@ -169,7 +169,7 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
-    self.module_table.modules.par_iter_mut().filter_map(Module::as_ecma_mut).for_each(|module| {
+    self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
       module.is_included = is_module_included_vec[module.idx];
       is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
@@ -182,8 +182,8 @@ impl LinkStage<'_> {
         .module_table
         .modules
         .iter()
-        .filter_map(Module::as_ecma)
-        .map(EcmaModule::to_debug_normal_module_for_tree_shaking)
+        .filter_map(Module::as_normal)
+        .map(NormalModule::to_debug_normal_module_for_tree_shaking)
         .collect::<Vec<_>>()
     );
   }
@@ -225,7 +225,7 @@ impl LinkStage<'_> {
         DeterminedSideEffects::Analyzed(v) if v => *module.side_effects(),
         // this branch means the side effects of the module is analyzed `false`
         DeterminedSideEffects::Analyzed(_) => match module {
-          Module::Ecma(module) => {
+          Module::Normal(module) => {
             DeterminedSideEffects::Analyzed(module.import_records.iter().any(|import_record| {
               determine_side_effects_for_module(
                 cache,
@@ -261,7 +261,7 @@ impl LinkStage<'_> {
 
     self.module_table.modules.iter_mut().zip(index_module_side_effects).for_each(
       |(module, side_effects)| {
-        if let Module::Ecma(module) = module {
+        if let Module::Normal(module) = module {
           module.side_effects = side_effects;
         }
       },

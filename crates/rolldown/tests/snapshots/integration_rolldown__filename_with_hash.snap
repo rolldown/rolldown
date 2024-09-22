@@ -3,58 +3,6 @@ source: crates/rolldown/tests/integration_rolldown.rs
 expression: output
 ---
 ```
-# tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
-
-- entry_ts-!~{000}~.mjs => entry_ts-4Cc0ZJV3.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_class
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_const
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_const_enum
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_enum
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_function
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_let
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_namespace
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_var
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_import_cts
-
-- entry_ts-!~{000}~.mjs => entry_ts-ZIvpO329.mjs
-
-# tests/esbuild/bundler_ts/ts_import_empty_namespace
-
-- entry_ts-!~{000}~.mjs => entry_ts-9NBZIX5i.mjs
-
-# tests/esbuild/bundler_ts/ts_import_type_only_file
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_prefer_js_over_ts_inside_node_modules
-
-- src_main_ts-!~{000}~.mjs => src_main_ts-tpTytWQ_.mjs
-
 # tests/esbuild/dce/base64_loader_remove_unused
 
 - entry_js-!~{000}~.mjs => entry_js-Taqabkgf.mjs
@@ -1291,6 +1239,58 @@ expression: output
 - a-!~{000}~.mjs => a-XSpJ2lOJ.mjs
 - b-!~{001}~.mjs => b-BnNTc7GP.mjs
 - shared-!~{002}~.mjs => shared-jJqW8ccl.mjs
+
+# tests/esbuild/ts/ts_abstract_class_field_use_define
+
+- entry_ts-!~{000}~.mjs => entry_ts-4Cc0ZJV3.mjs
+
+# tests/esbuild/ts/ts_declare_class
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_const
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_const_enum
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_enum
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_function
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_let
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_namespace
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_var
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_import_cts
+
+- entry_ts-!~{000}~.mjs => entry_ts-ZIvpO329.mjs
+
+# tests/esbuild/ts/ts_import_empty_namespace
+
+- entry_ts-!~{000}~.mjs => entry_ts-9NBZIX5i.mjs
+
+# tests/esbuild/ts/ts_import_type_only_file
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
+
+- src_main_ts-!~{000}~.mjs => src_main_ts-tpTytWQ_.mjs
 
 # tests/rolldown/cjs_compat/basic_commonjs
 

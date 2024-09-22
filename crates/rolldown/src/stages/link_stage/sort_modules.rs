@@ -76,7 +76,7 @@ impl<'a> LinkStage<'a> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
-            if let Module::Ecma(module) = &self.module_table.modules[id] {
+            if let Module::Normal(module) = &self.module_table.modules[id] {
               execution_stack.extend(
                 module
                   .import_records
@@ -92,7 +92,7 @@ impl<'a> LinkStage<'a> {
         Status::WaitForExit(id) => {
           executed_ids.insert(id);
           match &mut self.module_table.modules[id] {
-            Module::Ecma(module) => {
+            Module::Normal(module) => {
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
@@ -116,7 +116,7 @@ impl<'a> LinkStage<'a> {
         let paths = cycle
           .iter()
           .copied()
-          .filter_map(|id| self.module_table.modules[id].as_ecma())
+          .filter_map(|id| self.module_table.modules[id].as_normal())
           .map(|module| module.id.to_string())
           .collect::<Vec<_>>();
         self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());

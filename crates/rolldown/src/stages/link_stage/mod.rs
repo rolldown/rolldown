@@ -80,7 +80,7 @@ impl<'a> LinkStage<'a> {
               }
             })
             .collect(),
-          star_exports_from_external_modules: module.as_ecma().map_or(vec![], |inner| {
+          star_exports_from_external_modules: module.as_normal().map_or(vec![], |inner| {
             inner
               .star_exports_from_external_modules(&scan_stage_output.module_table.modules)
               .collect()
@@ -132,10 +132,10 @@ impl<'a> LinkStage<'a> {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
-    self.module_table.modules.iter().filter_map(Module::as_ecma).for_each(|importer| {
+    self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
         let importee_id = rec.resolved_module;
-        let Module::Ecma(importee) = &self.module_table.modules[importee_id] else {
+        let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
           return;
         };
 
@@ -235,7 +235,7 @@ impl<'a> LinkStage<'a> {
         importer.star_exports.iter().for_each(|rec_idx| {
           let rec = &importer.import_records[*rec_idx];
           match &self.module_table.modules[rec.resolved_module] {
-            Module::Ecma(_) => {}
+            Module::Normal(_) => {}
             Module::External(ext) => {
               self.metas[importer.idx]
                 .require_bindings_for_star_exports
@@ -257,7 +257,7 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    self.module_table.modules.par_iter().filter_map(Module::as_ecma).for_each(|importer| {
+    self.module_table.modules.par_iter().filter_map(Module::as_normal).for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
@@ -291,7 +291,7 @@ impl<'a> LinkStage<'a> {
                 _ => {}
               }
             }
-            Module::Ecma(importee) => {
+            Module::Normal(importee) => {
               let importee_linking_info = &self.metas[importee.idx];
               match rec.kind {
                 ImportKind::Import => {
@@ -428,71 +428,73 @@ impl<'a> LinkStage<'a> {
   }
 
   fn create_exports_for_ecma_modules(&mut self) {
-    self.module_table.modules.iter_mut().filter_map(|m| m.as_ecma_mut()).for_each(|ecma_module| {
-      let linking_info = &mut self.metas[ecma_module.idx];
+    self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
+      |ecma_module| {
+        let linking_info = &mut self.metas[ecma_module.idx];
 
-      create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime);
-      if self.entries.iter().any(|entry| entry.id == ecma_module.idx) {
-        init_entry_point_stmt_info(linking_info);
-      }
-
-      // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
-      // tree-shaking process.
-      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
-        let stmt_info = StmtInfo {
-          stmt_idx: None,
-          declared_symbols: vec![*symbol_ref],
-          referenced_symbols: vec![],
-          side_effect: false,
-          is_included: false,
-          import_records: Vec::new(),
-          debug_label: None,
-        };
-        ecma_module.stmt_infos.add_stmt_info(stmt_info);
-      });
-
-      // Generate export of Module Namespace Object for Namespace Import
-      // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
-      // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
-      // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
-      // real statement to construct the Module Namespace Object and assign it to a variable.
-      // This is only a concept of esm, so no need to care about this in commonjs.
-      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
-        let meta = &self.metas[ecma_module.idx];
-        let mut referenced_symbols = vec![];
-        let mut declared_symbols = vec![];
-        if !meta.is_canonical_exports_empty() {
-          referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
-          referenced_symbols
-            .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
+        create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime);
+        if self.entries.iter().any(|entry| entry.id == ecma_module.idx) {
+          init_entry_point_stmt_info(linking_info);
         }
-        if !meta.star_exports_from_external_modules.is_empty() {
-          referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
-          match self.options.format {
-            OutputFormat::Esm => {
-              meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
-                referenced_symbols.push(ecma_module.import_records[rec_idx].namespace_ref.into());
-                declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
-              });
-            }
-            OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::App => {}
+
+        // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
+        // tree-shaking process.
+        linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+          let stmt_info = StmtInfo {
+            stmt_idx: None,
+            declared_symbols: vec![*symbol_ref],
+            referenced_symbols: vec![],
+            side_effect: false,
+            is_included: false,
+            import_records: Vec::new(),
+            debug_label: None,
+          };
+          ecma_module.stmt_infos.add_stmt_info(stmt_info);
+        });
+
+        // Generate export of Module Namespace Object for Namespace Import
+        // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
+        // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
+        // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
+        // real statement to construct the Module Namespace Object and assign it to a variable.
+        // This is only a concept of esm, so no need to care about this in commonjs.
+        if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+          let meta = &self.metas[ecma_module.idx];
+          let mut referenced_symbols = vec![];
+          let mut declared_symbols = vec![];
+          if !meta.is_canonical_exports_empty() {
+            referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
+            referenced_symbols
+              .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
           }
-        };
-        // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
-        // Corresponding AST for this statement will be created by the finalizer.
-        declared_symbols.push(ecma_module.namespace_object_ref);
-        let namespace_stmt_info = StmtInfo {
-          stmt_idx: None,
-          declared_symbols,
-          referenced_symbols,
-          side_effect: false,
-          is_included: false,
-          import_records: Vec::new(),
-          debug_label: None,
-        };
-        ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
-      }
-    });
+          if !meta.star_exports_from_external_modules.is_empty() {
+            referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
+            match self.options.format {
+              OutputFormat::Esm => {
+                meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
+                  referenced_symbols.push(ecma_module.import_records[rec_idx].namespace_ref.into());
+                  declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
+                });
+              }
+              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::App => {}
+            }
+          };
+          // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
+          // Corresponding AST for this statement will be created by the finalizer.
+          declared_symbols.push(ecma_module.namespace_object_ref);
+          let namespace_stmt_info = StmtInfo {
+            stmt_idx: None,
+            declared_symbols,
+            referenced_symbols,
+            side_effect: false,
+            is_included: false,
+            import_records: Vec::new(),
+            debug_label: None,
+          };
+          ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+        }
+      },
+    );
   }
 
   fn patch_module_dependencies(&mut self) {
@@ -503,7 +505,7 @@ impl<'a> LinkStage<'a> {
         meta.dependencies.push(canonical_ref.owner);
       });
 
-      let Module::Ecma(module) = &self.module_table.modules[module_idx] else {
+      let Module::Normal(module) = &self.module_table.modules[module_idx] else {
         return;
       };
 

@@ -1,5 +1,5 @@
 use oxc::ast::VisitMut;
-use rolldown_common::EcmaModule;
+use rolldown_common::NormalModule;
 use rolldown_ecmascript::{AstSnippet, EcmaAst};
 
 use super::module_finalizers::scope_hoisting::{
@@ -26,7 +26,7 @@ pub mod tweak_ast_for_scanning;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(
-  module: &EcmaModule,
+  module: &NormalModule,
   ctx: ScopeHoistingFinalizerContext<'_>,
   ast: &mut EcmaAst,
 ) {

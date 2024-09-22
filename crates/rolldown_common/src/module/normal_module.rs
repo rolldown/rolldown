@@ -12,7 +12,7 @@ use rolldown_rstr::Rstr;
 use rustc_hash::FxHashSet;
 
 #[derive(Debug)]
-pub struct EcmaModule {
+pub struct NormalModule {
   pub exec_order: u32,
   pub idx: ModuleIdx,
   pub is_user_defined_entry: bool,
@@ -27,7 +27,7 @@ pub struct EcmaModule {
   pub css_view: Option<CssView>,
 }
 
-impl EcmaModule {
+impl NormalModule {
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
     self.ecma_view.star_exports.iter().map(|rec_id| {
       let rec = &self.ecma_view.import_records[*rec_id];
@@ -89,7 +89,7 @@ impl EcmaModule {
 
     self
       .star_export_module_ids()
-      .filter_map(|id| modules[id].as_ecma())
+      .filter_map(|id| modules[id].as_normal())
       .for_each(|module| module.get_exported_names(export_star_set, modules, false, ret));
     if include_default {
       ret.extend(self.ecma_view.named_exports.keys());
@@ -131,7 +131,7 @@ impl EcmaModule {
       let rec = &self.ecma_view.import_records[*rec_id];
       match modules[rec.resolved_module] {
         Module::External(_) => Some(*rec_id),
-        Module::Ecma(_) => None,
+        Module::Normal(_) => None,
       }
     })
   }
@@ -156,7 +156,7 @@ pub struct DebugNormalModuleForTreeShaking {
   pub stmt_infos: Vec<DebugStmtInfoForTreeShaking>,
 }
 
-impl Deref for EcmaModule {
+impl Deref for NormalModule {
   type Target = EcmaView;
 
   fn deref(&self) -> &Self::Target {
@@ -164,7 +164,7 @@ impl Deref for EcmaModule {
   }
 }
 
-impl DerefMut for EcmaModule {
+impl DerefMut for NormalModule {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.ecma_view
   }

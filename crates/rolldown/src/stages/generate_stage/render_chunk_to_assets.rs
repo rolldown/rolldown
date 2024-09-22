@@ -260,7 +260,7 @@ impl<'a> GenerateStage<'a> {
           .modules
           .par_iter()
           .map(|&module_idx| {
-            if let Some(module) = self.link_output.module_table.modules[module_idx].as_ecma() {
+            if let Some(module) = self.link_output.module_table.modules[module_idx].as_normal() {
               let enable_sourcemap = self.options.sourcemap.is_some() && !module.is_virtual();
 
               // Because oxc codegen sourcemap is last of sourcemap chain,

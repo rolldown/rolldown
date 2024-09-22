@@ -1,9 +1,9 @@
 use oxc::codegen::CodegenReturn;
-use rolldown_common::{EcmaModule, NormalizedBundlerOptions};
+use rolldown_common::{NormalModule, NormalizedBundlerOptions};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
 pub fn render_ecma_module(
-  module: &EcmaModule,
+  module: &NormalModule,
   options: &NormalizedBundlerOptions,
   render_output: CodegenReturn,
 ) -> Option<Vec<Box<dyn Source + Send>>> {

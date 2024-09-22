@@ -76,7 +76,7 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
       {
         let rec = &self.ctx.module.import_records[named_import.record_id];
         match &self.ctx.modules[rec.resolved_module] {
-          Module::Ecma(importee) => {
+          Module::Normal(importee) => {
             // TODO deconflict namespace_ref
             let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
 
@@ -364,7 +364,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
 
   fn create_namespace_object_ref_for_module(&self, module: &Module) -> CompactStr {
     match module {
-      Module::Ecma(importee) => {
+      Module::Normal(importee) => {
         // TODO deconflict namespace_ref
         self.ctx.symbols.get_original_name(importee.namespace_object_ref).clone()
       }

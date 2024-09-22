@@ -51,7 +51,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
             match &self.ctx.modules[rec.resolved_module] {
-              Module::Ecma(importee) => {
+              Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
                   let wrapper_ref_name =
@@ -340,7 +340,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
           match &self.ctx.modules[rec.resolved_module] {
-            Module::Ecma(importee) => {
+            Module::Normal(importee) => {
               match importee.module_type {
                 ModuleType::Json => {
                   // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
@@ -434,7 +434,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
         match &self.ctx.modules[importee_id] {
-          Module::Ecma(importee) => {
+          Module::Normal(importee) => {
             let importee_linking_info = &self.ctx.linking_infos[importee_id];
             match importee_linking_info.wrap_kind {
               WrapKind::Esm => {
@@ -556,7 +556,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
         match &self.ctx.modules[importee_id] {
-          Module::Ecma(_importee) => {
+          Module::Normal(_importee) => {
             let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
               .expect("Normal module should belong to a chunk");
             let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];

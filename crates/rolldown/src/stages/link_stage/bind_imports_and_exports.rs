@@ -114,7 +114,7 @@ impl<'link> LinkStage<'link> {
   pub fn bind_imports_and_exports(&mut self) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.iter_mut_enumerated().par_bridge().for_each(|(module_id, meta)| {
-      let Module::Ecma(module) = &self.module_table.modules[module_id] else {
+      let Module::Normal(module) = &self.module_table.modules[module_id] else {
         return;
       };
       let mut resolved_exports = module
@@ -193,12 +193,12 @@ impl<'link> LinkStage<'link> {
 
     module_stack.push(module_id);
 
-    let Module::Ecma(module) = &normal_modules[module_id] else {
+    let Module::Normal(module) = &normal_modules[module_id] else {
       return;
     };
 
     for dep_id in module.star_export_module_ids() {
-      let Module::Ecma(dep_module) = &normal_modules[dep_id] else {
+      let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
       if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
@@ -213,7 +213,7 @@ impl<'link> LinkStage<'link> {
         // This export star is shadowed if any file in the stack has a matching real named export
         if module_stack
           .iter()
-          .filter_map(|id| normal_modules[*id].as_ecma())
+          .filter_map(|id| normal_modules[*id].as_normal())
           .any(|module| module.named_exports.contains_key(exported_name))
         {
           continue;
@@ -261,7 +261,7 @@ impl<'link> LinkStage<'link> {
       .as_vec()
       .par_iter()
       .map(|module| match module {
-        Module::Ecma(module) => {
+        Module::Normal(module) => {
           let mut resolved = FxHashMap::default();
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
@@ -270,8 +270,8 @@ impl<'link> LinkStage<'link> {
                 let mut canonical_ref =
                   self.symbols.par_canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner = self.module_table.modules[canonical_ref.owner]
-                  .as_ecma()
-                  .expect("only ecma module");
+                  .as_normal()
+                  .expect("only normal module");
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref;
                 let mut ns_symbol_list = vec![];
@@ -288,7 +288,7 @@ impl<'link> LinkStage<'link> {
 
                   // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
                   if !self.module_table.modules[export_symbol.symbol_ref.owner]
-                    .as_ecma()
+                    .as_normal()
                     .unwrap()
                     .exports_kind
                     .is_esm()
@@ -298,7 +298,7 @@ impl<'link> LinkStage<'link> {
                   ns_symbol_list.push((canonical_ref, name.to_rstr()));
                   canonical_ref = self.symbols.par_canonical_ref_for(export_symbol.symbol_ref);
                   canonical_ref_owner =
-                    self.module_table.modules[canonical_ref.owner].as_ecma().unwrap();
+                    self.module_table.modules[canonical_ref.owner].as_normal().unwrap();
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
@@ -336,7 +336,7 @@ struct BindImportsAndExportsContext<'a> {
 
 impl<'a> BindImportsAndExportsContext<'a> {
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
-    let Module::Ecma(module) = &self.normal_modules[module_id] else {
+    let Module::Normal(module) = &self.normal_modules[module_id] else {
       return;
     };
     for (imported_as_ref, named_import) in &module.named_imports {
@@ -351,7 +351,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
 
       let ret = match &self.normal_modules[rec.resolved_module] {
         Module::External(_) => MatchImportKind::Normal { symbol: *imported_as_ref },
-        Module::Ecma(importee) => self.match_import_with_export(
+        Module::Normal(importee) => self.match_import_with_export(
           self.normal_modules,
           &mut MatchingContext { tracker_stack: Vec::default() },
           ImportTracker {
@@ -369,7 +369,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
           let importee = self.normal_modules[rec.resolved_module].stable_id().to_string();
 
           let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
-          if let Some(owner) = self.normal_modules[symbol_ref.owner].as_ecma() {
+          if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
             if let Specifier::Literal(name) = &named_import.imported {
               let named_export = &owner.named_exports[name];
               exporter.push(AmbiguousExternalNamespaceModule {
@@ -384,7 +384,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
             potentially_ambiguous_symbol_refs
               .iter()
               .filter_map(|&symbol_ref| {
-                if let Some(owner) = self.normal_modules[symbol_ref.owner].as_ecma() {
+                if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
                   if let Specifier::Literal(name) = &named_import.imported {
                     let named_export = &owner.named_exports[name];
                     return Some(AmbiguousExternalNamespaceModule {
@@ -437,20 +437,21 @@ impl<'a> BindImportsAndExportsContext<'a> {
 
   fn advance_import_tracker(&self, ctx: &mut MatchingContext) -> ImportStatus {
     let tracker = ctx.current_tracker();
-    let importer =
-      &self.normal_modules[tracker.importer].as_ecma().expect("only ecma module can be importer");
+    let importer = &self.normal_modules[tracker.importer]
+      .as_normal()
+      .expect("only normal module can be importer");
     let named_import = &importer.named_imports[&tracker.imported_as];
 
     // Is this an external file?
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
     let importee_id = match &self.normal_modules[importee_id] {
-      Module::Ecma(importee) => importee.idx,
+      Module::Normal(importee) => importee.idx,
       Module::External(_) => return ImportStatus::External,
     };
 
     // Is this a named import of a file without any exports?
     let importee =
-      &self.normal_modules[importee_id].as_ecma().expect("external module is bailout above");
+      &self.normal_modules[importee_id].as_normal().expect("external module is bailout above");
     debug_assert!(matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::CommonJs));
     // TODO: Deal with https://github.com/evanw/esbuild/blob/109449e5b80886f7bc7fc7e0cee745a0221eef8d/internal/linker/linker.go#L3062-L3072
 
@@ -512,8 +513,8 @@ impl<'a> BindImportsAndExportsContext<'a> {
       let import_status = self.advance_import_tracker(ctx);
       tracing::trace!("Got import_status {:?}", import_status);
       let importer = &self.normal_modules[tracker.importer];
-      let named_import = &importer.as_ecma().unwrap().named_imports[&tracker.imported_as];
-      let importer_record = &importer.as_ecma().unwrap().import_records[named_import.record_id];
+      let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
+      let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_id];
 
       let kind = match import_status {
         ImportStatus::CommonJS => match &tracker.imported {
@@ -538,12 +539,12 @@ impl<'a> BindImportsAndExportsContext<'a> {
           for ambiguous_ref in &potentially_ambiguous_export_star_refs {
             let ambiguous_ref_owner = &normal_modules[ambiguous_ref.owner];
             if let Some(another_named_import) =
-              ambiguous_ref_owner.as_ecma().unwrap().named_imports.get(ambiguous_ref)
+              ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref)
             {
-              let rec = &ambiguous_ref_owner.as_ecma().unwrap().import_records
+              let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
                 [another_named_import.record_id];
               let ambiguous_result = match &self.normal_modules[rec.resolved_module] {
-                Module::Ecma(importee) => self.match_import_with_export(
+                Module::Normal(importee) => self.match_import_with_export(
                   normal_modules,
                   &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
                   ImportTracker {
@@ -566,13 +567,14 @@ impl<'a> BindImportsAndExportsContext<'a> {
           // If this is a re-export of another import, continue for another
           // iteration of the loop to resolve that import as well
           let owner = &normal_modules[symbol.owner];
-          if let Some(another_named_import) = owner.as_ecma().unwrap().named_imports.get(&symbol) {
-            let rec = &owner.as_ecma().unwrap().import_records[another_named_import.record_id];
+          if let Some(another_named_import) = owner.as_normal().unwrap().named_imports.get(&symbol)
+          {
+            let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_id];
             match &self.normal_modules[rec.resolved_module] {
               Module::External(_) => {
                 break MatchImportKind::Normal { symbol: another_named_import.imported_as };
               }
-              Module::Ecma(importee) => {
+              Module::Normal(importee) => {
                 tracker.importee = importee.idx;
                 tracker.importer = owner.idx();
                 tracker.imported = another_named_import.imported.clone();
@@ -615,7 +617,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
       }
     }
 
-    if let Module::Ecma(importee) = &self.normal_modules[tracker.importee] {
+    if let Module::Normal(importee) = &self.normal_modules[tracker.importee] {
       if (self.options.shim_missing_exports || matches!(importee.module_type, ModuleType::Empty))
         && matches!(ret, MatchImportKind::NoMatch)
       {

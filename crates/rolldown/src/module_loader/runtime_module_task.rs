@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaView, ExportsKind,
-  ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaView, ExportsKind, ModuleDefFormat, ModuleId,
+  ModuleIdx, ModuleType, NormalModule, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
@@ -26,7 +26,7 @@ pub struct RuntimeModuleTaskResult {
   pub ast_symbols: AstSymbols,
   pub ast: EcmaAst,
   // pub warnings: Vec<BuildError>,
-  pub module: EcmaModule,
+  pub module: NormalModule,
 }
 
 pub struct MakeEcmaAstResult {
@@ -75,7 +75,7 @@ impl RuntimeModuleTask {
       errors: _,
     } = scan_result;
 
-    let module = EcmaModule {
+    let module = NormalModule {
       idx: self.module_id,
       repr_name: "rolldown_runtime".to_string(),
       stable_id: RUNTIME_MODULE_ID.to_string(),

@@ -48,7 +48,7 @@ impl<'a> GenerateStage<'a> {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let Module::Ecma(module) = &self.link_output.module_table.modules[entry_point.id] else {
+      let Module::Normal(module) = &self.link_output.module_table.modules[entry_point.id] else {
         continue;
       };
       let chunk = chunk_graph.add_chunk(Chunk::new(
@@ -81,7 +81,8 @@ impl<'a> GenerateStage<'a> {
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+    {
       if !normal_module.is_included {
         continue;
       }
@@ -228,7 +229,7 @@ impl<'a> GenerateStage<'a> {
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
   ) {
-    let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
+    let Module::Normal(module) = &self.link_output.module_table.modules[module_id] else {
       return;
     };
     let meta = &self.link_output.metas[module_id];
@@ -330,7 +331,8 @@ impl<'a> GenerateStage<'a> {
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
     let mut name_to_module_group: FxHashMap<ArcStr, ModuleGroupIdx> = FxHashMap::default();
 
-    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+    {
       if !normal_module.is_included {
         continue;
       }

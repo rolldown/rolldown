@@ -17,7 +17,7 @@ pub fn deconflict_chunk_symbols(
     .modules
     .iter()
     .copied()
-    .filter_map(|id| link_output.module_table.modules[id].as_ecma())
+    .filter_map(|id| link_output.module_table.modules[id].as_normal())
     .flat_map(|m| m.scope.root_unresolved_references().keys().map(Cow::Borrowed))
     .for_each(|name| {
       // global names should be reserved
@@ -56,7 +56,7 @@ pub fn deconflict_chunk_symbols(
     .copied()
     // Starts with entry module
     .rev()
-    .filter_map(|id| link_output.module_table.modules[id].as_ecma())
+    .filter_map(|id| link_output.module_table.modules[id].as_normal())
     .for_each(|module| {
       module
         .stmt_infos

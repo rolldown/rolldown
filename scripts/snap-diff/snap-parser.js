@@ -1,17 +1,17 @@
-import { trimStart } from "lodash-es";
-import { snakeCase } from "change-case";
-import markdown from "markdown-it";
-import assert from "assert";
+import { trimStart } from 'lodash-es'
+import { snakeCase } from 'change-case'
+import markdown from 'markdown-it'
+import assert from 'node:assert'
 
 /**
  * @param {string} source
  *
  **/
 export function parseEsbuildSnap(source) {
-	let cases = source.split(
-		"================================================================================",
-	);
-	return cases.map(parseEsbuildCase);
+  let cases = source.split(
+    '================================================================================',
+  )
+  return cases.map(parseEsbuildCase)
 }
 
 /**
@@ -19,68 +19,38 @@ export function parseEsbuildSnap(source) {
  * @returns {{name: string, sourceList: {name: string, content: string}[]}}
  * */
 function parseEsbuildCase(source) {
-	let lines = source.trimStart().split("\n");
-	let [name, ...rest] = lines;
-	let normalizedName = snakeCase(trimStart(name, "Test"));
-	let content = rest.join("\n");
-	return { name: normalizedName, sourceList: parseContent(content) };
+  let lines = source.trimStart().split('\n')
+  let [name, ...rest] = lines
+  let normalizedName = snakeCase(trimStart(name, 'Test'))
+  let content = rest.join('\n')
+  return { name: normalizedName, sourceList: parseContent(content) }
 }
 
 /**
  * @param {string} content
  */
 function parseContent(content) {
-	// Define a regex pattern to match the filename and its content
-	const regex = /----------\s*(.+?)\s*----------\s*([\s\S]*?)(?=----------|$)/g;
+  // Define a regex pattern to match the filename and its content
+  const regex = /----------\s*(.+?)\s*----------\s*([\s\S]*?)(?=----------|$)/g
 
-	const result = [];
-	let match;
+  const result = []
+  let match
 
-	// Use regex to find all matches in the input
-	while ((match = regex.exec(content)) !== null) {
-		const filename = match[1].trim(); // Extract the filename
-		const content = match[2].trim(); // Extract the content
+  // Use regex to find all matches in the input
+  while ((match = regex.exec(content)) !== null) {
+    const filename = match[1].trim() // Extract the filename
+    const content = match[2].trim() // Extract the content
 
-		// Push an object with filename and content into the result array
-		result.push({
-			name: filename,
-			content: content,
-		});
-	}
+    // Push an object with filename and content into the result array
+    result.push({
+      name: filename,
+      content: content,
+    })
+  }
 
-	return result;
+  return result
 }
 
-const rolldownSnap = `
----
-source: crates/rolldown_testing/src/integration_test.rs
----
-# Assets
-
-## entry_js.mjs
-
-\`\`\`js
-import { default as assert } from "node:assert";
-
-//#region b.js
-let x = 1;
-
-//#endregion
-//#region entry.js
-assert.equal(x, 1);
-
-//#endregion
-//
-
-\`\`\`
-
-## test/tes/test/test/someentry.mjs
-\`\`\`js
-console.log('testj')
-
-
-\`\`\`
-`;
 /**
  * @param {string | undefined} source
  *
@@ -89,30 +59,30 @@ export function parseRolldownSnap(source) {
   if (!source) {
     return undefined
   }
-	let match;
-	// strip `---source---` block
-	while ((match = /---\n([\s\S]+?)\n---/.exec(source))) {
-		source = source.slice(match.index + match[0].length);
-	}
-	// default mode
-	const md = markdown();
-	let tokens = md.parse(source);
-	let i = 0;
-	let ret = [];
-	while (i < tokens.length) {
-		let token = tokens[i];
+  let match
+  // strip `---source---` block
+  while ((match = /---\n([\s\S]+?)\n---/.exec(source))) {
+    source = source.slice(match.index + match[0].length)
+  }
+  // default mode
+  const md = markdown()
+  let tokens = md.parse(source)
+  let i = 0
+  let ret = []
+  while (i < tokens.length) {
+    let token = tokens[i]
 
-		if (token.type === "heading_open" && token.tag === "h2") {
-			let headingToken = tokens[i + 1];
-			assert(headingToken.type === "inline");
-			let filename = headingToken.content;
-			let codeToken = tokens[i + 3];
-			assert(codeToken.tag === "code");
-			let content = codeToken.content;
-			ret.push({ filename, content });
-			i += 3;
-		}
-		i++;
-	}
-	return ret;
+    if (token.type === 'heading_open' && token.tag === 'h2') {
+      let headingToken = tokens[i + 1]
+      assert(headingToken.type === 'inline')
+      let filename = headingToken.content
+      let codeToken = tokens[i + 3]
+      assert(codeToken.tag === 'code')
+      let content = codeToken.content
+      ret.push({ filename, content })
+      i += 3
+    }
+    i++
+  }
+  return ret
 }

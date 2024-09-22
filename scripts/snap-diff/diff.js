@@ -5,9 +5,9 @@
  * @param {string} rolldownFilename
  */
 function defaultResolveFunction(esbuildFilename, rolldownFilename) {
-	if (esbuildFilename === "/out.js" && /entry_js\.*/.test(rolldownFilename)) {
-		return true;
-	}
+  if (esbuildFilename === '/out.js' && /entry_js\.*/.test(rolldownFilename)) {
+    return true
+  }
 }
 /**
  * TODO: custom resolve
@@ -16,29 +16,29 @@ function defaultResolveFunction(esbuildFilename, rolldownFilename) {
  * @returns {'missing' | Array<{name: string, diff: any}> | 'same'}
  */
 export function diffCase(esbuildSnap, rolldownSnap) {
-	if (!rolldownSnap) {
-		return "missing";
-	}
-	let diff = [];
-	for (let esbuildSource of esbuildSnap.sourceList) {
-		let matchedSource = rolldownSnap.find((rolldownSource) => {
-			if (defaultResolveFunction(esbuildSource.name, rolldownSource.filename)) {
-				return true;
-			}
-			return rolldownSnap.find((snap) => {
-				return snap.filename == esbuildSource.name;
-			});
-		}) ?? { content: "" };
-		if (matchedSource.content !== esbuildSource.content) {
-			diff.push({
+  if (!rolldownSnap) {
+    return 'missing'
+  }
+  let diff = []
+  for (let esbuildSource of esbuildSnap.sourceList) {
+    let matchedSource = rolldownSnap.find((rolldownSource) => {
+      if (defaultResolveFunction(esbuildSource.name, rolldownSource.filename)) {
+        return true
+      }
+      return rolldownSnap.find((snap) => {
+        return snap.filename == esbuildSource.name
+      })
+    }) ?? { content: '' }
+    if (matchedSource.content !== esbuildSource.content) {
+      diff.push({
         name: esbuildSource.name,
-				esbuild: esbuildSource.content,
-				rolldown: matchedSource.content,
-			});
-		}
-	}
+        esbuild: esbuildSource.content,
+        rolldown: matchedSource.content,
+      })
+    }
+  }
   if (diff.length === 0) {
-    return "same";
+    return 'same'
   }
   return diff
 }

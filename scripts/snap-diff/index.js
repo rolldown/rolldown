@@ -1,4 +1,4 @@
-import { run } from "./runner.js";
+import { run } from './runner.js'
 
-const includeList = ["snapshots_importstar.txt"];
-run(includeList);
+const includeList = ['snapshots_importstar.txt']
+run(includeList)

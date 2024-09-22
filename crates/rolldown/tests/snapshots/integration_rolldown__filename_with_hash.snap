@@ -2109,6 +2109,11 @@ expression: output
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
 - main.css
 
+# tests/rolldown/topics/css/css_entries
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
+- main.css
+
 # tests/rolldown/topics/deconflict/basic
 
 - main-!~{000}~.mjs => main-3RXPquuH.mjs

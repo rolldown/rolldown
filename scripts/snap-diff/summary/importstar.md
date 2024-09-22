@@ -1,397 +1,199 @@
 # Failed Cases
-
 ## export_other_as_namespace_common_js
-
-diff
-
+  diff
 ## export_other_common_js
-
-diff
-
+  diff
 ## export_other_nested_common_js
-
-diff
-
+  diff
 ## export_self_and_import_self_common_js
-
-missing
-
+  missing
 ## export_self_and_import_self_common_js
-
-diff
-
+  diff
 ## export_self_and_require_self_common_js
-
-missing
-
+  missing
 ## export_self_and_require_self_common_js
-
-diff
-
+  diff
 ## export_self_as_namespace_common_js
-
-diff
-
+  diff
 ## export_self_as_namespace_es6
-
-diff
-
+  diff
 ## export_self_common_js
-
-diff
-
+  diff
 ## export_self_common_js_minified
-
-missing
-
+  missing
 ## export_self_common_js_minified
-
-diff
-
+  diff
 ## export_self_es6
-
-diff
-
+  diff
 ## export_self_iife
-
-missing
-
+  missing
 ## export_self_iife
-
-diff
-
+  diff
 ## export_self_iife_with_name
-
-missing
-
+  missing
 ## export_self_iife_with_name
-
-diff
-
+  diff
 ## export_star_default_export_common_js
-
-missing
-
+  missing
 ## export_star_default_export_common_js
-
-diff
-
+  diff
 ## import_default_namespace_combo_issue446
-
-missing
-
+  missing
 ## import_default_namespace_combo_issue446
-
-diff
-
+  diff
 ## import_export_other_as_namespace_common_js
-
-diff
-
+  diff
 ## import_export_self_as_namespace_es6
-
-diff
-
+  diff
 ## import_export_star_ambiguous_warning
-
-diff
-
+  diff
 ## import_namespace_undefined_property_empty_file
-
-missing
-
+  missing
 ## import_namespace_undefined_property_empty_file
-
-diff
-
+  diff
 ## import_namespace_undefined_property_side_effect_free_file
-
-missing
-
+  missing
 ## import_namespace_undefined_property_side_effect_free_file
-
-diff
-
+  diff
 ## import_of_export_star
-
-diff
-
+  diff
 ## import_of_export_star_of_import
-
-diff
-
+  diff
 ## import_self_common_js
-
-diff
-
+  diff
 ## import_star_and_common_js
-
-diff
-
+  diff
 ## import_star_capture
-
-diff
-
+  diff
 ## import_star_common_js_capture
-
-diff
-
+  diff
 ## import_star_common_js_no_capture
-
-diff
-
+  diff
 ## import_star_common_js_unused
-
-diff
-
+  diff
 ## import_star_export_import_star_capture
-
-diff
-
+  diff
 ## import_star_export_import_star_no_capture
-
-diff
-
+  diff
 ## import_star_export_import_star_unused
-
-diff
-
+  diff
 ## import_star_export_star_as_capture
-
-diff
-
+  diff
 ## import_star_export_star_as_no_capture
-
-diff
-
+  diff
 ## import_star_export_star_as_unused
-
-diff
-
+  diff
 ## import_star_export_star_capture
-
-diff
-
+  diff
 ## import_star_export_star_no_capture
-
-diff
-
+  diff
 ## import_star_export_star_omit_ambiguous
-
-diff
-
+  diff
 ## import_star_export_star_unused
-
-diff
-
+  diff
 ## import_star_mangle_no_bundle_capture
-
-missing
-
+  missing
 ## import_star_mangle_no_bundle_capture
-
-diff
-
+  diff
 ## import_star_mangle_no_bundle_no_capture
-
-missing
-
+  missing
 ## import_star_mangle_no_bundle_no_capture
-
-diff
-
+  diff
 ## import_star_mangle_no_bundle_unused
-
-missing
-
+  missing
 ## import_star_mangle_no_bundle_unused
-
-diff
-
+  diff
 ## import_star_no_bundle_capture
-
-missing
-
+  missing
 ## import_star_no_bundle_capture
-
-diff
-
+  diff
 ## import_star_no_bundle_no_capture
-
-missing
-
+  missing
 ## import_star_no_bundle_no_capture
-
-diff
-
+  diff
 ## import_star_no_bundle_unused
-
-missing
-
+  missing
 ## import_star_no_bundle_unused
-
-diff
-
+  diff
 ## import_star_no_capture
-
-diff
-
+  diff
 ## import_star_of_export_star_as
-
-diff
-
+  diff
 ## import_star_unused
-
-diff
-
+  diff
 ## issue176
-
-diff
-
+  diff
 ## namespace_import_missing_common_js
-
-diff
-
+  diff
 ## namespace_import_missing_es6
-
-diff
-
+  diff
 ## namespace_import_re_export_star_missing_es6
-
-diff
-
+  diff
 ## namespace_import_re_export_star_unused_missing_es6
-
-diff
-
+  diff
 ## namespace_import_unused_missing_common_js
-
-diff
-
+  diff
 ## namespace_import_unused_missing_es6
-
-diff
-
+  diff
 ## other_file_export_self_as_namespace_unused_es6
-
-diff
-
+  diff
 ## other_file_import_export_self_as_namespace_unused_es6
-
-diff
-
+  diff
 ## re_export_namespace_import_missing_es6
-
-diff
-
+  diff
 ## re_export_namespace_import_unused_missing_es6
-
-diff
-
+  diff
 ## re_export_other_file_export_self_as_namespace_es6
-
-diff
-
+  diff
 ## re_export_other_file_import_export_self_as_namespace_es6
-
-diff
-
+  diff
 ## re_export_star_as_common_js_no_bundle
-
-missing
-
+  missing
 ## re_export_star_as_common_js_no_bundle
-
-diff
-
+  diff
 ## re_export_star_as_es6_no_bundle
-
-missing
-
+  missing
 ## re_export_star_as_es6_no_bundle
-
-diff
-
+  diff
 ## re_export_star_as_external_common_js
-
-diff
-
+  diff
 ## re_export_star_as_external_es6
-
-diff
-
+  diff
 ## re_export_star_as_external_iife
-
-missing
-
+  missing
 ## re_export_star_as_external_iife
-
-diff
-
+  diff
 ## re_export_star_as_iife_no_bundle
-
-missing
-
+  missing
 ## re_export_star_as_iife_no_bundle
-
-diff
-
+  diff
 ## re_export_star_common_js_no_bundle
-
-missing
-
+  missing
 ## re_export_star_common_js_no_bundle
-
-diff
-
+  diff
 ## re_export_star_entry_point_and_inner_file
-
-diff
-
+  diff
 ## re_export_star_es6_no_bundle
-
-missing
-
+  missing
 ## re_export_star_es6_no_bundle
-
-diff
-
+  diff
 ## re_export_star_external_common_js
-
-diff
-
+  diff
 ## re_export_star_external_es6
-
-diff
-
+  diff
 ## re_export_star_external_iife
-
-missing
-
+  missing
 ## re_export_star_external_iife
-
-diff
-
+  diff
 ## re_export_star_iife_no_bundle
-
-missing
-
+  missing
 ## re_export_star_iife_no_bundle
-
-diff
-
+  diff
 ## re_export_star_name_collision_not_ambiguous_export
-
-diff
-
+  diff
 ## re_export_star_name_collision_not_ambiguous_import
-
-diff
-
+  diff
 ## re_export_star_name_shadowing_not_ambiguous
-
-diff
-
+  diff
 ## re_export_star_name_shadowing_not_ambiguous_re_export
-
-diff
+  diff

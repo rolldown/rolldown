@@ -18,6 +18,7 @@
     "/temp",
     "/tmp",
     "/packages/rolldown/npm",
+    "scripts/snap-diff/**/*.{txt,md}",
     "packages/rolldown/src/binding.js",
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
@@ -185,6 +186,7 @@
     "Xiangjun",
     "Yinan",
     "Yunfei",
-    "lvalue"
+    "lvalue",
+    "snapFile"
   ]
 }

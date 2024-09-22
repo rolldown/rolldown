@@ -1,0 +1,3508 @@
+TestBase64ImportURLInCSS
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:image/png;base64,iVBORw0KGgo=);
+}
+
+================================================================================
+TestBinaryImportURLInCSS
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:application/octet-stream;base64,iVBORw0KGgo=);
+}
+
+================================================================================
+TestCSSAndJavaScriptCodeSplittingIssue1064
+---------- /out/a.js ----------
+import {
+  shared_default
+} from "./chunk-XTGNVFM6.js";
+
+// a.js
+console.log(shared_default() + 1);
+
+---------- /out/b.js ----------
+import {
+  shared_default
+} from "./chunk-XTGNVFM6.js";
+
+// b.js
+console.log(shared_default() + 2);
+
+---------- /out/chunk-XTGNVFM6.js ----------
+// shared.js
+function shared_default() {
+  return 3;
+}
+
+export {
+  shared_default
+};
+
+---------- /out/c.css ----------
+/* shared.css */
+body {
+  background: black;
+}
+
+/* c.css */
+body {
+  color: red;
+}
+
+---------- /out/d.css ----------
+/* shared.css */
+body {
+  background: black;
+}
+
+/* d.css */
+body {
+  color: blue;
+}
+
+================================================================================
+TestCSSAssetPathsWithSpacesBundle
+---------- /foo-AKINYSFH.copy ----------
+...
+---------- /foo-AKINYSFH.file ----------
+...
+---------- /foo 2-AKINYSFH.copy ----------
+...
+---------- /foo 2-AKINYSFH.file ----------
+...
+---------- /out.css ----------
+/* entry.css */
+a {
+  background: url("./foo-AKINYSFH.copy");
+  background: url("./foo-AKINYSFH.file");
+}
+/*! The URLs for "foo 2" files must have quotes in the final CSS */
+b {
+  background: url("./foo 2-AKINYSFH.copy");
+  background: url("./foo 2-AKINYSFH.file");
+}
+
+================================================================================
+TestCSSAtImport
+---------- /out.css ----------
+/* a.css */
+.a {
+  color: green;
+}
+
+/* shared.css */
+.shared {
+  color: black;
+}
+
+/* b.css */
+.b {
+  color: blue;
+}
+
+/* entry.css */
+.entry {
+  color: red;
+}
+
+================================================================================
+TestCSSAtImportConditionsAtLayerBundle
+---------- /out/case1.css ----------
+@layer first.one;
+
+/* case1-foo.css */
+@layer last.one {
+  body {
+    color: red;
+  }
+}
+
+/* case1-foo.css */
+@layer first.one {
+  body {
+    color: red;
+  }
+}
+
+/* case1.css */
+
+---------- /out/case2.css ----------
+@layer first.one;
+
+/* case2-bar.css */
+@layer last.one {
+  body {
+    color: green;
+  }
+}
+
+/* case2-foo.css */
+@layer first.one {
+  body {
+    color: red;
+  }
+}
+
+/* case2.css */
+
+---------- /out/case3.css ----------
+/* case3-bar.css */
+@layer only.one {
+  body {
+    color: green;
+  }
+}
+
+/* case3-foo.css */
+@layer {
+  body {
+    color: red;
+  }
+}
+
+/* case3.css */
+
+---------- /out/case4.css ----------
+@layer first {
+  @layer one, one.two, one.three.four;
+}
+
+/* case4-foo.css */
+@layer last {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case4-foo.css */
+@layer first {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case4.css */
+
+---------- /out/case5.css ----------
+/* case5-foo.css */
+@layer middle {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case5-foo.css */
+@layer {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case5.css */
+
+---------- /out/case6.css ----------
+@layer first;
+
+/* case6-foo.css */
+@layer last {
+  @layer {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case6-foo.css */
+@layer first {
+  @layer {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case6.css */
+
+================================================================================
+TestCSSAtImportConditionsAtLayerBundleAlternatingLayerInFile
+---------- /out/case1.css ----------
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case1.css */
+
+---------- /out/case2.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case2.css */
+
+---------- /out/case3.css ----------
+@layer first, last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case3.css */
+
+---------- /out/case4.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case4.css */
+
+---------- /out/case5.css ----------
+@layer first, last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case5.css */
+
+---------- /out/case6.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case6.css */
+
+================================================================================
+TestCSSAtImportConditionsAtLayerBundleAlternatingLayerOnImport
+---------- /out/case1.css ----------
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case1.css */
+
+---------- /out/case2.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case2.css */
+
+---------- /out/case3.css ----------
+@layer first;
+@layer last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case3.css */
+
+---------- /out/case4.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case4.css */
+
+---------- /out/case5.css ----------
+@layer first;
+@layer last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case5.css */
+
+---------- /out/case6.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case6.css */
+
+================================================================================
+TestCSSAtImportConditionsBundle
+---------- /out.css ----------
+@import "http://example.com/foo.css";
+@import "http://example.com/foo.css" layer;
+@import "http://example.com/foo.css" layer(layer-name);
+@import "http://example.com/foo.css" layer(layer-name) supports(supports-condition);
+@import "http://example.com/foo.css" layer(layer-name) list-of-media-queries;
+@import "http://example.com/foo.css" supports(supports-condition);
+@import "http://example.com/foo.css" list-of-media-queries;
+
+/* foo.css */
+body {
+  color: red;
+}
+
+/* foo.css */
+@layer {
+  body {
+    color: red;
+  }
+}
+
+/* foo.css */
+@layer layer-name {
+  body {
+    color: red;
+  }
+}
+
+/* foo.css */
+@supports (supports-condition) {
+  @layer layer-name {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* foo.css */
+@media list-of-media-queries {
+  @layer layer-name {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* foo.css */
+@supports (supports-condition) {
+  body {
+    color: red;
+  }
+}
+
+/* foo.css */
+@media list-of-media-queries {
+  body {
+    color: red;
+  }
+}
+
+/* empty-1.css */
+@layer empty-1;
+
+/* empty-2.css */
+
+/* empty-3.css */
+
+/* foo.css */
+@layer outer {
+  @layer inner {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-layer.css */
+@layer outer;
+
+/* foo.css */
+@supports (outer: true) {
+  @layer inner {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-layer.css */
+
+/* foo.css */
+@media (outer: true) {
+  @layer inner {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-layer.css */
+
+/* foo.css */
+@layer outer {
+  @supports (inner: true) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-supports.css */
+@layer outer;
+
+/* foo.css */
+@supports (outer: true) {
+  @supports (inner: true) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-supports.css */
+
+/* foo.css */
+@media (outer: true) {
+  @supports (inner: true) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-supports.css */
+
+/* foo.css */
+@layer outer {
+  @media (inner: true) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-media.css */
+@layer outer;
+
+/* foo.css */
+@supports (outer: true) {
+  @media (inner: true) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-media.css */
+
+/* foo.css */
+@media (outer: true) {
+  @media (inner: true) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* nested-media.css */
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportConditionsBundleExternal
+---------- /out.css ----------
+@import "https://example.com/print.css" print;
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportConditionsBundleExternalConditionWithURL
+---------- /out.css ----------
+@import "https://example.com/foo.css" (foo: url(foo.png)) and (bar: url(bar.png));
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportConditionsChainExternal
+---------- /out.css ----------
+@import "http://example.com/external1.css" layer(a) not print;
+@import 'data:text/css,@import "http://example.com/external3.css" layer(b) not tv;' layer(a) not print;
+@import "data:text/css,@import 'data:text/css,@import \"http://example.com/external4.css\" layer(b2);' layer(b) not tv;" layer(a) not print;
+@import 'data:text/css,@import "http://example.com/external2.css" layer(a2);' layer(a) not print;
+
+/* b.css */
+@media not print {
+  @layer a {
+    @media not tv {
+      @layer b;
+    }
+  }
+}
+
+/* a.css */
+@media not print {
+  @layer a;
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportConditionsFromExternalRepo
+---------- /out/001/default/style.css ----------
+/* 001/default/a.css */
+.box {
+  background-color: green;
+}
+
+/* 001/default/style.css */
+
+---------- /out/001/relative-url/style.css ----------
+/* 001/relative-url/a.css */
+.box {
+  background-color: green;
+}
+
+/* 001/relative-url/style.css */
+
+---------- /out/at-charset/001/style.css ----------
+@charset "UTF-8";
+
+/* at-charset/001/a.css */
+.box {
+  background-color: red;
+}
+
+/* at-charset/001/b.css */
+.box {
+  background-color: green;
+}
+
+/* at-charset/001/style.css */
+
+---------- /out/at-keyframes/001/style.css ----------
+/* at-keyframes/001/a.css */
+@media screen {
+  .box {
+    animation: BOX;
+    animation-duration: 0s;
+    animation-fill-mode: both;
+  }
+  @keyframes BOX {
+    0%, 100% {
+      background-color: green;
+    }
+  }
+}
+
+/* at-keyframes/001/b.css */
+@media print {
+  .box {
+    animation: BOX;
+    animation-duration: 0s;
+    animation-fill-mode: both;
+  }
+  @keyframes BOX {
+    0%, 100% {
+      background-color: red;
+    }
+  }
+}
+
+/* at-keyframes/001/style.css */
+
+---------- /out/at-layer/001/style.css ----------
+@layer a;
+
+/* at-layer/001/b.css */
+@layer b {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-layer/001/a.css */
+@layer a {
+  .box {
+    background-color: red;
+  }
+}
+
+/* at-layer/001/style.css */
+
+---------- /out/at-layer/002/style.css ----------
+@media print {
+  @layer a;
+}
+
+/* at-layer/002/b.css */
+@layer b {
+  .box {
+    background-color: red;
+  }
+}
+
+/* at-layer/002/a.css */
+@layer a {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-layer/002/style.css */
+
+---------- /out/at-layer/003/style.css ----------
+@layer a;
+
+/* at-layer/003/b.css */
+@layer b {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-layer/003/a.css */
+@layer a {
+  .box {
+    background-color: red;
+  }
+}
+
+/* at-layer/003/style.css */
+
+---------- /out/at-layer/004/style.css ----------
+/* at-layer/004/b.css */
+@layer {
+  .box {
+    background-color: red;
+  }
+}
+
+/* at-layer/004/a.css */
+@layer {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-layer/004/style.css */
+
+---------- /out/at-layer/005/style.css ----------
+/* at-layer/005/b.css */
+@media (min-width: 1px) {
+  @layer a {
+    @media (width: 1px) {
+      @layer b {
+        .box {
+          background-color: red;
+        }
+      }
+    }
+  }
+}
+
+/* at-layer/005/a.css */
+@media (min-width: 1px) {
+  @layer a;
+}
+
+/* at-layer/005/style.css */
+@layer a.c {
+  .box {
+    background-color: red;
+  }
+}
+@layer a.b {
+  .box {
+    background-color: green;
+  }
+}
+
+---------- /out/at-layer/006/style.css ----------
+/* at-layer/006/b.css */
+@media (min-width: 1px) {
+  @layer a {
+    @media (min-width: 1px) {
+      @layer b {
+        .box {
+          background-color: red;
+        }
+      }
+    }
+  }
+}
+
+/* at-layer/006/a.css */
+@media (min-width: 1px) {
+  @layer a;
+}
+
+/* at-layer/006/style.css */
+@layer a.c {
+  .box {
+    background-color: green;
+  }
+}
+@layer a.b {
+  .box {
+    background-color: red;
+  }
+}
+
+---------- /out/at-layer/007/style.css ----------
+/* at-layer/007/style.css */
+@layer foo {
+}
+@layer bar {
+}
+@layer bar {
+  .box {
+    background-color: green;
+  }
+}
+@layer foo {
+  .box {
+    background-color: red;
+  }
+}
+
+---------- /out/at-layer/008/style.css ----------
+/* at-layer/008/b.css */
+@layer {
+  @layer {
+    .box {
+      background-color: red;
+    }
+  }
+}
+
+/* at-layer/008/a.css */
+@layer {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-layer/008/style.css */
+
+---------- /out/at-media/001/default/style.css ----------
+/* at-media/001/default/a.css */
+@media screen {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-media/001/default/style.css */
+
+---------- /out/at-media/002/style.css ----------
+/* at-media/002/a.css */
+@media screen {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-media/002/b.css */
+@media print {
+  .box {
+    background-color: red;
+  }
+}
+
+/* at-media/002/style.css */
+
+---------- /out/at-media/003/style.css ----------
+/* at-media/003/b.css */
+@media screen {
+  @media (min-width: 1px) {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* at-media/003/a.css */
+
+/* at-media/003/style.css */
+
+---------- /out/at-media/004/style.css ----------
+/* at-media/004/c.css */
+.box {
+  background-color: green;
+}
+
+/* at-media/004/b.css */
+@media print {
+  @media print {
+    .box {
+      background-color: red;
+    }
+  }
+}
+
+/* at-media/004/a.css */
+
+/* at-media/004/style.css */
+
+---------- /out/at-media/005/style.css ----------
+/* at-media/005/c.css */
+.box {
+  background-color: green;
+}
+
+/* at-media/005/b.css */
+@media (max-width: 1px) {
+  @media (max-width: 1px) {
+    .box {
+      background-color: red;
+    }
+  }
+}
+
+/* at-media/005/a.css */
+
+/* at-media/005/style.css */
+
+---------- /out/at-media/006/style.css ----------
+/* at-media/006/b.css */
+@media (min-height: 1px) {
+  @media (min-width: 1px) {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* at-media/006/a.css */
+
+/* at-media/006/style.css */
+
+---------- /out/at-media/007/style.css ----------
+/* at-media/007/b.css */
+@media all {
+  @media screen {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* at-media/007/a.css */
+
+/* at-media/007/style.css */
+
+---------- /out/at-media/008/style.css ----------
+/* at-media/008/green.css */
+@media all {
+  @layer alpha {
+    @media print {
+      @layer alpha {
+        .box {
+          background-color: green;
+        }
+      }
+    }
+  }
+}
+
+/* at-media/008/a.css */
+@media all {
+  @layer alpha;
+}
+
+/* at-media/008/red.css */
+@media all {
+  @layer beta {
+    @media print {
+      @layer beta {
+        .box {
+          background-color: red;
+        }
+      }
+    }
+  }
+}
+
+/* at-media/008/b.css */
+@media all {
+  @layer beta;
+}
+
+/* at-media/008/style.css */
+@layer beta {
+  .box {
+    background-color: green;
+  }
+}
+@layer alpha {
+  .box {
+    background-color: red;
+  }
+}
+
+---------- /out/at-supports/001/style.css ----------
+/* at-supports/001/a.css */
+@supports (display: block) {
+  .box {
+    background-color: green;
+  }
+}
+
+/* at-supports/001/style.css */
+
+---------- /out/at-supports/002/style.css ----------
+/* at-supports/002/b.css */
+@supports (display: block) {
+  @supports (width: 10px) {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* at-supports/002/a.css */
+
+/* at-supports/002/style.css */
+
+---------- /out/at-supports/003/style.css ----------
+/* at-supports/003/b.css */
+@supports ((display: block) or (display: inline)) {
+  @supports (width: 10px) {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* at-supports/003/a.css */
+
+/* at-supports/003/style.css */
+
+---------- /out/at-supports/004/style.css ----------
+/* at-supports/004/b.css */
+@supports (display: block) {
+  @layer a {
+    @supports (width: 10px) {
+      @layer b {
+        .box {
+          background-color: green;
+        }
+      }
+    }
+  }
+}
+
+/* at-supports/004/a.css */
+@supports (display: block) {
+  @layer a;
+}
+
+/* at-supports/004/style.css */
+
+---------- /out/at-supports/005/style.css ----------
+/* at-supports/005/green.css */
+@supports (display: block) {
+  @layer alpha {
+    @supports (foo: bar) {
+      @layer alpha {
+        .box {
+          background-color: green;
+        }
+      }
+    }
+  }
+}
+
+/* at-supports/005/a.css */
+@supports (display: block) {
+  @layer alpha;
+}
+
+/* at-supports/005/red.css */
+@supports (display: block) {
+  @layer beta {
+    @supports (foo: bar) {
+      @layer beta {
+        .box {
+          background-color: red;
+        }
+      }
+    }
+  }
+}
+
+/* at-supports/005/b.css */
+@supports (display: block) {
+  @layer beta;
+}
+
+/* at-supports/005/style.css */
+@layer beta {
+  .box {
+    background-color: green;
+  }
+}
+@layer alpha {
+  .box {
+    background-color: red;
+  }
+}
+
+---------- /out/cycles/001/style.css ----------
+/* cycles/001/style.css */
+.box {
+  background-color: green;
+}
+
+---------- /out/cycles/002/style.css ----------
+/* cycles/002/red.css */
+.box {
+  background-color: red;
+}
+
+/* cycles/002/green.css */
+.box {
+  background-color: green;
+}
+
+/* cycles/002/b.css */
+
+/* cycles/002/a.css */
+
+/* cycles/002/style.css */
+
+---------- /out/cycles/003/style.css ----------
+/* cycles/003/b.css */
+.box {
+  background-color: red;
+}
+
+/* cycles/003/a.css */
+.box {
+  background-color: green;
+}
+
+/* cycles/003/style.css */
+
+---------- /out/cycles/004/style.css ----------
+/* cycles/004/a.css */
+.box {
+  background-color: red;
+}
+
+/* cycles/004/b.css */
+.box {
+  background-color: green;
+}
+
+/* cycles/004/style.css */
+
+---------- /out/cycles/005/style.css ----------
+/* cycles/005/b.css */
+.box {
+  background-color: red;
+}
+
+/* cycles/005/a.css */
+.box {
+  background-color: green;
+}
+
+/* cycles/005/style.css */
+
+---------- /out/cycles/006/style.css ----------
+/* cycles/006/red.css */
+.box {
+  background-color: red;
+}
+
+/* cycles/006/green.css */
+.box {
+  background-color: green;
+}
+
+/* cycles/006/b.css */
+
+/* cycles/006/a.css */
+
+/* cycles/006/c.css */
+
+/* cycles/006/style.css */
+
+---------- /out/cycles/007/style.css ----------
+/* cycles/007/green.css */
+.box {
+  background-color: green;
+}
+
+/* cycles/007/red.css */
+@media all {
+  .box {
+    background-color: red;
+  }
+}
+
+/* cycles/007/a.css */
+
+/* cycles/007/b.css */
+
+/* cycles/007/red.css */
+@media not print {
+  .box {
+    background-color: red;
+  }
+}
+
+/* cycles/007/green.css */
+@media not print {
+  @media screen {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* cycles/007/b.css */
+
+/* cycles/007/a.css */
+
+/* cycles/007/c.css */
+
+/* cycles/007/style.css */
+
+---------- /out/cycles/008/style.css ----------
+/* cycles/008/green.css */
+@layer {
+  .box {
+    background-color: green;
+  }
+}
+
+/* cycles/008/red.css */
+@layer {
+  .box {
+    background-color: red;
+  }
+}
+
+/* cycles/008/a.css */
+
+/* cycles/008/b.css */
+
+/* cycles/008/red.css */
+@layer {
+  @layer {
+    .box {
+      background-color: red;
+    }
+  }
+}
+
+/* cycles/008/green.css */
+@layer {
+  @layer {
+    .box {
+      background-color: green;
+    }
+  }
+}
+
+/* cycles/008/b.css */
+
+/* cycles/008/a.css */
+
+/* cycles/008/c.css */
+
+/* cycles/008/style.css */
+
+---------- /out/data-urls/002/style.css ----------
+/* <data:text/css;plain,.box%20%7B%0A%09background-color%3A%20green%...> */
+.box {
+  background-color: green;
+}
+
+/* data-urls/002/style.css */
+
+---------- /out/data-urls/003/style.css ----------
+/* <data:text/css,.box%20%7B%0A%09background-color%3A%20green%3B%0A%...> */
+.box {
+  background-color: green;
+}
+
+/* data-urls/003/style.css */
+
+---------- /out/duplicates/001/style.css ----------
+/* duplicates/001/b.css */
+.box {
+  background-color: red;
+}
+
+/* duplicates/001/a.css */
+.box {
+  background-color: green;
+}
+
+/* duplicates/001/style.css */
+
+---------- /out/duplicates/002/style.css ----------
+/* duplicates/002/b.css */
+.box {
+  background-color: red;
+}
+
+/* duplicates/002/a.css */
+.box {
+  background-color: green;
+}
+
+/* duplicates/002/style.css */
+
+---------- /out/empty/001/style.css ----------
+/* empty/001/empty.css */
+/* empty/001/style.css */
+.box {
+  background-color: green;
+}
+
+---------- /out/relative-paths/001/style.css ----------
+/* relative-paths/001/b/b.css */
+.box {
+  background-color: green;
+}
+
+/* relative-paths/001/a/a.css */
+
+/* relative-paths/001/style.css */
+
+---------- /out/relative-paths/002/style.css ----------
+/* relative-paths/002/b/b.css */
+.box {
+  background-color: green;
+}
+
+/* relative-paths/002/a/a.css */
+
+/* relative-paths/002/style.css */
+
+---------- /out/subresource/001/style.css ----------
+/* subresource/001/something/styles/green.css */
+.box {
+  background-image: url(data:image/png;base64,Li4u);
+}
+
+/* subresource/001/style.css */
+
+---------- /out/subresource/002/style.css ----------
+/* subresource/002/styles/green.css */
+.box {
+  background-image: url(data:image/png;base64,Li4u);
+}
+
+/* subresource/002/style.css */
+
+---------- /out/subresource/004/style.css ----------
+/* subresource/004/styles/green.css */
+.box {
+  background-image: url(data:image/png;base64,Li4u);
+}
+
+/* subresource/004/style.css */
+
+---------- /out/subresource/005/style.css ----------
+/* subresource/005/styles/green.css */
+.box {
+  background-image: url(data:image/png;base64,Li4u);
+}
+
+/* subresource/005/style.css */
+
+---------- /out/subresource/007/style.css ----------
+/* subresource/007/style.css */
+.box {
+  background-image: url(data:image/png;base64,Li4u);
+}
+
+---------- /out/url-format/001/default/style.css ----------
+/* url-format/001/default/a.css */
+.box {
+  background-color: green;
+}
+
+/* url-format/001/default/style.css */
+
+---------- /out/url-format/001/relative-url/style.css ----------
+/* url-format/001/relative-url/a.css */
+.box {
+  background-color: green;
+}
+
+/* url-format/001/relative-url/style.css */
+
+---------- /out/url-format/002/default/style.css ----------
+/* url-format/002/default/a.css */
+.box {
+  background-color: green;
+}
+
+/* url-format/002/default/style.css */
+
+---------- /out/url-format/002/relative-url/style.css ----------
+/* url-format/002/relative-url/a.css */
+.box {
+  background-color: green;
+}
+
+/* url-format/002/relative-url/style.css */
+
+---------- /out/url-format/003/default/style.css ----------
+/* url-format/003/default/a.css */
+.box {
+  background-color: green;
+}
+
+/* url-format/003/default/style.css */
+
+---------- /out/url-format/003/relative-url/style.css ----------
+/* url-format/003/relative-url/a.css */
+.box {
+  background-color: green;
+}
+
+/* url-format/003/relative-url/style.css */
+
+---------- /out/url-fragments/001/style.css ----------
+/* url-fragments/001/a.css#foo */
+.box {
+  background-color: green;
+}
+
+/* url-fragments/001/style.css */
+
+---------- /out/url-fragments/002/style.css ----------
+/* url-fragments/002/a.css#1 */
+.box {
+  background-color: green;
+}
+
+/* url-fragments/002/b.css#2 */
+.box {
+  background-color: red;
+}
+
+/* url-fragments/002/a.css#3 */
+.box {
+  background-color: green;
+}
+
+/* url-fragments/002/style.css */
+
+================================================================================
+TestCSSAtImportConditionsNoBundle
+---------- /out.css ----------
+@import "./print.css" print;
+
+================================================================================
+TestCSSAtImportConditionsWithImportRecordsBundle
+---------- /out.css ----------
+/* foo.css */
+@supports (background: url(a.png)) {
+  body {
+    color: red;
+  }
+}
+
+/* foo.css */
+@media list-of-media-queries {
+  @supports (background: url(b.png)) {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* foo.css */
+@supports (background: url(a.png)) {
+  @layer layer-name {
+    body {
+      color: red;
+    }
+  }
+}
+
+/* foo.css */
+@media list-of-media-queries {
+  @supports (background: url(b.png)) {
+    @layer layer-name {
+      body {
+        color: red;
+      }
+    }
+  }
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportExtensionOrderCollision
+---------- /out.css ----------
+/* test.css */
+.css {
+  color: red;
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportExternal
+---------- /out/entry.css ----------
+@charset "UTF-8";
+@import "../external1.css";
+@import "../external2.css";
+@import "../external4.css";
+@import "../external5.css";
+@import "https://www.example.com/style2.css";
+@import "../external3.css";
+@import "https://www.example.com/style1.css";
+@import "https://www.example.com/style3.css";
+@import "../external5.css" screen;
+
+/* internal.css */
+.before {
+  color: red;
+}
+
+/* charset1.css */
+.middle {
+  color: green;
+}
+
+/* charset2.css */
+.after {
+  color: blue;
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSAtLayerBeforeImportBundle
+---------- /out/entry.css ----------
+@layer layer1, layer2.layer3;
+
+/* a.css */
+@layer layer4 {
+  a {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer layer5 {
+  b {
+    color: red;
+  }
+}
+
+/* entry.css */
+@layer layer6.layer7, layer8;
+
+================================================================================
+TestCSSAtLayerBeforeImportNoBundle
+---------- /out/entry.css ----------
+@layer layer1, layer2.layer3;
+@import "a.css";
+@import "b.css";
+@layer layer6.layer7, layer8;
+
+================================================================================
+TestCSSAtLayerMergingWithImportConditions
+---------- /out/entry.css ----------
+@supports (color: first) {
+  @layer a;
+}
+@import "http://example.com/a.css" supports(color: first);
+@import "http://example.com/a.css" supports(color: second);
+@import "http://example.com/b.css" supports(color: second);
+@import "http://example.com/b.css" supports(color: first);
+@supports (color: second) {
+  @layer a, b;
+}
+
+/* a.css */
+@supports (color: first) {
+  @layer b;
+}
+
+/* a.css */
+
+/* b.css */
+
+/* b.css */
+
+/* entry.css */
+
+================================================================================
+TestCSSCaseInsensitivity
+---------- /image-AKINYSFH.png ----------
+...
+---------- /out.css ----------
+/* nested.css */
+@media list-of-media-queries {
+  @supports (supports-condition) {
+    @layer layer-name {
+      @KeyFrames Foo {
+        0% {
+          OPAcity: 0;
+        }
+        tO {
+          opaCITY: 1;
+        }
+      }
+      body {
+        BACKGROUND-color: red;
+        width: 50Px;
+        background-IMAGE: url("./image-AKINYSFH.png");
+      }
+    }
+  }
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSEntryPoint
+---------- /out.css ----------
+/* entry.css */
+body {
+  background: white;
+  color: black;
+}
+
+================================================================================
+TestCSSExternalQueryAndHashMatchIssue1822
+---------- /out.css ----------
+/* entry.css */
+a {
+  background: url(foo/bar.png?baz);
+}
+b {
+  background: url(foo/bar.png#baz);
+}
+
+================================================================================
+TestCSSFromJSMissingStarImport
+---------- /out/entry.js ----------
+// entry.js
+console.log(void 0);
+
+---------- /out/entry.css ----------
+/* a.css */
+.a {
+  color: red;
+}
+
+================================================================================
+TestCSSMalformedAtImport
+---------- /out/entry.css ----------
+@import "https://example.com/url-token-eof.css";
+@import "https://example.com/url-token-whitespace-eof.css";
+@import "https://example.com/function-token-eof.css";
+@import "https://example.com/function-token-whitespace-eof.css";
+
+/* url-token-eof.css */
+
+/* url-token-whitespace-eof.css */
+
+/* function-token-eof.css */
+
+/* function-token-whitespace-eof.css */
+
+/* entry.css */
+
+================================================================================
+TestCSSNestingOldBrowser
+---------- /out/two-type-selectors.css ----------
+/* two-type-selectors.css */
+.c a:is(b) {
+  color: red;
+}
+
+---------- /out/two-parent-selectors.css ----------
+/* two-parent-selectors.css */
+.c :is(a b) {
+  color: red;
+}
+
+---------- /out/only-one-warning.css ----------
+/* only-one-warning.css */
+.a > .a,
+.a > :is(.b .c),
+.a > .d,
+.b .c > .a,
+.b .c > :is(.b .c),
+.b .c > .d,
+.d > .a,
+.d > :is(.b .c),
+.d > .d {
+  color: red;
+}
+
+---------- /out/nested-@layer.css ----------
+/* nested-@layer.css */
+@layer base {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/nested-@media.css ----------
+/* nested-@media.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/nested-ampersand-twice.css ----------
+/* nested-ampersand-twice.css */
+a,
+a {
+  color: red;
+}
+
+---------- /out/nested-ampersand-first.css ----------
+/* nested-ampersand-first.css */
+a,
+a b {
+  color: red;
+}
+
+---------- /out/nested-attribute.css ----------
+/* nested-attribute.css */
+a [href] {
+  color: red;
+}
+
+---------- /out/nested-colon.css ----------
+/* nested-colon.css */
+a :hover {
+  color: red;
+}
+
+---------- /out/nested-dot.css ----------
+/* nested-dot.css */
+a .cls {
+  color: red;
+}
+
+---------- /out/nested-greaterthan.css ----------
+/* nested-greaterthan.css */
+a > b {
+  color: red;
+}
+
+---------- /out/nested-hash.css ----------
+/* nested-hash.css */
+a #id {
+  color: red;
+}
+
+---------- /out/nested-plus.css ----------
+/* nested-plus.css */
+a + b {
+  color: red;
+}
+
+---------- /out/nested-tilde.css ----------
+/* nested-tilde.css */
+a ~ b {
+  color: red;
+}
+
+---------- /out/toplevel-ampersand-twice.css ----------
+/* toplevel-ampersand-twice.css */
+:scope,
+:scope {
+  color: red;
+}
+
+---------- /out/toplevel-ampersand-first.css ----------
+/* toplevel-ampersand-first.css */
+:scope,
+a {
+  color: red;
+}
+
+---------- /out/toplevel-ampersand-second.css ----------
+/* toplevel-ampersand-second.css */
+a,
+:scope {
+  color: red;
+}
+
+---------- /out/toplevel-attribute.css ----------
+/* toplevel-attribute.css */
+[href] {
+  color: red;
+}
+
+---------- /out/toplevel-colon.css ----------
+/* toplevel-colon.css */
+:hover {
+  color: red;
+}
+
+---------- /out/toplevel-dot.css ----------
+/* toplevel-dot.css */
+.cls {
+  color: red;
+}
+
+---------- /out/toplevel-greaterthan.css ----------
+/* toplevel-greaterthan.css */
+> b {
+  color: red;
+}
+
+---------- /out/toplevel-hash.css ----------
+/* toplevel-hash.css */
+#id {
+  color: red;
+}
+
+---------- /out/toplevel-plus.css ----------
+/* toplevel-plus.css */
++ b {
+  color: red;
+}
+
+---------- /out/toplevel-tilde.css ----------
+/* toplevel-tilde.css */
+~ b {
+  color: red;
+}
+
+---------- /out/media-ampersand-twice.css ----------
+/* media-ampersand-twice.css */
+@media screen {
+  :scope,
+  :scope {
+    color: red;
+  }
+}
+
+---------- /out/media-ampersand-first.css ----------
+/* media-ampersand-first.css */
+@media screen {
+  :scope,
+  a {
+    color: red;
+  }
+}
+
+---------- /out/media-ampersand-second.css ----------
+/* media-ampersand-second.css */
+@media screen {
+  a,
+  :scope {
+    color: red;
+  }
+}
+
+---------- /out/media-attribute.css ----------
+/* media-attribute.css */
+@media screen {
+  [href] {
+    color: red;
+  }
+}
+
+---------- /out/media-colon.css ----------
+/* media-colon.css */
+@media screen {
+  :hover {
+    color: red;
+  }
+}
+
+---------- /out/media-dot.css ----------
+/* media-dot.css */
+@media screen {
+  .cls {
+    color: red;
+  }
+}
+
+---------- /out/media-greaterthan.css ----------
+/* media-greaterthan.css */
+@media screen {
+  > b {
+    color: red;
+  }
+}
+
+---------- /out/media-hash.css ----------
+/* media-hash.css */
+@media screen {
+  #id {
+    color: red;
+  }
+}
+
+---------- /out/media-plus.css ----------
+/* media-plus.css */
+@media screen {
+  + b {
+    color: red;
+  }
+}
+
+---------- /out/media-tilde.css ----------
+/* media-tilde.css */
+@media screen {
+  ~ b {
+    color: red;
+  }
+}
+
+---------- /out/page-no-warning.css ----------
+/* page-no-warning.css */
+@page {
+  @top-left {
+    background: red;
+  }
+}
+
+================================================================================
+TestDataURLImportURLInCSS
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:image/png;base64,iVBORw0KGgo=);
+}
+
+================================================================================
+TestDeduplicateRules
+---------- /out/yes0.css ----------
+/* yes0.css */
+a {
+  color: green;
+  color: red;
+}
+
+---------- /out/yes1.css ----------
+/* yes1.css */
+a {
+  color: green;
+}
+a {
+  color: red;
+}
+
+---------- /out/yes2.css ----------
+/* yes2.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/yes3.css ----------
+/* yes3.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/no0.css ----------
+/* no0.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  b a& {
+    color: red;
+  }
+}
+
+---------- /out/no1.css ----------
+/* no1.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a[x] {
+    color: red;
+  }
+}
+
+---------- /out/no2.css ----------
+/* no2.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a.x {
+    color: red;
+  }
+}
+
+---------- /out/no3.css ----------
+/* no3.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a#x {
+    color: red;
+  }
+}
+
+---------- /out/no4.css ----------
+/* no4.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a:x {
+    color: red;
+  }
+}
+
+---------- /out/no5.css ----------
+/* no5.css */
+@media screen {
+  a:x {
+    color: red;
+  }
+}
+@media screen {
+  a:x(y) {
+    color: red;
+  }
+}
+
+---------- /out/no6.css ----------
+/* no6.css */
+@media screen {
+  a b {
+    color: red;
+  }
+}
+@media screen {
+  a + b {
+    color: red;
+  }
+}
+
+---------- /out/across-files.css ----------
+/* across-files-0.css */
+/* across-files-1.css */
+a {
+  color: green;
+}
+
+/* across-files-2.css */
+a {
+  color: red;
+}
+
+/* across-files.css */
+
+---------- /out/across-files-url.css ----------
+@import "http://example.com/some.css";
+
+/* across-files-url-0.css */
+
+/* across-files-url-1.css */
+@font-face {
+  src: url(http://example.com/some.other.font);
+}
+
+/* across-files-url-2.css */
+@font-face {
+  src: url(http://example.com/some.font);
+}
+
+/* across-files-url.css */
+
+================================================================================
+TestDeduplicateRulesGlobalVsLocalNames
+---------- /out/entry.css ----------
+/* a.css */
+b {
+  color: green;
+}
+.bar {
+  color: green;
+}
+.a_foo {
+  color: red;
+}
+.a_bar {
+  color: green;
+}
+div {
+  animation-name: a_anim_local;
+}
+
+/* b.css */
+a {
+  color: red;
+}
+b {
+  color: #00f;
+}
+.foo {
+  color: red;
+}
+.bar {
+  color: #00f;
+}
+.b_foo {
+  color: red;
+}
+.b_bar {
+  color: #00f;
+}
+div {
+  animation-name: anim_global;
+}
+div {
+  animation-name: b_anim_local;
+}
+
+/* entry.css */
+
+================================================================================
+TestExternalImportURLInCSS
+---------- /out/entry.css ----------
+/* src/entry.css */
+div:after {
+  content: 'If this is recognized, the path should become "../src/external.png"';
+  background: url(../src/external.png);
+}
+a {
+  background: url(http://example.com/images/image.png);
+}
+b {
+  background: url(https://example.com/images/image.png);
+}
+c {
+  background: url(//example.com/images/image.png);
+}
+d {
+  background: url(data:image/png;base64,iVBORw0KGgo=);
+}
+path {
+  fill: url(#filter);
+}
+
+================================================================================
+TestFileImportURLInCSS
+---------- /out/example-GDKWWYFY.data ----------
+This is some data.
+---------- /out/entry.css ----------
+/* one.css */
+a {
+  background: url("./example-GDKWWYFY.data");
+}
+
+/* two.css */
+b {
+  background: url("./example-GDKWWYFY.data");
+}
+
+/* entry.css */
+
+================================================================================
+TestIgnoreURLsInAtRulePrelude
+---------- /out/entry.css ----------
+/* entry.css */
+@supports (background: url(ignored.png)) {
+  a {
+    color: red;
+  }
+}
+
+================================================================================
+TestImportCSSFromJSComposes
+---------- /out/entry.js ----------
+// styles.module.css
+var styles_default = {
+  local0: "GLOBAL1 GLOBAL2 styles_local4 styles_local3 styles_local1 GLOBAL3 styles_local2 GLOBAL4 styles_local0",
+  local1: "styles_local4 styles_local3 styles_local1",
+  local2: "styles_local2",
+  local3: "styles_local4 styles_local3",
+  local4: "styles_local4",
+  fromOtherFile: "base_base1 base_base2 other1_local0 base_base3 other2_local0 styles_fromOtherFile"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* global.css */
+.GLOBAL1 {
+  color: black;
+}
+
+/* other1.module.css */
+.other1_local0 {
+  color: blue;
+}
+
+/* base.module.css */
+.base_base1 {
+  cursor: pointer;
+}
+.base_base2 {
+  display: inline;
+}
+.base_base3 {
+  float: left;
+}
+
+/* other2.module.css */
+.other2_local0 {
+  background: purple;
+}
+
+/* styles.module.css */
+.styles_local0 {
+}
+.styles_local0 {
+  background: green;
+}
+.styles_local0 {
+}
+.styles_local3 {
+  border: 1px solid black;
+}
+.styles_local4 {
+  opacity: 0.5;
+}
+.styles_local1 {
+  color: red;
+}
+.styles_fromOtherFile {
+}
+
+================================================================================
+TestImportCSSFromJSComposesCircular
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  foo: "styles_bar styles_foo",
+  bar: "styles_foo styles_bar",
+  baz: "styles_baz"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+.styles_foo {
+}
+.styles_bar {
+}
+.styles_baz {
+}
+
+================================================================================
+TestImportCSSFromJSComposesFromCircular
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  foo: "other_bar styles_foo",
+  bar: "styles_bar"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* other.css */
+.other_bar {
+}
+
+/* styles.css */
+.styles_foo {
+}
+.styles_bar {
+}
+
+================================================================================
+TestImportCSSFromJSComposesFromUndefined
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* well-defined.css */
+.well_defined_z1 {
+  zoom: 1;
+}
+.well_defined_z2 {
+  zoom: 2;
+}
+.well_defined_z4 {
+  zoom: 4;
+}
+.well_defined_z3 {
+  zoom: 3;
+}
+.well_defined_z5 {
+}
+
+/* undefined/case1.css */
+.case1_foo {
+  zoom: 2;
+}
+
+/* undefined/case2.css */
+.case2_foo {
+}
+
+/* undefined/case3.css */
+.case3_foo {
+}
+.case3_nested1 {
+  zoom: 3;
+}
+.case3_nested2 {
+}
+
+/* undefined/case4.css */
+.case4_foo {
+}
+.case4_nested1 {
+}
+.case4_nested2 {
+  zoom: 3;
+}
+
+/* file-1.css */
+.file_1_foo {
+  zoom: 1;
+}
+.file_1_bar {
+  zoom: 2;
+}
+
+/* file-2.css */
+.file_2_foo {
+  zoom: 2;
+}
+
+/* undefined/case5.css */
+.case5_foo {
+}
+.case5_nested1 {
+}
+.case5_nested2 {
+}
+
+/* styles.css */
+
+================================================================================
+TestImportCSSFromJSLocalAtContainer
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  local: "styles_local",
+  local1: "styles_local1",
+  local2: "styles_local2"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+@container not (max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local (max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local not (max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local (max-width: 100px) or (min-height: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local (max-width: 100px) and (min-height: 100px) {
+  div {
+    color: red;
+  }
+}
+@container general_enclosed(max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local general_enclosed(max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+div {
+  container-name: NONE initial;
+}
+div {
+  container-name: none INITIAL;
+}
+div {
+  container-name: GLOBAL1 GLOBAL2;
+}
+div {
+  container-name: styles_local1 styles_local2;
+}
+div {
+  container: none;
+}
+div {
+  container: NONE;
+}
+div {
+  container: NONE / size;
+}
+div {
+  container: none / size;
+}
+div {
+  container: GLOBAL1 GLOBAL2;
+}
+div {
+  container: styles_local1 styles_local2;
+}
+div {
+  container: GLOBAL1 GLOBAL2 / size;
+}
+div {
+  container: styles_local1 styles_local2 / size;
+}
+
+================================================================================
+TestImportCSSFromJSLocalAtCounterStyle
+---------- /out/entry.js ----------
+// list_style_type.css
+var list_style_type_default = {
+  local: "list_style_type_local"
+};
+
+// list_style.css
+var list_style_default = {
+  local: "list_style_local",
+  inside: "list_style_inside",
+  outside: "list_style_outside"
+};
+
+// entry.js
+console.log(list_style_type_default, list_style_default);
+
+---------- /out/entry.css ----------
+/* list_style_type.css */
+@counter-style list_style_type_local {
+  symbols: A B C;
+}
+div {
+  list-style-type: GLOBAL;
+}
+div {
+  list-style-type: list_style_type_local;
+}
+div {
+  list-style-type: none;
+}
+div {
+  list-style-type: INITIAL;
+}
+div {
+  list-style-type: decimal;
+}
+div {
+  list-style-type: disc;
+}
+div {
+  list-style-type: SQUARE;
+}
+div {
+  list-style-type: circle;
+}
+div {
+  list-style-type: disclosure-OPEN;
+}
+div {
+  list-style-type: DISCLOSURE-closed;
+}
+div {
+  list-style-type: LAO;
+}
+div {
+  list-style-type: "👍";
+}
+
+/* list_style.css */
+@counter-style list_style_local {
+  symbols: A B C;
+}
+div {
+  list-style: GLOBAL;
+}
+div {
+  list-style: list_style_local;
+}
+div {
+  list-style: list_style_local none;
+}
+div {
+  list-style: list_style_local url(http://);
+}
+div {
+  list-style: list_style_local linear-gradient(red, green);
+}
+div {
+  list-style: list_style_local inside;
+}
+div {
+  list-style: list_style_local outside;
+}
+div {
+  list-style: none list_style_local;
+}
+div {
+  list-style: url(http://) list_style_local;
+}
+div {
+  list-style: linear-gradient(red, green) list_style_local;
+}
+div {
+  list-style: list_style_local inside;
+}
+div {
+  list-style: list_style_local outside;
+}
+div {
+  list-style: inside list_style_inside;
+}
+div {
+  list-style: inside list_style_outside;
+}
+div {
+  list-style: outside list_style_inside;
+}
+div {
+  list-style: outside list_style_outside;
+}
+div {
+  list-style: url(http://) none invalid;
+}
+div {
+  list-style: linear-gradient(red, green) none invalid;
+}
+div {
+  list-style: INITIAL;
+}
+div {
+  list-style: decimal;
+}
+div {
+  list-style: disc;
+}
+div {
+  list-style: SQUARE;
+}
+div {
+  list-style: circle;
+}
+div {
+  list-style: disclosure-OPEN;
+}
+div {
+  list-style: DISCLOSURE-closed;
+}
+div {
+  list-style: LAO;
+}
+
+================================================================================
+TestImportCSSFromJSLocalAtKeyframes
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  local_name: "styles_local_name",
+  local_name1: "styles_local_name1",
+  local_name2: "styles_local_name2",
+  none: "styles_none"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+@keyframes styles_local_name {
+  to {
+    color: red;
+  }
+}
+div {
+  animation-name: none;
+}
+div {
+  animation-name: none;
+}
+div {
+  animation-name: global_name;
+}
+div {
+  animation-name: styles_local_name;
+}
+div {
+  animation-name:
+    global_name1,
+    none,
+    global_name2,
+    Inherit,
+    INITIAL,
+    revert,
+    revert-layer,
+    unset;
+}
+div {
+  animation-name:
+    styles_local_name1,
+    none,
+    styles_local_name2,
+    Inherit,
+    INITIAL,
+    revert,
+    revert-layer,
+    unset;
+}
+div {
+  animation: 2s infinite global_name;
+}
+div {
+  animation: 2s infinite styles_local_name;
+}
+@keyframes styles_none {
+  to {
+    color: red;
+  }
+}
+div {
+  animation-name: "none";
+}
+div {
+  animation-name: styles_none;
+}
+
+================================================================================
+TestImportCSSFromJSLocalVsGlobal
+---------- /out/entry.js ----------
+// normal.css
+var normal_default = {};
+
+// LOCAL.global-css
+var LOCAL_default = {
+  local: "LOCAL_local",
+  local_a: "LOCAL_local_a",
+  local_b: "LOCAL_local_b",
+  local_c: "LOCAL_local_c"
+};
+
+// LOCAL.local-css
+var LOCAL_default2 = {
+  top_level: "LOCAL_top_level",
+  local: "LOCAL_local2",
+  local_a: "LOCAL_local_a2",
+  local_b: "LOCAL_local_b2",
+  local_c: "LOCAL_local_c2",
+  nested: "LOCAL_nested"
+};
+
+// entry.js
+console.log("should be empty:", normal_default);
+console.log("fewer local names:", LOCAL_default);
+console.log("more local names:", LOCAL_default2);
+
+---------- /out/entry.css ----------
+/* normal.css */
+.top_level {
+  color: #000;
+}
+:global(.GLOBAL) {
+  color: #001;
+}
+:local(.local) {
+  color: #002;
+}
+div:global(.GLOBAL) {
+  color: #003;
+}
+div:local(.local) {
+  color: #004;
+}
+.top_level:global(div) {
+  color: #005;
+}
+.top_level:local(div) {
+  color: #006;
+}
+:global(div.GLOBAL) {
+  color: #007;
+}
+:local(div.local) {
+  color: #008;
+}
+div:global(span.GLOBAL) {
+  color: #009;
+}
+div:local(span.local) {
+  color: #00A;
+}
+div:global(#GLOBAL_A.GLOBAL_B.GLOBAL_C):local(.local_a.local_b#local_c) {
+  color: #00B;
+}
+div:global(#GLOBAL_A .GLOBAL_B .GLOBAL_C):local(.local_a .local_b #local_c) {
+  color: #00C;
+}
+.nested {
+  :global(&.GLOBAL) {
+    color: #00D;
+  }
+  :local(&.local) {
+    color: #00E;
+  }
+  &:global(.GLOBAL) {
+    color: #00F;
+  }
+  &:local(.local) {
+    color: #010;
+  }
+}
+:global(.GLOBAL_A .GLOBAL_B) {
+  color: #011;
+}
+:local(.local_a .local_b) {
+  color: #012;
+}
+div:global(.GLOBAL_A .GLOBAL_B):hover {
+  color: #013;
+}
+div:local(.local_a .local_b):hover {
+  color: #014;
+}
+div :global(.GLOBAL_A .GLOBAL_B) span {
+  color: #015;
+}
+div :local(.local_a .local_b) span {
+  color: #016;
+}
+div > :global(.GLOBAL_A ~ .GLOBAL_B) + span {
+  color: #017;
+}
+div > :local(.local_a ~ .local_b) + span {
+  color: #018;
+}
+div:global(+ .GLOBAL_A):hover {
+  color: #019;
+}
+div:local(+ .local_a):hover {
+  color: #01A;
+}
+:global.GLOBAL:local.local {
+  color: #01B;
+}
+:global .GLOBAL :local .local {
+  color: #01C;
+}
+:global {
+  .GLOBAL {
+    before: outer;
+    :local {
+      before: inner;
+      .local {
+        color: #01D;
+      }
+      after: inner;
+    }
+    after: outer;
+  }
+}
+
+/* LOCAL.global-css */
+.top_level {
+  color: #000;
+}
+.GLOBAL {
+  color: #001;
+}
+.LOCAL_local {
+  color: #002;
+}
+div.GLOBAL {
+  color: #003;
+}
+div.LOCAL_local {
+  color: #004;
+}
+div.top_level {
+  color: #005;
+}
+div.top_level {
+  color: #006;
+}
+div.GLOBAL {
+  color: #007;
+}
+div.LOCAL_local {
+  color: #008;
+}
+div:is(span).GLOBAL {
+  color: #009;
+}
+div:is(span).LOCAL_local {
+  color: #00A;
+}
+div#GLOBAL_A.GLOBAL_B.GLOBAL_C.LOCAL_local_a.LOCAL_local_b#LOCAL_local_c {
+  color: #00B;
+}
+div#GLOBAL_A .GLOBAL_B .GLOBAL_C.LOCAL_local_a .LOCAL_local_b #LOCAL_local_c {
+  color: #00C;
+}
+.nested {
+  &.GLOBAL {
+    color: #00D;
+  }
+  &.LOCAL_local {
+    color: #00E;
+  }
+  &.GLOBAL {
+    color: #00F;
+  }
+  &.LOCAL_local {
+    color: #010;
+  }
+}
+.GLOBAL_A .GLOBAL_B {
+  color: #011;
+}
+.LOCAL_local_a .LOCAL_local_b {
+  color: #012;
+}
+div.GLOBAL_A .GLOBAL_B:hover {
+  color: #013;
+}
+div.LOCAL_local_a .LOCAL_local_b:hover {
+  color: #014;
+}
+div .GLOBAL_A .GLOBAL_B span {
+  color: #015;
+}
+div .LOCAL_local_a .LOCAL_local_b span {
+  color: #016;
+}
+div > .GLOBAL_A ~ .GLOBAL_B + span {
+  color: #017;
+}
+div > .LOCAL_local_a ~ .LOCAL_local_b + span {
+  color: #018;
+}
+div + .GLOBAL_A:hover {
+  color: #019;
+}
+div + .LOCAL_local_a:hover {
+  color: #01A;
+}
+.GLOBAL.LOCAL_local {
+  color: #01B;
+}
+.GLOBAL .LOCAL_local {
+  color: #01C;
+}
+& {
+  .GLOBAL {
+    before: outer;
+    before: inner;
+    .LOCAL_local {
+      color: #01D;
+    }
+    after: inner;
+    after: outer;
+  }
+}
+
+/* LOCAL.local-css */
+.LOCAL_top_level {
+  color: #000;
+}
+.GLOBAL {
+  color: #001;
+}
+.LOCAL_local2 {
+  color: #002;
+}
+div.GLOBAL {
+  color: #003;
+}
+div.LOCAL_local2 {
+  color: #004;
+}
+div.LOCAL_top_level {
+  color: #005;
+}
+div.LOCAL_top_level {
+  color: #006;
+}
+div.GLOBAL {
+  color: #007;
+}
+div.LOCAL_local2 {
+  color: #008;
+}
+div:is(span).GLOBAL {
+  color: #009;
+}
+div:is(span).LOCAL_local2 {
+  color: #00A;
+}
+div#GLOBAL_A.GLOBAL_B.GLOBAL_C.LOCAL_local_a2.LOCAL_local_b2#LOCAL_local_c2 {
+  color: #00B;
+}
+div#GLOBAL_A .GLOBAL_B .GLOBAL_C.LOCAL_local_a2 .LOCAL_local_b2 #LOCAL_local_c2 {
+  color: #00C;
+}
+.LOCAL_nested {
+  &.GLOBAL {
+    color: #00D;
+  }
+  &.LOCAL_local2 {
+    color: #00E;
+  }
+  &.GLOBAL {
+    color: #00F;
+  }
+  &.LOCAL_local2 {
+    color: #010;
+  }
+}
+.GLOBAL_A .GLOBAL_B {
+  color: #011;
+}
+.LOCAL_local_a2 .LOCAL_local_b2 {
+  color: #012;
+}
+div.GLOBAL_A .GLOBAL_B:hover {
+  color: #013;
+}
+div.LOCAL_local_a2 .LOCAL_local_b2:hover {
+  color: #014;
+}
+div .GLOBAL_A .GLOBAL_B span {
+  color: #015;
+}
+div .LOCAL_local_a2 .LOCAL_local_b2 span {
+  color: #016;
+}
+div > .GLOBAL_A ~ .GLOBAL_B + span {
+  color: #017;
+}
+div > .LOCAL_local_a2 ~ .LOCAL_local_b2 + span {
+  color: #018;
+}
+div + .GLOBAL_A:hover {
+  color: #019;
+}
+div + .LOCAL_local_a2:hover {
+  color: #01A;
+}
+.GLOBAL.LOCAL_local2 {
+  color: #01B;
+}
+.GLOBAL .LOCAL_local2 {
+  color: #01C;
+}
+& {
+  .GLOBAL {
+    before: outer;
+    before: inner;
+    .LOCAL_local2 {
+      color: #01D;
+    }
+    after: inner;
+    after: outer;
+  }
+}
+
+================================================================================
+TestImportCSSFromJSLowerBareLocalAndGlobal
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  before: "styles_before",
+  button: "styles_button",
+  after: "styles_after"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+.styles_before {
+  color: #000;
+}
+:scope .styles_button {
+  color: #000;
+}
+.styles_after {
+  color: #000;
+}
+.styles_before {
+  color: #001;
+}
+:scope .button {
+  color: #001;
+}
+.styles_after {
+  color: #001;
+}
+div .styles_button {
+  color: #002;
+}
+div .button {
+  color: #003;
+}
+:scope {
+  color: #004;
+}
+:scope {
+  color: #005;
+}
+:scope .styles_button {
+  color: #006;
+}
+:scope .styles_button {
+  color: #007;
+}
+
+================================================================================
+TestImportCSSFromJSNthIndexLocal
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  local: "styles_local",
+  local1: "styles_local1",
+  local2: "styles_local2"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+:nth-child(2n of .styles_local) {
+  color: #000;
+}
+:nth-child(2n of #styles_local, .GLOBAL) {
+  color: #001;
+}
+:nth-child(2n of .styles_local1 .GLOBAL1, .GLOBAL2 .styles_local2) {
+  color: #002;
+}
+.styles_local1,
+:nth-child(2n of .GLOBAL),
+.styles_local2 {
+  color: #003;
+}
+:nth-last-child(2n of .styles_local) {
+  color: #000;
+}
+:nth-last-child(2n of #styles_local, .GLOBAL) {
+  color: #001;
+}
+:nth-last-child(2n of .styles_local1 .GLOBAL1, .GLOBAL2 .styles_local2) {
+  color: #002;
+}
+.styles_local1,
+:nth-last-child(2n of .GLOBAL),
+.styles_local2 {
+  color: #003;
+}
+
+================================================================================
+TestImportGlobalCSSFromJS
+---------- /out/entry.js ----------
+// a.css
+var a_default = {};
+
+// a.js
+console.log("a", void 0, a_default.a);
+
+// b.css
+var b_default = {};
+
+// b.js
+console.log("b", void 0, b_default.b);
+
+---------- /out/entry.css ----------
+/* a.css */
+.a {
+  color: red;
+}
+
+/* b.css */
+.b {
+  color: blue;
+}
+
+================================================================================
+TestImportLocalCSSFromJS
+---------- /out/entry.js ----------
+// dir1/style.css
+var button = "style_button";
+var style_default = {
+  a: "style_a",
+  button
+};
+
+// a.js
+console.log("file 1", button, style_default.a);
+
+// dir2/style.css
+var button2 = "style_button2";
+var style_default2 = {
+  b: "style_b",
+  button: button2
+};
+
+// b.js
+console.log("file 2", button2, style_default2.b);
+
+---------- /out/entry.css ----------
+/* dir1/style.css */
+.style_a {
+  color: red;
+}
+.style_button {
+  display: none;
+}
+
+/* dir2/style.css */
+.style_b {
+  color: blue;
+}
+.style_button2 {
+  display: none;
+}
+
+================================================================================
+TestImportLocalCSSFromJSMinifyIdentifiers
+---------- /out/entry.js ----------
+// dir1/style.css
+var t = "l";
+var l = {
+  a: "o",
+  button: t
+};
+
+// a.js
+console.log("file 1", t, l.a);
+
+// dir2/style.css
+var e = "n";
+var n = {
+  b: "e",
+  button: e
+};
+
+// b.js
+console.log("file 2", e, n.b);
+
+---------- /out/entry.css ----------
+/* dir1/style.css */
+.o {
+  color: red;
+}
+.l {
+  display: none;
+}
+
+/* dir2/style.css */
+.e {
+  color: blue;
+}
+.n {
+  display: none;
+}
+
+================================================================================
+TestImportLocalCSSFromJSMinifyIdentifiersAvoidGlobalNames
+---------- /out/entry.js ----------
+
+---------- /out/entry.css ----------
+/* global.css */
+:is(.a, .b, .c, .d, .e, .f, .g, .h, .i, .j, .k, .l, .m, .n, .o, .p, .q, .r, .s, .t, .u, .v, .w, .x, .y, .z),
+:is(.A, .B, .C, .D, .E, .F, .G, .H, .I, .J, .K, .L, .M, .N, .O, .P, .Q, .R, .S, .T, .U, .V, .W, .X, .Y, .Z),
+._ {
+  color: red;
+}
+
+/* local.module.css */
+.oo {
+  color: blue;
+}
+
+================================================================================
+TestImportLocalCSSFromJSMinifyIdentifiersMultipleEntryPoints
+---------- /out/a.js ----------
+// a.module.css
+var r = "o";
+var l = "c";
+
+// a.js
+console.log(r, l);
+
+---------- /out/a.css ----------
+/* a.module.css */
+.o {
+  color: #001;
+}
+.c {
+  color: #002;
+}
+
+---------- /out/b.js ----------
+// b.module.css
+var r = "l";
+var l = "r";
+
+// b.js
+console.log(r, l);
+
+---------- /out/b.css ----------
+/* b.module.css */
+.l {
+  color: #003;
+}
+.r {
+  color: #004;
+}
+
+================================================================================
+TestMetafileCSSBundleTwoToOne
+---------- /out/js/2PSDKYWE.js ----------
+// foo/entry.js
+console.log("foo");
+
+---------- /out/css/DIO3TRUB.css ----------
+/* common.css */
+body {
+  color: red;
+}
+
+---------- /out/js/MA6C7ZBK.js ----------
+// bar/entry.js
+console.log("bar");
+---------- metafile.json ----------
+{
+  "inputs": {
+    "common.css": {
+      "bytes": 28,
+      "imports": []
+    },
+    "foo/entry.js": {
+      "bytes": 54,
+      "imports": [
+        {
+          "path": "common.css",
+          "kind": "import-statement",
+          "original": "../common.css"
+        }
+      ],
+      "format": "esm"
+    },
+    "bar/entry.js": {
+      "bytes": 54,
+      "imports": [
+        {
+          "path": "common.css",
+          "kind": "import-statement",
+          "original": "../common.css"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "out/js/2PSDKYWE.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "foo/entry.js",
+      "cssBundle": "out/css/DIO3TRUB.css",
+      "inputs": {
+        "common.css": {
+          "bytesInOutput": 0
+        },
+        "foo/entry.js": {
+          "bytesInOutput": 20
+        }
+      },
+      "bytes": 36
+    },
+    "out/css/DIO3TRUB.css": {
+      "imports": [],
+      "inputs": {
+        "common.css": {
+          "bytesInOutput": 23
+        }
+      },
+      "bytes": 40
+    },
+    "out/js/MA6C7ZBK.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "bar/entry.js",
+      "cssBundle": "out/css/DIO3TRUB.css",
+      "inputs": {
+        "common.css": {
+          "bytesInOutput": 0
+        },
+        "bar/entry.js": {
+          "bytesInOutput": 20
+        }
+      },
+      "bytes": 36
+    }
+  }
+}
+
+================================================================================
+TestPackageURLsInCSS
+---------- /out/entry.css ----------
+/* test.css */
+.css {
+  color: red;
+}
+
+/* entry.css */
+a {
+  background: url(data:image/png;base64,YS0x);
+}
+b {
+  background: url(data:image/png;base64,Yi0yLW5vZGVfbW9kdWxlcw==);
+}
+c {
+  background: url(data:image/png;base64,Yy0z);
+}
+
+================================================================================
+TestTextImportURLInCSSText
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:text/plain;base64,VGhpcyBpcyBzb21lIHRleHQu);
+}
+
+================================================================================
+TestUndefinedImportWarningCSS
+---------- /out/entry.js ----------
+// empty.js
+var require_empty = __commonJS({
+  "empty.js"() {
+  }
+});
+
+// node_modules/pkg/empty.js
+var require_empty2 = __commonJS({
+  "node_modules/pkg/empty.js"() {
+  }
+});
+
+// entry.js
+var empty_js2 = __toESM(require_empty());
+var pkg_empty_js = __toESM(require_empty2());
+
+// node_modules/pkg/index.js
+var empty_js = __toESM(require_empty2());
+console.log(
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0
+);
+
+// entry.js
+console.log(
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0
+);
+console.log(
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0
+);
+
+---------- /out/entry.css ----------
+/* empty.css */
+/* empty.global-css */
+/* empty.local-css */
+/* node_modules/pkg/empty.css */
+/* node_modules/pkg/empty.global-css */
+/* node_modules/pkg/empty.local-css */

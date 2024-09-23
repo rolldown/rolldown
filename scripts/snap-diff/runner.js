@@ -45,6 +45,9 @@ export function run(includeList) {
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
       let diffResult = diffCase(snap, parsedRolldownSnap)
+      if (typeof diffResult !== 'string') {
+        writeDiffToTestcaseDir(rolldownTestPath, diffResult)
+      }
       diffList.push({ diffResult, name: snap.name })
     }
     diffList.sort((a, b) => {
@@ -67,6 +70,25 @@ function getRolldownSnap(caseDir) {
   if (fs.existsSync(artifactsPath)) {
     return fs.readFileSync(artifactsPath, 'utf-8')
   }
+}
+
+/**
+ * @param {string} dir
+ * @param {ReturnType<diffCase>} diffResult
+ */
+function writeDiffToTestcaseDir(dir, diffResult) {
+  // this seems redundant, just help ts type infer
+  if (typeof diffResult === 'string') {
+    return
+  }
+  let markdown = ''
+  for (let d of diffResult) {
+    markdown += `## ${d.esbuildName}\n`
+    markdown += `### esbuild\n\`\`\`js\n${d.esbuild}\n\`\`\`\n`
+    markdown += `### rolldown\n\`\`\`js\n${d.rolldown}\n\`\`\`\n`
+    markdown += `### diff\n\`\`\`diff\n${d.diff}\n\`\`\`\n`
+  }
+  fs.writeFileSync(path.join(dir, 'diff.md'), markdown)
 }
 
 /**

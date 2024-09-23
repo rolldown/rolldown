@@ -26,6 +26,7 @@
   "devDependencies": {
     "acorn": "^8.12.1",
     "acorn-walk": "^8.3.4",
+    "diff": "^7.0.0",
     "escodegen": "^2.1.0",
     "lodash-es": "^4.17.21",
     "markdown-it": "^14.1.0",

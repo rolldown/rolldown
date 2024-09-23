@@ -10,7 +10,6 @@ export function rewriteRolldown(code) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    onComment: [''],
   })
   walk.simple(ast, {
     ImportDeclaration(node) {
@@ -22,10 +21,12 @@ export function rewriteRolldown(code) {
     CallExpression(node) {
       let callee = node.callee
       // rewrite assert.strictEqual(test, 1)
+      // rewrite assert.equal(test, 1)
+      let assertProperties = ['equal', 'strictEqual']
       if (
         callee.type === 'MemberExpression' &&
         callee.object?.name === 'assert' &&
-        callee.property?.name === 'strictEqual'
+        assertProperties.includes(callee.property?.name)
       ) {
         let args = node.arguments
         if (args.length === 2) {
@@ -49,17 +50,9 @@ export function rewriteRolldown(code) {
  * @param {string} code
  */
 export function rewriteEsbuild(code) {
-  let ast = acorn.parse(code, { ecmaVersion: 'latest' })
+  let ast = acorn.parse(code, {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  })
   return gen.generate(ast)
 }
-
-const res = rewriteRolldown(
-  `
-import assert from "assert";
-import assert2 from "node:assert";
-assert.strictEqual(test, 1)
-
-`,
-)
-
-console.log(`res: `, res)

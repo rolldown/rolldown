@@ -396,6 +396,9 @@ importers:
       acorn-walk:
         specifier: ^8.3.4
         version: 8.3.4
+      diff:
+        specifier: ^7.0.0
+        version: 7.0.0
       escodegen:
         specifier: ^2.1.0
         version: 2.1.0
@@ -3675,6 +3678,10 @@ packages:
 
   diff@5.2.0:
     resolution: {integrity: sha512-uIFDxqpRZGZ6ThOk84hEfqWoHx2devRFvpTZcTHur85vImfaxUbTW9Ryh4CpCuDnToOP1CEtXKIgytHBPVff5A==}
+    engines: {node: '>=0.3.1'}
+
+  diff@7.0.0:
+    resolution: {integrity: sha512-PJWHUb1RFevKCwaFA9RlG5tCd+FO5iRh9A8HEtkmBH2Li03iJriB6m6JIN4rGz3K3JLawI7/veA1xzRKP6ISBw==}
     engines: {node: '>=0.3.1'}
 
   dir-glob@3.0.1:
@@ -9244,6 +9251,8 @@ snapshots:
   detect-libc@2.0.3: {}
 
   diff@5.2.0: {}
+
+  diff@7.0.0: {}
 
   dir-glob@3.0.1:
     dependencies:

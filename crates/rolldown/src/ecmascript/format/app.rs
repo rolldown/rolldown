@@ -28,7 +28,8 @@ pub fn render_app(
       if !is_runtime {
         concat_source.add_source(Box::new(RawSource::new(format!(
           "rolldown_runtime.define('{}',function(require, module, exports){{\n",
-          ctx.link_output.module_table.modules[module_idx].stable_id()
+          // Here need to care about virtual module `\0`, the oxc codegen will escape it, so here also escape it
+          ctx.link_output.module_table.modules[module_idx].stable_id().escape_default()
         ))));
       }
       for source in emitted_sources {
@@ -44,7 +45,7 @@ pub fn render_app(
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       concat_source.add_source(Box::new(RawSource::new(format!(
         "rolldown_runtime.require('{}');",
-        entry_module.stable_id
+        entry_module.stable_id.escape_default()
       ))));
     }
   }

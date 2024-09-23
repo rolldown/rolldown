@@ -1,3 +1,5 @@
+import * as diff from 'diff'
+import { rewriteEsbuild, rewriteRolldown } from './rewrite.js'
 /**
  * our filename generate logic is not the same as esbuild
  * so hardcode some filename remapping
@@ -13,13 +15,13 @@ function defaultResolveFunction(esbuildFilename, rolldownFilename) {
  * TODO: custom resolve
  * @param {{name: string, sourceList: Array<{name: string, content: string}>}} esbuildSnap
  * @param {Array<{filename: string, content: string}> | undefined} rolldownSnap
- * @returns {'missing' | Array<{name: string, diff: any}> | 'same'}
+ * @returns {'missing' | Array<{esbuildName: string, rolldownName: string, esbuild: string, rolldown: string, diff: string}> | 'same'}
  */
 export function diffCase(esbuildSnap, rolldownSnap) {
   if (!rolldownSnap) {
     return 'missing'
   }
-  let diff = []
+  let diffList = []
   for (let esbuildSource of esbuildSnap.sourceList) {
     let matchedSource = rolldownSnap.find((rolldownSource) => {
       if (defaultResolveFunction(esbuildSource.name, rolldownSource.filename)) {
@@ -28,18 +30,28 @@ export function diffCase(esbuildSnap, rolldownSnap) {
       return rolldownSnap.find((snap) => {
         return snap.filename == esbuildSource.name
       })
-    }) ?? { content: '' }
+    }) ?? { content: '', filename: '' }
+    let esbuildContent = rewriteEsbuild(esbuildSource.content)
+    let rolldownContent = rewriteRolldown(matchedSource.content)
     if (matchedSource.content !== esbuildSource.content) {
-      diff.push({
-        name: esbuildSource.name,
+      diffList.push({
+        esbuildName: esbuildSource.name,
         rolldownName: matchedSource.filename,
         esbuild: esbuildSource.content,
         rolldown: matchedSource.content,
+        diff: diff.createTwoFilesPatch(
+          'esbuild',
+          'rolldown',
+          esbuildContent,
+          rolldownContent,
+          esbuildSource.name,
+          matchedSource.filename,
+        ),
       })
     }
   }
-  if (diff.length === 0) {
+  if (diffList.length === 0) {
     return 'same'
   }
-  return diff
+  return diffList
 }

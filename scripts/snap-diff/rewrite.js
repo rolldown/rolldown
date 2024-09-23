@@ -10,7 +10,6 @@ export function rewriteRolldown(code) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    onComment: [''],
   })
   walk.simple(ast, {
     ImportDeclaration(node) {
@@ -49,7 +48,10 @@ export function rewriteRolldown(code) {
  * @param {string} code
  */
 export function rewriteEsbuild(code) {
-  let ast = acorn.parse(code, { ecmaVersion: 'latest' })
+  let ast = acorn.parse(code, {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  })
   return gen.generate(ast)
 }
 

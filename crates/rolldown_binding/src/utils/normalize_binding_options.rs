@@ -10,8 +10,8 @@ use crate::{
 };
 use napi::bindgen_prelude::Either;
 use rolldown::{
-  AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption, IsExternal,
-  MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
+  AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption,
+  ExperimentalOptions, IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -168,7 +168,10 @@ pub fn normalize_binding_options(
     }),
     globals: output_options.globals,
     module_types,
-    experimental: None,
+    experimental: input_options.experimental.map(|inner| ExperimentalOptions {
+      strict_execution_order: inner.strict_execution_order,
+      disable_live_bindings: inner.disable_live_bindings,
+    }),
     minify: output_options.minify,
     css_entry_filenames: None,
     css_chunk_filenames: None,

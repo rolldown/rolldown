@@ -82,9 +82,10 @@ pub fn render_chunk_exports(
 
                 match export_mode {
                   Some(OutputExports::Named) => {
-                    if !options.external_live_bindings
-                      && export_ref
-                        .is_created_by_import_from_external(&link_output.module_table.modules)
+                    if options.experimental.is_disable_live_bindings_enabled()
+                      || (!options.external_live_bindings
+                        && export_ref
+                          .is_created_by_import_from_external(&link_output.module_table.modules))
                     {
                       format!("exports['{exported_name}'] = {canonical_name}")
                     } else {

@@ -118,6 +118,10 @@ export function bindingifyInputOptions(
           },
         )
       : undefined,
+    experimental: {
+      strictExecutionOrder: options.experimental?.strictExecutionOrder,
+      disableLiveBindings: options.experimental?.disableLiveBindings,
+    },
   }
 }
 

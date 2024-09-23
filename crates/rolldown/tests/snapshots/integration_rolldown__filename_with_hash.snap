@@ -1547,6 +1547,10 @@ expression: output
 
 - main-!~{000}~.mjs => main-MTVu9T3l.mjs
 
+# tests/rolldown/function/experimental/disable_live_bindings
+
+- main-!~{000}~.cjs => main-D9vAVtBY.cjs
+
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
 - main-!~{000}~.mjs => main-UWLaSEMt.mjs

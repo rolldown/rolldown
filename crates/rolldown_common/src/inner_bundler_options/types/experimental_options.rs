@@ -11,10 +11,15 @@ use serde::Deserialize;
 )]
 pub struct ExperimentalOptions {
   pub strict_execution_order: Option<bool>,
+  pub disable_live_bindings: Option<bool>,
 }
 
 impl ExperimentalOptions {
   pub fn is_strict_execution_order_enabled(&self) -> bool {
     self.strict_execution_order.unwrap_or(false)
+  }
+
+  pub fn is_disable_live_bindings_enabled(&self) -> bool {
+    self.disable_live_bindings.unwrap_or(false)
   }
 }

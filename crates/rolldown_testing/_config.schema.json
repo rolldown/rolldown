@@ -376,6 +376,12 @@
     "ExperimentalOptions": {
       "type": "object",
       "properties": {
+        "disableLiveBindings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "strictExecutionOrder": {
           "type": [
             "boolean",

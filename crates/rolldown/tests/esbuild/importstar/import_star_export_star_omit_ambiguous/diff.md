@@ -52,7 +52,7 @@ assert.deepEqual(common_exports, {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,8 +1,11 @@
+@@ -1,8 +1,8 @@
 +const x = 1;
 +const z = 4;
  var common_exports = {};
@@ -62,12 +62,7 @@ assert.deepEqual(common_exports, {
  });
 -var x = 1;
 -var z = 4;
--console.log(common_exports);
-\ No newline at end of file
-+assert.deepEqual(common_exports, {
-+    x: 1,
-+    z: 4
-+});
+ console.log(common_exports);
 \ No newline at end of file
 
 ```

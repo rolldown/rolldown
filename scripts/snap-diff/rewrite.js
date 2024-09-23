@@ -22,7 +22,8 @@ export function rewriteRolldown(code) {
       let callee = node.callee
       // rewrite assert.strictEqual(test, 1)
       // rewrite assert.equal(test, 1)
-      let assertProperties = ['equal', 'strictEqual']
+      // rewrite assert.deepEqual(test, 1)
+      let assertProperties = ['equal', 'strictEqual', 'deepEqual']
       if (
         callee.type === 'MemberExpression' &&
         callee.object?.name === 'assert' &&

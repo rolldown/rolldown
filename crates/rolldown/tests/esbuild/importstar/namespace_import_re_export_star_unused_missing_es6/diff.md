@@ -35,7 +35,7 @@ assert.deepEqual(foo_exports, { x: 123 });
 +const x = 123;
 +var foo_exports = {};
 +__export(foo_exports, { x: () => x });
-+assert.deepEqual(foo_exports, { x: 123 });
++console.log(foo_exports);
 \ No newline at end of file
 
 ```

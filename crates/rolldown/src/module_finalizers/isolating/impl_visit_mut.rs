@@ -267,6 +267,60 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
                 })
               }));
 
+              return Some(self.snippet.builder.statement_declaration(
+                self.snippet.builder.declaration_from_variable(
+                  self.snippet.builder.variable_declaration(
+                    SPAN,
+                    var_decl.kind,
+                    var_decl.declarations.take_in(self.alloc),
+                    false,
+                  ),
+                ),
+              ));
+            }
+            ast::Declaration::FunctionDeclaration(func_decl) => {
+              let from =
+                func_decl.id.as_ref().expect("FunctionDeclaration should have ident").name.as_str();
+              self.generated_exports.push(self.snippet.object_property_kind_object_property(
+                from,
+                self.snippet.id_ref_expr(from, SPAN),
+                false,
+              ));
+              return Some(self.snippet.builder.statement_expression(
+                SPAN,
+                Expression::FunctionExpression(func_decl.take_in(self.alloc)),
+              ));
+            }
+            ast::Declaration::ClassDeclaration(class_decl) => {
+              let from =
+                class_decl.id.as_ref().expect("ClassDeclaration should have ident").name.as_str();
+              self.generated_exports.push(self.snippet.object_property_kind_object_property(
+                from,
+                self.snippet.id_ref_expr(from, SPAN),
+                false,
+              ));
+              return Some(self.snippet.builder.statement_expression(
+                SPAN,
+                Expression::ClassExpression(class_decl.take_in(self.alloc)),
+              ));
+            }
+            _ => {}
+          }
+        }
+
+        if let Some(decl) = &mut export_named_decl.declaration {
+          match decl {
+            ast::Declaration::VariableDeclaration(var_decl) => {
+              self.generated_exports.extend(var_decl.declarations.iter().filter_map(|decl| {
+                decl.id.get_identifier().map(|ident| {
+                  self.snippet.object_property_kind_object_property(
+                    ident.as_str(),
+                    self.snippet.id_ref_expr(ident.as_str(), SPAN),
+                    false,
+                  )
+                })
+              }));
+
               return Some(ast::Statement::VariableDeclaration(
                 self.snippet.builder.alloc_variable_declaration(
                   SPAN,

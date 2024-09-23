@@ -93,7 +93,7 @@ impl Plugin for ReactPlugin {
     _ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if args.id.ends_with(".jsx") {
+    if args.id.ends_with(".jsx") || args.id.ends_with(".tsx") {
       let mut content = args.code.to_string();
       content.push_str(&format!(
         r#"

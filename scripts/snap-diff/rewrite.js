@@ -20,7 +20,7 @@ export function rewriteRolldown(code) {
     },
     ExpressionStatement(node) {
       // TODO: use configuration to control
-      // esbuild don't generate 'use strict' when outputformt: cjs by default
+      // esbuild don't generate 'use strict' when outputFormat: cjs by default
       // only if there is already a 'use strict'
       if (node.directive === 'use strict') {
         node.type = 'EmptyStatement'

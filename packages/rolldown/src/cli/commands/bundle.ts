@@ -144,7 +144,9 @@ async function bundleInner(
     server.listen(8080)
 
     logger.log(`Watching for changes...`)
-    const watcher = chokidar.watch([cwd])
+    const watcher = chokidar.watch([cwd], {
+      ignored: [path.join(cwd, outputDir)],
+    })
     watcher.on('change', async (file) => {
       if (file) {
         logger.log(`Found change in ${file}`)

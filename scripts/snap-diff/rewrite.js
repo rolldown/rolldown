@@ -18,6 +18,14 @@ export function rewriteRolldown(code) {
         node.type = 'EmptyStatement'
       }
     },
+    ExpressionStatement(node) {
+      // TODO: use configuration to control
+      // esbuild don't generate 'use strict' when outputformt: cjs by default
+      // only if there is already a 'use strict'
+      if (node.directive === 'use strict') {
+        node.type = 'EmptyStatement'
+      }
+    },
     CallExpression(node) {
       let callee = node.callee
       // rewrite assert.strictEqual(test, 1)
@@ -33,6 +41,7 @@ export function rewriteRolldown(code) {
         if (args.length === 2) {
           callee.object.name = 'console'
           callee.property.name = 'log'
+          // remove second argument in `console.log`
           args.splice(1, 1)
         }
       }

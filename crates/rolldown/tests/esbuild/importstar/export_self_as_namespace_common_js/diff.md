@@ -43,9 +43,7 @@ Object.defineProperty(exports, 'ns', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,7 +1,19 @@
-+'use strict';
- var entry_exports = {};
+@@ -2,6 +2,17 @@
  __export(entry_exports, {
      foo: () => foo,
      ns: () => entry_exports

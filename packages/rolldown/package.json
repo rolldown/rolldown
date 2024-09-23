@@ -102,10 +102,13 @@
   "dependencies": {
     "zod": "^3.23.8",
     "chokidar": "3.6.0",
+    "watchpack": "2.4.2",
+    "@parcel/watcher": "2.4.1",
     "ws": "8.18.0",
     "connect": "3.7.0"
   },
   "devDependencies": {
+    "@types/watchpack": "2.4.2",
     "@napi-rs/cli": "^3.0.0-alpha.60",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@rolldown/testing": "workspace:*",

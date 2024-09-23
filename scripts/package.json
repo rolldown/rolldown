@@ -24,6 +24,9 @@
     "zx": "^8.1.2"
   },
   "devDependencies": {
+    "acorn": "^8.12.1",
+    "acorn-walk": "^8.3.4",
+    "escodegen": "^2.1.0",
     "lodash-es": "^4.17.21",
     "markdown-it": "^14.1.0",
     "web-tree-sitter": "^0.23.0"

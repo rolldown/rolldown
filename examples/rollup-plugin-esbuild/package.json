@@ -1,4 +1,5 @@
 {
+  "name": "@example/rollup-plugin-esbuild",
   "private": true,
   "type": "module",
   "scripts": {

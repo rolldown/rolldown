@@ -1,59 +1,8 @@
 ---
 source: crates/rolldown/tests/integration_rolldown.rs
-expression: "snapshot_outputs.join(\"\\n\")"
+expression: output
 ---
-# tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
-
-- entry_ts-!~{000}~.mjs => entry_ts-4Cc0ZJV3.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_class
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_const
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_const_enum
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_enum
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_function
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_let
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_namespace
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_declare_var
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_import_cts
-
-- entry_ts-!~{000}~.mjs => entry_ts-ZIvpO329.mjs
-
-# tests/esbuild/bundler_ts/ts_import_empty_namespace
-
-- entry_ts-!~{000}~.mjs => entry_ts-9NBZIX5i.mjs
-
-# tests/esbuild/bundler_ts/ts_import_type_only_file
-
-- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
-
-# tests/esbuild/bundler_ts/ts_prefer_js_over_ts_inside_node_modules
-
-- src_main_ts-!~{000}~.mjs => src_main_ts-tpTytWQ_.mjs
-
+```
 # tests/esbuild/dce/base64_loader_remove_unused
 
 - entry_js-!~{000}~.mjs => entry_js-Taqabkgf.mjs
@@ -82,7 +31,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_of_using_declarations
 
-- entry_js-!~{000}~.mjs => entry_js-eoVVsGMH.mjs
+- entry_js-!~{000}~.mjs => entry_js-LDqM0_-n.mjs
 
 # tests/esbuild/dce/dce_template_literal
 
@@ -132,8 +81,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-fn_js-!~{000}~.mjs => expr-fn_js--rxcfA_g.mjs
-- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-QjhqLgSt.mjs
+- expr-fn_js-!~{000}~.mjs => expr-fn_js-W9Gtn0zV.mjs
+- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-2ogAwbDJ.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
@@ -279,7 +228,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/remove_trailing_return
 
-- entry_js-!~{000}~.mjs => entry_js-FBg8hdTP.mjs
+- entry_js-!~{000}~.mjs => entry_js-kCyuwIxL.mjs
 
 # tests/esbuild/dce/remove_unused_import_meta
 
@@ -522,7 +471,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/require_resolve
 
-- entry_js-!~{000}~.mjs => entry_js-nQ38baFz.mjs
+- entry_js-!~{000}~.mjs => entry_js-EZ1rTO5t.mjs
 
 # tests/esbuild/default/require_with_call_inside_try
 
@@ -572,219 +521,219 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
 - function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
 
-# tests/esbuild/import_star/export_other_as_namespace_common_js
+# tests/esbuild/importstar/export_other_as_namespace_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-hv-uu-4A.cjs
 
-# tests/esbuild/import_star/export_other_common_js
+# tests/esbuild/importstar/export_other_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-R7RFZmNQ.cjs
 
-# tests/esbuild/import_star/export_other_nested_common_js
+# tests/esbuild/importstar/export_other_nested_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-YGOj8nbf.cjs
 
-# tests/esbuild/import_star/export_self_as_namespace_common_js
+# tests/esbuild/importstar/export_self_as_namespace_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-krfd71h4.cjs
 
-# tests/esbuild/import_star/export_self_as_namespace_es6
+# tests/esbuild/importstar/export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Ci9jf2Vl.mjs
 
-# tests/esbuild/import_star/export_self_common_js
+# tests/esbuild/importstar/export_self_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-mKIoiJrd.cjs
 
-# tests/esbuild/import_star/export_self_es6
+# tests/esbuild/importstar/export_self_es6
 
 - entry_js-!~{000}~.mjs => entry_js-_WUmd7Ck.mjs
 
-# tests/esbuild/import_star/import_export_other_as_namespace_common_js
+# tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-zk2aMjWa.mjs
 
-# tests/esbuild/import_star/import_export_self_as_namespace_es6
+# tests/esbuild/importstar/import_export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Ci9jf2Vl.mjs
 
-# tests/esbuild/import_star/import_export_star_ambiguous_warning
+# tests/esbuild/importstar/import_export_star_ambiguous_warning
 
 - entry_js-!~{000}~.mjs => entry_js-E-ikmnlw.mjs
 
-# tests/esbuild/import_star/import_of_export_star
+# tests/esbuild/importstar/import_of_export_star
 
 - entry_js-!~{000}~.mjs => entry_js-H0kDSDFN.mjs
 
-# tests/esbuild/import_star/import_of_export_star_of_import
+# tests/esbuild/importstar/import_of_export_star_of_import
 
 - entry_js-!~{000}~.mjs => entry_js-mzIYfNek.mjs
 
-# tests/esbuild/import_star/import_self_common_js
+# tests/esbuild/importstar/import_self_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-aJIS-FgI.mjs
 
-# tests/esbuild/import_star/import_star_and_common_js
+# tests/esbuild/importstar/import_star_and_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-eIHCfSy-.mjs
 
-# tests/esbuild/import_star/import_star_capture
+# tests/esbuild/importstar/import_star_capture
 
 - entry_js-!~{000}~.mjs => entry_js-jeNB7gUK.mjs
 
-# tests/esbuild/import_star/import_star_common_js_capture
+# tests/esbuild/importstar/import_star_common_js_capture
 
 - entry_js-!~{000}~.mjs => entry_js-tDRdEgO1.mjs
 
-# tests/esbuild/import_star/import_star_common_js_no_capture
+# tests/esbuild/importstar/import_star_common_js_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-yBFn7023.mjs
 
-# tests/esbuild/import_star/import_star_common_js_unused
+# tests/esbuild/importstar/import_star_common_js_unused
 
 - entry_js-!~{000}~.mjs => entry_js-rY5t4XFn.mjs
 
-# tests/esbuild/import_star/import_star_export_import_star_capture
+# tests/esbuild/importstar/import_star_export_import_star_capture
 
 - entry_js-!~{000}~.mjs => entry_js-j6rCJzbs.mjs
 
-# tests/esbuild/import_star/import_star_export_import_star_no_capture
+# tests/esbuild/importstar/import_star_export_import_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
 
-# tests/esbuild/import_star/import_star_export_import_star_unused
+# tests/esbuild/importstar/import_star_export_import_star_unused
 
 - entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
-# tests/esbuild/import_star/import_star_export_star_as_capture
+# tests/esbuild/importstar/import_star_export_star_as_capture
 
 - entry_js-!~{000}~.mjs => entry_js-jeNB7gUK.mjs
 
-# tests/esbuild/import_star/import_star_export_star_as_no_capture
+# tests/esbuild/importstar/import_star_export_star_as_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-mv1AdNog.mjs
 
-# tests/esbuild/import_star/import_star_export_star_as_unused
+# tests/esbuild/importstar/import_star_export_star_as_unused
 
 - entry_js-!~{000}~.mjs => entry_js-XjoLyWPj.mjs
 
-# tests/esbuild/import_star/import_star_export_star_capture
+# tests/esbuild/importstar/import_star_export_star_capture
 
 - entry_js-!~{000}~.mjs => entry_js--k6TbpWz.mjs
 
-# tests/esbuild/import_star/import_star_export_star_no_capture
+# tests/esbuild/importstar/import_star_export_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
 
-# tests/esbuild/import_star/import_star_export_star_omit_ambiguous
+# tests/esbuild/importstar/import_star_export_star_omit_ambiguous
 
 - entry_js-!~{000}~.mjs => entry_js-8PO_fo2V.mjs
 
-# tests/esbuild/import_star/import_star_export_star_unused
+# tests/esbuild/importstar/import_star_export_star_unused
 
 - entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
-# tests/esbuild/import_star/import_star_no_capture
+# tests/esbuild/importstar/import_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
 
-# tests/esbuild/import_star/import_star_of_export_star_as
+# tests/esbuild/importstar/import_star_of_export_star_as
 
 - entry_js-!~{000}~.mjs => entry_js-W7zmJGUu.mjs
 
-# tests/esbuild/import_star/import_star_unused
+# tests/esbuild/importstar/import_star_unused
 
 - entry_js-!~{000}~.mjs => entry_js-mfGmejp1.mjs
 
-# tests/esbuild/import_star/issue176
+# tests/esbuild/importstar/issue176
 
 - entry_js-!~{000}~.mjs => entry_js--2X9MJcv.mjs
 
-# tests/esbuild/import_star/namespace_import_missing_common_js
+# tests/esbuild/importstar/namespace_import_missing_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-yZtp5QwF.mjs
 
-# tests/esbuild/import_star/namespace_import_missing_es6
+# tests/esbuild/importstar/namespace_import_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-vUBXB_-Q.mjs
 
-# tests/esbuild/import_star/namespace_import_re_export_star_missing_es6
+# tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-YNk6SGbc.mjs
 
-# tests/esbuild/import_star/namespace_import_re_export_star_unused_missing_es6
+# tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-ZRfn5jSM.mjs
 
-# tests/esbuild/import_star/namespace_import_unused_missing_common_js
+# tests/esbuild/importstar/namespace_import_unused_missing_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-nsbMxosn.mjs
 
-# tests/esbuild/import_star/namespace_import_unused_missing_es6
+# tests/esbuild/importstar/namespace_import_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-gToj8462.mjs
 
-# tests/esbuild/import_star/other_file_export_self_as_namespace_unused_es6
+# tests/esbuild/importstar/other_file_export_self_as_namespace_unused_es6
 
 - entry_js-!~{000}~.mjs => entry_js-EqHrIcuQ.mjs
 
-# tests/esbuild/import_star/other_file_import_export_self_as_namespace_unused_es6
+# tests/esbuild/importstar/other_file_import_export_self_as_namespace_unused_es6
 
 - entry_js-!~{000}~.mjs => entry_js-EqHrIcuQ.mjs
 
-# tests/esbuild/import_star/re_export_namespace_import_missing_es6
+# tests/esbuild/importstar/re_export_namespace_import_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Llcqy5LG.mjs
 
-# tests/esbuild/import_star/re_export_namespace_import_unused_missing_es6
+# tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-nONTu2qq.mjs
 
-# tests/esbuild/import_star/re_export_other_file_export_self_as_namespace_es6
+# tests/esbuild/importstar/re_export_other_file_export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-eDDu2hYN.mjs
 
-# tests/esbuild/import_star/re_export_other_file_import_export_self_as_namespace_es6
+# tests/esbuild/importstar/re_export_other_file_import_export_self_as_namespace_es6
 
 - entry_js-!~{000}~.mjs => entry_js-eDDu2hYN.mjs
 
-# tests/esbuild/import_star/re_export_star_as_external_common_js
+# tests/esbuild/importstar/re_export_star_as_external_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-k_XF-EgE.cjs
 
-# tests/esbuild/import_star/re_export_star_as_external_es6
+# tests/esbuild/importstar/re_export_star_as_external_es6
 
 - entry_js-!~{000}~.mjs => entry_js-Hh289cnx.mjs
 
-# tests/esbuild/import_star/re_export_star_entry_point_and_inner_file
+# tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
 - entry_js-!~{000}~.mjs => entry_js-Dui1A2mX.mjs
 
-# tests/esbuild/import_star/re_export_star_external_common_js
+# tests/esbuild/importstar/re_export_star_external_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-ELPoWxMr.cjs
 
-# tests/esbuild/import_star/re_export_star_external_es6
+# tests/esbuild/importstar/re_export_star_external_es6
 
 - entry_js-!~{000}~.mjs => entry_js-f7yUzi-B.mjs
 
-# tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
+# tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
 - entry_js-!~{000}~.mjs => entry_js-U6_C9pII.mjs
 
-# tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
+# tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import
 
 - entry_js-!~{000}~.mjs => entry_js-5FiuY4N2.mjs
 
-# tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
+# tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous
 
 - entry_js-!~{000}~.mjs => entry_js-_Iu81E_Q.mjs
 
-# tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
+# tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous_re_export
 
 - entry_js-!~{000}~.mjs => entry_js-vjVClo_b.mjs
 
-# tests/esbuild/import_star_ts/ts_import_star_and_common_js
+# tests/esbuild/importstar_ts/ts_import_star_and_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-4ruieXoW.mjs
 
@@ -802,7 +751,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry_js-!~{000}~.mjs => entry_js-BtufIxnU.mjs
+- entry_js-!~{000}~.mjs => entry_js-21clhaXx.mjs
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -862,11 +811,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/lower/lower_for_await2015
 
-- entry_js-!~{000}~.mjs => entry_js-DE2I7oH2.mjs
+- entry_js-!~{000}~.mjs => entry_js-d5SxpGMh.mjs
 
 # tests/esbuild/lower/lower_for_await2017
 
-- entry_js-!~{000}~.mjs => entry_js-DE2I7oH2.mjs
+- entry_js-!~{000}~.mjs => entry_js-d5SxpGMh.mjs
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
@@ -1291,6 +1240,58 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-BnNTc7GP.mjs
 - shared-!~{002}~.mjs => shared-jJqW8ccl.mjs
 
+# tests/esbuild/ts/ts_abstract_class_field_use_define
+
+- entry_ts-!~{000}~.mjs => entry_ts-4Cc0ZJV3.mjs
+
+# tests/esbuild/ts/ts_declare_class
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_const
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_const_enum
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_enum
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_function
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_let
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_namespace
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_declare_var
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_import_cts
+
+- entry_ts-!~{000}~.mjs => entry_ts-ZIvpO329.mjs
+
+# tests/esbuild/ts/ts_import_empty_namespace
+
+- entry_ts-!~{000}~.mjs => entry_ts-9NBZIX5i.mjs
+
+# tests/esbuild/ts/ts_import_type_only_file
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
+
+- src_main_ts-!~{000}~.mjs => src_main_ts-tpTytWQ_.mjs
+
 # tests/rolldown/cjs_compat/basic_commonjs
 
 - main-!~{000}~.mjs => main-FRxwenOc.mjs
@@ -1367,6 +1368,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-QJZ7k4FX.mjs
 - a-!~{002}~.mjs => a-P3oI68KE.mjs
 
+# tests/rolldown/cjs_compat/node_module_commonjs
+
+- main-!~{000}~.mjs => main-ghlcWAL_.mjs
+- entry-!~{001}~.mjs => entry-wpwuDKy4.mjs
+- commonjs-!~{002}~.mjs => commonjs-hYeKntuE.mjs
+
 # tests/rolldown/cjs_compat/reexport_commonjs
 
 - main-!~{000}~.mjs => main--It2XZn-.mjs
@@ -1414,6 +1421,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-QSRhG9S4.mjs
 
+# tests/rolldown/dce/defined_expr_in_paren_expr
+
+- main-!~{000}~.mjs => main-HB-iqb-W.mjs
+
 # tests/rolldown/errors/ambiguous_external_namespace
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
@@ -1456,18 +1467,47 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/advanced_chunks/basic
 
-- a-!~{000}~.mjs => a-A_gsbJjW.mjs
-- b-!~{001}~.mjs => b-tp82H2Rv.mjs
-- common-!~{004}~.mjs => common-2bOggOQV.mjs
-- common-!~{002}~.mjs => common-OdNJRAZl.mjs
+- a-!~{000}~.mjs => a-tW-iNKZc.mjs
+- b-!~{001}~.mjs => b--_DvZU4q.mjs
+- common-!~{002}~.mjs => common-FR5ObYUG.mjs
+
+# tests/rolldown/function/advanced_chunks/min_share_count
+
+- a-!~{000}~.mjs => a-rxcY539f.mjs
+- b-!~{001}~.mjs => b-HYaDE4h7.mjs
+- c-!~{002}~.mjs => c-LLIBCnUa.mjs
+- at_least_share_by_2-!~{003}~.mjs => at_least_share_by_2-ieNXnL-H.mjs
+
+# tests/rolldown/function/advanced_chunks/min_share_count_fallback
+
+- a-!~{000}~.mjs => a-rxcY539f.mjs
+- b-!~{001}~.mjs => b-HYaDE4h7.mjs
+- c-!~{002}~.mjs => c-LLIBCnUa.mjs
+- at_least_share_by_2-!~{003}~.mjs => at_least_share_by_2-ieNXnL-H.mjs
+
+# tests/rolldown/function/advanced_chunks/min_size
+
+- main-!~{000}~.mjs => main-HJ4ta7pq.mjs
+- common_b-!~{001}~.mjs => common_b-a9EnhroC.mjs
+
+# tests/rolldown/function/advanced_chunks/min_size_fallback
+
+- main-!~{000}~.mjs => main-HJ4ta7pq.mjs
+- common_b-!~{001}~.mjs => common_b-a9EnhroC.mjs
+
+# tests/rolldown/function/advanced_chunks/split_node_modules
+
+- main-!~{000}~.mjs => main-M6jfBy0m.mjs
+- other-libs-!~{003}~.mjs => other-libs-U1jz6W1o.mjs
+- ui-!~{001}~.mjs => ui-a1Jazfmy.mjs
 
 # tests/rolldown/function/define/node_env
 
-- main-!~{000}~.mjs => main-zmFhpGWu.mjs
+- main-!~{000}~.mjs => main-SlP9BuWO.mjs
 
 # tests/rolldown/function/define/patterns
 
-- main-!~{000}~.mjs => main-alEkff5H.mjs
+- main-!~{000}~.mjs => main-vILvUyca.mjs
 
 # tests/rolldown/function/dir/should_generate_correct_relative_import_path
 
@@ -1617,11 +1657,31 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-gvGF4Vpz.cjs
 
+# tests/rolldown/function/format/app/export-all
+
+- main-!~{000}~.mjs => main-vclaJcDx.mjs
+
+# tests/rolldown/function/format/app/export-named
+
+- main-!~{000}~.mjs => main-oltTnqxz.mjs
+
+# tests/rolldown/function/format/app/export-named-from
+
+- main-!~{000}~.mjs => main-ixmQiC-s.mjs
+
+# tests/rolldown/function/format/app/import
+
+- main-!~{000}~.mjs => main-cfGohS4N.mjs
+
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- main-!~{000}~.mjs => main-soihLkqo.mjs
-- other-entry-!~{001}~.mjs => other-entry-coajbluq.mjs
-- cube-!~{002}~.mjs => cube-UC9SFjeM.mjs
+- main-!~{000}~.mjs => main-OEIxNKs9.mjs
+- other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
+- cube-!~{002}~.mjs => cube-r9ltmWJC.mjs
+
+# tests/rolldown/function/format/app/require
+
+- main-!~{000}~.mjs => main-dM7pALhW.mjs
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -1971,6 +2031,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-Nnl0Ev65.mjs
 
+# tests/rolldown/misc/invalid_ident_repr
+
+- main-!~{000}~.mjs => main-r-fid2FS.mjs
+
 # tests/rolldown/misc/object_shorthand_property
 
 - main-!~{000}~.mjs => main-T6y8-6S0.mjs
@@ -2039,6 +2103,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
 - main-!~{000}~.cjs => main-HEXq7EWu.cjs
+
+# tests/rolldown/topics/css/basic
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
+- main.css
+
+# tests/rolldown/topics/css/css_entries
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
+- main.css
 
 # tests/rolldown/topics/deconflict/basic
 
@@ -2294,3 +2368,5 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rollup/simplify-with-destructuring
 
 - main-!~{000}~.mjs => main-nQ2H1lM0.mjs
+
+```

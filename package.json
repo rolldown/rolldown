@@ -24,7 +24,8 @@
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
+    "prepare": "husky install"
   },
   "license": "MIT",
   "devDependencies": {
@@ -34,7 +35,7 @@
     "cjs-module-lexer": "^1.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",
-    "husky": "^9.0.11",
+    "husky": "^9.0.0",
     "lint-staged": "^15.2.5",
     "npm-rolldown": "npm:rolldown@0.12.2",
     "npm-run-all": "^4.1.5",
@@ -49,5 +50,12 @@
     "singleQuote": true,
     "trailingComma": "all",
     "arrowParens": "always"
+  },
+  "lint-staged": {
+    "*.toml": "taplo format",
+    "*.{js,ts,json,md,yml,yaml,vue}": [
+      "prettier --write",
+      "pnpm lint-code -- --fix"
+    ]
   }
 }

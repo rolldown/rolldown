@@ -52,7 +52,7 @@ pub fn render_chunk_exports(
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {
           let module =
-            &link_output.module_table.modules[module].as_ecma().expect("should be ecma module");
+            &link_output.module_table.modules[module].as_normal().expect("should be normal module");
           if matches!(module.exports_kind, ExportsKind::Esm) {
             let rendered_items = export_items
               .into_iter()

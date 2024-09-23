@@ -6,7 +6,7 @@ use oxc::ast::ast::{
   PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{AstBuilder, VisitMut};
+use oxc::ast::{AstBuilder, VisitMut, NONE};
 use oxc::codegen::{self, CodeGenerator, Gen};
 use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
@@ -24,7 +24,6 @@ mod utils;
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: String,
   pub insert_preload: bool,
-  pub optimize_module_preload_relative_paths: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
 }
@@ -227,7 +226,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
             ImportOrExportKind::Value,
           ))),
           self.builder.string_literal(SPAN, PRELOAD_HELPER_ID),
-          None,
+          NONE,
           ImportOrExportKind::Value,
         ),
       );

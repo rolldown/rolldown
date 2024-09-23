@@ -47,7 +47,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     rec_id: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_id];
-    let Module::Ecma(importee) = &self.ctx.modules[rec.resolved_module] else {
+    let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
@@ -58,13 +58,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       WrapKind::Cjs => {
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
         let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
-        let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+        let importee_wrapper_ref_name =
+          self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret,
-          self.snippet.call_expr_with_arg_expr_expr(
+          self.snippet.to_esm_call_with_interop(
             to_esm_fn_name,
-            self.snippet.call_expr_expr(wrapper_ref_name),
+            self.snippet.call_expr_expr(importee_wrapper_ref_name),
+            importee.interop(),
           ),
         );
         return false;

@@ -2,14 +2,14 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, BindingIdentifier, BindingRestElement, ImportOrExportKind, Statement,
-      TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+      self, Argument, BindingIdentifier, Expression, ImportOrExportKind, NumberBase,
+      ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
-    AstBuilder,
+    AstBuilder, NONE,
   },
   span::{Atom, CompactStr, Span, SPAN},
-  syntax::operator::UnaryOperator,
 };
+use rolldown_common::Interop;
 
 use crate::allocator_helpers::take_in::TakeIn;
 
@@ -105,7 +105,7 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.call_expression(
       SPAN,
       self.builder.expression_identifier_reference(SPAN, name),
-      None::<TSTypeParameterInstantiation>,
+      NONE,
       self.builder.vec(),
       false,
     )
@@ -116,7 +116,7 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.expression_call(
       SPAN,
       self.builder.expression_identifier_reference(SPAN, name),
-      None::<TSTypeParameterInstantiation>,
+      NONE,
       self.builder.vec(),
       false,
     )
@@ -167,7 +167,7 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.expression_call(
       SPAN,
       self.builder.expression_identifier_reference(SPAN, name),
-      None::<TSTypeParameterInstantiation>,
+      NONE,
       self.builder.vec_from_iter([
         self.builder.argument_expression(arg1),
         self.builder.argument_expression(arg2),
@@ -203,7 +203,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
-        None::<TSTypeAnnotation>,
+        NONE,
         false,
       ),
       Some(init),
@@ -229,7 +229,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
-        None::<TSTypeAnnotation>,
+        NONE,
         false,
       ),
       Some(init),
@@ -256,7 +256,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
-          None::<TSTypeAnnotation>,
+          NONE,
           false,
         ),
         false,
@@ -298,14 +298,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
-      None::<TSTypeParameterDeclaration>,
+      NONE,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
-        None::<BindingRestElement>,
+        NONE,
       ),
-      None::<TSTypeAnnotation>,
+      NONE,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
     arrow_expr.params.items.push(self.builder.formal_parameter(
@@ -313,7 +313,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
-        None::<TSTypeAnnotation>,
+        NONE,
         false,
       ),
       None,
@@ -326,7 +326,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
-        None::<TSTypeAnnotation>,
+        NONE,
         false,
       ),
       None,
@@ -362,14 +362,14 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
-      None::<TSTypeParameterDeclaration>,
+      NONE,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
-        None::<BindingRestElement>,
+        NONE,
       ),
-      None::<TSTypeAnnotation>,
+      NONE,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
 
@@ -436,25 +436,22 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       true,
       false,
-      None::<TSTypeParameterDeclaration>,
+      NONE,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
-        None::<BindingRestElement>,
+        NONE,
       ),
-      None::<TSTypeAnnotation>,
+      NONE,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     ))
   }
 
+  #[inline]
   /// `undefined` is acting like identifier, it might be shadowed by user code.
   pub fn void_zero(&self) -> ast::Expression<'ast> {
-    ast::Expression::UnaryExpression(self.builder.alloc_unary_expression(
-      SPAN,
-      UnaryOperator::Void,
-      self.number_expr(0.0, "0"),
-    ))
+    self.builder.void_0()
   }
 
   pub fn alloc_string_literal(
@@ -477,7 +474,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       Some(specifiers),
       self.builder.string_literal(SPAN, source),
-      None,
+      NONE,
       ImportOrExportKind::Value,
     ))
   }
@@ -498,7 +495,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, as_name),
-        None::<TSTypeAnnotation>,
+        NONE,
         false,
       ),
       Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
@@ -526,7 +523,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
-          None::<TSTypeAnnotation>,
+          NONE,
           false,
         ),
         false,
@@ -541,12 +538,8 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_object_pattern(
-          SPAN,
-          properties,
-          None::<BindingRestElement>,
-        ),
-        None::<TSTypeAnnotation>,
+        self.builder.binding_pattern_kind_object_pattern(SPAN, properties, NONE),
+        NONE,
         false,
       ),
       Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
@@ -557,6 +550,43 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       declarations,
+      false,
+    ))
+  }
+
+  pub fn require_call_expr(&self, source: &str) -> Expression<'ast> {
+    self.builder.expression_call(
+      SPAN,
+      self.builder.expression_identifier_reference(SPAN, "require"),
+      NONE,
+      self.builder.vec1(
+        self.builder.argument_expression(self.builder.expression_string_literal(SPAN, source)),
+      ),
+      false,
+    )
+  }
+
+  /// var [assignee] = require([source]);
+  pub fn variable_declarator_require_call_stmt(
+    &self,
+    assignee: &str,
+    init: ast::Expression<'ast>,
+    span: Span,
+  ) -> Statement<'ast> {
+    self.builder.statement_declaration(self.builder.declaration_variable(
+      span,
+      VariableDeclarationKind::Var,
+      self.builder.vec1(self.builder.variable_declarator(
+        SPAN,
+        VariableDeclarationKind::Var,
+        self.builder.binding_pattern(
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, assignee),
+          NONE,
+          false,
+        ),
+        Some(init),
+        false,
+      )),
       false,
     ))
   }
@@ -574,15 +604,15 @@ impl<'ast> AstSnippet<'ast> {
       false,
       false,
       false,
-      None::<TSTypeParameterDeclaration>,
-      None::<TSThisParameter>,
+      NONE,
+      NONE,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
-        None::<BindingRestElement>,
+        NONE,
       ),
-      None::<TSTypeAnnotation>,
+      NONE,
       Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
     )));
 
@@ -597,20 +627,16 @@ impl<'ast> AstSnippet<'ast> {
             self.id_name("resolve", SPAN),
             false,
           )),
-          None::<TSTypeParameterInstantiation>,
+          NONE,
           self.builder.vec(),
           false,
         )),
         self.id_name("then", SPAN),
         false,
       ));
-    ast::Expression::CallExpression(self.builder.alloc_call_expression(
-      span,
-      callee,
-      None::<TSTypeParameterInstantiation>,
-      arguments,
-      false,
-    ))
+    ast::Expression::CallExpression(
+      self.builder.alloc_call_expression(span, callee, NONE, arguments, false),
+    )
   }
 
   // return xxx
@@ -619,5 +645,54 @@ impl<'ast> AstSnippet<'ast> {
       ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc()) }
         .into_in(self.alloc()),
     )
+  }
+
+  // create `a: () => expr` for  `{ a: () => expr }``
+  pub fn object_property_kind_object_property(
+    &self,
+    key: PassedStr,
+    expr: ast::Expression<'ast>,
+    computed: bool,
+  ) -> ObjectPropertyKind<'ast> {
+    self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      if computed {
+        self.builder.property_key_expression(self.builder.expression_string_literal(SPAN, key))
+      } else {
+        self.builder.property_key_identifier_name(SPAN, key)
+      },
+      self.only_return_arrow_expr(expr),
+      None,
+      true,
+      false,
+      computed,
+    )
+  }
+
+  // If interop is None, using `require_foo()`
+  // If interop is babel, using __toESM(require_foo())
+  // If interop is node, using __toESM(require_foo(), 1)
+  #[allow(clippy::needless_pass_by_value)]
+  pub fn to_esm_call_with_interop(
+    &self,
+    to_esm_fn_name: PassedStr,
+    call_expr: Expression<'ast>,
+    interop: Option<Interop>,
+  ) -> Expression<'ast> {
+    match interop {
+      None => call_expr,
+      Some(Interop::Babel) => self.call_expr_with_arg_expr_expr(to_esm_fn_name, call_expr),
+      Some(Interop::Node) => self.alloc_call_expr_with_2arg_expr_expr(
+        to_esm_fn_name,
+        call_expr,
+        self.builder.expression_from_numeric_literal(self.builder.numeric_literal(
+          SPAN,
+          1.0,
+          "1",
+          NumberBase::Decimal,
+        )),
+      ),
+    }
   }
 }

@@ -54,6 +54,7 @@ export function bindingifyOutputOptions(
     minify: outputOptions.minify,
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
+    advancedChunks: outputOptions.advancedChunks,
   }
 }
 
@@ -69,6 +70,8 @@ function bindingifySourcemap(
 
     case false:
     case undefined:
+      return undefined
+
     case 'hidden':
       return 'hidden'
 

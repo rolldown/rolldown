@@ -57,6 +57,7 @@ pub async fn load_source(
           | ModuleType::Json
           | ModuleType::Text
           | ModuleType::Empty
+          | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
             StrOrBytes::Str(
               source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,

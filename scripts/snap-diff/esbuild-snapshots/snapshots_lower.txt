@@ -1,0 +1,5009 @@
+TestClassSuperThisIssue242NoBundle
+---------- /out.js ----------
+var _e;
+export class A {
+}
+export class B extends A {
+  constructor(c) {
+    var _a;
+    super();
+    __privateAdd(this, _e);
+    __privateSet(this, _e, (_a = c.d) != null ? _a : "test");
+  }
+  f() {
+    return __privateGet(this, _e);
+  }
+}
+_e = new WeakMap();
+
+================================================================================
+TestJavaScriptAutoAccessorES2021
+---------- /out/js-define.js ----------
+var _a, _b, _one, __two, _Foo_instances, two_get, two_set, _a2, _four, __five, _Foo_static, five_get, five_set, _b2;
+class Foo {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __privateAdd(this, _one, 1);
+    __privateAdd(this, __two, 2);
+    __privateAdd(this, _a2, 3);
+  }
+  get one() {
+    return __privateGet(this, _one);
+  }
+  set one(_) {
+    __privateSet(this, _one, _);
+  }
+  get [_b = three()]() {
+    return __privateGet(this, _a2);
+  }
+  set [_b](_) {
+    __privateSet(this, _a2, _);
+  }
+  static get four() {
+    return __privateGet(this, _four);
+  }
+  static set four(_) {
+    __privateSet(this, _four, _);
+  }
+  static get [_a = six()]() {
+    return __privateGet(this, _b2);
+  }
+  static set [_a](_) {
+    __privateSet(this, _b2, _);
+  }
+}
+_one = new WeakMap();
+__two = new WeakMap();
+_Foo_instances = new WeakSet();
+two_get = function() {
+  return __privateGet(this, __two);
+};
+two_set = function(_) {
+  __privateSet(this, __two, _);
+};
+_a2 = new WeakMap();
+_four = new WeakMap();
+__five = new WeakMap();
+_Foo_static = new WeakSet();
+five_get = function() {
+  return __privateGet(this, __five);
+};
+five_set = function(_) {
+  __privateSet(this, __five, _);
+};
+_b2 = new WeakMap();
+__privateAdd(Foo, _Foo_static);
+__privateAdd(Foo, _four, 4);
+__privateAdd(Foo, __five, 5);
+__privateAdd(Foo, _b2, 6);
+
+---------- /out/ts-define/ts-define.js ----------
+var _a, _b, _one, __two, _Foo_instances, two_get, two_set, _a2, _four, __five, _Foo_static, five_get, five_set, _b2, _a3, __a, _Private_instances, a_get, a_set, _a4, __a2, _StaticPrivate_static, a_get2, a_set2;
+class Foo {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __privateAdd(this, _one, 1);
+    __privateAdd(this, __two, 2);
+    __privateAdd(this, _a2, 3);
+  }
+  get one() {
+    return __privateGet(this, _one);
+  }
+  set one(_) {
+    __privateSet(this, _one, _);
+  }
+  get [_b = three()]() {
+    return __privateGet(this, _a2);
+  }
+  set [_b](_) {
+    __privateSet(this, _a2, _);
+  }
+  static get four() {
+    return __privateGet(this, _four);
+  }
+  static set four(_) {
+    __privateSet(this, _four, _);
+  }
+  static get [_a = six()]() {
+    return __privateGet(this, _b2);
+  }
+  static set [_a](_) {
+    __privateSet(this, _b2, _);
+  }
+}
+_one = new WeakMap();
+__two = new WeakMap();
+_Foo_instances = new WeakSet();
+two_get = function() {
+  return __privateGet(this, __two);
+};
+two_set = function(_) {
+  __privateSet(this, __two, _);
+};
+_a2 = new WeakMap();
+_four = new WeakMap();
+__five = new WeakMap();
+_Foo_static = new WeakSet();
+five_get = function() {
+  return __privateGet(this, __five);
+};
+five_set = function(_) {
+  __privateSet(this, __five, _);
+};
+_b2 = new WeakMap();
+__privateAdd(Foo, _Foo_static);
+__privateAdd(Foo, _four, 4);
+__privateAdd(Foo, __five, 5);
+__privateAdd(Foo, _b2, 6);
+class Normal {
+  constructor() {
+    __privateAdd(this, _a3, b);
+    __publicField(this, "c", d);
+  }
+  get a() {
+    return __privateGet(this, _a3);
+  }
+  set a(_) {
+    __privateSet(this, _a3, _);
+  }
+}
+_a3 = new WeakMap();
+class Private {
+  constructor() {
+    __privateAdd(this, _Private_instances);
+    __privateAdd(this, __a, b);
+    __publicField(this, "c", d);
+  }
+}
+__a = new WeakMap();
+_Private_instances = new WeakSet();
+a_get = function() {
+  return __privateGet(this, __a);
+};
+a_set = function(_) {
+  __privateSet(this, __a, _);
+};
+class StaticNormal {
+  static get a() {
+    return __privateGet(this, _a4);
+  }
+  static set a(_) {
+    __privateSet(this, _a4, _);
+  }
+}
+_a4 = new WeakMap();
+__privateAdd(StaticNormal, _a4, b);
+__publicField(StaticNormal, "c", d);
+class StaticPrivate {
+}
+__a2 = new WeakMap();
+_StaticPrivate_static = new WeakSet();
+a_get2 = function() {
+  return __privateGet(this, __a2);
+};
+a_set2 = function(_) {
+  __privateSet(this, __a2, _);
+};
+__privateAdd(StaticPrivate, _StaticPrivate_static);
+__privateAdd(StaticPrivate, __a2, b);
+__publicField(StaticPrivate, "c", d);
+
+---------- /out/ts-assign/ts-assign.js ----------
+var _a, _b, _one, __two, _Foo_instances, two_get, two_set, _a2, _four, __five, _Foo_static, five_get, five_set, _b2, _a3, __a, _Private_instances, a_get, a_set, _a4, __a2, _StaticPrivate_static, a_get2, a_set2;
+class Foo {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __privateAdd(this, _one, 1);
+    __privateAdd(this, __two, 2);
+    __privateAdd(this, _a2, 3);
+  }
+  get one() {
+    return __privateGet(this, _one);
+  }
+  set one(_) {
+    __privateSet(this, _one, _);
+  }
+  get [_b = three()]() {
+    return __privateGet(this, _a2);
+  }
+  set [_b](_) {
+    __privateSet(this, _a2, _);
+  }
+  static get four() {
+    return __privateGet(this, _four);
+  }
+  static set four(_) {
+    __privateSet(this, _four, _);
+  }
+  static get [_a = six()]() {
+    return __privateGet(this, _b2);
+  }
+  static set [_a](_) {
+    __privateSet(this, _b2, _);
+  }
+}
+_one = new WeakMap();
+__two = new WeakMap();
+_Foo_instances = new WeakSet();
+two_get = function() {
+  return __privateGet(this, __two);
+};
+two_set = function(_) {
+  __privateSet(this, __two, _);
+};
+_a2 = new WeakMap();
+_four = new WeakMap();
+__five = new WeakMap();
+_Foo_static = new WeakSet();
+five_get = function() {
+  return __privateGet(this, __five);
+};
+five_set = function(_) {
+  __privateSet(this, __five, _);
+};
+_b2 = new WeakMap();
+__privateAdd(Foo, _Foo_static);
+__privateAdd(Foo, _four, 4);
+__privateAdd(Foo, __five, 5);
+__privateAdd(Foo, _b2, 6);
+class Normal {
+  constructor() {
+    __privateAdd(this, _a3, b);
+    this.c = d;
+  }
+  get a() {
+    return __privateGet(this, _a3);
+  }
+  set a(_) {
+    __privateSet(this, _a3, _);
+  }
+}
+_a3 = new WeakMap();
+class Private {
+  constructor() {
+    __privateAdd(this, _Private_instances);
+    __privateAdd(this, __a, b);
+    this.c = d;
+  }
+}
+__a = new WeakMap();
+_Private_instances = new WeakSet();
+a_get = function() {
+  return __privateGet(this, __a);
+};
+a_set = function(_) {
+  __privateSet(this, __a, _);
+};
+class StaticNormal {
+  static get a() {
+    return __privateGet(this, _a4);
+  }
+  static set a(_) {
+    __privateSet(this, _a4, _);
+  }
+}
+_a4 = new WeakMap();
+__privateAdd(StaticNormal, _a4, b);
+StaticNormal.c = d;
+class StaticPrivate {
+}
+__a2 = new WeakMap();
+_StaticPrivate_static = new WeakSet();
+a_get2 = function() {
+  return __privateGet(this, __a2);
+};
+a_set2 = function(_) {
+  __privateSet(this, __a2, _);
+};
+__privateAdd(StaticPrivate, _StaticPrivate_static);
+__privateAdd(StaticPrivate, __a2, b);
+StaticPrivate.c = d;
+
+================================================================================
+TestJavaScriptAutoAccessorES2022
+---------- /out/js-define.js ----------
+var _a, _b;
+class Foo {
+  #one = 1;
+  get one() {
+    return this.#one;
+  }
+  set one(_) {
+    this.#one = _;
+  }
+  #_two = 2;
+  get #two() {
+    return this.#_two;
+  }
+  set #two(_) {
+    this.#_two = _;
+  }
+  #a = 3;
+  get [_b = three()]() {
+    return this.#a;
+  }
+  set [_b](_) {
+    this.#a = _;
+  }
+  static #four = 4;
+  static get four() {
+    return this.#four;
+  }
+  static set four(_) {
+    this.#four = _;
+  }
+  static #_five = 5;
+  static get #five() {
+    return this.#_five;
+  }
+  static set #five(_) {
+    this.#_five = _;
+  }
+  static #b = 6;
+  static get [_a = six()]() {
+    return this.#b;
+  }
+  static set [_a](_) {
+    this.#b = _;
+  }
+}
+
+---------- /out/ts-define/ts-define.js ----------
+var _a, _b;
+class Foo {
+  #one = 1;
+  get one() {
+    return this.#one;
+  }
+  set one(_) {
+    this.#one = _;
+  }
+  #_two = 2;
+  get #two() {
+    return this.#_two;
+  }
+  set #two(_) {
+    this.#_two = _;
+  }
+  #a = 3;
+  get [_b = three()]() {
+    return this.#a;
+  }
+  set [_b](_) {
+    this.#a = _;
+  }
+  static #four = 4;
+  static get four() {
+    return this.#four;
+  }
+  static set four(_) {
+    this.#four = _;
+  }
+  static #_five = 5;
+  static get #five() {
+    return this.#_five;
+  }
+  static set #five(_) {
+    this.#_five = _;
+  }
+  static #b = 6;
+  static get [_a = six()]() {
+    return this.#b;
+  }
+  static set [_a](_) {
+    this.#b = _;
+  }
+}
+class Normal {
+  #a = b;
+  get a() {
+    return this.#a;
+  }
+  set a(_) {
+    this.#a = _;
+  }
+  c = d;
+}
+class Private {
+  #_a = b;
+  get #a() {
+    return this.#_a;
+  }
+  set #a(_) {
+    this.#_a = _;
+  }
+  c = d;
+}
+class StaticNormal {
+  static #a = b;
+  static get a() {
+    return this.#a;
+  }
+  static set a(_) {
+    this.#a = _;
+  }
+  static c = d;
+}
+class StaticPrivate {
+  static #_a = b;
+  static get #a() {
+    return this.#_a;
+  }
+  static set #a(_) {
+    this.#_a = _;
+  }
+  static c = d;
+}
+
+---------- /out/ts-assign/ts-assign.js ----------
+var _a, _b, _a2, __a;
+class Foo {
+  #one = 1;
+  get one() {
+    return this.#one;
+  }
+  set one(_) {
+    this.#one = _;
+  }
+  #_two = 2;
+  get #two() {
+    return this.#_two;
+  }
+  set #two(_) {
+    this.#_two = _;
+  }
+  #a = 3;
+  get [_b = three()]() {
+    return this.#a;
+  }
+  set [_b](_) {
+    this.#a = _;
+  }
+  static #four = 4;
+  static get four() {
+    return this.#four;
+  }
+  static set four(_) {
+    this.#four = _;
+  }
+  static #_five = 5;
+  static get #five() {
+    return this.#_five;
+  }
+  static set #five(_) {
+    this.#_five = _;
+  }
+  static #b = 6;
+  static get [_a = six()]() {
+    return this.#b;
+  }
+  static set [_a](_) {
+    this.#b = _;
+  }
+}
+class Normal {
+  constructor() {
+    __privateAdd(this, _a2, b);
+    this.c = d;
+  }
+  get a() {
+    return __privateGet(this, _a2);
+  }
+  set a(_) {
+    __privateSet(this, _a2, _);
+  }
+}
+_a2 = new WeakMap();
+class Private {
+  constructor() {
+    __privateAdd(this, __a, b);
+    this.c = d;
+  }
+  get #a() {
+    return __privateGet(this, __a);
+  }
+  set #a(_) {
+    __privateSet(this, __a, _);
+  }
+}
+__a = new WeakMap();
+class StaticNormal {
+  static #a = b;
+  static get a() {
+    return this.#a;
+  }
+  static set a(_) {
+    this.#a = _;
+  }
+  static {
+    this.c = d;
+  }
+}
+class StaticPrivate {
+  static #_a = b;
+  static get #a() {
+    return this.#_a;
+  }
+  static set #a(_) {
+    this.#_a = _;
+  }
+  static {
+    this.c = d;
+  }
+}
+
+================================================================================
+TestJavaScriptAutoAccessorESNext
+---------- /out/js-define.js ----------
+class Foo {
+  accessor one = 1;
+  accessor #two = 2;
+  accessor [three()] = 3;
+  static accessor four = 4;
+  static accessor #five = 5;
+  static accessor [six()] = 6;
+}
+
+---------- /out/ts-define/ts-define.js ----------
+class Foo {
+  accessor one = 1;
+  accessor #two = 2;
+  accessor [three()] = 3;
+  static accessor four = 4;
+  static accessor #five = 5;
+  static accessor [six()] = 6;
+}
+class Normal {
+  accessor a = b;
+  c = d;
+}
+class Private {
+  accessor #a = b;
+  c = d;
+}
+class StaticNormal {
+  static accessor a = b;
+  static c = d;
+}
+class StaticPrivate {
+  static accessor #a = b;
+  static c = d;
+}
+
+---------- /out/ts-assign/ts-assign.js ----------
+var _a, __a;
+class Foo {
+  accessor one = 1;
+  accessor #two = 2;
+  accessor [three()] = 3;
+  static accessor four = 4;
+  static accessor #five = 5;
+  static accessor [six()] = 6;
+}
+class Normal {
+  constructor() {
+    __privateAdd(this, _a, b);
+    this.c = d;
+  }
+  get a() {
+    return __privateGet(this, _a);
+  }
+  set a(_) {
+    __privateSet(this, _a, _);
+  }
+}
+_a = new WeakMap();
+class Private {
+  constructor() {
+    __privateAdd(this, __a, b);
+    this.c = d;
+  }
+  get #a() {
+    return __privateGet(this, __a);
+  }
+  set #a(_) {
+    __privateSet(this, __a, _);
+  }
+}
+__a = new WeakMap();
+class StaticNormal {
+  static accessor a = b;
+  static {
+    this.c = d;
+  }
+}
+class StaticPrivate {
+  static accessor #a = b;
+  static {
+    this.c = d;
+  }
+}
+
+================================================================================
+TestJavaScriptDecoratorsBundleIssue3768
+---------- /out/base-instance-accessor.js ----------
+// base-instance-accessor.js
+var _foo_dec, _init, _foo;
+_foo_dec = [dec];
+var _Foo = class _Foo {
+  constructor() {
+    __privateAdd(this, _foo, __runInitializers(_init, 8, this, _Foo)), __runInitializers(_init, 11, this);
+  }
+};
+_init = __decoratorStart(null);
+_foo = new WeakMap();
+__decorateElement(_init, 4, "foo", _foo_dec, _Foo, _foo);
+__decoratorMetadata(_init, _Foo);
+var Foo = _Foo;
+
+---------- /out/base-instance-field.js ----------
+// base-instance-field.js
+var _foo_dec, _init;
+_foo_dec = [dec];
+var _Foo = class _Foo {
+  constructor() {
+    __publicField(this, "foo", __runInitializers(_init, 8, this, _Foo)), __runInitializers(_init, 11, this);
+  }
+};
+_init = __decoratorStart(null);
+__decorateElement(_init, 5, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+var Foo = _Foo;
+
+---------- /out/base-instance-method.js ----------
+// base-instance-method.js
+var _foo_dec, _init;
+_foo_dec = [dec];
+var _Foo = class _Foo {
+  constructor() {
+    __runInitializers(_init, 5, this);
+  }
+  foo() {
+    return _Foo;
+  }
+};
+_init = __decoratorStart(null);
+__decorateElement(_init, 1, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+var Foo = _Foo;
+
+---------- /out/base-static-accessor.js ----------
+// base-static-accessor.js
+var _foo_dec, _init, _foo;
+_foo_dec = [dec];
+var _Foo = class _Foo {
+};
+_init = __decoratorStart(null);
+_foo = new WeakMap();
+__decorateElement(_init, 12, "foo", _foo_dec, _Foo, _foo);
+__decoratorMetadata(_init, _Foo);
+__privateAdd(_Foo, _foo, __runInitializers(_init, 8, _Foo, _Foo)), __runInitializers(_init, 11, _Foo);
+var Foo = _Foo;
+
+---------- /out/base-static-field.js ----------
+// base-static-field.js
+var _foo_dec, _init;
+_foo_dec = [dec];
+var _Foo = class _Foo {
+};
+_init = __decoratorStart(null);
+__decorateElement(_init, 13, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+__publicField(_Foo, "foo", __runInitializers(_init, 8, _Foo, _Foo)), __runInitializers(_init, 11, _Foo);
+var Foo = _Foo;
+
+---------- /out/base-static-method.js ----------
+// base-static-method.js
+var _foo_dec, _init;
+_foo_dec = [dec];
+var _Foo = class _Foo {
+  static foo() {
+    return _Foo;
+  }
+};
+_init = __decoratorStart(null);
+__decorateElement(_init, 9, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+__runInitializers(_init, 3, _Foo);
+var Foo = _Foo;
+
+---------- /out/derived-instance-accessor.js ----------
+// derived-instance-accessor.js
+var _foo_dec, _a, _init, _foo;
+var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _foo, __runInitializers(_init, 8, this, _Foo)), __runInitializers(_init, 11, this);
+  }
+};
+_init = __decoratorStart(_a);
+_foo = new WeakMap();
+__decorateElement(_init, 4, "foo", _foo_dec, _Foo, _foo);
+__decoratorMetadata(_init, _Foo);
+var Foo = _Foo;
+
+---------- /out/derived-instance-field.js ----------
+// derived-instance-field.js
+var _foo_dec, _a, _init;
+var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "foo", __runInitializers(_init, 8, this, _Foo)), __runInitializers(_init, 11, this);
+  }
+};
+_init = __decoratorStart(_a);
+__decorateElement(_init, 5, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+var Foo = _Foo;
+
+---------- /out/derived-instance-method.js ----------
+// derived-instance-method.js
+var _foo_dec, _a, _init;
+var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
+  constructor() {
+    super(...arguments);
+    __runInitializers(_init, 5, this);
+  }
+  foo() {
+    return _Foo;
+  }
+};
+_init = __decoratorStart(_a);
+__decorateElement(_init, 1, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+var Foo = _Foo;
+
+---------- /out/derived-static-accessor.js ----------
+// derived-static-accessor.js
+var _foo_dec, _a, _init, _foo;
+var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
+};
+_init = __decoratorStart(_a);
+_foo = new WeakMap();
+__decorateElement(_init, 12, "foo", _foo_dec, _Foo, _foo);
+__decoratorMetadata(_init, _Foo);
+__privateAdd(_Foo, _foo, __runInitializers(_init, 8, _Foo, _Foo)), __runInitializers(_init, 11, _Foo);
+var Foo = _Foo;
+
+---------- /out/derived-static-field.js ----------
+// derived-static-field.js
+var _foo_dec, _a, _init;
+var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
+};
+_init = __decoratorStart(_a);
+__decorateElement(_init, 13, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+__publicField(_Foo, "foo", __runInitializers(_init, 8, _Foo, _Foo)), __runInitializers(_init, 11, _Foo);
+var Foo = _Foo;
+
+---------- /out/derived-static-method.js ----------
+// derived-static-method.js
+var _foo_dec, _a, _init;
+var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
+  static foo() {
+    return _Foo;
+  }
+};
+_init = __decoratorStart(_a);
+__decorateElement(_init, 9, "foo", _foo_dec, _Foo);
+__decoratorMetadata(_init, _Foo);
+__runInitializers(_init, 3, _Foo);
+var Foo = _Foo;
+
+================================================================================
+TestJavaScriptDecoratorsESNext
+---------- /out.js ----------
+@x.y()
+@(new y.x())
+export default class Foo {
+  @x @y mUndef;
+  @x @y mDef = 1;
+  @x @y method() {
+    return new Foo();
+  }
+  @x @y static sUndef;
+  @x @y static sDef = new Foo();
+  @x @y static sMethod() {
+    return new Foo();
+  }
+}
+
+================================================================================
+TestLowerAsync2016NoBundle
+---------- /out.js ----------
+function foo(_0) {
+  return __async(this, arguments, function* (bar) {
+    yield bar;
+    return [this, arguments];
+  });
+}
+class Foo {
+  foo() {
+    return __async(this, null, function* () {
+    });
+  }
+}
+export default [
+  foo,
+  Foo,
+  function() {
+    return __async(this, null, function* () {
+    });
+  },
+  () => __async(void 0, null, function* () {
+  }),
+  { foo() {
+    return __async(this, null, function* () {
+    });
+  } },
+  class {
+    foo() {
+      return __async(this, null, function* () {
+      });
+    }
+  },
+  function() {
+    var _arguments = arguments;
+    return (bar) => __async(this, null, function* () {
+      yield bar;
+      return [this, _arguments];
+    });
+  }
+];
+
+================================================================================
+TestLowerAsync2017NoBundle
+---------- /out.js ----------
+async function foo(bar) {
+  await bar;
+  return arguments;
+}
+class Foo {
+  async foo() {
+  }
+}
+export default [
+  foo,
+  Foo,
+  async function() {
+  },
+  async () => {
+  },
+  { async foo() {
+  } },
+  class {
+    async foo() {
+    }
+  },
+  function() {
+    return async (bar) => {
+      await bar;
+      return [this, arguments];
+    };
+  }
+];
+
+================================================================================
+TestLowerAsyncArrowSuperES2016
+---------- /out.js ----------
+// foo1.js
+var foo1_default = class _foo1_default extends x {
+  foo1() {
+    return () => __async(this, null, function* () {
+      return __superGet(_foo1_default.prototype, this, "foo").call(this, "foo1");
+    });
+  }
+};
+
+// foo2.js
+var foo2_default = class _foo2_default extends x {
+  foo2() {
+    return () => __async(this, null, function* () {
+      return () => __superGet(_foo2_default.prototype, this, "foo").call(this, "foo2");
+    });
+  }
+};
+
+// foo3.js
+var foo3_default = class _foo3_default extends x {
+  foo3() {
+    return () => () => __async(this, null, function* () {
+      return __superGet(_foo3_default.prototype, this, "foo").call(this, "foo3");
+    });
+  }
+};
+
+// foo4.js
+var foo4_default = class _foo4_default extends x {
+  foo4() {
+    return () => __async(this, null, function* () {
+      return () => __async(this, null, function* () {
+        return __superGet(_foo4_default.prototype, this, "foo").call(this, "foo4");
+      });
+    });
+  }
+};
+
+// bar1.js
+var bar1_default = class _bar1_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar1", () => __async(this, null, function* () {
+      return __superGet(_bar1_default.prototype, this, "foo").call(this, "bar1");
+    }));
+  }
+};
+
+// bar2.js
+var bar2_default = class _bar2_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar2", () => __async(this, null, function* () {
+      return () => __superGet(_bar2_default.prototype, this, "foo").call(this, "bar2");
+    }));
+  }
+};
+
+// bar3.js
+var bar3_default = class _bar3_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar3", () => () => __async(this, null, function* () {
+      return __superGet(_bar3_default.prototype, this, "foo").call(this, "bar3");
+    }));
+  }
+};
+
+// bar4.js
+var bar4_default = class _bar4_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar4", () => __async(this, null, function* () {
+      return () => __async(this, null, function* () {
+        return __superGet(_bar4_default.prototype, this, "foo").call(this, "bar4");
+      });
+    }));
+  }
+};
+
+// baz1.js
+var baz1_default = class _baz1_default extends x {
+  baz1() {
+    return __async(this, null, function* () {
+      return () => __superGet(_baz1_default.prototype, this, "foo").call(this, "baz1");
+    });
+  }
+};
+
+// baz2.js
+var baz2_default = class _baz2_default extends x {
+  baz2() {
+    return __async(this, null, function* () {
+      return () => () => __superGet(_baz2_default.prototype, this, "foo").call(this, "baz2");
+    });
+  }
+};
+
+// outer.js
+var outer_default = function() {
+  return __async(this, null, function* () {
+    class y extends z {
+      constructor() {
+        super(...arguments);
+        __publicField(this, "foo", () => __async(this, null, function* () {
+          return __superGet(y.prototype, this, "foo").call(this);
+        }));
+      }
+    }
+    yield new y().foo()();
+  });
+}();
+export {
+  bar1_default as bar1,
+  bar2_default as bar2,
+  bar3_default as bar3,
+  bar4_default as bar4,
+  baz1_default as baz1,
+  baz2_default as baz2,
+  foo1_default as foo1,
+  foo2_default as foo2,
+  foo3_default as foo3,
+  foo4_default as foo4
+};
+
+================================================================================
+TestLowerAsyncArrowSuperSetterES2016
+---------- /out.js ----------
+// foo1.js
+var foo1_default = class _foo1_default extends x {
+  foo1() {
+    return () => __async(this, null, function* () {
+      return __superSet(_foo1_default.prototype, this, "foo", "foo1");
+    });
+  }
+};
+
+// foo2.js
+var foo2_default = class _foo2_default extends x {
+  foo2() {
+    return () => __async(this, null, function* () {
+      return () => __superSet(_foo2_default.prototype, this, "foo", "foo2");
+    });
+  }
+};
+
+// foo3.js
+var foo3_default = class _foo3_default extends x {
+  foo3() {
+    return () => () => __async(this, null, function* () {
+      return __superSet(_foo3_default.prototype, this, "foo", "foo3");
+    });
+  }
+};
+
+// foo4.js
+var foo4_default = class _foo4_default extends x {
+  foo4() {
+    return () => __async(this, null, function* () {
+      return () => __async(this, null, function* () {
+        return __superSet(_foo4_default.prototype, this, "foo", "foo4");
+      });
+    });
+  }
+};
+
+// bar1.js
+var bar1_default = class _bar1_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar1", () => __async(this, null, function* () {
+      return __superSet(_bar1_default.prototype, this, "foo", "bar1");
+    }));
+  }
+};
+
+// bar2.js
+var bar2_default = class _bar2_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar2", () => __async(this, null, function* () {
+      return () => __superSet(_bar2_default.prototype, this, "foo", "bar2");
+    }));
+  }
+};
+
+// bar3.js
+var bar3_default = class _bar3_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar3", () => () => __async(this, null, function* () {
+      return __superSet(_bar3_default.prototype, this, "foo", "bar3");
+    }));
+  }
+};
+
+// bar4.js
+var bar4_default = class _bar4_default extends x {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "bar4", () => __async(this, null, function* () {
+      return () => __async(this, null, function* () {
+        return __superSet(_bar4_default.prototype, this, "foo", "bar4");
+      });
+    }));
+  }
+};
+
+// baz1.js
+var baz1_default = class _baz1_default extends x {
+  baz1() {
+    return __async(this, null, function* () {
+      return () => __superSet(_baz1_default.prototype, this, "foo", "baz1");
+    });
+  }
+};
+
+// baz2.js
+var baz2_default = class _baz2_default extends x {
+  baz2() {
+    return __async(this, null, function* () {
+      return () => () => __superSet(_baz2_default.prototype, this, "foo", "baz2");
+    });
+  }
+};
+
+// outer.js
+var outer_default = function() {
+  return __async(this, null, function* () {
+    class y extends z {
+      constructor() {
+        super(...arguments);
+        __publicField(this, "foo", () => __async(this, null, function* () {
+          return __superSet(y.prototype, this, "foo", "foo");
+        }));
+      }
+    }
+    yield new y().foo()();
+  });
+}();
+export {
+  bar1_default as bar1,
+  bar2_default as bar2,
+  bar3_default as bar3,
+  bar4_default as bar4,
+  baz1_default as baz1,
+  baz2_default as baz2,
+  foo1_default as foo1,
+  foo2_default as foo2,
+  foo3_default as foo3,
+  foo4_default as foo4
+};
+
+================================================================================
+TestLowerAsyncGenerator
+---------- /out/entry.js ----------
+function foo() {
+  return __asyncGenerator(this, null, function* () {
+    var _stack2 = [];
+    try {
+      yield;
+      yield x;
+      yield* __yieldStar(x);
+      const x = __using(_stack2, yield new __await(y), true);
+      try {
+        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+          let x2 = temp.value;
+        }
+      } catch (temp) {
+        error = [temp];
+      } finally {
+        try {
+          more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+        } finally {
+          if (error)
+            throw error[0];
+        }
+      }
+      try {
+        for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+          var _x = temp2.value;
+          var _stack = [];
+          try {
+            const x2 = __using(_stack, _x, true);
+          } catch (_) {
+            var _error = _, _hasError = true;
+          } finally {
+            var _promise = __callDispose(_stack, _error, _hasError);
+            _promise && (yield new __await(_promise));
+          }
+        }
+      } catch (temp2) {
+        error2 = [temp2];
+      } finally {
+        try {
+          more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+        } finally {
+          if (error2)
+            throw error2[0];
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield new __await(_promise2));
+    }
+  });
+}
+foo = function() {
+  return __asyncGenerator(this, null, function* () {
+    var _stack2 = [];
+    try {
+      yield;
+      yield x;
+      yield* __yieldStar(x);
+      const x = __using(_stack2, yield new __await(y), true);
+      try {
+        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+          let x2 = temp.value;
+        }
+      } catch (temp) {
+        error = [temp];
+      } finally {
+        try {
+          more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+        } finally {
+          if (error)
+            throw error[0];
+        }
+      }
+      try {
+        for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+          var _x = temp2.value;
+          var _stack = [];
+          try {
+            const x2 = __using(_stack, _x, true);
+          } catch (_) {
+            var _error = _, _hasError = true;
+          } finally {
+            var _promise = __callDispose(_stack, _error, _hasError);
+            _promise && (yield new __await(_promise));
+          }
+        }
+      } catch (temp2) {
+        error2 = [temp2];
+      } finally {
+        try {
+          more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+        } finally {
+          if (error2)
+            throw error2[0];
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield new __await(_promise2));
+    }
+  });
+};
+foo = { bar() {
+  return __asyncGenerator(this, null, function* () {
+    var _stack2 = [];
+    try {
+      yield;
+      yield x;
+      yield* __yieldStar(x);
+      const x = __using(_stack2, yield new __await(y), true);
+      try {
+        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+          let x2 = temp.value;
+        }
+      } catch (temp) {
+        error = [temp];
+      } finally {
+        try {
+          more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+        } finally {
+          if (error)
+            throw error[0];
+        }
+      }
+      try {
+        for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+          var _x = temp2.value;
+          var _stack = [];
+          try {
+            const x2 = __using(_stack, _x, true);
+          } catch (_) {
+            var _error = _, _hasError = true;
+          } finally {
+            var _promise = __callDispose(_stack, _error, _hasError);
+            _promise && (yield new __await(_promise));
+          }
+        }
+      } catch (temp2) {
+        error2 = [temp2];
+      } finally {
+        try {
+          more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+        } finally {
+          if (error2)
+            throw error2[0];
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield new __await(_promise2));
+    }
+  });
+} };
+class Foo {
+  bar() {
+    return __asyncGenerator(this, null, function* () {
+      var _stack2 = [];
+      try {
+        yield;
+        yield x;
+        yield* __yieldStar(x);
+        const x = __using(_stack2, yield new __await(y), true);
+        try {
+          for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+            let x2 = temp.value;
+          }
+        } catch (temp) {
+          error = [temp];
+        } finally {
+          try {
+            more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+          } finally {
+            if (error)
+              throw error[0];
+          }
+        }
+        try {
+          for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+            var _x = temp2.value;
+            var _stack = [];
+            try {
+              const x2 = __using(_stack, _x, true);
+            } catch (_) {
+              var _error = _, _hasError = true;
+            } finally {
+              var _promise = __callDispose(_stack, _error, _hasError);
+              _promise && (yield new __await(_promise));
+            }
+          }
+        } catch (temp2) {
+          error2 = [temp2];
+        } finally {
+          try {
+            more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+          } finally {
+            if (error2)
+              throw error2[0];
+          }
+        }
+      } catch (_2) {
+        var _error2 = _2, _hasError2 = true;
+      } finally {
+        var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+        _promise2 && (yield new __await(_promise2));
+      }
+    });
+  }
+}
+Foo = class {
+  bar() {
+    return __asyncGenerator(this, null, function* () {
+      var _stack2 = [];
+      try {
+        yield;
+        yield x;
+        yield* __yieldStar(x);
+        const x = __using(_stack2, yield new __await(y), true);
+        try {
+          for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+            let x2 = temp.value;
+          }
+        } catch (temp) {
+          error = [temp];
+        } finally {
+          try {
+            more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+          } finally {
+            if (error)
+              throw error[0];
+          }
+        }
+        try {
+          for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+            var _x = temp2.value;
+            var _stack = [];
+            try {
+              const x2 = __using(_stack, _x, true);
+            } catch (_) {
+              var _error = _, _hasError = true;
+            } finally {
+              var _promise = __callDispose(_stack, _error, _hasError);
+              _promise && (yield new __await(_promise));
+            }
+          }
+        } catch (temp2) {
+          error2 = [temp2];
+        } finally {
+          try {
+            more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+          } finally {
+            if (error2)
+              throw error2[0];
+          }
+        }
+      } catch (_2) {
+        var _error2 = _2, _hasError2 = true;
+      } finally {
+        var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+        _promise2 && (yield new __await(_promise2));
+      }
+    });
+  }
+};
+async function bar() {
+  await using x = await y;
+  for await (let x2 of y) {
+  }
+  for await (await using x2 of y) {
+  }
+}
+
+================================================================================
+TestLowerAsyncGeneratorNoAwait
+---------- /out/entry.js ----------
+function foo() {
+  return __asyncGenerator(this, null, function* () {
+    var _stack2 = [];
+    try {
+      yield;
+      yield x;
+      yield* __yieldStar(x);
+      const x = __using(_stack2, yield new __await(y), true);
+      try {
+        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+          let x2 = temp.value;
+        }
+      } catch (temp) {
+        error = [temp];
+      } finally {
+        try {
+          more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+        } finally {
+          if (error)
+            throw error[0];
+        }
+      }
+      try {
+        for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+          var _x = temp2.value;
+          var _stack = [];
+          try {
+            const x2 = __using(_stack, _x, true);
+          } catch (_) {
+            var _error = _, _hasError = true;
+          } finally {
+            var _promise = __callDispose(_stack, _error, _hasError);
+            _promise && (yield new __await(_promise));
+          }
+        }
+      } catch (temp2) {
+        error2 = [temp2];
+      } finally {
+        try {
+          more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+        } finally {
+          if (error2)
+            throw error2[0];
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield new __await(_promise2));
+    }
+  });
+}
+foo = function() {
+  return __asyncGenerator(this, null, function* () {
+    var _stack2 = [];
+    try {
+      yield;
+      yield x;
+      yield* __yieldStar(x);
+      const x = __using(_stack2, yield new __await(y), true);
+      try {
+        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+          let x2 = temp.value;
+        }
+      } catch (temp) {
+        error = [temp];
+      } finally {
+        try {
+          more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+        } finally {
+          if (error)
+            throw error[0];
+        }
+      }
+      try {
+        for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+          var _x = temp2.value;
+          var _stack = [];
+          try {
+            const x2 = __using(_stack, _x, true);
+          } catch (_) {
+            var _error = _, _hasError = true;
+          } finally {
+            var _promise = __callDispose(_stack, _error, _hasError);
+            _promise && (yield new __await(_promise));
+          }
+        }
+      } catch (temp2) {
+        error2 = [temp2];
+      } finally {
+        try {
+          more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+        } finally {
+          if (error2)
+            throw error2[0];
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield new __await(_promise2));
+    }
+  });
+};
+foo = { bar() {
+  return __asyncGenerator(this, null, function* () {
+    var _stack2 = [];
+    try {
+      yield;
+      yield x;
+      yield* __yieldStar(x);
+      const x = __using(_stack2, yield new __await(y), true);
+      try {
+        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+          let x2 = temp.value;
+        }
+      } catch (temp) {
+        error = [temp];
+      } finally {
+        try {
+          more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+        } finally {
+          if (error)
+            throw error[0];
+        }
+      }
+      try {
+        for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+          var _x = temp2.value;
+          var _stack = [];
+          try {
+            const x2 = __using(_stack, _x, true);
+          } catch (_) {
+            var _error = _, _hasError = true;
+          } finally {
+            var _promise = __callDispose(_stack, _error, _hasError);
+            _promise && (yield new __await(_promise));
+          }
+        }
+      } catch (temp2) {
+        error2 = [temp2];
+      } finally {
+        try {
+          more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+        } finally {
+          if (error2)
+            throw error2[0];
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield new __await(_promise2));
+    }
+  });
+} };
+class Foo {
+  bar() {
+    return __asyncGenerator(this, null, function* () {
+      var _stack2 = [];
+      try {
+        yield;
+        yield x;
+        yield* __yieldStar(x);
+        const x = __using(_stack2, yield new __await(y), true);
+        try {
+          for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+            let x2 = temp.value;
+          }
+        } catch (temp) {
+          error = [temp];
+        } finally {
+          try {
+            more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+          } finally {
+            if (error)
+              throw error[0];
+          }
+        }
+        try {
+          for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+            var _x = temp2.value;
+            var _stack = [];
+            try {
+              const x2 = __using(_stack, _x, true);
+            } catch (_) {
+              var _error = _, _hasError = true;
+            } finally {
+              var _promise = __callDispose(_stack, _error, _hasError);
+              _promise && (yield new __await(_promise));
+            }
+          }
+        } catch (temp2) {
+          error2 = [temp2];
+        } finally {
+          try {
+            more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+          } finally {
+            if (error2)
+              throw error2[0];
+          }
+        }
+      } catch (_2) {
+        var _error2 = _2, _hasError2 = true;
+      } finally {
+        var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+        _promise2 && (yield new __await(_promise2));
+      }
+    });
+  }
+}
+Foo = class {
+  bar() {
+    return __asyncGenerator(this, null, function* () {
+      var _stack2 = [];
+      try {
+        yield;
+        yield x;
+        yield* __yieldStar(x);
+        const x = __using(_stack2, yield new __await(y), true);
+        try {
+          for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield new __await(iter.next())).done; more = false) {
+            let x2 = temp.value;
+          }
+        } catch (temp) {
+          error = [temp];
+        } finally {
+          try {
+            more && (temp = iter.return) && (yield new __await(temp.call(iter)));
+          } finally {
+            if (error)
+              throw error[0];
+          }
+        }
+        try {
+          for (var iter2 = __forAwait(y), more2, temp2, error2; more2 = !(temp2 = yield new __await(iter2.next())).done; more2 = false) {
+            var _x = temp2.value;
+            var _stack = [];
+            try {
+              const x2 = __using(_stack, _x, true);
+            } catch (_) {
+              var _error = _, _hasError = true;
+            } finally {
+              var _promise = __callDispose(_stack, _error, _hasError);
+              _promise && (yield new __await(_promise));
+            }
+          }
+        } catch (temp2) {
+          error2 = [temp2];
+        } finally {
+          try {
+            more2 && (temp2 = iter2.return) && (yield new __await(temp2.call(iter2)));
+          } finally {
+            if (error2)
+              throw error2[0];
+          }
+        }
+      } catch (_2) {
+        var _error2 = _2, _hasError2 = true;
+      } finally {
+        var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+        _promise2 && (yield new __await(_promise2));
+      }
+    });
+  }
+};
+function bar() {
+  return __async(this, null, function* () {
+    var _stack2 = [];
+    try {
+      const x = __using(_stack2, yield y, true);
+      for await (let x2 of y) {
+      }
+      for await (var _x of y) {
+        var _stack = [];
+        try {
+          const x2 = __using(_stack, _x, true);
+        } catch (_) {
+          var _error = _, _hasError = true;
+        } finally {
+          var _promise = __callDispose(_stack, _error, _hasError);
+          _promise && (yield _promise);
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield _promise2);
+    }
+  });
+}
+
+================================================================================
+TestLowerAsyncSuperES2016NoBundle
+---------- /out.js ----------
+class Derived extends Base {
+  test(key) {
+    return __async(this, null, function* () {
+      var _a, _b, _c, _d;
+      return [
+        yield __superGet(Derived.prototype, this, "foo"),
+        yield __superGet(Derived.prototype, this, key),
+        yield [__superWrapper(Derived.prototype, this, "foo")._] = [0],
+        yield [__superWrapper(Derived.prototype, this, key)._] = [0],
+        yield __superSet(Derived.prototype, this, "foo", 1),
+        yield __superSet(Derived.prototype, this, key, 1),
+        yield __superSet(Derived.prototype, this, "foo", __superGet(Derived.prototype, this, "foo") + 2),
+        yield __superSet(Derived.prototype, this, key, __superGet(Derived.prototype, this, key) + 2),
+        yield ++__superWrapper(Derived.prototype, this, "foo")._,
+        yield ++__superWrapper(Derived.prototype, this, key)._,
+        yield __superWrapper(Derived.prototype, this, "foo")._++,
+        yield __superWrapper(Derived.prototype, this, key)._++,
+        yield __superGet(Derived.prototype, this, "foo").name,
+        yield __superGet(Derived.prototype, this, key).name,
+        yield (_a = __superGet(Derived.prototype, this, "foo")) == null ? void 0 : _a.name,
+        yield (_b = __superGet(Derived.prototype, this, key)) == null ? void 0 : _b.name,
+        yield __superGet(Derived.prototype, this, "foo").call(this, 1, 2),
+        yield __superGet(Derived.prototype, this, key).call(this, 1, 2),
+        yield (_c = __superGet(Derived.prototype, this, "foo")) == null ? void 0 : _c.call(this, 1, 2),
+        yield (_d = __superGet(Derived.prototype, this, key)) == null ? void 0 : _d.call(this, 1, 2),
+        yield (() => __superGet(Derived.prototype, this, "foo"))(),
+        yield (() => __superGet(Derived.prototype, this, key))(),
+        yield (() => __superGet(Derived.prototype, this, "foo").call(this))(),
+        yield (() => __superGet(Derived.prototype, this, key).call(this))(),
+        yield __superGet(Derived.prototype, this, "foo").bind(this)``,
+        yield __superGet(Derived.prototype, this, key).bind(this)``
+      ];
+    });
+  }
+}
+let fn = () => __async(this, null, function* () {
+  return class extends Base {
+    constructor() {
+      super(...arguments);
+      __publicField(this, "a", super.a);
+      __publicField(this, "b", () => super.b);
+    }
+    c() {
+      return super.c;
+    }
+    d() {
+      return () => super.d;
+    }
+  };
+});
+class Derived2 extends Base {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "b", () => __async(this, null, function* () {
+      var _a;
+      return _a = __superGet(Derived2.prototype, this, "foo"), class {
+        constructor() {
+          __publicField(this, _a, 123);
+        }
+      };
+    }));
+  }
+  a() {
+    return __async(this, null, function* () {
+      var _a;
+      return _a = __superGet(Derived2.prototype, this, "foo"), class {
+        constructor() {
+          __publicField(this, _a, 123);
+        }
+      };
+    });
+  }
+}
+for (let i = 0; i < 3; i++) {
+  let _a;
+  objs.push(_a = {
+    __proto__: {
+      foo() {
+        return i;
+      }
+    },
+    bar() {
+      return __async(this, null, function* () {
+        return __superGet(_a, this, "foo").call(this);
+      });
+    }
+  });
+}
+
+================================================================================
+TestLowerAsyncSuperES2017NoBundle
+---------- /out.js ----------
+class Derived extends Base {
+  async test(key) {
+    var _a, _b, _c, _d;
+    return [
+      await super.foo,
+      await super[key],
+      await ([super.foo] = [0]),
+      await ([super[key]] = [0]),
+      await (super.foo = 1),
+      await (super[key] = 1),
+      await (super.foo += 2),
+      await (super[key] += 2),
+      await ++super.foo,
+      await ++super[key],
+      await super.foo++,
+      await super[key]++,
+      await super.foo.name,
+      await super[key].name,
+      await ((_a = super.foo) == null ? void 0 : _a.name),
+      await ((_b = super[key]) == null ? void 0 : _b.name),
+      await super.foo(1, 2),
+      await super[key](1, 2),
+      await ((_c = super.foo) == null ? void 0 : _c.call(this, 1, 2)),
+      await ((_d = super[key]) == null ? void 0 : _d.call(this, 1, 2)),
+      await (() => super.foo)(),
+      await (() => super[key])(),
+      await (() => super.foo())(),
+      await (() => super[key]())(),
+      await super.foo``,
+      await super[key]``
+    ];
+  }
+}
+let fn = async () => class extends Base {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "a", super.a);
+    __publicField(this, "b", () => super.b);
+  }
+  c() {
+    return super.c;
+  }
+  d() {
+    return () => super.d;
+  }
+};
+class Derived2 extends Base {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "b", async () => {
+      var _a;
+      return _a = super.foo, class {
+        constructor() {
+          __publicField(this, _a, 123);
+        }
+      };
+    });
+  }
+  async a() {
+    var _a;
+    return _a = super.foo, class {
+      constructor() {
+        __publicField(this, _a, 123);
+      }
+    };
+  }
+}
+for (let i = 0; i < 3; i++) {
+  objs.push({
+    __proto__: {
+      foo() {
+        return i;
+      }
+    },
+    async bar() {
+      return super.foo();
+    }
+  });
+}
+
+================================================================================
+TestLowerAsyncThis2016CommonJS
+---------- /out.js ----------
+// entry.js
+var require_entry = __commonJS({
+  "entry.js"(exports) {
+    exports.foo = () => __async(exports, null, function* () {
+      return exports;
+    });
+  }
+});
+export default require_entry();
+
+================================================================================
+TestLowerAsyncThis2016ES6
+---------- /out.js ----------
+// other.js
+var bar = () => __async(void 0, null, function* () {
+});
+
+// entry.js
+var foo = () => __async(void 0, null, function* () {
+  return void 0;
+});
+export {
+  bar,
+  foo
+};
+
+================================================================================
+TestLowerClassField2020NoBundle
+---------- /out.js ----------
+var _foo, _bar, _s_foo, _s_bar;
+class Foo {
+  constructor() {
+    __privateAdd(this, _foo, 123);
+    __privateAdd(this, _bar);
+    __publicField(this, "foo", 123);
+    __publicField(this, "bar");
+  }
+}
+_foo = new WeakMap();
+_bar = new WeakMap();
+_s_foo = new WeakMap();
+_s_bar = new WeakMap();
+__privateAdd(Foo, _s_foo, 123);
+__privateAdd(Foo, _s_bar);
+__publicField(Foo, "s_foo", 123);
+__publicField(Foo, "s_bar");
+
+================================================================================
+TestLowerClassFieldNextNoBundle
+---------- /out.js ----------
+class Foo {
+  #foo = 123;
+  #bar;
+  foo = 123;
+  bar;
+  static #s_foo = 123;
+  static #s_bar;
+  static s_foo = 123;
+  static s_bar;
+}
+
+================================================================================
+TestLowerClassFieldStrictTsconfigJson2020
+---------- /out.js ----------
+// loose/index.js
+var loose_default = class {
+  constructor() {
+    __publicField(this, "foo");
+  }
+};
+
+// strict/index.js
+var strict_default = class {
+  constructor() {
+    __publicField(this, "foo");
+  }
+};
+
+// entry.js
+console.log(loose_default, strict_default);
+
+================================================================================
+TestLowerExportStarAsNameCollision
+---------- /out.js ----------
+// nested.js
+import * as foo from "path2";
+var foo2 = 123;
+
+// entry.js
+import * as ns from "path1";
+console.log(foo, foo2);
+var ns2 = 123;
+export {
+  ns,
+  ns2 as sn
+};
+
+================================================================================
+TestLowerExportStarAsNameCollisionNoBundle
+---------- /out.js ----------
+import * as ns from "path";
+export { ns };
+let ns2 = 123;
+export { ns2 as sn };
+
+================================================================================
+TestLowerForAwait2015
+---------- /out.js ----------
+export default [
+  () => __async(void 0, null, function* () {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+        x = temp.value;
+        z(x);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && (yield temp.call(iter));
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  }),
+  () => __async(void 0, null, function* () {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+        x.y = temp.value;
+        z(x);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && (yield temp.call(iter));
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  }),
+  () => __async(void 0, null, function* () {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+        let x2 = temp.value;
+        z(x2);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && (yield temp.call(iter));
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  }),
+  () => __async(void 0, null, function* () {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+        const x2 = temp.value;
+        z(x2);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && (yield temp.call(iter));
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  }),
+  () => __async(void 0, null, function* () {
+    try {
+      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+        const x2 = temp.value;
+        break label;
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && (yield temp.call(iter));
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  }),
+  () => __async(void 0, null, function* () {
+    try {
+      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+        const x2 = temp.value;
+        continue label;
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && (yield temp.call(iter));
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  })
+];
+
+================================================================================
+TestLowerForAwait2017
+---------- /out.js ----------
+export default [
+  async () => {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+        x = temp.value;
+        z(x);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && await temp.call(iter);
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  },
+  async () => {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+        x.y = temp.value;
+        z(x);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && await temp.call(iter);
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  },
+  async () => {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+        let x2 = temp.value;
+        z(x2);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && await temp.call(iter);
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  },
+  async () => {
+    try {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+        const x2 = temp.value;
+        z(x2);
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && await temp.call(iter);
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  },
+  async () => {
+    try {
+      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+        const x2 = temp.value;
+        break label;
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && await temp.call(iter);
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  },
+  async () => {
+    try {
+      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+        const x2 = temp.value;
+        continue label;
+      }
+    } catch (temp) {
+      error = [temp];
+    } finally {
+      try {
+        more && (temp = iter.return) && await temp.call(iter);
+      } finally {
+        if (error)
+          throw error[0];
+      }
+    }
+  }
+];
+
+================================================================================
+TestLowerNestedFunctionDirectEval
+---------- /out/1.js ----------
+if (foo) {
+  let x2 = function() {
+  };
+  var x = x2;
+}
+
+---------- /out/2.js ----------
+if (foo) {
+  function x() {
+  }
+  eval("");
+}
+
+---------- /out/3.js ----------
+if (foo) {
+  function x() {
+  }
+  if (bar) {
+    eval("");
+  }
+}
+
+---------- /out/4.js ----------
+if (foo) {
+  function x() {
+  }
+  eval("");
+}
+
+---------- /out/5.js ----------
+"use strict";
+if (foo) {
+  let x = function() {
+  };
+}
+
+---------- /out/6.js ----------
+"use strict";
+if (foo) {
+  function x() {
+  }
+  eval("");
+}
+
+---------- /out/7.js ----------
+"use strict";
+if (foo) {
+  function x() {
+  }
+  if (bar) {
+    eval("");
+  }
+}
+
+---------- /out/8.js ----------
+"use strict";
+if (foo) {
+  function x() {
+  }
+  eval("");
+}
+
+================================================================================
+TestLowerNullishCoalescingAssignmentIssue1493
+---------- /out.js ----------
+// entry.js
+var A = class {
+  #a;
+  f() {
+    this.#a ?? (this.#a = 1);
+  }
+};
+export {
+  A
+};
+
+================================================================================
+TestLowerObjectSpreadNoBundle
+---------- /out.js ----------
+let tests = [
+  __spreadValues(__spreadValues({}, a), b),
+  __spreadValues({ a, b }, c),
+  __spreadProps(__spreadValues({}, a), { b, c }),
+  __spreadProps(__spreadValues({ a }, b), { c }),
+  __spreadProps(__spreadValues(__spreadValues(__spreadProps(__spreadValues(__spreadValues({ a, b }, c), d), { e, f }), g), h), { i, j })
+];
+let jsx = [
+  /* @__PURE__ */ React.createElement("div", __spreadValues(__spreadValues({}, a), b)),
+  /* @__PURE__ */ React.createElement("div", __spreadValues({ a: true, b: true }, c)),
+  /* @__PURE__ */ React.createElement("div", __spreadProps(__spreadValues({}, a), { b: true, c: true })),
+  /* @__PURE__ */ React.createElement("div", __spreadProps(__spreadValues({ a: true }, b), { c: true })),
+  /* @__PURE__ */ React.createElement("div", __spreadProps(__spreadValues(__spreadValues(__spreadProps(__spreadValues(__spreadValues({ a: true, b: true }, c), d), { e: true, f: true }), g), h), { i: true, j: true }))
+];
+
+================================================================================
+TestLowerOptionalCatchNameCollisionNoBundle
+---------- /out.js ----------
+try {
+} catch (e4) {
+  var e, e2;
+}
+var e3;
+
+================================================================================
+TestLowerPrivateClassAccessorOrder
+---------- /out.js ----------
+var _Foo_instances, foo_get;
+class Foo {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __publicField(this, "bar", __privateGet(this, _Foo_instances, foo_get));
+  }
+  // This must be set before "bar" is initialized
+}
+_Foo_instances = new WeakSet();
+foo_get = function() {
+  return 123;
+};
+console.log(new Foo().bar === 123);
+
+================================================================================
+TestLowerPrivateClassBrandCheckSupported
+---------- /out.js ----------
+class Foo {
+  #foo;
+  #bar;
+  baz() {
+    return [
+      this.#foo,
+      this.#bar,
+      #foo in this
+    ];
+  }
+}
+
+================================================================================
+TestLowerPrivateClassBrandCheckUnsupported
+---------- /out.js ----------
+var _foo;
+class Foo {
+  constructor() {
+    __privateAdd(this, _foo);
+    this.#bar = void 0;
+  }
+  #bar;
+  baz() {
+    return [
+      __privateGet(this, _foo),
+      this.#bar,
+      __privateIn(_foo, this)
+    ];
+  }
+}
+_foo = new WeakMap();
+
+================================================================================
+TestLowerPrivateClassExpr2020NoBundle
+---------- /out.js ----------
+var _field, _Foo_instances, method_fn, _a, _staticField, _Foo_static, staticMethod_fn;
+export let Foo = (_a = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __privateAdd(this, _field);
+  }
+  foo() {
+    var _a2;
+    __privateSet(this, _field, __privateMethod(this, _Foo_instances, method_fn).call(this));
+    __privateSet(Foo, _staticField, __privateMethod(_a2 = Foo, _Foo_static, staticMethod_fn).call(_a2));
+  }
+}, _field = new WeakMap(), _Foo_instances = new WeakSet(), method_fn = function() {
+}, _staticField = new WeakMap(), _Foo_static = new WeakSet(), staticMethod_fn = function() {
+}, __privateAdd(_a, _Foo_static), __privateAdd(_a, _staticField), _a);
+
+================================================================================
+TestLowerPrivateClassFieldOrder
+---------- /out.js ----------
+var _foo;
+class Foo {
+  constructor() {
+    __privateAdd(this, _foo, 123);
+    // This must be set before "bar" is initialized
+    __publicField(this, "bar", __privateGet(this, _foo));
+  }
+}
+_foo = new WeakMap();
+console.log(new Foo().bar === 123);
+
+================================================================================
+TestLowerPrivateClassFieldStaticIssue1424
+---------- /out.js ----------
+// entry.js
+var _T_instances, a_fn, b_fn;
+var T = class {
+  constructor() {
+    __privateAdd(this, _T_instances);
+  }
+  d() {
+    console.log(__privateMethod(this, _T_instances, a_fn).call(this));
+  }
+};
+_T_instances = new WeakSet();
+a_fn = function() {
+  return "a";
+};
+b_fn = function() {
+  return "b";
+};
+__publicField(T, "c");
+new T().d();
+
+================================================================================
+TestLowerPrivateClassMethodOrder
+---------- /out.js ----------
+var _Foo_instances, foo_fn;
+class Foo {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __publicField(this, "bar", __privateMethod(this, _Foo_instances, foo_fn).call(this));
+  }
+  // This must be set before "bar" is initialized
+}
+_Foo_instances = new WeakSet();
+foo_fn = function() {
+  return 123;
+};
+console.log(new Foo().bar === 123);
+
+================================================================================
+TestLowerPrivateClassStaticAccessorOrder
+---------- /out.js ----------
+var _Foo_static, foo_get, _FooThis_static, foo_get2;
+const _Foo = class _Foo {
+  // This must be set before "bar" is initialized
+};
+_Foo_static = new WeakSet();
+foo_get = function() {
+  return 123;
+};
+__privateAdd(_Foo, _Foo_static);
+__publicField(_Foo, "bar", __privateGet(_Foo, _Foo_static, foo_get));
+let Foo = _Foo;
+console.log(Foo.bar === 123);
+const _FooThis = class _FooThis {
+  // This must be set before "bar" is initialized
+};
+_FooThis_static = new WeakSet();
+foo_get2 = function() {
+  return 123;
+};
+__privateAdd(_FooThis, _FooThis_static);
+__publicField(_FooThis, "bar", __privateGet(_FooThis, _FooThis_static, foo_get2));
+let FooThis = _FooThis;
+console.log(FooThis.bar === 123);
+
+================================================================================
+TestLowerPrivateClassStaticFieldOrder
+---------- /out.js ----------
+var _foo, _foo2;
+const _Foo = class _Foo {
+};
+_foo = new WeakMap();
+__privateAdd(_Foo, _foo, 123);
+// This must be set before "bar" is initialized
+__publicField(_Foo, "bar", __privateGet(_Foo, _foo));
+let Foo = _Foo;
+console.log(Foo.bar === 123);
+const _FooThis = class _FooThis {
+};
+_foo2 = new WeakMap();
+__privateAdd(_FooThis, _foo2, 123);
+// This must be set before "bar" is initialized
+__publicField(_FooThis, "bar", __privateGet(_FooThis, _foo2));
+let FooThis = _FooThis;
+console.log(FooThis.bar === 123);
+
+================================================================================
+TestLowerPrivateClassStaticMethodOrder
+---------- /out.js ----------
+var _a, _Foo_static, foo_fn, _b, _FooThis_static, foo_fn2;
+const _Foo = class _Foo {
+  // This must be set before "bar" is initialized
+};
+_Foo_static = new WeakSet();
+foo_fn = function() {
+  return 123;
+};
+__privateAdd(_Foo, _Foo_static);
+__publicField(_Foo, "bar", __privateMethod(_a = _Foo, _Foo_static, foo_fn).call(_a));
+let Foo = _Foo;
+console.log(Foo.bar === 123);
+const _FooThis = class _FooThis {
+  // This must be set before "bar" is initialized
+};
+_FooThis_static = new WeakSet();
+foo_fn2 = function() {
+  return 123;
+};
+__privateAdd(_FooThis, _FooThis_static);
+__publicField(_FooThis, "bar", __privateMethod(_b = _FooThis, _FooThis_static, foo_fn2).call(_b));
+let FooThis = _FooThis;
+console.log(FooThis.bar === 123);
+
+================================================================================
+TestLowerPrivateFieldAssignments2015NoBundle
+---------- /out.js ----------
+var _x;
+class Foo {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+  unary() {
+    __privateWrapper(this, _x)._++;
+    __privateWrapper(this, _x)._--;
+    ++__privateWrapper(this, _x)._;
+    --__privateWrapper(this, _x)._;
+  }
+  binary() {
+    var _a;
+    __privateSet(this, _x, 1);
+    __privateSet(this, _x, __privateGet(this, _x) + 1);
+    __privateSet(this, _x, __privateGet(this, _x) - 1);
+    __privateSet(this, _x, __privateGet(this, _x) * 1);
+    __privateSet(this, _x, __privateGet(this, _x) / 1);
+    __privateSet(this, _x, __privateGet(this, _x) % 1);
+    __privateSet(this, _x, __pow(__privateGet(this, _x), 1));
+    __privateSet(this, _x, __privateGet(this, _x) << 1);
+    __privateSet(this, _x, __privateGet(this, _x) >> 1);
+    __privateSet(this, _x, __privateGet(this, _x) >>> 1);
+    __privateSet(this, _x, __privateGet(this, _x) & 1);
+    __privateSet(this, _x, __privateGet(this, _x) | 1);
+    __privateSet(this, _x, __privateGet(this, _x) ^ 1);
+    __privateGet(this, _x) && __privateSet(this, _x, 1);
+    __privateGet(this, _x) || __privateSet(this, _x, 1);
+    (_a = __privateGet(this, _x)) != null ? _a : __privateSet(this, _x, 1);
+  }
+}
+_x = new WeakMap();
+
+================================================================================
+TestLowerPrivateFieldAssignments2019NoBundle
+---------- /out.js ----------
+var _x;
+class Foo {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+  unary() {
+    __privateWrapper(this, _x)._++;
+    __privateWrapper(this, _x)._--;
+    ++__privateWrapper(this, _x)._;
+    --__privateWrapper(this, _x)._;
+  }
+  binary() {
+    var _a;
+    __privateSet(this, _x, 1);
+    __privateSet(this, _x, __privateGet(this, _x) + 1);
+    __privateSet(this, _x, __privateGet(this, _x) - 1);
+    __privateSet(this, _x, __privateGet(this, _x) * 1);
+    __privateSet(this, _x, __privateGet(this, _x) / 1);
+    __privateSet(this, _x, __privateGet(this, _x) % 1);
+    __privateSet(this, _x, __privateGet(this, _x) ** 1);
+    __privateSet(this, _x, __privateGet(this, _x) << 1);
+    __privateSet(this, _x, __privateGet(this, _x) >> 1);
+    __privateSet(this, _x, __privateGet(this, _x) >>> 1);
+    __privateSet(this, _x, __privateGet(this, _x) & 1);
+    __privateSet(this, _x, __privateGet(this, _x) | 1);
+    __privateSet(this, _x, __privateGet(this, _x) ^ 1);
+    __privateGet(this, _x) && __privateSet(this, _x, 1);
+    __privateGet(this, _x) || __privateSet(this, _x, 1);
+    (_a = __privateGet(this, _x)) != null ? _a : __privateSet(this, _x, 1);
+  }
+}
+_x = new WeakMap();
+
+================================================================================
+TestLowerPrivateFieldAssignments2020NoBundle
+---------- /out.js ----------
+var _x;
+class Foo {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+  unary() {
+    __privateWrapper(this, _x)._++;
+    __privateWrapper(this, _x)._--;
+    ++__privateWrapper(this, _x)._;
+    --__privateWrapper(this, _x)._;
+  }
+  binary() {
+    __privateSet(this, _x, 1);
+    __privateSet(this, _x, __privateGet(this, _x) + 1);
+    __privateSet(this, _x, __privateGet(this, _x) - 1);
+    __privateSet(this, _x, __privateGet(this, _x) * 1);
+    __privateSet(this, _x, __privateGet(this, _x) / 1);
+    __privateSet(this, _x, __privateGet(this, _x) % 1);
+    __privateSet(this, _x, __privateGet(this, _x) ** 1);
+    __privateSet(this, _x, __privateGet(this, _x) << 1);
+    __privateSet(this, _x, __privateGet(this, _x) >> 1);
+    __privateSet(this, _x, __privateGet(this, _x) >>> 1);
+    __privateSet(this, _x, __privateGet(this, _x) & 1);
+    __privateSet(this, _x, __privateGet(this, _x) | 1);
+    __privateSet(this, _x, __privateGet(this, _x) ^ 1);
+    __privateGet(this, _x) && __privateSet(this, _x, 1);
+    __privateGet(this, _x) || __privateSet(this, _x, 1);
+    __privateGet(this, _x) ?? __privateSet(this, _x, 1);
+  }
+}
+_x = new WeakMap();
+
+================================================================================
+TestLowerPrivateFieldAssignmentsNextNoBundle
+---------- /out.js ----------
+class Foo {
+  #x;
+  unary() {
+    this.#x++;
+    this.#x--;
+    ++this.#x;
+    --this.#x;
+  }
+  binary() {
+    this.#x = 1;
+    this.#x += 1;
+    this.#x -= 1;
+    this.#x *= 1;
+    this.#x /= 1;
+    this.#x %= 1;
+    this.#x **= 1;
+    this.#x <<= 1;
+    this.#x >>= 1;
+    this.#x >>>= 1;
+    this.#x &= 1;
+    this.#x |= 1;
+    this.#x ^= 1;
+    this.#x &&= 1;
+    this.#x ||= 1;
+    this.#x ??= 1;
+  }
+}
+
+================================================================================
+TestLowerPrivateFieldOptionalChain2019NoBundle
+---------- /out.js ----------
+var _x;
+class Foo {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+  foo() {
+    var _a;
+    this == null ? void 0 : __privateGet(this, _x).y;
+    this == null ? void 0 : __privateGet(this.y, _x);
+    (_a = __privateGet(this, _x)) == null ? void 0 : _a.y;
+  }
+}
+_x = new WeakMap();
+
+================================================================================
+TestLowerPrivateFieldOptionalChain2020NoBundle
+---------- /out.js ----------
+var _x;
+class Foo {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+  foo() {
+    this == null ? void 0 : __privateGet(this, _x).y;
+    this == null ? void 0 : __privateGet(this.y, _x);
+    __privateGet(this, _x)?.y;
+  }
+}
+_x = new WeakMap();
+
+================================================================================
+TestLowerPrivateFieldOptionalChainNextNoBundle
+---------- /out.js ----------
+class Foo {
+  #x;
+  foo() {
+    this?.#x.y;
+    this?.y.#x;
+    this.#x?.y;
+  }
+}
+
+================================================================================
+TestLowerPrivateGetterSetter2015
+---------- /out.js ----------
+// entry.js
+var _Foo_instances, foo_get, bar_set, prop_get, prop_set;
+var Foo = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+  }
+  foo(fn) {
+    __privateGet(fn(), _Foo_instances, foo_get);
+    __privateSet(fn(), _Foo_instances, 1, bar_set);
+    __privateGet(fn(), _Foo_instances, prop_get);
+    __privateSet(fn(), _Foo_instances, 2, prop_set);
+  }
+  unary(fn) {
+    __privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._++;
+    __privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._--;
+    ++__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
+    --__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
+  }
+  binary(fn) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+    __privateSet(fn(), _Foo_instances, 1, prop_set);
+    __privateSet(_a = fn(), _Foo_instances, __privateGet(_a, _Foo_instances, prop_get) + 1, prop_set);
+    __privateSet(_b = fn(), _Foo_instances, __privateGet(_b, _Foo_instances, prop_get) - 1, prop_set);
+    __privateSet(_c = fn(), _Foo_instances, __privateGet(_c, _Foo_instances, prop_get) * 1, prop_set);
+    __privateSet(_d = fn(), _Foo_instances, __privateGet(_d, _Foo_instances, prop_get) / 1, prop_set);
+    __privateSet(_e = fn(), _Foo_instances, __privateGet(_e, _Foo_instances, prop_get) % 1, prop_set);
+    __privateSet(_f = fn(), _Foo_instances, __pow(__privateGet(_f, _Foo_instances, prop_get), 1), prop_set);
+    __privateSet(_g = fn(), _Foo_instances, __privateGet(_g, _Foo_instances, prop_get) << 1, prop_set);
+    __privateSet(_h = fn(), _Foo_instances, __privateGet(_h, _Foo_instances, prop_get) >> 1, prop_set);
+    __privateSet(_i = fn(), _Foo_instances, __privateGet(_i, _Foo_instances, prop_get) >>> 1, prop_set);
+    __privateSet(_j = fn(), _Foo_instances, __privateGet(_j, _Foo_instances, prop_get) & 1, prop_set);
+    __privateSet(_k = fn(), _Foo_instances, __privateGet(_k, _Foo_instances, prop_get) | 1, prop_set);
+    __privateSet(_l = fn(), _Foo_instances, __privateGet(_l, _Foo_instances, prop_get) ^ 1, prop_set);
+    __privateGet(_m = fn(), _Foo_instances, prop_get) && __privateSet(_m, _Foo_instances, 1, prop_set);
+    __privateGet(_n = fn(), _Foo_instances, prop_get) || __privateSet(_n, _Foo_instances, 1, prop_set);
+    (_p = __privateGet(_o = fn(), _Foo_instances, prop_get)) != null ? _p : __privateSet(_o, _Foo_instances, 1, prop_set);
+  }
+};
+_Foo_instances = new WeakSet();
+foo_get = function() {
+  return this.foo;
+};
+bar_set = function(val) {
+  this.bar = val;
+};
+prop_get = function() {
+  return this.prop;
+};
+prop_set = function(val) {
+  this.prop = val;
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateGetterSetter2019
+---------- /out.js ----------
+// entry.js
+var _Foo_instances, foo_get, bar_set, prop_get, prop_set;
+var Foo = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+  }
+  foo(fn) {
+    __privateGet(fn(), _Foo_instances, foo_get);
+    __privateSet(fn(), _Foo_instances, 1, bar_set);
+    __privateGet(fn(), _Foo_instances, prop_get);
+    __privateSet(fn(), _Foo_instances, 2, prop_set);
+  }
+  unary(fn) {
+    __privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._++;
+    __privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._--;
+    ++__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
+    --__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
+  }
+  binary(fn) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+    __privateSet(fn(), _Foo_instances, 1, prop_set);
+    __privateSet(_a = fn(), _Foo_instances, __privateGet(_a, _Foo_instances, prop_get) + 1, prop_set);
+    __privateSet(_b = fn(), _Foo_instances, __privateGet(_b, _Foo_instances, prop_get) - 1, prop_set);
+    __privateSet(_c = fn(), _Foo_instances, __privateGet(_c, _Foo_instances, prop_get) * 1, prop_set);
+    __privateSet(_d = fn(), _Foo_instances, __privateGet(_d, _Foo_instances, prop_get) / 1, prop_set);
+    __privateSet(_e = fn(), _Foo_instances, __privateGet(_e, _Foo_instances, prop_get) % 1, prop_set);
+    __privateSet(_f = fn(), _Foo_instances, __privateGet(_f, _Foo_instances, prop_get) ** 1, prop_set);
+    __privateSet(_g = fn(), _Foo_instances, __privateGet(_g, _Foo_instances, prop_get) << 1, prop_set);
+    __privateSet(_h = fn(), _Foo_instances, __privateGet(_h, _Foo_instances, prop_get) >> 1, prop_set);
+    __privateSet(_i = fn(), _Foo_instances, __privateGet(_i, _Foo_instances, prop_get) >>> 1, prop_set);
+    __privateSet(_j = fn(), _Foo_instances, __privateGet(_j, _Foo_instances, prop_get) & 1, prop_set);
+    __privateSet(_k = fn(), _Foo_instances, __privateGet(_k, _Foo_instances, prop_get) | 1, prop_set);
+    __privateSet(_l = fn(), _Foo_instances, __privateGet(_l, _Foo_instances, prop_get) ^ 1, prop_set);
+    __privateGet(_m = fn(), _Foo_instances, prop_get) && __privateSet(_m, _Foo_instances, 1, prop_set);
+    __privateGet(_n = fn(), _Foo_instances, prop_get) || __privateSet(_n, _Foo_instances, 1, prop_set);
+    (_p = __privateGet(_o = fn(), _Foo_instances, prop_get)) != null ? _p : __privateSet(_o, _Foo_instances, 1, prop_set);
+  }
+};
+_Foo_instances = new WeakSet();
+foo_get = function() {
+  return this.foo;
+};
+bar_set = function(val) {
+  this.bar = val;
+};
+prop_get = function() {
+  return this.prop;
+};
+prop_set = function(val) {
+  this.prop = val;
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateGetterSetter2020
+---------- /out.js ----------
+// entry.js
+var _Foo_instances, foo_get, bar_set, prop_get, prop_set;
+var Foo = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+  }
+  foo(fn) {
+    __privateGet(fn(), _Foo_instances, foo_get);
+    __privateSet(fn(), _Foo_instances, 1, bar_set);
+    __privateGet(fn(), _Foo_instances, prop_get);
+    __privateSet(fn(), _Foo_instances, 2, prop_set);
+  }
+  unary(fn) {
+    __privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._++;
+    __privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._--;
+    ++__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
+    --__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
+  }
+  binary(fn) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+    __privateSet(fn(), _Foo_instances, 1, prop_set);
+    __privateSet(_a = fn(), _Foo_instances, __privateGet(_a, _Foo_instances, prop_get) + 1, prop_set);
+    __privateSet(_b = fn(), _Foo_instances, __privateGet(_b, _Foo_instances, prop_get) - 1, prop_set);
+    __privateSet(_c = fn(), _Foo_instances, __privateGet(_c, _Foo_instances, prop_get) * 1, prop_set);
+    __privateSet(_d = fn(), _Foo_instances, __privateGet(_d, _Foo_instances, prop_get) / 1, prop_set);
+    __privateSet(_e = fn(), _Foo_instances, __privateGet(_e, _Foo_instances, prop_get) % 1, prop_set);
+    __privateSet(_f = fn(), _Foo_instances, __privateGet(_f, _Foo_instances, prop_get) ** 1, prop_set);
+    __privateSet(_g = fn(), _Foo_instances, __privateGet(_g, _Foo_instances, prop_get) << 1, prop_set);
+    __privateSet(_h = fn(), _Foo_instances, __privateGet(_h, _Foo_instances, prop_get) >> 1, prop_set);
+    __privateSet(_i = fn(), _Foo_instances, __privateGet(_i, _Foo_instances, prop_get) >>> 1, prop_set);
+    __privateSet(_j = fn(), _Foo_instances, __privateGet(_j, _Foo_instances, prop_get) & 1, prop_set);
+    __privateSet(_k = fn(), _Foo_instances, __privateGet(_k, _Foo_instances, prop_get) | 1, prop_set);
+    __privateSet(_l = fn(), _Foo_instances, __privateGet(_l, _Foo_instances, prop_get) ^ 1, prop_set);
+    __privateGet(_m = fn(), _Foo_instances, prop_get) && __privateSet(_m, _Foo_instances, 1, prop_set);
+    __privateGet(_n = fn(), _Foo_instances, prop_get) || __privateSet(_n, _Foo_instances, 1, prop_set);
+    __privateGet(_o = fn(), _Foo_instances, prop_get) ?? __privateSet(_o, _Foo_instances, 1, prop_set);
+  }
+};
+_Foo_instances = new WeakSet();
+foo_get = function() {
+  return this.foo;
+};
+bar_set = function(val) {
+  this.bar = val;
+};
+prop_get = function() {
+  return this.prop;
+};
+prop_set = function(val) {
+  this.prop = val;
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateGetterSetterNext
+---------- /out.js ----------
+// entry.js
+var Foo = class {
+  get #foo() {
+    return this.foo;
+  }
+  set #bar(val) {
+    this.bar = val;
+  }
+  get #prop() {
+    return this.prop;
+  }
+  set #prop(val) {
+    this.prop = val;
+  }
+  foo(fn) {
+    fn().#foo;
+    fn().#bar = 1;
+    fn().#prop;
+    fn().#prop = 2;
+  }
+  unary(fn) {
+    fn().#prop++;
+    fn().#prop--;
+    ++fn().#prop;
+    --fn().#prop;
+  }
+  binary(fn) {
+    fn().#prop = 1;
+    fn().#prop += 1;
+    fn().#prop -= 1;
+    fn().#prop *= 1;
+    fn().#prop /= 1;
+    fn().#prop %= 1;
+    fn().#prop **= 1;
+    fn().#prop <<= 1;
+    fn().#prop >>= 1;
+    fn().#prop >>>= 1;
+    fn().#prop &= 1;
+    fn().#prop |= 1;
+    fn().#prop ^= 1;
+    fn().#prop &&= 1;
+    fn().#prop ||= 1;
+    fn().#prop ??= 1;
+  }
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateMethod2019
+---------- /out.js ----------
+// entry.js
+var _field, _Foo_instances, method_fn;
+var Foo = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __privateAdd(this, _field);
+  }
+  baseline() {
+    var _a, _b, _c, _d, _e;
+    a().foo;
+    b().foo(x);
+    (_a = c()) == null ? void 0 : _a.foo(x);
+    (_c = (_b = d()).foo) == null ? void 0 : _c.call(_b, x);
+    (_e = (_d = e()) == null ? void 0 : _d.foo) == null ? void 0 : _e.call(_d, x);
+  }
+  privateField() {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    __privateGet(a(), _field);
+    __privateGet(_a = b(), _field).call(_a, x);
+    (_b = c()) == null ? void 0 : __privateGet(_b, _field).call(_b, x);
+    (_d = __privateGet(_c = d(), _field)) == null ? void 0 : _d.call(_c, x);
+    (_f = (_e = e()) == null ? void 0 : __privateGet(_e, _field)) == null ? void 0 : _f.call(_e, x);
+    (_g = f()) == null ? void 0 : __privateGet(_h = _g.foo, _field).call(_h, x).bar();
+  }
+  privateMethod() {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    __privateMethod(a(), _Foo_instances, method_fn);
+    __privateMethod(_a = b(), _Foo_instances, method_fn).call(_a, x);
+    (_b = c()) == null ? void 0 : __privateMethod(_b, _Foo_instances, method_fn).call(_b, x);
+    (_d = __privateMethod(_c = d(), _Foo_instances, method_fn)) == null ? void 0 : _d.call(_c, x);
+    (_f = (_e = e()) == null ? void 0 : __privateMethod(_e, _Foo_instances, method_fn)) == null ? void 0 : _f.call(_e, x);
+    (_g = f()) == null ? void 0 : __privateMethod(_h = _g.foo, _Foo_instances, method_fn).call(_h, x).bar();
+  }
+};
+_field = new WeakMap();
+_Foo_instances = new WeakSet();
+method_fn = function() {
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateMethod2020
+---------- /out.js ----------
+// entry.js
+var _field, _Foo_instances, method_fn;
+var Foo = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+    __privateAdd(this, _field);
+  }
+  baseline() {
+    a().foo;
+    b().foo(x);
+    c()?.foo(x);
+    d().foo?.(x);
+    e()?.foo?.(x);
+  }
+  privateField() {
+    var _a, _b, _c, _d, _e, _f, _g;
+    __privateGet(a(), _field);
+    __privateGet(_a = b(), _field).call(_a, x);
+    (_b = c()) == null ? void 0 : __privateGet(_b, _field).call(_b, x);
+    (_d = __privateGet(_c = d(), _field)) == null ? void 0 : _d.call(_c, x);
+    ((_e = e()) == null ? void 0 : __privateGet(_e, _field))?.(x);
+    (_f = f()) == null ? void 0 : __privateGet(_g = _f.foo, _field).call(_g, x).bar();
+  }
+  privateMethod() {
+    var _a, _b, _c, _d, _e, _f, _g;
+    __privateMethod(a(), _Foo_instances, method_fn);
+    __privateMethod(_a = b(), _Foo_instances, method_fn).call(_a, x);
+    (_b = c()) == null ? void 0 : __privateMethod(_b, _Foo_instances, method_fn).call(_b, x);
+    (_d = __privateMethod(_c = d(), _Foo_instances, method_fn)) == null ? void 0 : _d.call(_c, x);
+    ((_e = e()) == null ? void 0 : __privateMethod(_e, _Foo_instances, method_fn))?.(x);
+    (_f = f()) == null ? void 0 : __privateMethod(_g = _f.foo, _Foo_instances, method_fn).call(_g, x).bar();
+  }
+};
+_field = new WeakMap();
+_Foo_instances = new WeakSet();
+method_fn = function() {
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateMethodNext
+---------- /out.js ----------
+// entry.js
+var Foo = class {
+  #field;
+  #method() {
+  }
+  baseline() {
+    a().foo;
+    b().foo(x);
+    c()?.foo(x);
+    d().foo?.(x);
+    e()?.foo?.(x);
+  }
+  privateField() {
+    a().#field;
+    b().#field(x);
+    c()?.#field(x);
+    d().#field?.(x);
+    e()?.#field?.(x);
+    f()?.foo.#field(x).bar();
+  }
+  privateMethod() {
+    a().#method;
+    b().#method(x);
+    c()?.#method(x);
+    d().#method?.(x);
+    e()?.#method?.(x);
+    f()?.foo.#method(x).bar();
+  }
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateMethodWithModifiers2020
+---------- /out.js ----------
+// entry.js
+var _Foo_instances, g_fn, a_fn, ag_fn, _Foo_static, sg_fn, sa_fn, sag_fn;
+var Foo = class {
+  constructor() {
+    __privateAdd(this, _Foo_instances);
+  }
+};
+_Foo_instances = new WeakSet();
+g_fn = function* () {
+};
+a_fn = async function() {
+};
+ag_fn = async function* () {
+};
+_Foo_static = new WeakSet();
+sg_fn = function* () {
+};
+sa_fn = async function() {
+};
+sag_fn = async function* () {
+};
+__privateAdd(Foo, _Foo_static);
+export {
+  Foo
+};
+
+================================================================================
+TestLowerPrivateSuperES2021
+---------- /out.js ----------
+// foo1.js
+var _default_instances, foo_fn;
+var _foo1_default = class _foo1_default extends x {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _default_instances);
+  }
+};
+_default_instances = new WeakSet();
+foo_fn = function() {
+  __superGet(_foo1_default.prototype, this, "foo").call(this);
+};
+var foo1_default = _foo1_default;
+
+// foo2.js
+var _default_instances2, foo_fn2;
+var _foo2_default = class _foo2_default extends x {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _default_instances2);
+  }
+};
+_default_instances2 = new WeakSet();
+foo_fn2 = function() {
+  __superWrapper(_foo2_default.prototype, this, "foo")._++;
+};
+var foo2_default = _foo2_default;
+
+// foo3.js
+var _default_static, foo_fn3;
+var _foo3_default = class _foo3_default extends x {
+};
+_default_static = new WeakSet();
+foo_fn3 = function() {
+  __superGet(_foo3_default, this, "foo").call(this);
+};
+__privateAdd(_foo3_default, _default_static);
+var foo3_default = _foo3_default;
+
+// foo4.js
+var _default_static2, foo_fn4;
+var _foo4_default = class _foo4_default extends x {
+};
+_default_static2 = new WeakSet();
+foo_fn4 = function() {
+  __superWrapper(_foo4_default, this, "foo")._++;
+};
+__privateAdd(_foo4_default, _default_static2);
+var foo4_default = _foo4_default;
+
+// foo5.js
+var _foo;
+var foo5_default = class extends x {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _foo, () => {
+      super.foo();
+    });
+  }
+};
+_foo = new WeakMap();
+
+// foo6.js
+var _foo2;
+var foo6_default = class extends x {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _foo2, () => {
+      super.foo++;
+    });
+  }
+};
+_foo2 = new WeakMap();
+
+// foo7.js
+var _foo3;
+var _foo7_default = class _foo7_default extends x {
+};
+_foo3 = new WeakMap();
+__privateAdd(_foo7_default, _foo3, () => {
+  __superGet(_foo7_default, _foo7_default, "foo").call(this);
+});
+var foo7_default = _foo7_default;
+
+// foo8.js
+var _foo4;
+var _foo8_default = class _foo8_default extends x {
+};
+_foo4 = new WeakMap();
+__privateAdd(_foo8_default, _foo4, () => {
+  __superWrapper(_foo8_default, _foo8_default, "foo")._++;
+});
+var foo8_default = _foo8_default;
+export {
+  foo1_default as foo1,
+  foo2_default as foo2,
+  foo3_default as foo3,
+  foo4_default as foo4,
+  foo5_default as foo5,
+  foo6_default as foo6,
+  foo7_default as foo7,
+  foo8_default as foo8
+};
+
+================================================================================
+TestLowerPrivateSuperES2022
+---------- /out.js ----------
+// foo1.js
+var foo1_default = class extends x {
+  #foo() {
+    super.foo();
+  }
+};
+
+// foo2.js
+var foo2_default = class extends x {
+  #foo() {
+    super.foo++;
+  }
+};
+
+// foo3.js
+var foo3_default = class extends x {
+  static #foo() {
+    super.foo();
+  }
+};
+
+// foo4.js
+var foo4_default = class extends x {
+  static #foo() {
+    super.foo++;
+  }
+};
+
+// foo5.js
+var foo5_default = class extends x {
+  #foo = () => {
+    super.foo();
+  };
+};
+
+// foo6.js
+var foo6_default = class extends x {
+  #foo = () => {
+    super.foo++;
+  };
+};
+
+// foo7.js
+var foo7_default = class extends x {
+  static #foo = () => {
+    super.foo();
+  };
+};
+
+// foo8.js
+var foo8_default = class extends x {
+  static #foo = () => {
+    super.foo++;
+  };
+};
+export {
+  foo1_default as foo1,
+  foo2_default as foo2,
+  foo3_default as foo3,
+  foo4_default as foo4,
+  foo5_default as foo5,
+  foo6_default as foo6,
+  foo7_default as foo7,
+  foo8_default as foo8
+};
+
+================================================================================
+TestLowerPrivateSuperStaticBundleIssue2158
+---------- /out.js ----------
+// entry.js
+var Foo = class extends Object {
+  static FOO;
+  constructor() {
+    super();
+  }
+  #foo;
+};
+export {
+  Foo
+};
+
+================================================================================
+TestLowerRegExpNameCollision
+---------- /out.js ----------
+// entry.js
+function foo(RegExp2) {
+  return new RegExp2(new RegExp(".", "d"), "d");
+}
+export {
+  foo
+};
+
+================================================================================
+TestLowerStaticAsyncArrowSuperES2016
+---------- /out.js ----------
+// foo1.js
+var foo1_default = class _foo1_default extends x {
+  static foo1() {
+    return () => __async(this, null, function* () {
+      return __superGet(_foo1_default, this, "foo").call(this, "foo1");
+    });
+  }
+};
+
+// foo2.js
+var foo2_default = class _foo2_default extends x {
+  static foo2() {
+    return () => __async(this, null, function* () {
+      return () => __superGet(_foo2_default, this, "foo").call(this, "foo2");
+    });
+  }
+};
+
+// foo3.js
+var foo3_default = class _foo3_default extends x {
+  static foo3() {
+    return () => () => __async(this, null, function* () {
+      return __superGet(_foo3_default, this, "foo").call(this, "foo3");
+    });
+  }
+};
+
+// foo4.js
+var foo4_default = class _foo4_default extends x {
+  static foo4() {
+    return () => __async(this, null, function* () {
+      return () => __async(this, null, function* () {
+        return __superGet(_foo4_default, this, "foo").call(this, "foo4");
+      });
+    });
+  }
+};
+
+// bar1.js
+var _bar1_default = class _bar1_default extends x {
+};
+__publicField(_bar1_default, "bar1", () => __async(_bar1_default, null, function* () {
+  return __superGet(_bar1_default, _bar1_default, "foo").call(this, "bar1");
+}));
+var bar1_default = _bar1_default;
+
+// bar2.js
+var _bar2_default = class _bar2_default extends x {
+};
+__publicField(_bar2_default, "bar2", () => __async(_bar2_default, null, function* () {
+  return () => __superGet(_bar2_default, _bar2_default, "foo").call(this, "bar2");
+}));
+var bar2_default = _bar2_default;
+
+// bar3.js
+var _bar3_default = class _bar3_default extends x {
+};
+__publicField(_bar3_default, "bar3", () => () => __async(_bar3_default, null, function* () {
+  return __superGet(_bar3_default, _bar3_default, "foo").call(this, "bar3");
+}));
+var bar3_default = _bar3_default;
+
+// bar4.js
+var _bar4_default = class _bar4_default extends x {
+};
+__publicField(_bar4_default, "bar4", () => __async(_bar4_default, null, function* () {
+  return () => __async(_bar4_default, null, function* () {
+    return __superGet(_bar4_default, _bar4_default, "foo").call(this, "bar4");
+  });
+}));
+var bar4_default = _bar4_default;
+
+// baz1.js
+var baz1_default = class _baz1_default extends x {
+  static baz1() {
+    return __async(this, null, function* () {
+      return () => __superGet(_baz1_default, this, "foo").call(this, "baz1");
+    });
+  }
+};
+
+// baz2.js
+var baz2_default = class _baz2_default extends x {
+  static baz2() {
+    return __async(this, null, function* () {
+      return () => () => __superGet(_baz2_default, this, "foo").call(this, "baz2");
+    });
+  }
+};
+
+// outer.js
+var outer_default = function() {
+  return __async(this, null, function* () {
+    const _y = class _y extends z {
+    };
+    __publicField(_y, "foo", () => __async(_y, null, function* () {
+      return __superGet(_y, _y, "foo").call(this);
+    }));
+    let y = _y;
+    yield y.foo()();
+  });
+}();
+export {
+  bar1_default as bar1,
+  bar2_default as bar2,
+  bar3_default as bar3,
+  bar4_default as bar4,
+  baz1_default as baz1,
+  baz2_default as baz2,
+  foo1_default as foo1,
+  foo2_default as foo2,
+  foo3_default as foo3,
+  foo4_default as foo4
+};
+
+================================================================================
+TestLowerStaticAsyncArrowSuperSetterES2016
+---------- /out.js ----------
+// foo1.js
+var foo1_default = class _foo1_default extends x {
+  static foo1() {
+    return () => __async(this, null, function* () {
+      return __superSet(_foo1_default, this, "foo", "foo1");
+    });
+  }
+};
+
+// foo2.js
+var foo2_default = class _foo2_default extends x {
+  static foo2() {
+    return () => __async(this, null, function* () {
+      return () => __superSet(_foo2_default, this, "foo", "foo2");
+    });
+  }
+};
+
+// foo3.js
+var foo3_default = class _foo3_default extends x {
+  static foo3() {
+    return () => () => __async(this, null, function* () {
+      return __superSet(_foo3_default, this, "foo", "foo3");
+    });
+  }
+};
+
+// foo4.js
+var foo4_default = class _foo4_default extends x {
+  static foo4() {
+    return () => __async(this, null, function* () {
+      return () => __async(this, null, function* () {
+        return __superSet(_foo4_default, this, "foo", "foo4");
+      });
+    });
+  }
+};
+
+// bar1.js
+var _bar1_default = class _bar1_default extends x {
+};
+__publicField(_bar1_default, "bar1", () => __async(_bar1_default, null, function* () {
+  return __superSet(_bar1_default, _bar1_default, "foo", "bar1");
+}));
+var bar1_default = _bar1_default;
+
+// bar2.js
+var _bar2_default = class _bar2_default extends x {
+};
+__publicField(_bar2_default, "bar2", () => __async(_bar2_default, null, function* () {
+  return () => __superSet(_bar2_default, _bar2_default, "foo", "bar2");
+}));
+var bar2_default = _bar2_default;
+
+// bar3.js
+var _bar3_default = class _bar3_default extends x {
+};
+__publicField(_bar3_default, "bar3", () => () => __async(_bar3_default, null, function* () {
+  return __superSet(_bar3_default, _bar3_default, "foo", "bar3");
+}));
+var bar3_default = _bar3_default;
+
+// bar4.js
+var _bar4_default = class _bar4_default extends x {
+};
+__publicField(_bar4_default, "bar4", () => __async(_bar4_default, null, function* () {
+  return () => __async(_bar4_default, null, function* () {
+    return __superSet(_bar4_default, _bar4_default, "foo", "bar4");
+  });
+}));
+var bar4_default = _bar4_default;
+
+// baz1.js
+var baz1_default = class _baz1_default extends x {
+  static baz1() {
+    return __async(this, null, function* () {
+      return () => __superSet(_baz1_default, this, "foo", "baz1");
+    });
+  }
+};
+
+// baz2.js
+var baz2_default = class _baz2_default extends x {
+  static baz2() {
+    return __async(this, null, function* () {
+      return () => () => __superSet(_baz2_default, this, "foo", "baz2");
+    });
+  }
+};
+
+// outer.js
+var outer_default = function() {
+  return __async(this, null, function* () {
+    const _y = class _y extends z {
+    };
+    __publicField(_y, "foo", () => __async(_y, null, function* () {
+      return __superSet(_y, _y, "foo", "foo");
+    }));
+    let y = _y;
+    yield y.foo()();
+  });
+}();
+export {
+  bar1_default as bar1,
+  bar2_default as bar2,
+  bar3_default as bar3,
+  bar4_default as bar4,
+  baz1_default as baz1,
+  baz2_default as baz2,
+  foo1_default as foo1,
+  foo2_default as foo2,
+  foo3_default as foo3,
+  foo4_default as foo4
+};
+
+================================================================================
+TestLowerStaticAsyncSuperES2016NoBundle
+---------- /out.js ----------
+const _Derived = class _Derived extends Base {
+};
+__publicField(_Derived, "test", (key) => __async(_Derived, null, function* () {
+  var _a, _b, _c, _d;
+  return [
+    yield __superGet(_Derived, _Derived, "foo"),
+    yield __superGet(_Derived, _Derived, key),
+    yield [__superWrapper(_Derived, _Derived, "foo")._] = [0],
+    yield [__superWrapper(_Derived, _Derived, key)._] = [0],
+    yield __superSet(_Derived, _Derived, "foo", 1),
+    yield __superSet(_Derived, _Derived, key, 1),
+    yield __superSet(_Derived, _Derived, "foo", __superGet(_Derived, _Derived, "foo") + 2),
+    yield __superSet(_Derived, _Derived, key, __superGet(_Derived, _Derived, key) + 2),
+    yield ++__superWrapper(_Derived, _Derived, "foo")._,
+    yield ++__superWrapper(_Derived, _Derived, key)._,
+    yield __superWrapper(_Derived, _Derived, "foo")._++,
+    yield __superWrapper(_Derived, _Derived, key)._++,
+    yield __superGet(_Derived, _Derived, "foo").name,
+    yield __superGet(_Derived, _Derived, key).name,
+    yield (_a = __superGet(_Derived, _Derived, "foo")) == null ? void 0 : _a.name,
+    yield (_b = __superGet(_Derived, _Derived, key)) == null ? void 0 : _b.name,
+    yield __superGet(_Derived, _Derived, "foo").call(this, 1, 2),
+    yield __superGet(_Derived, _Derived, key).call(this, 1, 2),
+    yield (_c = __superGet(_Derived, _Derived, "foo")) == null ? void 0 : _c.call(this, 1, 2),
+    yield (_d = __superGet(_Derived, _Derived, key)) == null ? void 0 : _d.call(this, 1, 2),
+    yield (() => __superGet(_Derived, _Derived, "foo"))(),
+    yield (() => __superGet(_Derived, _Derived, key))(),
+    yield (() => __superGet(_Derived, _Derived, "foo").call(this))(),
+    yield (() => __superGet(_Derived, _Derived, key).call(this))(),
+    yield __superGet(_Derived, _Derived, "foo").bind(this)``,
+    yield __superGet(_Derived, _Derived, key).bind(this)``
+  ];
+}));
+let Derived = _Derived;
+let fn = () => __async(this, null, function* () {
+  var _a;
+  return _a = class extends Base {
+    static c() {
+      return super.c;
+    }
+    static d() {
+      return () => super.d;
+    }
+  }, __publicField(_a, "a", __superGet(_a, _a, "a")), __publicField(_a, "b", () => __superGet(_a, _a, "b")), _a;
+});
+const _Derived2 = class _Derived2 extends Base {
+  static a() {
+    return __async(this, null, function* () {
+      var _a;
+      return _a = __superGet(_Derived2, this, "foo"), class {
+        constructor() {
+          __publicField(this, _a, 123);
+        }
+      };
+    });
+  }
+};
+__publicField(_Derived2, "b", () => __async(_Derived2, null, function* () {
+  var _a;
+  return _a = __superGet(_Derived2, _Derived2, "foo"), class {
+    constructor() {
+      __publicField(this, _a, 123);
+    }
+  };
+}));
+let Derived2 = _Derived2;
+
+================================================================================
+TestLowerStaticAsyncSuperES2021NoBundle
+---------- /out.js ----------
+const _Derived = class _Derived extends Base {
+};
+__publicField(_Derived, "test", async (key) => {
+  return [
+    await __superGet(_Derived, _Derived, "foo"),
+    await __superGet(_Derived, _Derived, key),
+    await ([__superWrapper(_Derived, _Derived, "foo")._] = [0]),
+    await ([__superWrapper(_Derived, _Derived, key)._] = [0]),
+    await __superSet(_Derived, _Derived, "foo", 1),
+    await __superSet(_Derived, _Derived, key, 1),
+    await __superSet(_Derived, _Derived, "foo", __superGet(_Derived, _Derived, "foo") + 2),
+    await __superSet(_Derived, _Derived, key, __superGet(_Derived, _Derived, key) + 2),
+    await ++__superWrapper(_Derived, _Derived, "foo")._,
+    await ++__superWrapper(_Derived, _Derived, key)._,
+    await __superWrapper(_Derived, _Derived, "foo")._++,
+    await __superWrapper(_Derived, _Derived, key)._++,
+    await __superGet(_Derived, _Derived, "foo").name,
+    await __superGet(_Derived, _Derived, key).name,
+    await __superGet(_Derived, _Derived, "foo")?.name,
+    await __superGet(_Derived, _Derived, key)?.name,
+    await __superGet(_Derived, _Derived, "foo").call(this, 1, 2),
+    await __superGet(_Derived, _Derived, key).call(this, 1, 2),
+    await super.foo?.(1, 2),
+    await super[key]?.(1, 2),
+    await (() => __superGet(_Derived, _Derived, "foo"))(),
+    await (() => __superGet(_Derived, _Derived, key))(),
+    await (() => __superGet(_Derived, _Derived, "foo").call(this))(),
+    await (() => __superGet(_Derived, _Derived, key).call(this))(),
+    await __superGet(_Derived, _Derived, "foo").bind(this)``,
+    await __superGet(_Derived, _Derived, key).bind(this)``
+  ];
+});
+let Derived = _Derived;
+let fn = async () => {
+  var _a;
+  return _a = class extends Base {
+    static c() {
+      return super.c;
+    }
+    static d() {
+      return () => super.d;
+    }
+  }, __publicField(_a, "a", __superGet(_a, _a, "a")), __publicField(_a, "b", () => __superGet(_a, _a, "b")), _a;
+};
+const _Derived2 = class _Derived2 extends Base {
+  static async a() {
+    var _a;
+    return _a = super.foo, class {
+      constructor() {
+        __publicField(this, _a, 123);
+      }
+    };
+  }
+};
+__publicField(_Derived2, "b", async () => {
+  var _a;
+  return _a = __superGet(_Derived2, _Derived2, "foo"), class {
+    constructor() {
+      __publicField(this, _a, 123);
+    }
+  };
+});
+let Derived2 = _Derived2;
+
+================================================================================
+TestLowerStaticSuperES2016NoBundle
+---------- /out.js ----------
+const _Derived = class _Derived extends Base {
+};
+__publicField(_Derived, "test", (key) => {
+  var _a, _b, _c, _d;
+  return [
+    __superGet(_Derived, _Derived, "foo"),
+    __superGet(_Derived, _Derived, key),
+    [__superWrapper(_Derived, _Derived, "foo")._] = [0],
+    [__superWrapper(_Derived, _Derived, key)._] = [0],
+    __superSet(_Derived, _Derived, "foo", 1),
+    __superSet(_Derived, _Derived, key, 1),
+    __superSet(_Derived, _Derived, "foo", __superGet(_Derived, _Derived, "foo") + 2),
+    __superSet(_Derived, _Derived, key, __superGet(_Derived, _Derived, key) + 2),
+    ++__superWrapper(_Derived, _Derived, "foo")._,
+    ++__superWrapper(_Derived, _Derived, key)._,
+    __superWrapper(_Derived, _Derived, "foo")._++,
+    __superWrapper(_Derived, _Derived, key)._++,
+    __superGet(_Derived, _Derived, "foo").name,
+    __superGet(_Derived, _Derived, key).name,
+    (_a = __superGet(_Derived, _Derived, "foo")) == null ? void 0 : _a.name,
+    (_b = __superGet(_Derived, _Derived, key)) == null ? void 0 : _b.name,
+    __superGet(_Derived, _Derived, "foo").call(this, 1, 2),
+    __superGet(_Derived, _Derived, key).call(this, 1, 2),
+    (_c = __superGet(_Derived, _Derived, "foo")) == null ? void 0 : _c.call(this, 1, 2),
+    (_d = __superGet(_Derived, _Derived, key)) == null ? void 0 : _d.call(this, 1, 2),
+    (() => __superGet(_Derived, _Derived, "foo"))(),
+    (() => __superGet(_Derived, _Derived, key))(),
+    (() => __superGet(_Derived, _Derived, "foo").call(this))(),
+    (() => __superGet(_Derived, _Derived, key).call(this))(),
+    __superGet(_Derived, _Derived, "foo").bind(this)``,
+    __superGet(_Derived, _Derived, key).bind(this)``
+  ];
+});
+let Derived = _Derived;
+
+================================================================================
+TestLowerStaticSuperES2021NoBundle
+---------- /out.js ----------
+const _Derived = class _Derived extends Base {
+};
+__publicField(_Derived, "test", (key) => {
+  return [
+    __superGet(_Derived, _Derived, "foo"),
+    __superGet(_Derived, _Derived, key),
+    [__superWrapper(_Derived, _Derived, "foo")._] = [0],
+    [__superWrapper(_Derived, _Derived, key)._] = [0],
+    __superSet(_Derived, _Derived, "foo", 1),
+    __superSet(_Derived, _Derived, key, 1),
+    __superSet(_Derived, _Derived, "foo", __superGet(_Derived, _Derived, "foo") + 2),
+    __superSet(_Derived, _Derived, key, __superGet(_Derived, _Derived, key) + 2),
+    ++__superWrapper(_Derived, _Derived, "foo")._,
+    ++__superWrapper(_Derived, _Derived, key)._,
+    __superWrapper(_Derived, _Derived, "foo")._++,
+    __superWrapper(_Derived, _Derived, key)._++,
+    __superGet(_Derived, _Derived, "foo").name,
+    __superGet(_Derived, _Derived, key).name,
+    __superGet(_Derived, _Derived, "foo")?.name,
+    __superGet(_Derived, _Derived, key)?.name,
+    __superGet(_Derived, _Derived, "foo").call(this, 1, 2),
+    __superGet(_Derived, _Derived, key).call(this, 1, 2),
+    super.foo?.(1, 2),
+    super[key]?.(1, 2),
+    (() => __superGet(_Derived, _Derived, "foo"))(),
+    (() => __superGet(_Derived, _Derived, key))(),
+    (() => __superGet(_Derived, _Derived, "foo").call(this))(),
+    (() => __superGet(_Derived, _Derived, key).call(this))(),
+    __superGet(_Derived, _Derived, "foo").bind(this)``,
+    __superGet(_Derived, _Derived, key).bind(this)``
+  ];
+});
+let Derived = _Derived;
+
+================================================================================
+TestLowerStrictModeSyntax
+---------- /out.js ----------
+// for-in.js
+if (test) {
+  a = b;
+  for (a in {}) ;
+}
+var a;
+x = y;
+for (x in {}) ;
+var x;
+
+================================================================================
+TestLowerTemplateObject
+---------- /out.js ----------
+var _a, _b, _c, _d, _e, _f, _g, _h;
+x = () => [
+  tag(_a || (_a = __template(["x"]))),
+  tag(_b || (_b = __template(["ÿ"], ["\\xFF"]))),
+  tag(_c || (_c = __template([void 0], ["\\x"]))),
+  tag(_d || (_d = __template([void 0], ["\\u"])))
+];
+y = () => [
+  tag(_e || (_e = __template(["x", "z"])), y),
+  tag(_f || (_f = __template(["ÿ", "z"], ["\\xFF", "z"])), y),
+  tag(_g || (_g = __template(["x", "z"], ["x", "\\z"])), y),
+  tag(_h || (_h = __template(["x", void 0], ["x", "\\u"])), y)
+];
+
+================================================================================
+TestLowerUsing
+---------- /out/entry.js ----------
+function foo() {
+  var _stack4 = [];
+  try {
+    const a2 = __using(_stack4, b);
+    if (nested) {
+      var _stack3 = [];
+      try {
+        const x = __using(_stack3, 1);
+      } catch (_3) {
+        var _error3 = _3, _hasError3 = true;
+      } finally {
+        __callDispose(_stack3, _error3, _hasError3);
+      }
+    }
+  } catch (_4) {
+    var _error4 = _4, _hasError4 = true;
+  } finally {
+    __callDispose(_stack4, _error4, _hasError4);
+  }
+}
+async function bar() {
+  var _stack4 = [];
+  try {
+    const a2 = __using(_stack4, b);
+    const c2 = __using(_stack4, d, true);
+    if (nested) {
+      var _stack3 = [];
+      try {
+        const x = __using(_stack3, 1);
+        const y = __using(_stack3, 2, true);
+      } catch (_3) {
+        var _error3 = _3, _hasError3 = true;
+      } finally {
+        var _promise3 = __callDispose(_stack3, _error3, _hasError3);
+        _promise3 && await _promise3;
+      }
+    }
+  } catch (_4) {
+    var _error4 = _4, _hasError4 = true;
+  } finally {
+    var _promise4 = __callDispose(_stack4, _error4, _hasError4);
+    _promise4 && await _promise4;
+  }
+}
+var _stack2 = [];
+try {
+  var a = __using(_stack2, b);
+  var c = __using(_stack2, d, true);
+  if (nested) {
+    var _stack = [];
+    try {
+      const x = __using(_stack, 1);
+      const y = __using(_stack, 2, true);
+    } catch (_) {
+      var _error = _, _hasError = true;
+    } finally {
+      var _promise = __callDispose(_stack, _error, _hasError);
+      _promise && await _promise;
+    }
+  }
+} catch (_2) {
+  var _error2 = _2, _hasError2 = true;
+} finally {
+  var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+  _promise2 && await _promise2;
+}
+
+---------- /out/loops.js ----------
+for (var _a of b) {
+  var _stack = [];
+  try {
+    const a = __using(_stack, _a);
+    c(() => a);
+  } catch (_) {
+    var _error = _, _hasError = true;
+  } finally {
+    __callDispose(_stack, _error, _hasError);
+  }
+}
+for (var _d of e) {
+  var _stack2 = [];
+  try {
+    const d = __using(_stack2, _d, true);
+    f(() => d);
+  } catch (_2) {
+    var _error2 = _2, _hasError2 = true;
+  } finally {
+    var _promise = __callDispose(_stack2, _error2, _hasError2);
+    _promise && await _promise;
+  }
+}
+for await (var _g of h) {
+  var _stack3 = [];
+  try {
+    const g = __using(_stack3, _g);
+    i(() => g);
+  } catch (_3) {
+    var _error3 = _3, _hasError3 = true;
+  } finally {
+    __callDispose(_stack3, _error3, _hasError3);
+  }
+}
+for await (var _j of k) {
+  var _stack4 = [];
+  try {
+    const j = __using(_stack4, _j, true);
+    l(() => j);
+  } catch (_4) {
+    var _error4 = _4, _hasError4 = true;
+  } finally {
+    var _promise2 = __callDispose(_stack4, _error4, _hasError4);
+    _promise2 && await _promise2;
+  }
+}
+if (nested) {
+  for (var _a of b) {
+    var _stack5 = [];
+    try {
+      const a = __using(_stack5, _a);
+      c(() => a);
+    } catch (_5) {
+      var _error5 = _5, _hasError5 = true;
+    } finally {
+      __callDispose(_stack5, _error5, _hasError5);
+    }
+  }
+  for (var _d of e) {
+    var _stack6 = [];
+    try {
+      const d = __using(_stack6, _d, true);
+      f(() => d);
+    } catch (_6) {
+      var _error6 = _6, _hasError6 = true;
+    } finally {
+      var _promise3 = __callDispose(_stack6, _error6, _hasError6);
+      _promise3 && await _promise3;
+    }
+  }
+  for await (var _g of h) {
+    var _stack7 = [];
+    try {
+      const g = __using(_stack7, _g);
+      i(() => g);
+    } catch (_7) {
+      var _error7 = _7, _hasError7 = true;
+    } finally {
+      __callDispose(_stack7, _error7, _hasError7);
+    }
+  }
+  for await (var _j of k) {
+    var _stack8 = [];
+    try {
+      const j = __using(_stack8, _j, true);
+      l(() => j);
+    } catch (_8) {
+      var _error8 = _8, _hasError8 = true;
+    } finally {
+      var _promise4 = __callDispose(_stack8, _error8, _hasError8);
+      _promise4 && await _promise4;
+    }
+  }
+}
+function foo() {
+  for (var _a of b) {
+    var _stack9 = [];
+    try {
+      const a = __using(_stack9, _a);
+      c(() => a);
+    } catch (_9) {
+      var _error9 = _9, _hasError9 = true;
+    } finally {
+      __callDispose(_stack9, _error9, _hasError9);
+    }
+  }
+}
+async function bar() {
+  for (var _a of b) {
+    var _stack9 = [];
+    try {
+      const a = __using(_stack9, _a);
+      c(() => a);
+    } catch (_9) {
+      var _error9 = _9, _hasError9 = true;
+    } finally {
+      __callDispose(_stack9, _error9, _hasError9);
+    }
+  }
+  for (var _d of e) {
+    var _stack10 = [];
+    try {
+      const d = __using(_stack10, _d, true);
+      f(() => d);
+    } catch (_10) {
+      var _error10 = _10, _hasError10 = true;
+    } finally {
+      var _promise5 = __callDispose(_stack10, _error10, _hasError10);
+      _promise5 && await _promise5;
+    }
+  }
+  for await (var _g of h) {
+    var _stack11 = [];
+    try {
+      const g = __using(_stack11, _g);
+      i(() => g);
+    } catch (_11) {
+      var _error11 = _11, _hasError11 = true;
+    } finally {
+      __callDispose(_stack11, _error11, _hasError11);
+    }
+  }
+  for await (var _j of k) {
+    var _stack12 = [];
+    try {
+      const j = __using(_stack12, _j, true);
+      l(() => j);
+    } catch (_12) {
+      var _error12 = _12, _hasError12 = true;
+    } finally {
+      var _promise6 = __callDispose(_stack12, _error12, _hasError12);
+      _promise6 && await _promise6;
+    }
+  }
+}
+
+---------- /out/switch.js ----------
+async function foo() {
+  var _stack6 = [];
+  try {
+    const x2 = __using(_stack6, y);
+    var _stack4 = [];
+    try {
+      switch (foo) {
+        case 0:
+          const c = __using(_stack4, d);
+        default:
+          const e = __using(_stack4, f);
+      }
+    } catch (_4) {
+      var _error4 = _4, _hasError4 = true;
+    } finally {
+      __callDispose(_stack4, _error4, _hasError4);
+    }
+    var _stack5 = [];
+    try {
+      switch (foo) {
+        case 0:
+          const c = __using(_stack5, d, true);
+        default:
+          const e = __using(_stack5, f);
+      }
+    } catch (_5) {
+      var _error5 = _5, _hasError5 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack5, _error5, _hasError5);
+      _promise2 && await _promise2;
+    }
+  } catch (_6) {
+    var _error6 = _6, _hasError6 = true;
+  } finally {
+    __callDispose(_stack6, _error6, _hasError6);
+  }
+}
+var _stack3 = [];
+try {
+  var x = __using(_stack3, y);
+  var _stack = [];
+  try {
+    switch (foo) {
+      case 0:
+        var c = __using(_stack, d);
+      default:
+        var e = __using(_stack, f);
+    }
+  } catch (_) {
+    var _error = _, _hasError = true;
+  } finally {
+    __callDispose(_stack, _error, _hasError);
+  }
+  var _stack2 = [];
+  try {
+    switch (foo) {
+      case 0:
+        var c = __using(_stack2, d, true);
+      default:
+        var e = __using(_stack2, f);
+    }
+  } catch (_2) {
+    var _error2 = _2, _hasError2 = true;
+  } finally {
+    var _promise = __callDispose(_stack2, _error2, _hasError2);
+    _promise && await _promise;
+  }
+} catch (_3) {
+  var _error3 = _3, _hasError3 = true;
+} finally {
+  __callDispose(_stack3, _error3, _hasError3);
+}
+
+================================================================================
+TestLowerUsingHoisting
+---------- /out/hoist-use-strict.js ----------
+"use strict";
+function foo() {
+  "use strict";
+  var _stack2 = [];
+  try {
+    const a2 = __using(_stack2, b);
+  } catch (_2) {
+    var _error2 = _2, _hasError2 = true;
+  } finally {
+    __callDispose(_stack2, _error2, _hasError2);
+  }
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-directive.js ----------
+"use wtf";
+function foo() {
+  "use wtf";
+  var _stack2 = [];
+  try {
+    const a2 = __using(_stack2, b);
+  } catch (_2) {
+    var _error2 = _2, _hasError2 = true;
+  } finally {
+    __callDispose(_stack2, _error2, _hasError2);
+  }
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-import.js ----------
+import "./foo";
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-star.js ----------
+export * from "./foo";
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-from.js ----------
+export { x, y } from "./foo";
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-clause.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  a,
+  c as "c!"
+};
+
+---------- /out/hoist-export-local-direct.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var ac1 = [a, c], { x: [x1] } = foo;
+  var a1 = a, { y: [y1] } = foo;
+  var c1 = c, { z: [z1] } = foo;
+  var ac2 = [a, c], { x: [x2] } = foo;
+  var a2 = a, { y: [y2] } = foo;
+  var c2 = c, { z: [z2] } = foo;
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  ac1,
+  x1,
+  a1,
+  y1,
+  c1,
+  z1
+};
+
+---------- /out/hoist-export-local-indirect.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var ac1 = [a, c], { x: [x1] } = foo;
+  var a1 = a, { y: [y1] } = foo;
+  var c1 = c, { z: [z1] } = foo;
+  var ac2 = [a, c], { x: [x2] } = foo;
+  var a2 = a, { y: [y2] } = foo;
+  var c2 = c, { z: [z2] } = foo;
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  x1,
+  y1,
+  z1
+};
+
+---------- /out/hoist-export-class-direct.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var Foo1 = class {
+    ac = [a, c];
+  };
+  var Bar1 = class _Bar1 {
+    ac = [a, c, _Bar1];
+  };
+  var Foo2 = class {
+    ac = [a, c];
+  };
+  var Bar2 = class _Bar2 {
+    ac = [a, c, _Bar2];
+  };
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  Foo1,
+  Bar1
+};
+
+---------- /out/hoist-export-class-indirect.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var Foo1 = class {
+    ac = [a, c];
+  };
+  var Bar1 = class _Bar1 {
+    ac = [a, c, _Bar1];
+  };
+  var Foo2 = class {
+    ac = [a, c];
+  };
+  var Bar2 = class _Bar2 {
+    ac = [a, c, _Bar2];
+  };
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  Foo1,
+  Bar1
+};
+
+---------- /out/hoist-export-function-direct.js ----------
+export function foo1() {
+  return [a, c];
+}
+export function bar1() {
+  return [a, c, bar1];
+}
+function foo2() {
+  return [a, c];
+}
+function bar2() {
+  return [a, c, bar2];
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-function-indirect.js ----------
+function foo1() {
+  return [a, c];
+}
+function bar1() {
+  return [a, c, bar1];
+}
+function foo2() {
+  return [a, c];
+}
+function bar2() {
+  return [a, c, bar2];
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  foo1,
+  bar1
+};
+
+---------- /out/hoist-export-default-class-name-unused.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var Foo = class {
+    ac = [a, c];
+  };
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  Foo as default
+};
+
+---------- /out/hoist-export-default-class-name-used.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var Foo = class _Foo {
+    ac = [a, c, _Foo];
+  };
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  Foo as default
+};
+
+---------- /out/hoist-export-default-class-anonymous.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var hoist_export_default_class_anonymous_default = class {
+    ac = [a, c];
+  };
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  hoist_export_default_class_anonymous_default as default
+};
+
+---------- /out/hoist-export-default-function-name-unused.js ----------
+export default function foo() {
+  return [a, c];
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-default-function-name-used.js ----------
+export default function foo() {
+  return [a, c, foo];
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-default-function-anonymous.js ----------
+export default function() {
+  return [a, c];
+}
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+
+---------- /out/hoist-export-default-expr.js ----------
+var _stack = [];
+try {
+  var a = __using(_stack, b);
+  var hoist_export_default_expr_default = [a, c];
+  var c = __using(_stack, d);
+} catch (_) {
+  var _error = _, _hasError = true;
+} finally {
+  __callDispose(_stack, _error, _hasError);
+}
+export {
+  hoist_export_default_expr_default as default
+};
+
+================================================================================
+TestLowerUsingInsideTSNamespace
+---------- /out/entry.js ----------
+var ns;
+((ns2) => {
+  var _stack = [];
+  try {
+    ns2.a = b;
+    const c = __using(_stack, d);
+    ns2.e = f;
+  } catch (_) {
+    var _error = _, _hasError = true;
+  } finally {
+    __callDispose(_stack, _error, _hasError);
+  }
+})(ns || (ns = {}));
+
+================================================================================
+TestLowerUsingUnsupportedAsync
+---------- /out/entry.js ----------
+function foo() {
+  using a = b;
+  if (nested) {
+    using x = 1;
+  }
+}
+function bar() {
+  return __async(this, null, function* () {
+    var _stack2 = [];
+    try {
+      const a = __using(_stack2, b);
+      const c = __using(_stack2, d, true);
+      if (nested) {
+        var _stack = [];
+        try {
+          const x = __using(_stack, 1);
+          const y = __using(_stack, 2, true);
+        } catch (_) {
+          var _error = _, _hasError = true;
+        } finally {
+          var _promise = __callDispose(_stack, _error, _hasError);
+          _promise && (yield _promise);
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield _promise2);
+    }
+  });
+}
+
+---------- /out/loops.js ----------
+for (using a of b) c(() => a);
+if (nested) {
+  for (using a of b) c(() => a);
+}
+function foo() {
+  for (using a of b) c(() => a);
+}
+function bar() {
+  return __async(this, null, function* () {
+    for (using a of b) c(() => a);
+    for (var _d of e) {
+      var _stack = [];
+      try {
+        const d = __using(_stack, _d, true);
+        f(() => d);
+      } catch (_) {
+        var _error = _, _hasError = true;
+      } finally {
+        var _promise = __callDispose(_stack, _error, _hasError);
+        _promise && (yield _promise);
+      }
+    }
+  });
+}
+
+---------- /out/switch.js ----------
+using x = y;
+switch (foo) {
+  case 0:
+    using c = d;
+  default:
+    using e = f;
+}
+function foo() {
+  return __async(this, null, function* () {
+    using x2 = y;
+    switch (foo) {
+      case 0:
+        using c = d;
+      default:
+        using e = f;
+    }
+    var _stack = [];
+    try {
+      switch (foo) {
+        case 0:
+          const c = __using(_stack, d, true);
+        default:
+          const e = __using(_stack, f);
+      }
+    } catch (_) {
+      var _error = _, _hasError = true;
+    } finally {
+      var _promise = __callDispose(_stack, _error, _hasError);
+      _promise && (yield _promise);
+    }
+  });
+}
+
+================================================================================
+TestLowerUsingUnsupportedUsingAndAsync
+---------- /out/entry.js ----------
+function foo() {
+  var _stack2 = [];
+  try {
+    const a = __using(_stack2, b);
+    if (nested) {
+      var _stack = [];
+      try {
+        const x = __using(_stack, 1);
+      } catch (_) {
+        var _error = _, _hasError = true;
+      } finally {
+        __callDispose(_stack, _error, _hasError);
+      }
+    }
+  } catch (_2) {
+    var _error2 = _2, _hasError2 = true;
+  } finally {
+    __callDispose(_stack2, _error2, _hasError2);
+  }
+}
+function bar() {
+  return __async(this, null, function* () {
+    var _stack2 = [];
+    try {
+      const a = __using(_stack2, b);
+      const c = __using(_stack2, d, true);
+      if (nested) {
+        var _stack = [];
+        try {
+          const x = __using(_stack, 1);
+          const y = __using(_stack, 2, true);
+        } catch (_) {
+          var _error = _, _hasError = true;
+        } finally {
+          var _promise = __callDispose(_stack, _error, _hasError);
+          _promise && (yield _promise);
+        }
+      }
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      var _promise2 = __callDispose(_stack2, _error2, _hasError2);
+      _promise2 && (yield _promise2);
+    }
+  });
+}
+
+---------- /out/loops.js ----------
+for (var _a of b) {
+  var _stack = [];
+  try {
+    const a = __using(_stack, _a);
+    c(() => a);
+  } catch (_) {
+    var _error = _, _hasError = true;
+  } finally {
+    __callDispose(_stack, _error, _hasError);
+  }
+}
+if (nested) {
+  for (var _a of b) {
+    var _stack2 = [];
+    try {
+      const a = __using(_stack2, _a);
+      c(() => a);
+    } catch (_2) {
+      var _error2 = _2, _hasError2 = true;
+    } finally {
+      __callDispose(_stack2, _error2, _hasError2);
+    }
+  }
+}
+function foo() {
+  for (var _a of b) {
+    var _stack3 = [];
+    try {
+      const a = __using(_stack3, _a);
+      c(() => a);
+    } catch (_3) {
+      var _error3 = _3, _hasError3 = true;
+    } finally {
+      __callDispose(_stack3, _error3, _hasError3);
+    }
+  }
+}
+function bar() {
+  return __async(this, null, function* () {
+    for (var _a of b) {
+      var _stack3 = [];
+      try {
+        const a = __using(_stack3, _a);
+        c(() => a);
+      } catch (_3) {
+        var _error3 = _3, _hasError3 = true;
+      } finally {
+        __callDispose(_stack3, _error3, _hasError3);
+      }
+    }
+    for (var _d of e) {
+      var _stack4 = [];
+      try {
+        const d = __using(_stack4, _d, true);
+        f(() => d);
+      } catch (_4) {
+        var _error4 = _4, _hasError4 = true;
+      } finally {
+        var _promise = __callDispose(_stack4, _error4, _hasError4);
+        _promise && (yield _promise);
+      }
+    }
+  });
+}
+
+---------- /out/switch.js ----------
+function foo() {
+  return __async(this, null, function* () {
+    var _stack5 = [];
+    try {
+      const x2 = __using(_stack5, y);
+      var _stack3 = [];
+      try {
+        switch (foo) {
+          case 0:
+            const c = __using(_stack3, d);
+          default:
+            const e = __using(_stack3, f);
+        }
+      } catch (_3) {
+        var _error3 = _3, _hasError3 = true;
+      } finally {
+        __callDispose(_stack3, _error3, _hasError3);
+      }
+      var _stack4 = [];
+      try {
+        switch (foo) {
+          case 0:
+            const c = __using(_stack4, d, true);
+          default:
+            const e = __using(_stack4, f);
+        }
+      } catch (_4) {
+        var _error4 = _4, _hasError4 = true;
+      } finally {
+        var _promise = __callDispose(_stack4, _error4, _hasError4);
+        _promise && (yield _promise);
+      }
+    } catch (_5) {
+      var _error5 = _5, _hasError5 = true;
+    } finally {
+      __callDispose(_stack5, _error5, _hasError5);
+    }
+  });
+}
+var _stack2 = [];
+try {
+  var x = __using(_stack2, y);
+  var _stack = [];
+  try {
+    switch (foo) {
+      case 0:
+        var c = __using(_stack, d);
+      default:
+        var e = __using(_stack, f);
+    }
+  } catch (_) {
+    var _error = _, _hasError = true;
+  } finally {
+    __callDispose(_stack, _error, _hasError);
+  }
+} catch (_2) {
+  var _error2 = _2, _hasError2 = true;
+} finally {
+  __callDispose(_stack2, _error2, _hasError2);
+}
+
+================================================================================
+TestStaticClassBlockES2021
+---------- /out.js ----------
+// entry.js
+var _A = class _A {
+};
+_A.thisField++;
+_A.classField++;
+__superSet(_A, _A, "superField", __superGet(_A, _A, "superField") + 1);
+__superWrapper(_A, _A, "superField")._++;
+var A = _A;
+var _a;
+var B = (_a = class {
+}, _a.thisField++, __superSet(_a, _a, "superField", __superGet(_a, _a, "superField") + 1), __superWrapper(_a, _a, "superField")._++, _a);
+
+================================================================================
+TestStaticClassBlockESNext
+---------- /out.js ----------
+// entry.js
+var A = class _A {
+  static {
+  }
+  static {
+    this.thisField++;
+    _A.classField++;
+    super.superField = super.superField + 1;
+    super.superField++;
+  }
+};
+var B = class {
+  static {
+  }
+  static {
+    this.thisField++;
+    super.superField = super.superField + 1;
+    super.superField++;
+  }
+};
+
+================================================================================
+TestTSLowerClassField2020NoBundle
+---------- /out.js ----------
+var _foo, _bar, _s_foo, _s_bar;
+class Foo {
+  constructor() {
+    __privateAdd(this, _foo, 123);
+    __privateAdd(this, _bar);
+    this.foo = 123;
+  }
+}
+_foo = new WeakMap();
+_bar = new WeakMap();
+_s_foo = new WeakMap();
+_s_bar = new WeakMap();
+__privateAdd(Foo, _s_foo, 123);
+__privateAdd(Foo, _s_bar);
+Foo.s_foo = 123;
+
+================================================================================
+TestTSLowerClassFieldStrictTsconfigJson2020
+---------- /out.js ----------
+// loose/index.ts
+var loose_default = class {
+};
+
+// strict/index.ts
+var strict_default = class {
+  constructor() {
+    __publicField(this, "foo");
+  }
+};
+
+// entry.js
+console.log(loose_default, strict_default);
+
+================================================================================
+TestTSLowerClassPrivateFieldNextNoBundle
+---------- /out.js ----------
+class Foo {
+  constructor() {
+    this.#foo = 123;
+    this.foo = 123;
+  }
+  #foo;
+  #bar;
+  static #s_foo = 123;
+  static #s_bar;
+  static {
+    this.s_foo = 123;
+  }
+}
+
+================================================================================
+TestTSLowerObjectRest2017NoBundle
+---------- /out.js ----------
+var _q, _r, _t, _u, _v, _w, _x;
+const local_const = __objRest({}, []);
+let local_let = __objRest({}, []);
+var local_var = __objRest({}, []);
+let arrow_fn = (_a) => {
+  var x2 = __objRest(_a, []);
+};
+let fn_expr = function(_b = default_value) {
+  var x2 = __objRest(_b, []);
+};
+let class_expr = class {
+  method(x2, ..._c) {
+    var [y, _d] = _c, z = __objRest(_d, []);
+  }
+};
+function fn_stmt(_e, _g) {
+  var _f = _e, { a = b() } = _f, x2 = __objRest(_f, ["a"]);
+  var _h = _g, { c = d() } = _h, y = __objRest(_h, ["c"]);
+}
+class class_stmt {
+  method(_i) {
+    var x2 = __objRest(_i, []);
+  }
+}
+var ns;
+((ns2) => {
+  ns2.x = __objRest({}, []);
+})(ns || (ns = {}));
+try {
+} catch (_j) {
+  let catch_clause = __objRest(_j, []);
+}
+for (const _k in { abc }) {
+  const for_in_const = __objRest(_k, []);
+}
+for (let _l in { abc }) {
+  let for_in_let = __objRest(_l, []);
+}
+for (var _m in { abc }) {
+  var for_in_var = __objRest(_m, []);
+  ;
+}
+for (const _n of [{}]) {
+  const for_of_const = __objRest(_n, []);
+  ;
+}
+for (let _o of [{}]) {
+  let for_of_let = __objRest(_o, []);
+  x();
+}
+for (var _p of [{}]) {
+  var for_of_var = __objRest(_p, []);
+  x();
+}
+for (const for_const = __objRest({}, []); x; x = null) {
+}
+for (let for_let = __objRest({}, []); x; x = null) {
+}
+for (var for_var = __objRest({}, []); x; x = null) {
+}
+for (_q in { abc }) {
+  x = __objRest(_q, []);
+}
+for (_r of [{}]) {
+  x = __objRest(_r, []);
+}
+for (x = __objRest({}, []); x; x = null) {
+}
+assign = __objRest({}, []);
+({ obj_method(_s) {
+  var x2 = __objRest(_s, []);
+} });
+x = __objRest(x, []);
+for (x = __objRest(x, []); 0; ) ;
+console.log((x = __objRest(_t = x, []), _t));
+console.log((_v = _u = { x }, { x } = _v, xx = __objRest(_v, ["x"]), _u));
+console.log(({ x: _x } = _w = { x }, xx = __objRest(_x, []), _w));
+
+================================================================================
+TestTSLowerObjectRest2018NoBundle
+---------- /out.js ----------
+const { ...local_const } = {};
+let { ...local_let } = {};
+var { ...local_var } = {};
+let arrow_fn = ({ ...x2 }) => {
+};
+let fn_expr = function({ ...x2 } = default_value) {
+};
+let class_expr = class {
+  method(x2, ...[y, { ...z }]) {
+  }
+};
+function fn_stmt({ a = b(), ...x2 }, { c = d(), ...y }) {
+}
+class class_stmt {
+  method({ ...x2 }) {
+  }
+}
+var ns;
+((ns2) => {
+  ({ ...ns2.x } = {});
+})(ns || (ns = {}));
+try {
+} catch ({ ...catch_clause }) {
+}
+for (const { ...for_in_const } in { abc }) {
+}
+for (let { ...for_in_let } in { abc }) {
+}
+for (var { ...for_in_var } in { abc }) ;
+for (const { ...for_of_const } of [{}]) ;
+for (let { ...for_of_let } of [{}]) x();
+for (var { ...for_of_var } of [{}]) x();
+for (const { ...for_const } = {}; x; x = null) {
+}
+for (let { ...for_let } = {}; x; x = null) {
+}
+for (var { ...for_var } = {}; x; x = null) {
+}
+for ({ ...x } in { abc }) {
+}
+for ({ ...x } of [{}]) {
+}
+for ({ ...x } = {}; x; x = null) {
+}
+({ ...assign } = {});
+({ obj_method({ ...x2 }) {
+} });
+({ ...x } = x);
+for ({ ...x } = x; 0; ) ;
+console.log({ ...x } = x);
+console.log({ x, ...xx } = { x });
+console.log({ x: { ...xx } } = { x });
+
+================================================================================
+TestTSLowerPrivateFieldAndMethodAvoidNameCollision2015
+---------- /out.js ----------
+// entry.ts
+var _x;
+var WeakMap2 = class {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+};
+_x = new WeakMap();
+var _WeakSet_instances, y_fn;
+var WeakSet2 = class {
+  constructor() {
+    __privateAdd(this, _WeakSet_instances);
+  }
+};
+_WeakSet_instances = new WeakSet();
+y_fn = function() {
+};
+export {
+  WeakMap2 as WeakMap,
+  WeakSet2 as WeakSet
+};
+
+================================================================================
+TestTSLowerPrivateFieldOptionalChain2015NoBundle
+---------- /out.js ----------
+var _x;
+class Foo {
+  constructor() {
+    __privateAdd(this, _x);
+  }
+  foo() {
+    var _a;
+    this == null ? void 0 : __privateGet(this, _x).y;
+    this == null ? void 0 : __privateGet(this.y, _x);
+    (_a = __privateGet(this, _x)) == null ? void 0 : _a.y;
+  }
+}
+_x = new WeakMap();
+
+================================================================================
+TestTSLowerPrivateStaticMembers2015NoBundle
+---------- /out.js ----------
+var _x, _Foo_static, y_get, y_set, z_fn;
+const _Foo = class _Foo {
+  foo() {
+    var _a;
+    __privateSet(_Foo, _x, __privateGet(_Foo, _x) + 1);
+    __privateSet(_Foo, _Foo_static, __privateGet(_Foo, _Foo_static, y_get) + 1, y_set);
+    __privateMethod(_a = _Foo, _Foo_static, z_fn).call(_a);
+  }
+};
+_x = new WeakMap();
+_Foo_static = new WeakSet();
+y_get = function() {
+};
+y_set = function(x) {
+};
+z_fn = function() {
+};
+__privateAdd(_Foo, _Foo_static);
+__privateAdd(_Foo, _x);
+let Foo = _Foo;

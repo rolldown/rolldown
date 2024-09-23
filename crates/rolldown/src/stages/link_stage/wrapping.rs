@@ -1,6 +1,6 @@
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EcmaModule, ExportsKind, IndexModules, Module, ModuleIdx, StmtInfo, WrapKind,
+  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, WrapKind,
 };
 
 use crate::{
@@ -26,7 +26,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   }
   *is_visited = true;
 
-  let Module::Ecma(module) = &ctx.modules[target] else {
+  let Module::Normal(module) = &ctx.modules[target] else {
     return;
   };
 
@@ -54,7 +54,7 @@ fn has_dynamic_exports_due_to_export_star(
   visited_modules[target] = true;
 
   let has_dynamic_exports = match &modules[target] {
-    Module::Ecma(module) => {
+    Module::Normal(module) => {
       if matches!(module.exports_kind, ExportsKind::CommonJs) {
         true
       } else {
@@ -87,7 +87,7 @@ impl LinkStage<'_> {
     let mut visited_modules_for_dynamic_exports =
       oxc::index::index_vec![false; self.module_table.modules.len()];
 
-    for module in self.module_table.modules.iter().filter_map(Module::as_ecma) {
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
       let linking_info = &self.metas[module_id];
 
@@ -116,7 +116,7 @@ impl LinkStage<'_> {
 
       module.import_records.iter().for_each(|rec| {
         let importee_id = rec.resolved_module;
-        let Module::Ecma(importee) = &self.module_table.modules[importee_id] else {
+        let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
           return;
         };
         if matches!(importee.exports_kind, ExportsKind::CommonJs) {
@@ -135,7 +135,7 @@ impl LinkStage<'_> {
 }
 
 pub fn create_wrapper(
-  module: &mut EcmaModule,
+  module: &mut NormalModule,
   linking_info: &mut LinkingMetadata,
   symbols: &mut Symbols,
   runtime: &RuntimeModuleBrief,

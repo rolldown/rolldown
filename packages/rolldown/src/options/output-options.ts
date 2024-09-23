@@ -58,7 +58,7 @@ const outputOptionsSchema = z.strictObject({
   outro: z.string().or(addonFunctionSchema).optional(),
   extend: z
     .boolean()
-    .describe('extend global variable defined by name in IIFE or UMD formats')
+    .describe('extend global variable defined by name in IIFE / UMD formats')
     .optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
   entryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
@@ -69,7 +69,7 @@ const outputOptionsSchema = z.strictObject({
   globals: z
     .record(z.string())
     .describe(
-      'Comma-separated list of `module-id:global` pairs (`<module-id>:<global>,...`)',
+      'global variable of UMD / IIFE dependencies (syntax: `key=value`)',
     )
     .optional(),
   externalLiveBindings: z
@@ -81,6 +81,23 @@ const outputOptionsSchema = z.strictObject({
     .boolean()
     .describe('inline dynamic imports')
     .default(false)
+    .optional(),
+  advancedChunks: z
+    .strictObject({
+      minSize: z.number().optional(),
+      minShareCount: z.number().optional(),
+      groups: z
+        .array(
+          z.strictObject({
+            name: z.string(),
+            test: z.string().optional(),
+            priority: z.number().optional(),
+            minSize: z.number().optional(),
+            minShareCount: z.number().optional(),
+          }),
+        )
+        .optional(),
+    })
     .optional(),
 })
 
@@ -114,10 +131,20 @@ export const outputCliOptionsSchema = outputOptionsSchema
         'always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable).',
       )
       .optional(),
-    sourcemapIgnoreList: z.boolean().optional(),
-    sourcemapPathTransform: z.undefined().optional(),
+    advancedChunks: z
+      .strictObject({
+        minSize: z.number().describe('minimum size of the chunk').optional(),
+        minShareCount: z
+          .number()
+          .describe('minimum share count of the chunk')
+          .optional(),
+      })
+      .optional(),
   })
-  .omit({ sourcemapPathTransform: true })
+  .omit({
+    sourcemapPathTransform: true,
+    sourcemapIgnoreList: true,
+  })
 
 export type OutputOptions = z.infer<typeof outputOptionsSchema>
 

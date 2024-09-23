@@ -259,8 +259,6 @@ export function bindingifyLoad(
   }
   const { handler, meta, options } = normalizeHook(hook)
 
-  // @ts-ignore
-  console.log(`options.filter: `, options.filter)
   return {
     plugin: async (ctx, id) => {
       const ret = await handler.call(

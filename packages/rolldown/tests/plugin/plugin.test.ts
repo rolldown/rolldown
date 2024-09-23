@@ -58,3 +58,50 @@ describe('Plugin buildEnd hook', async () => {
     expect(buildEndFn).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('Plugin closeBundle hook', async () => {
+  test('call closeBundle hook if has error', async () => {
+    const closeBundleFn = vi.fn()
+    await buildWithPlugin({
+      load() {
+        throw new Error('load error')
+      },
+      closeBundle: () => {
+        closeBundleFn()
+      },
+    })
+    expect(closeBundleFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('call closeBundle with bundle close', async () => {
+    const closeBundleFn = vi.fn()
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          closeBundle: () => {
+            closeBundleFn()
+          },
+        },
+      ],
+    })
+    await build.close()
+    expect(closeBundleFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('should error at generate if bundle already closed', async () => {
+    try {
+      const build = await rolldown({
+        input: './main.js',
+        cwd: import.meta.dirname,
+      })
+      await build.close()
+      await build.write()
+    } catch (error: any) {
+      expect(error.message).toMatch(
+        `Rolldown internal error: Bundle is already closed, no more calls to 'generate' or 'write' are allowed.`,
+      )
+    }
+  })
+})

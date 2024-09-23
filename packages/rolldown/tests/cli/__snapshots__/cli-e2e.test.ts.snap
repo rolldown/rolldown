@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`basic arguments > should render help message for empty args 1`] = `
-"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.13.0)
+"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.13.2)
 
 USAGE rolldown -c <config> or rolldown <input> <options>
 
@@ -11,13 +11,15 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\`.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Comma-separated list of \`module-id:global\` pairs (\`<module-id>:<global>,...\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
   --platform -p, <platform>   Platform for which the code should be generated (node, browser, neutral).
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
   --version -v,               Show version number.
+  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
+  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   .
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
   --chunk-file-names <name>   .
@@ -26,7 +28,7 @@ OPTIONS
   --entry-file-names <name>   .
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
-  --extend                    Extend global variable defined by name in IIFE or UMD formats.
+  --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
@@ -37,7 +39,6 @@ OPTIONS
   --no-treeshake              Enable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --shim-missing-exports      .
-  --sourcemap-ignore-list     .
 
 EXAMPLES
 
@@ -95,7 +96,7 @@ exports[`cli options for bundling > should handle single array options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
-"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.13.0)
+"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.13.2)
 
 USAGE rolldown -c <config> or rolldown <input> <options>
 
@@ -105,13 +106,15 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\`.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Comma-separated list of \`module-id:global\` pairs (\`<module-id>:<global>,...\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
   --platform -p, <platform>   Platform for which the code should be generated (node, browser, neutral).
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
   --version -v,               Show version number.
+  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
+  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   .
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
   --chunk-file-names <name>   .
@@ -120,7 +123,7 @@ OPTIONS
   --entry-file-names <name>   .
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
-  --extend                    Extend global variable defined by name in IIFE or UMD formats.
+  --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
@@ -131,7 +134,6 @@ OPTIONS
   --no-treeshake              Enable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --shim-missing-exports      .
-  --sourcemap-ignore-list     .
 
 EXAMPLES
 

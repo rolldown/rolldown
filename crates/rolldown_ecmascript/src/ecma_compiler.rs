@@ -21,7 +21,7 @@ impl EcmaCompiler {
     source: impl Into<ArcStr>,
     ty: SourceType,
   ) -> DiagnosableResult<EcmaAst> {
-    let source = source.into();
+    let source: ArcStr = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let mut trivias = None;
     let inner =
@@ -35,14 +35,15 @@ impl EcmaCompiler {
           Err(
             ret
               .errors
-              .iter()
-              .map(|error| {
+              .into_iter()
+              .map(|mut error| {
+                let error = &mut *error;
                 BuildDiagnostic::oxc_parse_error(
                   source.clone(),
                   filename.to_string(),
-                  error.help.clone().unwrap_or_default().into(),
+                  error.help.take().unwrap_or_default().into(),
                   error.message.to_string(),
-                  error.labels.clone().unwrap_or_default(),
+                  error.labels.take().unwrap_or_default(),
                 )
               })
               .collect::<Vec<_>>(),

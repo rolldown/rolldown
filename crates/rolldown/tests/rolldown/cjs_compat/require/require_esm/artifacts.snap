@@ -25,6 +25,7 @@ var esm = (init_esm(), __toCommonJS(esm_ns));
 
 # Sourcemap Visualizer
 
+```
 - ../esm.js
 (0:0-1:1) "export { }\n" --> (21:0-28:0) "\nvar esm_ns;\nvar init_esm = __esmMin(() => {\n\tesm_ns = {};\n});\n\n//#endregion\n//#region main.js"
 - ../main.js
@@ -32,3 +33,4 @@ var esm = (init_esm(), __toCommonJS(esm_ns));
 (1:0-1:4) "\nvar" --> (29:0-29:4) "\nvar"
 (1:4-0:0) "" --> (29:4-29:11) " esm = "
 (0:0-2:1) "require('./esm.js');\nvar esm = require('./esm.js');\n" --> (29:11-32:34) "(init_esm(), __toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

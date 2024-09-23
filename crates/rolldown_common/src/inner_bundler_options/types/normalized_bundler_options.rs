@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use oxc::minifier::InjectGlobalVariablesConfig;
 use rustc_hash::FxHashMap;
 
+use super::advanced_chunks_options::AdvancedChunksOptions;
+use super::checks_options::ChecksOptions;
 use super::experimental_options::ExperimentalOptions;
-use super::manual_chunks_option::ManualChunksOption;
 use super::output_option::ChunkFilenamesOutputOption;
 use super::treeshake::TreeshakeOptions;
 use super::{
@@ -43,7 +44,7 @@ pub struct NormalizedBundlerOptions {
   pub exports: OutputExports,
   pub es_module: EsModuleFlag,
   pub globals: FxHashMap<String, String>,
-  pub sourcemap: SourceMapType,
+  pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,
   pub intro: Option<AddonOutputOption>,
@@ -58,5 +59,6 @@ pub struct NormalizedBundlerOptions {
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
   pub external_live_bindings: bool,
   pub inline_dynamic_imports: bool,
-  pub advanced_chunks: Option<ManualChunksOption>,
+  pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub checks: ChecksOptions,
 }

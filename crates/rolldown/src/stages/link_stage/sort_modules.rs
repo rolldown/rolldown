@@ -50,21 +50,23 @@ impl<'a> LinkStage<'a> {
       match status {
         Status::ToBeExecuted(id) => {
           if executed_ids.contains(&id) {
-            if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
-              // Executing
-              let cycles = execution_stack[index..]
-                .iter()
-                .filter_map(|action| match action {
-                  // Only modules with `Status::WaitForExit` are on the execution chain
-                  Status::ToBeExecuted(_) => None,
-                  Status::WaitForExit(id) => Some(*id),
-                })
-                .chain(iter::once(id))
-                .collect::<Box<[_]>>();
-              circular_dependencies.insert(cycles);
-            } else {
-              // It's already executed in other import chain, no need to execute again
+            if self.options.checks.circular_dependency.unwrap_or(false) {
+              // Try to check if there is a circular dependency
+              if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
+                // Executing
+                let cycles = execution_stack[index..]
+                  .iter()
+                  .filter_map(|action| match action {
+                    // Only modules with `Status::WaitForExit` are on the execution chain
+                    Status::ToBeExecuted(_) => None,
+                    Status::WaitForExit(id) => Some(*id),
+                  })
+                  .chain(iter::once(id))
+                  .collect::<Box<[_]>>();
+                circular_dependencies.insert(cycles);
+              }
             }
+            // It's already executed in other import chain, no need to execute again
           } else {
             executed_ids.insert(id);
             execution_stack.push(Status::WaitForExit(id));
@@ -74,7 +76,7 @@ impl<'a> LinkStage<'a> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
-            if let Module::Ecma(module) = &self.module_table.modules[id] {
+            if let Module::Normal(module) = &self.module_table.modules[id] {
               execution_stack.extend(
                 module
                   .import_records
@@ -90,7 +92,7 @@ impl<'a> LinkStage<'a> {
         Status::WaitForExit(id) => {
           executed_ids.insert(id);
           match &mut self.module_table.modules[id] {
-            Module::Ecma(module) => {
+            Module::Normal(module) => {
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
@@ -107,13 +109,14 @@ impl<'a> LinkStage<'a> {
       }
     }
 
-    if !circular_dependencies.is_empty() {
+    if self.options.checks.circular_dependency.unwrap_or(true) && !circular_dependencies.is_empty()
+    {
       let cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
       for cycle in cycles {
         let paths = cycle
           .iter()
           .copied()
-          .filter_map(|id| self.module_table.modules[id].as_ecma())
+          .filter_map(|id| self.module_table.modules[id].as_normal())
           .map(|module| module.id.to_string())
           .collect::<Vec<_>>();
         self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());

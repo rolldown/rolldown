@@ -6,9 +6,9 @@
     "type-check": "tsc -b"
   },
   "dependencies": {
-    "@rolldown/testing": "workspace:*",
     "@parcel/watcher": "^2.4.1",
     "@pnpm/find-workspace-packages": "^6.0.9",
+    "@rolldown/testing": "workspace:*",
     "@types/debug": "^4.1.12",
     "@types/fs-extra": "^11.0.4",
     "@types/semver": "^7.5.8",
@@ -18,12 +18,17 @@
     "dedent": "^1.5.3",
     "execa": "^9.2.0",
     "fast-glob": "^3.3.2",
+    "follow-redirects": "^1.15.6",
     "fs-extra": "^11.2.0",
     "semver": "^7.6.2",
-    "zx": "^8.1.2",
-    "follow-redirects": "^1.15.6"
+    "zx": "^8.1.2"
   },
   "devDependencies": {
+    "acorn": "^8.12.1",
+    "acorn-walk": "^8.3.4",
+    "escodegen": "^2.1.0",
+    "lodash-es": "^4.17.21",
+    "markdown-it": "^14.1.0",
     "web-tree-sitter": "^0.23.0"
   }
 }

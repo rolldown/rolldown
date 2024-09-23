@@ -1,9 +1,9 @@
 use oxc::codegen::CodegenReturn;
-use rolldown_common::{EcmaModule, NormalizedBundlerOptions};
+use rolldown_common::{NormalModule, NormalizedBundlerOptions};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
 pub fn render_ecma_module(
-  module: &EcmaModule,
+  module: &NormalModule,
   options: &NormalizedBundlerOptions,
   render_output: CodegenReturn,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
@@ -16,7 +16,7 @@ pub fn render_ecma_module(
       debug_module_id = module.debug_id
     ))));
 
-    let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual();
+    let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
 
     // Because oxc codegen sourcemap is last of sourcemap chain,
     // If here no extra sourcemap need remapping, we using it as final module sourcemap.

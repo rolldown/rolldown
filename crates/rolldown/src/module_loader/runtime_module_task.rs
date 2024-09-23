@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, ExportsKind, ModuleDefFormat,
-  ModuleId, ModuleIdx, ModuleType, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaView, ExportsKind, ModuleDefFormat, ModuleId,
+  ModuleIdx, ModuleType, NormalModule, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
@@ -26,7 +26,7 @@ pub struct RuntimeModuleTaskResult {
   pub ast_symbols: AstSymbols,
   pub ast: EcmaAst,
   // pub warnings: Vec<BuildError>,
-  pub module: EcmaModule,
+  pub module: NormalModule,
 }
 
 pub struct MakeEcmaAstResult {
@@ -68,7 +68,6 @@ impl RuntimeModuleTask {
       star_exports,
       default_export_ref,
       imports,
-      repr_name,
       import_records: _,
       exports_kind: _,
       warnings: _,
@@ -76,37 +75,43 @@ impl RuntimeModuleTask {
       errors: _,
     } = scan_result;
 
-    let module = EcmaModule {
-      source,
+    let module = NormalModule {
       idx: self.module_id,
-      ecma_ast_idx: None,
-      repr_name,
+      repr_name: "rolldown_runtime".to_string(),
       stable_id: RUNTIME_MODULE_ID.to_string(),
       id: ModuleId::new(RUNTIME_MODULE_ID),
-      named_imports,
-      named_exports,
-      stmt_infos,
-      imports,
-      star_exports,
-      default_export_ref,
-      scope: ast_scope,
-      exports_kind: ExportsKind::Esm,
-      namespace_object_ref,
-      def_format: ModuleDefFormat::EsmMjs,
+
       debug_id: RUNTIME_MODULE_ID.to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
-      import_records: IndexVec::default(),
-      is_included: false,
-      sourcemap_chain: vec![],
-      // The internal runtime module `importers/imported` should be skip.
-      importers: vec![],
-      dynamic_importers: vec![],
-      imported_ids: vec![],
-      dynamically_imported_ids: vec![],
-      side_effects: DeterminedSideEffects::Analyzed(false),
       module_type: ModuleType::Js,
-      has_eval,
+
+      ecma_view: EcmaView {
+        ecma_ast_idx: None,
+        source,
+
+        import_records: IndexVec::default(),
+        is_included: false,
+        sourcemap_chain: vec![],
+        // The internal runtime module `importers/imported` should be skip.
+        importers: vec![],
+        dynamic_importers: vec![],
+        imported_ids: vec![],
+        dynamically_imported_ids: vec![],
+        side_effects: DeterminedSideEffects::Analyzed(false),
+        has_eval,
+        named_imports,
+        named_exports,
+        stmt_infos,
+        imports,
+        star_exports,
+        default_export_ref,
+        scope: ast_scope,
+        exports_kind: ExportsKind::Esm,
+        namespace_object_ref,
+        def_format: ModuleDefFormat::EsmMjs,
+      },
+      css_view: None,
     };
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
@@ -151,7 +156,7 @@ impl RuntimeModuleTask {
       self.module_id,
       &ast_scope,
       &mut ast_symbols,
-      "runtime".to_string(),
+      "rolldown_runtime",
       ModuleDefFormat::EsmMjs,
       source,
       &facade_path,

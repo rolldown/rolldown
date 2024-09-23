@@ -33,7 +33,11 @@ impl FilenameTemplate {
       tmp = tmp.replace("[name]", name);
     }
     if let Some(hash) = options.hash {
-      tmp = tmp.replace("[hash]", hash);
+      if let Some(start) = tmp.find("[hash") {
+        if let Some(end) = tmp[start + 5..].find(']') {
+          tmp.replace_range(start..=start + end + 5, hash);
+        }
+      }
     }
     if let Some(ext) = options.ext {
       tmp = tmp.replace("[ext]", ext).replace("[extname]", &format!(".{ext}"));
@@ -45,4 +49,16 @@ impl FilenameTemplate {
 #[test]
 fn basic() {
   FilenameTemplate::new("[name]-[hash:8].js".to_string());
+}
+
+#[test]
+fn hash_with_len() {
+  let file_template = FilenameTemplate::new("[name]-[hash:3].js".to_string());
+  let str = file_template.render(&FileNameRenderOptions {
+    name: Some("hello"),
+    hash: Some("abc"),
+    ext: None,
+  });
+
+  assert_eq!(str, "hello-abc.js");
 }

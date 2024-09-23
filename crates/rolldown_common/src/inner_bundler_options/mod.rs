@@ -1,7 +1,8 @@
 use rolldown_utils::indexmap::FxIndexMap;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
+use types::advanced_chunks_options::AdvancedChunksOptions;
+use types::checks_options::ChecksOptions;
 use types::inject_import::InjectImport;
-use types::manual_chunks_option::ManualChunksOption;
 
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -14,9 +15,8 @@ use types::experimental_options::ExperimentalOptions;
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
   es_module_flag::EsModuleFlag, input_item::InputItem, is_external::IsExternal,
-  manual_chunks_option::ManualChunksDescriptor, output_exports::OutputExports,
-  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
-  resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
+  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
@@ -131,12 +131,8 @@ pub struct BundlerOptions {
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
   pub inline_dynamic_imports: Option<bool>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, deserialize_with = "deserialize_advanced_chunks"),
-    schemars(with = "Option<Vec<ManualChunksDescriptor>>")
-  )]
-  pub advanced_chunks: Option<ManualChunksOption>,
+  pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub checks: Option<ChecksOptions>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -146,17 +142,6 @@ where
 {
   let deserialized = Option::<Vec<String>>::deserialize(deserializer)?;
   Ok(deserialized.map(IsExternal::from_vec))
-}
-
-#[cfg(feature = "deserialize_bundler_options")]
-fn deserialize_advanced_chunks<'de, D>(
-  deserializer: D,
-) -> Result<Option<ManualChunksOption>, D::Error>
-where
-  D: Deserializer<'de>,
-{
-  let deserialized = Option::<Vec<ManualChunksDescriptor>>::deserialize(deserializer)?;
-  Ok(deserialized.map(ManualChunksOption::from_vec))
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

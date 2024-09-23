@@ -59,7 +59,7 @@ check-node:
 test: test-rust test-node
 
 test-rust:
-    cargo test --no-fail-fast
+    cargo test --workspace --exclude rolldown_binding
 
 # Supported presets: all, rolldown, rollup
 test-node preset="all" *args="": _build-native-debug
@@ -69,7 +69,7 @@ test-node-only preset="all" *args="":
     just _test-node-{{ preset }} {{ args }}
 
 _test-node-all:
-    pnpm run --recursive --parallel --filter=!rollup-tests test 
+    pnpm run --recursive --parallel --filter=!rollup-tests test
     # We run rollup tests separately to have a clean output.
     pnpm run --filter rollup-tests test
 
@@ -109,11 +109,11 @@ fix: fix-rust fix-repo
 
 fix-rust:
     just fmt-rust
-    cargo fix --allow-dirty
+    cargo fix --allow-dirty --allow-staged
     cargo shear --fix
 
 fix-repo:
-    pnpm lint-code --fix
+    pnpm lint-code -- --fix
     just fmt-repo
 
 # Support `just build [native|wasi] [debug|release]`
@@ -129,7 +129,7 @@ bench-rust:
     cargo bench -p bench
 
 bench-node:
-    pnpm --filter bench run bench 
+    pnpm --filter bench run bench
 
 bench-node-par:
     pnpm --filter bench exec node ./benches/par.js

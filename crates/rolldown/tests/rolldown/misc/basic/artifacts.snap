@@ -23,6 +23,7 @@ assert.equal(a$1, "shared.js");
 
 # Sourcemap Visualizer
 
+```
 - ../shared.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
@@ -41,3 +42,4 @@ assert.equal(a$1, "shared.js");
 (4:13-4:17) "(a2," --> (9:13-9:18) "(a$1,"
 (4:17-4:29) " 'shared.js'" --> (9:18-9:30) " \"shared.js\""
 (4:29-6:1) ")\n\n" --> (9:30-12:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

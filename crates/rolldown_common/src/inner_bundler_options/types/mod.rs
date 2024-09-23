@@ -1,10 +1,11 @@
+pub mod advanced_chunks_options;
+pub mod checks_options;
 pub mod es_module_flag;
 pub mod experimental_options;
 pub mod filename_template;
 pub mod inject_import;
 pub mod input_item;
 pub mod is_external;
-pub mod manual_chunks_option;
 pub mod module_type;
 pub mod normalized_bundler_options;
 pub mod output_exports;

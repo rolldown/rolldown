@@ -36,13 +36,18 @@ impl Plugin for ModulePreloadPolyfillPlugin {
   }
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if self.skip {
-      return Ok(Some(HookLoadOutput::default()));
+    if args.id == RESOLVED_MODULE_PRELOAD_POLYFILL_ID {
+      if self.skip {
+        return Ok(Some(HookLoadOutput { code: String::new(), ..Default::default() }));
+      }
+
+      Ok(Some(HookLoadOutput {
+        code: format!("{IS_MODERN_FLAG}&&{}", include_str!("module_preload_polyfill.js")),
+        side_effects: Some(HookSideEffects::True),
+        ..Default::default()
+      }))
+    } else {
+      Ok(None)
     }
-    Ok((args.id == RESOLVED_MODULE_PRELOAD_POLYFILL_ID).then(|| HookLoadOutput {
-      code: format!("{IS_MODERN_FLAG}&&{}", include_str!("module_preload_polyfill.js")),
-      side_effects: Some(HookSideEffects::True),
-      ..Default::default()
-    }))
   }
 }

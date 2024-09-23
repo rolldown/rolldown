@@ -49,17 +49,48 @@
   },
   "additionalProperties": false,
   "definitions": {
-    "BundlerOptions": {
+    "AdvancedChunksOptions": {
       "type": "object",
       "properties": {
-        "advancedChunks": {
+        "groups": {
           "type": [
             "array",
             "null"
           ],
           "items": {
-            "$ref": "#/definitions/ManualChunksDescriptor"
+            "$ref": "#/definitions/MatchGroup"
           }
+        },
+        "minShareCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "minSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false
+    },
+    "BundlerOptions": {
+      "type": "object",
+      "properties": {
+        "advancedChunks": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AdvancedChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "assetFilenames": {
           "type": [
@@ -71,6 +102,16 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "checks": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ChecksOptions"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "chunkFilenames": {
@@ -294,6 +335,18 @@
       },
       "additionalProperties": false
     },
+    "ChecksOptions": {
+      "type": "object",
+      "properties": {
+        "circularDependency": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "EsModuleFlag": {
       "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format. It is rollup-capable, and the rollup default is `IfDefaultProp`. You may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n> Whether to add a `__esModule: true` property when generating exports for non-ES formats. > This property signifies that the exported value is the namespace of an ES module and that the default > export of this module corresponds to the `.default` property of the exported object. > > *From rollupjs.org*",
       "oneOf": [
@@ -419,21 +472,26 @@
         }
       }
     },
-    "ManualChunksDescriptor": {
+    "MatchGroup": {
       "type": "object",
       "required": [
-        "filter",
         "name"
       ],
       "properties": {
-        "filter": {
-          "type": "string"
-        },
-        "includeDependenciesRecursively": {
+        "minShareCount": {
           "type": [
-            "boolean",
+            "integer",
             "null"
-          ]
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "minSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         },
         "name": {
           "type": "string"
@@ -445,6 +503,12 @@
           ],
           "format": "uint32",
           "minimum": 0.0
+        },
+        "test": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -463,7 +527,8 @@
             "base64",
             "dataurl",
             "binary",
-            "empty"
+            "empty",
+            "css"
           ]
         },
         {

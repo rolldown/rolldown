@@ -13,7 +13,7 @@ use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
 
-use super::pre_process_ecma_ast::pre_process_ecma_ast;
+use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
 use crate::{runtime::RUNTIME_MODULE_ID, types::oxc_parse_type::OxcParseType};
 
@@ -49,6 +49,10 @@ pub fn parse_to_ecma_ast(
     ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
     ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
     ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
+    ModuleType::Css => {
+      let content = "export {}".to_string();
+      (content, OxcParseType::Js)
+    }
     ModuleType::Json => {
       let content = json_to_esm(&source.try_into_string()?)?;
       (content, OxcParseType::Js)
@@ -107,15 +111,9 @@ pub fn parse_to_ecma_ast(
     id: stable_id,
   })?;
 
-  pre_process_ecma_ast(
-    ecma_ast,
-    &parsed_type,
-    path,
-    oxc_source_type,
-    replace_global_define_config,
-    options,
-  )
-  .map(|(ast, symbol_table, scope_tree)| {
-    Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, source })
-  })
+  PreProcessEcmaAst::default()
+    .build(ecma_ast, &parsed_type, path, oxc_source_type, replace_global_define_config, options)
+    .map(|(ast, symbol_table, scope_tree)| {
+      Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, source })
+    })
 }

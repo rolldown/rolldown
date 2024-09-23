@@ -1,7 +1,5 @@
 use oxc::minifier::InjectGlobalVariablesConfig;
-use rolldown_common::{
-  InjectImport, ModuleType, NormalizedBundlerOptions, Platform, SourceMapType,
-};
+use rolldown_common::{InjectImport, ModuleType, NormalizedBundlerOptions, Platform};
 use rustc_hash::FxHashMap;
 
 pub struct NormalizeOptionsReturn {
@@ -27,6 +25,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       ("tsx".to_string(), ModuleType::Tsx),
       ("json".to_string(), ModuleType::Json),
       ("txt".to_string(), ModuleType::Text),
+      ("css".to_string(), ModuleType::Css),
     ]
     .into_iter()
     .collect(),
@@ -107,7 +106,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     globals,
-    sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),
+    sourcemap: raw_options.sourcemap,
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
@@ -121,6 +120,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports: raw_options.inline_dynamic_imports.unwrap_or(false),
     advanced_chunks: raw_options.advanced_chunks,
+    checks: raw_options.checks.unwrap_or_default(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

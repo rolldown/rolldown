@@ -1,10 +1,12 @@
 {
+  "name": "@example/par-plugin",
   "private": true,
   "type": "module",
   "scripts": {
     "bench-babel": "hyperfine --warmup 1 --runs 3 'pnpm rolldown -c ./cases/babel-rome-ts/par-babel.rolldown.config.js' 'pnpm rolldown -c ./cases/babel-rome-ts/single-babel.rolldown.config.js'",
     "bench-esbuild": "hyperfine --warmup 1 --runs 3 'pnpm rolldown -c ./cases/esbuild-rome-ts/par.rolldown.config.js' 'pnpm rolldown -c ./cases/esbuild-rome-ts/single.rolldown.config.js' 'pnpm rolldown -c ./cases/esbuild-rome-ts/single-async.rolldown.config.js'",
-    "bench-noop": "hyperfine --warmup 1 --runs 3 'pnpm rolldown -c ./cases/noop-threejs10x/par-noop.rolldown.config.js' 'pnpm rolldown -c ./cases/noop-threejs10x/single-noop.rolldown.config.js'"
+    "bench-noop": "hyperfine --warmup 1 --runs 3 'pnpm rolldown -c ./cases/noop-threejs10x/par-noop.rolldown.config.js' 'pnpm rolldown -c ./cases/noop-threejs10x/single-noop.rolldown.config.js'",
+    "build": "echo success"
   },
   "devDependencies": {
     "rolldown": "workspace:*",

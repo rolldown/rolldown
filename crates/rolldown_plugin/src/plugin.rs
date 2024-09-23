@@ -241,6 +241,17 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
+  fn close_bundle(
+    &self,
+    _ctx: &PluginContext,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn close_bundle_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   // --- experimental hooks ---
 
   fn transform_ast(

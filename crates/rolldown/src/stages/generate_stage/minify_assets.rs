@@ -1,6 +1,6 @@
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexAssets;
 
@@ -9,7 +9,7 @@ use super::GenerateStage;
 impl<'a> GenerateStage<'a> {
   pub fn minify_assets(&mut self, assets: &mut IndexAssets) -> anyhow::Result<()> {
     if self.options.minify {
-      assets.iter_mut().par_bridge().try_for_each(|asset| -> anyhow::Result<()> {
+      assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
         match asset.meta {
           rolldown_common::InstantiationKind::Ecma(_) => {
             // TODO: Do we need to ensure `asset.filename` to be absolute path?

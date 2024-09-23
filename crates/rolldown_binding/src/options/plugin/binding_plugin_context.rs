@@ -44,12 +44,12 @@ impl BindingPluginContext {
 
   #[napi]
   pub fn emit_file(&self, file: BindingEmittedAsset) -> String {
-    self.inner.emit_file(file.into())
+    self.inner.emit_file(file.into()).to_string()
   }
 
   #[napi]
   pub fn get_file_name(&self, reference_id: String) -> String {
-    self.inner.get_file_name(reference_id.as_str())
+    self.inner.get_file_name(reference_id.as_str()).to_string()
   }
 
   #[napi]

@@ -63,9 +63,7 @@ impl<'a> GenerateStage<'a> {
       &mut index_imports_from_other_chunks,
     );
 
-    // TODO: support rayon trait in `oxc_index`
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
-      .raw
       .into_par_iter()
       .map(|cross_chunk_imports| {
         let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
@@ -172,14 +170,14 @@ impl<'a> GenerateStage<'a> {
       )| {
         let mut symbol_needs_to_assign = vec![];
         chunk.modules.iter().copied().for_each(|module_id| {
-          let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
+          let Module::Normal(module) = &self.link_output.module_table.modules[module_id] else {
             return;
           };
           module
             .import_records
             .iter()
             .inspect(|rec| {
-              if let Module::Ecma(importee_module) =
+              if let Module::Normal(importee_module) =
                 &self.link_output.module_table.modules[rec.resolved_module]
               {
                 // the the resolved module is not included in module graph, skip
@@ -250,7 +248,7 @@ impl<'a> GenerateStage<'a> {
         });
 
         if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
-          let entry = &self.link_output.module_table.modules[*entry_id].as_ecma().unwrap();
+          let entry = &self.link_output.module_table.modules[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -286,10 +284,11 @@ impl<'a> GenerateStage<'a> {
         let symbol = symbols.get_mut(declared);
         debug_assert!(
           symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
-          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
+          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}", 
           symbol.name,
           declared,
           self.link_output.module_table.modules[declared.owner].id(),
+          symbol.chunk_id,
         );
         symbol.chunk_id = Some(chunk_id);
       }

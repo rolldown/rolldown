@@ -49,17 +49,37 @@ mod wasm_shims {
       self.into_par_iter()
     }
   }
+
+  pub trait IntoParallelRefMutIterator<'data> {
+    type Item: 'data;
+    type Iter: ParallelIterator<Item = Self::Item>;
+
+    fn par_iter_mut(&'data mut self) -> Self::Iter;
+  }
+
+  impl<'data, I: 'data + ?Sized> IntoParallelRefMutIterator<'data> for I
+  where
+    &'data mut I: IntoParallelIterator,
+  {
+    type Iter = <&'data mut I as IntoParallelIterator>::Iter;
+    type Item = <&'data mut I as IntoParallelIterator>::Item;
+
+    fn par_iter_mut(&'data mut self) -> Self::Iter {
+      self.into_par_iter()
+    }
+  }
 }
 
 #[cfg(target_family = "wasm")]
 pub use wasm_shims::{
-  IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator,
+  IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge,
+  ParallelIterator,
 };
 
 #[cfg(not(target_family = "wasm"))]
 pub use rayon::iter::{
-  IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelBridge,
-  ParallelIterator,
+  IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
+  IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
 };
 
 fn _usages() {

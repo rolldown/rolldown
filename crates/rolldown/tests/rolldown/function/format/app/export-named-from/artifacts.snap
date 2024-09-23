@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+//#region main.js
+__toCommonJS(exports);
+__export(exports, {
+	foo: () => external.foo,
+	["bar2"]: () => external["bar"],
+	["abc"]: () => external["abc"],
+	["ddd2"]: () => external.ddd
+});
+var external = require("external");
+
+//#endregion
+```

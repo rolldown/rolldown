@@ -11,6 +11,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{IndexChunkToAssets, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
@@ -50,6 +51,7 @@ impl<'a> GenerateStage<'a> {
       content: mut code,
       file_dir,
       preliminary_filename,
+      filename,
       ..
     } in assets
     {
@@ -89,32 +91,40 @@ impl<'a> GenerateStage<'a> {
             map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
           map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
 
-          match self.options.sourcemap {
-            SourceMapType::File => {
-              let source = map.to_json_string();
-              output_assets.push(Output::Asset(Box::new(OutputAsset {
-                filename: map_filename.clone(),
-                source: source.into(),
-                original_file_name: None,
-                name: None,
-              })));
-              code.push_str(&format!(
-                "\n//# sourceMappingURL={}",
-                Path::new(&map_filename)
-                  .file_name()
-                  .expect("should have filename")
-                  .to_string_lossy()
-              ));
+          if let Some(sourcemap) = &self.options.sourcemap {
+            match sourcemap {
+              SourceMapType::File | SourceMapType::Hidden => {
+                let source = map.to_json_string();
+                output_assets.push(Output::Asset(Box::new(OutputAsset {
+                  filename: map_filename.as_str().into(),
+                  source: source.into(),
+                  original_file_name: None,
+                  name: None,
+                })));
+                if matches!(sourcemap, SourceMapType::File) {
+                  code.push_str(&format!(
+                    "\n//# sourceMappingURL={}",
+                    Path::new(&map_filename)
+                      .file_name()
+                      .expect("should have filename")
+                      .to_string_lossy()
+                  ));
+                }
+              }
+              SourceMapType::Inline => {
+                let data_url = map.to_data_url();
+                code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
+              }
             }
-            SourceMapType::Inline => {
-              let data_url = map.to_data_url();
-              code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
-            }
-            SourceMapType::Hidden => {}
           }
         }
+
         let sourcemap_filename =
-          map.as_ref().map(|_| format!("{}.map", rendered_chunk.filename.as_str()));
+          if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
+            None
+          } else {
+            Some(format!("{}.map", rendered_chunk.filename.as_str()))
+          };
         output.push(Output::Chunk(Box::new(OutputChunk {
           name: rendered_chunk.name,
           filename: rendered_chunk.filename,
@@ -130,6 +140,13 @@ impl<'a> GenerateStage<'a> {
           map,
           sourcemap_filename,
           preliminary_filename: preliminary_filename.to_string(),
+        })));
+      } else {
+        output.push(Output::Asset(Box::new(OutputAsset {
+          filename: filename.clone().into(),
+          source: code.into(),
+          original_file_name: None,
+          name: None,
         })));
       }
     }
@@ -147,7 +164,7 @@ impl<'a> GenerateStage<'a> {
           a.filename.cmp(&b.filename)
         }
       }
-      _ => unreachable!("here only sort chunks"),
+      _ => std::cmp::Ordering::Equal,
     });
 
     output.extend(output_assets);
@@ -166,6 +183,7 @@ impl<'a> GenerateStage<'a> {
     let mut index_preliminary_assets: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
+
     try_join_all(
       chunk_graph.chunk_table.iter_enumerated().zip(chunk_index_to_codegen_rets.into_iter()).map(
         |((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
@@ -179,12 +197,28 @@ impl<'a> GenerateStage<'a> {
             warnings: vec![],
             module_id_to_codegen_ret,
           };
-          EcmaGenerator::instantiate_chunk(&mut ctx).await
+          let ecma_chunks = EcmaGenerator::instantiate_chunk(&mut ctx).await;
+
+          let mut ctx = GenerateContext {
+            chunk_idx,
+            chunk,
+            options: self.options,
+            link_output: self.link_output,
+            chunk_graph,
+            plugin_driver: self.plugin_driver,
+            warnings: vec![],
+            // FIXME: module_id_to_codegen_ret is currently not used in CssGenerator. But we need to pass it to satisfy the args.
+            module_id_to_codegen_ret: vec![],
+          };
+          let css_chunks = CssGenerator::instantiate_chunk(&mut ctx).await;
+
+          ecma_chunks.and_then(|ecma_chunks| css_chunks.map(|css_chunks| [ecma_chunks, css_chunks]))
         },
       ),
     )
     .await?
     .into_iter()
+    .flatten()
     .for_each(|result| match result {
       Ok(generate_output) => {
         generate_output.chunks.into_iter().for_each(|asset| {
@@ -220,16 +254,14 @@ impl<'a> GenerateStage<'a> {
   ) -> Vec<Vec<Option<oxc::codegen::CodegenReturn>>> {
     let chunk_to_codegen_ret = chunk_graph
       .chunk_table
-      .raw
-      // TODO: don't use `.raw` when `oxc_index` support rayon related trait
       .par_iter()
       .map(|item| {
         item
           .modules
           .par_iter()
           .map(|&module_idx| {
-            if let Some(module) = self.link_output.module_table.modules[module_idx].as_ecma() {
-              let enable_sourcemap = !self.options.sourcemap.is_hidden() && !module.is_virtual();
+            if let Some(module) = self.link_output.module_table.modules[module_idx].as_normal() {
+              let enable_sourcemap = self.options.sourcemap.is_some() && !module.is_virtual();
 
               // Because oxc codegen sourcemap is last of sourcemap chain,
               // If here no extra sourcemap need remapping, we using it as final module sourcemap.

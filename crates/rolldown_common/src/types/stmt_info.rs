@@ -35,15 +35,12 @@ impl StmtInfos {
   }
 
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
-    self.infos[0] = info;
-    for symbol_ref in &*self.infos[0].declared_symbols {
-      self
-        .symbol_ref_to_declared_stmt_idx
-        .entry(*symbol_ref)
-        .or_default()
-        .push(StmtInfoIdx::from_raw(0));
+    let idx = StmtInfoIdx::from_raw(0);
+    self.infos[idx] = info;
+    for symbol_ref in &*self.infos[idx].declared_symbols {
+      self.symbol_ref_to_declared_stmt_idx.entry(*symbol_ref).or_default().push(idx);
     }
-    StmtInfoIdx::from_raw(0)
+    idx
   }
 
   pub fn declared_stmts_by_symbol(&self, symbol_ref: &SymbolRef) -> &[StmtInfoIdx] {

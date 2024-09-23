@@ -1,5 +1,5 @@
 use oxc::ast::VisitMut;
-use rolldown_common::EcmaModule;
+use rolldown_common::NormalModule;
 use rolldown_ecmascript::{AstSnippet, EcmaAst};
 
 use super::module_finalizers::scope_hoisting::{
@@ -10,7 +10,6 @@ pub mod augment_chunk_hash;
 pub mod call_expression_ext;
 pub mod chunk;
 pub mod ecma_visitors;
-pub mod extract_hash_pattern;
 pub mod extract_meaningful_input_name_from_path;
 pub mod hash_placeholder;
 pub mod load_source;
@@ -27,7 +26,7 @@ pub mod tweak_ast_for_scanning;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(
-  module: &EcmaModule,
+  module: &NormalModule,
   ctx: ScopeHoistingFinalizerContext<'_>,
   ast: &mut EcmaAst,
 ) {

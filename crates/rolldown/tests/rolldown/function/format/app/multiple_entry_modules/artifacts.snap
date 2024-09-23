@@ -7,16 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region square.js
-export default function square(x) {
+__toCommonJS(exports);
+__export(exports, { default: () => square });
+function square(x) {
 	return x * x;
-}
+};
 
 //#endregion
 //#region cube.js
-var { default: square } = __static_import("square.js");
-export default function cube(x) {
-	return square(x) * x;
-}
+__toCommonJS(exports);
+__export(exports, { default: () => cube });
+var square_ns = require("square.js");
+function cube(x) {
+	return square_ns.default(x) * x;
+};
 
 //#endregion
 ```
@@ -24,15 +28,18 @@ export default function cube(x) {
 
 ```js
 //#region hyper-cube.js
-var { default: cube } = __static_import("cube.js");
-export default function hyperCube(x) {
-	return cube(x) * x;
-}
+__toCommonJS(exports);
+__export(exports, { default: () => hyperCube });
+var cube_ns = require("cube.js");
+function hyperCube(x) {
+	return cube_ns.default(x) * x;
+};
 
 //#endregion
 //#region main.js
-var { default: hyperCube } = __static_import("hyper-cube.js");
-console.log(hyperCube(5));
+__toCommonJS(exports);
+var hyper_cube_ns = require("hyper-cube.js");
+console.log(hyper_cube_ns.default(5));
 
 //#endregion
 ```
@@ -40,8 +47,9 @@ console.log(hyperCube(5));
 
 ```js
 //#region other-entry.js
-var { default: cube } = __static_import("cube.js");
-console.log(cube(5));
+__toCommonJS(exports);
+var cube_ns = require("cube.js");
+console.log(cube_ns.default(5));
 
 //#endregion
 ```

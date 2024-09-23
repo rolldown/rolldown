@@ -35,6 +35,7 @@ impl BundlerBuilder {
     apply_inner_plugins(&mut self.plugins);
 
     Bundler {
+      closed: false,
       plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter),
       file_emitter,
       resolver,

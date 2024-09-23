@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -22,7 +22,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let old_body = self.alloc.take(&mut program.body);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.stmt_infos[0].is_included;
+      && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
 
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
     // Skip the first statement info, which is the namespace variable declaration
@@ -51,7 +51,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
             match &self.ctx.modules[rec.resolved_module] {
-              Module::Ecma(importee) => {
+              Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
                   let wrapper_ref_name =
@@ -94,9 +94,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                         .alloc_call_expr_with_2arg_expr_expr(
                           re_export_fn_name,
                           self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                          self.snippet.call_expr_with_arg_expr_expr(
+                          self.snippet.to_esm_call_with_interop(
                             to_esm_fn_name,
                             self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                            importee.interop(),
                           ),
                         )
                         .into_in(self.alloc),
@@ -339,7 +340,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
           match &self.ctx.modules[rec.resolved_module] {
-            Module::Ecma(importee) => {
+            Module::Normal(importee) => {
               match importee.module_type {
                 ModuleType::Json => {
                   // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
@@ -433,7 +434,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
         match &self.ctx.modules[importee_id] {
-          Module::Ecma(importee) => {
+          Module::Normal(importee) => {
             let importee_linking_info = &self.ctx.linking_infos[importee_id];
             match importee_linking_info.wrap_kind {
               WrapKind::Esm => {
@@ -462,9 +463,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 *expr = self.snippet.promise_resolve_then_call_expr(
                   expr.span(),
                   self.snippet.builder.vec1(self.snippet.return_stmt(
-                    self.snippet.call_expr_with_arg_expr_expr(
+                    self.snippet.to_esm_call_with_interop(
                       to_esm_fn_name,
                       self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                      importee.interop(),
                     ),
                   )),
                 );
@@ -554,7 +556,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
         match &self.ctx.modules[importee_id] {
-          Module::Ecma(_importee) => {
+          Module::Normal(_importee) => {
             let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
               .expect("Normal module should belong to a chunk");
             let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];

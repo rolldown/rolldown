@@ -64,50 +64,60 @@ pub fn generate_identifier(
   ctx: &mut GenerateContext<'_>,
   export_mode: &OutputExports,
 ) -> DiagnosableResult<(String, String)> {
-  if let Some(name) = &ctx.options.name {
-    // It is same as Rollup.
-    if name.contains('.') {
-      let (decl, expr) = generate_namespace_definition(name);
-      Ok((
-        decl,
-        // Extend the object if the `extend` option is enabled.
-        if ctx.options.extend && matches!(export_mode, OutputExports::Named) {
-          format!("{expr} = {expr} || {{}}")
-        } else {
-          expr
-        },
-      ))
-    } else if ctx.options.extend {
-      let caller = generate_caller(name.as_str());
-      if matches!(export_mode, OutputExports::Named) {
-        // In named exports, the `extend` option will make the assignment disappear and
-        // the modification will be done extending the existed object (the `name` option).
-        Ok((String::new(), format!("this{caller} = this{caller} || {{}}")))
-      } else {
-        Ok((
-          String::new(),
-          // If there isn't a name in default export, we shouldn't assign the function to `this[""]`.
-          // If there is, we should assign the function to `this["name"]`,
-          // because there isn't an object that we can extend.
-          if name.is_empty() { String::new() } else { format!("this{caller}") },
-        ))
-      }
-    } else if is_validate_assignee_identifier_name(name) {
-      // If valid, we can use the `var` statement to declare the variable.
-      Ok((String::new(), format!("var {name}")))
-    } else {
-      // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.
-      let name = ArcStr::from(name);
-      Err(vec![BuildDiagnostic::illegal_identifier_as_name(name)])
-    }
-  } else {
-    // If the `name` is empty, you may be impossible to call the result.
-    // But it is normal if we do not have exports.
-    // However, if there is no export, it is recommended to use `app` format.
+  // Handle the diagnostic warning
+  if ctx.options.name.as_ref().map_or(true, String::is_empty)
+    && !matches!(export_mode, OutputExports::None)
+  {
     ctx
       .warnings
       .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
-    Ok((String::new(), String::new()))
+  }
+
+  // Early return if `name` is None
+  let Some(name) = &ctx.options.name else {
+    return Ok((String::new(), String::new()));
+  };
+
+  // It is same as Rollup.
+  if name.contains('.') {
+    let (decl, expr) = generate_namespace_definition(name);
+    // Extend the object if the `extend` option is enabled.
+    let final_expr = if ctx.options.extend && matches!(export_mode, OutputExports::Named) {
+      format!("{expr} = {expr} || {{}}")
+    } else {
+      expr
+    };
+
+    return Ok((decl, final_expr));
+  }
+
+  if ctx.options.extend {
+    let caller = generate_caller(name.as_str());
+    let final_expr = if matches!(export_mode, OutputExports::Named) {
+      // In named exports, the `extend` option will make the assignment disappear and
+      // the modification will be done extending the existed object (the `name` option).
+      format!("this{caller} = this{caller} || {{}}")
+    } else {
+      // If there isn't a name in default export, we shouldn't assign the function to `this[""]`.
+      // If there is, we should assign the function to `this["name"]`,
+      // because there isn't an object that we can extend.
+      if name.is_empty() {
+        String::new()
+      } else {
+        format!("this{caller}")
+      }
+    };
+
+    return Ok((String::new(), final_expr));
+  }
+
+  if is_validate_assignee_identifier_name(name) {
+    // If valid, we can use the `var` statement to declare the variable.
+    Ok((String::new(), format!("var {name}")))
+  } else {
+    // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.
+    let name = ArcStr::from(name);
+    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name)])
   }
 }
 

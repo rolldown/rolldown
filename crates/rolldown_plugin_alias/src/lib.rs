@@ -59,7 +59,7 @@ impl Plugin for AliasPlugin {
       ctx
         .resolve(
           &update_id,
-          args.importer,
+          None,
           Some(PluginContextResolveOptions {
             import_kind: args.kind,
             skip_self: true,

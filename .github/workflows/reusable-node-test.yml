@@ -43,3 +43,6 @@ jobs:
 
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test
+
+      - name: examples
+        run: pnpm --filter '@example/**' build

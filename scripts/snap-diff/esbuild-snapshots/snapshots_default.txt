@@ -1,0 +1,7211 @@
+TestAmbiguousReexportMsg
+---------- /out/entry.js ----------
+// a.js
+var a = 1;
+
+// b.js
+var b = 3;
+
+// c.js
+var c = 4;
+export {
+  a,
+  b,
+  c
+};
+
+================================================================================
+TestArgumentDefaultValueScopeNoBundle
+---------- /out.js ----------
+export function a(o = foo) {
+  var r;
+  return o;
+}
+export class b {
+  fn(r = foo) {
+    var f;
+    return r;
+  }
+}
+export let c = [
+  function(o = foo) {
+    var r;
+    return o;
+  },
+  (o = foo) => {
+    var r;
+    return o;
+  },
+  { fn(o = foo) {
+    var r;
+    return o;
+  } },
+  class {
+    fn(o = foo) {
+      var r;
+      return o;
+    }
+  }
+];
+
+================================================================================
+TestArgumentsSpecialCaseNoBundle
+---------- /out.js ----------
+/* @__PURE__ */ (() => {
+  var r;
+  function t(n = arguments) {
+    return arguments;
+  }
+  (function(n = arguments) {
+    return arguments;
+  });
+  ({ foo(n = arguments) {
+    return arguments;
+  } });
+  class u {
+    foo(e = arguments) {
+      return arguments;
+    }
+  }
+  (class {
+    foo(n = arguments) {
+      return arguments;
+    }
+  });
+  function t(n = arguments) {
+    var arguments;
+    return arguments;
+  }
+  (function(n = arguments) {
+    var arguments;
+    return arguments;
+  });
+  ({ foo(n = arguments) {
+    var arguments;
+    return arguments;
+  } });
+  (n) => r;
+  () => r;
+  async () => r;
+  (n = r) => r;
+  async (n = r) => r;
+  (n) => r;
+  () => r;
+  async () => r;
+  (n = r) => r;
+  async (n = r) => r;
+  (n) => {
+    return r;
+  };
+  () => {
+    return r;
+  };
+  async () => {
+    return r;
+  };
+  (n = r) => {
+    return r;
+  };
+  async (n = r) => {
+    return r;
+  };
+  (n) => {
+    return r;
+  };
+  () => {
+    return r;
+  };
+  async () => {
+    return r;
+  };
+  (n = r) => {
+    return r;
+  };
+  async (n = r) => {
+    return r;
+  };
+})();
+
+================================================================================
+TestArrowFnScope
+---------- /out.js ----------
+// entry.js
+tests = {
+  0: (s = (e) => s + e, t) => s + t,
+  1: (s, t = (e) => t + e) => t + s,
+  2: (s = (a = (c) => s + a + c, b) => s + a + b, t, e) => s + t + e,
+  3: (s, t, e = (a, b = (c) => e + b + c) => e + b + a) => e + s + t,
+  4: (x = (s) => x + s, y, x + y),
+  5: (y, x = (s) => x + s, x + y),
+  6: (x = (s = (e) => x + s + e, t) => x + s + t, y, z, x + y + z),
+  7: (y, z, x = (s, t = (e) => x + t + e) => x + t + s, x + y + z)
+};
+
+================================================================================
+TestAutoExternal
+---------- /out/entry.js ----------
+// entry.js
+import "http://example.com/code.js";
+import "https://example.com/code.js";
+import "//example.com/code.js";
+import "data:application/javascript;base64,ZXhwb3J0IGRlZmF1bHQgMTIz";
+
+================================================================================
+TestAutoExternalNode
+---------- /out/entry.js ----------
+// entry.js
+import fs from "node:fs/promises";
+import "node:what-is-this";
+fs.readFile();
+
+================================================================================
+TestAvoidTDZ
+---------- /out.js ----------
+// entry.js
+var Foo = class _Foo {
+  static foo = new _Foo();
+};
+var foo = Foo.foo;
+console.log(foo);
+var Bar = class {
+};
+var bar = 123;
+export {
+  Bar,
+  bar
+};
+
+================================================================================
+TestAvoidTDZNoBundle
+---------- /out.js ----------
+class Foo {
+  static foo = new Foo();
+}
+let foo = Foo.foo;
+console.log(foo);
+export class Bar {
+}
+export let bar = 123;
+
+================================================================================
+TestAwaitImportInsideTry
+---------- /out.js ----------
+// entry.js
+async function main(name) {
+  try {
+    return await import(name);
+  } catch {
+  }
+}
+main("fs");
+
+================================================================================
+TestBuiltInNodeModulePrecedence
+---------- /out/entry.js ----------
+// node_modules/fs/abc.js
+var require_abc = __commonJS({
+  "node_modules/fs/abc.js"() {
+    console.log("include this");
+  }
+});
+
+// node_modules/fs/index.js
+var require_fs = __commonJS({
+  "node_modules/fs/index.js"() {
+    console.log("include this too");
+  }
+});
+
+// entry.js
+console.log([
+  // These are node core modules
+  require("fs"),
+  require("fs/promises"),
+  require("node:foo"),
+  // These are not node core modules
+  require_abc(),
+  require_fs()
+]);
+
+================================================================================
+TestBundlingFilesOutsideOfOutbase
+---------- /out/_.._/_.._/_.._/src/entry.js ----------
+// src/entry.js
+console.log("test");
+
+================================================================================
+TestCallImportNamespaceWarning
+---------- /out/js.js ----------
+import * as a from "a";
+import { b } from "b";
+import c from "c";
+a();
+b();
+c();
+new a();
+new b();
+new c();
+
+---------- /out/ts.js ----------
+import * as a from "a";
+import { b } from "b";
+import c from "c";
+a();
+b();
+c();
+new a();
+new b();
+new c();
+
+---------- /out/jsx-components.js ----------
+import * as A from "a";
+import { B } from "b";
+import C from "c";
+/* @__PURE__ */ React.createElement(A, null);
+/* @__PURE__ */ React.createElement(B, null);
+/* @__PURE__ */ React.createElement(C, null);
+
+---------- /out/jsx-a.js ----------
+import * as a from "a";
+/* @__PURE__ */ a("div", null);
+
+---------- /out/jsx-b.js ----------
+import { b } from "b";
+/* @__PURE__ */ b("div", null);
+
+---------- /out/jsx-c.js ----------
+import c from "c";
+/* @__PURE__ */ c("div", null);
+
+================================================================================
+TestCharFreqIgnoreComments
+---------- /out/a.js ----------
+// a.js
+function u(e, t, n, r) {
+  return "the argument names must be the same";
+}
+export {
+  u as default
+};
+
+---------- /out/b.js ----------
+// b.js
+function u(e, t, n, r) {
+  return "the argument names must be the same";
+}
+export {
+  u as default
+};
+
+================================================================================
+TestCommentPreservation
+---------- /out/entry.js ----------
+console.log(
+  import(
+    /* before */
+    foo
+  ),
+  import(
+    /* before */
+    "foo"
+  ),
+  import(
+    foo
+    /* after */
+  ),
+  import(
+    "foo"
+    /* after */
+  )
+);
+console.log(
+  import(
+    "foo",
+    /* before */
+    { assert: { type: "json" } }
+  ),
+  import("foo", {
+    /* before */
+    assert: { type: "json" }
+  }),
+  import("foo", {
+    assert:
+      /* before */
+      { type: "json" }
+  }),
+  import("foo", { assert: {
+    /* before */
+    type: "json"
+  } }),
+  import("foo", { assert: {
+    type:
+      /* before */
+      "json"
+  } }),
+  import("foo", { assert: {
+    type: "json"
+    /* before */
+  } }),
+  import("foo", {
+    assert: { type: "json" }
+    /* before */
+  }),
+  import(
+    "foo",
+    { assert: { type: "json" } }
+    /* before */
+  )
+);
+console.log(
+  require(
+    /* before */
+    foo
+  ),
+  require(
+    /* before */
+    "foo"
+  ),
+  require(
+    foo
+    /* after */
+  ),
+  require(
+    "foo"
+    /* after */
+  )
+);
+console.log(
+  require.resolve(
+    /* before */
+    foo
+  ),
+  require.resolve(
+    /* before */
+    "foo"
+  ),
+  require.resolve(
+    foo
+    /* after */
+  ),
+  require.resolve(
+    "foo"
+    /* after */
+  )
+);
+let [
+  /* foo */
+] = [
+  /* bar */
+];
+let [
+  // foo
+] = [
+  // bar
+];
+let [
+  /*before*/
+  ...s
+] = [
+  /*before*/
+  ...s
+];
+let [.../*before*/
+s2] = [.../*before*/
+s2];
+let {
+  /* foo */
+} = {
+  /* bar */
+};
+let {
+  // foo
+} = {
+  // bar
+};
+let {
+  /*before*/
+  ...s3
+} = {
+  /*before*/
+  ...s3
+};
+let { .../*before*/
+s4 } = { .../*before*/
+s4 };
+let [
+  /* before */
+  x
+] = [
+  /* before */
+  x
+];
+let [
+  /* before */
+  x2
+  /* after */
+] = [
+  /* before */
+  x2
+  /* after */
+];
+let [
+  // before
+  x3
+  // after
+] = [
+  // before
+  x3
+  // after
+];
+let {
+  /* before */
+  y
+} = {
+  /* before */
+  y
+};
+let {
+  /* before */
+  y2
+  /* after */
+} = {
+  /* before */
+  y2
+  /* after */
+};
+let {
+  // before
+  y3
+  // after
+} = {
+  // before
+  y3
+  // after
+};
+let {
+  /* before */
+  [y4]: y4
+} = {
+  /* before */
+  [y4]: y4
+};
+let { [
+  /* before */
+  y5
+]: y5 } = { [
+  /* before */
+  y5
+]: y5 };
+let { [
+  y6
+  /* after */
+]: y6 } = { [
+  y6
+  /* after */
+]: y6 };
+foo[
+  /* before */
+  x
+] = foo[
+  /* before */
+  x
+];
+foo[
+  x
+  /* after */
+] = foo[
+  x
+  /* after */
+];
+console.log(
+  // before
+  foo,
+  /* comment before */
+  bar
+  // comment after
+);
+console.log([
+  // before
+  foo,
+  /* comment before */
+  bar
+  // comment after
+]);
+console.log({
+  // before
+  foo,
+  /* comment before */
+  bar
+  // comment after
+});
+console.log(class {
+  // before
+  foo;
+  /* comment before */
+  bar;
+  // comment after
+});
+console.log(
+  () => {
+    return (
+      /* foo */
+      null
+    );
+  },
+  () => {
+    throw (
+      /* foo */
+      null
+    );
+  },
+  () => {
+    return (
+      /* foo */
+      null + 1
+    );
+  },
+  () => {
+    throw (
+      /* foo */
+      null + 1
+    );
+  },
+  () => {
+    return (
+      // foo
+      null + 1
+    );
+  },
+  () => {
+    throw (
+      // foo
+      null + 1
+    );
+  }
+);
+console.log(
+  /*a*/
+  a ? (
+    /*b*/
+    b
+  ) : (
+    /*c*/
+    c
+  ),
+  a ? b : c
+);
+for (
+  /*foo*/
+  a;
+  ;
+) ;
+for (
+  ;
+  /*foo*/
+  a;
+) ;
+for (
+  ;
+  ;
+  /*foo*/
+  a
+) ;
+for (
+  /*foo*/
+  a in b
+) ;
+for (
+  a in
+  /*foo*/
+  b
+) ;
+for (
+  /*foo*/
+  a of b
+) ;
+for (
+  a of
+  /*foo*/
+  b
+) ;
+if (
+  /*foo*/
+  a
+) ;
+with (
+  /*foo*/
+  a
+) ;
+while (
+  /*foo*/
+  a
+) ;
+do {
+} while (
+  /*foo*/
+  a
+);
+switch (
+  /*foo*/
+  a
+) {
+}
+
+================================================================================
+TestCommentPreservationImportAssertions
+---------- /out/entry.js ----------
+// entry.jsx
+import "foo" assert { type: "json" };
+import "foo" assert { type: "json" };
+import "foo" assert {
+  /* before */
+  type: "json"
+};
+import "foo" assert {
+  type:
+    /* before */
+    "json"
+};
+import "foo" assert {
+  type: "json"
+  /* before */
+};
+
+================================================================================
+TestCommentPreservationPreserveJSX
+---------- /out/entry.js ----------
+// entry.jsx
+console.log(
+  <div x={
+    /*before*/
+    x
+  } />,
+  <div x={
+    /*before*/
+    "y"
+  } />,
+  <div x={
+    /*before*/
+    true
+  } />,
+  <div {
+    /*before*/
+    ...x
+  } />,
+  <div>{
+    /*before*/
+    x
+  }</div>,
+  <>{
+    /*before*/
+    x
+  }</>,
+  // Comments on absent AST nodes
+  <div>before{}after</div>,
+  <div>before{
+    /* comment 1 */
+    /* comment 2 */
+  }after</div>,
+  <div>before{
+    // comment 1
+    // comment 2
+  }after</div>,
+  <>before{}after</>,
+  <>before{
+    /* comment 1 */
+    /* comment 2 */
+  }after</>,
+  <>before{
+    // comment 1
+    // comment 2
+  }after</>
+);
+
+================================================================================
+TestCommentPreservationTransformJSX
+---------- /out/entry.js ----------
+// entry.jsx
+console.log(
+  /* @__PURE__ */ React.createElement("div", { x: (
+    /*before*/
+    x
+  ) }),
+  /* @__PURE__ */ React.createElement("div", { x: (
+    /*before*/
+    "y"
+  ) }),
+  /* @__PURE__ */ React.createElement("div", { x: (
+    /*before*/
+    true
+  ) }),
+  /* @__PURE__ */ React.createElement("div", {
+    /*before*/
+    ...x
+  }),
+  /* @__PURE__ */ React.createElement(
+    "div",
+    null,
+    /*before*/
+    x
+  ),
+  /* @__PURE__ */ React.createElement(
+    React.Fragment,
+    null,
+    /*before*/
+    x
+  ),
+  // Comments on absent AST nodes
+  /* @__PURE__ */ React.createElement("div", null, "before", "after"),
+  /* @__PURE__ */ React.createElement("div", null, "before", "after"),
+  /* @__PURE__ */ React.createElement("div", null, "before", "after"),
+  /* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"),
+  /* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"),
+  /* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after")
+);
+
+================================================================================
+TestCommonJSFromES6
+---------- /out.js ----------
+// foo.js
+var foo_exports = {};
+__export(foo_exports, {
+  foo: () => foo
+});
+function foo() {
+  return "foo";
+}
+var init_foo = __esm({
+  "foo.js"() {
+  }
+});
+
+// bar.js
+var bar_exports = {};
+__export(bar_exports, {
+  bar: () => bar
+});
+function bar() {
+  return "bar";
+}
+var init_bar = __esm({
+  "bar.js"() {
+  }
+});
+
+// entry.js
+var { foo: foo2 } = (init_foo(), __toCommonJS(foo_exports));
+console.log(foo2(), bar2());
+var { bar: bar2 } = (init_bar(), __toCommonJS(bar_exports));
+
+================================================================================
+TestConditionalImport
+---------- /out/a.js ----------
+// import.js
+var require_import = __commonJS({
+  "import.js"(exports) {
+    exports.foo = 213;
+  }
+});
+
+// a.js
+x ? import("a") : y ? Promise.resolve().then(() => __toESM(require_import())) : import("c");
+
+---------- /out/b.js ----------
+// import.js
+var require_import = __commonJS({
+  "import.js"(exports) {
+    exports.foo = 213;
+  }
+});
+
+// b.js
+x ? y ? import("a") : Promise.resolve().then(() => __toESM(require_import())) : import(c);
+
+================================================================================
+TestConditionalRequire
+---------- /out.js ----------
+// b.js
+var require_b = __commonJS({
+  "b.js"(exports) {
+    exports.foo = 213;
+  }
+});
+
+// a.js
+x ? __require("a") : y ? require_b() : __require("c");
+x ? y ? __require("a") : require_b() : __require(c);
+
+================================================================================
+TestConditionalRequireResolve
+---------- /out.js ----------
+// a.js
+x ? require.resolve("a") : y ? require.resolve("b") : require.resolve("c");
+x ? y ? require.resolve("a") : require.resolve("b") : require.resolve(c);
+
+================================================================================
+TestConstWithLet
+---------- /out.js ----------
+// entry.js
+console.log(1);
+console.log(2);
+unknownFn(3);
+for (let c = x; ; ) console.log(c);
+for (let d in x) console.log(d);
+for (let e of x) console.log(e);
+
+================================================================================
+TestConstWithLetNoBundle
+---------- /out.js ----------
+const a = 1;
+console.log(1), console.log(2), unknownFn(3);
+for (const c = x; ; ) console.log(c);
+for (const d in x) console.log(d);
+for (const e of x) console.log(e);
+
+================================================================================
+TestConstWithLetNoMangle
+---------- /out.js ----------
+// entry.js
+var a = 1;
+console.log(a);
+if (true) {
+  const b = 2;
+  console.log(b);
+}
+for (const c = x; ; ) console.log(c);
+for (const d in x) console.log(d);
+for (const e of x) console.log(e);
+
+================================================================================
+TestDecoratorPrintingCJS
+---------- /out.js ----------
+// entry.js
+var import_somewhere = require("somewhere");
+_ = class {
+  #bar;
+  classes = [
+    class {
+      @import_somewhere.imported @((0, import_somewhere.imported)()) imported;
+    },
+    class {
+      @unbound @unbound() unbound;
+    },
+    class {
+      @(123) @(123()) constant;
+    },
+    class {
+      @(void 0) @((void 0)()) undef;
+    },
+    class {
+      @(element[access]) indexed;
+    },
+    class {
+      @foo.#bar private;
+    },
+    class {
+      @(foo["ヿ"]) unicode;
+    },
+    class {
+      @(() => {
+      }) arrow;
+    }
+  ];
+};
+
+================================================================================
+TestDecoratorPrintingESM
+---------- /out.js ----------
+// entry.js
+import { imported } from "somewhere";
+_ = class {
+  #bar;
+  classes = [
+    class {
+      @imported @imported() imported;
+    },
+    class {
+      @unbound @unbound() unbound;
+    },
+    class {
+      @(123) @(123()) constant;
+    },
+    class {
+      @(void 0) @((void 0)()) undef;
+    },
+    class {
+      @(element[access]) indexed;
+    },
+    class {
+      @foo.#bar private;
+    },
+    class {
+      @(foo["ヿ"]) unicode;
+    },
+    class {
+      @(() => {
+      }) arrow;
+    }
+  ];
+};
+
+================================================================================
+TestDefineAssignWarning
+---------- /out/read.js ----------
+// read.js
+console.log(
+  [null, null, null],
+  [ident, ident, ident],
+  [dot.chain, dot.chain, dot.chain]
+);
+
+---------- /out/write.js ----------
+// write.js
+console.log(
+  [a = 0, b.c = 0, b["c"] = 0],
+  [ident = 0, ident = 0, ident = 0],
+  [dot.chain = 0, dot.chain = 0, dot.chain = 0]
+);
+
+================================================================================
+TestDefineImportMeta
+---------- /out.js ----------
+// entry.js
+console.log(
+  // These should be fully substituted
+  1,
+  2,
+  3,
+  // Should just substitute "import.meta.foo"
+  2 .baz,
+  // This should not be substituted
+  1 .bar
+);
+
+================================================================================
+TestDefineImportMetaES5
+---------- /out/replaced.js ----------
+// replaced.js
+console.log(1);
+
+---------- /out/kept.js ----------
+// kept.js
+var import_meta = {};
+console.log(import_meta.y);
+
+---------- /out/dead-code.js ----------
+
+================================================================================
+TestDefineInfiniteLoopIssue2407
+---------- /out.js ----------
+// entry.js
+b.c();
+y();
+
+================================================================================
+TestDefineOptionalChain
+---------- /out.js ----------
+// entry.js
+console.log([
+  1,
+  1,
+  1
+], [
+  1,
+  1,
+  1
+], [
+  a[b][c],
+  a?.[b][c],
+  a[b]?.[c]
+]);
+
+================================================================================
+TestDefineOptionalChainLowered
+---------- /out.js ----------
+// entry.js
+var _a;
+console.log([
+  1,
+  1,
+  1
+], [
+  1,
+  1,
+  1
+], [
+  a[b][c],
+  a == null ? void 0 : a[b][c],
+  (_a = a[b]) == null ? void 0 : _a[c]
+]);
+
+================================================================================
+TestDefineOptionalChainPanicIssue3551
+---------- /out/id-define.js ----------
+// id-define.js
+1?.y.z;
+(1?.y).z;
+1?.y["z"];
+(1?.y)["z"];
+1?.y();
+(1?.y)();
+1?.y.z();
+(1?.y).z();
+1?.y["z"]();
+(1?.y)["z"]();
+delete 1?.y.z;
+delete (1?.y).z;
+delete 1?.y["z"];
+delete (1?.y)["z"];
+
+---------- /out/dot-define.js ----------
+// dot-define.js
+1 .c;
+1 .c;
+1["c"];
+1["c"];
+1();
+1();
+1 .c();
+1 .c();
+1["c"]();
+1["c"]();
+delete 1 .c;
+delete 1 .c;
+delete 1["c"];
+delete 1["c"];
+
+================================================================================
+TestDefineThis
+---------- /out.js ----------
+// entry.js
+ok(
+  // These should be fully substituted
+  1,
+  2,
+  3,
+  // Should just substitute "this.foo"
+  2 .baz,
+  // This should not be substituted
+  1 .bar
+);
+(() => {
+  ok(
+    1,
+    2,
+    3,
+    2 .baz,
+    1 .bar
+  );
+})();
+(function() {
+  doNotSubstitute(
+    this,
+    this.foo,
+    this.foo.bar,
+    this.foo.baz,
+    this.bar
+  );
+})();
+
+================================================================================
+TestDirectEvalTaintingNoBundle
+---------- /out.js ----------
+function test1() {
+  function add(n, t) {
+    return n + t;
+  }
+  eval("add(1, 2)");
+}
+function test2() {
+  function n(t, e) {
+    return t + e;
+  }
+  (0, eval)("add(1, 2)");
+}
+function test3() {
+  function n(t, e) {
+    return t + e;
+  }
+}
+function test4(eval) {
+  function add(n, t) {
+    return n + t;
+  }
+  eval("add(1, 2)");
+}
+function test5() {
+  function containsDirectEval() {
+    eval();
+  }
+  if (true) {
+    var shouldNotBeRenamed;
+  }
+}
+
+================================================================================
+TestDotImport
+---------- /out.js ----------
+// index.js
+var require_index = __commonJS({
+  "index.js"(exports) {
+    exports.x = 123;
+  }
+});
+
+// entry.js
+var import__ = __toESM(require_index());
+console.log(import__.x);
+
+================================================================================
+TestDuplicateEntryPoint
+---------- /out.js/entry.js ----------
+// entry.js
+console.log(123);
+
+================================================================================
+TestDuplicatePropertyWarning
+---------- /out/entry.js ----------
+// outside-node-modules/index.jsx
+console.log({ a: 1, a: 2 }, /* @__PURE__ */ React.createElement("div", { a2: true, a2: 3 }));
+
+// node_modules/inside-node-modules/index.jsx
+console.log({ c: 1, c: 2 }, /* @__PURE__ */ React.createElement("div", { c2: true, c2: 3 }));
+
+================================================================================
+TestDynamicImportWithExpressionCJS
+---------- /out.js ----------
+import("foo");
+import(foo());
+
+================================================================================
+TestDynamicImportWithTemplateIIFE
+---------- /out.js ----------
+(() => {
+  // b.js
+  var require_b = __commonJS({
+    "b.js"(exports) {
+      exports.x = 123;
+    }
+  });
+
+  // a.js
+  Promise.resolve().then(() => __toESM(require_b())).then((ns) => console.log(ns));
+  Promise.resolve().then(() => __toESM(require_b())).then((ns) => console.log(ns));
+})();
+
+================================================================================
+TestES6FromCommonJS
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports) {
+    exports.foo = function() {
+      return "foo";
+    };
+  }
+});
+
+// bar.js
+var require_bar = __commonJS({
+  "bar.js"(exports) {
+    exports.bar = function() {
+      return "bar";
+    };
+  }
+});
+
+// entry.js
+var import_foo = __toESM(require_foo());
+var import_bar = __toESM(require_bar());
+console.log((0, import_foo.foo)(), (0, import_bar.bar)());
+
+================================================================================
+TestEmptyExportClauseBundleAsCommonJSIssue910
+---------- /out.js ----------
+// types.mjs
+var types_exports = {};
+var init_types = __esm({
+  "types.mjs"() {
+  }
+});
+
+// entry.js
+console.log((init_types(), __toCommonJS(types_exports)));
+
+================================================================================
+TestEntryNamesChunkNamesExtPlaceholder
+---------- /out/main/js/entry1-4X3SO762.js ----------
+import "../../common/js/chunk-XHGYOYUR.js";
+
+// src/entries/entry1.js
+console.log("entry1");
+
+---------- /out/main/js/entry2-URQRHZS5.js ----------
+import "../../common/js/chunk-XHGYOYUR.js";
+
+// src/entries/entry2.js
+console.log("entry2");
+
+---------- /out/common/js/chunk-XHGYOYUR.js ----------
+// src/lib/shared.js
+console.log("shared");
+
+---------- /out/main/css/entry1-3JZGIUSL.css ----------
+/* src/entries/entry1.css */
+a:after {
+  content: "entry1";
+}
+
+---------- /out/main/css/entry2-NXZBPPIA.css ----------
+/* src/entries/entry2.css */
+a:after {
+  content: "entry2";
+}
+
+================================================================================
+TestEntryNamesNoSlashAfterDir
+---------- /out/app1-main.js ----------
+console.log(1);
+
+---------- /out/app2-main.js ----------
+console.log(2);
+
+---------- /out/-customPath.js ----------
+console.log(3);
+
+================================================================================
+TestEntryNamesNonPortableCharacter
+---------- /out/entry1-_.js ----------
+console.log(1);
+
+---------- /out/entry2-*.js ----------
+console.log(2);
+
+================================================================================
+TestExportChain
+---------- /out.js ----------
+// bar.js
+var c = 123;
+export {
+  c as a
+};
+
+================================================================================
+TestExportFSNode
+---------- /out.js ----------
+// entry.js
+import * as fs from "fs";
+import { readFileSync } from "fs";
+export {
+  fs,
+  readFileSync
+};
+
+================================================================================
+TestExportFSNodeInCommonJSModule
+---------- /out.js ----------
+// entry.js
+import * as fs from "fs";
+import { readFileSync } from "fs";
+var require_entry = __commonJS({
+  "entry.js"(exports) {
+    exports.fs = fs;
+    exports.readFileSync = readFileSync;
+    exports.foo = 123;
+  }
+});
+export default require_entry();
+
+================================================================================
+TestExportFormsCommonJS
+---------- /out.js ----------
+// a.js
+var abc;
+var init_a = __esm({
+  "a.js"() {
+    abc = void 0;
+  }
+});
+
+// b.js
+var b_exports = {};
+__export(b_exports, {
+  xyz: () => xyz
+});
+var xyz;
+var init_b = __esm({
+  "b.js"() {
+    xyz = null;
+  }
+});
+
+// commonjs.js
+var commonjs_exports = {};
+__export(commonjs_exports, {
+  C: () => Class,
+  Class: () => Class,
+  Fn: () => Fn,
+  abc: () => abc,
+  b: () => b_exports,
+  c: () => c,
+  default: () => commonjs_default,
+  l: () => l,
+  v: () => v
+});
+function Fn() {
+}
+var commonjs_default, v, l, c, Class;
+var init_commonjs = __esm({
+  "commonjs.js"() {
+    init_a();
+    init_b();
+    commonjs_default = 123;
+    v = 234;
+    l = 234;
+    c = 234;
+    Class = class {
+    };
+  }
+});
+
+// c.js
+var c_exports = {};
+__export(c_exports, {
+  default: () => c_default
+});
+var c_default;
+var init_c = __esm({
+  "c.js"() {
+    c_default = class {
+    };
+  }
+});
+
+// d.js
+var d_exports = {};
+__export(d_exports, {
+  default: () => Foo
+});
+var Foo;
+var init_d = __esm({
+  "d.js"() {
+    Foo = class {
+    };
+    Foo.prop = 123;
+  }
+});
+
+// e.js
+var e_exports = {};
+__export(e_exports, {
+  default: () => e_default
+});
+function e_default() {
+}
+var init_e = __esm({
+  "e.js"() {
+  }
+});
+
+// f.js
+var f_exports = {};
+__export(f_exports, {
+  default: () => foo
+});
+function foo() {
+}
+var init_f = __esm({
+  "f.js"() {
+    foo.prop = 123;
+  }
+});
+
+// g.js
+var g_exports = {};
+__export(g_exports, {
+  default: () => g_default
+});
+async function g_default() {
+}
+var init_g = __esm({
+  "g.js"() {
+  }
+});
+
+// h.js
+var h_exports = {};
+__export(h_exports, {
+  default: () => foo2
+});
+async function foo2() {
+}
+var init_h = __esm({
+  "h.js"() {
+    foo2.prop = 123;
+  }
+});
+
+// entry.js
+init_commonjs();
+init_c();
+init_d();
+init_e();
+init_f();
+init_g();
+init_h();
+
+================================================================================
+TestExportFormsES6
+---------- /out.js ----------
+// a.js
+var abc = void 0;
+
+// b.js
+var b_exports = {};
+__export(b_exports, {
+  xyz: () => xyz
+});
+var xyz = null;
+
+// entry.js
+var entry_default = 123;
+var v = 234;
+var l = 234;
+var c = 234;
+function Fn() {
+}
+var Class = class {
+};
+export {
+  Class as C,
+  Class,
+  Fn,
+  abc,
+  b_exports as b,
+  c,
+  entry_default as default,
+  l,
+  v
+};
+
+================================================================================
+TestExportFormsIIFE
+---------- /out.js ----------
+var globalName = (() => {
+  // entry.js
+  var entry_exports = {};
+  __export(entry_exports, {
+    C: () => Class,
+    Class: () => Class,
+    Fn: () => Fn,
+    abc: () => abc,
+    b: () => b_exports,
+    c: () => c,
+    default: () => entry_default,
+    l: () => l,
+    v: () => v
+  });
+
+  // a.js
+  var abc = void 0;
+
+  // b.js
+  var b_exports = {};
+  __export(b_exports, {
+    xyz: () => xyz
+  });
+  var xyz = null;
+
+  // entry.js
+  var entry_default = 123;
+  var v = 234;
+  var l = 234;
+  var c = 234;
+  function Fn() {
+  }
+  var Class = class {
+  };
+  return __toCommonJS(entry_exports);
+})();
+
+================================================================================
+TestExportFormsWithMinifyIdentifiersAndNoBundle
+---------- /out/a.js ----------
+export default 123;
+export var varName = 234;
+export let letName = 234;
+export const constName = 234;
+function s() {
+}
+class t {
+}
+export { Class as Cls, s as Fn2, t as Cls2 };
+export function Func() {
+}
+export class Class {
+}
+export * from "./a";
+export * as fromB from "./b";
+
+---------- /out/b.js ----------
+export default function() {
+}
+
+---------- /out/c.js ----------
+export default function o() {
+}
+
+---------- /out/d.js ----------
+export default class {
+}
+
+---------- /out/e.js ----------
+export default class o {
+}
+
+================================================================================
+TestExportWildcardFSNodeCommonJS
+---------- /out.js ----------
+// entry.js
+var entry_exports = {};
+__export(entry_exports, {
+  foo: () => foo
+});
+module.exports = __toCommonJS(entry_exports);
+__reExport(entry_exports, require("fs"), module.exports);
+
+// internal.js
+var foo = 123;
+
+// entry.js
+__reExport(entry_exports, require("./external"), module.exports);
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  foo,
+  ...require("fs"),
+  ...require("./external")
+});
+
+================================================================================
+TestExportWildcardFSNodeES6
+---------- /out.js ----------
+// entry.js
+export * from "fs";
+
+// internal.js
+var foo = 123;
+
+// entry.js
+export * from "./external";
+export {
+  foo
+};
+
+================================================================================
+TestExportsAndModuleFormatCommonJS
+---------- /out.js ----------
+// foo/test.js
+var test_exports = {};
+__export(test_exports, {
+  foo: () => foo
+});
+var foo = 123;
+
+// bar/test.js
+var test_exports2 = {};
+__export(test_exports2, {
+  bar: () => bar
+});
+var bar = 123;
+
+// entry.js
+console.log(exports, module.exports, test_exports, test_exports2);
+
+================================================================================
+TestExternalES6ConvertedToCommonJS
+---------- /out.js ----------
+// a.js
+var a_exports = {};
+__export(a_exports, {
+  ns: () => ns
+});
+import * as ns from "x";
+var init_a = __esm({
+  "a.js"() {
+  }
+});
+
+// b.js
+var b_exports = {};
+__export(b_exports, {
+  ns: () => ns2
+});
+import * as ns2 from "x";
+var init_b = __esm({
+  "b.js"() {
+  }
+});
+
+// c.js
+var c_exports = {};
+__export(c_exports, {
+  ns: () => ns3
+});
+import * as ns3 from "x";
+var init_c = __esm({
+  "c.js"() {
+  }
+});
+
+// d.js
+var d_exports = {};
+__export(d_exports, {
+  ns: () => ns4
+});
+import { ns as ns4 } from "x";
+var init_d = __esm({
+  "d.js"() {
+  }
+});
+
+// e.js
+var e_exports = {};
+import * as x_star from "x";
+var init_e = __esm({
+  "e.js"() {
+    __reExport(e_exports, x_star);
+  }
+});
+
+// entry.js
+init_a();
+init_b();
+init_c();
+init_d();
+init_e();
+
+================================================================================
+TestExternalModuleExclusionPackage
+---------- /out.js ----------
+// index.js
+import { S3 } from "aws-sdk";
+import { DocumentClient } from "aws-sdk/clients/dynamodb";
+var s3 = new S3();
+var dynamodb = new DocumentClient();
+export {
+  dynamodb,
+  s3
+};
+
+================================================================================
+TestExternalModuleExclusionRelativePath
+---------- /Users/user/project/out/index.js ----------
+// Users/user/project/src/nested/folder/test.js
+import foo from "../src/nested/folder/foo.js";
+import out from "./in-out-dir.js";
+import sha256 from "../src/sha256.min.js";
+import config from "/api/config?a=1&b=2";
+console.log(foo, out, sha256, config);
+
+================================================================================
+TestExternalPackages
+---------- /out.js ----------
+// project/entry.js
+import "pkg1";
+
+// project/file.js
+console.log("file");
+
+// project/node_modules/pkg2/index.js
+console.log("pkg2");
+
+// project/libs/pkg3.js
+console.log("pkg3");
+
+================================================================================
+TestExternalWildcardDoesNotMatchEntryPoint
+---------- /out.js ----------
+// entry.js
+import "foo";
+
+================================================================================
+TestFalseRequire
+---------- /out.js ----------
+// entry.js
+((require2) => require2("/test.txt"))();
+
+================================================================================
+TestHashbangBannerUseStrictOrder
+---------- /out.js ----------
+#! in file
+#! from banner
+"use strict";
+(() => {
+  // entry.js
+  foo();
+})();
+
+================================================================================
+TestHashbangBundle
+---------- /out.js ----------
+#!/usr/bin/env a
+
+// code.js
+var code = 0;
+
+// entry.js
+process.exit(code);
+
+================================================================================
+TestHashbangNoBundle
+---------- /out.js ----------
+#!/usr/bin/env node
+process.exit(0);
+
+================================================================================
+TestIIFE_ES5
+---------- /out.js ----------
+(function() {
+  // entry.js
+  console.log("test");
+})();
+
+================================================================================
+TestImportAbsPathAsDir
+---------- /out/entry.js ----------
+// Users/user/project/node_modules/pkg/index.js
+var pkg_default = 123;
+
+// Users/user/project/entry.js
+console.log(pkg_default);
+
+================================================================================
+TestImportAbsPathAsFile
+---------- /out/entry.js ----------
+// Users/user/project/node_modules/pkg/index.js
+var pkg_default = 123;
+
+// Users/user/project/entry.js
+console.log(pkg_default);
+
+================================================================================
+TestImportAbsPathWithQueryParameter
+---------- /out/entry.js ----------
+// Users/user/project/file.txt?foo
+var file_default = "This is some text";
+
+// Users/user/project/file.txt#bar
+var file_default2 = "This is some text";
+
+// Users/user/project/entry.js
+console.log(file_default, file_default2);
+
+================================================================================
+TestImportFSNodeCommonJS
+---------- /out.js ----------
+// entry.js
+var fs = __toESM(require("fs"));
+var import_fs = __toESM(require("fs"));
+var import_fs2 = require("fs");
+console.log(fs, import_fs2.readFileSync, import_fs.default);
+
+================================================================================
+TestImportFSNodeES6
+---------- /out.js ----------
+// entry.js
+import * as fs from "fs";
+import defaultValue from "fs";
+import { readFileSync } from "fs";
+console.log(fs, readFileSync, defaultValue);
+
+================================================================================
+TestImportFormsWithMinifyIdentifiersAndNoBundle
+---------- /out.js ----------
+import "foo";
+import {} from "foo";
+import * as o from "foo";
+import { a as r, b as m } from "foo";
+import t from "foo";
+import f, * as i from "foo";
+import p, { a2 as s, b as n } from "foo";
+const a = [
+  import("foo"),
+  function() {
+    return import("foo");
+  }
+];
+console.log(o, r, m, t, f, i, p, s, n, a);
+
+================================================================================
+TestImportFormsWithNoBundle
+---------- /out.js ----------
+import "foo";
+import {} from "foo";
+import * as ns from "foo";
+import { a, b as c } from "foo";
+import def from "foo";
+import def2, * as ns2 from "foo";
+import def3, { a2, b as c3 } from "foo";
+const imp = [
+  import("foo"),
+  function nested() {
+    return import("foo");
+  }
+];
+console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
+
+================================================================================
+TestImportMetaCommonJS
+---------- /out.js ----------
+// entry.js
+var import_meta = {};
+console.log(import_meta.url, import_meta.path);
+
+================================================================================
+TestImportMetaES6
+---------- /out.js ----------
+// entry.js
+console.log(import.meta.url, import.meta.path);
+
+================================================================================
+TestImportMetaNoBundle
+---------- /out.js ----------
+console.log(import.meta.url, import.meta.path);
+
+================================================================================
+TestImportMissingCommonJS
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports) {
+    exports.x = 123;
+  }
+});
+
+// entry.js
+var import_foo = __toESM(require_foo());
+console.log((0, import_foo.default)(import_foo.x, import_foo.y));
+
+================================================================================
+TestImportMissingNeitherES6NorCommonJS
+---------- /out/named.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"() {
+    console.log("no exports here");
+  }
+});
+
+// named.js
+var import_foo = __toESM(require_foo());
+console.log((0, import_foo.default)(void 0, void 0));
+
+---------- /out/star.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"() {
+    console.log("no exports here");
+  }
+});
+
+// star.js
+var ns = __toESM(require_foo());
+console.log(ns.default(void 0, void 0));
+
+---------- /out/star-capture.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"() {
+    console.log("no exports here");
+  }
+});
+
+// star-capture.js
+var ns = __toESM(require_foo());
+console.log(ns);
+
+---------- /out/bare.js ----------
+// foo.js
+console.log("no exports here");
+
+---------- /out/require.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"() {
+    console.log("no exports here");
+  }
+});
+
+// require.js
+console.log(require_foo());
+
+---------- /out/import.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"() {
+    console.log("no exports here");
+  }
+});
+
+// import.js
+console.log(Promise.resolve().then(() => __toESM(require_foo())));
+
+================================================================================
+TestImportNamespaceThisValue
+---------- /out/a.js ----------
+// a.js
+var ns = __toESM(require("external"));
+console.log(ns[foo](), new ns[foo]());
+
+---------- /out/b.js ----------
+// b.js
+var ns = __toESM(require("external"));
+console.log(ns.foo(), new ns.foo());
+
+---------- /out/c.js ----------
+// c.js
+var import_external = __toESM(require("external"));
+console.log((0, import_external.default)(), (0, import_external.foo)());
+console.log(new import_external.default(), new import_external.foo());
+
+================================================================================
+TestImportReExportES6Issue149
+---------- /out.js ----------
+// import.js
+import { h, render } from "preact";
+var p = "p";
+
+// in2.jsx
+var Internal = () => /* @__PURE__ */ h(p, null, " Test 2 ");
+
+// app.jsx
+var App = () => /* @__PURE__ */ h(p, null, " ", /* @__PURE__ */ h(Internal, null), " T ");
+render(/* @__PURE__ */ h(App, null), document.getElementById("app"));
+
+================================================================================
+TestImportThenCatch
+---------- /out.js ----------
+// entry.js
+import(name).then(pass, fail);
+import(name).then(pass).catch(fail);
+import(name).catch(fail);
+
+================================================================================
+TestImportWithHashInPath
+---------- /out/entry.js ----------
+// file#foo.txt
+var file_foo_default = "foo";
+
+// file#bar.txt
+var file_bar_default = "bar";
+
+// entry.js
+console.log(file_foo_default, file_bar_default);
+
+================================================================================
+TestImportWithHashParameter
+---------- /out/entry.js ----------
+// file.txt#foo
+var file_default = "This is some text";
+
+// file.txt#bar
+var file_default2 = "This is some text";
+
+// entry.js
+console.log(file_default, file_default2);
+
+================================================================================
+TestImportWithQueryParameter
+---------- /out/entry.js ----------
+// file.txt?foo
+var file_default = "This is some text";
+
+// file.txt?bar
+var file_default2 = "This is some text";
+
+// entry.js
+console.log(file_default, file_default2);
+
+================================================================================
+TestIndirectRequireMessage
+---------- /out/array.js ----------
+
+---------- /out/assign.js ----------
+// assign.js
+__require = x;
+
+---------- /out/dot.js ----------
+// dot.js
+var x = __require.cache;
+
+---------- /out/ident.js ----------
+
+---------- /out/index.js ----------
+// index.js
+var x = __require[cache];
+
+================================================================================
+TestInject
+---------- /out.js ----------
+// inject.js
+var obj = {};
+var sideEffects = console.log("side effects");
+
+// node_modules/unused/index.js
+console.log("This is unused but still has side effects");
+
+// replacement.js
+var replace = {
+  test() {
+  }
+};
+var replace2 = {
+  test() {
+  }
+};
+
+// re-export.js
+var import_external_pkg = require("external-pkg");
+var import_external_pkg2 = require("external-pkg2");
+
+// entry.js
+var sideEffects2 = console.log("this should be renamed");
+var collide = 123;
+console.log(obj.prop);
+console.log("defined");
+console.log("should be used");
+console.log("should be used");
+console.log(replace.test);
+console.log(replace2.test);
+console.log(collide);
+console.log(import_external_pkg.re_export);
+console.log(re_export2);
+
+================================================================================
+TestInjectDuplicate
+---------- /out.js ----------
+// inject.js
+console.log("injected");
+
+================================================================================
+TestInjectImportMeta
+---------- /out.js ----------
+// inject.js
+var foo = 1;
+var bar = 2;
+var baz = 3;
+
+// entry.js
+console.log(
+  // These should be fully substituted
+  foo,
+  bar,
+  baz,
+  // Should just substitute "import.meta.foo"
+  bar.baz,
+  // This should not be substituted
+  foo.bar
+);
+
+================================================================================
+TestInjectImportOrder
+---------- /out.js ----------
+// inject-1.js
+import "first";
+console.log("first");
+
+// inject-2.js
+import "second";
+console.log("second");
+
+// entry.ts
+import "third";
+console.log("third");
+
+================================================================================
+TestInjectImportTS
+---------- /out.js ----------
+console.log("must be present");
+console.log("here");
+
+================================================================================
+TestInjectJSX
+---------- /out.js ----------
+// inject.js
+function el() {
+}
+function frag() {
+}
+
+// entry.jsx
+console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
+
+================================================================================
+TestInjectJSXDotNames
+---------- /out.js ----------
+// inject.js
+function el() {
+}
+function frag() {
+}
+
+// entry.jsx
+console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
+
+================================================================================
+TestInjectNoBundle
+---------- /out.js ----------
+var obj2 = {};
+var sideEffects2 = console.log("this should be renamed");
+console.log("This is unused but still has side effects");
+var replace2 = {
+  test() {
+  }
+};
+var replaceDot = {
+  test() {
+  }
+};
+import { re_export as re_export2 } from "external-pkg";
+import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
+let sideEffects = console.log("side effects");
+let collide = 123;
+console.log(obj2.prop);
+console.log("defined");
+console.log("should be used");
+console.log("should be used");
+console.log(replace2.test);
+console.log(replaceDot.test);
+console.log(collide);
+console.log(re_export2);
+console.log(reexpo_rt);
+
+================================================================================
+TestInjectWithDefine
+---------- /out.js ----------
+// inject.js
+var second = "success (identifier)";
+var second2 = "success (dot name)";
+
+// entry.js
+console.log(
+  // define wins over inject
+  true,
+  true,
+  // define forwards to inject
+  second === "success (identifier)",
+  second2 === "success (dot name)"
+);
+
+================================================================================
+TestInjectWithStringExportNameBundle
+---------- /out.js ----------
+// inject.js
+var old = console.log;
+var fn = (...args) => old.apply(console, ["log:"].concat(args));
+
+// entry.js
+fn(test);
+fn(test);
+fn(test);
+
+================================================================================
+TestInjectWithStringExportNameNoBundle
+---------- /out.js ----------
+var old = console.log;
+var fn = (...args) => old.apply(console, ["log:"].concat(args));
+fn(test);
+
+================================================================================
+TestJSXAutomaticImportsCommonJS
+---------- /out.js ----------
+// custom-react.js
+var require_custom_react = __commonJS({
+  "custom-react.js"(exports, module) {
+    module.exports = {};
+  }
+});
+
+// entry.jsx
+var import_custom_react = __toESM(require_custom_react());
+import { Fragment as Fragment2, jsx as jsx2 } from "react/jsx-runtime";
+console.log(/* @__PURE__ */ jsx2("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ jsx2(Fragment2, { children: /* @__PURE__ */ jsx2(import_custom_react.Fragment, {}) }));
+
+================================================================================
+TestJSXAutomaticImportsES6
+---------- /out.js ----------
+// custom-react.js
+function jsx() {
+}
+function Fragment() {
+}
+
+// entry.jsx
+import { Fragment as Fragment2, jsx as jsx2 } from "react/jsx-runtime";
+console.log(/* @__PURE__ */ jsx2("div", { jsx }), /* @__PURE__ */ jsx2(Fragment2, { children: /* @__PURE__ */ jsx2(Fragment, {}) }));
+
+================================================================================
+TestJSXConstantFragments
+---------- /out.js ----------
+// default.jsx
+console.log(/* @__PURE__ */ React.createElement("]", null));
+
+// null.jsx
+console.log(/* @__PURE__ */ React.createElement(null, null));
+
+// boolean.jsx
+console.log(/* @__PURE__ */ React.createElement(true, null));
+
+// number.jsx
+console.log(/* @__PURE__ */ React.createElement(123, null));
+
+// string-single-empty.jsx
+console.log(/* @__PURE__ */ React.createElement("", null));
+
+// string-double-empty.jsx
+console.log(/* @__PURE__ */ React.createElement("", null));
+
+// string-single-punctuation.jsx
+console.log(/* @__PURE__ */ React.createElement("[", null));
+
+// string-double-punctuation.jsx
+console.log(/* @__PURE__ */ React.createElement("[", null));
+
+// string-template.jsx
+console.log(/* @__PURE__ */ React.createElement("]", null));
+
+================================================================================
+TestJSXDevSelfEdgeCases
+---------- /out/class-this.js ----------
+// class-this.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class {
+  foo() {
+    return /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "class-this.jsx",
+      lineNumber: 1,
+      columnNumber: 35
+    }, this);
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/derived-constructor-arg.js ----------
+// derived-constructor-arg.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class extends Object {
+  constructor(foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+    fileName: "derived-constructor-arg.jsx",
+    lineNumber: 1,
+    columnNumber: 53
+  })) {
+    super();
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/derived-constructor-field.js ----------
+// derived-constructor-field.tsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class extends Object {
+  constructor() {
+    super(...arguments);
+    this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "derived-constructor-field.tsx",
+      lineNumber: 1,
+      columnNumber: 41
+    }, this);
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/derived-constructor.js ----------
+// derived-constructor.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class extends Object {
+  constructor() {
+    super(/* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "derived-constructor.jsx",
+      lineNumber: 1,
+      columnNumber: 57
+    }));
+    this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "derived-constructor.jsx",
+      lineNumber: 1,
+      columnNumber: 77
+    });
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/function-this.js ----------
+// function-this.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+function Foo() {
+  return /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+    fileName: "function-this.jsx",
+    lineNumber: 1,
+    columnNumber: 32
+  }, this);
+}
+export {
+  Foo
+};
+
+---------- /out/normal-constructor-arg.js ----------
+// normal-constructor-arg.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class {
+  constructor(foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+    fileName: "normal-constructor-arg.jsx",
+    lineNumber: 1,
+    columnNumber: 38
+  }, this)) {
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/normal-constructor-field.js ----------
+// normal-constructor-field.tsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class {
+  constructor() {
+    this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "normal-constructor-field.tsx",
+      lineNumber: 1,
+      columnNumber: 26
+    }, this);
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/normal-constructor.js ----------
+// normal-constructor.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = class {
+  constructor() {
+    this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "normal-constructor.jsx",
+      lineNumber: 1,
+      columnNumber: 47
+    }, this);
+  }
+};
+export {
+  Foo
+};
+
+---------- /out/static-field.js ----------
+// static-field.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var _Foo = class _Foo {
+};
+__publicField(_Foo, "foo", /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+  fileName: "static-field.jsx",
+  lineNumber: 1,
+  columnNumber: 33
+}, _Foo));
+var Foo = _Foo;
+export {
+  Foo
+};
+
+---------- /out/top-level-this-cjs.js ----------
+// top-level-this-cjs.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var require_top_level_this_cjs = __commonJS({
+  "top-level-this-cjs.jsx"(exports) {
+    exports.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+      fileName: "top-level-this-cjs.jsx",
+      lineNumber: 1,
+      columnNumber: 15
+    });
+  }
+});
+export default require_top_level_this_cjs();
+
+---------- /out/top-level-this-esm.js ----------
+// top-level-this-esm.jsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+  fileName: "top-level-this-esm.jsx",
+  lineNumber: 1,
+  columnNumber: 18
+});
+if (Foo) {
+  foo = /* @__PURE__ */ jsxDEV(Foo, { children: "nested top-level this" }, void 0, false, {
+    fileName: "top-level-this-esm.jsx",
+    lineNumber: 1,
+    columnNumber: 43
+  });
+}
+export {
+  foo
+};
+
+---------- /out/tsconfig.js ----------
+// tsconfig.json
+var compilerOptions = { useDefineForClassFields: false };
+var tsconfig_default = { compilerOptions };
+export {
+  compilerOptions,
+  tsconfig_default as default
+};
+
+---------- /out/typescript-enum.js ----------
+// typescript-enum.tsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo = /* @__PURE__ */ ((Foo2) => {
+  Foo2[Foo2["foo"] = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+    fileName: "typescript-enum.tsx",
+    lineNumber: 1,
+    columnNumber: 25
+  })] = "foo";
+  return Foo2;
+})(Foo || {});
+export {
+  Foo
+};
+
+---------- /out/typescript-namespace.js ----------
+// typescript-namespace.tsx
+import { jsxDEV } from "react/jsx-dev-runtime";
+var Foo;
+((Foo2) => {
+  Foo2.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+    fileName: "typescript-namespace.tsx",
+    lineNumber: 1,
+    columnNumber: 41
+  });
+})(Foo || (Foo = {}));
+export {
+  Foo
+};
+
+================================================================================
+TestJSXImportMetaProperty
+---------- /out/factory.js ----------
+// factory.jsx
+var import_meta = {};
+console.log([
+  /* @__PURE__ */ import_meta.factory("x", null),
+  /* @__PURE__ */ import_meta.factory("x", null)
+]);
+f = function() {
+  console.log([
+    /* @__PURE__ */ import_meta.factory("y", null),
+    /* @__PURE__ */ import_meta.factory("y", null)
+  ]);
+};
+
+---------- /out/fragment.js ----------
+// fragment.jsx
+var import_meta = {};
+console.log([
+  /* @__PURE__ */ import_meta.factory(import_meta.fragment, null, "x"),
+  /* @__PURE__ */ import_meta.factory(import_meta.fragment, null, "x")
+]), f = function() {
+  console.log([
+    /* @__PURE__ */ import_meta.factory(import_meta.fragment, null, "y"),
+    /* @__PURE__ */ import_meta.factory(import_meta.fragment, null, "y")
+  ]);
+};
+
+================================================================================
+TestJSXImportMetaValue
+---------- /out/factory.js ----------
+// factory.jsx
+var import_meta = {};
+console.log([
+  /* @__PURE__ */ import_meta("x", null),
+  /* @__PURE__ */ import_meta("x", null)
+]);
+f = function() {
+  console.log([
+    /* @__PURE__ */ import_meta("y", null),
+    /* @__PURE__ */ import_meta("y", null)
+  ]);
+};
+
+---------- /out/fragment.js ----------
+// fragment.jsx
+var import_meta = {};
+console.log([
+  /* @__PURE__ */ import_meta(import_meta, null, "x"),
+  /* @__PURE__ */ import_meta(import_meta, null, "x")
+]), f = function() {
+  console.log([
+    /* @__PURE__ */ import_meta(import_meta, null, "y"),
+    /* @__PURE__ */ import_meta(import_meta, null, "y")
+  ]);
+};
+
+================================================================================
+TestJSXImportsCommonJS
+---------- /out.js ----------
+// custom-react.js
+var require_custom_react = __commonJS({
+  "custom-react.js"(exports, module) {
+    module.exports = {};
+  }
+});
+
+// entry.jsx
+var import_custom_react = __toESM(require_custom_react());
+console.log(/* @__PURE__ */ (0, import_custom_react.elem)("div", null), /* @__PURE__ */ (0, import_custom_react.elem)(import_custom_react.frag, null, "fragment"));
+
+================================================================================
+TestJSXImportsES6
+---------- /out.js ----------
+// custom-react.js
+function elem() {
+}
+function frag() {
+}
+
+// entry.jsx
+console.log(/* @__PURE__ */ elem("div", null), /* @__PURE__ */ elem(frag, null, "fragment"));
+
+================================================================================
+TestJSXThisPropertyCommonJS
+---------- /out/factory.js ----------
+// factory.jsx
+var require_factory = __commonJS({
+  "factory.jsx"(exports) {
+    console.log([
+      /* @__PURE__ */ exports.factory("x", null),
+      /* @__PURE__ */ exports.factory("x", null)
+    ]);
+    f = function() {
+      console.log([
+        /* @__PURE__ */ this.factory("y", null),
+        /* @__PURE__ */ this.factory("y", null)
+      ]);
+    };
+  }
+});
+export default require_factory();
+
+---------- /out/fragment.js ----------
+// fragment.jsx
+var require_fragment = __commonJS({
+  "fragment.jsx"(exports) {
+    console.log([
+      /* @__PURE__ */ exports.factory(exports.fragment, null, "x"),
+      /* @__PURE__ */ exports.factory(exports.fragment, null, "x")
+    ]), f = function() {
+      console.log([
+        /* @__PURE__ */ this.factory(this.fragment, null, "y"),
+        /* @__PURE__ */ this.factory(this.fragment, null, "y")
+      ]);
+    };
+  }
+});
+export default require_fragment();
+
+================================================================================
+TestJSXThisPropertyESM
+---------- /out/factory.js ----------
+// factory.jsx
+console.log([
+  /* @__PURE__ */ (void 0).factory("x", null),
+  /* @__PURE__ */ (void 0).factory("x", null)
+]);
+f = function() {
+  console.log([
+    /* @__PURE__ */ this.factory("y", null),
+    /* @__PURE__ */ this.factory("y", null)
+  ]);
+};
+
+---------- /out/fragment.js ----------
+// fragment.jsx
+console.log([
+  /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x"),
+  /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x")
+]), f = function() {
+  console.log([
+    /* @__PURE__ */ this.factory(this.fragment, null, "y"),
+    /* @__PURE__ */ this.factory(this.fragment, null, "y")
+  ]);
+};
+
+================================================================================
+TestJSXThisValueCommonJS
+---------- /out/factory.js ----------
+// factory.jsx
+var require_factory = __commonJS({
+  "factory.jsx"(exports) {
+    console.log([
+      /* @__PURE__ */ exports("x", null),
+      /* @__PURE__ */ exports("x", null)
+    ]);
+    f = function() {
+      console.log([
+        /* @__PURE__ */ this("y", null),
+        /* @__PURE__ */ this("y", null)
+      ]);
+    };
+  }
+});
+export default require_factory();
+
+---------- /out/fragment.js ----------
+// fragment.jsx
+var require_fragment = __commonJS({
+  "fragment.jsx"(exports) {
+    console.log([
+      /* @__PURE__ */ exports(exports, null, "x"),
+      /* @__PURE__ */ exports(exports, null, "x")
+    ]), f = function() {
+      console.log([
+        /* @__PURE__ */ this(this, null, "y"),
+        /* @__PURE__ */ this(this, null, "y")
+      ]);
+    };
+  }
+});
+export default require_fragment();
+
+================================================================================
+TestJSXThisValueESM
+---------- /out/factory.js ----------
+// factory.jsx
+console.log([
+  /* @__PURE__ */ (void 0)("x", null),
+  /* @__PURE__ */ (void 0)("x", null)
+]);
+f = function() {
+  console.log([
+    /* @__PURE__ */ this("y", null),
+    /* @__PURE__ */ this("y", null)
+  ]);
+};
+
+---------- /out/fragment.js ----------
+// fragment.jsx
+console.log([
+  /* @__PURE__ */ (void 0)(void 0, null, "x"),
+  /* @__PURE__ */ (void 0)(void 0, null, "x")
+]), f = function() {
+  console.log([
+    /* @__PURE__ */ this(this, null, "y"),
+    /* @__PURE__ */ this(this, null, "y")
+  ]);
+};
+
+================================================================================
+TestKeepNamesAllForms
+---------- /out/keep.js ----------
+function fn() {
+}
+__name(fn, "fn");
+function foo(fn2 = function() {
+}) {
+}
+__name(foo, "foo");
+var fn = /* @__PURE__ */ __name(function() {
+}, "fn");
+var obj = { "f n": /* @__PURE__ */ __name(function() {
+}, "f n") };
+class Foo0 {
+  static {
+    __name(this, "Foo0");
+  }
+  "f n" = /* @__PURE__ */ __name(function() {
+  }, "f n");
+}
+class Foo1 {
+  static {
+    __name(this, "Foo1");
+  }
+  static "f n" = /* @__PURE__ */ __name(function() {
+  }, "f n");
+}
+class Foo2 {
+  static {
+    __name(this, "Foo2");
+  }
+  accessor "f n" = /* @__PURE__ */ __name(function() {
+  }, "f n");
+}
+class Foo3 {
+  static {
+    __name(this, "Foo3");
+  }
+  static accessor "f n" = /* @__PURE__ */ __name(function() {
+  }, "f n");
+}
+class Foo4 {
+  static {
+    __name(this, "Foo4");
+  }
+  #fn = /* @__PURE__ */ __name(function() {
+  }, "#fn");
+}
+class Foo5 {
+  static {
+    __name(this, "Foo5");
+  }
+  static #fn = /* @__PURE__ */ __name(function() {
+  }, "#fn");
+}
+class Foo6 {
+  static {
+    __name(this, "Foo6");
+  }
+  accessor #fn = /* @__PURE__ */ __name(function() {
+  }, "#fn");
+}
+class Foo7 {
+  static {
+    __name(this, "Foo7");
+  }
+  static accessor #fn = /* @__PURE__ */ __name(function() {
+  }, "#fn");
+}
+fn = /* @__PURE__ */ __name(function() {
+}, "fn");
+fn ||= /* @__PURE__ */ __name(function() {
+}, "fn");
+fn &&= /* @__PURE__ */ __name(function() {
+}, "fn");
+fn ??= /* @__PURE__ */ __name(function() {
+}, "fn");
+var [fn = /* @__PURE__ */ __name(function() {
+}, "fn")] = [];
+var { fn = /* @__PURE__ */ __name(function() {
+}, "fn") } = {};
+for (var [fn = /* @__PURE__ */ __name(function() {
+}, "fn")] = []; ; ) ;
+for (var { fn = /* @__PURE__ */ __name(function() {
+}, "fn") } = {}; ; ) ;
+for (var [fn = /* @__PURE__ */ __name(function() {
+}, "fn")] in obj) ;
+for (var { fn = /* @__PURE__ */ __name(function() {
+}, "fn") } in obj) ;
+for (var [fn = /* @__PURE__ */ __name(function() {
+}, "fn")] of obj) ;
+for (var { fn = /* @__PURE__ */ __name(function() {
+}, "fn") } of obj) ;
+function foo([fn2 = /* @__PURE__ */ __name(function() {
+}, "fn")]) {
+}
+__name(foo, "foo");
+function foo({ fn: fn2 = /* @__PURE__ */ __name(function() {
+}, "fn") }) {
+}
+__name(foo, "foo");
+[fn = /* @__PURE__ */ __name(function() {
+}, "fn")] = [];
+({ fn = /* @__PURE__ */ __name(function() {
+}, "fn") } = {});
+
+---------- /out/do-not-keep.js ----------
+class Foo0 {
+  static {
+    __name(this, "Foo0");
+  }
+  fn() {
+  }
+}
+class Foo1 {
+  static {
+    __name(this, "Foo1");
+  }
+  *fn() {
+  }
+}
+class Foo2 {
+  static {
+    __name(this, "Foo2");
+  }
+  get fn() {
+  }
+}
+class Foo3 {
+  static {
+    __name(this, "Foo3");
+  }
+  set fn(_) {
+  }
+}
+class Foo4 {
+  static {
+    __name(this, "Foo4");
+  }
+  async fn() {
+  }
+}
+class Foo5 {
+  static {
+    __name(this, "Foo5");
+  }
+  static fn() {
+  }
+}
+class Foo6 {
+  static {
+    __name(this, "Foo6");
+  }
+  static *fn() {
+  }
+}
+class Foo7 {
+  static {
+    __name(this, "Foo7");
+  }
+  static get fn() {
+  }
+}
+class Foo8 {
+  static {
+    __name(this, "Foo8");
+  }
+  static set fn(_) {
+  }
+}
+class Foo9 {
+  static {
+    __name(this, "Foo9");
+  }
+  static async fn() {
+  }
+}
+class Bar0 {
+  static {
+    __name(this, "Bar0");
+  }
+  #fn() {
+  }
+}
+class Bar1 {
+  static {
+    __name(this, "Bar1");
+  }
+  *#fn() {
+  }
+}
+class Bar2 {
+  static {
+    __name(this, "Bar2");
+  }
+  get #fn() {
+  }
+}
+class Bar3 {
+  static {
+    __name(this, "Bar3");
+  }
+  set #fn(_) {
+  }
+}
+class Bar4 {
+  static {
+    __name(this, "Bar4");
+  }
+  async #fn() {
+  }
+}
+class Bar5 {
+  static {
+    __name(this, "Bar5");
+  }
+  static #fn() {
+  }
+}
+class Bar6 {
+  static {
+    __name(this, "Bar6");
+  }
+  static *#fn() {
+  }
+}
+class Bar7 {
+  static {
+    __name(this, "Bar7");
+  }
+  static get #fn() {
+  }
+}
+class Bar8 {
+  static {
+    __name(this, "Bar8");
+  }
+  static set #fn(_) {
+  }
+}
+class Bar9 {
+  static {
+    __name(this, "Bar9");
+  }
+  static async #fn(_) {
+  }
+}
+const Baz0 = { fn() {
+} };
+const Baz1 = { *fn() {
+} };
+const Baz2 = { get fn() {
+} };
+const Baz3 = { set fn(_) {
+} };
+const Baz4 = { async fn() {
+} };
+
+================================================================================
+TestKeepNamesClassStaticName
+---------- /out.js ----------
+class A {
+  static {
+    __name(this, "A");
+  }
+  static foo;
+}
+class B {
+  static name;
+}
+class C {
+  static name() {
+  }
+}
+class D {
+  static get name() {
+  }
+}
+class E {
+  static set name(x) {
+  }
+}
+class F {
+  static ["name"] = 0;
+}
+let a = class a3 {
+  static {
+    __name(this, "a");
+  }
+  static foo;
+};
+let b = class b3 {
+  static name;
+};
+let c = class c3 {
+  static name() {
+  }
+};
+let d = class d3 {
+  static get name() {
+  }
+};
+let e = class e3 {
+  static set name(x) {
+  }
+};
+let f = class f3 {
+  static ["name"] = 0;
+};
+let a2 = class {
+  static {
+    __name(this, "a2");
+  }
+  static foo;
+};
+let b2 = class {
+  static name;
+};
+let c2 = class {
+  static name() {
+  }
+};
+let d2 = class {
+  static get name() {
+  }
+};
+let e2 = class {
+  static set name(x) {
+  }
+};
+let f2 = class {
+  static ["name"] = 0;
+};
+
+================================================================================
+TestKeepNamesTreeShaking
+---------- /out.js ----------
+// entry.js
+function fnStmtKeep() {
+}
+__name(fnStmtKeep, "fnStmtKeep");
+x = fnStmtKeep;
+var fnExprKeep = /* @__PURE__ */ __name(function() {
+}, "keep");
+x = fnExprKeep;
+var clsStmtKeep = class {
+  static {
+    __name(this, "clsStmtKeep");
+  }
+};
+new clsStmtKeep();
+var clsExprKeep = class {
+  static {
+    __name(this, "keep");
+  }
+};
+new clsExprKeep();
+
+================================================================================
+TestLegalCommentsAvoidSlashTagEndOfFile
+---------- /out/entry.js ----------
+// entry.js
+var x;
+export {
+  x
+};
+//! <script>foo<\/script>
+
+---------- /out/entry.css ----------
+/* entry.css */
+x {
+  y: z;
+}
+/*! <style>foo<\/style> */
+
+================================================================================
+TestLegalCommentsAvoidSlashTagExternal
+---------- /out/entry.js.LEGAL.txt ----------
+//! <script>foo</script>
+
+---------- /out/entry.js ----------
+// entry.js
+var x;
+export {
+  x
+};
+
+---------- /out/entry.css.LEGAL.txt ----------
+/*! <style>foo</style> */
+
+---------- /out/entry.css ----------
+/* entry.css */
+x {
+  y: z;
+}
+
+================================================================================
+TestLegalCommentsAvoidSlashTagInline
+---------- /out/entry.js ----------
+// entry.js
+//! <script>foo<\/script>
+var x;
+export {
+  x
+};
+
+---------- /out/entry.css ----------
+/* entry.css */
+/*! <style>foo<\/style> */
+x {
+  y: z;
+}
+
+================================================================================
+TestLegalCommentsEndOfFile
+---------- /out/entry.js ----------
+// a.js
+console.log("in a");
+
+// b.js
+console.log("in b");
+
+// c.js
+console.log("in c");
+//! Copyright notice 1
+//! Copyright notice 2
+
+---------- /out/entry.css ----------
+/* a.css */
+a {
+  zoom: 2;
+}
+
+/* b.css */
+b {
+  zoom: 2;
+}
+
+/* c.css */
+c {
+  zoom: 2;
+}
+
+/* entry.css */
+/*! Copyright notice 1 */
+/*! Copyright notice 2 */
+
+================================================================================
+TestLegalCommentsEscapeSlashScriptAndStyleEndOfFile
+---------- /out/entry.js ----------
+x;a;
+/*! <\/script> */
+/*! Bundled license information:
+
+js-pkg/index.js:
+  (*! <\/script> *)
+*/
+
+---------- /out/entry.css ----------
+x{y:z}a{b:c}
+/*! <\/style> */
+/*! Bundled license information:
+
+css-pkg/index.css:
+  (*! <\/style> *)
+*/
+
+================================================================================
+TestLegalCommentsEscapeSlashScriptAndStyleExternal
+---------- /out/entry.js.LEGAL.txt ----------
+/*! </script> */
+
+Bundled license information:
+
+js-pkg/index.js:
+  /*! </script> */
+
+---------- /out/entry.js ----------
+x;a;
+
+---------- /out/entry.css.LEGAL.txt ----------
+/*! </style> */
+
+Bundled license information:
+
+css-pkg/index.css:
+  /*! </style> */
+
+---------- /out/entry.css ----------
+x{y:z}a{b:c}
+
+================================================================================
+TestLegalCommentsExternal
+---------- /out/entry.js.LEGAL.txt ----------
+//! Copyright notice 1
+//! Copyright notice 2
+
+---------- /out/entry.js ----------
+// a.js
+console.log("in a");
+
+// b.js
+console.log("in b");
+
+// c.js
+console.log("in c");
+
+---------- /out/entry.css.LEGAL.txt ----------
+/*! Copyright notice 1 */
+/*! Copyright notice 2 */
+
+---------- /out/entry.css ----------
+/* a.css */
+a {
+  zoom: 2;
+}
+
+/* b.css */
+b {
+  zoom: 2;
+}
+
+/* c.css */
+c {
+  zoom: 2;
+}
+
+/* entry.css */
+
+================================================================================
+TestLegalCommentsInline
+---------- /out/entry.js ----------
+// a.js
+console.log("in a");
+//! Copyright notice 1
+
+// b.js
+console.log("in b");
+//! Copyright notice 1
+
+// c.js
+console.log("in c");
+//! Copyright notice 2
+
+---------- /out/entry.css ----------
+/* a.css */
+a {
+  zoom: 2;
+}
+/*! Copyright notice 1 */
+
+/* b.css */
+b {
+  zoom: 2;
+}
+/*! Copyright notice 1 */
+
+/* c.css */
+c {
+  zoom: 2;
+}
+/*! Copyright notice 2 */
+
+/* entry.css */
+
+================================================================================
+TestLegalCommentsLinked
+---------- /out/entry.js.LEGAL.txt ----------
+//! Copyright notice 1
+//! Copyright notice 2
+
+---------- /out/entry.js ----------
+// a.js
+console.log("in a");
+
+// b.js
+console.log("in b");
+
+// c.js
+console.log("in c");
+/*! For license information please see entry.js.LEGAL.txt */
+
+---------- /out/entry.css.LEGAL.txt ----------
+/*! Copyright notice 1 */
+/*! Copyright notice 2 */
+
+---------- /out/entry.css ----------
+/* a.css */
+a {
+  zoom: 2;
+}
+
+/* b.css */
+b {
+  zoom: 2;
+}
+
+/* c.css */
+c {
+  zoom: 2;
+}
+
+/* entry.css */
+/*! For license information please see entry.css.LEGAL.txt */
+
+================================================================================
+TestLegalCommentsManyEndOfFile
+---------- /out/entry.js ----------
+console.log("in a");console.log("in b");function foo(){console.log("in c");}foo();function bar(){console.log("some-other-pkg")}bar();
+//! Copyright notice 1
+//! Duplicate comment
+/*
+ * @license
+ * Copyright notice 2
+ */
+// @preserve This is another comment
+/*! Bundled license information:
+
+some-other-pkg/js/index.js:
+  (*
+   * @preserve
+   * (c) Evil Software Corp
+   *)
+  (*! Duplicate third-party comment *)
+
+some-pkg/js/index.js:
+  (*! (c) Good Software Corp *)
+  (*! Duplicate third-party comment *)
+*/
+
+---------- /out/entry.css ----------
+a{zoom:2}b{zoom:2}c{zoom:2}.some-other-pkg{zoom:2}
+/*! Copyright notice 1 */
+/*! Duplicate comment */
+/*
+ * @license
+ * Copyright notice 2
+ */
+/* @preserve This is another comment */
+/*! Bundled license information:
+
+some-other-pkg/css/index.css:
+  (*! Duplicate third-party comment *)
+  (** @preserve
+   * (c) Evil Software Corp
+   *)
+
+some-pkg/css/index.css:
+  (*! (c) Good Software Corp *)
+  (*! Duplicate third-party comment *)
+*/
+
+================================================================================
+TestLegalCommentsManyLinked
+---------- /out/entry.js.LEGAL.txt ----------
+//! Copyright notice 1
+/*
+ * @license
+ * Copyright notice 2
+ */
+// @preserve This is another comment
+
+Bundled license information:
+
+some-other-pkg/js/index.js:
+  /*
+   * @preserve
+   * (c) Evil Software Corp
+   */
+
+some-pkg/js/index.js:
+  //! (c) Good Software Corp
+
+---------- /out/entry.js ----------
+console.log("in a");console.log("in b");function foo(){console.log("in c");}foo();function bar(){console.log("some-other-pkg")}bar();
+/*! For license information please see entry.js.LEGAL.txt */
+
+---------- /out/entry.css.LEGAL.txt ----------
+/*! Copyright notice 1 */
+/*
+ * @license
+ * Copyright notice 2
+ */
+/* @preserve This is another comment */
+
+Bundled license information:
+
+some-other-pkg/css/index.css:
+  /** @preserve
+   * (c) Evil Software Corp
+   */
+
+some-pkg/css/index.css:
+  /*! (c) Good Software Corp */
+
+---------- /out/entry.css ----------
+a{zoom:2}b{zoom:2}c{zoom:2}.some-other-pkg{zoom:2}
+/*! For license information please see entry.css.LEGAL.txt */
+
+================================================================================
+TestLegalCommentsModifyIndent
+---------- /out/entry.js ----------
+// entry.js
+var entry_default = () => {
+  /**
+   * @preserve
+   */
+};
+export {
+  entry_default as default
+};
+
+---------- /out/entry.css ----------
+/* entry.css */
+@media (x: y) {
+  /**
+   * @preserve
+   */
+  z {
+    zoom: 2;
+  }
+}
+
+================================================================================
+TestLegalCommentsNoEscapeSlashScriptEndOfFile
+---------- /out/entry.js ----------
+x;a;
+/*! </script> */
+/*! Bundled license information:
+
+js-pkg/index.js:
+  (*! </script> *)
+*/
+
+---------- /out/entry.css ----------
+x{y:z}a{b:c}
+/*! <\/style> */
+/*! Bundled license information:
+
+css-pkg/index.css:
+  (*! <\/style> *)
+*/
+
+================================================================================
+TestLegalCommentsNoEscapeSlashStyleEndOfFile
+---------- /out/entry.js ----------
+x;a;
+/*! <\/script> */
+/*! Bundled license information:
+
+js-pkg/index.js:
+  (*! <\/script> *)
+*/
+
+---------- /out/entry.css ----------
+x{y:z}a{b:c}
+/*! </style> */
+/*! Bundled license information:
+
+css-pkg/index.css:
+  (*! </style> *)
+*/
+
+================================================================================
+TestLegalCommentsNone
+---------- /out/entry.js ----------
+// a.js
+console.log("in a");
+
+// b.js
+console.log("in b");
+
+// c.js
+console.log("in c");
+
+---------- /out/entry.css ----------
+/* a.css */
+a {
+  zoom: 2;
+}
+
+/* b.css */
+b {
+  zoom: 2;
+}
+
+/* c.css */
+c {
+  zoom: 2;
+}
+
+/* entry.css */
+
+================================================================================
+TestLineLimitMinified
+---------- /out/script.js ----------
+export const SignUpForm=props=>{
+return React.createElement("p",{
+class:"signup"},React.createElement(
+"label",null,"Username: ",React.
+createElement("input",{class:"us\
+ername",type:"text"})),React.createElement(
+"label",null,"Password: ",React.
+createElement("input",{class:"pa\
+ssword",type:"password"})),React.
+createElement("div",{class:"prim\
+ary disabled"},props.buttonText),
+React.createElement("small",null,
+"By signing up, you are agreeing\
+ to our ",React.createElement("a",
+{href:"/tos/"},"terms of service"),
+"."))};
+
+---------- /out/style.css ----------
+body.light-mode.new-user-segment:not(.logged-in)
+.signup,body.light-mode.new-user-segment:not(.logged-in)
+.login{font:10px/12px "Font 1","\
+Font 2","Font 3","Font 4",sans-serif;
+user-select:none;color:var(--fg,
+rgba(11, 22, 33, 0.5));background:url("\
+data:image/svg+xml;base64,PHN2Zy\
+B3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMC\
+IgeG1sbnM9Imh0dHA6Ly93d3cudzMub3\
+JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIG\
+N4PSIxMDAiIGN5PSIxMDAiIHI9IjEwMC\
+IgZmlsbD0iI0ZGQ0YwMCIvPgogIDxwYX\
+RoIGQ9Ik00Ny41IDUyLjVMOTUgMTAwbC\
+00Ny41IDQ3LjVtNjAtOTVMMTU1IDEwMG\
+wtNDcuNSA0Ny41IiBmaWxsPSJub25lIi\
+BzdHJva2U9IiMxOTE5MTkiIHN0cm9rZS\
+13aWR0aD0iMjQiLz4KPC9zdmc+Cg==")}
+
+================================================================================
+TestLineLimitNotMinified
+---------- /out/x-TZ25B4WH.file ----------
+...file...
+---------- /out/x-UF3O47Y3.copy ----------
+...copy...
+---------- /out/script.js ----------
+// x.file
+var x_default = "./x-TZ25B4WH.file";
+
+// script.jsx
+import copyURL from "./x-UF3O47Y3.copy";
+
+// x.data
+var x_default2 = "data:text/plai\
+n;charset=utf-8,...lots of long \
+data...lots of long data...";
+
+// script.jsx
+var SignUpForm = (props) => {
+  return /* @__PURE__ */ React.createElement(
+  "p", { class: "signup" }, /* @__PURE__ */ React.
+  createElement("label", null, "\
+Username: ", /* @__PURE__ */ React.
+  createElement("input", { class: "\
+username", type: "text" })), /* @__PURE__ */ React.
+  createElement("label", null, "\
+Password: ", /* @__PURE__ */ React.
+  createElement("input", { class: "\
+password", type: "password" })),
+  /* @__PURE__ */ React.createElement(
+  "div", { class: "primary disab\
+led" }, props.buttonText), /* @__PURE__ */ React.
+  createElement("small", null, "\
+By signing up, you are agreeing \
+to our ", /* @__PURE__ */ React.
+  createElement("a", { href: "/t\
+os/" }, "terms of service"), "."),
+  /* @__PURE__ */ React.createElement(
+  "img", { src: x_default }), /* @__PURE__ */ React.
+  createElement("img", { src: copyURL }),
+  /* @__PURE__ */ React.createElement(
+  "img", { src: x_default2 }));
+};
+export {
+  SignUpForm
+};
+
+---------- /out/style.css ----------
+/* style.css */
+body.light-mode.new-user-segment:not(.logged-in)
+.signup,
+body.light-mode.new-user-segment:not(.logged-in)
+.login {
+  font:
+    10px/12px "Font 1",
+    "Font 2",
+    "Font 3",
+    "Font 4",
+    sans-serif;
+  user-select: none;
+  color: var(--fg, rgba(11, 22, 33,
+    0.5));
+  background: url("data:image/sv\
+g+xml;base64,PHN2ZyB3aWR0aD0iMjA\
+wIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh\
+0dHA6Ly93d3cudzMub3JnLzIwMDAvc3Z\
+nIj4KICA8Y2lyY2xlIGN4PSIxMDAiIGN\
+5PSIxMDAiIHI9IjEwMCIgZmlsbD0iI0Z\
+GQ0YwMCIvPgogIDxwYXRoIGQ9Ik00Ny4\
+1IDUyLjVMOTUgMTAwbC00Ny41IDQ3LjV\
+tNjAtOTVMMTU1IDEwMGwtNDcuNSA0Ny4\
+1IiBmaWxsPSJub25lIiBzdHJva2U9IiM\
+xOTE5MTkiIHN0cm9rZS13aWR0aD0iMjQ\
+iLz4KPC9zdmc+Cg==");
+  cursor: url("./x-TZ25B4WH.file");
+  cursor: url("./x-UF3O47Y3.copy");
+  cursor: url("data:text/plain;c\
+harset=utf-8,...lots of long dat\
+a...lots of long data...");
+}
+
+================================================================================
+TestMangleNoQuotedProps
+---------- /out/entry.js ----------
+x["_doNotMangleThis"];
+x?.["_doNotMangleThis"];
+x[y ? "_doNotMangleThis" : z];
+x?.[y ? "_doNotMangleThis" : z];
+x[y ? z : "_doNotMangleThis"];
+x?.[y ? z : "_doNotMangleThis"];
+({ "_doNotMangleThis": x });
+(class {
+  "_doNotMangleThis" = x;
+});
+var { "_doNotMangleThis": x } = y;
+"_doNotMangleThis" in x;
+(y ? "_doNotMangleThis" : z) in x;
+(y ? z : "_doNotMangleThis") in x;
+
+================================================================================
+TestMangleNoQuotedPropsMinifySyntax
+---------- /out/entry.js ----------
+x._doNotMangleThis, x?._doNotMangleThis, x[y ? "_doNotMangleThis" : z], x?.[y ? "_doNotMangleThis" : z], x[y ? z : "_doNotMangleThis"], x?.[y ? z : "_doNotMangleThis"];
+var { _doNotMangleThis: x } = y;
+"_doNotMangleThis" in x, (y ? "_doNotMangleThis" : z) in x, (y ? z : "_doNotMangleThis") in x;
+
+================================================================================
+TestMangleProps
+---------- /out/entry1.js ----------
+export function shouldMangle() {
+  let foo = {
+    a: 0,
+    b() {
+    }
+  };
+  let { a: bar_ } = foo;
+  ({ a: bar_ } = foo);
+  class foo_ {
+    a = 0;
+    b() {
+    }
+    static a = 0;
+    static b() {
+    }
+  }
+  return { a: bar_, c: foo_ };
+}
+export function shouldNotMangle() {
+  let foo = {
+    "bar_": 0,
+    "baz_"() {
+    }
+  };
+  let { "bar_": bar_ } = foo;
+  ({ "bar_": bar_ } = foo);
+  class foo_ {
+    "bar_" = 0;
+    "baz_"() {
+    }
+    static "bar_" = 0;
+    static "baz_"() {
+    }
+  }
+  return { "bar_": bar_, "foo_": foo_ };
+}
+
+---------- /out/entry2.js ----------
+export default {
+  a: 0,
+  "baz_": 1
+};
+
+================================================================================
+TestManglePropsAvoidCollisions
+---------- /out.js ----------
+export default {
+  c: 0,
+  // Must not be named "a"
+  d: 1,
+  // Must not be named "b"
+  a: 2,
+  b: 3,
+  __proto__: {}
+  // Always avoid mangling this
+};
+
+================================================================================
+TestManglePropsImportExport
+---------- /out/esm.js ----------
+export let foo_ = 123;
+import { bar_ } from "xyz";
+
+---------- /out/cjs.js ----------
+exports.a = 123;
+let bar_ = require("xyz").b;
+
+================================================================================
+TestManglePropsImportExportBundled
+---------- /out/entry-esm.js ----------
+// cjs.js
+var require_cjs = __commonJS({
+  "cjs.js"(exports) {
+    exports.a = "foo";
+  }
+});
+
+// esm.js
+var esm_exports = {};
+__export(esm_exports, {
+  esm_foo_: () => esm_foo_
+});
+var esm_foo_ = "foo";
+
+// entry-esm.js
+var import_cjs = __toESM(require_cjs());
+var cjs = __toESM(require_cjs());
+var bar_ = [
+  esm_foo_,
+  import_cjs.cjs_foo_,
+  esm_exports.b,
+  cjs.a
+];
+export {
+  bar_
+};
+
+---------- /out/entry-cjs.js ----------
+// esm.js
+var esm_exports = {};
+__export(esm_exports, {
+  esm_foo_: () => esm_foo_
+});
+var esm_foo_;
+var init_esm = __esm({
+  "esm.js"() {
+    esm_foo_ = "foo";
+  }
+});
+
+// cjs.js
+var require_cjs = __commonJS({
+  "cjs.js"(exports) {
+    exports.a = "foo";
+  }
+});
+
+// entry-cjs.js
+var require_entry_cjs = __commonJS({
+  "entry-cjs.js"(exports) {
+    var { b: esm_foo_2 } = (init_esm(), __toCommonJS(esm_exports));
+    var { a: cjs_foo_ } = require_cjs();
+    exports.c = [
+      esm_foo_2,
+      cjs_foo_
+    ];
+  }
+});
+export default require_entry_cjs();
+
+================================================================================
+TestManglePropsJSXPreserve
+---------- /out.jsx ----------
+let Foo = {
+  a(props) {
+    return <>{props.b}</>;
+  },
+  c: "hello, world"
+};
+export default <Foo.a b={Foo.c} />;
+
+================================================================================
+TestManglePropsJSXTransform
+---------- /out.js ----------
+let Foo = {
+  b(props) {
+    return /* @__PURE__ */ Foo.a(Foo.d, null, props.c);
+  },
+  e: "hello, world",
+  a(...args) {
+    console.log("createElement", ...args);
+  },
+  d(...args) {
+    console.log("Fragment", ...args);
+  }
+};
+export default /* @__PURE__ */ Foo.a(Foo.b, { c: Foo.e });
+
+================================================================================
+TestManglePropsJSXTransformNamespace
+---------- /out.js ----------
+export default [
+  /* @__PURE__ */ React.createElement(KEEP_THIS_, null),
+  /* @__PURE__ */ React.createElement("KEEP:THIS_", null),
+  /* @__PURE__ */ React.createElement("foo", { "KEEP:THIS_": true })
+];
+
+================================================================================
+TestManglePropsKeyComment
+---------- /out/entry.js ----------
+x(
+  /* __KEY__ */
+  "_doNotMangleThis",
+  /* __KEY__ */
+  `_doNotMangleThis`
+);
+x.a(/* @__KEY__ */ "a", /* @__KEY__ */ "a");
+x.b(/* @__KEY__ */ "b", /* @__KEY__ */ "b");
+x.c = /* @__KEY__ */ "c" in y;
+x([
+  `foo.${/* @__KEY__ */ "a"} = bar.${/* @__KEY__ */ "b"}`,
+  `foo.${/* @__KEY__ */ "notMangled"} = bar.${/* @__KEY__ */ "notMangledEither"}`
+]);
+
+================================================================================
+TestManglePropsKeyCommentMinify
+---------- /out/entry.js ----------
+x = class {
+  a = 1;
+  b = 2;
+  _doNotMangleThis = 3;
+}, x = {
+  a: 1,
+  b: 2,
+  _doNotMangleThis: 3
+}, x.a = 1, x.b = 2, x._doNotMangleThis = 3, x([
+  `${foo}.a = bar.b`,
+  `${foo}.notMangled = bar.notMangledEither`
+]);
+
+================================================================================
+TestManglePropsKeywordPropertyMinify
+---------- /out/entry.js ----------
+class Foo{static t={get s(){return 123}}}
+
+================================================================================
+TestManglePropsLoweredClassFields
+---------- /out.js ----------
+class Foo {
+  constructor() {
+    __publicField(this, "a", 123);
+  }
+}
+__publicField(Foo, "b", 234);
+Foo.b = new Foo().a;
+
+================================================================================
+TestManglePropsLoweredOptionalChain
+---------- /out.js ----------
+export default function(x) {
+  var _a;
+  x.a;
+  (_a = x.a) == null ? void 0 : _a.call(x);
+  x == null ? void 0 : x.a;
+  x == null ? void 0 : x.a();
+  x == null ? void 0 : x.a.b;
+  x == null ? void 0 : x.a.b();
+  x == null ? void 0 : x["foo_"].b;
+  x == null ? void 0 : x.a["bar_"];
+}
+
+================================================================================
+TestManglePropsMinify
+---------- /out/entry1.js ----------
+export function shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX() {
+  let X = {
+    X: 0,
+    Y() {
+    }
+  }, { X: Y } = X;
+  ({ X: Y } = X);
+  class t {
+    X = 0;
+    Y() {
+    }
+    static X = 0;
+    static Y() {
+    }
+  }
+  return { X: Y, t };
+}
+export function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
+  let X = {
+    bar_: 0,
+    baz_() {
+    }
+  }, { bar_: Y } = X;
+  ({ bar_: Y } = X);
+  class t {
+    bar_ = 0;
+    baz_() {
+    }
+    static bar_ = 0;
+    static baz_() {
+    }
+  }
+  return { bar_: Y, foo_: t };
+}
+
+---------- /out/entry2.js ----------
+export default {
+  a: 0,
+  baz_: 1
+};
+
+================================================================================
+TestManglePropsNoShorthand
+---------- /out.js ----------
+export let yyyyy = ({ y }) => ({ y: y });
+
+================================================================================
+TestManglePropsOptionalChain
+---------- /out.js ----------
+export default function(x) {
+  x.a;
+  x.a?.();
+  x?.a;
+  x?.a();
+  x?.a.b;
+  x?.a.b();
+  x?.["foo_"].b;
+  x?.a["bar_"];
+}
+
+================================================================================
+TestManglePropsShorthand
+---------- /out.js ----------
+export let yyyyy = ({ y }) => ({ y });
+
+================================================================================
+TestManglePropsSuperCall
+---------- /out.js ----------
+class Foo {
+}
+class Bar extends Foo {
+  constructor() {
+    super();
+  }
+}
+
+================================================================================
+TestManglePropsTypeScriptFeatures
+---------- /out/parameter-properties.js ----------
+class Foo {
+  constructor(KEEP_FIELD, MANGLE_FIELD_) {
+    this.KEEP_FIELD = KEEP_FIELD;
+    this.a = MANGLE_FIELD_;
+  }
+}
+let foo = new Foo();
+console.log(foo.KEEP_FIELD, foo.a);
+
+---------- /out/namespace-exports.js ----------
+var ns;
+((ns2) => {
+  ns2.c = 1;
+  ns2.d = 2;
+  ns2.e = 3;
+  ({ i: { a: ns2.a } } = 4);
+  function MANGLE_FUNCTION_() {
+  }
+  ns2.g = MANGLE_FUNCTION_;
+  class MANGLE_CLASS_ {
+  }
+  ns2.h = MANGLE_CLASS_;
+  let MANGLE_NAMESPACE_;
+  ((MANGLE_NAMESPACE_2) => {
+    ;
+  })(MANGLE_NAMESPACE_ = ns2.f || (ns2.f = {}));
+  let MANGLE_ENUM_;
+  ((MANGLE_ENUM_2) => {
+  })(MANGLE_ENUM_ = ns2.b || (ns2.b = {}));
+  console.log({
+    VAR: ns2.c,
+    LET: ns2.d,
+    CONST: ns2.e,
+    DESTRUCTURING: ns2.a,
+    FUNCTION: MANGLE_FUNCTION_,
+    CLASS: MANGLE_CLASS_,
+    NAMESPACE: MANGLE_NAMESPACE_,
+    ENUM: MANGLE_ENUM_
+  });
+})(ns || (ns = {}));
+console.log({
+  VAR: ns.c,
+  LET: ns.d,
+  CONST: ns.e,
+  DESTRUCTURING: ns.a,
+  FUNCTION: ns.g,
+  CLASS: ns.h,
+  NAMESPACE: ns.f,
+  ENUM: ns.b
+});
+((ns2) => {
+  console.log({
+    VAR: ns2.c,
+    LET: ns2.d,
+    CONST: ns2.e,
+    DESTRUCTURING: ns2.a,
+    FUNCTION: ns2.g,
+    CLASS: ns2.h,
+    NAMESPACE: ns2.f,
+    ENUM: ns2.b
+  });
+})(ns || (ns = {}));
+
+---------- /out/enum-values.js ----------
+var TopLevelNumber = /* @__PURE__ */ ((TopLevelNumber2) => {
+  TopLevelNumber2[TopLevelNumber2["foo_"] = 0] = "foo_";
+  return TopLevelNumber2;
+})(TopLevelNumber || {});
+var TopLevelString = /* @__PURE__ */ ((TopLevelString2) => {
+  TopLevelString2["bar_"] = "";
+  return TopLevelString2;
+})(TopLevelString || {});
+console.log({
+  foo: TopLevelNumber.a,
+  bar: TopLevelString.b
+});
+function fn() {
+  let NestedNumber;
+  ((NestedNumber2) => {
+    NestedNumber2[NestedNumber2["foo_"] = 0] = "foo_";
+  })(NestedNumber || (NestedNumber = {}));
+  let NestedString;
+  ((NestedString2) => {
+    NestedString2["bar_"] = "";
+  })(NestedString || (NestedString = {}));
+  console.log({
+    foo: TopLevelNumber.a,
+    bar: TopLevelString.b
+  });
+}
+
+================================================================================
+TestMangleQuotedProps
+---------- /out/keep.js ----------
+foo("_keepThisProperty");
+foo((x, "_keepThisProperty"));
+foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+x[foo("_keepThisProperty")];
+x?.[foo("_keepThisProperty")];
+({ [foo("_keepThisProperty")]: x });
+(class {
+  [foo("_keepThisProperty")] = x;
+});
+var { [foo("_keepThisProperty")]: x } = y;
+foo("_keepThisProperty") in x;
+
+---------- /out/mangle.js ----------
+x.a;
+x?.a;
+x[y ? "a" : z];
+x?.[y ? "a" : z];
+x[y ? z : "a"];
+x?.[y ? z : "a"];
+x[y, "a"];
+x?.[y, "a"];
+({ a: x });
+({ ["a"]: x });
+({ [(y, "a")]: x });
+(class {
+  a = x;
+});
+(class {
+  ["a"] = x;
+});
+(class {
+  [(y, "a")] = x;
+});
+var { a: x } = y;
+var { ["a"]: x } = y;
+var { [(z, "a")]: x } = y;
+"a" in x;
+(y ? "a" : z) in x;
+(y ? z : "a") in x;
+(y, "a") in x;
+
+================================================================================
+TestMangleQuotedPropsMinifySyntax
+---------- /out/keep.js ----------
+foo("_keepThisProperty"), foo("_keepThisProperty"), foo(x ? "_keepThisProperty" : "_keepThisPropertyToo"), x[foo("_keepThisProperty")], x?.[foo("_keepThisProperty")], foo("_keepThisProperty") + "", class {
+  [foo("_keepThisProperty")] = x;
+};
+var { [foo("_keepThisProperty")]: x } = y;
+foo("_keepThisProperty") in x;
+
+---------- /out/mangle.js ----------
+x.a, x?.a, x[y ? "a" : z], x?.[y ? "a" : z], x[y ? z : "a"], x?.[y ? z : "a"], x[y, "a"], x?.[y, "a"], (y, "a") + "", class {
+  [(y, "a")] = x;
+};
+var { a: x } = y, { ["a"]: x } = y, { [(z, "a")]: x } = y;
+"a" in x, (y ? "a" : z) in x, (y ? z : "a") in x, y, "a" in x;
+
+================================================================================
+TestManyEntryPoints
+---------- /out/e00.js ----------
+// shared.js
+var shared_default = 123;
+
+// e00.js
+console.log(shared_default);
+
+---------- /out/e01.js ----------
+// shared.js
+var shared_default = 123;
+
+// e01.js
+console.log(shared_default);
+
+---------- /out/e02.js ----------
+// shared.js
+var shared_default = 123;
+
+// e02.js
+console.log(shared_default);
+
+---------- /out/e03.js ----------
+// shared.js
+var shared_default = 123;
+
+// e03.js
+console.log(shared_default);
+
+---------- /out/e04.js ----------
+// shared.js
+var shared_default = 123;
+
+// e04.js
+console.log(shared_default);
+
+---------- /out/e05.js ----------
+// shared.js
+var shared_default = 123;
+
+// e05.js
+console.log(shared_default);
+
+---------- /out/e06.js ----------
+// shared.js
+var shared_default = 123;
+
+// e06.js
+console.log(shared_default);
+
+---------- /out/e07.js ----------
+// shared.js
+var shared_default = 123;
+
+// e07.js
+console.log(shared_default);
+
+---------- /out/e08.js ----------
+// shared.js
+var shared_default = 123;
+
+// e08.js
+console.log(shared_default);
+
+---------- /out/e09.js ----------
+// shared.js
+var shared_default = 123;
+
+// e09.js
+console.log(shared_default);
+
+---------- /out/e10.js ----------
+// shared.js
+var shared_default = 123;
+
+// e10.js
+console.log(shared_default);
+
+---------- /out/e11.js ----------
+// shared.js
+var shared_default = 123;
+
+// e11.js
+console.log(shared_default);
+
+---------- /out/e12.js ----------
+// shared.js
+var shared_default = 123;
+
+// e12.js
+console.log(shared_default);
+
+---------- /out/e13.js ----------
+// shared.js
+var shared_default = 123;
+
+// e13.js
+console.log(shared_default);
+
+---------- /out/e14.js ----------
+// shared.js
+var shared_default = 123;
+
+// e14.js
+console.log(shared_default);
+
+---------- /out/e15.js ----------
+// shared.js
+var shared_default = 123;
+
+// e15.js
+console.log(shared_default);
+
+---------- /out/e16.js ----------
+// shared.js
+var shared_default = 123;
+
+// e16.js
+console.log(shared_default);
+
+---------- /out/e17.js ----------
+// shared.js
+var shared_default = 123;
+
+// e17.js
+console.log(shared_default);
+
+---------- /out/e18.js ----------
+// shared.js
+var shared_default = 123;
+
+// e18.js
+console.log(shared_default);
+
+---------- /out/e19.js ----------
+// shared.js
+var shared_default = 123;
+
+// e19.js
+console.log(shared_default);
+
+---------- /out/e20.js ----------
+// shared.js
+var shared_default = 123;
+
+// e20.js
+console.log(shared_default);
+
+---------- /out/e21.js ----------
+// shared.js
+var shared_default = 123;
+
+// e21.js
+console.log(shared_default);
+
+---------- /out/e22.js ----------
+// shared.js
+var shared_default = 123;
+
+// e22.js
+console.log(shared_default);
+
+---------- /out/e23.js ----------
+// shared.js
+var shared_default = 123;
+
+// e23.js
+console.log(shared_default);
+
+---------- /out/e24.js ----------
+// shared.js
+var shared_default = 123;
+
+// e24.js
+console.log(shared_default);
+
+---------- /out/e25.js ----------
+// shared.js
+var shared_default = 123;
+
+// e25.js
+console.log(shared_default);
+
+---------- /out/e26.js ----------
+// shared.js
+var shared_default = 123;
+
+// e26.js
+console.log(shared_default);
+
+---------- /out/e27.js ----------
+// shared.js
+var shared_default = 123;
+
+// e27.js
+console.log(shared_default);
+
+---------- /out/e28.js ----------
+// shared.js
+var shared_default = 123;
+
+// e28.js
+console.log(shared_default);
+
+---------- /out/e29.js ----------
+// shared.js
+var shared_default = 123;
+
+// e29.js
+console.log(shared_default);
+
+---------- /out/e30.js ----------
+// shared.js
+var shared_default = 123;
+
+// e30.js
+console.log(shared_default);
+
+---------- /out/e31.js ----------
+// shared.js
+var shared_default = 123;
+
+// e31.js
+console.log(shared_default);
+
+---------- /out/e32.js ----------
+// shared.js
+var shared_default = 123;
+
+// e32.js
+console.log(shared_default);
+
+---------- /out/e33.js ----------
+// shared.js
+var shared_default = 123;
+
+// e33.js
+console.log(shared_default);
+
+---------- /out/e34.js ----------
+// shared.js
+var shared_default = 123;
+
+// e34.js
+console.log(shared_default);
+
+---------- /out/e35.js ----------
+// shared.js
+var shared_default = 123;
+
+// e35.js
+console.log(shared_default);
+
+---------- /out/e36.js ----------
+// shared.js
+var shared_default = 123;
+
+// e36.js
+console.log(shared_default);
+
+---------- /out/e37.js ----------
+// shared.js
+var shared_default = 123;
+
+// e37.js
+console.log(shared_default);
+
+---------- /out/e38.js ----------
+// shared.js
+var shared_default = 123;
+
+// e38.js
+console.log(shared_default);
+
+---------- /out/e39.js ----------
+// shared.js
+var shared_default = 123;
+
+// e39.js
+console.log(shared_default);
+
+================================================================================
+TestMetafileImportWithTypeJSON
+---------- /out/entry.js ----------
+// project/data.json
+var data_default = { some: "data" };
+
+// project/data.json with { type: 'json' }
+var data_default2 = { some: "data" };
+
+// project/entry.js
+x = [data_default, data_default, data_default2];
+---------- metafile.json ----------
+{
+  "inputs": {
+    "project/data.json": {
+      "bytes": 16,
+      "imports": []
+    },
+    "project/data.json with { type: 'json' }": {
+      "bytes": 16,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    "project/entry.js": {
+      "bytes": 164,
+      "imports": [
+        {
+          "path": "project/data.json",
+          "kind": "import-statement",
+          "original": "./data.json"
+        },
+        {
+          "path": "project/data.json",
+          "kind": "import-statement",
+          "original": "./data.json"
+        },
+        {
+          "path": "project/data.json with { type: 'json' }",
+          "kind": "import-statement",
+          "original": "./data.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "out/entry.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "project/entry.js",
+      "inputs": {
+        "project/data.json": {
+          "bytesInOutput": 37
+        },
+        "project/data.json with { type: 'json' }": {
+          "bytesInOutput": 38
+        },
+        "project/entry.js": {
+          "bytesInOutput": 49
+        }
+      },
+      "bytes": 210
+    }
+  }
+}
+
+================================================================================
+TestMetafileNoBundle
+---------- /out/entry.js ----------
+import a from "pkg";
+import b from "./file";
+console.log(
+  a,
+  b,
+  require("pkg2"),
+  require("./file2"),
+  import("./dynamic")
+);
+let exported;
+
+---------- /out/entry.css ----------
+@import "pkg";
+@import "./file";
+a {
+  background: url(pkg2);
+}
+a {
+  background: url(./file2);
+}
+---------- metafile.json ----------
+{
+  "inputs": {
+    "project/entry.js": {
+      "bytes": 191,
+      "imports": [],
+      "format": "esm"
+    },
+    "project/entry.css": {
+      "bytes": 112,
+      "imports": []
+    }
+  },
+  "outputs": {
+    "out/entry.js": {
+      "imports": [
+        {
+          "path": "pkg",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "./file",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "pkg2",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "./file2",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "./dynamic",
+          "kind": "dynamic-import",
+          "external": true
+        }
+      ],
+      "exports": [
+        "exported"
+      ],
+      "entryPoint": "project/entry.js",
+      "inputs": {
+        "project/entry.js": {
+          "bytesInOutput": 148
+        }
+      },
+      "bytes": 148
+    },
+    "out/entry.css": {
+      "imports": [
+        {
+          "path": "pkg",
+          "kind": "import-rule",
+          "external": true
+        },
+        {
+          "path": "./file",
+          "kind": "import-rule",
+          "external": true
+        },
+        {
+          "path": "pkg2",
+          "kind": "url-token",
+          "external": true
+        },
+        {
+          "path": "./file2",
+          "kind": "url-token",
+          "external": true
+        }
+      ],
+      "entryPoint": "project/entry.css",
+      "inputs": {
+        "project/entry.css": {
+          "bytesInOutput": 65
+        }
+      },
+      "bytes": 98
+    }
+  }
+}
+
+================================================================================
+TestMetafileVariousCases
+---------- /out/file-NVISQQTV.file ----------
+file
+---------- /out/copy-O3Y5SCJE.copy ----------
+copy
+---------- /out/entry.js ----------
+import {
+  __commonJS,
+  __require
+} from "./chunk-MQN2VSL5.js";
+
+// project/cjs.js
+var require_cjs = __commonJS({
+  "project/cjs.js"(exports, module) {
+    module.exports = 4;
+  }
+});
+
+// project/entry.js
+import a from "extern-esm";
+
+// project/esm.js
+var esm_default = 1;
+
+// <data:application/json,2>
+var json_2_default = 2;
+
+// project/file.file
+var file_default = "./file-NVISQQTV.file";
+
+// project/entry.js
+import e from "./copy-O3Y5SCJE.copy";
+console.log(
+  a,
+  esm_default,
+  json_2_default,
+  file_default,
+  e,
+  __require("extern-cjs"),
+  require_cjs(),
+  import("./dynamic-Q2DWDUFV.js")
+);
+var exported;
+export {
+  exported
+};
+
+---------- /out/dynamic-Q2DWDUFV.js ----------
+import "./chunk-MQN2VSL5.js";
+
+// project/dynamic.js
+var dynamic_default = 5;
+export {
+  dynamic_default as default
+};
+
+---------- /out/chunk-MQN2VSL5.js ----------
+export {
+  __require,
+  __commonJS
+};
+
+---------- /out/entry.css ----------
+@import "extern.css";
+
+/* project/entry.css */
+a {
+  background: url(data:image/svg+xml,<svg/>);
+}
+b {
+  background: url("./file-NVISQQTV.file");
+}
+c {
+  background: url("./copy-O3Y5SCJE.copy");
+}
+d {
+  background: url(extern.png);
+}
+---------- metafile.json ----------
+{
+  "inputs": {
+    "project/esm.js": {
+      "bytes": 16,
+      "imports": [],
+      "format": "esm"
+    },
+    "<data:application/json,2>": {
+      "bytes": 1,
+      "imports": []
+    },
+    "project/file.file": {
+      "bytes": 4,
+      "imports": []
+    },
+    "project/copy.copy": {
+      "bytes": 4,
+      "imports": []
+    },
+    "project/cjs.js": {
+      "bytes": 18,
+      "imports": [],
+      "format": "cjs"
+    },
+    "project/dynamic.js": {
+      "bytes": 16,
+      "imports": [],
+      "format": "esm"
+    },
+    "project/entry.js": {
+      "bytes": 333,
+      "imports": [
+        {
+          "path": "extern-esm",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "project/esm.js",
+          "kind": "import-statement",
+          "original": "./esm"
+        },
+        {
+          "path": "<data:application/json,2>",
+          "kind": "import-statement",
+          "original": "data:application/json,2"
+        },
+        {
+          "path": "project/file.file",
+          "kind": "import-statement",
+          "original": "./file.file"
+        },
+        {
+          "path": "project/copy.copy",
+          "kind": "import-statement",
+          "original": "./copy.copy"
+        },
+        {
+          "path": "extern-cjs",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "project/cjs.js",
+          "kind": "require-call",
+          "original": "./cjs"
+        },
+        {
+          "path": "project/dynamic.js",
+          "kind": "dynamic-import",
+          "original": "./dynamic"
+        }
+      ],
+      "format": "esm"
+    },
+    "project/inline.svg": {
+      "bytes": 6,
+      "imports": []
+    },
+    "project/entry.css": {
+      "bytes": 180,
+      "imports": [
+        {
+          "path": "extern.css",
+          "kind": "import-rule",
+          "external": true
+        },
+        {
+          "path": "project/inline.svg",
+          "kind": "url-token",
+          "original": "inline.svg"
+        },
+        {
+          "path": "project/file.file",
+          "kind": "url-token",
+          "original": "file.file"
+        },
+        {
+          "path": "project/copy.copy",
+          "kind": "url-token",
+          "original": "copy.copy"
+        },
+        {
+          "path": "extern.png",
+          "kind": "url-token",
+          "external": true
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "out/file-NVISQQTV.file": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/file.file": {
+          "bytesInOutput": 4
+        }
+      },
+      "bytes": 4
+    },
+    "out/copy-O3Y5SCJE.copy": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/copy.copy": {
+          "bytesInOutput": 4
+        }
+      },
+      "bytes": 4
+    },
+    "out/entry.js": {
+      "imports": [
+        {
+          "path": "out/chunk-MQN2VSL5.js",
+          "kind": "import-statement"
+        },
+        {
+          "path": "extern-esm",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "out/file-NVISQQTV.file",
+          "kind": "file-loader"
+        },
+        {
+          "path": "out/copy-O3Y5SCJE.copy",
+          "kind": "import-statement"
+        },
+        {
+          "path": "extern-cjs",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "out/dynamic-Q2DWDUFV.js",
+          "kind": "dynamic-import"
+        }
+      ],
+      "exports": [
+        "exported"
+      ],
+      "entryPoint": "project/entry.js",
+      "inputs": {
+        "project/cjs.js": {
+          "bytesInOutput": 101
+        },
+        "project/entry.js": {
+          "bytesInOutput": 233
+        },
+        "project/esm.js": {
+          "bytesInOutput": 21
+        },
+        "<data:application/json,2>": {
+          "bytesInOutput": 24
+        },
+        "project/file.file": {
+          "bytesInOutput": 43
+        }
+      },
+      "bytes": 642
+    },
+    "out/dynamic-Q2DWDUFV.js": {
+      "imports": [
+        {
+          "path": "out/chunk-MQN2VSL5.js",
+          "kind": "import-statement"
+        }
+      ],
+      "exports": [
+        "default"
+      ],
+      "entryPoint": "project/dynamic.js",
+      "inputs": {
+        "project/dynamic.js": {
+          "bytesInOutput": 25
+        }
+      },
+      "bytes": 119
+    },
+    "out/chunk-MQN2VSL5.js": {
+      "imports": [],
+      "exports": [
+        "__commonJS",
+        "__require"
+      ],
+      "inputs": {},
+      "bytes": 38
+    },
+    "out/entry.css": {
+      "imports": [
+        {
+          "path": "extern.css",
+          "kind": "import-rule",
+          "external": true
+        },
+        {
+          "path": "data:image/svg+xml,<svg/>",
+          "kind": "url-token"
+        },
+        {
+          "path": "out/file-NVISQQTV.file",
+          "kind": "url-token"
+        },
+        {
+          "path": "out/copy-O3Y5SCJE.copy",
+          "kind": "url-token"
+        },
+        {
+          "path": "extern.png",
+          "kind": "url-token",
+          "external": true
+        }
+      ],
+      "entryPoint": "project/entry.css",
+      "inputs": {
+        "project/entry.css": {
+          "bytesInOutput": 187
+        }
+      },
+      "bytes": 234
+    }
+  }
+}
+
+================================================================================
+TestMetafileVeryLongExternalPaths
+---------- /out/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-55DNWN2R.file ----------
+
+---------- /out/bytesInOutput should be at least 99 (1).js ----------
+// project/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.file
+var __default = "./111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-55DNWN2R.file";
+
+// project/bytesInOutput should be at least 99 (1).js
+console.log(__default);
+
+---------- /out/222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222-55DNWN2R.copy ----------
+
+---------- /out/bytesInOutput should be at least 99 (2).js ----------
+// project/bytesInOutput should be at least 99 (2).js
+import a from "./222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222-55DNWN2R.copy";
+console.log(a);
+
+---------- /out/bytesInOutput should be at least 99 (3).js ----------
+// project/bytesInOutput should be at least 99 (3).js
+import("./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js").then(console.log);
+
+---------- /out/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js ----------
+
+---------- /out/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file ----------
+
+---------- /out/bytesInOutput should be at least 99.css ----------
+/* project/bytesInOutput should be at least 99.css */
+a {
+  background: url("./444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file");
+}
+---------- metafile.json ----------
+{
+  "inputs": {
+    "project/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.file": {
+      "bytes": 0,
+      "imports": []
+    },
+    "project/bytesInOutput should be at least 99 (1).js": {
+      "bytes": 150,
+      "imports": [
+        {
+          "path": "project/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.file",
+          "kind": "import-statement",
+          "original": "./111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.file"
+        }
+      ],
+      "format": "esm"
+    },
+    "project/222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222.copy": {
+      "bytes": 0,
+      "imports": []
+    },
+    "project/bytesInOutput should be at least 99 (2).js": {
+      "bytes": 150,
+      "imports": [
+        {
+          "path": "project/222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222.copy",
+          "kind": "import-statement",
+          "original": "./222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222.copy"
+        }
+      ],
+      "format": "esm"
+    },
+    "project/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js": {
+      "bytes": 0,
+      "imports": []
+    },
+    "project/bytesInOutput should be at least 99 (3).js": {
+      "bytes": 141,
+      "imports": [
+        {
+          "path": "project/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js",
+          "kind": "dynamic-import",
+          "original": "./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js"
+        }
+      ]
+    },
+    "project/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444.file": {
+      "bytes": 0,
+      "imports": []
+    },
+    "project/bytesInOutput should be at least 99.css": {
+      "bytes": 136,
+      "imports": [
+        {
+          "path": "project/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444.file",
+          "kind": "url-token",
+          "original": "444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444.file"
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "out/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-55DNWN2R.file": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.file": {
+          "bytesInOutput": 0
+        }
+      },
+      "bytes": 0
+    },
+    "out/bytesInOutput should be at least 99 (1).js": {
+      "imports": [
+        {
+          "path": "out/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-55DNWN2R.file",
+          "kind": "file-loader"
+        }
+      ],
+      "exports": [],
+      "entryPoint": "project/bytesInOutput should be at least 99 (1).js",
+      "inputs": {
+        "project/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.file": {
+          "bytesInOutput": 135
+        },
+        "project/bytesInOutput should be at least 99 (1).js": {
+          "bytesInOutput": 24
+        }
+      },
+      "bytes": 330
+    },
+    "out/222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222-55DNWN2R.copy": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222.copy": {
+          "bytesInOutput": 0
+        }
+      },
+      "bytes": 0
+    },
+    "out/bytesInOutput should be at least 99 (2).js": {
+      "imports": [
+        {
+          "path": "out/222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222-55DNWN2R.copy",
+          "kind": "import-statement"
+        }
+      ],
+      "exports": [],
+      "entryPoint": "project/bytesInOutput should be at least 99 (2).js",
+      "inputs": {
+        "project/bytesInOutput should be at least 99 (2).js": {
+          "bytesInOutput": 149
+        }
+      },
+      "bytes": 203
+    },
+    "out/bytesInOutput should be at least 99 (3).js": {
+      "imports": [
+        {
+          "path": "out/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js",
+          "kind": "dynamic-import"
+        }
+      ],
+      "exports": [],
+      "entryPoint": "project/bytesInOutput should be at least 99 (3).js",
+      "inputs": {
+        "project/bytesInOutput should be at least 99 (3).js": {
+          "bytesInOutput": 143
+        }
+      },
+      "bytes": 197
+    },
+    "out/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "project/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js",
+      "inputs": {
+        "project/333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js": {
+          "bytesInOutput": 0
+        }
+      },
+      "bytes": 0
+    },
+    "out/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444.file": {
+          "bytesInOutput": 0
+        }
+      },
+      "bytes": 0
+    },
+    "out/bytesInOutput should be at least 99.css": {
+      "imports": [
+        {
+          "path": "out/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file",
+          "kind": "url-token"
+        }
+      ],
+      "entryPoint": "project/bytesInOutput should be at least 99.css",
+      "inputs": {
+        "project/bytesInOutput should be at least 99.css": {
+          "bytesInOutput": 144
+        }
+      },
+      "bytes": 198
+    }
+  }
+}
+
+================================================================================
+TestMinifiedBundleCommonJS
+---------- /out.js ----------
+var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}});var{foo:f}=t();console.log(f(),n());
+
+================================================================================
+TestMinifiedBundleES6
+---------- /out.js ----------
+function o(){return 123}o();console.log(o());
+
+================================================================================
+TestMinifiedBundleEndingWithImportantSemicolon
+---------- /out.js ----------
+(()=>{while(foo());})();
+
+================================================================================
+TestMinifiedDynamicImportWithExpressionCJS
+---------- /out.js ----------
+import("foo");import(foo());
+
+================================================================================
+TestMinifiedExportsAndModuleFormatCommonJS
+---------- /out.js ----------
+// foo/test.js
+var o = {};
+p(o, {
+  foo: () => l
+});
+var l = 123;
+
+// bar/test.js
+var r = {};
+p(r, {
+  bar: () => m
+});
+var m = 123;
+
+// entry.js
+console.log(exports, module.exports, o, r);
+
+================================================================================
+TestMinifiedJSXPreserveWithObjectSpread
+---------- /out.js ----------
+// entry.jsx
+var obj = {
+  before,
+  [key]: value,
+  key: value,
+  after
+};
+<Foo
+  before
+  {...{ [key]: value }}
+  key={value}
+  after
+/>;
+<Bar
+  a={a}
+  {...{ [b]: c }}
+  {...d}
+  e={e}
+/>;
+
+================================================================================
+TestMinifyArguments
+---------- /out.js ----------
+(() => {
+  // entry.js
+  function e(n = arguments) {
+    let t;
+  }
+  function u(n = arguments) {
+    let t;
+  }
+  function a(n = arguments) {
+    let t;
+  }
+  e();
+  u();
+  a();
+})();
+
+================================================================================
+TestMinifyIdentifiersImportPathFrequencyAnalysis
+---------- /out/import.js ----------
+var o=123;console.log(o,"no identifier in this file should be named W, X, Y, or Z");
+
+---------- /out/require.js ----------
+var i=r((t,e)=>{e.exports=123});var s=i();console.log(s,"no identifier in this file should be named A, B, C, or D");
+
+================================================================================
+TestMinifyNestedLabelsNoBundle
+---------- /out.js ----------
+l:n:a:b:c:d:e:f:g:h:i:j:k:m:o:p:{nl(`
+`);q:r:s:t:u:v:w:x:y:z:A:B:C:D:E:F:{nl(`
+`);G:H:I:J:K:L:M:N:O:P:Q:R:S:T:U:V:{nl(`
+`);W:X:Y:Z:_:$:ll:nl:al:bl:cl:dl:el:fl:gl:hl:{nl(`
+`);il:jl:kl:ml:ol:pl:ql:rl:sl:tl:ul:vl:wl:xl:yl:zl:{nl(`
+`);Al:Bl:Cl:Dl:El:Fl:Gl:Hl:Il:Jl:Kl:Ll:Ml:Nl:Ol:Pl:{nl(`
+`);Ql:Rl:Sl:Tl:Ul:Vl:Wl:Xl:Yl:Zl:_l:$l:ln:nn:an:bn:{nl(`
+`);cn:dn:en:fn:gn:hn:jn:kn:mn:on:pn:qn:rn:sn:tn:un:{nl(`
+`);vn:wn:xn:yn:zn:An:Bn:Cn:Dn:En:Fn:Gn:Hn:In:Jn:Kn:{nl(`
+`);Ln:Mn:Nn:On:Pn:Qn:Rn:Sn:Tn:Un:Vn:Wn:Xn:Yn:Zn:_n:{nl(`
+`);$n:la:na:aa:ba:ca:da:ea:fa:ga:ha:ia:ja:ka:ma:oa:{nl(`
+`);pa:qa:ra:sa:ta:ua:va:wa:xa:ya:za:Aa:Ba:Ca:Da:Ea:{nl(`
+`);Fa:Ga:Ha:Ia:Ja:Ka:La:Ma:Na:Oa:Pa:Qa:Ra:Sa:Ta:Ua:{nl(`
+`);Va:Wa:Xa:Ya:Za:_a:$a:lb:nb:ab:bb:cb:db:eb:fb:gb:{nl(`
+`);hb:ib:jb:kb:mb:ob:pb:qb:rb:sb:tb:ub:vb:wb:xb:yb:{nl(`
+`);zb:Ab:Bb:Cb:Db:Eb:Fb:Gb:Hb:Ib:Jb:Kb:Lb:Mb:Nb:Ob:{nl(`
+`);Pb:Qb:Rb:Sb:Tb:Ub:Vb:Wb:Xb:Yb:Zb:_b:$b:lc:nc:ac:{nl(`
+`);bc:cc:dc:ec:fc:gc:hc:ic:jc:kc:mc:oc:pc:qc:rc:sc:{nl(`
+`);tc:uc:vc:wc:xc:yc:zc:Ac:Bc:Cc:Dc:Ec:Fc:Gc:Hc:Ic:{nl(`
+`);Jc:Kc:Lc:Mc:Nc:Oc:Pc:Qc:Rc:Sc:Tc:Uc:Vc:Wc:Xc:Yc:{nl(`
+`);Zc:_c:$c:ld:nd:ad:bd:cd:dd:ed:fd:gd:hd:{}}}}}}}}}}}}}}}}}}nl(`
+`)}}}
+
+================================================================================
+TestMinifyPrivateIdentifiersNoBundle
+---------- /out.js ----------
+class Foo {
+  #a;
+  foo = class {
+    #s;
+    #f;
+    #r;
+  };
+  get #o() {
+  }
+  set #o(a) {
+  }
+}
+class Bar {
+  #a;
+  foo = class {
+    #s;
+    #f;
+    #r;
+  };
+  get #o() {
+  }
+  set #o(a) {
+  }
+}
+
+================================================================================
+TestMinifySiblingLabelsNoBundle
+---------- /out.js ----------
+a: {
+  b: {
+    if (x) break b;
+    break a;
+  }
+}
+a: {
+  b: {
+    if (x) break b;
+    break a;
+  }
+}
+a: {
+  b: {
+    if (x) break b;
+    break a;
+  }
+}
+
+================================================================================
+TestMultipleEntryPointsSameNameCollision
+---------- /out/a/entry.js ----------
+// common.js
+var foo = 123;
+
+// a/entry.js
+console.log(foo);
+
+---------- /out/b/entry.js ----------
+// common.js
+var foo = 123;
+
+// b/entry.js
+console.log(foo);
+
+================================================================================
+TestNamedFunctionExpressionArgumentCollision
+---------- /out/entry.js ----------
+let x = function(foo) {
+  var foo;
+  return foo;
+};
+
+================================================================================
+TestNestedCommonJS
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports, module) {
+    module.exports = function() {
+      return 123;
+    };
+  }
+});
+
+// entry.js
+function nestedScope() {
+  const fn = require_foo();
+  console.log(fn());
+}
+nestedScope();
+
+================================================================================
+TestNestedES6FromCommonJS
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports) {
+    exports.fn = function() {
+      return 123;
+    };
+  }
+});
+
+// entry.js
+var import_foo = __toESM(require_foo());
+(() => {
+  console.log((0, import_foo.fn)());
+})();
+
+================================================================================
+TestNestedRequireWithoutCall
+---------- /out.js ----------
+// entry.js
+(() => {
+  const req = __require;
+  req("./entry");
+})();
+
+================================================================================
+TestNestedScopeBug
+---------- /out.js ----------
+// entry.js
+(() => {
+  function a() {
+    b();
+  }
+  {
+    var b = () => {
+    };
+  }
+  a();
+})();
+
+================================================================================
+TestNewExpressionCommonJS
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports, module) {
+    var Foo = class {
+    };
+    module.exports = { Foo };
+  }
+});
+
+// entry.js
+new (require_foo()).Foo();
+
+================================================================================
+TestNoWarnCommonJSExportsInESMPassThrough
+---------- /out/cjs-in-esm.js ----------
+export let foo = 1;
+exports.foo = 2;
+module.exports = 3;
+
+---------- /out/import-in-cjs.js ----------
+import { foo } from "bar";
+exports.foo = foo;
+module.exports = foo;
+
+---------- /out/no-warnings-here.js ----------
+console.log(module, exports);
+
+================================================================================
+TestNodeAnnotationFalsePositiveIssue3544
+---------- /out.js ----------
+// entry.mjs
+var entry_exports = {};
+__export(entry_exports, {
+  confuseNode: () => confuseNode
+});
+module.exports = __toCommonJS(entry_exports);
+function confuseNode(exports2) {
+  exports2.notAnExport = function() {
+  };
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  confuseNode
+});
+
+================================================================================
+TestNodeModules
+---------- /Users/user/project/out.js ----------
+// Users/user/project/node_modules/demo-pkg/index.js
+var require_demo_pkg = __commonJS({
+  "Users/user/project/node_modules/demo-pkg/index.js"(exports, module) {
+    module.exports = function() {
+      return 123;
+    };
+  }
+});
+
+// Users/user/project/src/entry.js
+var import_demo_pkg = __toESM(require_demo_pkg());
+console.log((0, import_demo_pkg.default)());
+
+================================================================================
+TestNonDeterminismIssue2537
+---------- /out.js ----------
+// entry.ts
+function i(o, e) {
+  let r = "teun";
+  if (o) {
+    let u = function(n) {
+      return n * 2;
+    }, t = function(n) {
+      return n / 2;
+    };
+    var b = u, f = t;
+    r = u(e) + t(e);
+  }
+  return r;
+}
+export {
+  i as aap
+};
+
+================================================================================
+TestObjectLiteralProtoSetterEdgeCases
+---------- /out/import-normal.js ----------
+import { __proto__, bar } from "foo";
+function foo() {
+  console.log(
+    'this must not become "{ __proto__ }":',
+    {
+      __proto__: __proto__,
+      bar
+    }
+  );
+}
+
+---------- /out/import-shorthand.js ----------
+import { __proto__, bar } from "foo";
+function foo() {
+  console.log(
+    'this must not become "{ __proto__: ... }":',
+    {
+      __proto__,
+      bar
+    }
+  );
+}
+
+---------- /out/local-normal.js ----------
+function foo(__proto__, bar) {
+  console.log(
+    'this must not become "{ __proto__ }":',
+    {
+      __proto__: __proto__,
+      bar
+    }
+  );
+}
+
+---------- /out/local-shorthand.js ----------
+function foo(__proto__, bar) {
+  {
+    let __proto__2, bar2;
+    console.log(
+      'this must not become "{ __proto__: ... }":',
+      {
+        ["__proto__"]: __proto__2,
+        bar: bar2
+      }
+    );
+  }
+}
+
+================================================================================
+TestObjectLiteralProtoSetterEdgeCasesMinifySyntax
+---------- /out/import-computed.js ----------
+import { __proto__, bar } from "foo";
+function foo() {
+  console.log(
+    'this must not become "{ __proto__: ... }":',
+    {
+      ["__proto__"]: __proto__,
+      bar
+    }
+  );
+}
+
+---------- /out/import-normal.js ----------
+import { __proto__, bar } from "foo";
+function foo() {
+  console.log(
+    'this must not become "{ __proto__ }":',
+    {
+      __proto__: __proto__,
+      bar
+    }
+  );
+}
+
+---------- /out/local-computed.js ----------
+function foo(__proto__, bar) {
+  {
+    let __proto__2, bar2;
+    console.log(
+      'this must not become "{ __proto__: ... }":',
+      {
+        ["__proto__"]: __proto__2,
+        bar: bar2
+      }
+    );
+  }
+}
+
+---------- /out/local-normal.js ----------
+function foo(__proto__, bar) {
+  console.log(
+    'this must not become "{ __proto__ }":',
+    {
+      __proto__: __proto__,
+      bar
+    }
+  );
+}
+
+================================================================================
+TestOutbase
+---------- /out/a/b/c.js ----------
+// a/b/c.js
+console.log("c");
+
+---------- /out/a/b/d.js ----------
+// a/b/d.js
+console.log("d");
+
+================================================================================
+TestOutputExtensionRemappingDir
+---------- /out/entry.notjs ----------
+// entry.js
+console.log("test");
+
+================================================================================
+TestOutputExtensionRemappingFile
+---------- /out.js ----------
+// entry.js
+console.log("test");
+
+================================================================================
+TestOutputForAssertTypeJSON
+---------- /out/foo-FYKHFNL2.copy ----------
+{}
+---------- /out/js-entry.js ----------
+// foo.json
+var foo_default = {};
+
+// js-entry.js
+import copy from "./foo-FYKHFNL2.copy" assert { type: "json" };
+use(foo_default, copy, foo_default, void 0);
+export {
+  foo_default as default
+};
+
+---------- /out/ts-entry.js ----------
+// foo.json
+var foo_default = {};
+
+// ts-entry.ts
+import copy from "./foo-FYKHFNL2.copy" assert { type: "json" };
+use(foo_default, copy, foo_default, void 0);
+export {
+  foo_default as default
+};
+
+================================================================================
+TestPackageAlias
+---------- /out.js ----------
+// node_modules/alias1/index.js
+console.log(1);
+
+// node_modules/alias2/foo.js
+console.log(2);
+
+// node_modules/alias3/index.js
+console.log(3);
+
+// node_modules/alias4/index.js
+console.log(4);
+
+// node_modules/alias5/foo.js
+console.log(5);
+
+// alias6/dir/index.js
+console.log(6);
+
+// alias7/dir/foo/index.js
+console.log(7);
+
+// alias8/dir/pkg8/index.js
+console.log(8);
+
+// alias9/some/file.js
+console.log(9);
+
+// node_modules/prefix-foo/index.js
+console.log(10);
+
+// node_modules/@scope/prefix-foo/index.js
+console.log(11);
+
+================================================================================
+TestPackageAliasMatchLongest
+---------- /out.js ----------
+// entry.js
+import "alias/pkg";
+import "alias/pkg_foo";
+import "alias/pkg_foo_bar";
+import "alias/pkg_foo_bar/baz";
+import "alias/pkg/bar/baz";
+import "alias/pkg/baz";
+
+================================================================================
+TestPreserveKeyComment
+---------- /out/entry.js ----------
+x(
+  /* __KEY__ */
+  "notKey",
+  /* __KEY__ */
+  `notKey`
+);
+x(/* @__KEY__ */ "key", /* @__KEY__ */ `key`);
+x(/* @__KEY__ */ "alsoKey", /* @__KEY__ */ `alsoKey`);
+
+================================================================================
+TestQuotedProperty
+---------- /out/entry.js ----------
+// entry.js
+var ns = __toESM(require("ext"));
+console.log(ns.mustBeUnquoted, ns["mustBeQuoted"]);
+
+================================================================================
+TestQuotedPropertyMangle
+---------- /out/entry.js ----------
+// entry.js
+var ns = __toESM(require("ext"));
+console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
+
+================================================================================
+TestReExportCommonJSAsES6
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports) {
+    exports.bar = 123;
+  }
+});
+
+// entry.js
+var import_foo = __toESM(require_foo());
+var export_bar = import_foo.bar;
+export {
+  export_bar as bar
+};
+
+================================================================================
+TestReExportDefaultExternalCommonJS
+---------- /out.js ----------
+// entry.js
+var entry_exports = {};
+__export(entry_exports, {
+  bar: () => import_bar.default,
+  foo: () => import_foo.default
+});
+module.exports = __toCommonJS(entry_exports);
+var import_foo = __toESM(require("foo"));
+
+// bar.js
+var import_bar = __toESM(require("bar"));
+
+================================================================================
+TestReExportDefaultExternalES6
+---------- /out.js ----------
+// entry.js
+import { default as default3 } from "foo";
+
+// bar.js
+import { default as default2 } from "bar";
+export {
+  default2 as bar,
+  default3 as foo
+};
+
+================================================================================
+TestReExportDefaultInternal
+---------- /out.js ----------
+// foo.js
+var foo_default = "foo";
+
+// bar.js
+var bar_default = "bar";
+export {
+  bar_default as bar,
+  foo_default as foo
+};
+
+================================================================================
+TestReExportDefaultNoBundle
+---------- /out.js ----------
+export { default as foo } from "./foo";
+export { default as bar } from "./bar";
+
+================================================================================
+TestReExportDefaultNoBundleCommonJS
+---------- /out.js ----------
+var entry_exports = {};
+__export(entry_exports, {
+  bar: () => import_bar.default,
+  foo: () => import_foo.default
+});
+module.exports = __toCommonJS(entry_exports);
+var import_foo = __toESM(require("./foo"));
+var import_bar = __toESM(require("./bar"));
+
+================================================================================
+TestReExportDefaultNoBundleES6
+---------- /out.js ----------
+import { default as default2 } from "./foo";
+import { default as default3 } from "./bar";
+export {
+  default3 as bar,
+  default2 as foo
+};
+
+================================================================================
+TestReExportFSNode
+---------- /out.js ----------
+// foo.js
+import * as fs from "fs";
+import { readFileSync } from "fs";
+export {
+  fs as f,
+  readFileSync as rfs
+};
+
+================================================================================
+TestRenameLabelsNoBundle
+---------- /out.js ----------
+foo: {
+  bar: {
+    if (x) break bar;
+    break foo;
+  }
+}
+foo2: {
+  bar2: {
+    if (x) break bar2;
+    break foo2;
+  }
+}
+foo: {
+  bar: {
+    if (x) break bar;
+    break foo;
+  }
+}
+
+================================================================================
+TestRenamePrivateIdentifiersNoBundle
+---------- /out.js ----------
+class Foo {
+  #foo;
+  foo = class {
+    #foo2;
+    #foo22;
+    #bar2;
+  };
+  get #bar() {
+  }
+  set #bar(x) {
+  }
+}
+class Bar {
+  #foo;
+  foo = class {
+    #foo2;
+    #foo3;
+    #bar2;
+  };
+  get #bar() {
+  }
+  set #bar(x) {
+  }
+}
+
+================================================================================
+TestRequireAndDynamicImportInvalidTemplate
+---------- /out.js ----------
+// require("./**/*") in entry.js
+var globRequire;
+var init_ = __esm({
+  'require("./**/*") in entry.js'() {
+    globRequire = __glob({
+      "./entry.js": () => require_entry()
+    });
+  }
+});
+
+// import("./**/*") in entry.js
+var globImport;
+var init_2 = __esm({
+  'import("./**/*") in entry.js'() {
+    globImport = __glob({
+      "./entry.js": () => Promise.resolve().then(() => __toESM(require_entry()))
+    });
+  }
+});
+
+// entry.js
+var require_entry = __commonJS({
+  "entry.js"() {
+    init_();
+    init_2();
+    __require(tag`./b`);
+    globRequire(`./${b}`);
+    try {
+      __require(tag`./b`);
+      globRequire(`./${b}`);
+    } catch {
+    }
+    (async () => {
+      import(tag`./b`);
+      globImport(`./${b}`);
+      await import(tag`./b`);
+      await globImport(`./${b}`);
+      try {
+        import(tag`./b`);
+        globImport(`./${b}`);
+        await import(tag`./b`);
+        await globImport(`./${b}`);
+      } catch {
+      }
+    })();
+  }
+});
+export default require_entry();
+
+================================================================================
+TestRequireBadArgumentCount
+---------- /out.js ----------
+// entry.js
+__require();
+__require("a", "b");
+try {
+  __require();
+  __require("a", "b");
+} catch {
+}
+
+================================================================================
+TestRequireChildDirCommonJS
+---------- /out.js ----------
+// Users/user/project/src/dir/index.js
+var require_dir = __commonJS({
+  "Users/user/project/src/dir/index.js"(exports, module) {
+    module.exports = 123;
+  }
+});
+
+// Users/user/project/src/entry.js
+console.log(require_dir());
+
+================================================================================
+TestRequireChildDirES6
+---------- /out.js ----------
+// Users/user/project/src/dir/index.js
+var dir_default = 123;
+
+// Users/user/project/src/entry.js
+console.log(dir_default);
+
+================================================================================
+TestRequireFSNode
+---------- /out.js ----------
+// entry.js
+return require("fs");
+
+================================================================================
+TestRequireFSNodeMinify
+---------- /out.js ----------
+return require("fs");
+
+================================================================================
+TestRequireJson
+---------- /out.js ----------
+// test.json
+var require_test = __commonJS({
+  "test.json"(exports, module) {
+    module.exports = {
+      a: true,
+      b: 123,
+      c: [null]
+    };
+  }
+});
+
+// entry.js
+console.log(require_test());
+
+================================================================================
+TestRequireMainCacheCommonJS
+---------- /out.js ----------
+// is-main.js
+var require_is_main = __commonJS({
+  "is-main.js"(exports2, module2) {
+    module2.exports = require.main === module2;
+  }
+});
+
+// entry.js
+console.log("is main:", require.main === module);
+console.log(require_is_main());
+console.log("cache:", require.cache);
+
+================================================================================
+TestRequireParentDirCommonJS
+---------- /out.js ----------
+// Users/user/project/src/index.js
+var require_src = __commonJS({
+  "Users/user/project/src/index.js"(exports, module) {
+    module.exports = 123;
+  }
+});
+
+// Users/user/project/src/dir/entry.js
+console.log(require_src());
+
+================================================================================
+TestRequireParentDirES6
+---------- /out.js ----------
+// Users/user/project/src/index.js
+var src_default = 123;
+
+// Users/user/project/src/dir/entry.js
+console.log(src_default);
+
+================================================================================
+TestRequirePropertyAccessCommonJS
+---------- /out.js ----------
+// entry.js
+console.log(Object.keys(require.cache));
+console.log(Object.keys(require.extensions));
+delete require.cache["fs"];
+delete require.extensions[".json"];
+
+================================================================================
+TestRequireResolve
+---------- /out.js ----------
+// entry.js
+console.log(require.resolve);
+console.log(require.resolve());
+console.log(require.resolve(foo));
+console.log(require.resolve("a", "b"));
+console.log(require.resolve("./present-file"));
+console.log(require.resolve("./missing-file"));
+console.log(require.resolve("./external-file"));
+console.log(require.resolve("missing-pkg"));
+console.log(require.resolve("external-pkg"));
+console.log(require.resolve("@scope/missing-pkg"));
+console.log(require.resolve("@scope/external-pkg"));
+try {
+  console.log(require.resolve("inside-try"));
+} catch (e) {
+}
+if (false) {
+  console.log(null);
+}
+console.log(false ? null : 0);
+console.log(true ? 0 : null);
+console.log(false);
+console.log(true);
+console.log(true);
+
+================================================================================
+TestRequireShimSubstitution
+---------- /out/entry.js ----------
+// example.json
+var require_example = __commonJS({
+  "example.json"(exports, module) {
+    module.exports = { works: true };
+  }
+});
+
+// entry.js
+console.log([
+  __require,
+  typeof __require,
+  require_example(),
+  __require("./example.json", { type: "json" }),
+  __require(window.SOME_PATH),
+  require_example(),
+  __require("./example.json", { type: "json" }),
+  __require(window.SOME_PATH),
+  __require.resolve("some-path"),
+  __require.resolve(window.SOME_PATH),
+  Promise.resolve().then(() => __toESM(__require("some-path"))),
+  Promise.resolve().then(() => __toESM(__require(window.SOME_PATH)))
+]);
+
+================================================================================
+TestRequireTxt
+---------- /out.js ----------
+// test.txt
+var require_test = __commonJS({
+  "test.txt"(exports, module) {
+    module.exports = "This is a test.";
+  }
+});
+
+// entry.js
+console.log(require_test());
+
+================================================================================
+TestRequireWithCallInsideTry
+---------- /out.js ----------
+// entry.js
+var require_entry = __commonJS({
+  "entry.js"(exports) {
+    try {
+      const supportsColor = __require("supports-color");
+      if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
+        exports.colors = [];
+      }
+    } catch (error) {
+    }
+  }
+});
+export default require_entry();
+
+================================================================================
+TestRequireWithTemplate
+---------- /out.js ----------
+// b.js
+var require_b = __commonJS({
+  "b.js"(exports) {
+    exports.x = 123;
+  }
+});
+
+// a.js
+console.log(require_b());
+console.log(require_b());
+
+================================================================================
+TestRequireWithoutCall
+---------- /out.js ----------
+// entry.js
+var req = __require;
+req("./entry");
+
+================================================================================
+TestRequireWithoutCallInsideTry
+---------- /out.js ----------
+// entry.js
+try {
+  oldLocale = globalLocale._abbr;
+  aliasedRequire = __require;
+  aliasedRequire("./locale/" + name);
+  getSetGlobalLocale(oldLocale);
+} catch (e) {
+}
+var aliasedRequire;
+
+================================================================================
+TestReserveProps
+---------- /out.js ----------
+export default {
+  a: 0,
+  _bar_: 1
+};
+
+================================================================================
+TestRuntimeNameCollisionNoBundle
+---------- /out.js ----------
+function __require() {
+  return 123;
+}
+console.log(__require());
+
+================================================================================
+TestScopedExternalModuleExclusion
+---------- /out.js ----------
+// index.js
+import { Foo } from "@scope/foo";
+import { Bar } from "@scope/foo/bar";
+var foo = new Foo();
+var bar = new Bar();
+export {
+  bar,
+  foo
+};
+
+================================================================================
+TestSimpleCommonJS
+---------- /out.js ----------
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports, module) {
+    module.exports = function() {
+      return 123;
+    };
+  }
+});
+
+// entry.js
+var fn = require_foo();
+console.log(fn());
+
+================================================================================
+TestSimpleES6
+---------- /out.js ----------
+// foo.js
+function fn() {
+  return 123;
+}
+
+// entry.js
+console.log(fn());
+
+================================================================================
+TestSourceMap
+---------- /Users/user/project/out.js.map ----------
+{
+  "version": 3,
+  "sources": ["src/bar.js", "src/data.txt", "src/entry.js"],
+  "sourcesContent": ["\n\t\t\t\texport function bar() { throw new Error('test') }\n\t\t\t", "#2041", "\n\t\t\t\timport {bar} from './bar'\n\t\t\t\timport data from './data.txt'\n\t\t\t\tfunction foo() { bar() }\n\t\t\t\tfoo()\n\t\t\t\tconsole.log(data)\n\t\t\t"],
+  "mappings": ";AACW,SAAS,MAAM;AAAE,QAAM,IAAI,MAAM,MAAM;AAAE;;;ACDpD;;;ACGI,SAAS,MAAM;AAAE,MAAI;AAAE;AACvB,IAAI;AACJ,QAAQ,IAAI,YAAI;",
+  "names": []
+}
+
+---------- /Users/user/project/out.js ----------
+// Users/user/project/src/bar.js
+function bar() {
+  throw new Error("test");
+}
+
+// Users/user/project/src/data.txt
+var data_default = "#2041";
+
+// Users/user/project/src/entry.js
+function foo() {
+  bar();
+}
+foo();
+console.log(data_default);
+//# sourceMappingURL=out.js.map
+
+================================================================================
+TestStrictModeNestedFnDeclKeepNamesVariableInliningIssue1552
+---------- /out/entry.js ----------
+export function outer() {
+  {
+    let inner = function() {
+      return Math.random();
+    };
+    __name(inner, "inner");
+    const x = inner();
+    console.log(x);
+  }
+}
+__name(outer, "outer"), outer();
+
+================================================================================
+TestStringExportNamesCommonJS
+---------- /out.js ----------
+var entry_exports = {};
+__export(entry_exports, {
+  "all the stuff": () => all_the_stuff,
+  "some export": () => import_foo["some import"]
+});
+module.exports = __toCommonJS(entry_exports);
+var import_foo = require("./foo");
+var all_the_stuff = __toESM(require("./foo"));
+
+================================================================================
+TestStringExportNamesIIFE
+---------- /out.js ----------
+var global;
+(global ||= {}).name = (() => {
+  var entry_exports = {};
+  __export(entry_exports, {
+    "all the stuff": () => all_the_stuff,
+    "some export": () => import_foo["some import"]
+  });
+  var import_foo = require("./foo");
+  var all_the_stuff = __toESM(require("./foo"));
+  return __toCommonJS(entry_exports);
+})();
+
+================================================================================
+TestSwitchScopeNoBundle
+---------- /out.js ----------
+switch (foo) {
+  default:
+    var foo;
+}
+switch (bar) {
+  default:
+    let a;
+}
+
+================================================================================
+TestThisInsideFunction
+---------- /out.js ----------
+// entry.js
+function foo(x = this) {
+  console.log(this);
+}
+var objFoo = {
+  foo(x = this) {
+    console.log(this);
+  }
+};
+var Foo = class {
+  x = this;
+  static y = this.z;
+  foo(x = this) {
+    console.log(this);
+  }
+  static bar(x = this) {
+    console.log(this);
+  }
+};
+new Foo(foo(objFoo));
+if (nested) {
+  let bar = function(x = this) {
+    console.log(this);
+  };
+  bar2 = bar;
+  const objBar = {
+    foo(x = this) {
+      console.log(this);
+    }
+  };
+  class Bar {
+    x = this;
+    static y = this.z;
+    foo(x = this) {
+      console.log(this);
+    }
+    static bar(x = this) {
+      console.log(this);
+    }
+  }
+  new Bar(bar(objBar));
+}
+var bar2;
+
+================================================================================
+TestThisOutsideFunction
+---------- /out.js ----------
+// entry.js
+var require_entry = __commonJS({
+  "entry.js"(exports) {
+    if (shouldBeExportsNotThis) {
+      console.log(exports);
+      console.log((x = exports) => exports);
+      console.log({ x: exports });
+      console.log(class extends exports.foo {
+      });
+      console.log(class {
+        [exports.foo];
+      });
+      console.log(class {
+        [exports.foo]() {
+        }
+      });
+      console.log(class {
+        static [exports.foo];
+      });
+      console.log(class {
+        static [exports.foo]() {
+        }
+      });
+    }
+    if (shouldBeThisNotExports) {
+      console.log(class {
+        foo = this;
+      });
+      console.log(class {
+        foo() {
+          this;
+        }
+      });
+      console.log(class {
+        static foo = this;
+      });
+      console.log(class {
+        static foo() {
+          this;
+        }
+      });
+    }
+  }
+});
+export default require_entry();
+
+================================================================================
+TestThisUndefinedWarningESM
+---------- /out/entry.js ----------
+// file1.js
+var file1_default = [void 0, void 0];
+
+// node_modules/pkg/file2.js
+var file2_default = [void 0, void 0];
+
+// entry.js
+console.log(file1_default, file2_default);
+
+================================================================================
+TestThisWithES6Syntax
+---------- /out.js ----------
+// cjs.js
+var require_cjs = __commonJS({
+  "cjs.js"(exports) {
+    console.log(exports);
+  }
+});
+
+// dummy.js
+var dummy_exports = {};
+__export(dummy_exports, {
+  dummy: () => dummy
+});
+var dummy;
+var init_dummy = __esm({
+  "dummy.js"() {
+    dummy = 123;
+  }
+});
+
+// es6-import-stmt.js
+var require_es6_import_stmt = __commonJS({
+  "es6-import-stmt.js"(exports) {
+    init_dummy();
+    console.log(exports);
+  }
+});
+
+// es6-import-assign.ts
+var require_es6_import_assign = __commonJS({
+  "es6-import-assign.ts"(exports) {
+    var x2 = (init_dummy(), __toCommonJS(dummy_exports));
+    console.log(exports);
+  }
+});
+
+// es6-import-dynamic.js
+var require_es6_import_dynamic = __commonJS({
+  "es6-import-dynamic.js"(exports) {
+    Promise.resolve().then(() => init_dummy());
+    console.log(exports);
+  }
+});
+
+// es6-expr-import-dynamic.js
+var require_es6_expr_import_dynamic = __commonJS({
+  "es6-expr-import-dynamic.js"(exports) {
+    Promise.resolve().then(() => init_dummy());
+    console.log(exports);
+  }
+});
+
+// es6-export-assign.ts
+var require_es6_export_assign = __commonJS({
+  "es6-export-assign.ts"(exports, module) {
+    console.log(exports);
+    module.exports = 123;
+  }
+});
+
+// es6-ns-export-variable.ts
+var require_es6_ns_export_variable = __commonJS({
+  "es6-ns-export-variable.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      ns2.foo = 123;
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-function.ts
+var require_es6_ns_export_function = __commonJS({
+  "es6-ns-export-function.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      function foo() {
+      }
+      ns2.foo = foo;
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-async-function.ts
+var require_es6_ns_export_async_function = __commonJS({
+  "es6-ns-export-async-function.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      async function foo() {
+      }
+      ns2.foo = foo;
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-enum.ts
+var require_es6_ns_export_enum = __commonJS({
+  "es6-ns-export-enum.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      let Foo;
+      ((Foo2) => {
+      })(Foo = ns2.Foo || (ns2.Foo = {}));
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-const-enum.ts
+var require_es6_ns_export_const_enum = __commonJS({
+  "es6-ns-export-const-enum.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      let Foo;
+      ((Foo2) => {
+      })(Foo = ns2.Foo || (ns2.Foo = {}));
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-module.ts
+var require_es6_ns_export_module = __commonJS({
+  "es6-ns-export-module.ts"(exports) {
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-namespace.ts
+var require_es6_ns_export_namespace = __commonJS({
+  "es6-ns-export-namespace.ts"(exports) {
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-class.ts
+var require_es6_ns_export_class = __commonJS({
+  "es6-ns-export-class.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      class Foo {
+      }
+      ns2.Foo = Foo;
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// es6-ns-export-abstract-class.ts
+var require_es6_ns_export_abstract_class = __commonJS({
+  "es6-ns-export-abstract-class.ts"(exports) {
+    var ns;
+    ((ns2) => {
+      class Foo {
+      }
+      ns2.Foo = Foo;
+    })(ns || (ns = {}));
+    console.log(exports);
+  }
+});
+
+// entry.js
+var import_cjs = __toESM(require_cjs());
+var import_es6_import_stmt = __toESM(require_es6_import_stmt());
+var import_es6_import_assign = __toESM(require_es6_import_assign());
+var import_es6_import_dynamic = __toESM(require_es6_import_dynamic());
+
+// es6-import-meta.js
+console.log(void 0);
+
+// entry.js
+var import_es6_expr_import_dynamic = __toESM(require_es6_expr_import_dynamic());
+
+// es6-expr-import-meta.js
+console.log(void 0);
+
+// es6-export-variable.js
+console.log(void 0);
+
+// es6-export-function.js
+console.log(void 0);
+
+// es6-export-async-function.js
+console.log(void 0);
+
+// es6-export-enum.ts
+console.log(void 0);
+
+// es6-export-const-enum.ts
+console.log(void 0);
+
+// es6-export-module.ts
+console.log(void 0);
+
+// es6-export-namespace.ts
+console.log(void 0);
+
+// es6-export-class.js
+console.log(void 0);
+
+// es6-export-abstract-class.ts
+console.log(void 0);
+
+// es6-export-default.js
+console.log(void 0);
+
+// es6-export-clause.js
+console.log(void 0);
+
+// es6-export-clause-from.js
+init_dummy();
+console.log(void 0);
+
+// es6-export-star.js
+init_dummy();
+console.log(void 0);
+
+// es6-export-star-as.js
+init_dummy();
+console.log(void 0);
+
+// entry.js
+var import_es6_export_assign = __toESM(require_es6_export_assign());
+
+// es6-export-import-assign.ts
+var x = (init_dummy(), __toCommonJS(dummy_exports));
+console.log(void 0);
+
+// entry.js
+var import_es6_ns_export_variable = __toESM(require_es6_ns_export_variable());
+var import_es6_ns_export_function = __toESM(require_es6_ns_export_function());
+var import_es6_ns_export_async_function = __toESM(require_es6_ns_export_async_function());
+var import_es6_ns_export_enum = __toESM(require_es6_ns_export_enum());
+var import_es6_ns_export_const_enum = __toESM(require_es6_ns_export_const_enum());
+var import_es6_ns_export_module = __toESM(require_es6_ns_export_module());
+var import_es6_ns_export_namespace = __toESM(require_es6_ns_export_namespace());
+var import_es6_ns_export_class = __toESM(require_es6_ns_export_class());
+var import_es6_ns_export_abstract_class = __toESM(require_es6_ns_export_abstract_class());
+
+================================================================================
+TestToESMWrapperOmission
+---------- /out/entry.js ----------
+var entry_exports = {};
+module.exports = __toCommonJS(entry_exports);
+var import_a_nowrap = require("a_nowrap");
+var import_b_nowrap = require("b_nowrap");
+__reExport(entry_exports, require("c_nowrap"), module.exports);
+var d = __toESM(require("d_WRAP"));
+var import_e_WRAP = __toESM(require("e_WRAP"));
+var import_f_WRAP = __toESM(require("f_WRAP"));
+var import_g_WRAP = __toESM(require("g_WRAP"));
+var h = __toESM(require("h_WRAP"));
+var i = __toESM(require("i_WRAP"));
+var j = __toESM(require("j_WRAP"));
+(0, import_b_nowrap.b)();
+x = d.x;
+(0, import_e_WRAP.default)();
+(0, import_f_WRAP.default)();
+(0, import_g_WRAP.__esModule)();
+x = h;
+i.x();
+j.x``;
+x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
+
+================================================================================
+TestTopLevelAwaitAllowedImportWithSplitting
+---------- /out/entry.js ----------
+// entry.js
+import("./a-3BAWOBN3.js");
+import("./b-2IGVSUS7.js");
+import("./c-DMBKURS2.js");
+require_entry();
+await 0;
+
+---------- /out/c-DMBKURS2.js ----------
+import "./chunk-GETF6B5C.js";
+
+---------- /out/b-2IGVSUS7.js ----------
+import "./chunk-QJYGFXJG.js";
+import "./chunk-GETF6B5C.js";
+
+---------- /out/a-3BAWOBN3.js ----------
+import "./chunk-QJYGFXJG.js";
+import "./chunk-GETF6B5C.js";
+
+---------- /out/chunk-QJYGFXJG.js ----------
+
+---------- /out/chunk-GETF6B5C.js ----------
+// c.js
+await 0;
+
+================================================================================
+TestTopLevelAwaitAllowedImportWithoutSplitting
+---------- /out.js ----------
+// c.js
+var c_exports = {};
+var init_c = __esm({
+  async "c.js"() {
+    await 0;
+  }
+});
+
+// b.js
+var b_exports = {};
+var init_b = __esm({
+  async "b.js"() {
+    await init_c();
+  }
+});
+
+// a.js
+var a_exports = {};
+var init_a = __esm({
+  async "a.js"() {
+    await init_b();
+  }
+});
+
+// entry.js
+var entry_exports = {};
+var init_entry = __esm({
+  async "entry.js"() {
+    init_a();
+    init_b();
+    init_c();
+    init_entry();
+    await 0;
+  }
+});
+await init_entry();
+
+================================================================================
+TestTopLevelAwaitCJSDeadBranch
+---------- /out.js ----------
+// entry.js
+if (false) foo;
+if (false) for (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitESM
+---------- /out.js ----------
+// entry.js
+await foo;
+for await (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitESMDeadBranch
+---------- /out.js ----------
+// entry.js
+if (false) await foo;
+if (false) for await (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitForbiddenRequireDeadBranch
+---------- /out.js ----------
+(() => {
+  // c.js
+  var c_exports = {};
+  var init_c = __esm({
+    "c.js"() {
+      if (false) for (let x of y) ;
+    }
+  });
+
+  // b.js
+  var b_exports = {};
+  var init_b = __esm({
+    "b.js"() {
+      init_c();
+    }
+  });
+
+  // a.js
+  var a_exports = {};
+  var init_a = __esm({
+    "a.js"() {
+      init_b();
+    }
+  });
+
+  // entry.js
+  var entry_exports = {};
+  var init_entry = __esm({
+    "entry.js"() {
+      init_a();
+      init_b();
+      init_c();
+      init_entry();
+      if (false) for (let x of y) ;
+    }
+  });
+  init_entry();
+})();
+
+================================================================================
+TestTopLevelAwaitIIFEDeadBranch
+---------- /out.js ----------
+(() => {
+  // entry.js
+  if (false) foo;
+  if (false) for (foo of bar) ;
+})();
+
+================================================================================
+TestTopLevelAwaitNoBundle
+---------- /out.js ----------
+await foo;
+for await (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitNoBundleCommonJSDeadBranch
+---------- /out.js ----------
+if (false) foo;
+if (false) for (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitNoBundleDeadBranch
+---------- /out.js ----------
+if (false) await foo;
+if (false) for await (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitNoBundleESM
+---------- /out.js ----------
+await foo;
+for await (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitNoBundleESMDeadBranch
+---------- /out.js ----------
+if (false) await foo;
+if (false) for await (foo of bar) ;
+
+================================================================================
+TestTopLevelAwaitNoBundleIIFEDeadBranch
+---------- /out.js ----------
+(() => {
+  if (false) foo;
+  if (false) for (foo of bar) ;
+})();
+
+================================================================================
+TestUseStrictDirectiveBundleCJSIssue2264
+---------- /out.js ----------
+"use strict";
+
+// entry.js
+var entry_exports = {};
+__export(entry_exports, {
+  a: () => a
+});
+module.exports = __toCommonJS(entry_exports);
+var a = 1;
+
+================================================================================
+TestUseStrictDirectiveBundleESMIssue2264
+---------- /out.js ----------
+// entry.js
+var a = 1;
+export {
+  a
+};
+
+================================================================================
+TestUseStrictDirectiveBundleIIFEIssue2264
+---------- /out.js ----------
+"use strict";
+(() => {
+  // entry.js
+  var a = 1;
+})();
+
+================================================================================
+TestUseStrictDirectiveBundleIssue1837
+---------- /out.js ----------
+(() => {
+  // shims.js
+  var import_process;
+  var init_shims = __esm({
+    "shims.js"() {
+      import_process = __toESM(__require("process"));
+    }
+  });
+
+  // cjs.js
+  var require_cjs = __commonJS({
+    "cjs.js"(exports) {
+      "use strict";
+      init_shims();
+      exports.foo = import_process.default;
+    }
+  });
+
+  // entry.js
+  init_shims();
+  console.log(require_cjs());
+})();
+
+================================================================================
+TestUseStrictDirectiveMinifyNoBundle
+---------- /out.js ----------
+"use strict";"use loose";a,b;
+
+================================================================================
+TestVarRelocatingBundle
+---------- /out/top-level.js ----------
+// top-level.js
+for (; 0; ) ;
+var b;
+for ({ c, x: [d] } = {}; 0; ) ;
+var c;
+var d;
+for (e of []) ;
+var e;
+for ({ f, x: [g] } of []) ;
+var f;
+var g;
+for (h in {}) ;
+var h;
+i = 1;
+for (i in {}) ;
+var i;
+for ({ j, x: [k] } in {}) ;
+var j;
+var k;
+
+---------- /out/nested.js ----------
+// nested.js
+if (true) {
+  let l = function() {
+  };
+  l2 = l;
+  for (; 0; ) ;
+  for ({ c, x: [d] } = {}; 0; ) ;
+  for (e of []) ;
+  for ({ f, x: [g] } of []) ;
+  for (h in {}) ;
+  i = 1;
+  for (i in {}) ;
+  for ({ j, x: [k] } in {}) ;
+}
+var a;
+var b;
+var c;
+var d;
+var e;
+var f;
+var g;
+var h;
+var i;
+var j;
+var k;
+var l2;
+
+---------- /out/let.js ----------
+// let.js
+if (true) {
+  let a;
+  for (let b; 0; ) ;
+  for (let { c, x: [d] } = {}; 0; ) ;
+  for (let e of []) ;
+  for (let { f, x: [g] } of []) ;
+  for (let h in {}) ;
+  for (let { j, x: [k] } in {}) ;
+}
+
+---------- /out/function.js ----------
+// function.js
+function x() {
+  var a;
+  for (var b; 0; ) ;
+  for (var { c, x: [d] } = {}; 0; ) ;
+  for (var e of []) ;
+  for (var { f, x: [g] } of []) ;
+  for (var h in {}) ;
+  i = 1;
+  for (var i in {}) ;
+  for (var { j, x: [k] } in {}) ;
+  function l() {
+  }
+}
+x();
+
+---------- /out/function-nested.js ----------
+// function-nested.js
+function x() {
+  if (true) {
+    let l2 = function() {
+    };
+    var l = l2;
+    var a;
+    for (var b; 0; ) ;
+    for (var { c, x: [d] } = {}; 0; ) ;
+    for (var e of []) ;
+    for (var { f, x: [g] } of []) ;
+    for (var h in {}) ;
+    i = 1;
+    for (var i in {}) ;
+    for (var { j, x: [k] } in {}) ;
+  }
+}
+x();
+
+================================================================================
+TestVarRelocatingNoBundle
+---------- /out/top-level.js ----------
+var a;
+for (var b; 0; ) ;
+for (var { c, x: [d] } = {}; 0; ) ;
+for (var e of []) ;
+for (var { f, x: [g] } of []) ;
+for (var h in {}) ;
+i = 1;
+for (var i in {}) ;
+for (var { j, x: [k] } in {}) ;
+function l() {
+}
+
+---------- /out/nested.js ----------
+if (true) {
+  let l = function() {
+  };
+  var l2 = l;
+  var a;
+  for (var b; 0; ) ;
+  for (var { c, x: [d] } = {}; 0; ) ;
+  for (var e of []) ;
+  for (var { f, x: [g] } of []) ;
+  for (var h in {}) ;
+  i = 1;
+  for (var i in {}) ;
+  for (var { j, x: [k] } in {}) ;
+}
+
+---------- /out/let.js ----------
+if (true) {
+  let a;
+  for (let b; 0; ) ;
+  for (let { c, x: [d] } = {}; 0; ) ;
+  for (let e of []) ;
+  for (let { f, x: [g] } of []) ;
+  for (let h in {}) ;
+  for (let { j, x: [k] } in {}) ;
+}
+
+---------- /out/function.js ----------
+function x() {
+  var a;
+  for (var b; 0; ) ;
+  for (var { c, x: [d] } = {}; 0; ) ;
+  for (var e of []) ;
+  for (var { f, x: [g] } of []) ;
+  for (var h in {}) ;
+  i = 1;
+  for (var i in {}) ;
+  for (var { j, x: [k] } in {}) ;
+  function l() {
+  }
+}
+x();
+
+---------- /out/function-nested.js ----------
+function x() {
+  if (true) {
+    let l2 = function() {
+    };
+    var l = l2;
+    var a;
+    for (var b; 0; ) ;
+    for (var { c, x: [d] } = {}; 0; ) ;
+    for (var e of []) ;
+    for (var { f, x: [g] } of []) ;
+    for (var h in {}) ;
+    i = 1;
+    for (var i in {}) ;
+    for (var { j, x: [k] } in {}) ;
+  }
+}
+x();
+
+================================================================================
+TestWarnCommonJSExportsInESMBundle
+---------- /out/cjs-in-esm.js ----------
+// cjs-in-esm.js
+var cjs_in_esm_exports = {};
+__export(cjs_in_esm_exports, {
+  foo: () => foo
+});
+module.exports = __toCommonJS(cjs_in_esm_exports);
+var foo = 1;
+exports.foo = 2;
+module.exports = 3;
+
+---------- /out/import-in-cjs.js ----------
+// import-in-cjs.js
+var import_bar = require("bar");
+exports.foo = import_bar.foo;
+module.exports = import_bar.foo;
+
+---------- /out/no-warnings-here.js ----------
+// no-warnings-here.js
+console.log(module, exports);
+
+================================================================================
+TestWarnCommonJSExportsInESMConvert
+---------- /out/cjs-in-esm.js ----------
+var cjs_in_esm_exports = {};
+__export(cjs_in_esm_exports, {
+  foo: () => foo
+});
+module.exports = __toCommonJS(cjs_in_esm_exports);
+let foo = 1;
+exports.foo = 2;
+module.exports = 3;
+
+---------- /out/cjs-in-esm2.js ----------
+var cjs_in_esm2_exports = {};
+__export(cjs_in_esm2_exports, {
+  foo: () => foo
+});
+module.exports = __toCommonJS(cjs_in_esm2_exports);
+let foo = 1;
+module.exports.bar = 3;
+
+---------- /out/import-in-cjs.js ----------
+var import_bar = require("bar");
+exports.foo = import_bar.foo;
+module.exports = import_bar.foo;
+module.exports.bar = import_bar.foo;
+
+---------- /out/no-warnings-here.js ----------
+console.log(module, exports);
+
+================================================================================
+TestWarningsInsideNodeModules
+---------- /out.js ----------
+// return-asi.js
+var require_return_asi = __commonJS({
+  "return-asi.js"() {
+    return;
+  }
+});
+
+// node_modules/return-asi.js
+var require_return_asi2 = __commonJS({
+  "node_modules/return-asi.js"() {
+    return;
+  }
+});
+
+// plugin-dir/node_modules/return-asi.js
+var require_return_asi3 = __commonJS({
+  "plugin-dir/node_modules/return-asi.js"() {
+    return;
+  }
+});
+
+// dup-case.js
+switch (x) {
+  case 0:
+  case 0:
+}
+
+// node_modules/dup-case.js
+switch (x) {
+  case 0:
+  case 0:
+}
+
+// plugin-dir/node_modules/dup-case.js
+switch (x) {
+  case 0:
+  case 0:
+}
+
+// not-in.js
+!a in b;
+
+// node_modules/not-in.js
+!a in b;
+
+// plugin-dir/node_modules/not-in.js
+!a in b;
+
+// not-instanceof.js
+!a instanceof b;
+
+// node_modules/not-instanceof.js
+!a instanceof b;
+
+// plugin-dir/node_modules/not-instanceof.js
+!a instanceof b;
+
+// entry.js
+var import_return_asi = __toESM(require_return_asi());
+var import_return_asi2 = __toESM(require_return_asi2());
+var import_return_asi3 = __toESM(require_return_asi3());
+
+// equals-neg-zero.js
+x === -0;
+
+// node_modules/equals-neg-zero.js
+x === -0;
+
+// plugin-dir/node_modules/equals-neg-zero.js
+x === -0;
+
+// equals-nan.js
+x === NaN;
+
+// node_modules/equals-nan.js
+x === NaN;
+
+// plugin-dir/node_modules/equals-nan.js
+x === NaN;
+
+// equals-object.js
+x === [];
+
+// node_modules/equals-object.js
+x === [];
+
+// plugin-dir/node_modules/equals-object.js
+x === [];
+
+// delete-super.js
+var Foo = class extends Bar {
+  foo() {
+    delete super.foo;
+  }
+};
+
+// node_modules/delete-super.js
+var Foo2 = class extends Bar {
+  foo() {
+    delete super.foo;
+  }
+};
+
+// plugin-dir/node_modules/delete-super.js
+var Foo3 = class extends Bar {
+  foo() {
+    delete super.foo;
+  }
+};
+
+================================================================================
+TestWithStatementTaintingNoBundle
+---------- /out.js ----------
+(() => {
+  let e = 1;
+  let outer = 2;
+  let outerDead = 3;
+  with ({}) {
+    var hoisted = 4;
+    let t = 5;
+    hoisted++;
+    t++;
+    if (1) outer++;
+    if (0) outerDead++;
+  }
+  if (1) {
+    hoisted++;
+    e++;
+    outer++;
+    outerDead++;
+  }
+})();

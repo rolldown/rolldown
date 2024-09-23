@@ -39,6 +39,7 @@ init_foo(), __toCommonJS(foo_ns);
 
 # Sourcemap Visualizer
 
+```
 - ../foo.js
 (4:15-4:24) " function" --> (28:0-28:9) "\nfunction"
 (4:24-4:28) " foo" --> (28:9-28:15) " foo$1"
@@ -80,3 +81,4 @@ init_foo(), __toCommonJS(foo_ns);
 (7:42-9:0) ")\n" --> (48:42-49:0) ");"
 (9:0-0:0) "" --> (49:0-49:0) ""
 (0:0-10:1) "import assert from 'node:assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')\n" --> (49:0-52:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

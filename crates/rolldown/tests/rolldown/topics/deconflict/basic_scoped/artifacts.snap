@@ -25,6 +25,7 @@ assert.deepEqual(foo("foo"), ["foo", "main.js", "a.js"]);
 
 # Sourcemap Visualizer
 
+```
 - ../a.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
@@ -55,3 +56,4 @@ assert.deepEqual(foo("foo"), ["foo", "main.js", "a.js"]);
 (9:48-9:55) " 'a.js'" --> (11:48-11:55) " \"a.js\""
 (9:55-9:56) "]" --> (11:55-11:56) "]"
 (9:56-10:1) ")\n" --> (11:56-14:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+```

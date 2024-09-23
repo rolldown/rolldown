@@ -1,0 +1,19 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "test": "[\\\\/]node_modules",
+          "name": "other-libs",
+          "priority": 0
+        },
+        {
+          "test": "node_modules[\\\\/]+lib-ui",
+          "name": "ui",
+          "priority": 10
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": false
+}

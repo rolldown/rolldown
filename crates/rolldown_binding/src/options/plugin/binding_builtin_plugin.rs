@@ -113,6 +113,7 @@ pub struct BindingTransformPluginConfig {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub jsx_inject: Option<String>,
+  pub targets: Option<String>,
 }
 
 #[napi_derive::napi(object)]
@@ -149,7 +150,6 @@ impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlug
     Ok(BuildImportAnalysisPlugin {
       preload_code: value.preload_code,
       insert_preload: value.insert_preload,
-      optimize_module_preload_relative_paths: value.optimize_module_preload_relative_paths,
       render_built_url: value.render_built_url,
       is_relative_base: value.is_relative_base,
     })
@@ -198,6 +198,7 @@ impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
       include: normalized_include,
       exclude: normalized_exclude,
       jsx_inject: value.jsx_inject,
+      targets: value.targets,
     })
   }
 }

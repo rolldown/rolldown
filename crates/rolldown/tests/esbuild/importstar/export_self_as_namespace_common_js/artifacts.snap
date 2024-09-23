@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.cjs
+
+```js
+"use strict";
+
+
+//#region entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	foo: () => foo,
+	ns: () => entry_ns
+});
+const foo = 123;
+
+//#endregion
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
+Object.defineProperty(exports, 'ns', {
+  enumerable: true,
+  get: function () {
+    return entry_ns;
+  }
+});
+```

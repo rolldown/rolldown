@@ -38,7 +38,7 @@ impl Generator for EcmaGenerator {
       .zip(module_id_to_codegen_ret)
       .filter_map(|(id, codegen_ret)| {
         ctx.link_output.module_table.modules[id]
-          .as_ecma()
+          .as_normal()
           .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
       })
       .map(|(m, codegen_ret)| {

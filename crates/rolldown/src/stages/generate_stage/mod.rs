@@ -4,14 +4,15 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
+  extract_hash_pattern::extract_hash_pattern,
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
-  rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
   sanitize_file_name::sanitize_file_name,
 };
 use sugar_path::SugarPath;
@@ -25,7 +26,6 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   utils::{
     chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
-    extract_hash_pattern::extract_hash_pattern,
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
     hash_placeholder::HashPlaceholderGenerator,
@@ -61,18 +61,17 @@ impl<'a> GenerateStage<'a> {
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
-    chunk_graph.chunk_table.iter_mut().par_bridge().for_each(|chunk| {
+    chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
       deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
     });
 
-    let ast_table_iter = self.link_output.ast_table.iter_mut();
+    let ast_table_iter = self.link_output.ast_table.par_iter_mut();
     ast_table_iter
-      .par_bridge()
       .filter(|(_ast, owner)| {
-        self.link_output.module_table.modules[*owner].as_ecma().map_or(false, |m| m.is_included)
+        self.link_output.module_table.modules[*owner].as_normal().map_or(false, |m| m.is_included)
       })
       .for_each(|(ast, owner)| {
-        let Module::Ecma(module) = &self.link_output.module_table.modules[*owner] else {
+        let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {
           return;
         };
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
@@ -100,12 +99,16 @@ impl<'a> GenerateStage<'a> {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {
               alloc,
-              // scope: &module.scope,
+              scope: &module.scope,
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.modules,
+                symbols: &self.link_output.symbols,
               },
               snippet: AstSnippet::new(alloc),
+              generated_imports_set: FxHashSet::default(),
+              generated_imports: oxc::allocator::Vec::new_in(alloc),
+              generated_exports: oxc::allocator::Vec::new_in(alloc),
             };
             finalizer.visit_program(oxc_program);
           });

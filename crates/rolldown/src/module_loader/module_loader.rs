@@ -254,10 +254,10 @@ impl ModuleLoader {
               .into_iter()
               .zip(resolved_deps)
               .map(|(raw_rec, info)| {
-                let ecma_module = module.as_ecma().unwrap();
+                let normal_module = module.as_normal().unwrap();
                 let owner = ModuleTaskOwner::new(
-                  ecma_module.source.clone(),
-                  ecma_module.stable_id.as_str().into(),
+                  normal_module.source.clone(),
+                  normal_module.stable_id.as_str().into(),
                   Span::new(raw_rec.module_request_start, raw_rec.module_request_end()),
                 );
                 let id = self.try_spawn_new_task(info, Some(owner));
@@ -324,7 +324,8 @@ impl ModuleLoader {
       .flatten()
       .enumerate()
       .map(|(id, mut module)| {
-        if let Some(module) = module.as_ecma_mut() {
+        let id = ModuleIdx::from(id);
+        if let Some(module) = module.as_normal_mut() {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
           for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {

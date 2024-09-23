@@ -1,3 +1,6 @@
+use crate::ast_scanner::side_effect_detector::utils::{
+  extract_member_expr_chain, is_primitive_literal,
+};
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
   BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
@@ -5,40 +8,15 @@ use oxc::ast::ast::{
 };
 use oxc::ast::{match_expression, match_member_expression, Trivias};
 use rolldown_common::AstScopes;
-use rustc_hash::FxHashSet;
-use std::sync::LazyLock;
-
-use crate::ast_scanner::side_effect_detector::utils::{
-  extract_member_expr_chain, is_primitive_literal,
+use rolldown_utils::global_reference::{
+  is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
+  is_side_effect_free_member_expr_of_len_two,
 };
 
 use self::utils::{known_primitive_type, PrimitiveType};
 
 mod annotation;
 mod utils;
-
-// Probably we should generate this using macros.
-static SIDE_EFFECT_FREE_MEMBER_EXPR_2: LazyLock<FxHashSet<(&'static str, &'static str)>> =
-  LazyLock::new(|| {
-    [
-      ("Object", "create"),
-      ("Object", "defineProperty"),
-      ("Object", "getOwnPropertyDescriptor"),
-      ("Object", "getPrototypeOf"),
-      ("Object", "getOwnPropertyNames"),
-      ("Symbol", "iterator"),
-    ]
-    .into_iter()
-    .collect()
-  });
-
-static SIDE_EFFECT_FREE_MEMBER_EXPR_3: LazyLock<
-  FxHashSet<(&'static str, &'static str, &'static str)>,
-> = LazyLock::new(|| {
-  [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
-    .into_iter()
-    .collect()
-});
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
@@ -132,9 +110,9 @@ impl<'a> SideEffectDetector<'a> {
     if !self.scope.is_unresolved(ref_id) {
       return true;
     }
-    match chains.as_slice() {
-      [a, b] => !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(a.as_str(), b.as_str())),
-      [a, b, c] => !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(a.as_str(), b.as_str(), c.as_str())),
+    match chains.len() {
+      2 => !is_side_effect_free_member_expr_of_len_two(&chains),
+      3 => !is_side_effect_free_member_expr_of_len_three(&chains),
       _ => true,
     }
   }
@@ -349,7 +327,7 @@ impl<'a> SideEffectDetector<'a> {
 
   #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> bool {
-    self.is_unresolved_reference(ident_ref) && ident_ref.name != "undefined"
+    self.is_unresolved_reference(ident_ref) && !is_global_ident_ref(&ident_ref.name)
   }
 
   #[allow(clippy::too_many_lines)]
@@ -464,14 +442,10 @@ mod test {
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
   fn get_statements_side_effect(code: &str) -> bool {
-    let source_type = SourceType::default()
-      .with_always_strict(true)
-      .with_module(true)
-      .with_jsx(true)
-      .with_typescript(false);
+    let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let ast_scope = {
-      let semantic = EcmaAst::make_semantic(ast.source(), ast.program(), source_type);
+      let semantic = EcmaAst::make_semantic(ast.source(), ast.program());
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
       AstScopes::new(
         scope,
@@ -755,5 +729,32 @@ mod test {
     assert!(get_statements_side_effect("import('foo')"));
     assert!(get_statements_side_effect("let a; a``"));
     assert!(get_statements_side_effect("let a; a++"));
+  }
+
+  #[test]
+  fn test_side_effects_free_global_variable_ref() {
+    assert!(!get_statements_side_effect("let a = undefined"));
+    assert!(!get_statements_side_effect("let a = NaN"));
+    assert!(!get_statements_side_effect("let a = String"));
+    assert!(!get_statements_side_effect("let a = Object.assign"));
+    assert!(!get_statements_side_effect("let a = Object.prototype.propertyIsEnumerable"));
+    assert!(!get_statements_side_effect("let a = Symbol.asyncDispose"));
+    assert!(!get_statements_side_effect("let a = Math.E"));
+    assert!(!get_statements_side_effect("let a = Reflect.apply"));
+    assert!(!get_statements_side_effect("let a = JSON.stringify"));
+    assert!(!get_statements_side_effect("let a = Proxy"));
+
+    // should have side effects other global member expr access
+    assert!(get_statements_side_effect("let a = Object.test"));
+    assert!(get_statements_side_effect("let a = Object.prototype.two"));
+    assert!(get_statements_side_effect("let a = Reflect.something"));
+  }
+
+  #[test]
+  fn test_object_expression() {
+    assert!(!get_statements_side_effect("const of = { [1]: 'hi'}"));
+    assert!(!get_statements_side_effect("const of = { [-1]: 'hi'}"));
+    assert!(!get_statements_side_effect("const of = { [+1]: 'hi'}"));
+    assert!(get_statements_side_effect("const of = { [{}]: 'hi'}"));
   }
 }

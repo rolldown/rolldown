@@ -1,6 +1,6 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, OutputFormat, SymbolRef};
+use rolldown_common::{IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -115,7 +115,7 @@ impl<'name> Renamer<'name> {
   ) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
-      module: &'name EcmaModule,
+      module: &'name NormalModule,
       scope_id: ScopeId,
       stack: &mut Vec<Cow<FxHashMap<Rstr, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
@@ -160,7 +160,7 @@ impl<'name> Renamer<'name> {
     }
 
     let copied_scope_iter =
-      modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_ecma()).flat_map(
+      modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_normal()).flat_map(
         |module| {
           let child_scopes: &[ScopeId] = module.scope.get_child_ids(module.scope.root_scope_id());
 

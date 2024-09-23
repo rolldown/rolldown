@@ -68,6 +68,7 @@ export declare class Bundler {
   write(): Promise<FinalBindingOutputs>
   generate(): Promise<FinalBindingOutputs>
   scan(): Promise<void>
+  close(): Promise<void>
 }
 
 /**
@@ -100,6 +101,12 @@ export interface ArrowFunctionsBindingOptions {
    * @default false
    */
   spec?: boolean
+}
+
+export interface BindingAdvancedChunksOptions {
+  minSize?: number
+  minShareCount?: number
+  groups?: Array<BindingMatchGroup>
 }
 
 export interface BindingAliasPluginAlias {
@@ -257,6 +264,14 @@ export interface BindingManifestPluginConfig {
   outPath: string
 }
 
+export interface BindingMatchGroup {
+  name: string
+  test?: string
+  priority?: number
+  minSize?: number
+  minShareCount?: number
+}
+
 export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
@@ -283,6 +298,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean
+  advancedChunks?: BindingAdvancedChunksOptions
 }
 
 export interface BindingPluginContextResolvedId {
@@ -331,6 +347,8 @@ export interface BindingPluginOptions {
   generateBundleMeta?: BindingPluginHookMeta
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   writeBundleMeta?: BindingPluginHookMeta
+  closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  closeBundleMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   bannerMeta?: BindingPluginHookMeta
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
@@ -407,6 +425,7 @@ export interface BindingTransformPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxInject?: string
+  targets?: string
 }
 
 export interface BindingTreeshake {
@@ -419,10 +438,15 @@ export interface Es2015BindingOptions {
 }
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
-export declare function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
+export declare function isolatedDeclaration(filename: string, sourceText: string, options: IsolatedDeclarationsOptions): IsolatedDeclarationsResult
+
+export interface IsolatedDeclarationsOptions {
+  sourcemap: boolean
+}
 
 export interface IsolatedDeclarationsResult {
-  sourceText: string
+  code: string
+  map?: SourceMap
   errors: Array<string>
 }
 
@@ -518,6 +542,24 @@ export interface ReactBindingOptions {
    * @default false
    */
   useSpread?: boolean
+  /** Enable react fast refresh transform */
+  refresh?: ReactRefreshBindingOptions
+}
+
+export interface ReactRefreshBindingOptions {
+  /**
+   * Specify the identifier of the refresh registration variable.
+   *
+   * @default `$RefreshReg$`.
+   */
+  refreshReg?: string
+  /**
+   * Specify the identifier of the refresh signature variable.
+   *
+   * @default `$RefreshSig$`.
+   */
+  refreshSig?: string
+  emitFullSignatures?: boolean
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
@@ -538,10 +580,12 @@ export interface RenderedChunk {
 export interface SourceMap {
   file?: string
   mappings?: string
+  names?: Array<string>
   sourceRoot?: string
   sources?: Array<string | undefined | null>
   sourcesContent?: Array<string | undefined | null>
-  names?: Array<string>
+  version: number
+  x_google_ignoreList?: Array<number>
 }
 
 /**
@@ -600,13 +644,13 @@ export interface TransformResult {
    *
    * If parsing failed, this will be an empty string.
    */
-  sourceText: string
+  code: string
   /**
    * The source map for the transformed code.
    *
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
-  sourceMap?: SourceMap
+  map?: SourceMap
   /**
    * The `.d.ts` declaration file for the transformed code. Declarations are
    * only generated if `declaration` is set to `true` and a TypeScript file
@@ -650,5 +694,16 @@ export interface TypeScriptBindingOptions {
    * @default false
    */
   declaration?: boolean
+  /**
+   * Rewrite or remove TypeScript import/export declaration extensions.
+   *
+   * - When set to `rewrite`, it will change `.ts`, `.mts`, `.cts` extensions to `.js`, `.mjs`, `.cjs` respectively.
+   * - When set to `remove`, it will remove `.ts`/`.mts`/`.cts`/`.tsx` extension entirely.
+   * - When set to `true`, it's equivalent to `rewrite`.
+   * - When set to `false` or omitted, no changes will be made to the extensions.
+   *
+   * @default false
+   */
+  rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
 

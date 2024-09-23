@@ -24,6 +24,7 @@ pub async fn resolve_id_with_plugins(
   import_kind: ImportKind,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
   custom: Arc<TypedDashMap>,
+  is_user_defined_entry: bool,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) = plugin_driver
@@ -85,7 +86,7 @@ pub async fn resolve_id_with_plugins(
     }));
   }
 
-  resolve_id(resolver, request, importer, import_kind)
+  resolve_id(resolver, request, importer, import_kind, is_user_defined_entry)
 }
 
 fn resolve_id(
@@ -93,8 +94,10 @@ fn resolve_id(
   request: &str,
   importer: Option<&str>,
   import_kind: ImportKind,
+  is_user_defined_entry: bool,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-  let resolved = resolver.resolve(importer.map(Path::new), request, import_kind)?;
+  let resolved =
+    resolver.resolve(importer.map(Path::new), request, import_kind, is_user_defined_entry)?;
 
   if let Err(err) = resolved {
     match err {

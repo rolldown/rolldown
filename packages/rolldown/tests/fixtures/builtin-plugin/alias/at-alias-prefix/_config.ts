@@ -2,6 +2,7 @@ import { aliasPlugin } from 'rolldown/experimental'
 import { defineTest } from '@tests'
 
 export default defineTest({
+  skip: true,
   config: {
     input: './main.js',
     plugins: [

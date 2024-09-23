@@ -115,6 +115,7 @@ impl ScanStage {
         ImportKind::Import,
         None,
         Arc::default(),
+        true,
       )
       .await;
 

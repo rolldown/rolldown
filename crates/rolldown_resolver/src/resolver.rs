@@ -150,34 +150,44 @@ impl<F: FileSystem + Default> Resolver<F> {
     importer: Option<&Path>,
     specifier: &str,
     import_kind: ImportKind,
+    is_user_defined_entry: bool,
   ) -> anyhow::Result<Result<ResolveReturn, ResolveError>> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::Require => &self.require_resolver,
     };
-    let resolution = if let Some(importer) = importer {
-      let context = importer.parent().expect("Should have a parent dir");
-      selected_resolver.resolve(context, specifier)
-    } else {
-      // If the importer is `None`, it means that the specifier is provided by the user in `input`. In this case, we can't call `resolver.resolve` with
-      // `{ context: cwd, specifier: specifier }` due to rollup's default resolve behavior. For specifier `main`, rollup will try to resolve it as
-      // `{ context: cwd, specifier: cwd.join(main) }`, which will resolve to `<cwd>/main.{js,mjs}`. To align with this behavior, we should also
-      // concat the CWD with the specifier.
-      // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
-      let joined_specifier = self.cwd.join(specifier).normalize();
 
-      let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
-
-      let resolution = selected_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
-      if resolution.is_ok() {
-        resolution
-      } else if !is_path_like {
-        // If the specifier is not path-like, we should try to resolve it as a bare specifier. This allows us to resolve modules from node_modules.
-        selected_resolver.resolve(&self.cwd, specifier)
+    let importer_dir = importer.and_then(|importer| importer.parent()).and_then(|inner| {
+      if inner.components().next().is_none() {
+        // Empty path `Path::new("")`
+        None
       } else {
-        resolution
+        Some(inner)
       }
-    };
+    });
+
+    let context_dir = importer_dir.unwrap_or(self.cwd.as_path());
+
+    let mut resolution = selected_resolver.resolve(context_dir, specifier);
+
+    if resolution.is_err() && is_user_defined_entry {
+      let is_specifier_path_like = specifier.starts_with('.') || specifier.starts_with('/');
+      let need_rollup_resolve_compat = !is_specifier_path_like;
+      if need_rollup_resolve_compat {
+        // Rolldown doesn't pursue to have the same resolve behavior as Rollup. Even though, in most cases, rolldown have the same resolve result as Rollup. And in this branch, it's the case that rolldown will perform differently from Rollup.
+
+        // The case is user writes config like `{ input: 'main' }`. `main` would be treated as a npm package name in rolldown
+        // and try to resolve it from `node_modules`. But rollup will resolve it to `<CWD>/main.{js,mjs,cjs}`.
+
+        // So in this branch, to improve rollup-compatibility, we try to simulate the Rollup's resolve behavior in this case.
+        // // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
+        let fallback = selected_resolver
+          .resolve(context_dir, &self.cwd.join(specifier).normalize().to_string_lossy());
+        if fallback.is_ok() {
+          resolution = fallback;
+        }
+      }
+    }
 
     match resolution {
       Ok(info) => {

@@ -73,6 +73,7 @@ impl<'a> CreateModuleContext<'a> {
       kind,
       None,
       Arc::default(),
+      false,
     )
     .await?;
 

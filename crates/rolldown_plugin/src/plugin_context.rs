@@ -98,6 +98,7 @@ impl PluginContextImpl {
         None
       },
       normalized_extra_options.custom,
+      false,
     )
     .await
   }

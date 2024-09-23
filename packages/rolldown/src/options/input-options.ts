@@ -100,6 +100,8 @@ export const inputOptionsSchema = z.strictObject({
   experimental: z
     .strictObject({
       enableComposingJsPlugins: z.boolean().optional(),
+      strictExecutionOrder: z.boolean().optional(),
+      disableLiveBindings: z.boolean().optional(),
     })
     .optional(),
   define: z.record(z.string()).describe('define global variables').optional(),

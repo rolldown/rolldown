@@ -15,6 +15,7 @@ pub mod bundler_options {
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup},
       es_module_flag::EsModuleFlag,
+      experimental_options::ExperimentalOptions,
       filename_template::{FileNameRenderOptions, FilenameTemplate},
       inject_import::InjectImport,
       input_item::InputItem,

@@ -157,6 +157,11 @@ export interface BindingEmittedAsset {
   source: BindingAssetSource
 }
 
+export interface BindingExperimentalOptions {
+  strictExecutionOrder?: boolean
+  disableLiveBindings?: boolean
+}
+
 export interface BindingGeneralHookFilter {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
@@ -236,6 +241,7 @@ export interface BindingInputOptions {
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
+  experimental: BindingExperimentalOptions
 }
 
 export interface BindingJsonPluginConfig {

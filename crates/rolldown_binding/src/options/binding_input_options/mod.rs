@@ -14,6 +14,7 @@ use self::{binding_input_item::BindingInputItem, binding_resolve_options::Bindin
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 
+mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
 mod binding_resolve_options;
@@ -79,6 +80,7 @@ pub struct BindingInputOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
   pub inject: Option<Vec<BindingInjectImport>>,
+  pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

@@ -55,7 +55,7 @@ assert.equal(import_foo.foo, undefined);
 +    default: { x: 123 },
 +    x: 123
 +});
-+assert.equal(import_foo.foo, undefined);
++console.log(import_foo.foo);
 \ No newline at end of file
 
 ```

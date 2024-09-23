@@ -42,9 +42,9 @@ assert.equal(z, 4);
 \ No newline at end of file
 +const x = 1;
 +const z = 4;
-+assert.equal(x, 1);
-+assert.equal(void 0, undefined);
-+assert.equal(z, 4);
++console.log(x);
++console.log(void 0);
++console.log(z);
 \ No newline at end of file
 
 ```

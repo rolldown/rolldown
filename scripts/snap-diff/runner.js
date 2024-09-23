@@ -45,7 +45,6 @@ export function run(includeList) {
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
       let diffResult = diffCase(snap, parsedRolldownSnap)
-      console.log(`rolldownTestPath: `, rolldownTestPath)
       if (typeof diffResult !== 'string') {
         writeDiffToTestcaseDir(rolldownTestPath, diffResult)
       }

@@ -65,8 +65,8 @@ assert.equal(ns2.foo, 123);
 -console.log(foo, ns2.foo);
 \ No newline at end of file
 +const ns2 = (init_foo(), __toCommonJS(foo_ns));
-+assert.equal(foo, 123);
-+assert.equal(ns2.foo, 123);
++console.log(foo);
++console.log(ns2.foo);
 \ No newline at end of file
 
 ```

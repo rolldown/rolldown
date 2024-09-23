@@ -40,10 +40,8 @@ assert.equal(bar, 123);
  statement();
  statement();
 -var bar = 123;
--console.log(bar);
-\ No newline at end of file
 +const bar = 123;
-+assert.equal(bar, 123);
+ console.log(bar);
 \ No newline at end of file
 
 ```

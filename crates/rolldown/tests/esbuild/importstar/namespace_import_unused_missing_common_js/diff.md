@@ -47,7 +47,7 @@ assert.equal(import_foo.foo, undefined);
 -console.log(ns.foo);
 \ No newline at end of file
 +var import_foo = __toESM(require_foo());
-+assert.equal(import_foo.foo, undefined);
++console.log(import_foo.foo);
 \ No newline at end of file
 
 ```

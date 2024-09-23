@@ -28,10 +28,8 @@ assert.equal(x, 1);
 +++ rolldown	entry_js.mjs
 @@ -1,2 +1,2 @@
 -var x = 1;
--console.log(x);
-\ No newline at end of file
 +let x = 1;
-+assert.equal(x, 1);
+ console.log(x);
 \ No newline at end of file
 
 ```

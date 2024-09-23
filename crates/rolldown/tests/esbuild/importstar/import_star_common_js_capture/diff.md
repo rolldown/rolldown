@@ -60,8 +60,8 @@ assert.equal(foo, 234);
 +    default: { foo: 123 },
 +    foo: 123
 +});
-+assert.equal(import_foo.foo, 123);
-+assert.equal(foo, 234);
++console.log(import_foo.foo);
++console.log(foo);
 \ No newline at end of file
 
 ```

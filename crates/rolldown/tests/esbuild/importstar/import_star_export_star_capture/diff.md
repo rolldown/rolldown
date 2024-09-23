@@ -54,8 +54,8 @@ assert.equal(foo, 234);
 +__export(bar_ns, { foo: () => foo$1 });
 +let foo = 234;
 +assert.deepEqual(bar_ns, { foo: 123 });
-+assert.equal(foo$1, 123);
-+assert.equal(foo, 234);
++console.log(foo$1);
++console.log(foo);
 \ No newline at end of file
 
 ```

@@ -43,7 +43,7 @@ export default require_entry();
 +var require_entry = __commonJSMin((exports, module) => {
 +    var import_entry = __toESM(require_entry());
 +    exports.foo = 123;
-+    assert.equal(import_entry.foo, undefined);
++    console.log(import_entry.foo);
  });
 -module.exports = require_entry();
 \ No newline at end of file

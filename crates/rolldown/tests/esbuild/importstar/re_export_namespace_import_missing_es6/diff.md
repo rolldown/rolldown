@@ -44,7 +44,7 @@ assert.equal(bar_ns.foo, undefined);
 +__export(bar_ns, { x: () => x });
 +const x = 123;
 +assert.deepEqual(bar_ns, { x: 123 });
-+assert.equal(bar_ns.foo, undefined);
++console.log(bar_ns.foo);
 \ No newline at end of file
 
 ```

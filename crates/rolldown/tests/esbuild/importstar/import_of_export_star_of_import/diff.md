@@ -39,16 +39,12 @@ assert.equal(value, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,6 +1,6 @@
+@@ -1,5 +1,5 @@
 -var value = 123;
 +const value = 123;
  statement();
  statement();
  statement();
  statement();
--console.log(value);
-\ No newline at end of file
-+assert.equal(value, 123);
-\ No newline at end of file
 
 ```

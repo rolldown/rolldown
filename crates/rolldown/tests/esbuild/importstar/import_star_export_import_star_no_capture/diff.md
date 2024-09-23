@@ -42,8 +42,8 @@ assert.equal(foo, 234);
 \ No newline at end of file
 +const foo$1 = 123;
 +let foo = 234;
-+assert.equal(foo$1, 123);
-+assert.equal(foo, 234);
++console.log(foo$1);
++console.log(foo);
 \ No newline at end of file
 
 ```

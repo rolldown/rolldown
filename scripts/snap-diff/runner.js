@@ -104,7 +104,7 @@ function getSummaryMarkdown(diffList, snapshotCategory) {
       testDir,
     )
     if (diff.diffResult === 'missing') {
-      markdown += `## [${diff.name}](${relativePath})\n`
+      markdown += `## ${diff.name}\n`
       markdown += `  missing\n`
       continue
     }

@@ -1,6 +1,6 @@
 set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
-
+alias ued := update-esbuild-diff
 _default:
     just --list -u
 

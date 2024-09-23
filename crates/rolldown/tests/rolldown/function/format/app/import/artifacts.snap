@@ -18,8 +18,8 @@ module.exports = 1;
 //#region main.js
 __toCommonJS(exports);
 var external = require("external");
-var cjs_ns = __toESM(require("cjs.js"));
-var commonjs_ns = __toESM(require("commonjs.mjs"), 1);
+var cjs_exports = __toESM(require("cjs.js"));
+var commonjs_exports = __toESM(require("commonjs.mjs"), 1);
 
 //#endregion
 ```

@@ -11,16 +11,16 @@ import "external";
 
 //#region foo.js
 import * as import_external from "external";
-var foo_ns;
+var foo_exports;
 var init_foo = __esmMin(() => {
-	foo_ns = {};
-	__reExport(foo_ns, import_external);
+	foo_exports = {};
+	__reExport(foo_exports, import_external);
 });
 
 //#endregion
 //#region main.js
 var require_main = __commonJSMin((exports, module) => {
-	const value = (init_foo(), __toCommonJS(foo_ns));
+	const value = (init_foo(), __toCommonJS(foo_exports));
 	module.exports = value;
 });
 

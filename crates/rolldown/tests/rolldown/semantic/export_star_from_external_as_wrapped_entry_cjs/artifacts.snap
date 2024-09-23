@@ -18,13 +18,13 @@ Object.keys(node_fs).forEach(function (k) {
 require("node:fs");
 
 //#region main.js
-var main_ns, main;
+var main_exports, main;
 var init_main = __esmMin(() => {
-	main_ns = {};
-	__export(main_ns, { main: () => main });
-	__reExport(main_ns, require("node:fs"));
+	main_exports = {};
+	__export(main_exports, { main: () => main });
+	__reExport(main_exports, require("node:fs"));
 	main = "main";
-	console.log((init_main(), __toCommonJS(main_ns)));
+	console.log((init_main(), __toCommonJS(main_exports)));
 });
 
 //#endregion

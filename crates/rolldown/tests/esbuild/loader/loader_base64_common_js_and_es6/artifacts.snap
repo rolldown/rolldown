@@ -14,16 +14,16 @@ var y_default = "eQ==";
 
 //#endregion
 //#region x.b64
-var x_ns, x_default;
+var x_exports, x_default;
 var init_x = __esmMin(() => {
-	x_ns = {};
-	__export(x_ns, { default: () => x_default });
+	x_exports = {};
+	__export(x_exports, { default: () => x_default });
 	x_default = "eA==";
 });
 
 //#endregion
 //#region entry.js
-const x_b64 = (init_x(), __toCommonJS(x_ns));
+const x_b64 = (init_x(), __toCommonJS(x_exports));
 assert.deepEqual(x_b64, { default: "eA==" });
 assert.equal(y_default, "eQ==");
 

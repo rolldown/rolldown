@@ -23,12 +23,12 @@ const foo = () => "hi there";
 
 //#endregion
 //#region folders/index.js
-var folders_index_ns = {};
-__export(folders_index_ns, { foo: () => foo });
+var folders_index_exports = {};
+__export(folders_index_exports, { foo: () => foo });
 
 //#endregion
 //#region entry.js
-assert(Object.keys(JSON.stringify(folders_index_ns)), 2);
+assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
 
 //#endregion
 
@@ -45,9 +45,9 @@ assert(Object.keys(JSON.stringify(folders_index_ns)), 2);
 -console.log(JSON.stringify(folders_exports));
 \ No newline at end of file
 +const foo = () => 'hi there';
-+var folders_index_ns = {};
-+__export(folders_index_ns, { foo: () => foo });
-+assert(Object.keys(JSON.stringify(folders_index_ns)), 2);
++var folders_index_exports = {};
++__export(folders_index_exports, { foo: () => foo });
++assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
 \ No newline at end of file
 
 ```

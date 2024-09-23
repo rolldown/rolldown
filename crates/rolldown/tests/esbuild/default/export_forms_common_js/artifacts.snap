@@ -16,25 +16,25 @@ var init_a = __esmMin(() => {
 
 //#endregion
 //#region b.js
-var b_ns, xyz;
+var b_exports, xyz;
 var init_b = __esmMin(() => {
-	b_ns = {};
-	__export(b_ns, { xyz: () => xyz });
+	b_exports = {};
+	__export(b_exports, { xyz: () => xyz });
 	xyz = null;
 });
 
 //#endregion
 //#region commonjs.js
 function Fn() {}
-var commonjs_ns, commonjs_default, v, l, c, Class;
+var commonjs_exports, commonjs_default, v, l, c, Class;
 var init_commonjs = __esmMin(() => {
-	commonjs_ns = {};
-	__export(commonjs_ns, {
+	commonjs_exports = {};
+	__export(commonjs_exports, {
 		C: () => Class,
 		Class: () => Class,
 		Fn: () => Fn,
 		abc: () => abc,
-		b: () => b_ns,
+		b: () => b_exports,
 		c: () => c,
 		default: () => commonjs_default,
 		l: () => l,
@@ -51,19 +51,19 @@ var init_commonjs = __esmMin(() => {
 
 //#endregion
 //#region c.js
-var c_ns, c_default;
+var c_exports, c_default;
 var init_c = __esmMin(() => {
-	c_ns = {};
-	__export(c_ns, { default: () => c_default });
+	c_exports = {};
+	__export(c_exports, { default: () => c_default });
 	c_default = class {};
 });
 
 //#endregion
 //#region d.js
-var d_ns, Foo;
+var d_exports, Foo;
 var init_d = __esmMin(() => {
-	d_ns = {};
-	__export(d_ns, { default: () => Foo });
+	d_exports = {};
+	__export(d_exports, { default: () => Foo });
 	Foo = class {};
 	Foo.prop = 123;
 });
@@ -71,50 +71,50 @@ var init_d = __esmMin(() => {
 //#endregion
 //#region e.js
 function e_default() {}
-var e_ns;
+var e_exports;
 var init_e = __esmMin(() => {
-	e_ns = {};
-	__export(e_ns, { default: () => e_default });
+	e_exports = {};
+	__export(e_exports, { default: () => e_default });
 });
 
 //#endregion
 //#region f.js
 function foo$1() {}
-var f_ns;
+var f_exports;
 var init_f = __esmMin(() => {
-	f_ns = {};
-	__export(f_ns, { default: () => foo$1 });
+	f_exports = {};
+	__export(f_exports, { default: () => foo$1 });
 	foo$1.prop = 123;
 });
 
 //#endregion
 //#region g.js
 async function g_default() {}
-var g_ns;
+var g_exports;
 var init_g = __esmMin(() => {
-	g_ns = {};
-	__export(g_ns, { default: () => g_default });
+	g_exports = {};
+	__export(g_exports, { default: () => g_default });
 });
 
 //#endregion
 //#region h.js
 async function foo() {}
-var h_ns;
+var h_exports;
 var init_h = __esmMin(() => {
-	h_ns = {};
-	__export(h_ns, { default: () => foo });
+	h_exports = {};
+	__export(h_exports, { default: () => foo });
 	foo.prop = 123;
 });
 
 //#endregion
 //#region entry.js
-init_commonjs(), __toCommonJS(commonjs_ns);
-init_c(), __toCommonJS(c_ns);
-init_d(), __toCommonJS(d_ns);
-init_e(), __toCommonJS(e_ns);
-init_f(), __toCommonJS(f_ns);
-init_g(), __toCommonJS(g_ns);
-init_h(), __toCommonJS(h_ns);
+init_commonjs(), __toCommonJS(commonjs_exports);
+init_c(), __toCommonJS(c_exports);
+init_d(), __toCommonJS(d_exports);
+init_e(), __toCommonJS(e_exports);
+init_f(), __toCommonJS(f_exports);
+init_g(), __toCommonJS(g_exports);
+init_h(), __toCommonJS(h_exports);
 
 //#endregion
 ```

@@ -15,18 +15,18 @@ var require_c = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region b.js
-var b_ns = {};
-__reExport(b_ns, __toESM(require_c()));
+var b_exports = {};
+__reExport(b_exports, __toESM(require_c()));
 
 //#endregion
 //#region a.js
-var a_ns = {};
-__reExport(a_ns, b_ns);
+var a_exports = {};
+__reExport(a_exports, b_exports);
 
 //#endregion
 //#region main.js
-var main_ns = {};
-__reExport(main_ns, a_ns);
+var main_exports = {};
+__reExport(main_exports, a_exports);
 
 //#endregion
 ```

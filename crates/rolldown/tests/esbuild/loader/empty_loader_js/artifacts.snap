@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { default as assert } from "node:assert";
 
 //#region b.empty
-var b_ns = {};
+var b_exports = {};
 
 //#endregion
 //#region c.empty
@@ -21,8 +21,8 @@ var named = void 0;
 
 //#endregion
 //#region entry.js
-console.log(b_ns, default$1, named);
-assert.deepEqual(b_ns, {});
+console.log(b_exports, default$1, named);
+assert.deepEqual(b_exports, {});
 assert.equal(default$1, undefined);
 assert.equal(named, undefined);
 

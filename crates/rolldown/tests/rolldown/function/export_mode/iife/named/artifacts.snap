@@ -13,8 +13,8 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region mod.js
-var named_mod_ns = {};
-__export(named_mod_ns, {
+var named_mod_exports = {};
+__export(named_mod_exports, {
 	add: () => add,
 	subtract: () => subtract
 });
@@ -41,7 +41,7 @@ Object.defineProperty(exports, 'aaa', {
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {
-    return named_mod_ns;
+    return named_mod_exports;
   }
 });
 return exports;

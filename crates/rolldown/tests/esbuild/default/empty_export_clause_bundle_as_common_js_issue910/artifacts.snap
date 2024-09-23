@@ -10,14 +10,14 @@ import { default as assert } from "node:assert";
 
 
 //#region types.mjs
-var types_ns;
+var types_exports;
 var init_types = __esmMin(() => {
-	types_ns = {};
+	types_exports = {};
 });
 
 //#endregion
 //#region entry.js
-assert.deepEqual((init_types(), __toCommonJS(types_ns)), {});
+assert.deepEqual((init_types(), __toCommonJS(types_exports)), {});
 
 //#endregion
 ```

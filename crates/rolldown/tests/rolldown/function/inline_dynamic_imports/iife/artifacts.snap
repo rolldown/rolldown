@@ -18,7 +18,7 @@ Promise.resolve().then(function() {
 	return __toESM(require_cjs());
 });
 Promise.resolve().then(function() {
-	return init_esm(), esm_ns;
+	return init_esm(), esm_exports;
 });
 
 //#endregion
@@ -33,10 +33,10 @@ var require_cjs = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region esm.js
-var esm_ns, value;
+var esm_exports, value;
 var init_esm = __esmMin(() => {
-	esm_ns = {};
-	__export(esm_ns, { value: () => value });
+	esm_exports = {};
+	__export(esm_exports, { value: () => value });
 	value = 1;
 });
 

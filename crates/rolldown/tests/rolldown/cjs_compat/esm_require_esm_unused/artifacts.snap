@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region esm.js
-var esm_ns, esm_default;
+var esm_exports, esm_default;
 var init_esm = __esmMin(() => {
-	esm_ns = {};
-	__export(esm_ns, { default: () => esm_default });
+	esm_exports = {};
+	__export(esm_exports, { default: () => esm_default });
 	esm_default = "esm";
 });
 
 //#endregion
 //#region main.js
-init_esm(), __toCommonJS(esm_ns);
+init_esm(), __toCommonJS(esm_exports);
 
 //#endregion
 ```

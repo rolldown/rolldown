@@ -14,13 +14,13 @@ const x = 123;
 
 //#endregion
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, { x: () => x });
+var foo_exports = {};
+__export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(foo_ns, { x: 123 });
-assert.equal(foo_ns.foo, undefined);
+assert.deepEqual(foo_exports, { x: 123 });
+assert.equal(foo_exports.foo, undefined);
 
 //#endregion
 ```

@@ -10,10 +10,10 @@ import { default as assert } from "node:assert";
 
 
 //#region codes.json
-var codes_ns, foo, codes_default;
+var codes_exports, foo, codes_default;
 var init_codes = __esmMin(() => {
-	codes_ns = {};
-	__export(codes_ns, {
+	codes_exports = {};
+	__export(codes_exports, {
 		default: () => codes_default,
 		foo: () => foo
 	});
@@ -24,7 +24,7 @@ var init_codes = __esmMin(() => {
 //#endregion
 //#region main.js
 init_codes();
-const codes2 = (init_codes(), __toCommonJS(codes_ns).default);
+const codes2 = (init_codes(), __toCommonJS(codes_exports).default);
 assert.strictEqual(codes_default, codes2);
 
 //#endregion

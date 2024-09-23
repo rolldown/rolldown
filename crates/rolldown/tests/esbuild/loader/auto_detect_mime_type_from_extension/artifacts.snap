@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region test.svg
-var test_ns, test_default;
+var test_exports, test_default;
 var init_test = __esmMin(() => {
-	test_ns = {};
-	__export(test_ns, { default: () => test_default });
+	test_exports = {};
+	__export(test_exports, { default: () => test_default });
 	test_default = "data:image/svg+xml;base64,YQBigGP/ZA==";
 });
 
 //#endregion
 //#region entry.js
-console.log((init_test(), __toCommonJS(test_ns)));
+console.log((init_test(), __toCommonJS(test_exports)));
 
 //#endregion
 ```

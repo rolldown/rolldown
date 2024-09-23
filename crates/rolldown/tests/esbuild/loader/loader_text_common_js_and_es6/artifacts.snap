@@ -14,16 +14,16 @@ var y_default = "y";
 
 //#endregion
 //#region x.txt
-var x_ns, x_default;
+var x_exports, x_default;
 var init_x = __esmMin(() => {
-	x_ns = {};
-	__export(x_ns, { default: () => x_default });
+	x_exports = {};
+	__export(x_exports, { default: () => x_default });
 	x_default = "x";
 });
 
 //#endregion
 //#region entry.js
-const x_txt = (init_x(), __toCommonJS(x_ns));
+const x_txt = (init_x(), __toCommonJS(x_exports));
 assert.deepEqual(x_txt, { default: "x" });
 assert.equal(y_default, "y");
 

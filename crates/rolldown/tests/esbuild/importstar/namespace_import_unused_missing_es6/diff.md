@@ -10,13 +10,13 @@ import { default as assert } from "node:assert";
 
 
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, { x: () => x });
+var foo_exports = {};
+__export(foo_exports, { x: () => x });
 const x = 123;
 
 //#endregion
 //#region entry.js
-assert.equal(foo_ns.foo, undefined);
+assert.equal(foo_exports.foo, undefined);
 
 //#endregion
 
@@ -29,10 +29,10 @@ assert.equal(foo_ns.foo, undefined);
 @@ -1,1 +1,4 @@
 -console.log(void 0);
 \ No newline at end of file
-+var foo_ns = {};
-+__export(foo_ns, { x: () => x });
++var foo_exports = {};
++__export(foo_exports, { x: () => x });
 +const x = 123;
-+console.log(foo_ns.foo);
++console.log(foo_exports.foo);
 \ No newline at end of file
 
 ```

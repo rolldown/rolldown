@@ -23,19 +23,19 @@ import { default as assert } from "node:assert";
 
 
 //#region bar.js
-var bar_ns = {};
-__export(bar_ns, { bar: () => bar });
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar });
 const bar = 123;
 
 //#endregion
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, { bar_ns: () => bar_ns });
+var foo_exports = {};
+__export(foo_exports, { bar_ns: () => bar_exports });
 
 //#endregion
 //#region entry.js
-console.log(foo_ns);
-assert.deepEqual(foo_ns, { bar_ns: { bar: 123 } });
+console.log(foo_exports);
+assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
 
 //#endregion
 
@@ -48,18 +48,16 @@ assert.deepEqual(foo_ns, { bar_ns: { bar: 123 } });
 @@ -1,6 +1,7 @@
 -var foo_exports = {};
 -__export(foo_exports, { bar_ns: () => bar_exports });
--var bar_exports = {};
--__export(bar_exports, { bar: () => bar });
+ var bar_exports = {};
+ __export(bar_exports, { bar: () => bar });
 -var bar = 123;
 -console.log(foo_exports);
 \ No newline at end of file
-+var bar_ns = {};
-+__export(bar_ns, { bar: () => bar });
 +const bar = 123;
-+var foo_ns = {};
-+__export(foo_ns, { bar_ns: () => bar_ns });
-+console.log(foo_ns);
-+assert.deepEqual(foo_ns, { bar_ns: { bar: 123 } });
++var foo_exports = {};
++__export(foo_exports, { bar_ns: () => bar_exports });
++console.log(foo_exports);
++assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
 \ No newline at end of file
 
 ```

@@ -118,7 +118,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-GFrITIHx.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-UwpMJzbZ.mjs
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module
 
@@ -163,7 +163,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-3kOaj0Nl.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-U9UNPOrg.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
 
@@ -179,7 +179,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-u1nwuVaT.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-KuIoSw5u.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999
 
@@ -272,7 +272,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
-- entry_js-!~{000}~.mjs => entry_js-xJwc1XyR.mjs
+- entry_js-!~{000}~.mjs => entry_js-k2uBub81.mjs
 
 # tests/esbuild/dce/tree_shaking_no_bundle_cjs
 
@@ -316,7 +316,7 @@ expression: output
 
 # tests/esbuild/default/common_js_from_es6
 
-- entry_js-!~{000}~.mjs => entry_js-L_KI_5IK.mjs
+- entry_js-!~{000}~.mjs => entry_js-noISe_f1.mjs
 
 # tests/esbuild/default/const_with_let
 
@@ -338,7 +338,7 @@ expression: output
 
 # tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 
-- entry_js-!~{000}~.mjs => entry_js-RDq0gCeM.mjs
+- entry_js-!~{000}~.mjs => entry_js-bt34poN2.mjs
 
 # tests/esbuild/default/es6_from_common_js
 
@@ -350,15 +350,15 @@ expression: output
 
 # tests/esbuild/default/export_forms_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-ATw0CWrg.mjs
+- entry_js-!~{000}~.mjs => entry_js-zdIjEvK3.mjs
 
 # tests/esbuild/default/export_forms_es6
 
-- entry_js-!~{000}~.mjs => entry_js-yDqUz3f2.mjs
+- entry_js-!~{000}~.mjs => entry_js-GxT3GmIH.mjs
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
-- entry-!~{000}~.cjs => entry-UjxmBZP-.cjs
+- entry-!~{000}~.cjs => entry-TyT7t99U.cjs
 
 # tests/esbuild/default/external_packages
 
@@ -535,11 +535,11 @@ expression: output
 
 # tests/esbuild/importstar/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-krfd71h4.cjs
+- entry_js-!~{000}~.cjs => entry_js-lkGhL6zP.cjs
 
 # tests/esbuild/importstar/export_self_as_namespace_es6
 
-- entry_js-!~{000}~.mjs => entry_js-Ci9jf2Vl.mjs
+- entry_js-!~{000}~.mjs => entry_js-4bGwcs59.mjs
 
 # tests/esbuild/importstar/export_self_common_js
 
@@ -555,7 +555,7 @@ expression: output
 
 # tests/esbuild/importstar/import_export_self_as_namespace_es6
 
-- entry_js-!~{000}~.mjs => entry_js-Ci9jf2Vl.mjs
+- entry_js-!~{000}~.mjs => entry_js-4bGwcs59.mjs
 
 # tests/esbuild/importstar/import_export_star_ambiguous_warning
 
@@ -575,11 +575,11 @@ expression: output
 
 # tests/esbuild/importstar/import_star_and_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-eIHCfSy-.mjs
+- entry_js-!~{000}~.mjs => entry_js-IuADXYH6.mjs
 
 # tests/esbuild/importstar/import_star_capture
 
-- entry_js-!~{000}~.mjs => entry_js-jeNB7gUK.mjs
+- entry_js-!~{000}~.mjs => entry_js-GAPFh6If.mjs
 
 # tests/esbuild/importstar/import_star_common_js_capture
 
@@ -595,7 +595,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_export_import_star_capture
 
-- entry_js-!~{000}~.mjs => entry_js-j6rCJzbs.mjs
+- entry_js-!~{000}~.mjs => entry_js-K9IP8nbs.mjs
 
 # tests/esbuild/importstar/import_star_export_import_star_no_capture
 
@@ -607,7 +607,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_export_star_as_capture
 
-- entry_js-!~{000}~.mjs => entry_js-jeNB7gUK.mjs
+- entry_js-!~{000}~.mjs => entry_js-GAPFh6If.mjs
 
 # tests/esbuild/importstar/import_star_export_star_as_no_capture
 
@@ -619,7 +619,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_export_star_capture
 
-- entry_js-!~{000}~.mjs => entry_js--k6TbpWz.mjs
+- entry_js-!~{000}~.mjs => entry_js-I9B9YtMG.mjs
 
 # tests/esbuild/importstar/import_star_export_star_no_capture
 
@@ -627,7 +627,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_export_star_omit_ambiguous
 
-- entry_js-!~{000}~.mjs => entry_js-8PO_fo2V.mjs
+- entry_js-!~{000}~.mjs => entry_js-mP7j6B5E.mjs
 
 # tests/esbuild/importstar/import_star_export_star_unused
 
@@ -639,7 +639,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_of_export_star_as
 
-- entry_js-!~{000}~.mjs => entry_js-W7zmJGUu.mjs
+- entry_js-!~{000}~.mjs => entry_js-d_u-D_UD.mjs
 
 # tests/esbuild/importstar/import_star_unused
 
@@ -647,7 +647,7 @@ expression: output
 
 # tests/esbuild/importstar/issue176
 
-- entry_js-!~{000}~.mjs => entry_js--2X9MJcv.mjs
+- entry_js-!~{000}~.mjs => entry_js-S8D0aSGv.mjs
 
 # tests/esbuild/importstar/namespace_import_missing_common_js
 
@@ -655,15 +655,15 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-vUBXB_-Q.mjs
+- entry_js-!~{000}~.mjs => entry_js-VFYWHpLF.mjs
 
 # tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-YNk6SGbc.mjs
+- entry_js-!~{000}~.mjs => entry_js-nip6g79Q.mjs
 
 # tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-ZRfn5jSM.mjs
+- entry_js-!~{000}~.mjs => entry_js-iVeTeR--.mjs
 
 # tests/esbuild/importstar/namespace_import_unused_missing_common_js
 
@@ -671,7 +671,7 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_unused_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-gToj8462.mjs
+- entry_js-!~{000}~.mjs => entry_js-HdKsy06U.mjs
 
 # tests/esbuild/importstar/other_file_export_self_as_namespace_unused_es6
 
@@ -683,19 +683,19 @@ expression: output
 
 # tests/esbuild/importstar/re_export_namespace_import_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-Llcqy5LG.mjs
+- entry_js-!~{000}~.mjs => entry_js-vaGbXvs4.mjs
 
 # tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-nONTu2qq.mjs
+- entry_js-!~{000}~.mjs => entry_js-QUvnkXDO.mjs
 
 # tests/esbuild/importstar/re_export_other_file_export_self_as_namespace_es6
 
-- entry_js-!~{000}~.mjs => entry_js-eDDu2hYN.mjs
+- entry_js-!~{000}~.mjs => entry_js-3xo5jbbP.mjs
 
 # tests/esbuild/importstar/re_export_other_file_import_export_self_as_namespace_es6
 
-- entry_js-!~{000}~.mjs => entry_js-eDDu2hYN.mjs
+- entry_js-!~{000}~.mjs => entry_js-3xo5jbbP.mjs
 
 # tests/esbuild/importstar/re_export_star_as_external_common_js
 
@@ -707,7 +707,7 @@ expression: output
 
 # tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
-- entry_js-!~{000}~.mjs => entry_js-Dui1A2mX.mjs
+- entry_js-!~{000}~.mjs => entry_js-nsOyjTyb.mjs
 
 # tests/esbuild/importstar/re_export_star_external_common_js
 
@@ -735,19 +735,19 @@ expression: output
 
 # tests/esbuild/importstar_ts/ts_import_star_and_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-4ruieXoW.mjs
+- entry_js-!~{000}~.mjs => entry_js-3JOPU13n.mjs
 
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 
-- entry_js-!~{000}~.mjs => entry_js-1fVKEPEa.mjs
+- entry_js-!~{000}~.mjs => entry_js-zR5jzTOP.mjs
 
 # tests/esbuild/loader/empty_loader_js
 
-- entry_js-!~{000}~.mjs => entry_js-FoV7L20n.mjs
+- entry_js-!~{000}~.mjs => entry_js-eFtKxpLV.mjs
 
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
-- entry_js-!~{000}~.mjs => entry_js-tACN0y8c.mjs
+- entry_js-!~{000}~.mjs => entry_js-23QmEnu_.mjs
 
 # tests/esbuild/loader/loader_data_url_application_json
 
@@ -763,7 +763,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_common_js_and_es6
 
-- entry_js-!~{000}~.mjs => entry_js-ZCpxPRkP.mjs
+- entry_js-!~{000}~.mjs => entry_js-Yf5dcnL1.mjs
 
 # tests/esbuild/loader/loader_data_url_escape_percents
 
@@ -791,11 +791,11 @@ expression: output
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
-- entry_js-!~{000}~.mjs => entry_js-UB3z4tvw.mjs
+- entry_js-!~{000}~.mjs => entry_js-G3JijMI9.mjs
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry_js-!~{000}~.mjs => entry_js-fqV4U3fZ.mjs
+- entry_js-!~{000}~.mjs => entry_js-kGM3TIUH.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -999,23 +999,23 @@ expression: output
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_force_module_before_main
 
-- entry-!~{000}~.mjs => entry-34X3MlpV.mjs
+- entry-!~{000}~.mjs => entry-DFFksWSr.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_implicit_main
 
-- entry-!~{000}~.mjs => entry-e2Istpfl.mjs
+- entry-!~{000}~.mjs => entry-_y7IMOFT.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
 
-- entry-!~{000}~.mjs => entry-agCTNewO.mjs
+- entry-!~{000}~.mjs => entry-rPXf1Cq3.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_same_file
 
-- entry-!~{000}~.mjs => entry--71iNVBe.mjs
+- entry-!~{000}~.mjs => entry-_C8MYTEZ.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_separate_files
 
-- entry-!~{000}~.mjs => entry-hiDvRmQZ.mjs
+- entry-!~{000}~.mjs => entry-9_AsmaQX.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_only
 
@@ -1023,7 +1023,7 @@ expression: output
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_require_only
 
-- entry-!~{000}~.mjs => entry-UuMD3I97.mjs
+- entry-!~{000}~.mjs => entry-XLqRVWvj.mjs
 
 # tests/esbuild/packagejson/test_package_json_exports_browser
 
@@ -1200,9 +1200,9 @@ expression: output
 
 # tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 
-- a-!~{000}~.mjs => a-ThNt-Gvl.mjs
-- b-!~{001}~.mjs => b-TV8Eiw0d.mjs
-- a-!~{002}~.mjs => a-dcq8m4Qu.mjs
+- a-!~{000}~.mjs => a-lYn4ICpD.mjs
+- b-!~{001}~.mjs => b-8OJFTs5T.mjs
+- a-!~{002}~.mjs => a-tvvvybql.mjs
 
 # tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
 
@@ -1294,7 +1294,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/basic_commonjs
 
-- main-!~{000}~.mjs => main-FRxwenOc.mjs
+- main-!~{000}~.mjs => main-CIybBUkd.mjs
 
 # tests/rolldown/cjs_compat/cjs_entry
 
@@ -1319,15 +1319,15 @@ expression: output
 
 # tests/rolldown/cjs_compat/esm_require_esm
 
-- main-!~{000}~.mjs => main-eUqTL2ii.mjs
+- main-!~{000}~.mjs => main-j13VvTkF.mjs
 
 # tests/rolldown/cjs_compat/esm_require_esm_unused
 
-- main-!~{000}~.mjs => main-l0tl7Svn.mjs
+- main-!~{000}~.mjs => main-drUlimQ_.mjs
 
 # tests/rolldown/cjs_compat/exoprt_star_of_cjs
 
-- main-!~{000}~.mjs => main-0tuf-UDS.mjs
+- main-!~{000}~.mjs => main-k8MoOPrd.mjs
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
@@ -1339,11 +1339,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.mjs => main-eaQPImz1.mjs
+- main-!~{000}~.mjs => main-pVXIOwI3.mjs
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.mjs => main-IqpqufYA.mjs
+- main-!~{000}~.mjs => main-TdhICskj.mjs
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 
@@ -1370,13 +1370,13 @@ expression: output
 
 # tests/rolldown/cjs_compat/node_module_commonjs
 
-- main-!~{000}~.mjs => main-ghlcWAL_.mjs
+- main-!~{000}~.mjs => main-7FKkp1qo.mjs
 - entry-!~{001}~.mjs => entry-wpwuDKy4.mjs
 - commonjs-!~{002}~.mjs => commonjs-hYeKntuE.mjs
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
-- main-!~{000}~.mjs => main--It2XZn-.mjs
+- main-!~{000}~.mjs => main-b6BrKnoQ.mjs
 
 # tests/rolldown/cjs_compat/require/create_require
 
@@ -1389,8 +1389,8 @@ expression: output
 
 # tests/rolldown/cjs_compat/require/require_esm
 
-- main-!~{000}~.mjs => main-Z2hh72c5.mjs
-- main-Z2hh72c5.mjs.map
+- main-!~{000}~.mjs => main-YSwdhqtW.mjs
+- main-YSwdhqtW.mjs.map
 
 # tests/rolldown/code_splitting/basic
 
@@ -1419,7 +1419,7 @@ expression: output
 
 # tests/rolldown/dce/conditional_exports
 
-- main-!~{000}~.mjs => main-QSRhG9S4.mjs
+- main-!~{000}~.mjs => main-M0U4aIuS.mjs
 
 # tests/rolldown/dce/defined_expr_in_paren_expr
 
@@ -1497,9 +1497,9 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.mjs => main-M6jfBy0m.mjs
-- other-libs-!~{003}~.mjs => other-libs-U1jz6W1o.mjs
-- ui-!~{001}~.mjs => ui-a1Jazfmy.mjs
+- main-!~{000}~.mjs => main-Z4fDlQiN.mjs
+- other-libs-!~{003}~.mjs => other-libs-15Mlcu4z.mjs
+- ui-!~{001}~.mjs => ui-Gu20c7AA.mjs
 
 # tests/rolldown/function/define/node_env
 
@@ -1589,7 +1589,7 @@ expression: output
 
 # tests/rolldown/function/export_mode/cjs/default
 
-- main-!~{000}~.cjs => main-lVNnDFgR.cjs
+- main-!~{000}~.cjs => main-urILPFgw.cjs
 
 # tests/rolldown/function/export_mode/cjs/named
 
@@ -1601,11 +1601,11 @@ expression: output
 
 # tests/rolldown/function/export_mode/iife/default
 
-- main-!~{000}~.mjs => main-iElRRI9C.mjs
+- main-!~{000}~.mjs => main-kYC60ERt.mjs
 
 # tests/rolldown/function/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-sCXhT0Sa.mjs
+- main-!~{000}~.mjs => main-okYdXZxm.mjs
 
 # tests/rolldown/function/extend/iife/namespace_default
 
@@ -1633,7 +1633,7 @@ expression: output
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
-- main-!~{000}~.mjs => main-c_gWEcpH.mjs
+- main-!~{000}~.mjs => main-n5o_LOVA.mjs
 
 # tests/rolldown/function/external/export_external
 
@@ -1675,13 +1675,13 @@ expression: output
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-cfGohS4N.mjs
+- main-!~{000}~.mjs => main-Qan6nsA6.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- main-!~{000}~.mjs => main-OEIxNKs9.mjs
-- other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
-- cube-!~{002}~.mjs => cube-r9ltmWJC.mjs
+- main-!~{000}~.mjs => main-TewHhIq5.mjs
+- other-entry-!~{001}~.mjs => other-entry-Qq5cWnPt.mjs
+- cube-!~{002}~.mjs => cube-yryvJ4HJ.mjs
 
 # tests/rolldown/function/format/app/require
 
@@ -1749,15 +1749,15 @@ expression: output
 
 # tests/rolldown/function/inline_dynamic_imports/cjs
 
-- main-!~{000}~.cjs => main-q1pPmrEc.cjs
+- main-!~{000}~.cjs => main-YOG_JDtb.cjs
 
 # tests/rolldown/function/inline_dynamic_imports/esm
 
-- main-!~{000}~.mjs => main-U4B9RsY6.mjs
+- main-!~{000}~.mjs => main-tTDeZg9m.mjs
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.mjs => main--9MFXZs-.mjs
+- main-!~{000}~.mjs => main-vhQGOxfx.mjs
 
 # tests/rolldown/function/intro/cjs
 
@@ -1826,7 +1826,7 @@ expression: output
 
 # tests/rolldown/function/module_types/json/correct_semantic_of_import_and_require
 
-- main-!~{000}~.mjs => main-iOI1mnUB.mjs
+- main-!~{000}~.mjs => main-9njfqnXQ.mjs
 
 # tests/rolldown/function/module_types/json/customize
 
@@ -1910,7 +1910,7 @@ expression: output
 
 # tests/rolldown/function/shim_missing_exports/basic_wrapped_esm
 
-- main-!~{000}~.mjs => main-2Umuzbfw.mjs
+- main-!~{000}~.mjs => main-6OJhVu7j.mjs
 
 # tests/rolldown/function/shim_missing_exports/shake_unused_shimmed_exports
 
@@ -2037,7 +2037,7 @@ expression: output
 
 # tests/rolldown/misc/invalid_ident_repr
 
-- main-!~{000}~.mjs => main-r-fid2FS.mjs
+- main-!~{000}~.mjs => main-J9MSaWHA.mjs
 
 # tests/rolldown/misc/object_shorthand_property
 
@@ -2046,9 +2046,9 @@ expression: output
 
 # tests/rolldown/misc/reexport_star
 
-- main-!~{000}~.mjs => main-DQ0-01Fy.mjs
-- entry-!~{001}~.mjs => entry-owA6NmYM.mjs
-- a-!~{002}~.mjs => a-VLP_qSX0.mjs
+- main-!~{000}~.mjs => main-R4ADCm0h.mjs
+- entry-!~{001}~.mjs => entry-G2vkO74V.mjs
+- a-!~{002}~.mjs => a-tIRbhTMm.mjs
 
 # tests/rolldown/misc/reexport_star_from_local_named_export
 
@@ -2068,8 +2068,8 @@ expression: output
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.mjs => main-c_fP-LRz.mjs
-- main-c_fP-LRz.mjs.map
+- main-!~{000}~.mjs => main-Xdl--hbh.mjs
+- main-Xdl--hbh.mjs.map
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
@@ -2089,11 +2089,11 @@ expression: output
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
-- entry-!~{000}~.mjs => entry-0rqducjg.mjs
+- entry-!~{000}~.mjs => entry-0_dbncMW.mjs
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.cjs => entry-CNbnClbZ.cjs
+- entry-!~{000}~.cjs => entry-O9RqfYm4.cjs
 
 # tests/rolldown/sourcemap/inline_url_relative_to_file
 
@@ -2162,13 +2162,13 @@ expression: output
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.mjs => main-SeK2UgGl.mjs
-- main-SeK2UgGl.mjs.map
+- main-!~{000}~.mjs => main-SYznQ5Em.mjs
+- main-SYznQ5Em.mjs.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_export_named_function
 
-- main-!~{000}~.mjs => main-pnopkX4j.mjs
-- main-pnopkX4j.mjs.map
+- main-!~{000}~.mjs => main-BW4KIo0F.mjs
+- main-BW4KIo0F.mjs.map
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 
@@ -2252,17 +2252,17 @@ expression: output
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 
-- main-!~{000}~.mjs => main-Anrmq1Co.mjs
+- main-!~{000}~.mjs => main-KixZW5-u.mjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_and_shared_entries
 
-- entry-!~{000}~.mjs => entry-5ue-8b2f.mjs
-- entry2-!~{001}~.mjs => entry2-cZXNnr1C.mjs
-- main-!~{002}~.mjs => main-LpXe3shX.mjs
+- entry-!~{000}~.mjs => entry-PvG8Fm9Z.mjs
+- entry2-!~{001}~.mjs => entry2-sHHwchQ5.mjs
+- main-!~{002}~.mjs => main-rt47y4ie.mjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
-- main-!~{000}~.cjs => main-mPfHqQYZ.cjs
+- main-!~{000}~.cjs => main-eZNxv93F.cjs
 
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 
@@ -2282,7 +2282,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/export_star
 
-- main-!~{000}~.mjs => main-vODAsO5h.mjs
+- main-!~{000}~.mjs => main-2kAmJ_7c.mjs
 
 # tests/rolldown/tree_shaking/export_star2
 

@@ -18,15 +18,15 @@ export {
 
 
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, {
+var foo_exports = {};
+__export(foo_exports, {
 	foo: () => foo,
-	ns: () => foo_ns
+	ns: () => foo_exports
 });
 const foo = 123;
 
 //#endregion
-export { foo, foo_ns as ns };
+export { foo, foo_exports as ns };
 
 ```
 ### diff
@@ -34,21 +34,16 @@ export { foo, foo_ns as ns };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,10 +1,10 @@
--var foo_exports = {};
--__export(foo_exports, {
-+var foo_ns = {};
-+__export(foo_ns, {
+@@ -2,9 +2,9 @@
+ __export(foo_exports, {
      foo: () => foo,
--    ns: () => foo_exports
-+    ns: () => foo_ns
+     ns: () => foo_exports
  });
 -var foo = 123;
 +const foo = 123;
  export {
      foo,
--    foo_exports as ns
-+    foo_ns as ns
+     foo_exports as ns
  };
 \ No newline at end of file
 

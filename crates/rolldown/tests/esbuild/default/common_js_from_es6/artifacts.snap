@@ -13,10 +13,10 @@ import { default as assert } from "node:assert";
 function foo$1() {
 	return "foo";
 }
-var foo_ns;
+var foo_exports;
 var init_foo = __esmMin(() => {
-	foo_ns = {};
-	__export(foo_ns, { foo: () => foo$1 });
+	foo_exports = {};
+	__export(foo_exports, { foo: () => foo$1 });
 });
 
 //#endregion
@@ -24,18 +24,18 @@ var init_foo = __esmMin(() => {
 function bar$1() {
 	return "bar";
 }
-var bar_ns;
+var bar_exports;
 var init_bar = __esmMin(() => {
-	bar_ns = {};
-	__export(bar_ns, { bar: () => bar$1 });
+	bar_exports = {};
+	__export(bar_exports, { bar: () => bar$1 });
 });
 
 //#endregion
 //#region entry.js
-const { foo } = (init_foo(), __toCommonJS(foo_ns));
+const { foo } = (init_foo(), __toCommonJS(foo_exports));
 assert.equal(foo(), "foo");
 assert.equal(bar(), "bar");
-const { bar } = (init_bar(), __toCommonJS(bar_ns));
+const { bar } = (init_bar(), __toCommonJS(bar_exports));
 
 //#endregion
 ```

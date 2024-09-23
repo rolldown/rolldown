@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region lib.prod.js
-var lib_prod_ns, lib_prod_default;
+var lib_prod_exports, lib_prod_default;
 var init_lib_prod = __esmMin(() => {
-	lib_prod_ns = {};
-	__export(lib_prod_ns, { default: () => lib_prod_default });
+	lib_prod_exports = {};
+	__export(lib_prod_exports, { default: () => lib_prod_default });
 	lib_prod_default = "prod";
 });
 
@@ -20,7 +20,7 @@ var init_lib_prod = __esmMin(() => {
 //#region lib.js
 var require_lib = __commonJSMin((exports, module) => {
 	{
-		module.exports = (init_lib_prod(), __toCommonJS(lib_prod_ns));
+		module.exports = (init_lib_prod(), __toCommonJS(lib_prod_exports));
 	}
 });
 

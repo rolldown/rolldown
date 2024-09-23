@@ -10,20 +10,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 const { default: assert } = __toESM(require("node:assert"));
 
 //#region foo/test.js
-var test_ns$1 = {};
-__export(test_ns$1, { foo: () => foo });
+var test_exports$1 = {};
+__export(test_exports$1, { foo: () => foo });
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
-var test_ns = {};
-__export(test_ns, { bar: () => bar });
+var test_exports = {};
+__export(test_exports, { bar: () => bar });
 let bar = 123;
 
 //#endregion
 //#region entry.js
-assert.deepEqual(test_ns$1, { foo: 123 });
-assert.deepEqual(test_ns, { bar: 123 });
+assert.deepEqual(test_exports$1, { foo: 123 });
+assert.deepEqual(test_exports, { bar: 123 });
 console.log(exports, module.exports);
 
 //#endregion

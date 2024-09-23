@@ -24,17 +24,17 @@ import { default as assert } from "node:assert";
 
 
 //#region foo.js
-var foo_ns, foo;
+var foo_exports, foo;
 var init_foo = __esmMin(() => {
-	foo_ns = {};
-	__export(foo_ns, { foo: () => foo });
+	foo_exports = {};
+	__export(foo_exports, { foo: () => foo });
 	foo = 123;
 });
 
 //#endregion
 //#region entry.js
 init_foo();
-const ns2 = (init_foo(), __toCommonJS(foo_ns));
+const ns2 = (init_foo(), __toCommonJS(foo_exports));
 assert.equal(foo, 123);
 assert.equal(ns2.foo, 123);
 
@@ -54,17 +54,17 @@ assert.equal(ns2.foo, 123);
 -    'foo.js'() {
 -        foo = 123;
 -    }
-+var foo_ns, foo;
++var foo_exports, foo;
 +var init_foo = __esmMin(() => {
-+    foo_ns = {};
-+    __export(foo_ns, { foo: () => foo });
++    foo_exports = {};
++    __export(foo_exports, { foo: () => foo });
 +    foo = 123;
  });
  init_foo();
 -var ns2 = (init_foo(), __toCommonJS(foo_exports));
 -console.log(foo, ns2.foo);
 \ No newline at end of file
-+const ns2 = (init_foo(), __toCommonJS(foo_ns));
++const ns2 = (init_foo(), __toCommonJS(foo_exports));
 +console.log(foo);
 +console.log(ns2.foo);
 \ No newline at end of file

@@ -31,15 +31,15 @@ const z = 4;
 
 //#endregion
 //#region common.js
-var common_ns = {};
-__export(common_ns, {
+var common_exports = {};
+__export(common_exports, {
 	x: () => x,
 	z: () => z
 });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(common_ns, {
+assert.deepEqual(common_exports, {
 	x: 1,
 	z: 4
 });
@@ -53,12 +53,10 @@ assert.deepEqual(common_ns, {
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,8 +1,11 @@
--var common_exports = {};
--__export(common_exports, {
 +const x = 1;
 +const z = 4;
-+var common_ns = {};
-+__export(common_ns, {
+ var common_exports = {};
+ __export(common_exports, {
      x: () => x,
      z: () => z
  });
@@ -66,7 +64,7 @@ assert.deepEqual(common_ns, {
 -var z = 4;
 -console.log(common_exports);
 \ No newline at end of file
-+assert.deepEqual(common_ns, {
++assert.deepEqual(common_exports, {
 +    x: 1,
 +    z: 4
 +});

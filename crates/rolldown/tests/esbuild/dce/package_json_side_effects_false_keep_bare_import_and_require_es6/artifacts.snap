@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_index_ns, foo;
+var demo_pkg_index_exports, foo;
 var init_demo_pkg_index = __esmMin(() => {
-	demo_pkg_index_ns = {};
-	__export(demo_pkg_index_ns, { foo: () => foo });
+	demo_pkg_index_exports = {};
+	__export(demo_pkg_index_exports, { foo: () => foo });
 	foo = 123;
 	console.log("hello");
 });
@@ -20,7 +20,7 @@ var init_demo_pkg_index = __esmMin(() => {
 //#endregion
 //#region src/entry.js
 init_demo_pkg_index();
-init_demo_pkg_index(), __toCommonJS(demo_pkg_index_ns);
+init_demo_pkg_index(), __toCommonJS(demo_pkg_index_exports);
 console.log("unused import");
 
 //#endregion

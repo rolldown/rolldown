@@ -13,13 +13,13 @@ export * from "node:fs"
 
 //#region main.js
 import * as import_node_fs from "node:fs";
-var main_ns, main;
+var main_exports, main;
 var init_main = __esmMin(() => {
-	main_ns = {};
-	__export(main_ns, { main: () => main });
-	__reExport(main_ns, import_node_fs);
+	main_exports = {};
+	__export(main_exports, { main: () => main });
+	__reExport(main_exports, import_node_fs);
 	main = "main";
-	console.log((init_main(), __toCommonJS(main_ns)));
+	console.log((init_main(), __toCommonJS(main_exports)));
 });
 
 //#endregion

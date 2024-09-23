@@ -33,13 +33,13 @@ console.log(import_commonjs.default);
 import { __reExport, __toESM, require_commonjs } from "./commonjs.mjs";
 
 //#region star-export.js
-var star_export_ns = {};
-__reExport(star_export_ns, __toESM(require_commonjs(), 1));
+var star_export_exports = {};
+__reExport(star_export_exports, __toESM(require_commonjs(), 1));
 
 //#endregion
 //#region main.mjs
 var import_commonjs = __toESM(require_commonjs(), 1);
-console.log(import_commonjs.default, star_export_ns);
+console.log(import_commonjs.default, star_export_exports);
 
 //#endregion
 ```

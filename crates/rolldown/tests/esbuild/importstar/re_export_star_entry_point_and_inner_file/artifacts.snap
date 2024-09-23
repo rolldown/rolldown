@@ -19,12 +19,12 @@ const D = "2";
 
 //#endregion
 //#region inner.js
-var inner_ns = {};
-__export(inner_ns, {
+var inner_exports = {};
+__export(inner_exports, {
 	C: () => C,
 	D: () => D
 });
 
 //#endregion
-export { A, B, inner_ns as inner };
+export { A, B, inner_exports as inner };
 ```

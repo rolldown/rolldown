@@ -18,10 +18,10 @@ var init_lib = __esmMin(() => {
 
 //#endregion
 //#region cjs.js
-var cjs_ns, cjs_default;
+var cjs_exports, cjs_default;
 var init_cjs = __esmMin(() => {
-	cjs_ns = {};
-	__export(cjs_ns, { default: () => cjs_default });
+	cjs_exports = {};
+	__export(cjs_exports, { default: () => cjs_default });
 	init_lib();
 	cjs_default = keep2();
 });
@@ -30,7 +30,7 @@ var init_cjs = __esmMin(() => {
 //#region entry.js
 init_lib();
 assert.equal(keep1(), "keep1");
-assert.deepEqual((init_cjs(), __toCommonJS(cjs_ns)).default, "keep2");
+assert.deepEqual((init_cjs(), __toCommonJS(cjs_exports)).default, "keep2");
 
 //#endregion
 ```

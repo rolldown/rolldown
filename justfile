@@ -54,12 +54,17 @@ check-rust:
 
 check-node:
     pnpm type-check
-
+update-esbuild-diff:
+    node ./scripts/snap-diff/
+  
 # run tests for both Rust and Node.js
 test: test-rust test-node
 
+
 test-rust:
     cargo test --workspace --exclude rolldown_binding
+    # update esbuild diff
+    
 
 # Supported presets: all, rolldown, rollup
 test-node preset="all" *args="": _build-native-debug

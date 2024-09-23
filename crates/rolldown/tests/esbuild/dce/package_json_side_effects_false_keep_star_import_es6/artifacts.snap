@@ -10,14 +10,14 @@ import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_index_ns = {};
-__export(demo_pkg_index_ns, { foo: () => foo });
+var demo_pkg_index_exports = {};
+__export(demo_pkg_index_exports, { foo: () => foo });
 const foo = 123;
 console.log("hello");
 
 //#endregion
 //#region src/entry.js
-assert.deepEqual(demo_pkg_index_ns, { foo: 123 });
+assert.deepEqual(demo_pkg_index_exports, { foo: 123 });
 
 //#endregion
 ```

@@ -9,24 +9,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region a.js
-var a_ns = {};
-__export(a_ns, { abc: () => abc });
+var a_exports = {};
+__export(a_exports, { abc: () => abc });
 const abc = undefined;
 
 //#endregion
-export { a_ns };
+export { a_exports };
 ```
 ## entry.mjs
 
 ```js
-import { a_ns } from "./a.mjs";
+import { a_exports } from "./a.mjs";
 
-export { a_ns as a };
+export { a_exports as a };
 ```
 ## main.mjs
 
 ```js
-import { a_ns } from "./a.mjs";
+import { a_exports } from "./a.mjs";
 
-export { a_ns as a };
+export { a_exports as a };
 ```

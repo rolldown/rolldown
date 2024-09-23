@@ -18,15 +18,15 @@ const z = 4;
 
 //#endregion
 //#region common.js
-var common_ns = {};
-__export(common_ns, {
+var common_exports = {};
+__export(common_exports, {
 	x: () => x,
 	z: () => z
 });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(common_ns, {
+assert.deepEqual(common_exports, {
 	x: 1,
 	z: 4
 });

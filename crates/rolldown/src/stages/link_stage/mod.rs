@@ -301,7 +301,7 @@ impl<'a> LinkStage<'a> {
                       // for case:
                       // ```js
                       // // index.js
-                      // export * from './foo'; /* importee wrap kind is `none`, but since `foo` has dynamic_export, we need to preserve the `__reExport(index_ns, foo_ns)` */
+                      // export * from './foo'; /* importee wrap kind is `none`, but since `foo` has dynamic_export, we need to preserve the `__reExport(index_exports, foo_ns)` */
                       //
                       // // foo.js
                       // export * from './bar' /* importee wrap kind is `cjs`, preserve by

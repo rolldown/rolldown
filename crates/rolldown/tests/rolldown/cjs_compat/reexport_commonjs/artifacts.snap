@@ -20,12 +20,12 @@ const value = 1;
 
 //#endregion
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, {
+var foo_exports = {};
+__export(foo_exports, {
 	bar: () => import_commonjs$1.bar,
 	value: () => value
 });
-__reExport(foo_ns, __toESM(require_commonjs()));
+__reExport(foo_exports, __toESM(require_commonjs()));
 var import_commonjs$1 = __toESM(require_commonjs());
 
 //#endregion
@@ -33,8 +33,8 @@ var import_commonjs$1 = __toESM(require_commonjs());
 var import_commonjs = __toESM(require_commonjs());
 assert.equal(import_commonjs$1.bar, 1);
 assert.equal(value, 1);
-assert.equal(foo_ns.foo, undefined);
-assert.equal(Object.keys(foo_ns).length, 2);
+assert.equal(foo_exports.foo, undefined);
+assert.equal(Object.keys(foo_exports).length, 2);
 
 //#endregion
 var bar = import_commonjs.bar;

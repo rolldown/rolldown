@@ -23,13 +23,13 @@ const x = 123;
 
 //#endregion
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, { x: () => x });
+var foo_exports = {};
+__export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(foo_ns, { x: 123 });
-assert.equal(foo_ns.foo, undefined);
+assert.deepEqual(foo_exports, { x: 123 });
+assert.equal(foo_exports.foo, undefined);
 
 //#endregion
 
@@ -40,16 +40,14 @@ assert.equal(foo_ns.foo, undefined);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,4 +1,5 @@
--var foo_exports = {};
--__export(foo_exports, { x: () => x });
++const x = 123;
+ var foo_exports = {};
+ __export(foo_exports, { x: () => x });
 -var x = 123;
 -console.log(foo_exports, void 0);
 \ No newline at end of file
-+const x = 123;
-+var foo_ns = {};
-+__export(foo_ns, { x: () => x });
-+assert.deepEqual(foo_ns, { x: 123 });
-+console.log(foo_ns.foo);
++assert.deepEqual(foo_exports, { x: 123 });
++console.log(foo_exports.foo);
 \ No newline at end of file
 
 ```

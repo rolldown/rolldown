@@ -14,12 +14,12 @@ const x = 123;
 
 //#endregion
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, { x: () => x });
+var foo_exports = {};
+__export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(foo_ns, { x: 123 });
+assert.deepEqual(foo_exports, { x: 123 });
 
 //#endregion
 
@@ -33,9 +33,9 @@ assert.deepEqual(foo_ns, { x: 123 });
 -console.log(void 0);
 \ No newline at end of file
 +const x = 123;
-+var foo_ns = {};
-+__export(foo_ns, { x: () => x });
-+assert.deepEqual(foo_ns, { x: 123 });
++var foo_exports = {};
++__export(foo_exports, { x: () => x });
++assert.deepEqual(foo_exports, { x: 123 });
 \ No newline at end of file
 
 ```

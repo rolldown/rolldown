@@ -11,16 +11,16 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region main.js
-var main_ns, foo, main_default;
+var main_exports, foo, main_default;
 var init_main = __esmMin(() => {
-	main_ns = {};
-	__export(main_ns, {
+	main_exports = {};
+	__export(main_exports, {
 		default: () => main_default,
 		foo: () => foo
 	});
 	foo = "foo";
 	main_default = "main";
-	console.log((init_main(), __toCommonJS(main_ns)));
+	console.log((init_main(), __toCommonJS(main_exports)));
 });
 
 //#endregion

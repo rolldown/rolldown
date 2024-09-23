@@ -225,7 +225,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut re_export_external_stmts: Option<_> = None;
     if !export_all_externals_rec_ids.is_empty() {
-      // construct `__reExport(exports, foo_ns)`
+      // construct `__reExport(exports, foo_exports)`
       let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
       match self.ctx.options.format {
         OutputFormat::Esm => {

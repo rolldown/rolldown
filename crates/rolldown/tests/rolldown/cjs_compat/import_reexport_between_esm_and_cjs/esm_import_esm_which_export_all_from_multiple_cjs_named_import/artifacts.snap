@@ -22,13 +22,13 @@ var require_commonjs2 = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region proxy.js
-var proxy_ns = {};
-__reExport(proxy_ns, __toESM(require_commonjs()));
-__reExport(proxy_ns, __toESM(require_commonjs2()));
+var proxy_exports = {};
+__reExport(proxy_exports, __toESM(require_commonjs()));
+__reExport(proxy_exports, __toESM(require_commonjs2()));
 
 //#endregion
 //#region main.js
-assert.equal(proxy_ns.a, 1);
+assert.equal(proxy_exports.a, 1);
 
 //#endregion
 ```

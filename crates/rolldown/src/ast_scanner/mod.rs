@@ -87,7 +87,7 @@ impl<'me> AstScanner<'me> {
     let symbol_id_for_default_export_ref = symbols
       .create_symbol(format!("{legitimized_repr_name}_default").into(), scope.root_scope_id());
 
-    let name = format!("{legitimized_repr_name}_ns");
+    let name = format!("{legitimized_repr_name}_exports");
     let namespace_object_ref: SymbolRef =
       (idx, symbols.create_symbol(name.into(), scope.root_scope_id())).into();
 

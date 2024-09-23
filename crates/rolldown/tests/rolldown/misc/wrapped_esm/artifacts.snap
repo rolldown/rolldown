@@ -10,10 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.js
 function foo() {}
-var foo_ns, a, b, c, d, e, g, bar, baz;
+var foo_exports, a, b, c, d, e, g, bar, baz;
 var init_foo = __esmMin(() => {
-	foo_ns = {};
-	__export(foo_ns, {
+	foo_exports = {};
+	__export(foo_exports, {
 		a: () => a,
 		b: () => b,
 		bar: () => bar,
@@ -34,7 +34,7 @@ var init_foo = __esmMin(() => {
 
 //#endregion
 //#region main.js
-init_foo(), __toCommonJS(foo_ns);
+init_foo(), __toCommonJS(foo_exports);
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -48,7 +48,7 @@ init_foo(), __toCommonJS(foo_ns);
 (2:16-2:22) " foo()" --> (27:9-27:15) " foo()"
 (2:22-2:25) " { " --> (27:15-27:16) " "
 (2:25-0:0) "" --> (27:16-28:0) "{}"
-(0:0-0:15) "export var a, [" --> (28:0-42:2) "\nvar foo_ns, a, b, c, d, e, g, bar, baz;\nvar init_foo = __esmMin(() => {\n\tfoo_ns = {};\n\t__export(foo_ns, {\n\t\ta: () => a,\n\t\tb: () => b,\n\t\tbar: () => bar,\n\t\tc: () => c,\n\t\td: () => d,\n\t\tdefault: () => baz,\n\t\te: () => e,\n\t\tfoo: () => foo,\n\t\tg: () => g\n\t});\n\t"
+(0:0-0:15) "export var a, [" --> (28:0-42:2) "\nvar foo_exports, a, b, c, d, e, g, bar, baz;\nvar init_foo = __esmMin(() => {\n\tfoo_exports = {};\n\t__export(foo_exports, {\n\t\ta: () => a,\n\t\tb: () => b,\n\t\tbar: () => bar,\n\t\tc: () => c,\n\t\td: () => d,\n\t\tdefault: () => baz,\n\t\te: () => e,\n\t\tfoo: () => foo,\n\t\tg: () => g\n\t});\n\t"
 (0:15-0:0) "export var a, [" --> (42:2-42:4) "[b"
 (0:0-0:20) "export var a, [b] = " --> (42:4-42:7) "] ="
 (0:20-0:22) "[]" --> (42:7-42:9) " ["
@@ -78,5 +78,5 @@ init_foo(), __toCommonJS(foo_ns);
 (4:25-4:28) " { " --> (47:13-47:14) " "
 (4:28-0:0) "" --> (47:14-48:0) "{};"
 (0:0-8:1) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport function foo() { }\nexport class bar { }\nexport default class baz { }\n\n\nexport { }\n" --> (48:0-52:0) "\n});\n\n//#endregion\n//#region main.js"
-(0:0-1:1) "require('./foo')\n" --> (52:0-55:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-1:1) "require('./foo')\n" --> (52:0-55:34) "\ninit_foo(), __toCommonJS(foo_exports);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
 ```

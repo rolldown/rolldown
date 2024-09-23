@@ -12,8 +12,8 @@ var module = (function() {
 
 
 //#region mod.js
-var default_mod_ns = {};
-__export(default_mod_ns, {
+var default_mod_exports = {};
+__export(default_mod_exports, {
 	add: () => add,
 	subtract: () => subtract
 });
@@ -25,6 +25,6 @@ function subtract(a, b) {
 }
 
 //#endregion
-return default_mod_ns;
+return default_mod_exports;
 })();
 ```

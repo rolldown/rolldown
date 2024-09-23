@@ -13,12 +13,12 @@ const foo = 1;
 
 //#endregion
 //#region export-star.js
-var export_star_ns = {};
-__export(export_star_ns, { foo: () => foo });
+var export_star_exports = {};
+__export(export_star_exports, { foo: () => foo });
 
 //#endregion
 //#region main.js
-console.log(export_star_ns);
+console.log(export_star_exports);
 
 //#endregion
 ```

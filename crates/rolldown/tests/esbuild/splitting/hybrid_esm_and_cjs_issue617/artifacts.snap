@@ -17,22 +17,22 @@ export { foo };
 
 
 //#region a.js
-var a_ns, foo;
+var a_exports, foo;
 var init_a = __esmMin(() => {
-	a_ns = {};
-	__export(a_ns, { foo: () => foo });
+	a_exports = {};
+	__export(a_exports, { foo: () => foo });
 });
 
 //#endregion
-export { __toCommonJS, a_ns, foo, init_a };
+export { __toCommonJS, a_exports, foo, init_a };
 ```
 ## b.mjs
 
 ```js
-import { __toCommonJS, a_ns, init_a } from "./a2.mjs";
+import { __toCommonJS, a_exports, init_a } from "./a2.mjs";
 
 //#region b.js
-let bar = (init_a(), __toCommonJS(a_ns));
+let bar = (init_a(), __toCommonJS(a_exports));
 
 //#endregion
 export { bar };

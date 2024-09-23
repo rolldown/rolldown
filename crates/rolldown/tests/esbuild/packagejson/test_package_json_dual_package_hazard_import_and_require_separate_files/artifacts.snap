@@ -10,16 +10,16 @@ import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/module.js
-var module_ns, module_default;
+var module_exports, module_default;
 var init_module = __esmMin(() => {
-	module_ns = {};
-	__export(module_ns, { default: () => module_default });
+	module_exports = {};
+	__export(module_exports, { default: () => module_default });
 	module_default = "module";
 });
 
 //#endregion
 //#region src/test-main.js
-console.log((init_module(), __toCommonJS(module_ns)));
+console.log((init_module(), __toCommonJS(module_exports)));
 
 //#endregion
 //#region src/test-module.js

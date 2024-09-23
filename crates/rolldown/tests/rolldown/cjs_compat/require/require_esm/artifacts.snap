@@ -9,15 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region esm.js
-var esm_ns;
+var esm_exports;
 var init_esm = __esmMin(() => {
-	esm_ns = {};
+	esm_exports = {};
 });
 
 //#endregion
 //#region main.js
-init_esm(), __toCommonJS(esm_ns);
-var esm = (init_esm(), __toCommonJS(esm_ns));
+init_esm(), __toCommonJS(esm_exports);
+var esm = (init_esm(), __toCommonJS(esm_exports));
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -27,10 +27,10 @@ var esm = (init_esm(), __toCommonJS(esm_ns));
 
 ```
 - ../esm.js
-(0:0-1:1) "export { }\n" --> (21:0-28:0) "\nvar esm_ns;\nvar init_esm = __esmMin(() => {\n\tesm_ns = {};\n});\n\n//#endregion\n//#region main.js"
+(0:0-1:1) "export { }\n" --> (21:0-28:0) "\nvar esm_exports;\nvar init_esm = __esmMin(() => {\n\tesm_exports = {};\n});\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-1:0) "require('./esm.js');" --> (28:0-29:0) "\ninit_esm(), __toCommonJS(esm_ns);"
+(0:0-1:0) "require('./esm.js');" --> (28:0-29:0) "\ninit_esm(), __toCommonJS(esm_exports);"
 (1:0-1:4) "\nvar" --> (29:0-29:4) "\nvar"
 (1:4-0:0) "" --> (29:4-29:11) " esm = "
-(0:0-2:1) "require('./esm.js');\nvar esm = require('./esm.js');\n" --> (29:11-32:34) "(init_esm(), __toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-2:1) "require('./esm.js');\nvar esm = require('./esm.js');\n" --> (29:11-32:34) "(init_esm(), __toCommonJS(esm_exports));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
 ```

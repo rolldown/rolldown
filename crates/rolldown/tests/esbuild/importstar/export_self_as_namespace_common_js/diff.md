@@ -16,10 +16,10 @@ var foo = 123;
 
 
 //#region entry.js
-var entry_ns = {};
-__export(entry_ns, {
+var entry_exports = {};
+__export(entry_exports, {
 	foo: () => foo,
-	ns: () => entry_ns
+	ns: () => entry_exports
 });
 const foo = 123;
 
@@ -33,7 +33,7 @@ Object.defineProperty(exports, 'foo', {
 Object.defineProperty(exports, 'ns', {
   enumerable: true,
   get: function () {
-    return entry_ns;
+    return entry_exports;
   }
 });
 
@@ -44,14 +44,11 @@ Object.defineProperty(exports, 'ns', {
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
 @@ -1,7 +1,19 @@
--var entry_exports = {};
--__export(entry_exports, {
 +'use strict';
-+var entry_ns = {};
-+__export(entry_ns, {
+ var entry_exports = {};
+ __export(entry_exports, {
      foo: () => foo,
--    ns: () => entry_exports
-+    ns: () => entry_ns
+     ns: () => entry_exports
  });
 -module.exports = __toCommonJS(entry_exports);
 -var foo = 123;
@@ -66,7 +63,7 @@ Object.defineProperty(exports, 'ns', {
 +Object.defineProperty(exports, 'ns', {
 +    enumerable: true,
 +    get: function () {
-+        return entry_ns;
++        return entry_exports;
 +    }
 +});
 \ No newline at end of file

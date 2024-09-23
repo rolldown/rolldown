@@ -10,13 +10,13 @@ import { default as assert } from "node:assert";
 
 
 //#region bar.js
-var bar_ns = {};
-__export(bar_ns, { x: () => x });
+var bar_exports = {};
+__export(bar_exports, { x: () => x });
 const x = 123;
 
 //#endregion
 //#region entry.js
-assert.deepEqual(bar_ns, { x: 123 });
+assert.deepEqual(bar_exports, { x: 123 });
 
 //#endregion
 ```

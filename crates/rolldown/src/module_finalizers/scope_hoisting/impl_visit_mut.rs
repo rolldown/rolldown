@@ -404,7 +404,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
     self.try_rewrite_identifier_reference_expr(expr, false);
 
-    // rewrite `foo_ns.bar` to `bar` directly
+    // rewrite `foo_exports.bar` to `bar` directly
     match expr {
       Expression::StaticMemberExpression(ref inner_expr) => {
         if let Some(resolved) =

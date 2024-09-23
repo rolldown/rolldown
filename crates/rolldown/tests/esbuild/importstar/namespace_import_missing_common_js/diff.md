@@ -39,7 +39,7 @@ assert.equal(import_foo.foo, undefined);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,7 +1,9 @@
+@@ -1,7 +1,6 @@
 -var require_foo = __commonJS({
 -    'foo.js'(exports) {
 -        exports.x = 123;
@@ -51,10 +51,7 @@ assert.equal(import_foo.foo, undefined);
 -console.log(ns, ns.foo);
 \ No newline at end of file
 +var import_foo = __toESM(require_foo());
-+assert.deepEqual(import_foo, {
-+    default: { x: 123 },
-+    x: 123
-+});
++console.log(import_foo);
 +console.log(import_foo.foo);
 \ No newline at end of file
 

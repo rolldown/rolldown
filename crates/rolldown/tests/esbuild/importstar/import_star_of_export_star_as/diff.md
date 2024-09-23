@@ -51,13 +51,11 @@ assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
  var bar_exports = {};
  __export(bar_exports, { bar: () => bar });
 -var bar = 123;
--console.log(foo_exports);
-\ No newline at end of file
 +const bar = 123;
 +var foo_exports = {};
 +__export(foo_exports, { bar_ns: () => bar_exports });
 +console.log(foo_exports);
-+assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
+ console.log(foo_exports);
 \ No newline at end of file
 
 ```

@@ -52,7 +52,7 @@ assert.equal(foo, 234);
 \ No newline at end of file
 +__export(bar_exports, { foo: () => foo$1 });
 +let foo = 234;
-+assert.deepEqual(bar_exports, { foo: 123 });
++console.log(bar_exports);
 +console.log(foo$1);
 +console.log(foo);
 \ No newline at end of file

@@ -46,7 +46,7 @@ assert.equal(foo_exports.foo, undefined);
 -var x = 123;
 -console.log(foo_exports, void 0);
 \ No newline at end of file
-+assert.deepEqual(foo_exports, { x: 123 });
++console.log(foo_exports);
 +console.log(foo_exports.foo);
 \ No newline at end of file
 

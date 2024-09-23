@@ -40,7 +40,7 @@ assert.deepEqual(bar_exports, { x: 123 });
 -console.log(bar_exports.foo);
 \ No newline at end of file
 +const x = 123;
-+assert.deepEqual(bar_exports, { x: 123 });
++console.log(bar_exports);
 \ No newline at end of file
 
 ```

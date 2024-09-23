@@ -25,12 +25,11 @@ require("foo");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,11 @@
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);
 -__reExport(entry_exports, require('foo'), module.exports);
 \ No newline at end of file
-+'use strict';
 +var foo = require('foo');
 +Object.keys(foo).forEach(function (k) {
 +    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k))

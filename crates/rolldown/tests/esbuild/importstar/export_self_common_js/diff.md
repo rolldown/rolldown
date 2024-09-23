@@ -30,13 +30,12 @@ Object.defineProperty(exports, 'foo', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,4 +1,8 @@
+@@ -1,4 +1,7 @@
 -var entry_exports = {};
 -__export(entry_exports, { foo: () => foo });
 -module.exports = __toCommonJS(entry_exports);
 -var foo = 123;
 \ No newline at end of file
-+'use strict';
 +const foo = 123;
 +Object.defineProperty(exports, 'foo', {
 +    enumerable: true,

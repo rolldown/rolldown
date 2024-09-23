@@ -81,10 +81,10 @@ Object.defineProperty(exports, 'nonExternal', {
     return nonExternal;
   }
 });
-exports['read'] = read
-exports['readFile'] = readFile
-exports['readFileSync'] = readFileSync
-exports['readSync'] = readSync
+exports.read = read
+exports.readFile = readFile
+exports.readFileSync = readFileSync
+exports.readSync = readSync
 return exports;
 })({}, node_fs);"
 `;

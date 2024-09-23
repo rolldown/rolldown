@@ -241,7 +241,7 @@ export interface BindingInputOptions {
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
-  experimental: BindingExperimentalOptions
+  experimental?: BindingExperimentalOptions
 }
 
 export interface BindingJsonPluginConfig {

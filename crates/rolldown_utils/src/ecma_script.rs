@@ -51,6 +51,14 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
   Cow::Borrowed(name)
 }
 
+pub fn property_access_str(obj: &str, prop: &str) -> String {
+  if is_validate_identifier_name(prop) {
+    format!("{obj}.{prop}")
+  } else {
+    format!("{obj}[\"{prop}\"]")
+  }
+}
+
 #[test]
 fn test_is_validate_identifier_name() {
   assert!(is_validate_identifier_name("foo"));

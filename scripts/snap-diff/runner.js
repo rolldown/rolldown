@@ -53,7 +53,7 @@ export function run(includeList) {
     diffList.sort((a, b) => {
       return a.name.localeCompare(b.name)
     })
-    let summaryMarkdown = getSummaryMarkdown(diffList)
+    let summaryMarkdown = getSummaryMarkdown(diffList, snapCategory)
     fs.writeFileSync(
       path.join(import.meta.dirname, './summary/', `${snapCategory}.md`),
       summaryMarkdown,
@@ -93,17 +93,23 @@ function writeDiffToTestcaseDir(dir, diffResult) {
 
 /**
  * @param {Array<{diffResult: ReturnType<diffCase>, name: string}>} diffList
+ * @param {string} snapshotCategory
  */
-function getSummaryMarkdown(diffList) {
+function getSummaryMarkdown(diffList, snapshotCategory) {
   let markdown = `# Failed Cases\n`
   for (let diff of diffList) {
+    let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name)
+    let relativePath = path.relative(
+      path.join(import.meta.dirname, 'summary'),
+      testDir,
+    )
     if (diff.diffResult === 'missing') {
       markdown += `## ${diff.name}\n`
       markdown += `  missing\n`
       continue
     }
     if (diff.diffResult !== 'same') {
-      markdown += `## ${diff.name}\n`
+      markdown += `## [${diff.name}](${relativePath}/diff.md)\n`
       markdown += `  diff\n`
     }
   }

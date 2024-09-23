@@ -6,7 +6,7 @@ use rolldown_common::{
   WrapKind,
 };
 use rolldown_rstr::Rstr;
-use rolldown_utils::ecma_script::is_validate_identifier_name;
+use rolldown_utils::ecma_script::{is_validate_identifier_name, property_access_str};
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(
@@ -87,7 +87,10 @@ pub fn render_chunk_exports(
                         && export_ref
                           .is_created_by_import_from_external(&link_output.module_table.modules))
                     {
-                      format!("exports['{exported_name}'] = {canonical_name}")
+                      format!(
+                        "{left_value} = {canonical_name}",
+                        left_value = property_access_str("exports", &exported_name)
+                      )
                     } else {
                       format!(
                         "Object.defineProperty(exports, '{exported_name}', {{

@@ -1549,7 +1549,7 @@ expression: output
 
 # tests/rolldown/function/experimental/disable_live_bindings
 
-- main-!~{000}~.cjs => main-D9vAVtBY.cjs
+- main-!~{000}~.cjs => main-btPWwKyG.cjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
@@ -1659,7 +1659,7 @@ expression: output
 
 # tests/rolldown/function/external_live_bindings
 
-- main-!~{000}~.cjs => main-gvGF4Vpz.cjs
+- main-!~{000}~.cjs => main-9oedPrfh.cjs
 
 # tests/rolldown/function/format/app/export-all
 

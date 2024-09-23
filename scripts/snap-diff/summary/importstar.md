@@ -1,5 +1,5 @@
 # Failed Cases
-## export_other_as_namespace_common_js
+## [export_other_as_namespace_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_other_as_namespace_common_js/)
   diff
 ## export_other_common_js
   diff

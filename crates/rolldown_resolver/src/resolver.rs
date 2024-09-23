@@ -158,6 +158,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     let resolution = if let Some(importer) = importer {
       let context = importer.parent().expect("Should have a parent dir");
 
+      // When resolving a virtual module, the context might be an empty string.
       if context.to_str().map_or(true, str::is_empty) {
         self.resolve_with_cwd(selected_resolver, specifier)
       } else {

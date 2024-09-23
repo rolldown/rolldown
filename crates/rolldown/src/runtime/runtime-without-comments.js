@@ -178,7 +178,7 @@ var rolldown_runtime = self.rolldown_runtime = {
   }
 }
 
-const socket = new WebSocket(`http://localhost:8080`)
+const socket = new WebSocket(`ws://localhost:8080`)
 
 socket.onmessage = function(event) {
   const data = JSON.parse(event.data)

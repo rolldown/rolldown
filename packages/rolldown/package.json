@@ -104,8 +104,7 @@
     "zod": "^3.23.8",
     "chokidar": "3.6.0",
     "ws": "8.18.0",
-    "connect": "3.7.0",
-    "serve-static": "1.14.1"
+    "connect": "3.7.0"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.60",

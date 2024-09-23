@@ -9,7 +9,6 @@ import { createServer } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 import chokidar from 'chokidar'
 import connect from 'connect'
-import ServerStatic from 'serve-static'
 import path from 'node:path'
 import path from 'node:path'
 import { onExit } from 'signal-exit'
@@ -112,10 +111,15 @@ async function bundleInner(
   const startTime = performance.now()
 
   const build = await rolldown({ ...options, ...cliOptions.input })
-  const bundleOutput = await build.write({
-    ...options?.output,
-    ...cliOptions.output,
-  })
+  const bundleOutput = options.dev
+    ? await build.generate({
+        ...options?.output,
+        ...cliOptions.output,
+      })
+    : await build.write({
+        ...options?.output,
+        ...cliOptions.output,
+      })
 
   const endTime = performance.now()
 
@@ -130,7 +134,24 @@ async function bundleInner(
     const cwd = options.cwd ?? process.cwd()
     const outputDir = options.output?.dir ?? 'dist'
     const app = connect()
-    app.use(ServerStatic(path.join(cwd, outputDir)))
+    const virtualFiles = Object.fromEntries(
+      bundleOutput.output.map((chunk) => [
+        chunk.fileName,
+        chunk.type === 'chunk' ? chunk.code : chunk.source,
+      ]),
+    )
+    app.use((req, res, next) => {
+      if (req.url) {
+        const url = req.url === '/' ? 'index.html' : req.url.slice(1)
+        const virtualFile = virtualFiles[url]
+        if (virtualFile) {
+          res.end(virtualFile)
+        } else {
+          console.log(req.url + 'not found')
+          next()
+        }
+      }
+    })
     const server = createServer(app)
     const wsServer = new WebSocketServer({ server })
     let socket: WebSocket
@@ -145,12 +166,28 @@ async function bundleInner(
 
     logger.log(`Watching for changes...`)
     const watcher = chokidar.watch([cwd], {
-      ignored: [path.join(cwd, outputDir)],
+      ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/test-results/**',
+        path.join(cwd, outputDir),
+      ],
+      ignoreInitial: true,
+      ignorePermissionErrors: true,
+      // for windows and macos, we need to wait for the file to be written
+      awaitWriteFinish:
+        process.platform === 'linux'
+          ? undefined
+          : {
+              stabilityThreshold: 10,
+              pollInterval: 10,
+            },
     })
     watcher.on('change', async (file) => {
       if (file) {
         logger.log(`Found change in ${file}`)
-        const fileName = await build.experimental_hmr_rebuild([file])
+        const [fileName, content] = await build.experimental_hmr_rebuild([file])
+        virtualFiles[fileName] = content
         if (socket) {
           socket.send(
             JSON.stringify({

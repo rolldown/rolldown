@@ -32,6 +32,7 @@ export function diffCase(esbuildSnap, rolldownSnap) {
     if (matchedSource.content !== esbuildSource.content) {
       diff.push({
         name: esbuildSource.name,
+        rolldownName: matchedSource.filename,
         esbuild: esbuildSource.content,
         rolldown: matchedSource.content,
       })

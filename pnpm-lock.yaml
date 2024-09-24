@@ -417,6 +417,9 @@ importers:
       escodegen:
         specifier: ^2.1.0
         version: 2.1.0
+      estree-toolkit:
+        specifier: ^1.7.8
+        version: 1.7.8
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -2974,6 +2977,9 @@ packages:
   '@types/escodegen@0.0.10':
     resolution: {integrity: sha512-IVvcNLEFbiL17qiGRGzyfx/u9K6lA5w6wcQSIgv2h4JG3ZAFIY1Be9ITTSPuARIxRpzW54s8OvcF6PdonBbDzg==}
 
+  '@types/estree-jsx@1.0.5':
+    resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
+
   '@types/estree@1.0.5':
     resolution: {integrity: sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==}
 
@@ -3922,6 +3928,9 @@ packages:
   estraverse@5.3.0:
     resolution: {integrity: sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==}
     engines: {node: '>=4.0'}
+
+  estree-toolkit@1.7.8:
+    resolution: {integrity: sha512-v0Q0L+0agSDFe3x9Sj7aAzrI9afvsfr5r7AM2SNk/8bKYRQ3tUf4PQEUWe99LkWysmT1PsuSpW+W1w/xZmCKeg==}
 
   estree-walker@2.0.2:
     resolution: {integrity: sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==}
@@ -8488,6 +8497,10 @@ snapshots:
 
   '@types/escodegen@0.0.10': {}
 
+  '@types/estree-jsx@1.0.5':
+    dependencies:
+      '@types/estree': 1.0.5
+
   '@types/estree@1.0.5': {}
 
   '@types/fs-extra@11.0.4':
@@ -9678,6 +9691,11 @@ snapshots:
   esprima@4.0.1: {}
 
   estraverse@5.3.0: {}
+
+  estree-toolkit@1.7.8:
+    dependencies:
+      '@types/estree': 1.0.5
+      '@types/estree-jsx': 1.0.5
 
   estree-walker@2.0.2: {}
 

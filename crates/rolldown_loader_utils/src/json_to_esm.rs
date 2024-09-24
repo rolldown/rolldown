@@ -3,13 +3,9 @@ use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
 use serde_json::Value;
 // TODO: handling https://github.com/tc39/proposal-json-superset
 
-fn trim_bom(raw: &str) -> &str {
-  raw.trim_start_matches("\u{FEFF}")
-}
-
 pub fn json_to_esm(json: &str) -> anyhow::Result<String> {
   // TODO: use zero-copy deserialization
-  let json_value: Value = serde_json::from_str(trim_bom(json))?;
+  let json_value: Value = serde_json::from_str(json.trim_start_matches("\u{FEFF}"))?;
 
   match json_value {
     Value::Object(map) => {

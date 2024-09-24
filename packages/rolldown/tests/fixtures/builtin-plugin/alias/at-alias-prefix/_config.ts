@@ -2,15 +2,11 @@ import { aliasPlugin } from 'rolldown/experimental'
 import { defineTest } from '@tests'
 
 export default defineTest({
-  skip: true,
   config: {
     input: './main.js',
     plugins: [
       aliasPlugin({
-        entries: [
-          { find: '@src', replacement: 'src' },
-          { find: '@utils', replacement: './utils' },
-        ],
+        entries: [{ find: '@utils', replacement: './utils' }],
       }),
     ],
   },

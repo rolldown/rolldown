@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region obj.json
+const description = "This file is marked with BOM.";
+const message = "If the parsing is successful, the BOM tag has been removed.";
+var obj_default = {
+	description,
+	message
+};
+
+//#endregion
+//#region main.js
+console.log(obj_default);
+
+//#endregion
+```

@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use bitflags::bitflags;
 use oxc::{index::IndexVec, span::Span};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -40,4 +41,14 @@ pub struct EcmaView {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ModuleId>,
   pub side_effects: DeterminedSideEffects,
+  pub ast_usage: EcmaModuleAstUsage,
+}
+
+bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    pub struct EcmaModuleAstUsage: u8 {
+        const ModuleRef = 1;
+        const ExportsRef = 1 << 1;
+        const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
+    }
 }

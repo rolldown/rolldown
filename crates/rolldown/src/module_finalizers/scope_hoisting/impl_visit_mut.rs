@@ -226,6 +226,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             wrap_ref_name,
             commonjs_ref_name,
             old_body,
+            self.ctx.module.ast_usage,
           ));
         }
         WrapKind::Esm => {

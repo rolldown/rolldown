@@ -10,7 +10,7 @@ import { default as assert } from "node:assert";
 
 
 //#region index.js
-var require_dot_import_index = __commonJSMin((exports, module) => {
+var require_dot_import_index = __commonJSMin((exports) => {
 	exports.x = 123;
 });
 

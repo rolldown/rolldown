@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{Atom, CompactStr, Span, SPAN},
 };
-use rolldown_common::Interop;
+use rolldown_common::{EcmaModuleAstUsage, Interop};
 
 use crate::allocator_helpers::take_in::TakeIn;
 
@@ -291,6 +291,7 @@ impl<'ast> AstSnippet<'ast> {
     binding_name: PassedStr,
     commonjs_name: PassedStr,
     statements: allocator::Vec<'ast, Statement<'ast>>,
+    ast_usage: EcmaModuleAstUsage,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
 
@@ -302,37 +303,41 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
-        self.builder.vec_with_capacity(2),
+        self.builder.vec_with_capacity(1),
         NONE,
       ),
       NONE,
       self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
-    arrow_expr.params.items.push(self.builder.formal_parameter(
-      SPAN,
-      self.builder.vec(),
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
-        NONE,
+    if ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
+      arrow_expr.params.items.push(self.builder.formal_parameter(
+        SPAN,
+        self.builder.vec(),
+        self.builder.binding_pattern(
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
+          NONE,
+          false,
+        ),
+        None,
         false,
-      ),
-      None,
-      false,
-      false,
-    ));
+        false,
+      ));
+    }
 
-    arrow_expr.params.items.push(self.builder.formal_parameter(
-      SPAN,
-      self.builder.vec(),
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
-        NONE,
+    if ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
+      arrow_expr.params.items.push(self.builder.formal_parameter(
+        SPAN,
+        self.builder.vec(),
+        self.builder.binding_pattern(
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
+          NONE,
+          false,
+        ),
+        None,
         false,
-      ),
-      None,
-      false,
-      false,
-    ));
+        false,
+      ));
+    }
 
     //  __commonJS(...)
     let mut commonjs_call_expr = self.call_expr(commonjs_name);

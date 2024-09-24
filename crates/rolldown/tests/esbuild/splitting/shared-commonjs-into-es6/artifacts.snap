@@ -33,7 +33,7 @@ assert.equal(foo, 123);
 
 
 //#region shared.js
-var require_shared = __commonJSMin((exports, module) => {
+var require_shared = __commonJSMin((exports) => {
 	exports.foo = 123;
 });
 

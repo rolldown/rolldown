@@ -114,6 +114,7 @@ impl ModuleViewFactory for EcmaModuleViewFactory {
       warnings: scan_warnings,
       has_eval,
       errors,
+      ast_usage,
     } = scan_result;
     if !errors.is_empty() {
       return Ok(Err(errors));
@@ -195,6 +196,7 @@ impl ModuleViewFactory for EcmaModuleViewFactory {
       dynamically_imported_ids,
       side_effects,
       has_eval,
+      ast_usage,
     };
 
     Ok(Ok(CreateModuleViewReturn {

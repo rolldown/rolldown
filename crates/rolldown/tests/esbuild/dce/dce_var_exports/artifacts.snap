@@ -39,7 +39,7 @@ export default require_b();
 import { __commonJSMin } from "./chunk.mjs";
 
 //#region c.js
-var require_c = __commonJSMin((exports, module) => {
+var require_c = __commonJSMin((exports) => {
 	var module = { bar: 123 };
 	exports.foo = module;
 });

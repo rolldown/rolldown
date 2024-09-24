@@ -16,9 +16,9 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
-  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier,
-  StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
+  Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
@@ -43,6 +43,7 @@ pub struct ScanResult {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub has_eval: bool,
+  pub ast_usage: EcmaModuleAstUsage,
 }
 
 pub struct AstScanner<'me> {
@@ -67,7 +68,7 @@ pub struct AstScanner<'me> {
   /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
   /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
   /// lhs of AssignmentExpression
-  is_cjs_module: bool,
+  ast_usage: EcmaModuleAstUsage,
 }
 
 impl<'me> AstScanner<'me> {
@@ -108,6 +109,7 @@ impl<'me> AstScanner<'me> {
       warnings: Vec::new(),
       has_eval: false,
       errors: Vec::new(),
+      ast_usage: EcmaModuleAstUsage::empty(),
     };
 
     Self {
@@ -125,7 +127,7 @@ impl<'me> AstScanner<'me> {
       source,
       file_path,
       trivias,
-      is_cjs_module: false,
+      ast_usage: EcmaModuleAstUsage::empty(),
     }
   }
 
@@ -159,7 +161,7 @@ impl<'me> AstScanner<'me> {
           .with_severity_warning(),
         );
       }
-    } else if self.is_cjs_module {
+    } else if self.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
@@ -203,7 +205,7 @@ impl<'me> AstScanner<'me> {
       //   ));
       // }
     }
-
+    self.result.ast_usage = self.ast_usage;
     Ok(self.result)
   }
 
@@ -601,8 +603,14 @@ impl<'me> AstScanner<'me> {
         }
       }
       None => {
-        if !self.is_cjs_module {
-          self.is_cjs_module = ident.name == "module" || ident.name == "exports";
+        // atom cmp is not `O(1)`, so if the module already contains both `module` and `exports`,
+        // don't need to check it again.
+        if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
+          match ident.name.as_str() {
+            "module" => self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef),
+            "exports" => self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef),
+            _ => {}
+          }
         }
         None
       }

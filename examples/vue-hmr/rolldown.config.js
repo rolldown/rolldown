@@ -7,6 +7,7 @@ export default defineConfig({
     'process.env.NODE_ENV': '"development"',
   },
   plugins: [
+    // Add option to vue plugin inject hmr related code
     vuePlugin({
       devServer: {
         watcher: {

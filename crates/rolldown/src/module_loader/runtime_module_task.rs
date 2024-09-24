@@ -73,6 +73,7 @@ impl RuntimeModuleTask {
       warnings: _,
       has_eval,
       errors: _,
+      ast_usage,
     } = scan_result;
 
     let module = NormalModule {
@@ -110,6 +111,7 @@ impl RuntimeModuleTask {
         exports_kind: ExportsKind::Esm,
         namespace_object_ref,
         def_format: ModuleDefFormat::EsmMjs,
+        ast_usage,
       },
       css_view: None,
     };

@@ -23,7 +23,7 @@ Promise.resolve().then(function() {
 
 //#endregion
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {});
+var require_foo = __commonJSMin(() => {});
 
 //#endregion
 //#region cjs.js

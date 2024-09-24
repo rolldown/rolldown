@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region node_modules/pkg/require.js
-var require_require = __commonJSMin((exports, module) => {
+var require_require = __commonJSMin(() => {
 	console.log("SUCCESS");
 });
 

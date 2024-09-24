@@ -17,7 +17,7 @@ export default require_foo();
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin((exports) => {
 	exports.bar = 123;
 });
 

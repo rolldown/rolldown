@@ -9,13 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region src/node_modules/sub/bar.js
-var require_bar = __commonJSMin((exports, module) => {
+var require_bar = __commonJSMin(() => {
 	works();
 });
 
 //#endregion
 //#region src/node_modules/pkg/sub/foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin(() => {
 	require_bar();
 });
 

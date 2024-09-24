@@ -2,6 +2,7 @@ pub mod impl_visit;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use bitflags::Flags;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
 use oxc::{
@@ -16,9 +17,9 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
-  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier,
-  StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
+  Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
@@ -43,6 +44,7 @@ pub struct ScanResult {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub has_eval: bool,
+  pub ast_usage: EcmaModuleAstUsage,
 }
 
 pub struct AstScanner<'me> {
@@ -108,6 +110,7 @@ impl<'me> AstScanner<'me> {
       warnings: Vec::new(),
       has_eval: false,
       errors: Vec::new(),
+      ast_usage: EcmaModuleAstUsage::empty(),
     };
 
     Self {
@@ -203,7 +206,12 @@ impl<'me> AstScanner<'me> {
       //   ));
       // }
     }
-
+    if self.cjs_module_ident.is_some() {
+      self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+    }
+    if self.cjs_exports_ident.is_some() {
+      self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+    }
     Ok(self.result)
   }
 

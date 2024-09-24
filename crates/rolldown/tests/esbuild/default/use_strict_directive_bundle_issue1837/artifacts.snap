@@ -10,7 +10,7 @@ import { default as assert } from "node:assert";
 
 
 //#region cjs.js
-var require_cjs = __commonJSMin((exports, module) => {
+var require_cjs = __commonJSMin((exports) => {
 	exports.foo = process;
 });
 

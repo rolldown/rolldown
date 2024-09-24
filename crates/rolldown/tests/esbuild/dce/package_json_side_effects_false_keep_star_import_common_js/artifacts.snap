@@ -10,7 +10,7 @@ import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/index.js
-var require_demo_pkg_index = __commonJSMin((exports, module) => {
+var require_demo_pkg_index = __commonJSMin((exports) => {
 	exports.foo = 123;
 	console.log("hello");
 });

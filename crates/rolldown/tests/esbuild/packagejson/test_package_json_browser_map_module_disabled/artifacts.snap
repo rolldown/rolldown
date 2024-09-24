@@ -10,7 +10,7 @@ import { default as assert } from "node:assert";
 
 
 //#region (ignored) node_modules/demo-pkg
-var require_demo_pkg = __commonJSMin((exports, module) => {});
+var require_demo_pkg = __commonJSMin(() => {});
 
 //#endregion
 //#region node_modules/demo-pkg/index.js

@@ -10,7 +10,7 @@ import { default as assert } from "node:assert";
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin((exports) => {
 	exports.foo = function() {
 		return "foo";
 	};
@@ -18,7 +18,7 @@ var require_foo = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region bar.js
-var require_bar = __commonJSMin((exports, module) => {
+var require_bar = __commonJSMin((exports) => {
 	exports.bar = function() {
 		return "bar";
 	};

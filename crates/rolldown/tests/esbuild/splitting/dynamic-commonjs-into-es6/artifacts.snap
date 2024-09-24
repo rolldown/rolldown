@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin((exports) => {
 	exports.bar = 123;
 });
 

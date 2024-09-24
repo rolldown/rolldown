@@ -31,7 +31,7 @@ module.exports = 1;
 
 //#endregion
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {});
+var require_foo = __commonJSMin(() => {});
 
 //#endregion
 //#region esm-export-cjs-require.js
@@ -71,7 +71,7 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 (0:7-0:17) "exports = " --> (27:7-27:17) ".exports ="
 (0:17-1:24) "1;\nexport const value = 1;" --> (27:17-31:0) " 1;\n\n//#endregion\n//#region foo.js"
 - ../foo.js
-(0:0-0:0) "" --> (31:0-35:0) "\nvar require_foo = __commonJSMin((exports, module) => {});\n\n//#endregion\n//#region esm-export-cjs-require.js"
+(0:0-0:0) "" --> (31:0-35:0) "\nvar require_foo = __commonJSMin(() => {});\n\n//#endregion\n//#region esm-export-cjs-require.js"
 - ../esm-export-cjs-require.js
 (0:0-1:24) "require('./foo')\nexport const value = 1;" --> (35:0-39:0) "\nrequire_foo();\n\n//#endregion\n//#region esm-import-cjs-export.js"
 - ../esm-import-cjs-export.js

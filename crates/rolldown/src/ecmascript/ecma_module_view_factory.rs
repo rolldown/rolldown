@@ -5,8 +5,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaView, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, ModuleView, SymbolRef,
-  TreeshakeOptions,
+  AstScopes, EcmaModuleAstUsage, EcmaView, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
+  ModuleView, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{DiagnosableResult, UnhandleableResult};
@@ -114,6 +114,7 @@ impl ModuleViewFactory for EcmaModuleViewFactory {
       warnings: scan_warnings,
       has_eval,
       errors,
+      ast_usage,
     } = scan_result;
     if !errors.is_empty() {
       return Ok(Err(errors));
@@ -195,6 +196,7 @@ impl ModuleViewFactory for EcmaModuleViewFactory {
       dynamically_imported_ids,
       side_effects,
       has_eval,
+      ast_usage,
     };
 
     Ok(Ok(CreateModuleViewReturn {

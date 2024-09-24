@@ -7,7 +7,18 @@ export default defineConfig({
     'process.env.NODE_ENV': '"development"',
   },
   plugins: [
-    vuePlugin(),
+    vuePlugin({
+      devServer: {
+        watcher: {
+          on() {},
+        },
+        config: {
+          server: {
+            hmr: true,
+          },
+        },
+      },
+    }),
     {
       name: 'emit-html',
       generateBundle() {

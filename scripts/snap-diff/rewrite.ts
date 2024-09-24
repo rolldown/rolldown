@@ -33,6 +33,7 @@ export function rewriteRolldown(code: string) {
       }
     },
     VariableDeclaration(path) {
+      // related to https://esbuild.github.io/faq/#top-level-var
       let node = path.node as acorn.VariableDeclaration
       if (path.scope === programScope) {
         node.kind = 'var'

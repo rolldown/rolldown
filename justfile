@@ -55,7 +55,7 @@ check-rust:
 check-node:
     pnpm type-check
 update-esbuild-diff:
-    node ./scripts/snap-diff/
+    pnpm --filter=scripts esbuild-snap-diff
   
 # run tests for both Rust and Node.js
 test: test-rust test-node

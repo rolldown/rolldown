@@ -2,7 +2,6 @@ pub mod impl_visit;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use bitflags::Flags;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
 use oxc::{

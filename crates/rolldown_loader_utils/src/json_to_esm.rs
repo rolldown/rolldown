@@ -5,7 +5,7 @@ use serde_json::Value;
 
 pub fn json_to_esm(json: &str) -> anyhow::Result<String> {
   // TODO: use zero-copy deserialization
-  let json_value: Value = serde_json::from_str(json)?;
+  let json_value: Value = serde_json::from_str(json.trim_start_matches("\u{FEFF}"))?;
 
   match json_value {
     Value::Object(map) => {

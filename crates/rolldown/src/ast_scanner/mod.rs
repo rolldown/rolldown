@@ -69,7 +69,7 @@ pub struct AstScanner<'me> {
   /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
   /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
   /// lhs of AssignmentExpression
-  is_cjs_module: bool,
+  ast_usage: EcmaModuleAstUsage,
 }
 
 impl<'me> AstScanner<'me> {
@@ -128,7 +128,7 @@ impl<'me> AstScanner<'me> {
       source,
       file_path,
       trivias,
-      is_cjs_module: false,
+      ast_usage: EcmaModuleAstUsage::empty(),
     }
   }
 
@@ -162,7 +162,7 @@ impl<'me> AstScanner<'me> {
           .with_severity_warning(),
         );
       }
-    } else if self.is_cjs_module {
+    } else if self.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
@@ -206,12 +206,7 @@ impl<'me> AstScanner<'me> {
       //   ));
       // }
     }
-    if self.cjs_module_ident.is_some() {
-      self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
-    }
-    if self.cjs_exports_ident.is_some() {
-      self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
-    }
+    self.result.ast_usage = self.ast_usage;
     Ok(self.result)
   }
 
@@ -609,8 +604,14 @@ impl<'me> AstScanner<'me> {
         }
       }
       None => {
-        if !self.is_cjs_module {
-          self.is_cjs_module = ident.name == "module" || ident.name == "exports";
+        // atom cmp is not `O(1)`, so if the module already contains both `module` and `exports`,
+        // don't need to check it again.
+        if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
+          match ident.name.as_str() {
+            "module" => self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef),
+            "exports" => self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef),
+            _ => {}
+          }
         }
         None
       }

@@ -455,7 +455,7 @@ expression: output
 
 # tests/esbuild/default/require_main_cache_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-hw6Zfefe.mjs
+- entry_js-!~{000}~.mjs => entry_js-5kDxb2ia.mjs
 
 # tests/esbuild/default/require_parent_dir_common_js
 

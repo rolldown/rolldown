@@ -15,7 +15,7 @@ var require_is_main = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJSMin(() => {
+var require_entry = __commonJSMin((exports, module) => {
 	console.log("is main:", require.main === module);
 	console.log(require_is_main());
 	console.log("cache:", require.cache);

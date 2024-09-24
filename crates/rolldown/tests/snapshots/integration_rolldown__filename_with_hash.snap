@@ -1973,10 +1973,6 @@ expression: output
 - a-!~{001}~.mjs => a-jx75PpPL.mjs
 - c-!~{005}~.mjs => c-idcE24nQ.mjs
 
-# tests/rolldown/issues/2297
-
-- main-!~{000}~.mjs => main-8muk9Dcv.mjs
-
 # tests/rolldown/issues/2300
 
 - main-!~{000}~.mjs => main-NFramzI5.mjs

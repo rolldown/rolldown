@@ -1,4 +1,5 @@
 import { defineConfig } from 'rolldown'
+// The plugin-vue-rolldown-hmr-demo copy form @vitejs/plugin-vue, it save descriptor cache make sure `_rerender_only` work at rolldown.
 import vuePlugin from 'plugin-vue-rolldown-hmr-demo'
 
 export default defineConfig({

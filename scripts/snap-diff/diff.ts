@@ -3,10 +3,11 @@ import { rewriteEsbuild, rewriteRolldown } from './rewrite.js'
 /**
  * our filename generate logic is not the same as esbuild
  * so hardcode some filename remapping
- * @param {string} esbuildFilename
- * @param {string} rolldownFilename
  */
-function defaultResolveFunction(esbuildFilename, rolldownFilename) {
+function defaultResolveFunction(
+  esbuildFilename: string,
+  rolldownFilename: string,
+) {
   if (esbuildFilename === '/out.js' && /entry_js\.*/.test(rolldownFilename)) {
     return true
   }
@@ -17,7 +18,22 @@ function defaultResolveFunction(esbuildFilename, rolldownFilename) {
  * @param {Array<{filename: string, content: string}> | undefined} rolldownSnap
  * @returns {'missing' | Array<{esbuildName: string, rolldownName: string, esbuild: string, rolldown: string, diff: string}> | 'same'}
  */
-export function diffCase(esbuildSnap, rolldownSnap) {
+export function diffCase(
+  esbuildSnap: {
+    name: string
+    sourceList: Array<{ name: string; content: string }>
+  },
+  rolldownSnap: Array<{ filename: string; content: string }> | undefined,
+):
+  | 'missing'
+  | Array<{
+      esbuildName: string
+      rolldownName: string
+      esbuild: string
+      rolldown: string
+      diff: string
+    }>
+  | 'same' {
   if (!rolldownSnap) {
     return 'missing'
   }

@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "type-check": "tsc -b"
+    "type-check": "tsc -b",
+    "esbuild-snap-diff": "node --import @oxc-node/core/register ./snap-diff/index.ts"
   },
   "dependencies": {
     "@parcel/watcher": "^2.4.1",
@@ -24,6 +25,11 @@
     "zx": "^8.1.2"
   },
   "devDependencies": {
+    "@oxc-node/core": "^0.0.15",
+    "@types/diff": "^5.2.2",
+    "@types/escodegen": "^0.0.10",
+    "@types/lodash-es": "^4.17.12",
+    "@types/markdown-it": "^14.1.2",
     "acorn": "^8.12.1",
     "acorn-walk": "^8.3.4",
     "diff": "^7.0.0",

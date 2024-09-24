@@ -50,7 +50,6 @@ impl Plugin for ImportGlobPlugin {
         import_decls: ast_builder.vec(),
         ast_builder,
         current: 0,
-        source_len: fields.source.len(),
         restore_query_extension: self.config.restore_query_extension,
       };
       visitor.visit_program(fields.program);
@@ -74,7 +73,6 @@ pub struct GlobImportVisit<'ast, 'a> {
   ast_builder: AstBuilder<'ast>,
   import_decls: Vec<'ast, Statement<'ast>>,
   current: usize,
-  source_len: usize,
   restore_query_extension: bool,
 }
 
@@ -306,8 +304,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
       } else {
         // import('./dir/bar.js')
         let mut import_expression = self.ast_builder.expression_import(
-          // Crate a different span for each import expression
-          Span::new((self.source_len + self.current) as u32, index as u32),
+          SPAN,
           self.ast_builder.expression_string_literal(Span::default(), formatted_file.as_str()),
           self.ast_builder.vec(),
         );

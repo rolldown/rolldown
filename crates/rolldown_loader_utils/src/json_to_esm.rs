@@ -4,7 +4,7 @@ use serde_json::Value;
 // TODO: handling https://github.com/tc39/proposal-json-superset
 
 fn trim_bom(raw: &str) -> &str {
-  raw.strip_prefix("\u{FEFF}").unwrap_or(raw)
+  raw.trim_start_matches("\u{FEFF}")
 }
 
 pub fn json_to_esm(json: &str) -> anyhow::Result<String> {

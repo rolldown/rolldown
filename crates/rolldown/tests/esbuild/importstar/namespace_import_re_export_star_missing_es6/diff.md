@@ -40,7 +40,7 @@ assert.equal(foo_exports.foo, undefined);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,4 +1,5 @@
-+const x = 123;
++var x = 123;
  var foo_exports = {};
  __export(foo_exports, { x: () => x });
 -var x = 123;

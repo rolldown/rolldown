@@ -61,10 +61,9 @@ assert.equal(ns2.foo, 123);
 +    foo = 123;
  });
  init_foo();
--var ns2 = (init_foo(), __toCommonJS(foo_exports));
+ var ns2 = (init_foo(), __toCommonJS(foo_exports));
 -console.log(foo, ns2.foo);
 \ No newline at end of file
-+const ns2 = (init_foo(), __toCommonJS(foo_exports));
 +console.log(foo);
 +console.log(ns2.foo);
 \ No newline at end of file

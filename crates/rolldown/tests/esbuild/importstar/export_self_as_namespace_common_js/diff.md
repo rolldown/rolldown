@@ -51,7 +51,7 @@ Object.defineProperty(exports, 'ns', {
 -module.exports = __toCommonJS(entry_exports);
 -var foo = 123;
 \ No newline at end of file
-+const foo = 123;
++var foo = 123;
 +Object.defineProperty(exports, 'foo', {
 +    enumerable: true,
 +    get: function () {

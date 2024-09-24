@@ -41,10 +41,9 @@ assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
 @@ -1,4 +1,4 @@
 -var folders_exports = {};
 -__export(folders_exports, { foo: () => foo });
--var foo = () => 'hi there';
+ var foo = () => 'hi there';
 -console.log(JSON.stringify(folders_exports));
 \ No newline at end of file
-+const foo = () => 'hi there';
 +var folders_index_exports = {};
 +__export(folders_index_exports, { foo: () => foo });
 +assert(Object.keys(JSON.stringify(folders_index_exports)), 2);

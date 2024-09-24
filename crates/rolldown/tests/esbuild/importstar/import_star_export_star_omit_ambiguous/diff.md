@@ -53,8 +53,8 @@ assert.deepEqual(common_exports, {
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,8 +1,8 @@
-+const x = 1;
-+const z = 4;
++var x = 1;
++var z = 4;
  var common_exports = {};
  __export(common_exports, {
      x: () => x,

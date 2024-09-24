@@ -55,7 +55,7 @@ assert.equal(foo, 234);
 -console.log(ns, ns.foo, foo2);
 \ No newline at end of file
 +var import_foo = __toESM(require_foo());
-+let foo = 234;
++var foo = 234;
 +console.log(import_foo);
 +console.log(import_foo.foo);
 +console.log(foo);

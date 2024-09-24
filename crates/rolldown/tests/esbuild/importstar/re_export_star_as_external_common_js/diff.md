@@ -34,7 +34,7 @@ Object.defineProperty(exports, 'out', {
 -module.exports = __toCommonJS(entry_exports);
 -var out = __toESM(require('foo'));
 \ No newline at end of file
-+const out = __toESM(require('foo'));
++var out = __toESM(require('foo'));
 +Object.defineProperty(exports, 'out', {
 +    enumerable: true,
 +    get: function () {

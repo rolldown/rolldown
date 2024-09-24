@@ -29,12 +29,10 @@ assert(x === 1 && y === 2);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,3 +1,3 @@
--var x = 1;
--var y = 2;
+ var x = 1;
+ var y = 2;
 -console.log(x, y);
 \ No newline at end of file
-+let x = 1;
-+let y = 2;
 +assert(x === 1 && y === 2);
 \ No newline at end of file
 

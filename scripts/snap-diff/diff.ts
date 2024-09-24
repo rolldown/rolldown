@@ -14,9 +14,6 @@ function defaultResolveFunction(
 }
 /**
  * TODO: custom resolve
- * @param {{name: string, sourceList: Array<{name: string, content: string}>}} esbuildSnap
- * @param {Array<{filename: string, content: string}> | undefined} rolldownSnap
- * @returns {'missing' | Array<{esbuildName: string, rolldownName: string, esbuild: string, rolldown: string, diff: string}> | 'same'}
  */
 export function diffCase(
   esbuildSnap: {
@@ -49,21 +46,27 @@ export function diffCase(
     }) ?? { content: '', filename: '' }
     let esbuildContent = rewriteEsbuild(esbuildSource.content)
     let rolldownContent = rewriteRolldown(matchedSource.content)
+
     if (matchedSource.content !== esbuildSource.content) {
-      diffList.push({
-        esbuildName: esbuildSource.name,
-        rolldownName: matchedSource.filename,
-        esbuild: esbuildSource.content,
-        rolldown: matchedSource.content,
-        diff: diff.createTwoFilesPatch(
-          'esbuild',
-          'rolldown',
-          esbuildContent,
-          rolldownContent,
-          esbuildSource.name,
-          matchedSource.filename,
-        ),
-      })
+      let structuredPatch = diff.structuredPatch(
+        'esbuild',
+        'rolldown',
+        esbuildContent,
+        rolldownContent,
+        esbuildSource.name,
+        matchedSource.filename,
+      )
+      let formatDiff = ''
+      if (structuredPatch.hunks.length > 0) {
+        formatDiff = diff.formatPatch(structuredPatch)
+        diffList.push({
+          esbuildName: esbuildSource.name,
+          rolldownName: matchedSource.filename,
+          esbuild: esbuildSource.content,
+          rolldown: matchedSource.content,
+          diff: formatDiff,
+        })
+      }
     }
   }
   if (diffList.length === 0) {

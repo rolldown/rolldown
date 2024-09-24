@@ -36,12 +36,10 @@ assert.equal(z, 4);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,3 +1,5 @@
--var x = 1;
--var z = 4;
+ var x = 1;
+ var z = 4;
 -console.log(x, void 0, z);
 \ No newline at end of file
-+const x = 1;
-+const z = 4;
 +console.log(x);
 +console.log(void 0);
 +console.log(z);

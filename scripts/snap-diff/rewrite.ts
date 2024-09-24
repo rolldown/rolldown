@@ -1,31 +1,46 @@
 import * as acorn from 'acorn'
 import * as gen from 'escodegen'
-import * as walk from 'acorn-walk'
+import { traverse, builders as b, Scope } from 'estree-toolkit'
 
 export function rewriteRolldown(code: string) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
   })
-  walk.simple(ast, {
-    ImportDeclaration(node) {
+  let programScope: Scope | null | undefined
+  traverse(ast, {
+    $: { scope: true },
+    Program(path) {
+      programScope = path.scope
+    },
+    ImportDeclaration(path) {
       let sourceList = ['assert', 'node:assert']
+      let node = path.node as acorn.ImportDeclaration
       if (
         node.source.value &&
         sourceList.includes(node.source.value.toString())
       ) {
-        ;(node as any).type = 'EmptyStatement'
+        path.replaceWith(b.emptyStatement())
       }
     },
-    ExpressionStatement(node) {
+    ExpressionStatement(path) {
+      let node = path.node as acorn.ExpressionStatement
       // TODO: use configuration to control
       // esbuild don't generate 'use strict' when outputFormat: cjs by default
       // only if there is already a 'use strict'
       if (node.directive === 'use strict') {
-        ;(node as any).type = 'EmptyStatement'
+        path.replaceWith(b.emptyStatement())
       }
     },
-    CallExpression(node) {
+    VariableDeclaration(path) {
+      // related to https://esbuild.github.io/faq/#top-level-var
+      let node = path.node as acorn.VariableDeclaration
+      if (path.scope === programScope) {
+        node.kind = 'var'
+      }
+    },
+    CallExpression(path) {
+      let node = path.node as acorn.CallExpression
       let callee = node.callee
       // rewrite assert.strictEqual(test, 1)
       // rewrite assert.equal(test, 1)

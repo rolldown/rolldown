@@ -64,7 +64,7 @@ impl ReplacePlugin {
         // Cannot set the number too low or it will be ignored by `fancy_regex::Error::RuntimeError` in `try_replace`.
         // Setting `backtrack_limit` to a large number will cause huge performance regression.
         // See <https://github.com/fancy-regex/fancy-regex/blob/main/PERFORMANCE.md#fancy-regex>.
-        .backtrack_limit(1000)
+        .backtrack_limit(1_000_000)
         .build()
         .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
       prevent_assignment: options.prevent_assignment,

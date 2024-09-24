@@ -414,7 +414,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
 /// hack some syntax that `glob` did not support
 /// 1. `**.js` -> `*.js`
 fn preprocess_glob_expr(glob_expr: &str) -> String {
-  let mut parts = glob_expr.split("/").peekable();
+  let mut parts = glob_expr.split('/').peekable();
   let mut new_glob_expr = String::with_capacity(glob_expr.len());
   while let Some(part) = parts.next() {
     new_glob_expr.push_str(&part.replace("**.", "*."));

@@ -21,7 +21,7 @@ pub mod bundler_options {
       input_item::InputItem,
       is_external::IsExternal,
       module_type::ModuleType,
-      normalized_bundler_options::NormalizedBundlerOptions,
+      normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{AddonFunction, AddonOutputOption, ChunkFilenamesOutputOption},

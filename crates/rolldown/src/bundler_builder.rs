@@ -36,7 +36,7 @@ impl BundlerBuilder {
 
     Bundler {
       closed: false,
-      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter),
+      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),
       file_emitter,
       resolver,
       options,

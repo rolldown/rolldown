@@ -2,6 +2,7 @@
 //! the `rolldown` internal use.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use oxc::minifier::InjectGlobalVariablesConfig;
 use rustc_hash::FxHashMap;
@@ -62,3 +63,5 @@ pub struct NormalizedBundlerOptions {
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: ChecksOptions,
 }
+
+pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

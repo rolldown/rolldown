@@ -5,7 +5,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
+use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
     plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
   },
-  utils::resolve_id_with_plugins::resolve_id_with_plugins,
+  utils::resolve_id_with_plugins::resolve_id_check_external,
   PluginDriver,
 };
 
@@ -33,6 +33,7 @@ impl PluginContext {
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
       module_table: self.module_table.clone(),
+      options: Arc::clone(&self.options),
     }))
   }
 }
@@ -54,6 +55,7 @@ pub struct PluginContextImpl {
   pub(crate) file_emitter: SharedFileEmitter,
   #[allow(clippy::redundant_allocation)]
   pub(crate) module_table: OnceLock<&'static ModuleTable>,
+  pub(crate) options: SharedNormalizedBundlerOptions,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -76,7 +78,7 @@ impl PluginContextImpl {
 
     let normalized_extra_options = extra_options.unwrap_or_default();
 
-    resolve_id_with_plugins(
+    resolve_id_check_external(
       &self.resolver,
       &plugin_driver,
       specifier,
@@ -99,6 +101,7 @@ impl PluginContextImpl {
       },
       normalized_extra_options.custom,
       false,
+      &self.options,
     )
     .await
   }

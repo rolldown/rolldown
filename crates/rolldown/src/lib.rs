@@ -18,7 +18,7 @@ use rolldown_fs::OsFileSystem;
 use rolldown_resolver::Resolver;
 
 pub(crate) type SharedResolver = Arc<Resolver<OsFileSystem>>;
-pub(crate) type SharedOptions = Arc<NormalizedBundlerOptions>;
+pub(crate) type SharedOptions = SharedNormalizedBundlerOptions;
 
 pub use crate::{
   bundler::Bundler, bundler_builder::BundlerBuilder, types::bundle_output::BundleOutput,

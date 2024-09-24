@@ -2,11 +2,7 @@ import * as acorn from 'acorn'
 import * as gen from 'escodegen'
 import * as walk from 'acorn-walk'
 
-/**
- * @param {string} code
- *
- */
-export function rewriteRolldown(code) {
+export function rewriteRolldown(code: string) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
@@ -14,8 +10,11 @@ export function rewriteRolldown(code) {
   walk.simple(ast, {
     ImportDeclaration(node) {
       let sourceList = ['assert', 'node:assert']
-      if (sourceList.includes(node.source.value)) {
-        node.type = 'EmptyStatement'
+      if (
+        node.source.value &&
+        sourceList.includes(node.source.value.toString())
+      ) {
+        ;(node as any).type = 'EmptyStatement'
       }
     },
     ExpressionStatement(node) {
@@ -23,7 +22,7 @@ export function rewriteRolldown(code) {
       // esbuild don't generate 'use strict' when outputFormat: cjs by default
       // only if there is already a 'use strict'
       if (node.directive === 'use strict') {
-        node.type = 'EmptyStatement'
+        ;(node as any).type = 'EmptyStatement'
       }
     },
     CallExpression(node) {
@@ -34,8 +33,10 @@ export function rewriteRolldown(code) {
       let assertProperties = ['equal', 'strictEqual', 'deepEqual']
       if (
         callee.type === 'MemberExpression' &&
-        callee.object?.name === 'assert' &&
-        assertProperties.includes(callee.property?.name)
+        callee.object.type === 'Identifier' &&
+        callee.object.name === 'assert' &&
+        callee.property.type === 'Identifier' &&
+        assertProperties.includes(callee.property.name)
       ) {
         let args = node.arguments
         if (args.length === 2) {
@@ -56,10 +57,7 @@ export function rewriteRolldown(code) {
     .join('\n')
 }
 
-/*
- * @param {string} code
- */
-export function rewriteEsbuild(code) {
+export function rewriteEsbuild(code: string) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',

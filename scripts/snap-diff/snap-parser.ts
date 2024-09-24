@@ -3,22 +3,17 @@ import { snakeCase } from 'change-case'
 import markdown from 'markdown-it'
 import assert from 'node:assert'
 
-/**
- * @param {string} source
- *
- **/
-export function parseEsbuildSnap(source) {
+export function parseEsbuildSnap(source: string) {
   let cases = source.split(
     '================================================================================',
   )
   return cases.map(parseEsbuildCase)
 }
 
-/**
- * @param {string} source
- * @returns {{name: string, sourceList: {name: string, content: string}[]}}
- * */
-function parseEsbuildCase(source) {
+function parseEsbuildCase(source: string): {
+  name: string
+  sourceList: { name: string; content: string }[]
+} {
   let lines = source.trimStart().split('\n')
   let [name, ...rest] = lines
   let normalizedName = snakeCase(trimStart(name, 'Test'))
@@ -26,10 +21,7 @@ function parseEsbuildCase(source) {
   return { name: normalizedName, sourceList: parseContent(content) }
 }
 
-/**
- * @param {string} content
- */
-function parseContent(content) {
+function parseContent(content: string) {
   // Define a regex pattern to match the filename and its content
   const regex = /----------\s*(.+?)\s*----------\s*([\s\S]*?)(?=----------|$)/g
 
@@ -51,11 +43,7 @@ function parseContent(content) {
   return result
 }
 
-/**
- * @param {string | undefined} source
- *
- */
-export function parseRolldownSnap(source) {
+export function parseRolldownSnap(source: string | undefined) {
   if (!source) {
     return undefined
   }
@@ -66,7 +54,7 @@ export function parseRolldownSnap(source) {
   }
   // default mode
   const md = markdown()
-  let tokens = md.parse(source)
+  let tokens = md.parse(source, {})
   let i = 0
   let ret = []
   while (i < tokens.length) {

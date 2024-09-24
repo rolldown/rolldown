@@ -1,18 +1,15 @@
-// @ts-check
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js'
-import { diffCase } from './diff.js'
+import { diffCase } from './diff'
 const esbuildTestDir = path.join(
   import.meta.dirname,
   '../../crates/rolldown/tests/esbuild',
 )
 
-/**
- * @param {string[]} includeList
- * @returns {Array<{normalizedName: string, content: string}>}
- */
-export function getEsbuildSnapFile(includeList) {
+export function getEsbuildSnapFile(
+  includeList: string[],
+): Array<{ normalizedName: string; content: string }> {
   let dirname = path.resolve(import.meta.dirname, './esbuild-snapshots/')
   let fileList = fs.readdirSync(dirname)
   let ret = fileList
@@ -29,10 +26,7 @@ export function getEsbuildSnapFile(includeList) {
   return ret
 }
 
-/**
- * @param {string[]} includeList
- */
-export function run(includeList) {
+export function run(includeList: string[]) {
   let snapfileList = getEsbuildSnapFile(includeList)
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
@@ -61,22 +55,17 @@ export function run(includeList) {
   }
 }
 
-/**
- * @param {string} caseDir
- *
- */
-function getRolldownSnap(caseDir) {
+function getRolldownSnap(caseDir: string) {
   let artifactsPath = path.join(caseDir, 'artifacts.snap')
   if (fs.existsSync(artifactsPath)) {
     return fs.readFileSync(artifactsPath, 'utf-8')
   }
 }
 
-/**
- * @param {string} dir
- * @param {ReturnType<diffCase>} diffResult
- */
-function writeDiffToTestcaseDir(dir, diffResult) {
+function writeDiffToTestcaseDir(
+  dir: string,
+  diffResult: ReturnType<typeof diffCase>,
+) {
   // this seems redundant, just help ts type infer
   if (typeof diffResult === 'string') {
     return
@@ -91,11 +80,10 @@ function writeDiffToTestcaseDir(dir, diffResult) {
   fs.writeFileSync(path.join(dir, 'diff.md'), markdown)
 }
 
-/**
- * @param {Array<{diffResult: ReturnType<diffCase>, name: string}>} diffList
- * @param {string} snapshotCategory
- */
-function getSummaryMarkdown(diffList, snapshotCategory) {
+function getSummaryMarkdown(
+  diffList: Array<{ diffResult: ReturnType<typeof diffCase>; name: string }>,
+  snapshotCategory: string,
+) {
   let markdown = `# Failed Cases\n`
   for (let diff of diffList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name)

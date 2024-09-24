@@ -5,7 +5,7 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModuleAstUsage, EcmaView, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
+  AstScopes, EcmaView, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
   ModuleView, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;

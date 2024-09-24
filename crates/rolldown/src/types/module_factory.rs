@@ -1,5 +1,4 @@
 use arcstr::ArcStr;
-use bitflags::bitflags;
 use futures::future::join_all;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;

@@ -8,15 +8,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-var entry_default = [async () => {
-	for  await(x of y) z(x);
-}, async () => {
-	for  await(x.y of y) z(x);
-}, async () => {
-	for  await(let x$1 of y) z(x$1);
-}, async () => {
-	for  await(const x$1 of y) z(x$1);
-}];
+var entry_default = [
+	async () => {
+		for await (x of y) z(x);
+	},
+	async () => {
+		for await (x.y of y) z(x);
+	},
+	async () => {
+		for await (let x$1 of y) z(x$1);
+	},
+	async () => {
+		for await (const x$1 of y) z(x$1);
+	}
+];
 
 //#endregion
 export { entry_default as default };

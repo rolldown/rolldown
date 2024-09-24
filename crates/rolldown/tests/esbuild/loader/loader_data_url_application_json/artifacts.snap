@@ -26,7 +26,12 @@ var json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0__default = { works };
 
 //#endregion
 //#region entry.js
-console.log([json___31_32_33__default, json_base64_eyJ3b3JrcyI6dHJ1ZX0__default, json_charset_UTF_8__31_32_33_default, json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0__default]);
+console.log([
+	json___31_32_33__default,
+	json_base64_eyJ3b3JrcyI6dHJ1ZX0__default,
+	json_charset_UTF_8__31_32_33_default,
+	json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0__default
+]);
 
 //#endregion
 ```

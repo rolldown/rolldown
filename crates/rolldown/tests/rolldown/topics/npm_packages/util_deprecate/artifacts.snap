@@ -12,7 +12,10 @@ const { deprecate } = __toESM(require("node:util"));
 
 //#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
 var require_node = __commonJSMin((exports, module) => {
-	module.exports = require("node:util").deprecate;
+/**
+	* For Node.js, simply re-export the core `util.deprecate` function.
+	*/
+		module.exports = require("node:util").deprecate;
 });
 
 //#endregion

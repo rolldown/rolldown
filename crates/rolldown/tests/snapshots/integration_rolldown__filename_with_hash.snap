@@ -22,7 +22,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_destructuring
 
-- entry_js-!~{000}~.mjs => entry_js-_sU-PTzV.mjs
+- entry_js-!~{000}~.mjs => entry_js-R3dH_Idl.mjs
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -81,8 +81,8 @@ expression: output
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-fn_js-!~{000}~.mjs => expr-fn_js-W9Gtn0zV.mjs
-- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-2ogAwbDJ.mjs
+- expr-fn_js-!~{000}~.mjs => expr-fn_js-A3c2fLNS.mjs
+- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-tGZtJh4T.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
@@ -228,7 +228,7 @@ expression: output
 
 # tests/esbuild/dce/remove_trailing_return
 
-- entry_js-!~{000}~.mjs => entry_js-kCyuwIxL.mjs
+- entry_js-!~{000}~.mjs => entry_js-9Qv4OwLU.mjs
 
 # tests/esbuild/dce/remove_unused_import_meta
 
@@ -248,7 +248,7 @@ expression: output
 
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
-- entry_js-!~{000}~.mjs => entry_js-Tk6Vfya3.mjs
+- entry_js-!~{000}~.mjs => entry_js-F2d68Dz7.mjs
 
 # tests/esbuild/dce/text_loader_remove_unused
 
@@ -751,7 +751,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry_js-!~{000}~.mjs => entry_js-21clhaXx.mjs
+- entry_js-!~{000}~.mjs => entry_js-IdntoCFC.mjs
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -811,11 +811,11 @@ expression: output
 
 # tests/esbuild/lower/lower_for_await2015
 
-- entry_js-!~{000}~.mjs => entry_js-d5SxpGMh.mjs
+- entry_js-!~{000}~.mjs => entry_js--Ha5YOjz.mjs
 
 # tests/esbuild/lower/lower_for_await2017
 
-- entry_js-!~{000}~.mjs => entry_js-d5SxpGMh.mjs
+- entry_js-!~{000}~.mjs => entry_js--Ha5YOjz.mjs
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
@@ -2124,13 +2124,13 @@ expression: output
 
 # tests/rolldown/topics/deconflict/basic_scoped
 
-- main-!~{000}~.mjs => main-6UfLvAvI.mjs
-- main-6UfLvAvI.mjs.map
+- main-!~{000}~.mjs => main-zVPN4Rfm.mjs
+- main-zVPN4Rfm.mjs.map
 
 # tests/rolldown/topics/deconflict/complex_params_patterns
 
-- main-!~{000}~.mjs => main-ryRyplt5.mjs
-- main-ryRyplt5.mjs.map
+- main-!~{000}~.mjs => main-_cXeCbNH.mjs
+- main-_cXeCbNH.mjs.map
 
 # tests/rolldown/topics/deconflict/conflict_between_global_and_local_binding
 
@@ -2228,7 +2228,7 @@ expression: output
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 
-- main-!~{000}~.cjs => main-tghke2_c.cjs
+- main-!~{000}~.cjs => main-FFnym-mB.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 

@@ -31,7 +31,7 @@ assert.equal(foo_exports.foo, undefined);
 \ No newline at end of file
 +var foo_exports = {};
 +__export(foo_exports, { x: () => x });
-+const x = 123;
++var x = 123;
 +console.log(foo_exports.foo);
 \ No newline at end of file
 

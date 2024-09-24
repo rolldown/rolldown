@@ -25,15 +25,5 @@ export { x, y };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,6 +1,6 @@
--var x = 1;
--var y = 2;
-+let x = 1;
-+let y = 2;
- export {
-     x,
-     y
- };
-\ No newline at end of file
 
 ```

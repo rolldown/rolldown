@@ -34,14 +34,5 @@ assert.equal(bar, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,6 +1,6 @@
- statement();
- statement();
- statement();
- statement();
--var bar = 123;
-+const bar = 123;
- console.log(bar);
-\ No newline at end of file
 
 ```

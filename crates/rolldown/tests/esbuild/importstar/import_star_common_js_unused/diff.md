@@ -46,9 +46,8 @@ assert.equal(foo, 234);
 +    exports.foo = 123;
  });
 -var ns = __toESM(require_foo());
--var foo = 234;
 +var import_foo = __toESM(require_foo());
-+let foo = 234;
+ var foo = 234;
  console.log(foo);
 \ No newline at end of file
 

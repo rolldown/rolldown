@@ -44,8 +44,8 @@ assert.equal(foo, 234);
 -console.log(foo_exports, foo_exports.foo, foo2);
 \ No newline at end of file
 +__export(foo_exports, { foo: () => foo$1 });
-+const foo$1 = 123;
-+let foo = 234;
++var foo$1 = 123;
++var foo = 234;
 +console.log(foo_exports);
 +console.log(foo);
 \ No newline at end of file

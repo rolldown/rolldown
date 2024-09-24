@@ -1,13 +1,18 @@
 import * as acorn from 'acorn'
 import * as gen from 'escodegen'
-import { traverse, builders as b } from 'estree-toolkit'
+import { traverse, builders as b, Scope } from 'estree-toolkit'
 
 export function rewriteRolldown(code: string) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
   })
+  let programScope: Scope | null | undefined
   traverse(ast, {
+    $: { scope: true },
+    Program(path) {
+      programScope = path.scope
+    },
     ImportDeclaration(path) {
       let sourceList = ['assert', 'node:assert']
       let node = path.node as acorn.ImportDeclaration
@@ -25,6 +30,12 @@ export function rewriteRolldown(code: string) {
       // only if there is already a 'use strict'
       if (node.directive === 'use strict') {
         path.replaceWith(b.emptyStatement())
+      }
+    },
+    VariableDeclaration(path) {
+      let node = path.node as acorn.VariableDeclaration
+      if (path.scope === programScope) {
+        node.kind = 'var'
       }
     },
     CallExpression(path) {

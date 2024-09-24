@@ -21,10 +21,5 @@ assert.equal(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,2 +1,2 @@
--var foo = 234;
-+let foo = 234;
- console.log(foo);
-\ No newline at end of file
 
 ```

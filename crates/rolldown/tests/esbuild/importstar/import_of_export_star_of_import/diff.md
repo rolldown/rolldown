@@ -39,12 +39,5 @@ assert.equal(value, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,5 +1,5 @@
--var value = 123;
-+const value = 123;
- statement();
- statement();
- statement();
- statement();
 
 ```

@@ -22,10 +22,9 @@ assert(foo, 234);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,2 +1,2 @@
--var foo = 234;
+ var foo = 234;
 -console.log(foo);
 \ No newline at end of file
-+let foo = 234;
 +assert(foo, 234);
 \ No newline at end of file
 

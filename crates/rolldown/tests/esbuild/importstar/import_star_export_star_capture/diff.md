@@ -43,7 +43,7 @@ assert.equal(foo, 234);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,5 +1,7 @@
-+const foo$1 = 123;
++var foo$1 = 123;
  var bar_exports = {};
 -__export(bar_exports, { foo: () => foo });
 -var foo = 123;
@@ -51,7 +51,7 @@ assert.equal(foo, 234);
 -console.log(bar_exports, foo, foo2);
 \ No newline at end of file
 +__export(bar_exports, { foo: () => foo$1 });
-+let foo = 234;
++var foo = 234;
 +console.log(bar_exports);
 +console.log(foo$1);
 +console.log(foo);

@@ -41,6 +41,11 @@ export function run(includeList: string[]) {
       let diffResult = diffCase(snap, parsedRolldownSnap)
       if (typeof diffResult !== 'string') {
         writeDiffToTestcaseDir(rolldownTestPath, diffResult)
+      } else {
+        if (diffResult === 'same') {
+          // this happens when we fixing some issues and the snapshot is align with esbuild,
+          fs.rmSync(path.join(rolldownTestPath, 'diff.md'))
+        }
       }
       diffList.push({ diffResult, name: snap.name })
     }

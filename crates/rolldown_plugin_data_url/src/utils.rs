@@ -21,7 +21,7 @@ pub fn parse_data_url(dataurl: &str) -> Option<ParsedDataUrl> {
   let mime = captures.get(1).map(|m| m.as_str())?;
   let is_base64 = captures.get(3).is_some();
   let data = captures.get(4).map(|m| m.as_str())?;
-  Some(ParsedDataUrl { mime, is_base64, data })
+  Some(ParsedDataUrl { mime: mime.trim(), is_base64, data: data.trim() })
 }
 
 #[cfg(test)]

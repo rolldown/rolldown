@@ -1,7 +1,7 @@
 use crate::{
   types::hook_resolve_id_skipped::HookResolveIdSkipped, HookResolveIdArgs, PluginDriver,
 };
-use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
+use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId, SharedNormalizedBundlerOptions};
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use typedmap::TypedDashMap;
@@ -12,6 +12,60 @@ fn is_http_url(s: &str) -> bool {
 
 fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn resolve_id_check_external(
+  resolver: &Resolver,
+  plugin_driver: &PluginDriver,
+  request: &str,
+  importer: Option<&str>,
+  is_entry: bool,
+  import_kind: ImportKind,
+  skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
+  custom: Arc<TypedDashMap>,
+  is_user_defined_entry: bool,
+  bundle_options: &SharedNormalizedBundlerOptions,
+) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+  // Check external with unresolved path
+  if let Some(is_external) = bundle_options.external.as_ref() {
+    if is_external(request, importer, false).await? {
+      return Ok(Ok(ResolvedId {
+        id: request.to_string().into(),
+        ignored: false,
+        module_def_format: ModuleDefFormat::Unknown,
+        is_external: true,
+        package_json: None,
+        side_effects: None,
+      }));
+    }
+  }
+
+  let resolved_id = resolve_id_with_plugins(
+    resolver,
+    plugin_driver,
+    request,
+    importer,
+    is_entry,
+    import_kind,
+    skipped_resolve_calls,
+    custom,
+    is_user_defined_entry,
+  )
+  .await?;
+
+  match resolved_id {
+    Ok(mut resolved_id) => {
+      if !resolved_id.is_external {
+        // Check external with resolved path
+        if let Some(is_external) = bundle_options.external.as_ref() {
+          resolved_id.is_external = is_external(request, importer, true).await?;
+        }
+      }
+      Ok(Ok(resolved_id))
+    }
+    Err(e) => Ok(Err(e)),
+  }
 }
 
 #[allow(clippy::too_many_arguments)]

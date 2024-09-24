@@ -9,12 +9,12 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
-use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_sourcemap::SourceMap;
 use std::sync::Arc;
 
-use crate::{runtime::RUNTIME_MODULE_ID, utils::resolve_id, SharedOptions, SharedResolver};
+use crate::{runtime::RUNTIME_MODULE_ID, SharedOptions, SharedResolver};
 
 use super::ast_symbols::AstSymbols;
 
@@ -38,20 +38,6 @@ impl<'a> CreateModuleContext<'a> {
     specifier: &str,
     kind: ImportKind,
   ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-    // Check external with unresolved path
-    if let Some(is_external) = bundle_options.external.as_ref() {
-      if is_external(specifier, Some(importer), false).await? {
-        return Ok(Ok(ResolvedId {
-          id: specifier.to_string().into(),
-          ignored: false,
-          module_def_format: ModuleDefFormat::Unknown,
-          is_external: true,
-          package_json: None,
-          side_effects: None,
-        }));
-      }
-    }
-
     // Check runtime module
     if specifier == RUNTIME_MODULE_ID {
       return Ok(Ok(ResolvedId {
@@ -64,7 +50,7 @@ impl<'a> CreateModuleContext<'a> {
       }));
     }
 
-    let resolved_id = resolve_id::resolve_id(
+    resolve_id_check_external(
       resolver,
       plugin_driver,
       specifier,
@@ -74,21 +60,9 @@ impl<'a> CreateModuleContext<'a> {
       None,
       Arc::default(),
       false,
+      bundle_options,
     )
-    .await?;
-
-    match resolved_id {
-      Ok(mut resolved_id) => {
-        if !resolved_id.is_external {
-          // Check external with resolved path
-          if let Some(is_external) = bundle_options.external.as_ref() {
-            resolved_id.is_external = is_external(specifier, Some(importer), true).await?;
-          }
-        }
-        Ok(Ok(resolved_id))
-      }
-      Err(e) => Ok(Err(e)),
-    }
+    .await
   }
 
   pub async fn resolve_dependencies(

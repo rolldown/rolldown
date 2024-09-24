@@ -4,7 +4,7 @@ use std::{
   vec,
 };
 
-use rolldown_common::{ModuleTable, SharedFileEmitter};
+use rolldown_common::{ModuleTable, SharedFileEmitter, SharedNormalizedBundlerOptions};
 use rolldown_resolver::Resolver;
 
 use crate::{
@@ -33,6 +33,7 @@ impl PluginDriver {
     plugins: Vec<SharedPluginable>,
     resolver: &Arc<Resolver>,
     file_emitter: &SharedFileEmitter,
+    options: &SharedNormalizedBundlerOptions,
   ) -> SharedPluginDriver {
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
@@ -55,6 +56,7 @@ impl PluginDriver {
             resolver: Arc::clone(resolver),
             file_emitter: Arc::clone(file_emitter),
             module_table: OnceLock::default(),
+            options: Arc::clone(options),
           }
           .into(),
         );

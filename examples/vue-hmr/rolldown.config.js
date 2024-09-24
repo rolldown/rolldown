@@ -1,5 +1,5 @@
 import { defineConfig } from 'rolldown'
-import vuePlugin from '@vitejs/plugin-vue'
+import vuePlugin from 'plugin-vue-rolldown-hmr-demo'
 
 export default defineConfig({
   input: './main.js',

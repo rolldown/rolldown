@@ -129,9 +129,9 @@ importers:
         specifier: ^3.4.29
         version: 3.4.38(typescript@5.5.4)
     devDependencies:
-      '@vitejs/plugin-vue':
-        specifier: 5.1.4
-        version: 5.1.4(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))
+      plugin-vue-rolldown-hmr-demo:
+        specifier: 5.0.5
+        version: 5.0.5(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))
 
   packages/bench:
     dependencies:
@@ -3005,13 +3005,6 @@ packages:
       vite: ^5.0.0
       vue: ^3.2.25
 
-  '@vitejs/plugin-vue@5.1.4':
-    resolution: {integrity: sha512-N2XSI2n3sQqp5w7Y/AN/L2XDjBIRGqXko+eDp42sydYSBeJuSm5a1sLf8zakmo8u7tA8NmBgoDLA1HeOESjp9A==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    peerDependencies:
-      vite: ^5.0.0
-      vue: ^3.2.25
-
   '@vitest/expect@2.0.5':
     resolution: {integrity: sha512-yHZtwuP7JZivj65Gxoi8upUN2OzHTi3zVfjwdpu2WrvCZPLwsJ2Ey5ILIPccoW23dd/zQBlJ4/dhi7DWNyXCpA==}
 
@@ -4914,6 +4907,13 @@ packages:
 
   pkg-types@1.2.0:
     resolution: {integrity: sha512-+ifYuSSqOQ8CqP4MbZA5hDpb97n3E8SVWdJe+Wms9kj745lmd3b7EZJiqvmLwAlmRfjrI7Hi5z3kdBJ93lFNPA==}
+
+  plugin-vue-rolldown-hmr-demo@5.0.5:
+    resolution: {integrity: sha512-TZ0whrLaUN4zvJDcHsmQXYK0ZkPVft4U9DddgeSENZVfW1Mks9qBOcGQSR8AoJZG/GplVdzFF6hIO7PPFwV2xQ==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0
+      vue: ^3.2.25
 
   possible-typed-array-names@1.0.0:
     resolution: {integrity: sha512-d7Uw+eZoloe0EHDIYoe+bQ5WXnGMOpmiZFTuMWCwpjzzkL2nTjcKiAk4hh8TjnGye2TwWOk3UXucZ+3rbmBa8Q==}
@@ -8525,11 +8525,6 @@ snapshots:
       vite: 5.4.2(@types/node@22.5.2)(terser@5.31.6)
       vue: 3.4.38(typescript@5.5.4)
 
-  '@vitejs/plugin-vue@5.1.4(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))':
-    dependencies:
-      vite: 5.4.2(@types/node@22.5.2)(terser@5.31.6)
-      vue: 3.4.38(typescript@5.5.4)
-
   '@vitest/expect@2.0.5':
     dependencies:
       '@vitest/spy': 2.0.5
@@ -10660,6 +10655,11 @@ snapshots:
       confbox: 0.1.7
       mlly: 1.7.1
       pathe: 1.1.2
+
+  plugin-vue-rolldown-hmr-demo@5.0.5(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4)):
+    dependencies:
+      vite: 5.4.2(@types/node@22.5.2)(terser@5.31.6)
+      vue: 3.4.38(typescript@5.5.4)
 
   possible-typed-array-names@1.0.0: {}
 

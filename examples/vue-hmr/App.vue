@@ -2,6 +2,7 @@
   <div className="App">
     <header className="App-header">
       <h1>Hello Rolldown + Vue</h1>
+      <Button />
       <p>Edit <code>App.vue</code> and save to test HMR updates.</p>
       <a
         className="App-link"
@@ -14,3 +15,7 @@
     </header>
   </div>
 </template>
+
+<script setup>
+import Button from './Button.vue'
+</script>

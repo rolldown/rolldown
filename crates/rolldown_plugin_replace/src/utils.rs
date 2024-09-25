@@ -15,21 +15,10 @@ pub(crate) fn expand_typeof_replacements(
   for key in values.keys() {
     if OBJECT_RE.is_match(key) {
       // Skip last part
-      let mut parts = key.split('.');
-      let mut part = parts.next().unwrap();
-      for next in parts {
-        replacements.extend([
-          (format!("typeof {part} ==="), "\"object\" ===".to_string()),
-          (format!("typeof {part}==="), "\"object\"===".to_string()),
-          (format!("typeof {part} !=="), "\"object\" !==".to_string()),
-          (format!("typeof {part}!=="), "\"object\"!==".to_string()),
-          (format!("typeof {part} =="), "\"object\" ===".to_string()),
-          (format!("typeof {part}=="), "\"object\"===".to_string()),
-          (format!("typeof {part}!="), "\"object\"!==".to_string()),
-          (format!("typeof {part} !="), "\"object\" !==".to_string()),
-        ]);
-        part = next;
-      }
+      replacements.extend(key.match_indices('.').map(|(index, _)| {
+        let match_str = &key[..index];
+        (format!("typeof {match_str}"), "\"object\"".to_string())
+      }));
     };
   }
 
@@ -58,48 +47,16 @@ mod tests {
     run_test(&["a"], &[]);
     run_test(&["abc"], &[]);
 
+    run_test(&["abc.def"], &[("typeof abc", "\"object\"")]);
+
     run_test(
-      &["abc.def"],
-      &[
-        ("typeof abc===", "\"object\"==="),
-        ("typeof abc ===", "\"object\" ==="),
-        ("typeof abc==", "\"object\"==="),
-        ("typeof abc ==", "\"object\" ==="),
-        ("typeof abc!==", "\"object\"!=="),
-        ("typeof abc !==", "\"object\" !=="),
-        ("typeof abc!=", "\"object\"!=="),
-        ("typeof abc !=", "\"object\" !=="),
-      ],
+      &["process.env.NODE_ENV"],
+      &[("typeof process", "\"object\""), ("typeof process.env", "\"object\"")],
     );
 
     run_test(
       &["a.b.c.d"],
-      &[
-        ("typeof a===", "\"object\"==="),
-        ("typeof a ===", "\"object\" ==="),
-        ("typeof a==", "\"object\"==="),
-        ("typeof a ==", "\"object\" ==="),
-        ("typeof a!==", "\"object\"!=="),
-        ("typeof a !==", "\"object\" !=="),
-        ("typeof a!=", "\"object\"!=="),
-        ("typeof a !=", "\"object\" !=="),
-        ("typeof b===", "\"object\"==="),
-        ("typeof b ===", "\"object\" ==="),
-        ("typeof b==", "\"object\"==="),
-        ("typeof b ==", "\"object\" ==="),
-        ("typeof b!==", "\"object\"!=="),
-        ("typeof b !==", "\"object\" !=="),
-        ("typeof b!=", "\"object\"!=="),
-        ("typeof b !=", "\"object\" !=="),
-        ("typeof c===", "\"object\"==="),
-        ("typeof c ===", "\"object\" ==="),
-        ("typeof c==", "\"object\"==="),
-        ("typeof c ==", "\"object\" ==="),
-        ("typeof c!==", "\"object\"!=="),
-        ("typeof c !==", "\"object\" !=="),
-        ("typeof c!=", "\"object\"!=="),
-        ("typeof c !=", "\"object\" !=="),
-      ],
+      &[("typeof a", "\"object\""), ("typeof a.b", "\"object\""), ("typeof a.b.c", "\"object\"")],
     );
   }
 
@@ -107,48 +64,21 @@ mod tests {
   fn test_expand_unicode() {
     run_test(
       &["कुत्तेपरपानी.पतलूनमेंआग.मेरेशॉर्ट्सखाओ"],
-      &[
-        ("typeof कुत्तेपरपानी===", "\"object\"==="),
-        ("typeof कुत्तेपरपानी ===", "\"object\" ==="),
-        ("typeof कुत्तेपरपानी==", "\"object\"==="),
-        ("typeof कुत्तेपरपानी ==", "\"object\" ==="),
-        ("typeof कुत्तेपरपानी!==", "\"object\"!=="),
-        ("typeof कुत्तेपरपानी !==", "\"object\" !=="),
-        ("typeof कुत्तेपरपानी!=", "\"object\"!=="),
-        ("typeof कुत्तेपरपानी !=", "\"object\" !=="),
-        ("typeof पतलूनमेंआग===", "\"object\"==="),
-        ("typeof पतलूनमेंआग ===", "\"object\" ==="),
-        ("typeof पतलूनमेंआग==", "\"object\"==="),
-        ("typeof पतलूनमेंआग ==", "\"object\" ==="),
-        ("typeof पतलूनमेंआग!==", "\"object\"!=="),
-        ("typeof पतलूनमेंआग !==", "\"object\" !=="),
-        ("typeof पतलूनमेंआग!=", "\"object\"!=="),
-        ("typeof पतलूनमेंआग !=", "\"object\" !=="),
-      ],
+      &[("typeof कुत्तेपरपानी", "\"object\""), ("typeof कुत्तेपरपानी.पतलूनमेंआग", "\"object\"")],
     );
   }
 
   #[test]
   fn test_expand_multiple() {
     run_test(
-      &["a.x", "b.y"],
+      &["a.x", "b.y", "c.z", "d.e.f", "g.h"],
       &[
-        ("typeof a===", "\"object\"==="),
-        ("typeof a ===", "\"object\" ==="),
-        ("typeof a==", "\"object\"==="),
-        ("typeof a ==", "\"object\" ==="),
-        ("typeof a!==", "\"object\"!=="),
-        ("typeof a !==", "\"object\" !=="),
-        ("typeof a!=", "\"object\"!=="),
-        ("typeof a !=", "\"object\" !=="),
-        ("typeof b===", "\"object\"==="),
-        ("typeof b ===", "\"object\" ==="),
-        ("typeof b==", "\"object\"==="),
-        ("typeof b ==", "\"object\" ==="),
-        ("typeof b!==", "\"object\"!=="),
-        ("typeof b !==", "\"object\" !=="),
-        ("typeof b!=", "\"object\"!=="),
-        ("typeof b !=", "\"object\" !=="),
+        ("typeof a", "\"object\""),
+        ("typeof b", "\"object\""),
+        ("typeof c", "\"object\""),
+        ("typeof d", "\"object\""),
+        ("typeof d.e", "\"object\""),
+        ("typeof g", "\"object\""),
       ],
     );
   }
@@ -171,26 +101,6 @@ mod tests {
     run_test(&["a.b.cde!"], &[]);
     run_test(&["a.b.c.d!e"], &[]);
 
-    run_test(
-      &["a.x", "!", "b.y"],
-      &[
-        ("typeof a===", "\"object\"==="),
-        ("typeof a ===", "\"object\" ==="),
-        ("typeof a==", "\"object\"==="),
-        ("typeof a ==", "\"object\" ==="),
-        ("typeof a!==", "\"object\"!=="),
-        ("typeof a !==", "\"object\" !=="),
-        ("typeof a!=", "\"object\"!=="),
-        ("typeof a !=", "\"object\" !=="),
-        ("typeof b===", "\"object\"==="),
-        ("typeof b ===", "\"object\" ==="),
-        ("typeof b==", "\"object\"==="),
-        ("typeof b ==", "\"object\" ==="),
-        ("typeof b!==", "\"object\"!=="),
-        ("typeof b !==", "\"object\" !=="),
-        ("typeof b!=", "\"object\"!=="),
-        ("typeof b !=", "\"object\" !=="),
-      ],
-    );
+    run_test(&["a.x", "!", "b.y"], &[("typeof a", "\"object\""), ("typeof b", "\"object\"")]);
   }
 }

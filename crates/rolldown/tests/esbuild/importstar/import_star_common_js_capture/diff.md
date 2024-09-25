@@ -19,7 +19,7 @@ import { default as assert } from "node:assert";
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin((exports) => {
 	exports.foo = 123;
 });
 
@@ -47,7 +47,7 @@ assert.equal(foo, 234);
 -    'foo.js'(exports) {
 -        exports.foo = 123;
 -    }
-+var require_foo = __commonJSMin((exports, module) => {
++var require_foo = __commonJSMin(exports => {
 +    exports.foo = 123;
  });
 -var ns = __toESM(require_foo());

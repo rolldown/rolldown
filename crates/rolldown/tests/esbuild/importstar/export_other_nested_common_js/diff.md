@@ -23,7 +23,7 @@ var import_foo = __toESM(require_foo());
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin((exports) => {
 	exports.foo = 123;
 });
 
@@ -51,7 +51,7 @@ Object.defineProperty(exports, 'y', {
 -    'foo.js'(exports) {
 -        exports.foo = 123;
 -    }
-+var require_foo = __commonJSMin((exports, module) => {
++var require_foo = __commonJSMin(exports => {
 +    exports.foo = 123;
  });
 -var entry_exports = {};

@@ -663,7 +663,7 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-iVeTeR--.mjs
+- entry_js-!~{000}~.mjs => entry_js-2eEPShz1.mjs
 
 # tests/esbuild/importstar/namespace_import_unused_missing_common_js
 

@@ -21,7 +21,7 @@ var ns = __toESM(require_foo());
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports, module) => {
+var require_foo = __commonJSMin((exports) => {
 	exports.foo = 123;
 });
 
@@ -43,7 +43,7 @@ export { import_foo as ns };
 -    'foo.js'(exports) {
 -        exports.foo = 123;
 -    }
-+var require_foo = __commonJSMin((exports, module) => {
++var require_foo = __commonJSMin(exports => {
 +    exports.foo = 123;
  });
 -var entry_exports = {};

@@ -17,7 +17,7 @@ import { default as assert } from "node:assert";
 
 
 //#region entry.js
-var require_entry = __commonJSMin((exports, module) => {
+var require_entry = __commonJSMin((exports) => {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
 	assert.equal(import_entry.foo, undefined);
@@ -40,7 +40,7 @@ export default require_entry();
 -        exports.foo = 123;
 -        console.log(import_entry.foo);
 -    }
-+var require_entry = __commonJSMin((exports, module) => {
++var require_entry = __commonJSMin(exports => {
 +    var import_entry = __toESM(require_entry());
 +    exports.foo = 123;
 +    console.log(import_entry.foo);

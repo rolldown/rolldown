@@ -145,6 +145,8 @@ jobs:
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
+        with:
+          tools: just, taplo-cli, cargo-shear
 
       - name: Lint Filename
         run: pnpm lint-filename

@@ -1,6 +1,4 @@
-import type { RollupError, LoggingFunction } from '../rollup'
 import type { BindingPluginContext } from '../binding'
-import { getLogHandler, normalizeLog } from '../log/logHandler'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type {
   CustomPluginOptions,
@@ -8,8 +6,7 @@ import type {
   Plugin,
   ResolvedId,
 } from './index'
-import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { error, logPluginError } from '../log/logs'
+import { MinimalPluginContext } from '../log/logger'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
 import { unimplemented, unsupported } from '../utils/misc'
 import { ModuleInfo } from '../types/module-info'
@@ -36,11 +33,7 @@ export interface PrivatePluginContextResolveOptions
   [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol
 }
 
-export class PluginContext {
-  debug: LoggingFunction
-  info: LoggingFunction
-  warn: LoggingFunction
-  readonly error: (error: RollupError | string) => never
+export class PluginContext extends MinimalPluginContext {
   readonly resolve: (
     source: string,
     importer?: string,
@@ -62,33 +55,7 @@ export class PluginContext {
     plugin: Plugin,
     data: PluginContextData,
   ) {
-    const onLog = options.onLog
-    const pluginName = plugin.name || 'unknown'
-    const logLevel = options.logLevel
-    this.debug = getLogHandler(
-      LOG_LEVEL_DEBUG,
-      'PLUGIN_LOG',
-      onLog,
-      pluginName,
-      logLevel,
-    )
-    this.warn = getLogHandler(
-      LOG_LEVEL_WARN,
-      'PLUGIN_WARNING',
-      onLog,
-      pluginName,
-      logLevel,
-    )
-    this.info = getLogHandler(
-      LOG_LEVEL_INFO,
-      'PLUGIN_LOG',
-      onLog,
-      pluginName,
-      logLevel,
-    )
-    this.error = (e): never => {
-      return error(logPluginError(normalizeLog(e), pluginName))
-    }
+    super(options, plugin)
     this.resolve = async (source, importer, options) => {
       let receipt: number | undefined = undefined
       if (options != null) {

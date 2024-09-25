@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "build": "rolldown -c rolldown.config.mjs"
-  }
-}

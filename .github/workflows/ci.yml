@@ -158,6 +158,11 @@ jobs:
       - name: Lint Toml
         run: pnpm lint-toml
 
+      - name: Check if esbuild tests diff has changed
+        run: |
+          just ued
+          git diff-index --quiet HEAD -- || exit 1;
+
   pkg-preview:
     name: Pkg Preview
     needs:

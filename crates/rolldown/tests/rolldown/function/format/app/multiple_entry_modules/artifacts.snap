@@ -33,6 +33,7 @@ function cube(x) {
 ## main.mjs
 
 ```js
+
 rolldown_runtime.define('hyper-cube.js',function(require, module, exports){
 
 //#region hyper-cube.js

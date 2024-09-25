@@ -4218,6 +4218,7 @@ snapshot_kind: text
 # tests/rolldown/function/format/app/export-all
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - main-!~{000}~.js => main--pSlkPVu.js
 
 # tests/rolldown/function/format/app/export-default-class
@@ -4285,22 +4286,25 @@ snapshot_kind: text
 >>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
 =======
 - main-!~{000}~.mjs => main-K6QmF0kO.mjs
+=======
+- main-!~{000}~.mjs => main-vhtY9kYB.mjs
+>>>>>>> 5616e0dcb (fix: make sure rolldown inject runtime at vue (#2292))
 
 # tests/rolldown/function/format/app/export-named
 
-- main-!~{000}~.mjs => main-MOyfuQsk.mjs
+- main-!~{000}~.mjs => main-uVxkIXf0.mjs
 
 # tests/rolldown/function/format/app/export-named-from
 
-- main-!~{000}~.mjs => main-DuEm7JfO.mjs
+- main-!~{000}~.mjs => main-_b0uuJ6W.mjs
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-uRVVcs4c.mjs
+- main-!~{000}~.mjs => main-3gUyQa_J.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- main-!~{000}~.mjs => main-B1VCcyOD.mjs
+- main-!~{000}~.mjs => main-zDOZ7-2r.mjs
 - other-entry-!~{001}~.mjs => other-entry-EZYP3cGv.mjs
 - cube-!~{002}~.mjs => cube-bpLihKnj.mjs
 >>>>>>> d901ab068 (chore(hmr): rebase main branch)

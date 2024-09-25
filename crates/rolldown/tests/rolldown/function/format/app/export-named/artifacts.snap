@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+
 rolldown_runtime.define('main.js',function(require, module, exports){
 
 //#region main.js

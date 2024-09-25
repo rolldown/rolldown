@@ -480,6 +480,21 @@ impl<'a> LinkStage<'a> {
         module.import_records[rec_id].meta |= meta;
       }
     }
+
+    // Make sure rolldown inject runtime
+    if matches!(self.options.format, OutputFormat::App) {
+      for module in &mut self.module_table.modules {
+        if module.idx() == self.runtime.id() {
+          continue;
+        }
+        if let Some(module) = module.as_ecma_mut() {
+          module.stmt_infos.iter_mut().for_each(|stmt_info| {
+            stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__commonJS").into());
+          });
+          return;
+        }
+      }
+    }
   }
 
   fn create_exports_for_ecma_modules(&mut self) {

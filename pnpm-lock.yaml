@@ -134,6 +134,16 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
+  examples/vue-hmr:
+    dependencies:
+      vue:
+        specifier: ^3.4.29
+        version: 3.4.38(typescript@5.5.4)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: 5.1.4
+        version: 5.1.4(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))
+
   packages/bench:
     dependencies:
       '@babel/core':
@@ -3228,8 +3238,20 @@ packages:
       vite: ^5.0.0
       vue: ^3.2.25
 
+<<<<<<< HEAD
   '@vitest/expect@2.1.4':
     resolution: {integrity: sha512-DOETT0Oh1avie/D/o2sgMHGrzYUFFo3zqESB2Hn70z6QB1HrS2IQ9z5DfyTqU8sg4Bpu13zZe9V4+UTNQlUeQA==}
+=======
+  '@vitejs/plugin-vue@5.1.4':
+    resolution: {integrity: sha512-N2XSI2n3sQqp5w7Y/AN/L2XDjBIRGqXko+eDp42sydYSBeJuSm5a1sLf8zakmo8u7tA8NmBgoDLA1HeOESjp9A==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0
+      vue: ^3.2.25
+
+  '@vitest/expect@2.0.5':
+    resolution: {integrity: sha512-yHZtwuP7JZivj65Gxoi8upUN2OzHTi3zVfjwdpu2WrvCZPLwsJ2Ey5ILIPccoW23dd/zQBlJ4/dhi7DWNyXCpA==}
+>>>>>>> da075a260 (feat: add vue hmr example (#2291))
 
 <<<<<<< HEAD
   '@vitest/mocker@2.1.4':
@@ -9336,7 +9358,16 @@ snapshots:
       vue: 3.4.38(typescript@5.5.4)
 >>>>>>> d901ab068 (chore(hmr): rebase main branch)
 
+<<<<<<< HEAD
   '@vitest/expect@2.1.4':
+=======
+  '@vitejs/plugin-vue@5.1.4(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))':
+    dependencies:
+      vite: 5.4.2(@types/node@22.5.2)(terser@5.31.6)
+      vue: 3.4.38(typescript@5.5.4)
+
+  '@vitest/expect@2.0.5':
+>>>>>>> da075a260 (feat: add vue hmr example (#2291))
     dependencies:
       '@vitest/spy': 2.1.4
       '@vitest/utils': 2.1.4

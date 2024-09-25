@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region input.js
-if (typeof process !== "undefined" && typeof process.env === "object" && true) {
+{
 	console.log("production");
 }
 

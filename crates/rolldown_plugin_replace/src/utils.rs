@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use fancy_regex::Regex;
+use regex::Regex;
 
 static OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
   let pattern = r"^([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(\.([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*))+$";
@@ -13,10 +13,8 @@ pub(crate) fn expand_typeof_replacements(
   let mut replacements: Vec<(String, String)> = Vec::new();
 
   for key in values.keys() {
-    if let Ok(Some(matched)) = OBJECT_RE.captures(key) {
-      let capture_str = matched.get(0).unwrap().as_str();
-
-      let capture_vec: Vec<&str> = capture_str.split('.').collect::<Vec<&str>>();
+    if OBJECT_RE.is_match(key) {
+      let capture_vec: Vec<&str> = key.split('.').collect::<Vec<&str>>();
 
       let capture_arr = capture_vec.as_slice();
 

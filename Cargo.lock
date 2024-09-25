@@ -2531,6 +2531,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fancy-regex",
+ "regex",
  "rolldown",
  "rolldown_plugin",
  "rolldown_testing",

@@ -111,7 +111,6 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                   //   './dir/foo.js': () => import('./dir/foo.js'),
                   //   './dir/bar.js': () => import('./dir/bar.js').then((m) => m.setup),
                   // }
-
                   *expr = self.generate_glob_object_expression(&files, &opts, call_expr.span);
                   self.current += 1;
                 }
@@ -221,7 +220,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     }
 
     for glob_expr in glob_exprs {
-      let path = Path::new(self.cwd).join(Path::new(glob_expr));
+      let path = Path::new(self.cwd).join(Path::new(&preprocess_glob_expr(glob_expr)));
       if path.is_absolute() {
         if let Some(path) = path.to_str() {
           // TODO handle error
@@ -407,4 +406,18 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     let properties = self.ast_builder.vec_from_iter(properties);
     self.ast_builder.expression_object(call_expr_span, properties, None)
   }
+}
+
+/// hack some syntax that `glob` did not support
+/// 1. `**.js` -> `*.js`
+fn preprocess_glob_expr(glob_expr: &str) -> String {
+  let mut parts = glob_expr.split('/').peekable();
+  let mut new_glob_expr = String::with_capacity(glob_expr.len());
+  while let Some(part) = parts.next() {
+    new_glob_expr.push_str(&part.replace("**.", "*."));
+    if parts.peek().is_some() {
+      new_glob_expr.push('/');
+    }
+  }
+  new_glob_expr
 }

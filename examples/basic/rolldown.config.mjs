@@ -2,11 +2,11 @@ import { defineConfig } from 'rolldown'
 import { importGlobPlugin } from 'rolldown/experimental'
 
 export default defineConfig({
-  input: ['./src/index.js'],
+  input: ['./main.js'],
   plugins: [
     importGlobPlugin({
       // root: import.meta.dirname,
-      restoreQueryExtension: false,
+      // restoreQueryExtension: false,
     }),
   ],
 })

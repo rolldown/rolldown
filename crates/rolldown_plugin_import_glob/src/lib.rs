@@ -44,13 +44,16 @@ impl Plugin for ImportGlobPlugin {
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
-      let cwd = self.config.root.as_ref().map(PathBuf::from);
+      let normalized_path = args.cwd.join(args.id);
+      let normalized_id = normalized_path.to_slash_lossy();
+      let root = self.config.root.as_ref().map(PathBuf::from);
       let mut visitor = GlobImportVisit {
-        cwd: cwd.as_ref().unwrap_or(args.cwd),
+        root: root.as_ref().unwrap_or(args.cwd),
         import_decls: ast_builder.vec(),
         ast_builder,
         current: 0,
         restore_query_extension: self.config.restore_query_extension,
+        id: &normalized_id,
       };
       visitor.visit_program(fields.program);
       if !visitor.import_decls.is_empty() {
@@ -69,11 +72,12 @@ pub struct ImportGlobOptions {
 }
 
 pub struct GlobImportVisit<'ast, 'a> {
-  cwd: &'a PathBuf,
+  root: &'a PathBuf,
   ast_builder: AstBuilder<'ast>,
   import_decls: Vec<'ast, Statement<'ast>>,
   current: usize,
   restore_query_extension: bool,
+  id: &'a str,
 }
 
 impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
@@ -220,15 +224,16 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     }
 
     for glob_expr in glob_exprs {
-      let path = Path::new(self.cwd).join(Path::new(&preprocess_glob_expr(glob_expr)));
-      if path.is_absolute() {
-        if let Some(path) = path.to_str() {
-          // TODO handle error
-          for file in glob(path).unwrap() {
-            let file = file.unwrap().as_path().relative(self.cwd).to_slash_lossy().to_string();
-            files.push(format!("./{file}"));
-          }
-        }
+      let processed_glob_expr = preprocess_glob_expr(glob_expr);
+      let root = &self.root.to_slash_lossy();
+      let (absolute_glob, mut dir) = to_absolute_glob(&processed_glob_expr, root, self.id).unwrap();
+      if dir == "" {
+        dir = Cow::Borrowed(root);
+      }
+      // TODO handle error
+      for file in glob(&absolute_glob).unwrap() {
+        let file = file.unwrap().as_path().relative(dir.as_ref()).to_slash_lossy().to_string();
+        files.push(format!("./{file}"));
       }
     }
   }
@@ -420,4 +425,38 @@ fn preprocess_glob_expr(glob_expr: &str) -> String {
     }
   }
   new_glob_expr
+}
+
+fn to_absolute_glob<'a>(
+  mut glob: &'a str,
+  root: &'a str,
+  importer: &'a str,
+) -> anyhow::Result<(String, Cow<'a, str>)> {
+  let mut pre: Option<char> = None;
+  if glob.starts_with('!') {
+    pre = Some('!');
+    glob = &glob[1..];
+  }
+
+  let dir = {
+    let dir = Path::new(importer).parent().unwrap_or_else(|| Path::new(root));
+    dir.to_slash_lossy()
+  };
+
+  let mut ret = if let Some(pre) = pre { String::from(pre) } else { String::new() };
+
+  if let Some(glob) = glob.strip_prefix('/') {
+    ret.push_str(&Path::new(root).join(glob).to_slash_lossy());
+  } else if let Some(glob) = glob.strip_prefix("./") {
+    ret.push_str(&Path::new(dir.as_ref()).join(glob).to_slash_lossy());
+  } else if let Some(glob) = glob.strip_prefix("../") {
+    ret.push_str(&Path::new(dir.as_ref()).join(glob).to_slash_lossy());
+  } else if glob.starts_with("**") {
+    ret.push_str(glob);
+  } else {
+    // https://github.com/rolldown/vite/blob/454c8fff9f7115ed29281c2d927366280508a0ab/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
+    // Needs to investigate if oxc resolver support this pattern
+    return Err(anyhow::format_err!("Invalid glob pattern: {}", glob));
+  };
+  Ok((ret, dir))
 }

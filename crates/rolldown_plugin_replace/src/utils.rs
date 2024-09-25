@@ -9,35 +9,31 @@ static OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 pub(crate) fn expand_typeof_replacements(
   values: &HashMap<String, String>,
-) -> HashMap<String, String> {
+) -> Vec<(String, String)> {
   let mut replacements: Vec<(String, String)> = Vec::new();
 
   for key in values.keys() {
     if OBJECT_RE.is_match(key) {
-      let capture_vec: Vec<&str> = key.split('.').collect::<Vec<&str>>();
-
-      let capture_arr = capture_vec.as_slice();
-
-      let replaces: Vec<(String, String)> = capture_arr[0..capture_arr.len() - 1]
-        .iter()
-        .flat_map(|x| {
-          vec![
-            (format!("typeof {} ===", *x), "\"object\" ===".to_string()),
-            (format!("typeof {}===", *x), "\"object\"===".to_string()),
-            (format!("typeof {} !==", *x), "\"object\" !==".to_string()),
-            (format!("typeof {}!==", *x), "\"object\"!==".to_string()),
-            (format!("typeof {} ==", *x), "\"object\" ===".to_string()),
-            (format!("typeof {}==", *x), "\"object\"===".to_string()),
-            (format!("typeof {}!=", *x), "\"object\"!==".to_string()),
-            (format!("typeof {} !=", *x), "\"object\" !==".to_string()),
-          ]
-        })
-        .collect();
-      replacements.extend(replaces);
+      // Skip last part
+      let mut parts = key.split('.');
+      let mut part = parts.next().unwrap();
+      for next in parts {
+        replacements.extend([
+          (format!("typeof {part} ==="), "\"object\" ===".to_string()),
+          (format!("typeof {part}==="), "\"object\"===".to_string()),
+          (format!("typeof {part} !=="), "\"object\" !==".to_string()),
+          (format!("typeof {part}!=="), "\"object\"!==".to_string()),
+          (format!("typeof {part} =="), "\"object\" ===".to_string()),
+          (format!("typeof {part}=="), "\"object\"===".to_string()),
+          (format!("typeof {part}!="), "\"object\"!==".to_string()),
+          (format!("typeof {part} !="), "\"object\" !==".to_string()),
+        ]);
+        part = next;
+      }
     };
   }
 
-  HashMap::from_iter(replacements)
+  replacements
 }
 
 #[cfg(test)]
@@ -48,7 +44,7 @@ mod tests {
 
   fn run_test(keys: &[&str], expected: &[(&str, &str)]) {
     let map = keys.iter().copied().map(|key| (key.to_string(), "x".to_string())).collect();
-    let result = expand_typeof_replacements(&map);
+    let result = expand_typeof_replacements(&map).into_iter().collect::<HashMap<_, _>>();
     let expected = expected
       .iter()
       .copied()

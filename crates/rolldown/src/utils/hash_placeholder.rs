@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use arcstr::ArcStr;
 use regex::{Captures, Regex};
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
@@ -69,15 +70,14 @@ impl HashPlaceholderGenerator {
 
 pub fn replace_facade_hash_replacement(
   source: String,
-  final_hashes_by_placeholder: &FxHashMap<String, &str>,
+  final_hashes_by_placeholder: &FxHashMap<ArcStr, &str>,
 ) -> String {
-  let replaced = REPLACER_REGEX.replace_all(&source, |captures: &Captures<'_>| -> &str {
+  let replaced = REPLACER_REGEX.replace_all(&source, |captures: &Captures<'_>| -> ArcStr {
     debug_assert!(captures.len() == 1);
     let facade = captures.get(0).unwrap().as_str();
-    let real_hash = final_hashes_by_placeholder.get(facade).unwrap_or_else(|| {
-      panic!("This should not happen. hash not found for facade replacement: {facade}")
-    });
-    real_hash
+    // If content hasn't the placeholder using placeholder, ref https://github.com/rollup/rollup/blob/master/src/utils/hashPlaceholders.ts#L52
+    let real_hash = final_hashes_by_placeholder.get(facade).unwrap_or(&facade);
+    (*real_hash).into()
   });
 
   match replaced {
@@ -86,10 +86,10 @@ pub fn replace_facade_hash_replacement(
   }
 }
 
-pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<String> {
+pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
   let captures = REPLACER_REGEX.captures(source);
   if let Some(captures) = captures {
-    captures.iter().map(|capture| capture.unwrap().as_str().to_string()).collect()
+    captures.iter().map(|capture| capture.unwrap().as_str().into()).collect()
   } else {
     FxIndexSet::default()
   }

@@ -1916,6 +1916,10 @@ expression: output
 
 - main-!~{000}~.mjs => main-5qiIpCZ9.mjs
 
+# tests/rolldown/hash/content_include_placeholder
+
+- main-!~{000}~.mjs => main-Dk7hFqBM.mjs
+
 # tests/rolldown/issues/122/a
 
 - entry1-!~{000}~.mjs => entry1-wVgKFI7T.mjs

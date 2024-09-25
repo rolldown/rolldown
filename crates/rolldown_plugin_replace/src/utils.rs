@@ -48,39 +48,155 @@ mod tests {
 
   use super::expand_typeof_replacements;
 
+  fn run_test(keys: &[&str], expected: &[(&str, &str)]) {
+    let map = keys.iter().copied().map(|key| (key.to_string(), "x".to_string())).collect();
+    let result = expand_typeof_replacements(&map);
+    let expected = expected
+      .iter()
+      .copied()
+      .map(|(key, replacement)| (key.to_string(), replacement.to_string()))
+      .collect::<HashMap<_, _>>();
+    assert_eq!(result, expected);
+  }
+
   #[test]
   fn test_expand() {
-    let map = HashMap::from([("a.b.c.d".to_string(), "x".to_string())]);
+    run_test(&["a"], &[]);
+    run_test(&["abc"], &[]);
 
-    let result = expand_typeof_replacements(&map);
+    run_test(
+      &["abc.def"],
+      &[
+        ("typeof abc===", "\"object\"==="),
+        ("typeof abc ===", "\"object\" ==="),
+        ("typeof abc==", "\"object\"==="),
+        ("typeof abc ==", "\"object\" ==="),
+        ("typeof abc!==", "\"object\"!=="),
+        ("typeof abc !==", "\"object\" !=="),
+        ("typeof abc!=", "\"object\"!=="),
+        ("typeof abc !=", "\"object\" !=="),
+      ],
+    );
 
-    let expected = HashMap::from([
-      ("typeof a===".to_string(), "\"object\"===".to_string()),
-      ("typeof a ===".to_string(), "\"object\" ===".to_string()),
-      ("typeof a==".to_string(), "\"object\"===".to_string()),
-      ("typeof a ==".to_string(), "\"object\" ===".to_string()),
-      ("typeof a!==".to_string(), "\"object\"!==".to_string()),
-      ("typeof a !==".to_string(), "\"object\" !==".to_string()),
-      ("typeof a!=".to_string(), "\"object\"!==".to_string()),
-      ("typeof a !=".to_string(), "\"object\" !==".to_string()),
-      ("typeof b===".to_string(), "\"object\"===".to_string()),
-      ("typeof b ===".to_string(), "\"object\" ===".to_string()),
-      ("typeof b==".to_string(), "\"object\"===".to_string()),
-      ("typeof b ==".to_string(), "\"object\" ===".to_string()),
-      ("typeof b!==".to_string(), "\"object\"!==".to_string()),
-      ("typeof b !==".to_string(), "\"object\" !==".to_string()),
-      ("typeof b!=".to_string(), "\"object\"!==".to_string()),
-      ("typeof b !=".to_string(), "\"object\" !==".to_string()),
-      ("typeof c===".to_string(), "\"object\"===".to_string()),
-      ("typeof c ===".to_string(), "\"object\" ===".to_string()),
-      ("typeof c==".to_string(), "\"object\"===".to_string()),
-      ("typeof c ==".to_string(), "\"object\" ===".to_string()),
-      ("typeof c!==".to_string(), "\"object\"!==".to_string()),
-      ("typeof c !==".to_string(), "\"object\" !==".to_string()),
-      ("typeof c!=".to_string(), "\"object\"!==".to_string()),
-      ("typeof c !=".to_string(), "\"object\" !==".to_string()),
-    ]);
+    run_test(
+      &["a.b.c.d"],
+      &[
+        ("typeof a===", "\"object\"==="),
+        ("typeof a ===", "\"object\" ==="),
+        ("typeof a==", "\"object\"==="),
+        ("typeof a ==", "\"object\" ==="),
+        ("typeof a!==", "\"object\"!=="),
+        ("typeof a !==", "\"object\" !=="),
+        ("typeof a!=", "\"object\"!=="),
+        ("typeof a !=", "\"object\" !=="),
+        ("typeof b===", "\"object\"==="),
+        ("typeof b ===", "\"object\" ==="),
+        ("typeof b==", "\"object\"==="),
+        ("typeof b ==", "\"object\" ==="),
+        ("typeof b!==", "\"object\"!=="),
+        ("typeof b !==", "\"object\" !=="),
+        ("typeof b!=", "\"object\"!=="),
+        ("typeof b !=", "\"object\" !=="),
+        ("typeof c===", "\"object\"==="),
+        ("typeof c ===", "\"object\" ==="),
+        ("typeof c==", "\"object\"==="),
+        ("typeof c ==", "\"object\" ==="),
+        ("typeof c!==", "\"object\"!=="),
+        ("typeof c !==", "\"object\" !=="),
+        ("typeof c!=", "\"object\"!=="),
+        ("typeof c !=", "\"object\" !=="),
+      ],
+    );
+  }
 
-    assert_eq!(result, expected);
+  #[test]
+  fn test_expand_unicode() {
+    run_test(
+      &["कुत्तेपरपानी.पतलूनमेंआग.मेरेशॉर्ट्सखाओ"],
+      &[
+        ("typeof कुत्तेपरपानी===", "\"object\"==="),
+        ("typeof कुत्तेपरपानी ===", "\"object\" ==="),
+        ("typeof कुत्तेपरपानी==", "\"object\"==="),
+        ("typeof कुत्तेपरपानी ==", "\"object\" ==="),
+        ("typeof कुत्तेपरपानी!==", "\"object\"!=="),
+        ("typeof कुत्तेपरपानी !==", "\"object\" !=="),
+        ("typeof कुत्तेपरपानी!=", "\"object\"!=="),
+        ("typeof कुत्तेपरपानी !=", "\"object\" !=="),
+        ("typeof पतलूनमेंआग===", "\"object\"==="),
+        ("typeof पतलूनमेंआग ===", "\"object\" ==="),
+        ("typeof पतलूनमेंआग==", "\"object\"==="),
+        ("typeof पतलूनमेंआग ==", "\"object\" ==="),
+        ("typeof पतलूनमेंआग!==", "\"object\"!=="),
+        ("typeof पतलूनमेंआग !==", "\"object\" !=="),
+        ("typeof पतलूनमेंआग!=", "\"object\"!=="),
+        ("typeof पतलूनमेंआग !=", "\"object\" !=="),
+      ],
+    );
+  }
+
+  #[test]
+  fn test_expand_multiple() {
+    run_test(
+      &["a.x", "b.y"],
+      &[
+        ("typeof a===", "\"object\"==="),
+        ("typeof a ===", "\"object\" ==="),
+        ("typeof a==", "\"object\"==="),
+        ("typeof a ==", "\"object\" ==="),
+        ("typeof a!==", "\"object\"!=="),
+        ("typeof a !==", "\"object\" !=="),
+        ("typeof a!=", "\"object\"!=="),
+        ("typeof a !=", "\"object\" !=="),
+        ("typeof b===", "\"object\"==="),
+        ("typeof b ===", "\"object\" ==="),
+        ("typeof b==", "\"object\"==="),
+        ("typeof b ==", "\"object\" ==="),
+        ("typeof b!==", "\"object\"!=="),
+        ("typeof b !==", "\"object\" !=="),
+        ("typeof b!=", "\"object\"!=="),
+        ("typeof b !=", "\"object\" !=="),
+      ],
+    );
+  }
+
+  #[test]
+  fn test_expand_invalid() {
+    run_test(&[""], &[]);
+    run_test(&["~"], &[]);
+    run_test(&["."], &[]);
+    run_test(&["a."], &[]);
+    run_test(&[".a"], &[]);
+    run_test(&["a.b."], &[]);
+    run_test(&["a.b..c"], &[]);
+    run_test(&["!a.b.c"], &[]);
+    run_test(&["a!.b.c"], &[]);
+    run_test(&["a.!b.c"], &[]);
+    run_test(&["a.b!.d"], &[]);
+    run_test(&["a.b!c.d"], &[]);
+    run_test(&["a.b.!cde"], &[]);
+    run_test(&["a.b.cde!"], &[]);
+    run_test(&["a.b.c.d!e"], &[]);
+
+    run_test(
+      &["a.x", "!", "b.y"],
+      &[
+        ("typeof a===", "\"object\"==="),
+        ("typeof a ===", "\"object\" ==="),
+        ("typeof a==", "\"object\"==="),
+        ("typeof a ==", "\"object\" ==="),
+        ("typeof a!==", "\"object\"!=="),
+        ("typeof a !==", "\"object\" !=="),
+        ("typeof a!=", "\"object\"!=="),
+        ("typeof a !=", "\"object\" !=="),
+        ("typeof b===", "\"object\"==="),
+        ("typeof b ===", "\"object\" ==="),
+        ("typeof b==", "\"object\"==="),
+        ("typeof b ==", "\"object\" ==="),
+        ("typeof b!==", "\"object\"!=="),
+        ("typeof b !==", "\"object\" !=="),
+        ("typeof b!=", "\"object\"!=="),
+        ("typeof b !=", "\"object\" !=="),
+      ],
+    );
   }
 }

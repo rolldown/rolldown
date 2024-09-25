@@ -145,8 +145,8 @@ jobs:
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
-        with:
-          tools: just, taplo-cli, cargo-shear
+
+      - uses: taiki-e/install-action@just
 
       - name: Lint Filename
         run: pnpm lint-filename

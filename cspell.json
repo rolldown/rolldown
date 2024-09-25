@@ -188,6 +188,10 @@
     "Yinan",
     "Yunfei",
     "lvalue",
-    "snapFile"
+    "snapFile",
+    // Example unicode strings used in `crates/rolldown_plugin_replace/src/utils.rs`
+    "कुत्तेपरपानी",
+    "पतलूनमे",
+    "मेरेशॉर्ट्सखाओ"
   ]
 }

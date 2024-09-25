@@ -13,8 +13,8 @@ pub(crate) fn expand_typeof_replacements(
   let mut replacements: Vec<(String, String)> = Vec::new();
 
   for key in values.keys() {
-    if let Ok(matched) = OBJECT_RE.captures(key) {
-      let capture_str = matched.unwrap().get(0).unwrap().as_str();
+    if let Ok(Some(matched)) = OBJECT_RE.captures(key) {
+      let capture_str = matched.get(0).unwrap().as_str();
 
       let capture_vec: Vec<&str> = capture_str.split('.').collect::<Vec<&str>>();
 

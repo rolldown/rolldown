@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## input.mjs
+
+```js
+
+//#region input.js
+[
+	bar,
+	foo.qux,
+	"bar"
+];
+
+//#endregion
+```

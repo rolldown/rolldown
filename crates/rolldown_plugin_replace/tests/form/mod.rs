@@ -4,6 +4,7 @@ mod match_variables;
 mod process_check;
 mod replace_nothing;
 mod replace_strings;
+mod simple_object_guards;
 mod special_characters;
 mod special_delimiters;
 mod ternary_operator;

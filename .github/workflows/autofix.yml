@@ -25,7 +25,9 @@ jobs:
           cache-key: debug-build
           components: clippy rustfmt
 
-      - run: just fix
+      - run: |
+          just fix
+          just ued
 
       - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c
 

@@ -97,13 +97,14 @@ function getSummaryMarkdown(
       path.join(import.meta.dirname, 'summary'),
       testDir,
     )
+    const posixPath = relativePath.replaceAll('\\', '/')
     if (diff.diffResult === 'missing') {
       markdown += `## ${diff.name}\n`
       markdown += `  missing\n`
       continue
     }
     if (diff.diffResult !== 'same') {
-      markdown += `## [${diff.name}](${relativePath}/diff.md)\n`
+      markdown += `## [${diff.name}](${posixPath}/diff.md)\n`
       markdown += `  diff\n`
     }
   }

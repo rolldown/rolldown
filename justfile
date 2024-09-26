@@ -31,6 +31,7 @@ roll:
     just roll-rust
     just roll-node
     just roll-repo
+    just ued
 
 roll-rust:
     just check-rust
@@ -63,7 +64,6 @@ test: test-rust test-node
 
 test-rust:
     cargo test --workspace --exclude rolldown_binding
-    # update esbuild diff
     
 
 # Supported presets: all, rolldown, rollup

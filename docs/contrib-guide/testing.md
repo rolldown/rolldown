@@ -9,6 +9,7 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 - `just test-node` for running all Node.js tests.
 - `just test-node rolldown` for running only Rolldown's Node.js tests.
 - `just test-node rollup` for running only Rollup's tests.
+- `just update-esbuild-diff` or `just ued` for update diff in esbuild test suite
 
 ## Rust Tests
 

@@ -13,6 +13,18 @@ pub fn deconflict_chunk_symbols(
   let mut renamer =
     Renamer::new(&link_output.symbols, link_output.module_table.modules.len(), format);
 
+  if matches!(format, OutputFormat::Iife) {
+    // deconflict iife introduce symbols by external
+    // Also for UMD, AMD, but we don't support them yet.
+    chunk
+      .imports_from_external_modules
+      .iter()
+      .filter_map(|(idx, _)| link_output.module_table.modules[*idx].as_external())
+      .for_each(|external_module| {
+        renamer.add_top_level_symbol(external_module.symbol_ref);
+      });
+  }
+
   chunk
     .modules
     .iter()

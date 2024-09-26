@@ -1,30 +1,60 @@
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, Specifier};
+use rolldown_common::{Chunk, Specifier, SymbolRef};
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 #[derive(Debug, Ord, PartialEq, Eq, PartialOrd)]
-pub struct RenderImportSpecifier<'a> {
-  pub imported: &'a str,
-  pub alias: Option<&'a str>,
+pub struct RenderImportSpecifier {
+  pub imported: ArcStr,
+  pub alias: Option<ArcStr>,
 }
 
-pub enum RenderImportDeclarationSpecifier<'a> {
-  ImportSpecifier(Vec<RenderImportSpecifier<'a>>),
-  ImportStarSpecifier(&'a str),
+pub enum RenderImportDeclarationSpecifier {
+  ImportSpecifier(Vec<RenderImportSpecifier>),
+  ImportStarSpecifier(ArcStr),
 }
 
-pub struct RenderImportStmt<'a> {
+pub struct ExternalRenderImportStmt {
   pub path: ArcStr,
-  pub is_external: bool, // for cjs __toESM(require('foo'))
-  pub specifiers: RenderImportDeclarationSpecifier<'a>,
+  pub symbol_ref: SymbolRef, // for cjs __toESM(require('foo')) and iife get deconflict name
+  pub specifiers: RenderImportDeclarationSpecifier,
 }
 
-pub fn collect_render_chunk_imports<'a>(
-  chunk: &'a Chunk,
+pub struct NormalRenderImportStmt {
+  pub path: ArcStr,
+  pub specifiers: RenderImportDeclarationSpecifier,
+}
+
+pub enum RenderImportStmt {
+  NormalRenderImportStmt(NormalRenderImportStmt),
+  ExternalRenderImportStmt(ExternalRenderImportStmt),
+}
+
+impl RenderImportStmt {
+  pub fn path(&self) -> &ArcStr {
+    match self {
+      Self::ExternalRenderImportStmt(e) => &e.path,
+      Self::NormalRenderImportStmt(n) => &n.path,
+    }
+  }
+
+  pub fn specifiers(&self) -> &RenderImportDeclarationSpecifier {
+    match self {
+      Self::ExternalRenderImportStmt(e) => &e.specifiers,
+      Self::NormalRenderImportStmt(n) => &n.specifiers,
+    }
+  }
+
+  pub fn is_external(&self) -> bool {
+    matches!(self, Self::ExternalRenderImportStmt(_))
+  }
+}
+
+pub fn collect_render_chunk_imports(
+  chunk: &Chunk,
   graph: &LinkStageOutput,
   chunk_graph: &ChunkGraph,
-) -> Vec<RenderImportStmt<'a>> {
+) -> Vec<RenderImportStmt> {
   let mut render_import_stmts = vec![];
 
   // render imports from other chunks
@@ -39,19 +69,22 @@ pub fn collect_render_chunk_imports<'a>(
           panic!("should not be star import from other chunks")
         };
         RenderImportSpecifier {
-          imported: export_alias,
-          alias: if export_alias == local_binding { None } else { Some(local_binding) },
+          imported: export_alias.as_str().into(),
+          alias: if export_alias == local_binding {
+            None
+          } else {
+            Some(local_binding.as_str().into())
+          },
         }
       })
       .collect::<Vec<_>>();
     specifiers.sort_unstable();
 
-    render_import_stmts.push(RenderImportStmt {
+    render_import_stmts.push(RenderImportStmt::NormalRenderImportStmt(NormalRenderImportStmt {
       // TODO: filename relative to importee
       path: chunk.import_path_for(importee_chunk).into(),
-      is_external: false,
       specifiers: RenderImportDeclarationSpecifier::ImportSpecifier(specifiers),
-    });
+    }));
   });
 
   // render external imports
@@ -73,16 +106,20 @@ pub fn collect_render_chunk_imports<'a>(
         match &item.imported {
           Specifier::Star => {
             has_importee_imported = true;
-            render_import_stmts.push(RenderImportStmt {
-              path: importee.name.as_str().into(),
-              is_external: true,
-              specifiers: RenderImportDeclarationSpecifier::ImportStarSpecifier(alias),
-            });
+            render_import_stmts.push(RenderImportStmt::ExternalRenderImportStmt(
+              ExternalRenderImportStmt {
+                path: importee.name.clone(),
+                symbol_ref: importee.symbol_ref,
+                specifiers: RenderImportDeclarationSpecifier::ImportStarSpecifier(
+                  alias.as_str().into(),
+                ),
+              },
+            ));
             None
           }
           Specifier::Literal(imported) => Some(RenderImportSpecifier {
-            imported,
-            alias: if alias == imported { None } else { Some(alias) },
+            imported: imported.as_str().into(),
+            alias: if alias == imported { None } else { Some(alias.as_str().into()) },
           }),
         }
       })
@@ -92,11 +129,13 @@ pub fn collect_render_chunk_imports<'a>(
     if !specifiers.is_empty()
       || (importee.side_effects.has_side_effects() && !has_importee_imported)
     {
-      render_import_stmts.push(RenderImportStmt {
-        path: importee.name.as_str().into(),
-        is_external: true,
-        specifiers: RenderImportDeclarationSpecifier::ImportSpecifier(specifiers),
-      });
+      render_import_stmts.push(RenderImportStmt::ExternalRenderImportStmt(
+        ExternalRenderImportStmt {
+          path: importee.name.clone(),
+          symbol_ref: importee.symbol_ref,
+          specifiers: RenderImportDeclarationSpecifier::ImportSpecifier(specifiers),
+        },
+      ));
     }
   });
 

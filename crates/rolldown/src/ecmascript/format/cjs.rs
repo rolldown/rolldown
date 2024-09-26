@@ -171,11 +171,11 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   });
 
   render_import_stmts.iter().for_each(|stmt| {
-    if !stmt.is_external {
+    if !stmt.is_external() {
       return;
     }
-    let require_path_str = format!("require(\"{}\")", &stmt.path);
-    match &stmt.specifiers {
+    let require_path_str = format!("require(\"{}\")", &stmt.path());
+    match &stmt.specifiers() {
       RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
         if specifiers.is_empty() {
           s.push_str(&format!("{require_path_str};\n"));
@@ -193,7 +193,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           s.push_str(&format!(
             "const {{ {} }} = {};\n",
             specifiers.join(", "),
-            if stmt.is_external {
+            if stmt.is_external() {
               let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
                 .link_output
                 .symbols
@@ -209,7 +209,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
         s.push_str(&format!(
           "const {alias} = {};\n",
-          if stmt.is_external {
+          if stmt.is_external() {
             let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
               .link_output
               .symbols

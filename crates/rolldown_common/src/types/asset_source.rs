@@ -24,3 +24,9 @@ impl From<Vec<u8>> for AssetSource {
     Self::Buffer(value)
   }
 }
+
+impl Default for AssetSource {
+  fn default() -> Self {
+    Self::Buffer(vec![])
+  }
+}

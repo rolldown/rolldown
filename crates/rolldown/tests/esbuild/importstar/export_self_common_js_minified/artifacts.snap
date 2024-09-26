@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.cjs
+
+```js
+
+
+//#region entry.js
+var require_entry = __commonJSMin((exports, module) => {
+	module.exports = { foo: 123 };
+	console.log(require_entry());
+});
+
+//#endregion
+export default require_entry();
+
+```

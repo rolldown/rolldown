@@ -1,0 +1,1 @@
+export * as out from "foo"

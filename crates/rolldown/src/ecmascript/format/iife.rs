@@ -24,7 +24,8 @@
 
 use crate::ecmascript::format::utils::namespace::generate_identifier;
 use crate::utils::chunk::collect_render_chunk_imports::{
-  collect_render_chunk_imports, RenderImportDeclarationSpecifier,
+  collect_render_chunk_imports, ExternalRenderImportStmt, RenderImportDeclarationSpecifier,
+  RenderImportStmt,
 };
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::{
@@ -37,6 +38,7 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
+use itertools::Itertools;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
@@ -176,48 +178,52 @@ pub fn render_iife(
 }
 
 /// Handling external imports needs to modify the arguments of the wrapper function.
-fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) {
+fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<ExternalRenderImportStmt>) {
   let render_import_stmts =
     collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
 
-  let mut s = String::new();
-  let externals: Vec<String> = render_import_stmts
-    .iter()
+  let mut import_code = String::new();
+  let externals = render_import_stmts
+    .into_iter()
     .filter_map(|stmt| {
-      let require_path_str = &stmt.path;
-      match &stmt.specifiers {
-        RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-          // Empty specifiers can be ignored in IIFE.
-          if specifiers.is_empty() {
-            None
-          } else {
-            let specifiers = specifiers
-              .iter()
-              .map(|specifier| {
-                if let Some(alias) = &specifier.alias {
-                  format!("{}: {alias}", specifier.imported)
-                } else {
-                  specifier.imported.to_string()
-                }
-              })
-              .collect::<Vec<_>>();
-            s.push_str(&format!(
-              "const {{ {} }} = {};\n",
-              specifiers.join(", "),
-              legitimize_identifier_name(&stmt.path)
-            ));
-            Some(require_path_str.to_string())
+      if let RenderImportStmt::ExternalRenderImportStmt(external_stmt) = stmt {
+        let symbol_name = ctx
+          .link_output
+          .symbols
+          .canonical_name_for(external_stmt.symbol_ref, &ctx.chunk.canonical_names);
+        match &external_stmt.specifiers {
+          RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
+            // Empty specifiers can be ignored in IIFE.
+            if specifiers.is_empty() {
+              None
+            } else {
+              let specifiers = specifiers
+                .iter()
+                .map(|specifier| {
+                  if let Some(alias) = &specifier.alias {
+                    format!("{}: {alias}", specifier.imported)
+                  } else {
+                    specifier.imported.to_string()
+                  }
+                })
+                .collect::<Vec<_>>();
+              import_code
+                .push_str(&format!("const {{ {} }} = {symbol_name};\n", specifiers.join(", ")));
+              Some(external_stmt)
+            }
+          }
+          RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
+            import_code.push_str(&format!("const {alias} = {symbol_name};\n"));
+            Some(external_stmt)
           }
         }
-        RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-          s.push_str(&format!("const {alias} = {};\n", legitimize_identifier_name(&stmt.path)));
-          Some(require_path_str.to_string())
-        }
+      } else {
+        None
       }
     })
-    .collect();
+    .collect_vec();
 
-  (s, externals)
+  (import_code, externals)
 }
 
 /// Rendering the arguments of the wrapper function, including the function arguments and calling arguments.
@@ -233,10 +239,10 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
 ///    - If the global variable is defined in `output.globals`, the global variable will be used directly (after legitimizing it).
 fn render_iife_arguments(
   ctx: &mut GenerateContext<'_>,
-  externals: &[String],
+  externals: &[ExternalRenderImportStmt],
   exports_prefix: Option<&str>,
 ) -> (String, String) {
-  let mut input_args = if exports_prefix.is_some() { vec!["exports".to_string()] } else { vec![] };
+  let mut input_args = if exports_prefix.is_some() { vec!["exports"] } else { vec![] };
   let mut output_args = if let Some(exports_prefix) = exports_prefix {
     vec![exports_prefix.to_string()]
   } else {
@@ -244,17 +250,19 @@ fn render_iife_arguments(
   };
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
-    // TODO deconflict input args
-    input_args.push(legitimize_identifier_name(external).to_string());
-    if let Some(global) = globals.get(external) {
+    let symbol_name =
+      ctx.link_output.symbols.canonical_name_for(external.symbol_ref, &ctx.chunk.canonical_names);
+    input_args.push(symbol_name.as_str());
+
+    if let Some(global) = globals.get(external.path.as_str()) {
       output_args.push(legitimize_identifier_name(global).to_string());
     } else {
-      let target = legitimize_identifier_name(external).to_string();
+      let target = legitimize_identifier_name(external.path.as_str()).to_string();
       ctx.warnings.push(
-        BuildDiagnostic::missing_global_name(ArcStr::from(external), ArcStr::from(&target))
+        BuildDiagnostic::missing_global_name(external.path.clone(), ArcStr::from(&target))
           .with_severity_warning(),
       );
-      output_args.push(target.to_string());
+      output_args.push(target);
     }
   });
   (input_args.join(", "), output_args.join(", "))

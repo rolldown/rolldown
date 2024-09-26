@@ -108,8 +108,8 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
   let mut s = String::new();
   render_import_stmts.iter().for_each(|stmt| {
-    let path = &stmt.path;
-    match &stmt.specifiers {
+    let path = &stmt.path();
+    match &stmt.specifiers() {
       RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
         if specifiers.is_empty() {
           s.push_str(&format!("import \"{path}\";\n",));

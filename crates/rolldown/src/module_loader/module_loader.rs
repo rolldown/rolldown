@@ -20,6 +20,7 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
@@ -172,8 +173,14 @@ impl ModuleLoader {
               },
             }
           };
-          let ext =
-            ExternalModule::new(idx, ArcStr::clone(&resolved_id.id), external_module_side_effects);
+          let symbol_ref =
+            self.symbols.create_symbol(idx, legitimize_identifier_name(&resolved_id.id).into());
+          let ext = ExternalModule::new(
+            idx,
+            ArcStr::clone(&resolved_id.id),
+            external_module_side_effects,
+            symbol_ref,
+          );
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx
         } else {

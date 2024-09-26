@@ -21,7 +21,6 @@
         "name": "function-nested_js",
         "import": "function-nested.js"
       }
-    ],
-    "treeshake": false
+    ]
   }
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown::BundlerOptions;
+use rolldown::{BundlerOptions, TreeshakeOptions};
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
@@ -15,6 +15,7 @@ async fn process_check() {
       BundlerOptions {
         input: Some(vec!["./input.js".to_string().into()]),
         cwd: Some(cwd),
+        treeshake: TreeshakeOptions::Boolean(false),
         ..Default::default()
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {

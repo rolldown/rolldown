@@ -531,7 +531,7 @@ expression: output
 
 # tests/esbuild/importstar/export_other_nested_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-qv-cfYKv.cjs
+- entry_js-!~{000}~.cjs => entry_js--Tfo1Zzo.cjs
 
 # tests/esbuild/importstar/export_self_as_namespace_common_js
 

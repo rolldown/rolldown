@@ -1,5 +1,6 @@
 use std::hash::Hash;
 
+use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{AssetIdx, InstantiationKind, ModuleId};
@@ -33,9 +34,9 @@ pub fn finalize_assets(
       asset
         .preliminary_filename
         .hash_placeholder()
-        .map(|hash_placeholder| (hash_placeholder.to_string(), asset_idx))
+        .map(|hash_placeholder| (hash_placeholder.into(), asset_idx))
     })
-    .collect::<FxHashMap<_, _>>();
+    .collect::<FxHashMap<ArcStr, _>>();
 
   let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
     .as_vec()
@@ -43,7 +44,7 @@ pub fn finalize_assets(
     .map(|asset| {
       extract_hash_placeholders(&asset.content)
         .iter()
-        .map(|placeholder| asset_idx_by_placeholder[placeholder])
+        .filter_map(|placeholder| asset_idx_by_placeholder.get(placeholder).copied())
         .collect_vec()
     })
     .collect::<Vec<_>>()
@@ -96,7 +97,7 @@ pub fn finalize_assets(
         .as_ref()
         .unwrap()
         .hash_placeholder()
-        .map(|hash_placeholder| (hash_placeholder.to_string(), &hash[..hash_placeholder.len()]))
+        .map(|hash_placeholder| (hash_placeholder.into(), &hash[..hash_placeholder.len()]))
     })
     .collect::<FxHashMap<_, _>>();
 

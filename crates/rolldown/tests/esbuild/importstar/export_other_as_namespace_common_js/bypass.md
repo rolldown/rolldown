@@ -1,3 +1,6 @@
+# Reason
+1. cjs module lexer can't recognize esbuild interop code
+# Diff
 ## /out.js
 ### esbuild
 ```js

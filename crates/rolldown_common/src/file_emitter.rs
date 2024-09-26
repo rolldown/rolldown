@@ -122,20 +122,19 @@ impl FileEmitter {
   }
 
   pub fn add_additional_files(&self, bundle: &mut Vec<Output>) {
-    for file in &self.files {
-      let (key, value) = file.pair();
+    self.files.iter_mut().for_each(|mut file| {
+      let (key, value) = file.pair_mut();
       if self.emitted_files.contains(key) {
-        continue;
+        return;
       }
       self.emitted_files.insert(key.clone());
-      // TODO avoid clone asset
       bundle.push(Output::Asset(Box::new(OutputAsset {
         filename: value.file_name.clone().expect("should have file name"),
-        source: value.source.clone(),
-        name: value.name.clone(),
-        original_file_name: value.original_file_name.clone(),
+        source: std::mem::take(&mut value.source),
+        name: std::mem::take(&mut value.name),
+        original_file_name: std::mem::take(&mut value.original_file_name),
       })));
-    }
+    });
   }
 }
 

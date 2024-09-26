@@ -60,7 +60,7 @@ pub fn render_chunk_exports(
                 let canonical_ref = link_output.symbols.par_canonical_ref_for(export_ref);
                 let symbol = link_output.symbols.get(canonical_ref);
                 let mut canonical_name = Cow::Borrowed(&chunk.canonical_names[&canonical_ref]);
-                let exported_rhs = if let Some(ns_alias) = &symbol.namespace_alias {
+                let exported_value = if let Some(ns_alias) = &symbol.namespace_alias {
                   let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
                   let property_name = &ns_alias.property_name;
                   Cow::Owned(format!("{canonical_ns_name}.{property_name}").into())
@@ -87,16 +87,15 @@ pub fn render_chunk_exports(
                           .is_created_by_import_from_external(&link_output.module_table.modules))
                     {
                       format!(
-                        "{left_value} = {exported_rhs}",
+                        "{left_value} = {exported_value}",
                         left_value = property_access_str("exports", &exported_name)
                       )
                     } else {
-                      dbg!(&canonical_name);
                       format!(
                         "Object.defineProperty(exports, '{exported_name}', {{
   enumerable: true,
   get: function () {{
-    return {exported_rhs};
+    return {exported_value};
   }}
 }});"
                       )

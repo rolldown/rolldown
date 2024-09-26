@@ -5,7 +5,7 @@ import type {
 import type { LoggingFunctionWithPosition, RollupError } from '../rollup'
 import { normalizeLog } from '../log/logHandler'
 import { PluginContext } from './plugin-context'
-import { augmentCodeLocation } from '../log/logs'
+import { augmentCodeLocation, error, logPluginError } from '../log/logs'
 import { PluginContextData } from './plugin-context-data'
 import { NormalizedInputOptions } from '..'
 import type { Plugin } from './index'
@@ -41,14 +41,14 @@ export class TransformPluginContext extends PluginContext {
     this.warn = getLogHandler(this.warn)
     this.info = getLogHandler(this.info)
     this.error = (
-      error: RollupError | string,
+      e: RollupError | string,
       pos?: number | { column: number; line: number },
     ): never => {
-      if (typeof error === 'string') error = { message: error }
-      if (pos) augmentCodeLocation(error, pos, moduleSource, moduleId)
-      error.id = moduleId
-      error.hook = 'transform'
-      return this.error(error)
+      if (typeof e === 'string') e = { message: e }
+      if (pos) augmentCodeLocation(e, pos, moduleSource, moduleId)
+      e.id = moduleId
+      e.hook = 'transform'
+      return error(logPluginError(normalizeLog(e), plugin.name || 'unknown'))
     }
     // this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
   }

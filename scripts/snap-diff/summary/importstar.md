@@ -27,8 +27,8 @@
   diff
 ## import_namespace_undefined_property_empty_file
   missing
-## import_namespace_undefined_property_side_effect_free_file
-  missing
+## [import_namespace_undefined_property_side_effect_free_file](../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file/diff.md)
+  diff
 ## [import_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_self_common_js/diff.md)
   diff
 ## [import_star_and_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_star_and_common_js/diff.md)

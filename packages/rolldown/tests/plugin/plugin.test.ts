@@ -105,3 +105,24 @@ describe('Plugin closeBundle hook', async () => {
     }
   })
 })
+
+test('call transformContext error', async () => {
+  try {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          transform() {
+            this.error('transform hook error')
+          },
+        },
+      ],
+    })
+    await build.write({})
+  } catch (error: any) {
+    expect(error.message).toMatchInlineSnapshot(
+      `"Rolldown internal error: GenericFailure, RollupError: transform hook error"`,
+    )
+  }
+})

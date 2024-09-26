@@ -33,7 +33,7 @@ assert.equal(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,5 +1,4 @@
+@@ -1,5 +1,3 @@
 -var foo_exports = {};
 -__export(foo_exports, { foo: () => foo });
 -var foo = 123;
@@ -42,8 +42,7 @@ assert.equal(foo, 234);
 \ No newline at end of file
 +var foo$1 = 123;
 +var foo = 234;
-+console.log(foo$1);
-+console.log(foo);
++console.log(foo$1, foo);
 \ No newline at end of file
 
 ```

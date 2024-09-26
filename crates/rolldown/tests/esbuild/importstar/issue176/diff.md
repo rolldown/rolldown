@@ -15,7 +15,6 @@ console.log(JSON.stringify(folders_exports));
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
 
 
 //#region folders/child/foo.js
@@ -28,7 +27,7 @@ __export(folders_index_exports, { foo: () => foo });
 
 //#endregion
 //#region entry.js
-assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
+console.log(JSON.stringify(folders_index_exports));
 
 //#endregion
 
@@ -46,7 +45,7 @@ assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
 \ No newline at end of file
 +var folders_index_exports = {};
 +__export(folders_index_exports, { foo: () => foo });
-+assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
++console.log(JSON.stringify(folders_index_exports));
 \ No newline at end of file
 
 ```

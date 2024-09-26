@@ -10,7 +10,7 @@ import { default as assert } from "node:assert";
 
 //#region entry.js
 let foo = 234;
-assert(foo === 234);
+assert.equal(foo, 234);
 
 //#endregion
 ```

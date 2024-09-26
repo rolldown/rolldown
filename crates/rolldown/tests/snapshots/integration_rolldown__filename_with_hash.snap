@@ -611,11 +611,11 @@ expression: output
 
 # tests/esbuild/importstar/import_star_export_star_as_no_capture
 
-- entry_js-!~{000}~.mjs => entry_js-mv1AdNog.mjs
+- entry_js-!~{000}~.mjs => entry_js-htXSRm-E.mjs
 
 # tests/esbuild/importstar/import_star_export_star_as_unused
 
-- entry_js-!~{000}~.mjs => entry_js-XjoLyWPj.mjs
+- entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
 # tests/esbuild/importstar/import_star_export_star_capture
 
@@ -643,11 +643,11 @@ expression: output
 
 # tests/esbuild/importstar/import_star_unused
 
-- entry_js-!~{000}~.mjs => entry_js-mfGmejp1.mjs
+- entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
 # tests/esbuild/importstar/issue176
 
-- entry_js-!~{000}~.mjs => entry_js-S8D0aSGv.mjs
+- entry_js-!~{000}~.mjs => entry_js-20EzPIA2.mjs
 
 # tests/esbuild/importstar/namespace_import_missing_common_js
 
@@ -723,7 +723,7 @@ expression: output
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import
 
-- entry_js-!~{000}~.mjs => entry_js-5FiuY4N2.mjs
+- entry_js-!~{000}~.mjs => entry_js-kSvHi-Xf.mjs
 
 # tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous
 

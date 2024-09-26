@@ -22,9 +22,9 @@ const foo$1 = 123;
 //#endregion
 //#region entry.js
 let foo = 234;
-console.log(foo$1, foo$1, foo);
 assert.equal(foo$1, 123);
-assert(foo, 234);
+assert.equal(foo$1, 123);
+assert.equal(foo, 234);
 
 //#endregion
 
@@ -34,7 +34,7 @@ assert(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,5 +1,5 @@
+@@ -1,5 +1,3 @@
 -var foo_exports = {};
 -__export(foo_exports, { foo: () => foo });
 -var foo = 123;
@@ -44,8 +44,6 @@ assert(foo, 234);
 +var foo$1 = 123;
 +var foo = 234;
 +console.log(foo$1, foo$1, foo);
-+console.log(foo$1);
-+assert(foo, 234);
 \ No newline at end of file
 
 ```

@@ -14,7 +14,8 @@ let y = 2;
 
 //#endregion
 //#region entry.js
-assert(x === 1 && y === 2);
+assert.equal(x, 1);
+assert.equal(y, 2);
 
 //#endregion
 ```

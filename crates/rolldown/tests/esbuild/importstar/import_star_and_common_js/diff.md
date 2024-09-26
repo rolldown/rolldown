@@ -46,7 +46,7 @@ assert.equal(ns2.foo, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,11 +1,10 @@
+@@ -1,11 +1,9 @@
 -var foo_exports = {};
 -__export(foo_exports, { foo: () => foo });
 -var foo;
@@ -62,10 +62,7 @@ assert.equal(ns2.foo, 123);
  });
  init_foo();
  var ns2 = (init_foo(), __toCommonJS(foo_exports));
--console.log(foo, ns2.foo);
-\ No newline at end of file
-+console.log(foo);
-+console.log(ns2.foo);
+ console.log(foo, ns2.foo);
 \ No newline at end of file
 
 ```

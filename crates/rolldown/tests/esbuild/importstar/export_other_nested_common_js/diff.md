@@ -32,11 +32,10 @@ var require_foo = __commonJSMin((exports) => {
 var import_foo = __toESM(require_foo());
 
 //#endregion
-var y = import_foo.x;
 Object.defineProperty(exports, 'y', {
   enumerable: true,
   get: function () {
-    return y;
+    return import_foo.x;
   }
 });
 
@@ -46,7 +45,7 @@ Object.defineProperty(exports, 'y', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,9 +1,11 @@
+@@ -1,9 +1,10 @@
 -var require_foo = __commonJS({
 -    'foo.js'(exports) {
 -        exports.foo = 123;
@@ -60,11 +59,10 @@ Object.defineProperty(exports, 'y', {
 -var import_foo = __toESM(require_foo());
 \ No newline at end of file
 +var import_foo = __toESM(require_foo());
-+var y = import_foo.x;
 +Object.defineProperty(exports, 'y', {
 +    enumerable: true,
 +    get: function () {
-+        return y;
++        return import_foo.x;
 +    }
 +});
 \ No newline at end of file

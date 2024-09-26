@@ -60,12 +60,10 @@ pub fn render_chunk_exports(
                 let canonical_ref = link_output.symbols.par_canonical_ref_for(export_ref);
                 let symbol = link_output.symbols.get(canonical_ref);
                 let mut canonical_name = Cow::Borrowed(&chunk.canonical_names[&canonical_ref]);
-                if let Some(ns_alias) = &symbol.namespace_alias {
+                let exported_value = if let Some(ns_alias) = &symbol.namespace_alias {
                   let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
                   let property_name = &ns_alias.property_name;
-                  s.push_str(&format!(
-                    "var {canonical_name} = {canonical_ns_name}.{property_name};\n"
-                  ));
+                  Cow::Owned(format!("{canonical_ns_name}.{property_name}").into())
                 } else {
                   let cur_chunk_idx = ctx.chunk_idx;
                   let canonical_ref_owner_chunk_idx =
@@ -77,8 +75,9 @@ pub fn render_chunk_exports(
                       [&canonical_ref_owner_chunk_idx];
                     canonical_name =
                       Cow::Owned(Rstr::new(&format!("{require_binding}.{canonical_name}")));
-                  }
-                }
+                  };
+                  canonical_name.clone()
+                };
 
                 match export_mode {
                   Some(OutputExports::Named) => {
@@ -88,7 +87,7 @@ pub fn render_chunk_exports(
                           .is_created_by_import_from_external(&link_output.module_table.modules))
                     {
                       format!(
-                        "{left_value} = {canonical_name}",
+                        "{left_value} = {exported_value}",
                         left_value = property_access_str("exports", &exported_name)
                       )
                     } else {
@@ -96,7 +95,7 @@ pub fn render_chunk_exports(
                         "Object.defineProperty(exports, '{exported_name}', {{
   enumerable: true,
   get: function () {{
-    return {canonical_name};
+    return {exported_value};
   }}
 }});"
                       )

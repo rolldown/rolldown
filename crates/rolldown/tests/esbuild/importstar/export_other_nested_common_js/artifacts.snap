@@ -18,11 +18,10 @@ var require_foo = __commonJSMin((exports) => {
 var import_foo = __toESM(require_foo());
 
 //#endregion
-var y = import_foo.x;
 Object.defineProperty(exports, 'y', {
   enumerable: true,
   get: function () {
-    return y;
+    return import_foo.x;
   }
 });
 ```

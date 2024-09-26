@@ -2324,6 +2324,7 @@ dependencies = [
  "insta",
  "itertools 0.13.0",
  "itoa",
+ "lightningcss",
  "memchr",
  "oxc",
  "regex",

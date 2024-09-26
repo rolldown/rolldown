@@ -43,13 +43,9 @@ Object.defineProperty(exports, 'bar', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,9 +1,10 @@
--var require_foo = __commonJS({
--    'foo.js'(exports) {
--        exports.foo = 123;
--    }
-+var require_foo = __commonJSMin(exports => {
-+    exports.foo = 123;
+@@ -1,7 +1,10 @@
+ var require_foo = __commonJSMin(exports => {
+     exports.foo = 123;
  });
 -var entry_exports = {};
 -__export(entry_exports, { bar: () => import_foo.bar });

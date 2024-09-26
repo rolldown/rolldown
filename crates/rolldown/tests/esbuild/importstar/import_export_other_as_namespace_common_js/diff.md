@@ -38,13 +38,9 @@ export { import_foo as ns };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,9 +1,7 @@
--var require_foo = __commonJS({
--    'foo.js'(exports) {
--        exports.foo = 123;
--    }
-+var require_foo = __commonJSMin(exports => {
-+    exports.foo = 123;
+@@ -1,7 +1,7 @@
+ var require_foo = __commonJSMin(exports => {
+     exports.foo = 123;
  });
 -var entry_exports = {};
 -__export(entry_exports, { ns: () => ns });

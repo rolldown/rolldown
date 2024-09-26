@@ -37,13 +37,9 @@ assert.equal(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,8 +1,6 @@
--var require_foo = __commonJS({
--    'foo.js'(exports) {
--        exports.foo = 123;
--    }
-+var require_foo = __commonJSMin(exports => {
-+    exports.foo = 123;
+@@ -1,6 +1,6 @@
+ var require_foo = __commonJSMin(exports => {
+     exports.foo = 123;
  });
 -var ns = __toESM(require_foo());
 +var import_foo = __toESM(require_foo());

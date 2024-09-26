@@ -535,11 +535,11 @@ expression: output
 
 # tests/esbuild/importstar/export_self_and_import_self_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-8-mr-oDv.mjs
+- entry_js-!~{000}~.cjs => entry_js-32I83GKt.cjs
 
 # tests/esbuild/importstar/export_self_and_require_self_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-8nylj3EY.mjs
+- entry_js-!~{000}~.cjs => entry_js-CC22M0_F.cjs
 
 # tests/esbuild/importstar/export_self_as_namespace_common_js
 
@@ -611,8 +611,9 @@ expression: output
 
 # tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 
-- ntry-nope_js-!~{000}~.mjs => ntry-nope_js-0SNm6DBR.mjs
-- ntry-default_js-!~{001}~.mjs => ntry-default_js-MOPa3OOv.mjs
+- entry-nope_js-!~{000}~.mjs => entry-nope_js-xIT0LZ3y.mjs
+- entry-default_js-!~{001}~.mjs => entry-default_js-y1YtWPvw.mjs
+- empty-!~{002}~.mjs => empty-OcPe_QXG.mjs
 
 # tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 

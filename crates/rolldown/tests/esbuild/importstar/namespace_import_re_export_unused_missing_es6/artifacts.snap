@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "foo" is not exported by "bar.js".
+   ╭─[foo.js:1:9]
+   │
+ 1 │ export {foo} from './bar'
+   │         ─┬─  
+   │          ╰─── Missing export
+───╯
+
+```# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+console.log(foo);
+
+//#endregion
+```

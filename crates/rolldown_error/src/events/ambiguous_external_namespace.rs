@@ -47,7 +47,7 @@ impl BuildEvent for AmbiguousExternalNamespace {
     diagnostic.add_label(
       &file_id,
       self.importer.span_of_identifier.start..self.importer.span_of_identifier.end,
-      format!(r#""{}" re-exports "{}"#, self.importee, self.ambiguous_export_name),
+      format!(r#""{}" re-exports "{}""#, self.importee, self.ambiguous_export_name),
     );
 
     self.exporter.iter().for_each(|exporter| {

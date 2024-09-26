@@ -1658,23 +1658,23 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/app/export-all
 
-- main-!~{000}~.mjs => main-vhtY9kYB.mjs
+- main-!~{000}~.mjs => main-9HBv82R7.mjs
 
 # tests/rolldown/function/format/app/export-named
 
-- main-!~{000}~.mjs => main-uVxkIXf0.mjs
+- main-!~{000}~.mjs => main-BpWBfuBT.mjs
 
 # tests/rolldown/function/format/app/export-named-from
 
-- main-!~{000}~.mjs => main-_b0uuJ6W.mjs
+- main-!~{000}~.mjs => main-vHKD1O4a.mjs
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-3gUyQa_J.mjs
+- main-!~{000}~.mjs => main-YXBHhXtu.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- main-!~{000}~.mjs => main-zDOZ7-2r.mjs
+- main-!~{000}~.mjs => main-uDhpRUC1.mjs
 - other-entry-!~{001}~.mjs => other-entry-EZYP3cGv.mjs
 - cube-!~{002}~.mjs => cube-bpLihKnj.mjs
 

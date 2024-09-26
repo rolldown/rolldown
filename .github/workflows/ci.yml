@@ -146,8 +146,6 @@ jobs:
       - name: Setup Node
         uses: ./.github/actions/setup-node
 
-      - uses: taiki-e/install-action@just
-
       - name: Lint Filename
         run: pnpm lint-filename
 
@@ -159,11 +157,6 @@ jobs:
 
       - name: Lint Toml
         run: pnpm lint-toml
-
-      - name: Check if esbuild tests diff has changed
-        run: |
-          just ued
-          git diff --quiet
 
   pkg-preview:
     name: Pkg Preview

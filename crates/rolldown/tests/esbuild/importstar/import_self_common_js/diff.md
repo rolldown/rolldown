@@ -33,10 +33,12 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -2,5 +2,5 @@
+@@ -1,6 +1,6 @@
+ var require_entry = __commonJSMin(exports => {
      var import_entry = __toESM(require_entry());
      exports.foo = 123;
-     console.log(import_entry.foo);
+-    console.log(import_entry.foo);
++    assert.equal(import_entry.foo, undefined);
  });
 -module.exports = require_entry();
 \ No newline at end of file

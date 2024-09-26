@@ -1,6 +1,6 @@
 import * as acorn from 'acorn'
 import * as gen from 'escodegen'
-import { traverse, builders as b, Scope } from 'estree-toolkit'
+import { traverse, builders as b, Scope, NodePath } from 'estree-toolkit'
 
 export function rewriteRolldown(code: string) {
   let ast = acorn.parse(code, {
@@ -8,10 +8,29 @@ export function rewriteRolldown(code: string) {
     sourceType: 'module',
   })
   let programScope: Scope | null | undefined
+  let collapsedAssertArgs: acorn.Expression[] = []
+  let pathToRemove: NodePath<any, any>[] = []
+  let isLastExpressionStatementAssert = false
   traverse(ast, {
     $: { scope: true },
-    Program(path) {
-      programScope = path.scope
+    Program: {
+      enter(path) {
+        programScope = path.scope
+      },
+      leave(path) {
+        for (let p of pathToRemove) {
+          p.remove()
+        }
+        if (collapsedAssertArgs.length) {
+          let consoleLogStmt = b.expressionStatement(
+            b.callExpression(
+              b.memberExpression(b.identifier('console'), b.identifier('log')),
+              collapsedAssertArgs as any,
+            ),
+          )
+          path.node?.body.push(consoleLogStmt)
+        }
+      },
     },
     ImportDeclaration(path) {
       let sourceList = ['assert', 'node:assert']
@@ -20,7 +39,7 @@ export function rewriteRolldown(code: string) {
         node.source.value &&
         sourceList.includes(node.source.value.toString())
       ) {
-        path.replaceWith(b.emptyStatement())
+        path.remove()
       }
     },
     ExpressionStatement(path) {
@@ -29,7 +48,30 @@ export function rewriteRolldown(code: string) {
       // esbuild don't generate 'use strict' when outputFormat: cjs by default
       // only if there is already a 'use strict'
       if (node.directive === 'use strict') {
-        path.replaceWith(b.emptyStatement())
+        pathToRemove.push(path)
+        return
+      }
+      if (path.scope === programScope) {
+        if (node.expression.type === 'CallExpression') {
+          let arg = extractAssertArgument(node.expression)
+          if (arg) {
+            isLastExpressionStatementAssert = true
+            collapsedAssertArgs.push(arg)
+            pathToRemove.push(path)
+            return
+          }
+        }
+
+        if (isLastExpressionStatementAssert && collapsedAssertArgs.length) {
+          isLastExpressionStatementAssert = false
+          let consoleLogStmt = b.expressionStatement(
+            b.callExpression(
+              b.memberExpression(b.identifier('console'), b.identifier('log')),
+              collapsedAssertArgs as any,
+            ),
+          )
+          path.insertBefore([consoleLogStmt])
+        }
       }
     },
     VariableDeclaration(path) {
@@ -39,25 +81,17 @@ export function rewriteRolldown(code: string) {
         node.kind = 'var'
       }
     },
-    CallExpression(path) {
-      let node = path.node as acorn.CallExpression
-      rewriteAssert(node)
-    },
   })
-  let generated = gen.generate(ast, {})
-  return generated
-    .split('\n')
-    .filter((line) => {
-      return line !== ';'
-    })
-    .join('\n')
+  return gen.generate(ast, {})
 }
 
-function rewriteAssert(node: acorn.CallExpression) {
+function extractAssertArgument(
+  node: acorn.CallExpression,
+): acorn.Expression | undefined {
   let callee = node.callee
-  // rewrite assert.strictEqual(test, 1)
-  // rewrite assert.equal(test, 1)
-  // rewrite assert.deepEqual(test, 1)
+  // extract assert.strictEqual(test, 1)
+  // extract assert.equal(test, 1)
+  // extract assert.deepEqual(test, 1)
   let assertProperties = ['equal', 'strictEqual', 'deepEqual']
   if (
     callee.type === 'MemberExpression' &&
@@ -67,12 +101,7 @@ function rewriteAssert(node: acorn.CallExpression) {
     assertProperties.includes(callee.property.name)
   ) {
     let args = node.arguments
-    if (args.length === 2) {
-      callee.object.name = 'console'
-      callee.property.name = 'log'
-      // remove second argument in `console.log`
-      args.splice(1, 1)
-    }
+    return args[0] as acorn.Expression
   }
 }
 

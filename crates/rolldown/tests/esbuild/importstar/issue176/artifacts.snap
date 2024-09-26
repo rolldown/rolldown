@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.mjs
 
 ```js
-import { default as assert } from "node:assert";
 
 
 //#region folders/child/foo.js
@@ -19,7 +18,7 @@ __export(folders_index_exports, { foo: () => foo });
 
 //#endregion
 //#region entry.js
-assert(Object.keys(JSON.stringify(folders_index_exports)), 2);
+console.log(JSON.stringify(folders_index_exports));
 
 //#endregion
 ```

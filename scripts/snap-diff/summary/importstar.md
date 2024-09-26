@@ -25,8 +25,6 @@
   missing
 ## [import_export_other_as_namespace_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_export_other_as_namespace_common_js/diff.md)
   diff
-## [import_export_star_ambiguous_warning](../../../crates/rolldown/tests/esbuild/importstar/import_export_star_ambiguous_warning/diff.md)
-  diff
 ## import_namespace_undefined_property_empty_file
   missing
 ## import_namespace_undefined_property_side_effect_free_file
@@ -51,8 +49,6 @@
   diff
 ## [import_star_export_star_as_no_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_as_no_capture/diff.md)
   diff
-## [import_star_export_star_as_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_as_unused/diff.md)
-  diff
 ## [import_star_export_star_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_capture/diff.md)
   diff
 ## [import_star_export_star_no_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_no_capture/diff.md)
@@ -75,8 +71,6 @@
   diff
 ## [import_star_of_export_star_as](../../../crates/rolldown/tests/esbuild/importstar/import_star_of_export_star_as/diff.md)
   diff
-## [import_star_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_unused/diff.md)
-  diff
 ## [issue176](../../../crates/rolldown/tests/esbuild/importstar/issue176/diff.md)
   diff
 ## [namespace_import_missing_common_js](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_common_js/diff.md)
@@ -90,8 +84,6 @@
 ## [namespace_import_unused_missing_common_js](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_common_js/diff.md)
   diff
 ## [namespace_import_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_es6/diff.md)
-  diff
-## [re_export_namespace_import_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_namespace_import_missing_es6/diff.md)
   diff
 ## [re_export_namespace_import_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6/diff.md)
   diff
@@ -119,5 +111,3 @@
   missing
 ## re_export_star_iife_no_bundle
   missing
-## [re_export_star_name_collision_not_ambiguous_import](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import/diff.md)
-  diff

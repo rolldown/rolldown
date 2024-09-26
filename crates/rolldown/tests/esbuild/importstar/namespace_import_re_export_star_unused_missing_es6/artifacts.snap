@@ -19,7 +19,7 @@ __export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(foo_exports, { x: 123 });
+assert.deepEqual(foo_exports.foo, void 0);
 
 //#endregion
 ```

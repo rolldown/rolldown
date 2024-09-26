@@ -19,7 +19,7 @@ __export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(foo_exports, { x: 123 });
+assert.deepEqual(foo_exports.foo, void 0);
 
 //#endregion
 
@@ -35,7 +35,7 @@ assert.deepEqual(foo_exports, { x: 123 });
 +var x = 123;
 +var foo_exports = {};
 +__export(foo_exports, { x: () => x });
-+console.log(foo_exports);
++console.log(foo_exports.foo);
 \ No newline at end of file
 
 ```

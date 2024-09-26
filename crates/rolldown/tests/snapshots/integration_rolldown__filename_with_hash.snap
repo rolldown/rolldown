@@ -515,7 +515,7 @@ expression: output
 
 # tests/esbuild/default/var_relocating_bundle
 
-- top-level_js-!~{000}~.mjs => top-level_js-aLnr7tad.mjs
+- top-level_js-!~{000}~.mjs => top-level_js-MmvXL_FE.mjs
 - nested_js-!~{001}~.mjs => nested_js-9dHTQmah.mjs
 - let_js-!~{002}~.mjs => let_js-lSQgoT-J.mjs
 - function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs

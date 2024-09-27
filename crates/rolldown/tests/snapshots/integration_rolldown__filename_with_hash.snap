@@ -545,9 +545,21 @@ expression: output
 
 - entry_js-!~{000}~.cjs => entry_js-mKIoiJrd.cjs
 
+# tests/esbuild/importstar/export_self_common_js_minified
+
+- entry_js-!~{000}~.cjs => entry_js-Nrr5cneU.cjs
+
 # tests/esbuild/importstar/export_self_es6
 
 - entry_js-!~{000}~.mjs => entry_js-_WUmd7Ck.mjs
+
+# tests/esbuild/importstar/export_self_iife
+
+- entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
+
+# tests/esbuild/importstar/export_self_iife_with_name
+
+- entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
@@ -633,6 +645,30 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-BygGyWzE.mjs
 
+# tests/esbuild/importstar/import_star_mangle_no_bundle_capture
+
+- entry_js-!~{000}~.mjs => entry_js-_XdNvPI2.mjs
+
+# tests/esbuild/importstar/import_star_mangle_no_bundle_no_capture
+
+- entry_js-!~{000}~.mjs => entry_js-n_Y5fwlk.mjs
+
+# tests/esbuild/importstar/import_star_mangle_no_bundle_unused
+
+- entry_js-!~{000}~.mjs => entry_js-WrapWXT3.mjs
+
+# tests/esbuild/importstar/import_star_no_bundle_capture
+
+- entry_js-!~{000}~.mjs => entry_js-_XdNvPI2.mjs
+
+# tests/esbuild/importstar/import_star_no_bundle_no_capture
+
+- entry_js-!~{000}~.mjs => entry_js-n_Y5fwlk.mjs
+
+# tests/esbuild/importstar/import_star_no_bundle_unused
+
+- entry_js-!~{000}~.mjs => entry_js-WrapWXT3.mjs
+
 # tests/esbuild/importstar/import_star_no_capture
 
 - entry_js-!~{000}~.mjs => entry_js-o4JnhJiy.mjs
@@ -697,6 +733,14 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-3xo5jbbP.mjs
 
+# tests/esbuild/importstar/re_export_star_as_common_js_no_bundle
+
+- entry_js-!~{000}~.cjs => entry_js-k_XF-EgE.cjs
+
+# tests/esbuild/importstar/re_export_star_as_es6_no_bundle
+
+- entry_js-!~{000}~.mjs => entry_js-Hh289cnx.mjs
+
 # tests/esbuild/importstar/re_export_star_as_external_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-k_XF-EgE.cjs
@@ -705,9 +749,25 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-Hh289cnx.mjs
 
+# tests/esbuild/importstar/re_export_star_as_external_iife
+
+- entry_js-!~{000}~.mjs => entry_js-O0kO95RR.mjs
+
+# tests/esbuild/importstar/re_export_star_as_iife_no_bundle
+
+- entry_js-!~{000}~.mjs => entry_js-O0kO95RR.mjs
+
+# tests/esbuild/importstar/re_export_star_common_js_no_bundle
+
+- entry_js-!~{000}~.cjs => entry_js-ELPoWxMr.cjs
+
 # tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
 - entry_js-!~{000}~.mjs => entry_js-nsOyjTyb.mjs
+
+# tests/esbuild/importstar/re_export_star_es6_no_bundle
+
+- entry_js-!~{000}~.mjs => entry_js-f7yUzi-B.mjs
 
 # tests/esbuild/importstar/re_export_star_external_common_js
 
@@ -716,6 +776,14 @@ expression: output
 # tests/esbuild/importstar/re_export_star_external_es6
 
 - entry_js-!~{000}~.mjs => entry_js-f7yUzi-B.mjs
+
+# tests/esbuild/importstar/re_export_star_external_iife
+
+- entry_js-!~{000}~.mjs => entry_js-AgsIhQIf.mjs
+
+# tests/esbuild/importstar/re_export_star_iife_no_bundle
+
+- entry_js-!~{000}~.mjs => entry_js-AgsIhQIf.mjs
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 

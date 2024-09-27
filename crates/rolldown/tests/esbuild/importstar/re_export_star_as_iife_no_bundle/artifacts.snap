@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
+
+```text
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+
+```
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "foo" in "output.globals" – guessing "foo".
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+(function(exports, foo) {
+
+"use strict";
+const out = foo;
+
+Object.defineProperty(exports, 'out', {
+  enumerable: true,
+  get: function () {
+    return out;
+  }
+});
+return exports;
+})({}, foo);
+```

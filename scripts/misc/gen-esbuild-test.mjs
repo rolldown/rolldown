@@ -6,8 +6,6 @@ import * as path from 'node:path'
 import * as changeCase from 'change-case'
 import chalk from 'chalk'
 import * as dedent from 'dedent'
-import { fileURLToPath } from 'node:url'
-import { URL } from 'node:url'
 import * as nodeHttps from 'node:https'
 import * as nodeFs from 'node:fs'
 import * as fsExtra from 'fs-extra'
@@ -28,10 +26,15 @@ if (process.argv.length < 3) {
 const SUITE_NAME = process.argv[2]
 console.log(`Processing test suite: ${SUITE_NAME}`)
 
-// 2. Set the tests root directory
-const __dirname = fileURLToPath(new URL('.', import.meta.url))
+const __dirname = import.meta.dirname
 
-const TESTS_ROOT_DIR = path.resolve(__dirname, 'tests/esbuild', SUITE_NAME)
+// 2. Set the tests root directory
+
+const TESTS_ROOT_DIR = path.resolve(
+  __dirname,
+  '../../crates/rolldown/tests/esbuild',
+  SUITE_NAME,
+)
 
 // 3. Download .go test source file located in the suites object
 //    for each suite and place it under "scripts" dir.
@@ -82,15 +85,15 @@ const suites = /** @type {const} */ ({
       'dce_of_using_declarations',
     ],
   },
-  import_star: {
+  importstar: {
     name: 'import_star',
     sourcePath: './bundler_importstar_test.go',
     sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_test.go',
 
     ignoreCases: [],
   },
-  import_star_ts: {
+  importstar_ts: {
     name: 'import_star_ts',
     sourcePath: './bundler_importstar_ts_test.go',
     sourceGithubUrl:
@@ -98,7 +101,7 @@ const suites = /** @type {const} */ ({
 
     ignoreCases: [],
   },
-  bundler_ts: {
+  ts: {
     name: 'bundler_ts',
     sourcePath: './bundler_ts_test.go',
     sourceGithubUrl:
@@ -190,32 +193,33 @@ async function readTestSuiteSource(testSuiteName) {
 
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
+console.log(source)
 
 // This is up to suit name
-const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
+// const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
 // Generic ignored pattern, maybe used in many suites
-const ignoredTestPattern = [
-  'ts',
-  'txt',
-  'json',
-  'jsx',
-  'tsx',
-  'no_bundle',
-  'mangle',
-  'minify',
-  'minified',
-  'comments',
-  'fs',
-  'alias',
-  'node',
-  'decorator',
-  'iife',
-  'abs_path',
-  'inject',
-  'metafile',
-  'output_extension',
-  'top_level_return_forbidden',
-]
+// const ignoredTestPattern = [
+//   'ts',
+//   'txt',
+//   'json',
+//   'jsx',
+//   'tsx',
+//   'no_bundle',
+//   'mangle',
+//   'minify',
+//   'minified',
+//   'comments',
+//   'fs',
+//   'alias',
+//   'node',
+//   'decorator',
+//   'iife',
+//   'abs_path',
+//   'inject',
+//   'metafile',
+//   'output_extension',
+//   'top_level_return_forbidden',
+// ]
 
 let queryString = `
 (call_expression
@@ -283,15 +287,15 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 
     console.log('testCaseName: ', testCaseName)
 
-    let isIgnored = false
+    // let isIgnored = false
     // Skip some test cases by ignoredTestName
-    if (ignoredTestPattern.some((name) => testCaseName?.includes(name))) {
-      isIgnored = true
-    }
+    // if (ignoredTestPattern.some((name) => testCaseName?.includes(name))) {
+    //   isIgnored = true
+    // }
     // @ts-ignore
-    if (ignoreCases.includes(testCaseName)) {
-      isIgnored = true
-    }
+    // if (ignoreCases.includes(testCaseName)) {
+    //   isIgnored = true
+    // }
     let bundle_field_list = query.captures(child).filter((item) => {
       return item.name === 'element_list'
     })
@@ -302,20 +306,6 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     })
 
     const fileList = jsConfig['files']
-    // Skip jsx/ts/tsx files test case
-    if (
-      fileList.some(
-        (file) =>
-          file.name.endsWith('ts') ||
-          file.name.endsWith('tsx') ||
-          file.name.endsWith('jsx'),
-      )
-    ) {
-      isIgnored = true
-    }
-    if (isIgnored) {
-      testCaseName = `.${testCaseName}`
-    }
 
     const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
     const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)

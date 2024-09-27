@@ -31,10 +31,14 @@ console.log(
 ===================================================================
 --- esbuild	/out/entry-nope.js
 +++ rolldown	
-@@ -1,7 +0,0 @@
--var require_empty = __commonJSMin(() => {
+@@ -1,11 +0,0 @@
+-var require_empty = __commonJS({
+-    'empty.js'() {
+-    }
 -});
--var require_empty2 = __commonJSMin(() => {
+-var require_empty2 = __commonJS({
+-    'empty.cjs'() {
+-    }
 -});
 -var js = __toESM(require_empty());
 -var cjs = __toESM(require_empty2());
@@ -75,10 +79,14 @@ console.log(
 ===================================================================
 --- esbuild	/out/entry-default.js
 +++ rolldown	
-@@ -1,7 +0,0 @@
--var require_empty = __commonJSMin(() => {
+@@ -1,11 +0,0 @@
+-var require_empty = __commonJS({
+-    'empty.js'() {
+-    }
 -});
--var require_empty2 = __commonJSMin(() => {
+-var require_empty2 = __commonJS({
+-    'empty.cjs'() {
+-    }
 -});
 -var js = __toESM(require_empty());
 -var cjs = __toESM(require_empty2());

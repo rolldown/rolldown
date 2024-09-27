@@ -121,6 +121,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     inline_dynamic_imports: raw_options.inline_dynamic_imports.unwrap_or(false),
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default(),
+    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
+    profiler_names: raw_options.profiler_names.unwrap_or(!raw_options.minify.unwrap_or(false)),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

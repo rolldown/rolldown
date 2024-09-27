@@ -432,7 +432,7 @@ impl<'a> LinkStage<'a> {
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];
 
-        create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime);
+        create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
         if self.entries.iter().any(|entry| entry.id == ecma_module.idx) {
           init_entry_point_stmt_info(linking_info);
         }

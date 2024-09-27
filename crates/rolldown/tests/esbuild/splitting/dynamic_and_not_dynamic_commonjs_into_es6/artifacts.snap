@@ -17,9 +17,9 @@ export default require_foo();
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports) => {
+var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
-});
+} });
 
 //#endregion
 export { __toESM, require_foo };

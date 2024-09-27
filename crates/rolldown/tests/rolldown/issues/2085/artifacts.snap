@@ -9,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region b.js
-var require_b = __commonJSMin((exports) => {
+var require_b = __commonJS({ "b.js"(exports) {
 	exports._default = function test() {
 		return "f";
 	};
-});
+} });
 
 //#endregion
 //#region a.js

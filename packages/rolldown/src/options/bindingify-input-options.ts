@@ -122,6 +122,7 @@ export function bindingifyInputOptions(
       strictExecutionOrder: options.experimental?.strictExecutionOrder,
       disableLiveBindings: options.experimental?.disableLiveBindings,
     },
+    profilerNames: options?.profilerNames,
   }
 }
 

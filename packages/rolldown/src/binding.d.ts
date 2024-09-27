@@ -242,6 +242,7 @@ export interface BindingInputOptions {
   define?: Array<[string, string]>
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
   experimental?: BindingExperimentalOptions
+  profilerNames?: boolean
 }
 
 export interface BindingJsonPluginConfig {

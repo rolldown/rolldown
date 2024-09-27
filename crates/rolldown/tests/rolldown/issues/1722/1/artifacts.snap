@@ -25,9 +25,9 @@ export { main, sub };
 
 
 //#region sub.cjs
-var require_sub = __commonJSMin((exports, module) => {
+var require_sub = __commonJS({ "sub.cjs"(exports, module) {
 	module.exports.sub = "sub";
-});
+} });
 
 //#endregion
 //#region main.js

@@ -9,17 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region is-main.js
-var require_is_main = __commonJSMin((exports, module) => {
+var require_is_main = __commonJS({ "is-main.js"(exports, module) {
 	module.exports = require.main === module;
-});
+} });
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJSMin((exports, module) => {
+var require_entry = __commonJS({ "entry.js"(exports, module) {
 	console.log("is main:", require.main === module);
 	console.log(require_is_main());
 	console.log("cache:", require.cache);
-});
+} });
 
 //#endregion
 export default require_entry();

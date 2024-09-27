@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region (ignored) node_modules/package/util.js
-var require_util = __commonJSMin(() => {});
+var require_util = __commonJS({ "node_modules/package/util.js"() {} });
 
 //#endregion
 //#region node_modules/package/index.js

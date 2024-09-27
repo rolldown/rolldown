@@ -1,6 +1,7 @@
 use oxc::index::IndexVec;
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, WrapKind,
+  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions, StmtInfo,
+  WrapKind,
 };
 
 use crate::{
@@ -139,6 +140,7 @@ pub fn create_wrapper(
   linking_info: &mut LinkingMetadata,
   symbols: &mut Symbols,
   runtime: &RuntimeModuleBrief,
+  options: &NormalizedBundlerOptions,
 ) {
   match linking_info.wrap_kind {
     // If this is a CommonJS file, we're going to need to generate a wrapper
@@ -155,7 +157,11 @@ pub fn create_wrapper(
       let stmt_info = StmtInfo {
         stmt_idx: None,
         declared_symbols: vec![wrapper_ref],
-        referenced_symbols: vec![runtime.resolve_symbol("__commonJSMin").into()],
+        referenced_symbols: vec![if options.profiler_names {
+          runtime.resolve_symbol("__commonJS").into()
+        } else {
+          runtime.resolve_symbol("__commonJSMin").into()
+        }],
         side_effect: false,
         is_included: false,
         import_records: Vec::new(),
@@ -180,7 +186,11 @@ pub fn create_wrapper(
       let stmt_info = StmtInfo {
         stmt_idx: None,
         declared_symbols: vec![wrapper_ref],
-        referenced_symbols: vec![runtime.resolve_symbol("__esmMin").into()],
+        referenced_symbols: vec![if options.profiler_names {
+          runtime.resolve_symbol("__esm").into()
+        } else {
+          runtime.resolve_symbol("__esmMin").into()
+        }],
         side_effect: false,
         is_included: false,
         import_records: Vec::new(),

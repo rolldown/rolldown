@@ -81,6 +81,7 @@ pub struct BindingInputOptions {
   #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
   pub inject: Option<Vec<BindingInjectImport>>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
+  pub profiler_names: Option<bool>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

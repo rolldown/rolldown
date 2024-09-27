@@ -9,15 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region src/node_modules/sub/index.js
-var require_sub_index = __commonJSMin(() => {
+var require_sub_index = __commonJS({ "src/node_modules/sub/index.js"() {
 	works();
-});
+} });
 
 //#endregion
 //#region src/node_modules/pkg/sub/foo.js
-var require_foo = __commonJSMin(() => {
+var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
 	require_sub_index();
-});
+} });
 
 //#endregion
 //#region src/entry.js

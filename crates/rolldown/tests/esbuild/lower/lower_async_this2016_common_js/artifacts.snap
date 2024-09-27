@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region entry.js
-var require_entry = __commonJSMin((exports) => {
+var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = async () => this;
-});
+} });
 
 //#endregion
 export default require_entry();

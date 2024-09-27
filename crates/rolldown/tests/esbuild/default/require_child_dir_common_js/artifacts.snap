@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region dir/index.js
-var require_dir_index = __commonJSMin((exports, module) => {
+var require_dir_index = __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;
-});
+} });
 
 //#endregion
 //#region entry.js

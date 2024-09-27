@@ -13,10 +13,10 @@ module.exports = r();
 
 
 //#region entry.js
-var require_entry = __commonJSMin((exports, module) => {
+var require_entry = __commonJS({ "entry.js"(exports, module) {
 	module.exports = { foo: 123 };
 	console.log(require_entry());
-});
+} });
 
 //#endregion
 export default require_entry();
@@ -28,13 +28,15 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,5 +1,5 @@
+@@ -1,5 +1,7 @@
 -var r = s((f, e) => {
 -    e.exports = { foo: 123 };
 -    console.log(r());
-+var require_entry = __commonJSMin((exports, module) => {
-+    module.exports = { foo: 123 };
-+    console.log(require_entry());
++var require_entry = __commonJS({
++    'entry.js'(exports, module) {
++        module.exports = { foo: 123 };
++        console.log(require_entry());
++    }
  });
 -module.exports = r();
 \ No newline at end of file

@@ -13,9 +13,9 @@ const output = "esm";
 
 //#endregion
 //#region node_modules/package/cjs-output.js
-var require_cjs_output = __commonJSMin((exports, module) => {
+var require_cjs_output = __commonJS({ "node_modules/package/cjs-output.js"(exports, module) {
 	module.exports.output = "cjs";
-});
+} });
 
 //#endregion
 //#region main.js

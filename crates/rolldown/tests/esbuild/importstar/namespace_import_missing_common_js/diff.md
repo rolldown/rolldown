@@ -18,9 +18,9 @@ import { default as assert } from "node:assert";
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports) => {
+var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.x = 123;
-});
+} });
 
 //#endregion
 //#region entry.js
@@ -39,9 +39,10 @@ assert.equal(import_foo.foo, undefined);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,5 +1,5 @@
- var require_foo = __commonJSMin(exports => {
-     exports.x = 123;
+@@ -2,6 +2,6 @@
+     'foo.js'(exports) {
+         exports.x = 123;
+     }
  });
 -var ns = __toESM(require_foo());
 -console.log(ns, ns.foo);

@@ -62,6 +62,7 @@ pub struct NormalizedBundlerOptions {
   pub inline_dynamic_imports: bool,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: ChecksOptions,
+  pub profiler_names: bool,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

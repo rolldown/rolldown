@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM, require_main2 } from "./main22.mjs";
+import { __commonJS, __toESM, require_main2 } from "./main22.mjs";
 
 //#region main.js
-var require_main = __commonJSMin((exports, module) => {
+var require_main = __commonJS({ "main.js"(exports, module) {
 	var import_main2 = __toESM(require_main2());
 	module.exports = import_main2.default;
-});
+} });
 
 //#endregion
 export default require_main();
@@ -32,10 +32,10 @@ export default require_main2();
 
 
 //#region main2.js
-var require_main2 = __commonJSMin((exports, module) => {
+var require_main2 = __commonJS({ "main2.js"(exports, module) {
 	module.exports = {};
-});
+} });
 
 //#endregion
-export { __commonJSMin, __toESM, require_main2 };
+export { __commonJS, __toESM, require_main2 };
 ```

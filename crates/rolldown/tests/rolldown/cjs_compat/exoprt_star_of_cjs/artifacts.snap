@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region c.js
-var require_c = __commonJSMin((exports) => {
+var require_c = __commonJS({ "c.js"(exports) {
 	exports.test = 1000;
-});
+} });
 
 //#endregion
 //#region b.js

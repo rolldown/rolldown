@@ -110,33 +110,5 @@ export function rewriteEsbuild(code: string) {
     ecmaVersion: 'latest',
     sourceType: 'module',
   })
-  traverse(ast, {
-    CallExpression(path) {
-      let node = path.node as acorn.CallExpression
-      let callee = node.callee
-      if (callee.type === 'Identifier' && callee.name === '__commonJS') {
-        callee.name = '__commonJSMin'
-        if (node.arguments[0].type === 'ObjectExpression') {
-          let obj = node.arguments[0]
-          let prop = obj.properties[0] as acorn.Property
-          // @ts-ignore
-          node.arguments[0] = functionExprToArrowFunction(
-            prop.value as acorn.FunctionExpression,
-          )
-        }
-      }
-    },
-  })
-  return gen.generate(ast)
-}
-
-function functionExprToArrowFunction(node: acorn.FunctionExpression) {
-  let arrowFunction = b.arrowFunctionExpression(
-    // @ts-ignore
-    node.params,
-    node.body,
-    node.async,
-    node.generator,
-  )
-  return arrowFunction
+  return gen.generate(ast, {})
 }

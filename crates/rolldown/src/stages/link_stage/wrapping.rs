@@ -186,7 +186,11 @@ pub fn create_wrapper(
       let stmt_info = StmtInfo {
         stmt_idx: None,
         declared_symbols: vec![wrapper_ref],
-        referenced_symbols: vec![runtime.resolve_symbol("__esmMin").into()],
+        referenced_symbols: vec![if options.profiler_names {
+          runtime.resolve_symbol("__esm").into()
+        } else {
+          runtime.resolve_symbol("__esmMin").into()
+        }],
         side_effect: false,
         is_included: false,
         import_records: Vec::new(),

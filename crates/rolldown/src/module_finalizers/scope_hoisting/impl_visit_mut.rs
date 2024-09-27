@@ -239,7 +239,11 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         WrapKind::Esm => {
           use ast::Statement;
           let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-          let esm_ref_name = self.canonical_name_for_runtime("__esmMin");
+          let esm_ref_name = if self.ctx.options.profiler_names {
+            self.canonical_name_for_runtime("__esm")
+          } else {
+            self.canonical_name_for_runtime("__esmMin")
+          };
           let old_body = program.body.take_in(self.alloc);
 
           let mut fn_stmts = allocator::Vec::new_in(self.alloc);
@@ -299,6 +303,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             wrap_ref_name,
             esm_ref_name,
             stmts_inside_closure,
+            self.ctx.options.profiler_names,
+            &self.ctx.module.stable_id,
           ));
         }
         WrapKind::None => {}

@@ -11,11 +11,11 @@ import { default as assert } from "node:assert";
 
 //#region foo.ts
 var foo_exports, foo;
-var init_foo = __esmMin(() => {
+var init_foo = __esm({ "foo.ts"() {
 	foo_exports = {};
 	__export(foo_exports, { foo: () => foo });
 	foo = 123;
-});
+} });
 
 //#endregion
 //#region entry.js

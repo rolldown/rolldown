@@ -282,17 +282,6 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
-  // var require_foo = __commonJS({
-  //   "foo.js"(exports) {
-  //     exports.x = 123;
-  //   }
-  // });
-  //
-  // //#region foo.js
-  // var require_foo = __commonJSMin((exports) => {
-  // 	exports.x = 123;
-  // });
-
   /// ```js
   ///  var require_foo = __commonJS((exports, module) => {
   ///    ...
@@ -405,27 +394,58 @@ impl<'ast> AstSnippet<'ast> {
     binding_name: PassedStr,
     esm_fn_name: PassedStr,
     statements: allocator::Vec<'ast, Statement<'ast>>,
+    profiler_names: bool,
+    stable_id: &str,
   ) -> ast::Statement<'ast> {
     // () => { ... }
-
-    let arrow_expr = self.builder.alloc_arrow_function_expression(
+    let params = self.builder.formal_parameters(
       SPAN,
-      false,
-      false,
+      ast::FormalParameterKind::Signature,
+      self.builder.vec(),
       NONE,
-      self.builder.formal_parameters(
-        SPAN,
-        ast::FormalParameterKind::Signature,
-        self.builder.vec(),
-        NONE,
-      ),
-      NONE,
-      self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
+    let body = self.builder.function_body(SPAN, self.builder.vec(), statements);
 
     //  __esm(...)
     let mut commonjs_call_expr = self.call_expr(esm_fn_name);
-    commonjs_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
+
+    if profiler_names {
+      let obj_expr = self.builder.alloc_object_expression(
+        SPAN,
+        self.builder.vec1(
+          self.builder.object_property_kind_object_property(
+            SPAN,
+            PropertyKind::Init,
+            self
+              .builder
+              .property_key_expression(self.builder.expression_string_literal(SPAN, stable_id)),
+            self.builder.expression_function(
+              FunctionType::FunctionExpression,
+              SPAN,
+              None,
+              false,
+              false,
+              false,
+              NONE,
+              NONE,
+              params,
+              NONE,
+              Some(body),
+            ),
+            None,
+            true,
+            false,
+            false,
+          ),
+        ),
+        None,
+      );
+      commonjs_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
+    } else {
+      let arrow_expr =
+        self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
+      commonjs_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
+    };
 
     // var init_foo = ...
 

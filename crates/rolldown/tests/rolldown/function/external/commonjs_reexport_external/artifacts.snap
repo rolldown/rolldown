@@ -12,10 +12,10 @@ import "external";
 //#region foo.js
 import * as import_external from "external";
 var foo_exports;
-var init_foo = __esmMin(() => {
+var init_foo = __esm({ "foo.js"() {
 	foo_exports = {};
 	__reExport(foo_exports, import_external);
-});
+} });
 
 //#endregion
 //#region main.js

@@ -11,9 +11,9 @@ import { default as assert } from "node:assert";
 
 //#region types.mjs
 var types_exports;
-var init_types = __esmMin(() => {
+var init_types = __esm({ "types.mjs"() {
 	types_exports = {};
-});
+} });
 
 //#endregion
 //#region entry.js

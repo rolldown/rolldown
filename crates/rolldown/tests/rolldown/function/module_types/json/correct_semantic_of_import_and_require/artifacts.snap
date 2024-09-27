@@ -11,7 +11,7 @@ import { default as assert } from "node:assert";
 
 //#region codes.json
 var codes_exports, foo, codes_default;
-var init_codes = __esmMin(() => {
+var init_codes = __esm({ "codes.json"() {
 	codes_exports = {};
 	__export(codes_exports, {
 		default: () => codes_default,
@@ -19,7 +19,7 @@ var init_codes = __esmMin(() => {
 	});
 	foo = "bar";
 	codes_default = { foo };
-});
+} });
 
 //#endregion
 //#region main.js

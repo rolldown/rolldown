@@ -10,11 +10,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region test.custom
 var test_exports, test_default;
-var init_test = __esmMin(() => {
+var init_test = __esm({ "test.custom"() {
 	test_exports = {};
 	__export(test_exports, { default: () => test_default });
 	test_default = "data:application/octet-stream;base64,YQBigGP/ZA==";
-});
+} });
 
 //#endregion
 //#region entry.js

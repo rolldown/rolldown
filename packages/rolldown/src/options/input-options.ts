@@ -134,6 +134,7 @@ export const inputCliOptionsSchema = inputOptionsSchema
     onLog: true,
     resolve: true,
     experimental: true,
+    profilerNames: true,
   })
 
 type RawInputOptions = z.infer<typeof inputOptionsSchema>

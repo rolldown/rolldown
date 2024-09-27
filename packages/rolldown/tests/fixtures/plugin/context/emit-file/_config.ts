@@ -8,8 +8,11 @@ import path from 'node:path'
 let referenceId: string
 
 const ORIGINAL_FILE_NAME = 'original.txt'
-
+let isComposingJs = false
 export default defineTest({
+  beforeTest(testKind) {
+    isComposingJs = testKind === 'compose-js-plugin'
+  },
   config: {
     output: {
       assetFileNames: '[name]-[hash].[ext]',
@@ -27,9 +30,13 @@ export default defineTest({
           })
         },
         generateBundle() {
-          expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
-            `"_emitted-umwR9Fta.txt"`,
-          )
+          isComposingJs
+            ? expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
+                `"_emitted-umwR9Fta.txt"`,
+              )
+            : expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
+                `"_emitted-umwR9Fta.txt"`,
+              )
           // emit asset buffer source
           this.emitFile({
             type: 'asset',
@@ -45,14 +52,24 @@ export default defineTest({
     for (const asset of assets) {
       switch (asset.name) {
         case '+emitted.txt':
-          expect(asset.fileName).toMatchInlineSnapshot(
-            `"_emitted-umwR9Fta.txt"`,
-          )
+          isComposingJs
+            ? expect(asset.fileName).toMatchInlineSnapshot(
+                `"_emitted-umwR9Fta.txt"`,
+              )
+            : expect(asset.fileName).toMatchInlineSnapshot(
+                `"_emitted-umwR9Fta.txt"`,
+              )
           expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME)
           break
 
         case 'icon.png':
-          expect(asset.fileName).toMatchInlineSnapshot(`"icon-eUkSwvpV.png"`)
+          isComposingJs
+            ? expect(asset.fileName).toMatchInlineSnapshot(
+                `"icon-eUkSwvpV.png"`,
+              )
+            : expect(asset.fileName).toMatchInlineSnapshot(
+                `"icon-eUkSwvpV.png"`,
+              )
           break
 
         default:

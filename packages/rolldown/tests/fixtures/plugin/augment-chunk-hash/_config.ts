@@ -6,7 +6,11 @@ import path from 'node:path'
 
 const fn = vi.fn()
 
+let isComposingJs = false
 export default defineTest({
+  beforeTest(testKind) {
+    isComposingJs = testKind === 'compose-js-plugin'
+  },
   config: {
     input: ['main.js', 'entry.js'],
     output: {
@@ -31,11 +35,19 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-M-2YP1Eg.js"`)
+          isComposingJs
+            ? expect(chunk.fileName).toMatchInlineSnapshot(`"main-M-2YP1Eg.js"`)
+            : expect(chunk.fileName).toMatchInlineSnapshot(`"main-M-2YP1Eg.js"`)
           break
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-LZxEycPx.js"`)
+          isComposingJs
+            ? expect(chunk.fileName).toMatchInlineSnapshot(
+                `"entry-LZxEycPx.js"`,
+              )
+            : expect(chunk.fileName).toMatchInlineSnapshot(
+                `"entry-LZxEycPx.js"`,
+              )
           break
 
         default:

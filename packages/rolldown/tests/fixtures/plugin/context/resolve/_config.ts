@@ -1,10 +1,13 @@
 import { defineTest } from '@tests'
 import { expect, vi } from 'vitest'
-import nodePath from 'path'
+import nodePath from 'node:path'
 
 const fn = vi.fn()
-
+let isComposingJs = false
 export default defineTest({
+  beforeTest(testKind) {
+    isComposingJs = testKind === 'compose-js-plugin'
+  },
   config: {
     plugins: [
       {
@@ -15,7 +18,13 @@ export default defineTest({
             throw new Error('resolve failed')
           }
           const { id, ...props } = ret
-          expect(props).toMatchInlineSnapshot(`
+          isComposingJs
+            ? expect(props).toMatchInlineSnapshot(`
+            {
+              "external": false,
+            }
+          `)
+            : expect(props).toMatchInlineSnapshot(`
             {
               "external": false,
             }

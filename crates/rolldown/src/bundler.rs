@@ -6,17 +6,21 @@ use super::stages::{
 };
 use crate::{
   bundler_builder::BundlerBuilder,
+  module_loader::hmr_module_loader::HmrModuleLoader,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
-  types::bundle_output::BundleOutput,
+  type_alias::IndexEcmaAst,
+  types::{bundle_output::BundleOutput, symbols::Symbols},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
-use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use arcstr::ArcStr;
+use rolldown_common::{ModuleIdx, ModuleTable, NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_error::{BuildDiagnostic, DiagnosableResult, DiagnosticOptions};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
+use rustc_hash::FxHashMap;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -27,6 +31,11 @@ pub struct Bundler {
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
+  // Store data for hmr.
+  pub(crate) previous_module_table: ModuleTable,
+  pub(crate) previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
+  pub(crate) pervious_index_ecma_ast: IndexEcmaAst,
+  pub(crate) pervious_symbols: Symbols,
 }
 
 impl Bundler {
@@ -184,7 +193,47 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
+    // store last build modules info
+    self.previous_module_table = link_stage_output.module_table;
+    self.previous_module_id_to_modules = link_stage_output.module_id_to_modules;
+    self.pervious_index_ecma_ast = link_stage_output.ast_table;
+    self.pervious_symbols = link_stage_output.symbols;
+
     Ok(output)
+  }
+
+  #[allow(clippy::unused_async)]
+  pub async fn hmr_rebuild(&mut self, changed_files: Vec<String>) -> Result<()> {
+    let hmr_module_loader = HmrModuleLoader::new(
+      Arc::clone(&self.options),
+      Arc::clone(&self.plugin_driver),
+      self.fs,
+      Arc::clone(&self.resolver),
+      std::mem::take(&mut self.previous_module_id_to_modules),
+      std::mem::take(&mut self.previous_module_table),
+      std::mem::take(&mut self.pervious_index_ecma_ast),
+      std::mem::take(&mut self.pervious_symbols),
+    )?;
+
+    let hmr_module_loader_output = hmr_module_loader.fetch_changed_files(changed_files).await?;
+
+    // store last build modules info
+    self.previous_module_table = hmr_module_loader_output.module_table;
+    self.previous_module_id_to_modules = hmr_module_loader_output.module_id_to_modules;
+    self.pervious_index_ecma_ast = hmr_module_loader_output.index_ecma_ast;
+    self.pervious_symbols = hmr_module_loader_output.symbols;
+
+    // The hmr only reporter error, it shouldn't panic to exit process.
+    hmr_module_loader_output.errors.into_iter().for_each(|err| {
+      eprintln!(
+        "{}",
+        err
+          .into_diagnostic_with(&DiagnosticOptions { cwd: self.options.cwd.clone() })
+          .to_color_string()
+      );
+    });
+
+    Ok(())
   }
 
   fn normalize_error<T>(

@@ -2157,6 +2157,10 @@ expression: output
 - main2-!~{001}~.mjs => main2-ot7vHxft.mjs
 - main2-!~{002}~.mjs => main2-styOS98S.mjs
 
+# tests/rolldown/misc/common_js_min
+
+- main-!~{000}~.mjs => main-Furd8-C-.mjs
+
 # tests/rolldown/misc/duplicate_entries
 
 - main-!~{000}~.mjs => main-CRWIrp09.mjs

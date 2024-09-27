@@ -107,6 +107,18 @@
   diff
 ## [re_export_star_iife_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle/diff.md)
   diff
+## re_export_star_external_iife
+  missing
+## re_export_star_iife_no_bundle
+  missing
+## [re_export_star_name_collision_not_ambiguous_import](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import/diff.md)
+  diff
+## [re_export_star_name_collision_not_ambiguous_import](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import/diff.md)
+  diff
+## re_export_star_external_iife
+  missing
+## re_export_star_iife_no_bundle
+  missing
 # Passed Cases
 ## [export_self_as_namespace_es6](../../../crates/rolldown/tests/esbuild/importstar/export_self_as_namespace_es6)
 ## [export_self_es6](../../../crates/rolldown/tests/esbuild/importstar/export_self_es6)

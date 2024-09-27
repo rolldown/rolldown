@@ -2,7 +2,7 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, AssignmentOperator, BindingIdentifier, Expression, FormalParameters,
+      self, Argument, BindingIdentifier, Expression,
       FunctionType, ImportOrExportKind, NumberBase, ObjectPropertyKind, PropertyKind, Statement,
       VariableDeclarationKind,
     },

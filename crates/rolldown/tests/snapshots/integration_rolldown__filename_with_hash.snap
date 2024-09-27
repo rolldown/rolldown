@@ -4219,6 +4219,7 @@ snapshot_kind: text
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 - main-!~{000}~.js => main--pSlkPVu.js
 
 # tests/rolldown/function/format/app/export-default-class
@@ -4289,22 +4290,25 @@ snapshot_kind: text
 =======
 - main-!~{000}~.mjs => main-vhtY9kYB.mjs
 >>>>>>> 5616e0dcb (fix: make sure rolldown inject runtime at vue (#2292))
+=======
+- main-!~{000}~.mjs => main-9HBv82R7.mjs
+>>>>>>> e70060b24 (feat: support hot accept callback (#2294))
 
 # tests/rolldown/function/format/app/export-named
 
-- main-!~{000}~.mjs => main-uVxkIXf0.mjs
+- main-!~{000}~.mjs => main-BpWBfuBT.mjs
 
 # tests/rolldown/function/format/app/export-named-from
 
-- main-!~{000}~.mjs => main-_b0uuJ6W.mjs
+- main-!~{000}~.mjs => main-vHKD1O4a.mjs
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.mjs => main-3gUyQa_J.mjs
+- main-!~{000}~.mjs => main-YXBHhXtu.mjs
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-- main-!~{000}~.mjs => main-zDOZ7-2r.mjs
+- main-!~{000}~.mjs => main-uDhpRUC1.mjs
 - other-entry-!~{001}~.mjs => other-entry-EZYP3cGv.mjs
 - cube-!~{002}~.mjs => cube-bpLihKnj.mjs
 >>>>>>> d901ab068 (chore(hmr): rebase main branch)

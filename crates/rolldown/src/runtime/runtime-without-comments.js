@@ -97,8 +97,15 @@ var rolldown_runtime = self.rolldown_runtime = {
       parents: [parent],
       hot: {
         selfAccept: false,
-        accept: function() {
+        acceptCallbacks: [],
+        accept: function(callback) {
           this.selfAccept = true;
+          if(callback && typeof callback === 'function') {
+            this.acceptCallbacks.push({
+              deps: [id],
+              callback
+            });
+          }
         }
       }
     };
@@ -114,9 +121,10 @@ var rolldown_runtime = self.rolldown_runtime = {
 
     var boundaries = [];
     var invalidModuleIds = [];
+    var acceptCallbacks = [];
 
     for (var i = 0; i < updateModuleIds.length; i++) {
-      foundBoundariesAndInvalidModuleIds(updateModuleIds[i], boundaries, invalidModuleIds)
+      foundBoundariesAndInvalidModuleIds(updateModuleIds[i], boundaries, invalidModuleIds, acceptCallbacks)
     }
 
     for (var i = 0; i < invalidModuleIds.length; i++) {
@@ -133,13 +141,17 @@ var rolldown_runtime = self.rolldown_runtime = {
       this.require(boundaries[i]);
     }
 
+    for (var i = 0; i < acceptCallbacks.length; i++) {
+      var item = acceptCallbacks[i];
+      item.callback.apply(null, item.deps.map((dep) => this.moduleCache[dep].exports));
+    }
+
     self.patching = false;
 
-    function foundBoundariesAndInvalidModuleIds(updateModuleId, boundaries, invalidModuleIds) {
+    function foundBoundariesAndInvalidModuleIds(updateModuleId, boundaries, invalidModuleIds, acceptCallbacks) {
       var queue = [ { moduleId: updateModuleId, chain: [updateModuleId] }];
       var visited = {};
      
-
       while (queue.length > 0) {
         var item = queue.pop();
         var moduleId = item.moduleId;
@@ -154,6 +166,13 @@ var rolldown_runtime = self.rolldown_runtime = {
         if (module.hot.selfAccept) {
           if(boundaries.indexOf(moduleId) === -1) {
             boundaries.push(moduleId);
+
+            for (var i = 0; i < module.hot.acceptCallbacks.length; i++) {
+              var item = module.hot.acceptCallbacks[i];
+              if(item.deps.includes(updateModuleId)) {
+                acceptCallbacks.push(item);
+              }
+            }
           }
           for (var i = 0; i < chain.length; i++) {
             if(invalidModuleIds.indexOf(chain[i]) === -1) {
@@ -174,7 +193,7 @@ var rolldown_runtime = self.rolldown_runtime = {
         visited[moduleId] = true;
       }
 
-      
+
     }
   }
   ,

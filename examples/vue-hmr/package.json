@@ -9,6 +9,6 @@
     "vue": "^3.4.29"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "5.1.4"
+    "plugin-vue-rolldown-hmr-demo": "5.0.5"
   }
 }

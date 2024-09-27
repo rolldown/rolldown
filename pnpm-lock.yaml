@@ -140,9 +140,9 @@ importers:
         specifier: ^3.4.29
         version: 3.4.38(typescript@5.5.4)
     devDependencies:
-      '@vitejs/plugin-vue':
-        specifier: 5.1.4
-        version: 5.1.4(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))
+      plugin-vue-rolldown-hmr-demo:
+        specifier: 5.0.5
+        version: 5.0.5(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))
 
   packages/bench:
     dependencies:
@@ -3239,6 +3239,7 @@ packages:
       vue: ^3.2.25
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@vitest/expect@2.1.4':
     resolution: {integrity: sha512-DOETT0Oh1avie/D/o2sgMHGrzYUFFo3zqESB2Hn70z6QB1HrS2IQ9z5DfyTqU8sg4Bpu13zZe9V4+UTNQlUeQA==}
 =======
@@ -3249,6 +3250,8 @@ packages:
       vite: ^5.0.0
       vue: ^3.2.25
 
+=======
+>>>>>>> e70060b24 (feat: support hot accept callback (#2294))
   '@vitest/expect@2.0.5':
     resolution: {integrity: sha512-yHZtwuP7JZivj65Gxoi8upUN2OzHTi3zVfjwdpu2WrvCZPLwsJ2Ey5ILIPccoW23dd/zQBlJ4/dhi7DWNyXCpA==}
 >>>>>>> da075a260 (feat: add vue hmr example (#2291))
@@ -5378,6 +5381,13 @@ packages:
 
   pkg-types@1.2.1:
     resolution: {integrity: sha512-sQoqa8alT3nHjGuTjuKgOnvjo4cljkufdtLMnO2LBP/wRwuDlo1tkaEdMxCRhyGRPacv/ztlZgDPm2b7FAmEvw==}
+
+  plugin-vue-rolldown-hmr-demo@5.0.5:
+    resolution: {integrity: sha512-TZ0whrLaUN4zvJDcHsmQXYK0ZkPVft4U9DddgeSENZVfW1Mks9qBOcGQSR8AoJZG/GplVdzFF6hIO7PPFwV2xQ==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0
+      vue: ^3.2.25
 
   possible-typed-array-names@1.0.0:
     resolution: {integrity: sha512-d7Uw+eZoloe0EHDIYoe+bQ5WXnGMOpmiZFTuMWCwpjzzkL2nTjcKiAk4hh8TjnGye2TwWOk3UXucZ+3rbmBa8Q==}
@@ -9346,6 +9356,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+<<<<<<< HEAD
 =======
 >>>>>>> 98341aae (fix: using simple react refresh and make serve work (#2158))
   '@vitejs/plugin-vue@5.1.2(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4))':
@@ -9366,6 +9377,8 @@ snapshots:
       vite: 5.4.2(@types/node@22.5.2)(terser@5.31.6)
       vue: 3.4.38(typescript@5.5.4)
 
+=======
+>>>>>>> e70060b24 (feat: support hot accept callback (#2294))
   '@vitest/expect@2.0.5':
 >>>>>>> da075a260 (feat: add vue hmr example (#2291))
     dependencies:
@@ -11917,6 +11930,11 @@ snapshots:
       confbox: 0.1.8
       mlly: 1.7.2
       pathe: 1.1.2
+
+  plugin-vue-rolldown-hmr-demo@5.0.5(vite@5.4.2(@types/node@22.5.2)(terser@5.31.6))(vue@3.4.38(typescript@5.5.4)):
+    dependencies:
+      vite: 5.4.2(@types/node@22.5.2)(terser@5.31.6)
+      vue: 3.4.38(typescript@5.5.4)
 
   possible-typed-array-names@1.0.0: {}
 

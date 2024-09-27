@@ -356,7 +356,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 
     let log = jsConfig['expectedCompileLog']
     if (log) {
-      const compileLogPath = path.resolve(testDir, 'compile-log.text')
+      const compileLogPath = path.resolve(testDir, 'compile-log.txt')
       fs.writeFileSync(compileLogPath, log)
     }
   }

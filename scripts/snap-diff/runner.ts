@@ -39,7 +39,7 @@ export function run(includeList: string[]) {
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
       let diffResult = diffCase(snap, parsedRolldownSnap)
-      // if the testdir has a `bypass.md`, we skip generate `diff.md`,
+      // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')
       let diffMarkdownPath = path.join(rolldownTestPath, 'diff.md')

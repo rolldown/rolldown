@@ -10,11 +10,11 @@ import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/main.js
-var require_main = __commonJSMin((exports, module) => {
+var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	module.exports = function() {
 		return 123;
 	};
-});
+} });
 
 //#endregion
 //#region src/entry.js

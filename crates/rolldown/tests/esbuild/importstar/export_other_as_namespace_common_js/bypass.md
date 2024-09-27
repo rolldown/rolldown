@@ -24,9 +24,9 @@ var ns = __toESM(require_foo());
 
 
 //#region foo.js
-var require_foo = __commonJSMin((exports) => {
+var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
-});
+} });
 
 //#endregion
 //#region entry.js
@@ -46,9 +46,10 @@ Object.defineProperty(exports, 'ns', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,7 +1,10 @@
- var require_foo = __commonJSMin(exports => {
-     exports.foo = 123;
+@@ -2,8 +2,11 @@
+     'foo.js'(exports) {
+         exports.foo = 123;
+     }
  });
 -var entry_exports = {};
 -__export(entry_exports, { ns: () => ns });

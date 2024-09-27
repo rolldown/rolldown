@@ -110,33 +110,42 @@ export function rewriteEsbuild(code: string) {
     ecmaVersion: 'latest',
     sourceType: 'module',
   })
-  traverse(ast, {
-    CallExpression(path) {
-      let node = path.node as acorn.CallExpression
-      let callee = node.callee
-      if (callee.type === 'Identifier' && callee.name === '__commonJS') {
-        callee.name = '__commonJSMin'
-        if (node.arguments[0].type === 'ObjectExpression') {
-          let obj = node.arguments[0]
-          let prop = obj.properties[0] as acorn.Property
-          // @ts-ignore
-          node.arguments[0] = functionExprToArrowFunction(
-            prop.value as acorn.FunctionExpression,
-          )
-        }
-      }
-    },
-  })
-  return gen.generate(ast)
+  return gen.generate(ast, {})
 }
 
-function functionExprToArrowFunction(node: acorn.FunctionExpression) {
-  let arrowFunction = b.arrowFunctionExpression(
-    // @ts-ignore
-    node.params,
-    node.body,
-    node.async,
-    node.generator,
-  )
-  return arrowFunction
-}
+const esbuild = `
+var require_foo = __commonJS({
+  "foo.js"(exports) {
+    exports.foo = 123;
+  }
+});
+
+// entry.js
+var entry_exports = {};
+__export(entry_exports, {
+  ns: () => ns
+});
+module.exports = __toCommonJS(entry_exports);
+var ns = __toESM(require_foo());
+`
+
+const rolldown = `
+var require_foo = __commonJS({ "foo.js"(exports) {
+	exports.foo = 123;
+} });
+
+//#endregion
+//#region entry.js
+var import_foo = __toESM(require_foo());
+
+//#endregion
+Object.defineProperty(exports, 'ns', {
+  enumerable: true,
+  get: function () {
+    return import_foo;
+  }
+});
+`
+
+console.log(rewriteEsbuild(esbuild))
+console.log(rewriteRolldown(rolldown))

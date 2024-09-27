@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region node_modules/pkg/require.js
-var require_require = __commonJSMin(() => {
+var require_require = __commonJS({ "node_modules/pkg/require.js"() {
 	console.log("SUCCESS");
-});
+} });
 
 //#endregion
 //#region src/entry.js

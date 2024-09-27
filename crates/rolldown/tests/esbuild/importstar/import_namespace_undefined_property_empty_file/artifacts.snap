@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region empty.js
-var require_empty$1 = __commonJSMin(() => {});
+var require_empty$1 = __commonJS({ "empty.js"() {} });
 
 //#endregion
 //#region empty.mjs
@@ -17,7 +17,7 @@ var empty_exports = {};
 
 //#endregion
 //#region empty.cjs
-var require_empty = __commonJSMin(() => {});
+var require_empty = __commonJS({ "empty.cjs"() {} });
 
 //#endregion
 export { __toESM, empty_exports, require_empty$1 as require_empty, require_empty as require_empty$1 };

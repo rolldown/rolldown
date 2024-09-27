@@ -19,10 +19,10 @@ var init_foo = __esmMin(() => {
 
 //#endregion
 //#region main.js
-var require_main = __commonJSMin((exports, module) => {
+var require_main = __commonJS({ "main.js"(exports, module) {
 	const value = (init_foo(), __toCommonJS(foo_exports));
 	module.exports = value;
-});
+} });
 
 //#endregion
 export default require_main();

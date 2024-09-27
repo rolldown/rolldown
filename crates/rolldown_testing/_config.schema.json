@@ -303,6 +303,12 @@
             }
           ]
         },
+        "profilerNames": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "resolve": {
           "anyOf": [
             {

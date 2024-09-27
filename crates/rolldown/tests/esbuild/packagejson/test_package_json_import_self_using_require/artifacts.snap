@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region src/foo-require.js
-var require_foo_require = __commonJSMin((exports, module) => {
+var require_foo_require = __commonJS({ "src/foo-require.js"(exports, module) {
 	module.exports = "foo";
-});
+} });
 
 //#endregion
 //#region src/index.js
-var require_src_index = __commonJSMin((exports, module) => {
+var require_src_index = __commonJS({ "src/index.js"(exports, module) {
 	module.exports = "index";
 	console.log(require_src_index(), require_foo_require());
-});
+} });
 
 //#endregion
 export default require_src_index();

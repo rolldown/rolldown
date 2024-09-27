@@ -17,11 +17,11 @@ import { default as assert } from "node:assert";
 
 
 //#region entry.js
-var require_entry = __commonJSMin((exports) => {
+var require_entry = __commonJS({ "entry.js"(exports) {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
 	assert.equal(import_entry.foo, undefined);
-});
+} });
 
 //#endregion
 export default require_entry();
@@ -33,12 +33,14 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,6 +1,6 @@
- var require_entry = __commonJSMin(exports => {
-     var import_entry = __toESM(require_entry());
-     exports.foo = 123;
--    console.log(import_entry.foo);
-+    assert.equal(import_entry.foo, undefined);
+@@ -1,8 +1,8 @@
+ var require_entry = __commonJS({
+     'entry.js'(exports) {
+         var import_entry = __toESM(require_entry());
+         exports.foo = 123;
+-        console.log(import_entry.foo);
++        assert.equal(import_entry.foo, undefined);
+     }
  });
 -module.exports = require_entry();
 \ No newline at end of file

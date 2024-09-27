@@ -31,10 +31,10 @@ var init_esm = __esmMin(() => {
 
 //#endregion
 //#region commonjs.js
-var require_commonjs$1 = __commonJSMin((exports, module) => {
+var require_commonjs$1 = __commonJS({ "commonjs.js"(exports, module) {
 	var value = (init_esm(), __toCommonJS(esm_exports));
 	module.exports = value;
-});
+} });
 
 //#endregion
 //#region main.js

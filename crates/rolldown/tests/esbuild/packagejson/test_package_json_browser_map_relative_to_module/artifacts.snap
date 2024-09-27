@@ -10,18 +10,18 @@ import { default as assert } from "node:assert";
 
 
 //#region node_modules/util-browser/index.js
-var require_util_browser_index = __commonJSMin((exports, module) => {
+var require_util_browser_index = __commonJS({ "node_modules/util-browser/index.js"(exports, module) {
 	module.exports = "util-browser";
-});
+} });
 
 //#endregion
 //#region node_modules/demo-pkg/main.js
-var require_main = __commonJSMin((exports, module) => {
+var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	const util = require_util_browser_index();
 	module.exports = function() {
 		return ["main", util];
 	};
-});
+} });
 
 //#endregion
 //#region src/entry.js

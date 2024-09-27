@@ -201,6 +201,8 @@ pub fn normalize_binding_options(
       }),
     }),
     checks: None,
+    // TODO: finish js binding
+    profiler_names: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

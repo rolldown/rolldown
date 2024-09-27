@@ -20,10 +20,10 @@ export { a };
 
 
 //#region c.js
-var require_c = __commonJSMin((exports) => {
+var require_c = __commonJS({ "c.js"(exports) {
 	const test$1 = 1000;
 	exports.test = test$1;
-});
+} });
 
 //#endregion
 //#region b.js

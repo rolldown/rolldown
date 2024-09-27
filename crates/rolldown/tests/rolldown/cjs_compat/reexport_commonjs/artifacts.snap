@@ -10,9 +10,9 @@ import { default as assert } from "node:assert";
 
 
 //#region commonjs.js
-var require_commonjs = __commonJSMin((exports, module) => {
+var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = { bar: 1 };
-});
+} });
 
 //#endregion
 //#region esm.js

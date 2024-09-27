@@ -33,9 +33,9 @@ console.log(import_no_side_effects.nope, no_side_effects_exports.nope, import_no
 
 
 //#region foo/no-side-effects.js
-var require_no_side_effects$1 = __commonJSMin(() => {
+var require_no_side_effects$1 = __commonJS({ "foo/no-side-effects.js"() {
 	console.log("js");
-});
+} });
 
 //#endregion
 //#region foo/no-side-effects.mjs
@@ -44,9 +44,9 @@ console.log("mjs");
 
 //#endregion
 //#region foo/no-side-effects.cjs
-var require_no_side_effects = __commonJSMin(() => {
+var require_no_side_effects = __commonJS({ "foo/no-side-effects.cjs"() {
 	console.log("cjs");
-});
+} });
 
 //#endregion
 export { __toESM, no_side_effects_exports, require_no_side_effects$1 as require_no_side_effects, require_no_side_effects as require_no_side_effects$1 };

@@ -18,11 +18,11 @@ var init_lib_prod = __esmMin(() => {
 
 //#endregion
 //#region lib.js
-var require_lib = __commonJSMin((exports, module) => {
+var require_lib = __commonJS({ "lib.js"(exports, module) {
 	{
 		module.exports = (init_lib_prod(), __toCommonJS(lib_prod_exports));
 	}
-});
+} });
 
 //#endregion
 //#region main.js

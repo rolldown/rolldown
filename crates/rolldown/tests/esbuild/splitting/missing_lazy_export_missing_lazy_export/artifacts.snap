@@ -31,7 +31,7 @@ assert.deepEqual(bar(), [undefined]);
 
 
 //#region empty.js
-var require_empty = __commonJSMin(() => {});
+var require_empty = __commonJS({ "empty.js"() {} });
 
 //#endregion
 //#region common.js

@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a_js.mjs
 
 ```js
-import { __commonJSMin } from "./chunk.mjs";
+import { __commonJS } from "./chunk.mjs";
 
 //#region a.js
-var require_a = __commonJSMin((exports, module) => {
+var require_a = __commonJS({ "a.js"(exports, module) {
 	var foo = { bar: 123 };
 	module.exports = foo;
-});
+} });
 
 //#endregion
 export default require_a();
@@ -21,13 +21,13 @@ export default require_a();
 ## b_js.mjs
 
 ```js
-import { __commonJSMin } from "./chunk.mjs";
+import { __commonJS } from "./chunk.mjs";
 
 //#region b.js
-var require_b = __commonJSMin((exports, module) => {
+var require_b = __commonJS({ "b.js"(exports, module) {
 	var exports = { bar: 123 };
 	module.exports = exports;
-});
+} });
 
 //#endregion
 export default require_b();
@@ -36,13 +36,13 @@ export default require_b();
 ## c_js.mjs
 
 ```js
-import { __commonJSMin } from "./chunk.mjs";
+import { __commonJS } from "./chunk.mjs";
 
 //#region c.js
-var require_c = __commonJSMin((exports) => {
+var require_c = __commonJS({ "c.js"(exports) {
 	var module = { bar: 123 };
 	exports.foo = module;
-});
+} });
 
 //#endregion
 export default require_c();
@@ -53,5 +53,5 @@ export default require_c();
 ```js
 
 
-export { __commonJSMin };
+export { __commonJS };
 ```

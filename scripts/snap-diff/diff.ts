@@ -22,6 +22,7 @@ export function diffCase(
   },
   rolldownSnap: Array<{ filename: string; content: string }> | undefined,
 ):
+  | 'bypass'
   | 'missing'
   | Array<{
       esbuildName: string

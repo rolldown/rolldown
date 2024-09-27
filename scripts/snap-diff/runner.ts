@@ -39,13 +39,25 @@ export function run(includeList: string[]) {
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
       let diffResult = diffCase(snap, parsedRolldownSnap)
-      if (typeof diffResult !== 'string') {
-        writeDiffToTestcaseDir(rolldownTestPath, diffResult)
-      } else {
-        let diffMarkdownPath = path.join(rolldownTestPath, 'diff.md')
-        if (diffResult === 'same' && fs.existsSync(diffMarkdownPath)) {
-          // this happens when we fixing some issues and the snapshot is align with esbuild,
+      // if the testDir has a `bypass.md`, we skip generate `diff.md`,
+      // append the diff result to `bypass.md` instead
+      let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')
+      let diffMarkdownPath = path.join(rolldownTestPath, 'diff.md')
+
+      if (fs.existsSync(bypassMarkdownPath)) {
+        if (fs.existsSync(diffMarkdownPath)) {
           fs.rmSync(diffMarkdownPath, {})
+        }
+        updateBypassMarkdown(bypassMarkdownPath, diffResult)
+        diffResult = 'bypass'
+      } else {
+        if (typeof diffResult !== 'string') {
+          writeDiffMarkdownToTestcaseDir(diffResult, rolldownTestPath)
+        } else {
+          if (diffResult === 'same' && fs.existsSync(diffMarkdownPath)) {
+            // this happens when we fixing some issues and the snapshot is align with esbuild,
+            fs.rmSync(diffMarkdownPath, {})
+          }
         }
       }
       diffList.push({ diffResult, name: snap.name })
@@ -68,13 +80,21 @@ function getRolldownSnap(caseDir: string) {
   }
 }
 
-function writeDiffToTestcaseDir(
-  dir: string,
+function writeDiffMarkdownToTestcaseDir(
   diffResult: ReturnType<typeof diffCase>,
+  dir: string,
 ) {
   // this seems redundant, just help ts type infer
   if (typeof diffResult === 'string') {
     return
+  }
+  let markdown = getDiffMarkdown(diffResult)
+  fs.writeFileSync(path.join(dir, 'diff.md'), markdown)
+}
+
+function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
+  if (typeof diffResult === 'string') {
+    throw new Error('diffResult should not be string')
   }
   let markdown = ''
   for (let d of diffResult) {
@@ -83,15 +103,27 @@ function writeDiffToTestcaseDir(
     markdown += `### rolldown\n\`\`\`js\n${d.rolldown}\n\`\`\`\n`
     markdown += `### diff\n\`\`\`diff\n${d.diff}\n\`\`\`\n`
   }
-  fs.writeFileSync(path.join(dir, 'diff.md'), markdown)
+  return markdown
 }
 
 function getSummaryMarkdown(
   diffList: Array<{ diffResult: ReturnType<typeof diffCase>; name: string }>,
   snapshotCategory: string,
 ) {
-  let markdown = `# Failed Cases\n`
+  let bypassList = []
+  let failedList = []
+  let passList = []
   for (let diff of diffList) {
+    if (diff.diffResult === 'bypass') {
+      bypassList.push(diff)
+    } else if (diff.diffResult === 'same') {
+      passList.push(diff)
+    } else {
+      failedList.push(diff)
+    }
+  }
+  let markdown = `# Failed Cases\n`
+  for (let diff of failedList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name)
     let relativePath = path.relative(
       path.join(import.meta.dirname, 'summary'),
@@ -108,5 +140,45 @@ function getSummaryMarkdown(
       markdown += `  diff\n`
     }
   }
+
+  markdown += `# Passed Cases\n`
+  for (let diff of passList) {
+    let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name)
+    let relativePath = path.relative(
+      path.join(import.meta.dirname, 'summary'),
+      testDir,
+    )
+    const posixPath = relativePath.replaceAll('\\', '/')
+    markdown += `## [${diff.name}](${posixPath})\n`
+  }
+
+  markdown += `# Bypassed Cases\n`
+  for (let diff of bypassList) {
+    let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name)
+    let relativePath = path.relative(
+      path.join(import.meta.dirname, 'summary'),
+      testDir,
+    )
+    const posixPath = relativePath.replaceAll('\\', '/')
+    markdown += `## [${diff.name}](${posixPath}/bypass.md)\n`
+  }
+
   return markdown
+}
+
+function updateBypassMarkdown(
+  bypassMarkdownPath: string,
+  diffResult: ReturnType<typeof diffCase>,
+) {
+  let bypassContent = fs.readFileSync(bypassMarkdownPath, 'utf-8')
+
+  let res = /# Diff/.exec(bypassContent)
+  if (res) {
+    bypassContent = bypassContent.slice(0, res.index)
+  }
+  let diffMarkdown = getDiffMarkdown(diffResult)
+  bypassContent = bypassContent.trimEnd()
+  bypassContent += '\n# Diff\n'
+  bypassContent += diffMarkdown
+  fs.writeFileSync(bypassMarkdownPath, bypassContent)
 }

@@ -106,6 +106,7 @@ export const inputOptionsSchema = z.strictObject({
     .optional(),
   define: z.record(z.string()).describe('define global variables').optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
+  profilerNames: z.boolean().optional(),
 })
 
 export const inputCliOptionsSchema = inputOptionsSchema

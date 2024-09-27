@@ -561,6 +561,14 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-_WUmd7Ck.mjs
 
+# tests/esbuild/importstar/export_self_iife
+
+- entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
+
+# tests/esbuild/importstar/export_self_iife_with_name
+
+- entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
+
 # tests/esbuild/importstar/export_star_default_export_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-OaS52Neu.mjs

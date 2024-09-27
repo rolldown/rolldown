@@ -13,16 +13,12 @@
   diff
 ## [export_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_common_js/diff.md)
   diff
-## [export_self_and_require_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_and_require_self_common_js/diff.md)
+## [export_self_common_js_minified](../../../crates/rolldown/tests/esbuild/importstar/export_self_common_js_minified/diff.md)
   diff
 ## [export_self_iife](../../../crates/rolldown/tests/esbuild/importstar/export_self_iife/diff.md)
   diff
 ## [export_self_iife_with_name](../../../crates/rolldown/tests/esbuild/importstar/export_self_iife_with_name/diff.md)
   diff
-## export_star_default_export_common_js
-  missing
-## import_default_namespace_combo_issue446
-  missing
 ## [export_star_default_export_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_star_default_export_common_js/diff.md)
   diff
 ## [import_default_namespace_combo_issue446](../../../crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446/diff.md)

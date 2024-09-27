@@ -1,0 +1,148 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[entry-default-ns-prop.js:1:8]
+   │
+ 1 │ import def, * as ns from './foo'; console.log(def, ns, ns.default)
+   │        ─┬─  
+   │         ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[entry-default-ns.js:1:8]
+   │
+ 1 │ import def, * as ns from './foo'; console.log(def, ns)
+   │        ─┬─  
+   │         ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[entry-default-prop.js:1:8]
+   │
+ 1 │ import def, * as ns from './foo'; console.log(def, ns.default)
+   │        ─┬─  
+   │         ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[entry-default.js:1:8]
+   │
+ 1 │ import def from './foo'; console.log(def)
+   │        ─┬─  
+   │         ╰─── Missing export
+───╯
+
+```# Assets
+
+## entry-dead_js.mjs
+
+```js
+import "./foo.mjs";
+
+```
+## entry-default-ns-prop_js.mjs
+
+```js
+import { foo_exports } from "./foo.mjs";
+
+//#region entry-default-ns-prop.js
+console.log(def, foo_exports, foo_exports.default);
+
+//#endregion
+```
+## entry-default-ns_js.mjs
+
+```js
+import { foo_exports } from "./foo.mjs";
+
+//#region entry-default-ns.js
+console.log(def, foo_exports);
+
+//#endregion
+```
+## entry-default-prop_js.mjs
+
+```js
+import { foo_exports } from "./foo.mjs";
+
+//#region entry-default-prop.js
+console.log(def, foo_exports.default);
+
+//#endregion
+```
+## entry-default_js.mjs
+
+```js
+import "./foo.mjs";
+
+//#region entry-default.js
+console.log(def);
+
+//#endregion
+```
+## entry-prop_js.mjs
+
+```js
+import { foo_exports } from "./foo.mjs";
+
+//#region entry-prop.js
+console.log(foo_exports.default);
+
+//#endregion
+```
+## entry-typo-indirect_js.mjs
+
+```js
+import { __export, button } from "./foo.mjs";
+
+//#region indirect.js
+var indirect_exports = {};
+__export(indirect_exports, { button: () => button });
+
+//#endregion
+//#region entry-typo-indirect.js
+console.log(indirect_exports.buton);
+
+//#endregion
+```
+## entry-typo_js.mjs
+
+```js
+import { foo_exports } from "./foo.mjs";
+
+//#region entry-typo.js
+console.log(foo_exports.buton);
+
+//#endregion
+```
+## foo.mjs
+
+```js
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { button: () => button });
+let button = {};
+
+//#endregion
+export { __export, button, foo_exports };
+```

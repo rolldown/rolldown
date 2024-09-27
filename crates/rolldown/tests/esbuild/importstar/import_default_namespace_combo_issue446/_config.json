@@ -1,5 +1,6 @@
 {
-  "input": {
+  "expectExecuted": false,
+  "config": {
     "input": [
       {
         "name": "external-default2_js",

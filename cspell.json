@@ -26,6 +26,7 @@
     "/crates/rolldown_utils/src/light_guess.rs",
     "/pnpm-lock.yaml",
     "*.wasm",
+    "*.text",
     "*.go"
   ],
   "languageSettings": [

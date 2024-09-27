@@ -1,5 +1,6 @@
 {
-  "input": {
+  "expectError": true,
+  "config": {
     "input": [
       {
         "name": "entry-default-ns-prop_js",

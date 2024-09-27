@@ -533,6 +533,14 @@ expression: output
 
 - entry_js-!~{000}~.cjs => entry_js--Tfo1Zzo.cjs
 
+# tests/esbuild/importstar/export_self_and_import_self_common_js
+
+- entry_js-!~{000}~.cjs => entry_js-32I83GKt.cjs
+
+# tests/esbuild/importstar/export_self_and_require_self_common_js
+
+- entry_js-!~{000}~.cjs => entry_js-CC22M0_F.cjs
+
 # tests/esbuild/importstar/export_self_as_namespace_common_js
 
 - entry_js-!~{000}~.cjs => entry_js-lkGhL6zP.cjs
@@ -561,6 +569,38 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
 
+# tests/esbuild/importstar/export_star_default_export_common_js
+
+- entry_js-!~{000}~.mjs => entry_js-OaS52Neu.mjs
+
+# tests/esbuild/importstar/import_default_namespace_combo_issue446
+
+- external-default2_js-!~{000}~.mjs => external-default2_js-pQH934wi.mjs
+- external-ns_js-!~{001}~.mjs => external-ns_js-ewZBfGd8.mjs
+- external-ns-default_js-!~{002}~.mjs => external-ns-default_js-L3eSlCSK.mjs
+- external-ns-def_js-!~{003}~.mjs => external-ns-def_js-ftEEDh_C.mjs
+- external-default_js-!~{004}~.mjs => external-default_js-GLMhPWhU.mjs
+- external-def_js-!~{005}~.mjs => external-def_js-gz23So38.mjs
+- internal-default2_js-!~{006}~.mjs => internal-default2_js-cL3x0OOX.mjs
+- internal-ns_js-!~{007}~.mjs => internal-ns_js-vXOV4lFq.mjs
+- internal-ns-default_js-!~{008}~.mjs => internal-ns-default_js-8MAVa-aA.mjs
+- internal-ns-def_js-!~{009}~.mjs => internal-ns-def_js-W4vrcO9x.mjs
+- internal-default_js-!~{00a}~.mjs => internal-default_js-6MaS6BmB.mjs
+- internal-def_js-!~{00b}~.mjs => internal-def_js-neWxDaWB.mjs
+- internal-!~{00c}~.mjs => internal-iBIENIyN.mjs
+
+# tests/esbuild/importstar/import_default_namespace_combo_no_default
+
+- entry-default-ns-prop_js-!~{000}~.mjs => entry-default-ns-prop_js-ZUIlsYas.mjs
+- entry-default-ns_js-!~{001}~.mjs => entry-default-ns_js-f3sHoYaT.mjs
+- entry-default-prop_js-!~{002}~.mjs => entry-default-prop_js-DFIDkjSz.mjs
+- entry-default_js-!~{003}~.mjs => entry-default_js-T8wh9lPt.mjs
+- entry-prop_js-!~{004}~.mjs => entry-prop_js-EbUObqgB.mjs
+- entry-dead_js-!~{005}~.mjs => entry-dead_js-ExCqZVi6.mjs
+- entry-typo_js-!~{006}~.mjs => entry-typo_js--E4KMj2i.mjs
+- entry-typo-indirect_js-!~{007}~.mjs => entry-typo-indirect_js-RAipWtAb.mjs
+- foo-!~{008}~.mjs => foo-aVNQbHIH.mjs
+
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
 - entry_js-!~{000}~.mjs => entry_js-bgAJgOS5.mjs
@@ -569,9 +609,25 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-4bGwcs59.mjs
 
+# tests/esbuild/importstar/import_export_star_ambiguous_error
+
+- entry_js-!~{000}~.mjs => entry_js--bHsW-5g.mjs
+
 # tests/esbuild/importstar/import_export_star_ambiguous_warning
 
 - entry_js-!~{000}~.mjs => entry_js-E-ikmnlw.mjs
+
+# tests/esbuild/importstar/import_namespace_undefined_property_empty_file
+
+- entry-nope_js-!~{000}~.mjs => entry-nope_js-xIT0LZ3y.mjs
+- entry-default_js-!~{001}~.mjs => entry-default_js-y1YtWPvw.mjs
+- empty-!~{002}~.mjs => empty-OcPe_QXG.mjs
+
+# tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
+
+- entry-nope_js-!~{000}~.mjs => entry-nope_js-ij-ZnS3E.mjs
+- entry-default_js-!~{001}~.mjs => entry-default_js-rpQKIAsp.mjs
+- no-side-effects-!~{002}~.mjs => no-side-effects-pO9RVW7p.mjs
 
 # tests/esbuild/importstar/import_of_export_star
 
@@ -693,6 +749,10 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-VFYWHpLF.mjs
 
+# tests/esbuild/importstar/namespace_import_re_export_missing_es6
+
+- entry_js-!~{000}~.mjs => entry_js-gpUnZkBn.mjs
+
 # tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-nip6g79Q.mjs
@@ -700,6 +760,10 @@ expression: output
 # tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-2eEPShz1.mjs
+
+# tests/esbuild/importstar/namespace_import_re_export_unused_missing_es6
+
+- entry_js-!~{000}~.mjs => entry_js-XMZ0k1M5.mjs
 
 # tests/esbuild/importstar/namespace_import_unused_missing_common_js
 

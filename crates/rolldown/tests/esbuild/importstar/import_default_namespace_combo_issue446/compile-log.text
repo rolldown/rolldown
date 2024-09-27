@@ -1,0 +1,2 @@
+internal-def.js: WARNING: Import "def" will always be undefined because there is no matching export in "internal.js"
+internal-ns-def.js: WARNING: Import "def" will always be undefined because there is no matching export in "internal.js"

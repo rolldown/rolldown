@@ -1,0 +1,181 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-def.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-default.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-default2.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-ns-def.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-ns-default.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-ns.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## external-def_js.mjs
+
+```js
+import * as ns from "external";
+import { default as def } from "external";
+
+//#region external-def.js
+console.log(def, ns.def);
+
+//#endregion
+```
+## external-default2_js.mjs
+
+```js
+import { default as def, default as default2 } from "external";
+
+//#region external-default2.js
+console.log(def, default2);
+
+//#endregion
+```
+## external-default_js.mjs
+
+```js
+import * as ns from "external";
+import { default as def } from "external";
+
+//#region external-default.js
+console.log(def, ns.default);
+
+//#endregion
+```
+## external-ns-def_js.mjs
+
+```js
+import * as ns from "external";
+import { default as def } from "external";
+
+//#region external-ns-def.js
+console.log(def, ns, ns.def);
+
+//#endregion
+```
+## external-ns-default_js.mjs
+
+```js
+import * as ns from "external";
+import { default as def } from "external";
+
+//#region external-ns-default.js
+console.log(def, ns, ns.default);
+
+//#endregion
+```
+## external-ns_js.mjs
+
+```js
+import * as ns from "external";
+import { default as def } from "external";
+
+//#region external-ns.js
+console.log(def, ns);
+
+//#endregion
+```
+## internal-def_js.mjs
+
+```js
+import { internal_default, internal_exports } from "./internal.mjs";
+
+//#region internal-def.js
+console.log(internal_default, internal_exports.def);
+
+//#endregion
+```
+## internal-default2_js.mjs
+
+```js
+import { internal_default } from "./internal.mjs";
+
+//#region internal-default2.js
+console.log(internal_default, internal_default);
+
+//#endregion
+```
+## internal-default_js.mjs
+
+```js
+import { internal_default } from "./internal.mjs";
+
+//#region internal-default.js
+console.log(internal_default, internal_default);
+
+//#endregion
+```
+## internal-ns-def_js.mjs
+
+```js
+import { internal_default, internal_exports } from "./internal.mjs";
+
+//#region internal-ns-def.js
+console.log(internal_default, internal_exports, internal_exports.def);
+
+//#endregion
+```
+## internal-ns-default_js.mjs
+
+```js
+import { internal_default, internal_exports } from "./internal.mjs";
+
+//#region internal-ns-default.js
+console.log(internal_default, internal_exports, internal_default);
+
+//#endregion
+```
+## internal-ns_js.mjs
+
+```js
+import { internal_default, internal_exports } from "./internal.mjs";
+
+//#region internal-ns.js
+console.log(internal_default, internal_exports);
+
+//#endregion
+```
+## internal.mjs
+
+```js
+
+
+//#region internal.js
+var internal_exports = {};
+__export(internal_exports, { default: () => internal_default });
+var internal_default = 123;
+
+//#endregion
+export { internal_default, internal_exports };
+```

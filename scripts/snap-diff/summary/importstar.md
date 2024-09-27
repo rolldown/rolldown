@@ -3,10 +3,10 @@
   diff
 ## [export_other_nested_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_other_nested_common_js/diff.md)
   diff
-## export_self_and_import_self_common_js
-  missing
-## export_self_and_require_self_common_js
-  missing
+## [export_self_and_import_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_and_import_self_common_js/diff.md)
+  diff
+## [export_self_and_require_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_and_require_self_common_js/diff.md)
+  diff
 ## [export_self_as_namespace_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_as_namespace_common_js/diff.md)
   diff
 ## [export_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_common_js/diff.md)
@@ -17,16 +17,16 @@
   diff
 ## [export_self_iife_with_name](../../../crates/rolldown/tests/esbuild/importstar/export_self_iife_with_name/diff.md)
   diff
-## export_star_default_export_common_js
-  missing
-## import_default_namespace_combo_issue446
-  missing
+## [export_star_default_export_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_star_default_export_common_js/diff.md)
+  diff
+## [import_default_namespace_combo_issue446](../../../crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446/diff.md)
+  diff
 ## [import_export_other_as_namespace_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_export_other_as_namespace_common_js/diff.md)
   diff
-## import_namespace_undefined_property_empty_file
-  missing
-## import_namespace_undefined_property_side_effect_free_file
-  missing
+## [import_namespace_undefined_property_empty_file](../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file/diff.md)
+  diff
+## [import_namespace_undefined_property_side_effect_free_file](../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file/diff.md)
+  diff
 ## [import_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_self_common_js/diff.md)
   diff
 ## [import_star_and_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_star_and_common_js/diff.md)

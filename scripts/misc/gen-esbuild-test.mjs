@@ -30,7 +30,11 @@ const __dirname = import.meta.dirname
 
 // 2. Set the tests root directory
 
-const TESTS_ROOT_DIR = path.resolve(__dirname, '../../crates/rolldown/tests/esbuild', SUITE_NAME)
+const TESTS_ROOT_DIR = path.resolve(
+  __dirname,
+  '../../crates/rolldown/tests/esbuild',
+  SUITE_NAME,
+)
 
 // 3. Download .go test source file located in the suites object
 //    for each suite and place it under "scripts" dir.
@@ -192,7 +196,7 @@ const source = await readTestSuiteSource(SUITE_NAME)
 console.log(source)
 
 // This is up to suit name
-const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
+// const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
 // Generic ignored pattern, maybe used in many suites
 // const ignoredTestPattern = [
 //   'ts',

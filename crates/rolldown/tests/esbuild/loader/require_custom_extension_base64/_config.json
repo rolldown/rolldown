@@ -5,6 +5,9 @@
         "name": "entry_js",
         "import": "entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".custom": "base64"
+    }
   }
 }

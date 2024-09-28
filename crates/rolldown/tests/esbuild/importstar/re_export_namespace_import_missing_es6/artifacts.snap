@@ -17,7 +17,7 @@ const x = 123;
 //#endregion
 //#region entry.js
 assert.deepEqual(bar_exports, { x: 123 });
-assert.equal(bar_exports.foo, undefined);
+assert.equal(void 0, undefined);
 
 //#endregion
 ```

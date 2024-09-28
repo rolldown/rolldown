@@ -109,10 +109,10 @@ console.log(def, ns);
 ## internal-def_js.mjs
 
 ```js
-import { internal_default, internal_exports } from "./internal.mjs";
+import { internal_default } from "./internal.mjs";
 
 //#region internal-def.js
-console.log(internal_default, internal_exports.def);
+console.log(internal_default, void 0);
 
 //#endregion
 ```
@@ -142,7 +142,7 @@ console.log(internal_default, internal_default);
 import { internal_default, internal_exports } from "./internal.mjs";
 
 //#region internal-ns-def.js
-console.log(internal_default, internal_exports, internal_exports.def);
+console.log(internal_default, internal_exports, void 0);
 
 //#endregion
 ```

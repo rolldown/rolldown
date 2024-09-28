@@ -23,7 +23,7 @@ const x = 123;
 
 //#endregion
 //#region entry.js
-assert.equal(foo_exports.foo, undefined);
+assert.equal(void 0, undefined);
 assert.deepEqual(foo_exports, { x: 123 });
 
 //#endregion
@@ -40,6 +40,8 @@ assert.deepEqual(foo_exports, { x: 123 });
  });
  var x = 123;
 -console.log(foo_exports, void 0);
-+console.log(foo_exports.foo, foo_exports);
+\ No newline at end of file
++console.log(void 0, foo_exports);
+\ No newline at end of file
 
 ```

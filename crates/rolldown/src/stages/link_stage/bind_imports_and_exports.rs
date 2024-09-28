@@ -280,7 +280,13 @@ impl<'link> LinkStage<'link> {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(&name.to_rstr());
-                  let Some(export_symbol) = export_symbol else { break };
+                  let Some(export_symbol) = export_symbol else {
+                    dbg!(&member_expr_ref,);
+                    if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
+                      resolved.insert(member_expr_ref.span, None);
+                    }
+                    break;
+                  };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
                     resolved.insert(member_expr_ref.span, None);
                     return;

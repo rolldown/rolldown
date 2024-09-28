@@ -584,22 +584,22 @@ expression: output
 - internal-default2_js-!~{006}~.mjs => internal-default2_js-cL3x0OOX.mjs
 - internal-ns_js-!~{007}~.mjs => internal-ns_js-vXOV4lFq.mjs
 - internal-ns-default_js-!~{008}~.mjs => internal-ns-default_js-8MAVa-aA.mjs
-- internal-ns-def_js-!~{009}~.mjs => internal-ns-def_js-W4vrcO9x.mjs
+- internal-ns-def_js-!~{009}~.mjs => internal-ns-def_js-ClwveEgn.mjs
 - internal-default_js-!~{00a}~.mjs => internal-default_js-6MaS6BmB.mjs
-- internal-def_js-!~{00b}~.mjs => internal-def_js-neWxDaWB.mjs
+- internal-def_js-!~{00b}~.mjs => internal-def_js-TiQqbk95.mjs
 - internal-!~{00c}~.mjs => internal-iBIENIyN.mjs
 
 # tests/esbuild/importstar/import_default_namespace_combo_no_default
 
-- entry-default-ns-prop_js-!~{000}~.mjs => entry-default-ns-prop_js-ZUIlsYas.mjs
-- entry-default-ns_js-!~{001}~.mjs => entry-default-ns_js-f3sHoYaT.mjs
-- entry-default-prop_js-!~{002}~.mjs => entry-default-prop_js-DFIDkjSz.mjs
-- entry-default_js-!~{003}~.mjs => entry-default_js-T8wh9lPt.mjs
-- entry-prop_js-!~{004}~.mjs => entry-prop_js-EbUObqgB.mjs
-- entry-dead_js-!~{005}~.mjs => entry-dead_js-ExCqZVi6.mjs
-- entry-typo_js-!~{006}~.mjs => entry-typo_js--E4KMj2i.mjs
-- entry-typo-indirect_js-!~{007}~.mjs => entry-typo-indirect_js-RAipWtAb.mjs
-- foo-!~{008}~.mjs => foo-aVNQbHIH.mjs
+- entry-default-ns-prop_js-!~{000}~.mjs => entry-default-ns-prop_js-CaKYTDd0.mjs
+- entry-default-ns_js-!~{001}~.mjs => entry-default-ns_js-ipPVA6cI.mjs
+- entry-default-prop_js-!~{002}~.mjs => entry-default-prop_js-oE2jrl4R.mjs
+- entry-default_js-!~{003}~.mjs => entry-default_js-j4gTRbjJ.mjs
+- entry-prop_js-!~{004}~.mjs => entry-prop_js-65J3g5lS.mjs
+- entry-dead_js-!~{005}~.mjs => entry-dead_js-hbQXKQjW.mjs
+- entry-typo_js-!~{006}~.mjs => entry-typo_js-P8HumcNN.mjs
+- entry-typo-indirect_js-!~{007}~.mjs => entry-typo-indirect_js-cS0xZ60L.mjs
+- foo-!~{008}~.mjs => foo-MzQoStBa.mjs
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
@@ -619,15 +619,15 @@ expression: output
 
 # tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 
-- entry-nope_js-!~{000}~.mjs => entry-nope_js-cqYTXtM4.mjs
-- entry-default_js-!~{001}~.mjs => entry-default_js-dFv9ufZp.mjs
-- empty-!~{002}~.mjs => empty-KYihkxoI.mjs
+- entry-nope_js-!~{000}~.mjs => entry-nope_js-YUjNstjz.mjs
+- entry-default_js-!~{001}~.mjs => entry-default_js-y4lvntDz.mjs
+- empty-!~{002}~.mjs => empty-Rv7siP4X.mjs
 
 # tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 
-- entry-nope_js-!~{000}~.mjs => entry-nope_js-w-XOMSky.mjs
-- entry-default_js-!~{001}~.mjs => entry-default_js-xeAe4cPf.mjs
-- no-side-effects-!~{002}~.mjs => no-side-effects-PMvX2hHz.mjs
+- entry-nope_js-!~{000}~.mjs => entry-nope_js-GmUVp50P.mjs
+- entry-default_js-!~{001}~.mjs => entry-default_js-6iPw1zvB.mjs
+- no-side-effects-!~{002}~.mjs => no-side-effects-sJ2cTI7V.mjs
 
 # tests/esbuild/importstar/import_of_export_star
 
@@ -747,7 +747,7 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-VFYWHpLF.mjs
+- entry_js-!~{000}~.mjs => entry_js-4vJXRapg.mjs
 
 # tests/esbuild/importstar/namespace_import_re_export_missing_es6
 
@@ -755,11 +755,11 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-nip6g79Q.mjs
+- entry_js-!~{000}~.mjs => entry_js-u_a0IRvs.mjs
 
 # tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-2eEPShz1.mjs
+- entry_js-!~{000}~.mjs => entry_js-n78TOwOh.mjs
 
 # tests/esbuild/importstar/namespace_import_re_export_unused_missing_es6
 
@@ -771,7 +771,7 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_unused_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-HdKsy06U.mjs
+- entry_js-!~{000}~.mjs => entry_js-koCgLkM7.mjs
 
 # tests/esbuild/importstar/other_file_export_self_as_namespace_unused_es6
 
@@ -783,7 +783,7 @@ expression: output
 
 # tests/esbuild/importstar/re_export_namespace_import_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-vaGbXvs4.mjs
+- entry_js-!~{000}~.mjs => entry_js-BAsDdd6K.mjs
 
 # tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6
 

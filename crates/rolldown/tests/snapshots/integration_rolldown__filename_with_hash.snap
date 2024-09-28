@@ -360,6 +360,10 @@ expression: output
 
 - entry-!~{000}~.cjs => entry-TyT7t99U.cjs
 
+# tests/esbuild/default/extension_alias
+
+- main-!~{000}~.mjs => main-Shia6zBw.mjs
+
 # tests/esbuild/default/external_packages
 
 - entry_js-!~{000}~.mjs => entry_js-hzg_7R2t.mjs

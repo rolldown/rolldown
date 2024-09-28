@@ -281,6 +281,9 @@ impl<'link> LinkStage<'link> {
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(&name.to_rstr());
                   let Some(export_symbol) = export_symbol else {
+                    // when we try to resolve `a.b.c`, and found that `b` is not exported by module
+                    // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
+                    // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
                       resolved.insert(member_expr_ref.span, None);
                     }

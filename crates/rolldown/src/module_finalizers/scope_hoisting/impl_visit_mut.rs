@@ -421,14 +421,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     // rewrite `foo_exports.bar` to `bar` directly
     match expr {
       Expression::StaticMemberExpression(ref inner_expr) => {
-        dbg!(&inner_expr);
-
-        dbg!(&self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span));
-        dbg!(&"test");
         if let Some(resolved) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
-          dbg!(&resolved);
           match resolved {
             Some((object_ref, props)) => {
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);

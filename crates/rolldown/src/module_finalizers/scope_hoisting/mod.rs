@@ -128,11 +128,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         }
       }
-      _ => {
-        dbg!(&canonical_ref);
-        dbg!(&self.ctx.symbols.get(canonical_ref));
-        self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
-      }
+      _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
     };
 
     if let Some(ns_alias) = namespace_alias {

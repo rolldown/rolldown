@@ -114,13 +114,9 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       include_symbol(ctx, *symbol_ref);
     }
     SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-      dbg!(ctx.symbols.get(member_expr.object_ref));
       if let Some(symbol) =
         member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
       {
-        dbg!(&ctx.metas[module.idx].resolved_member_expr_refs);
-        dbg!(&symbol);
-        dbg!(&ctx.symbols.get(symbol));
         include_symbol(ctx, symbol);
       }
     }

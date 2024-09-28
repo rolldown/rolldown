@@ -747,7 +747,7 @@ expression: output
 
 # tests/esbuild/importstar/namespace_import_missing_es6
 
-- entry_js-!~{000}~.mjs => entry_js-4vJXRapg.mjs
+- entry_js-!~{000}~.mjs => entry_js-DJGpKbDQ.mjs
 
 # tests/esbuild/importstar/namespace_import_re_export_missing_es6
 

@@ -392,6 +392,7 @@ export interface BindingResolveOptions {
   conditionNames?: Array<string>
   exportsFields?: Array<Array<string>>
   extensions?: Array<string>
+  extensionAlias?: Array<ExtensionAliasItem>
   mainFields?: Array<string>
   mainFiles?: Array<string>
   modules?: Array<string>
@@ -441,6 +442,11 @@ export interface BindingTreeshake {
 export interface Es2015BindingOptions {
   /** Transform arrow functions into function expressions. */
   arrowFunction?: ArrowFunctionsBindingOptions
+}
+
+export interface ExtensionAliasItem {
+  target: string
+  replacements: Array<string>
 }
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */

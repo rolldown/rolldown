@@ -5,6 +5,10 @@
         "name": "entry_js",
         "import": "entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".txt": "text",
+      ".base64.txt": "base64"
+    }
   }
 }

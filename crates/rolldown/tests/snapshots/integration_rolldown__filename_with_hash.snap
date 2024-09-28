@@ -917,6 +917,10 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-KkOuFAbd.mjs
 
+# tests/esbuild/loader/loader_data_url_unknown_mime
+
+- entry_js-!~{000}~.mjs => entry_js-LFrNCB2G.mjs
+
 # tests/esbuild/loader/loader_json_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs

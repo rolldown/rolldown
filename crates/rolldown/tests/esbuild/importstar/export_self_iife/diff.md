@@ -35,7 +35,6 @@ return exports;
 -(() => {
 -    var foo = 123;
 -})();
-\ No newline at end of file
 +(function (exports) {
 +    const foo = 123;
 +    Object.defineProperty(exports, 'foo', {
@@ -45,7 +44,6 @@ return exports;
 +        }
 +    });
 +    return exports;
-+}({}));
-\ No newline at end of file
++})({});
 
 ```

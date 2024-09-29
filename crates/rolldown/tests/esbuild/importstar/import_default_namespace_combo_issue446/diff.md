@@ -15,9 +15,8 @@ console.log(def, default2);
 --- esbuild	/out/external-default2.js
 +++ rolldown	
 @@ -1,2 +0,0 @@
--import def, { default as default2 } from 'external';
+-import def, {default as default2} from "external";
 -console.log(def, default2);
-\ No newline at end of file
 
 ```
 ## /out/external-ns.js
@@ -37,9 +36,8 @@ console.log(def, ns);
 --- esbuild	/out/external-ns.js
 +++ rolldown	
 @@ -1,2 +0,0 @@
--import def, * as ns from 'external';
+-import def, * as ns from "external";
 -console.log(def, ns);
-\ No newline at end of file
 
 ```
 ## /out/external-ns-default.js
@@ -59,9 +57,8 @@ console.log(def, ns, ns.default);
 --- esbuild	/out/external-ns-default.js
 +++ rolldown	
 @@ -1,2 +0,0 @@
--import def, * as ns from 'external';
+-import def, * as ns from "external";
 -console.log(def, ns, ns.default);
-\ No newline at end of file
 
 ```
 ## /out/external-ns-def.js
@@ -81,9 +78,8 @@ console.log(def, ns, ns.def);
 --- esbuild	/out/external-ns-def.js
 +++ rolldown	
 @@ -1,2 +0,0 @@
--import def, * as ns from 'external';
+-import def, * as ns from "external";
 -console.log(def, ns, ns.def);
-\ No newline at end of file
 
 ```
 ## /out/external-default.js
@@ -103,9 +99,8 @@ console.log(def, ns.default);
 --- esbuild	/out/external-default.js
 +++ rolldown	
 @@ -1,2 +0,0 @@
--import def, * as ns from 'external';
+-import def, * as ns from "external";
 -console.log(def, ns.default);
-\ No newline at end of file
 
 ```
 ## /out/external-def.js
@@ -125,9 +120,8 @@ console.log(def, ns.def);
 --- esbuild	/out/external-def.js
 +++ rolldown	
 @@ -1,2 +0,0 @@
--import def, * as ns from 'external';
+-import def, * as ns from "external";
 -console.log(def, ns.def);
-\ No newline at end of file
 
 ```
 ## /out/internal-default2.js
@@ -151,7 +145,6 @@ console.log(internal_default, internal_default);
 @@ -1,2 +0,0 @@
 -var internal_default = 123;
 -console.log(internal_default, internal_default);
-\ No newline at end of file
 
 ```
 ## /out/internal-ns.js
@@ -176,12 +169,13 @@ console.log(internal_default, internal_exports);
 ===================================================================
 --- esbuild	/out/internal-ns.js
 +++ rolldown	
-@@ -1,4 +0,0 @@
+@@ -1,6 +0,0 @@
 -var internal_exports = {};
--__export(internal_exports, { default: () => internal_default });
+-__export(internal_exports, {
+-    default: () => internal_default
+-});
 -var internal_default = 123;
 -console.log(internal_default, internal_exports);
-\ No newline at end of file
 
 ```
 ## /out/internal-ns-default.js
@@ -206,12 +200,13 @@ console.log(internal_default, internal_exports, internal_default);
 ===================================================================
 --- esbuild	/out/internal-ns-default.js
 +++ rolldown	
-@@ -1,4 +0,0 @@
+@@ -1,6 +0,0 @@
 -var internal_exports = {};
--__export(internal_exports, { default: () => internal_default });
+-__export(internal_exports, {
+-    default: () => internal_default
+-});
 -var internal_default = 123;
 -console.log(internal_default, internal_exports, internal_default);
-\ No newline at end of file
 
 ```
 ## /out/internal-ns-def.js
@@ -236,12 +231,13 @@ console.log(internal_default, internal_exports, void 0);
 ===================================================================
 --- esbuild	/out/internal-ns-def.js
 +++ rolldown	
-@@ -1,4 +0,0 @@
+@@ -1,6 +0,0 @@
 -var internal_exports = {};
--__export(internal_exports, { default: () => internal_default });
+-__export(internal_exports, {
+-    default: () => internal_default
+-});
 -var internal_default = 123;
 -console.log(internal_default, internal_exports, void 0);
-\ No newline at end of file
 
 ```
 ## /out/internal-default.js
@@ -265,7 +261,6 @@ console.log(internal_default, internal_default);
 @@ -1,2 +0,0 @@
 -var internal_default = 123;
 -console.log(internal_default, internal_default);
-\ No newline at end of file
 
 ```
 ## /out/internal-def.js
@@ -289,6 +284,5 @@ console.log(internal_default, void 0);
 @@ -1,2 +0,0 @@
 -var internal_default = 123;
 -console.log(internal_default, void 0);
-\ No newline at end of file
 
 ```

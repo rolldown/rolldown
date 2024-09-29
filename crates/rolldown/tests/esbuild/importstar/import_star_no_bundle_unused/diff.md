@@ -22,11 +22,10 @@ console.log(foo);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,3 +1,3 @@
--import * as ns from './foo';
+-import * as ns from "./foo";
 -let foo = 234;
-+import './foo';
++import "./foo";
 +var foo = 234;
  console.log(foo);
-\ No newline at end of file
 
 ```

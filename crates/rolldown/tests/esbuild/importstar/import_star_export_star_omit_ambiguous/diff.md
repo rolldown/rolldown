@@ -63,6 +63,5 @@ assert.deepEqual(common_exports, {
 -var x = 1;
 -var z = 4;
  console.log(common_exports);
-\ No newline at end of file
 
 ```

@@ -18,8 +18,7 @@ export * from "foo"
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -1,1 +1,2 @@
-+import 'foo';
- export * from 'foo';
-\ No newline at end of file
++import "foo";
+ export * from "foo";
 
 ```

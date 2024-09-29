@@ -37,15 +37,16 @@ console.log(JSON.stringify(folders_index_exports));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,4 +1,4 @@
+@@ -1,6 +1,6 @@
 -var folders_exports = {};
--__export(folders_exports, { foo: () => foo });
- var foo = () => 'hi there';
--console.log(JSON.stringify(folders_exports));
-\ No newline at end of file
+-__export(folders_exports, {
++var foo = () => "hi there";
 +var folders_index_exports = {};
-+__export(folders_index_exports, { foo: () => foo });
++__export(folders_index_exports, {
+     foo: () => foo
+ });
+-var foo = () => "hi there";
+-console.log(JSON.stringify(folders_exports));
 +console.log(JSON.stringify(folders_index_exports));
-\ No newline at end of file
 
 ```

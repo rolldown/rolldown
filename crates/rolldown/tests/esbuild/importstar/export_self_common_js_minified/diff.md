@@ -28,19 +28,21 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,5 +1,7 @@
+@@ -1,7 +1,9 @@
 -var r = s((f, e) => {
--    e.exports = { foo: 123 };
+-    e.exports = {
+-        foo: 123
+-    };
 -    console.log(r());
 +var require_entry = __commonJS({
-+    'entry.js'(exports, module) {
-+        module.exports = { foo: 123 };
++    "entry.js"(exports, module) {
++        module.exports = {
++            foo: 123
++        };
 +        console.log(require_entry());
 +    }
  });
 -module.exports = r();
-\ No newline at end of file
 +export default require_entry();
-\ No newline at end of file
 
 ```

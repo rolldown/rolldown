@@ -46,15 +46,19 @@ assert.equal(ns2.foo, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,9 +1,9 @@
+@@ -1,11 +1,11 @@
 -var foo_exports = {};
--__export(foo_exports, { foo: () => foo });
+-__export(foo_exports, {
+-    foo: () => foo
+-});
 -var foo;
 +var foo_exports, foo;
  var init_foo = __esm({
-     'foo.js'() {
+     "foo.js"() {
 +        foo_exports = {};
-+        __export(foo_exports, { foo: () => foo });
++        __export(foo_exports, {
++            foo: () => foo
++        });
          foo = 123;
      }
  });

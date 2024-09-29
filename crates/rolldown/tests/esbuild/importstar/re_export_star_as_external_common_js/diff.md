@@ -28,19 +28,18 @@ Object.defineProperty(exports, 'out', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,4 +1,7 @@
+@@ -1,6 +1,7 @@
 -var entry_exports = {};
--__export(entry_exports, { out: () => out });
+-__export(entry_exports, {
+-    out: () => out
+-});
 -module.exports = __toCommonJS(entry_exports);
--var out = __toESM(require('foo'));
-\ No newline at end of file
-+var out = __toESM(require('foo'));
+ var out = __toESM(require("foo"));
 +Object.defineProperty(exports, 'out', {
 +    enumerable: true,
 +    get: function () {
 +        return out;
 +    }
 +});
-\ No newline at end of file
 
 ```

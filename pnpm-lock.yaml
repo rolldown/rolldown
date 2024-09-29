@@ -396,9 +396,6 @@ importers:
       '@types/diff':
         specifier: ^5.2.2
         version: 5.2.2
-      '@types/escodegen':
-        specifier: ^0.0.10
-        version: 0.0.10
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -414,9 +411,6 @@ importers:
       diff:
         specifier: ^7.0.0
         version: 7.0.0
-      escodegen:
-        specifier: ^2.1.0
-        version: 2.1.0
       estree-toolkit:
         specifier: ^1.7.8
         version: 1.7.8
@@ -2010,7 +2004,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 
@@ -2977,9 +2970,6 @@ packages:
   '@types/diff@5.2.2':
     resolution: {integrity: sha512-qVqLpd49rmJA2nZzLVsmfS/aiiBpfVE95dHhPVwG0NmSBAt+riPxnj53wq2oBq5m4Q2RF1IWFEUpnZTgrQZfEQ==}
 
-  '@types/escodegen@0.0.10':
-    resolution: {integrity: sha512-IVvcNLEFbiL17qiGRGzyfx/u9K6lA5w6wcQSIgv2h4JG3ZAFIY1Be9ITTSPuARIxRpzW54s8OvcF6PdonBbDzg==}
-
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
 
@@ -3932,19 +3922,10 @@ packages:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
 
-  escodegen@2.1.0:
-    resolution: {integrity: sha512-2NlIDTwUWJN0mRPQOdtQBzbUHvdGY2P1VXSyU83Q3xKxM7WHX2Ql8dKq782Q9TgQUNOLEzEYu9bzLNj1q88I5w==}
-    engines: {node: '>=6.0'}
-    hasBin: true
-
   esprima@4.0.1:
     resolution: {integrity: sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==}
     engines: {node: '>=4'}
     hasBin: true
-
-  estraverse@5.3.0:
-    resolution: {integrity: sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==}
-    engines: {node: '>=4.0'}
 
   estree-toolkit@1.7.8:
     resolution: {integrity: sha512-v0Q0L+0agSDFe3x9Sj7aAzrI9afvsfr5r7AM2SNk/8bKYRQ3tUf4PQEUWe99LkWysmT1PsuSpW+W1w/xZmCKeg==}
@@ -8518,8 +8499,6 @@ snapshots:
 
   '@types/diff@5.2.2': {}
 
-  '@types/escodegen@0.0.10': {}
-
   '@types/estree-jsx@1.0.5':
     dependencies:
       '@types/estree': 1.0.6
@@ -9713,17 +9692,7 @@ snapshots:
 
   escape-string-regexp@4.0.0: {}
 
-  escodegen@2.1.0:
-    dependencies:
-      esprima: 4.0.1
-      estraverse: 5.3.0
-      esutils: 2.0.3
-    optionalDependencies:
-      source-map: 0.6.1
-
   esprima@4.0.1: {}
-
-  estraverse@5.3.0: {}
 
   estree-toolkit@1.7.8:
     dependencies:

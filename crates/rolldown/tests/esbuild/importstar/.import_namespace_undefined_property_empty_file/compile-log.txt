@@ -1,4 +1,0 @@
-entry-default.js: WARNING: Import "default" will always be undefined because there is no matching export in "empty.mjs"
-entry-nope.js: WARNING: Import "nope" will always be undefined because the file "empty.js" has no exports
-entry-nope.js: WARNING: Import "nope" will always be undefined because the file "empty.mjs" has no exports
-entry-nope.js: WARNING: Import "nope" will always be undefined because the file "empty.cjs" has no exports

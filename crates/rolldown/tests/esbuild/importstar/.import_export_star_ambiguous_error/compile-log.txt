@@ -1,3 +1,0 @@
-entry.js: ERROR: Ambiguous import "y" has multiple matching exports
-foo.js: NOTE: One matching export is here:
-bar.js: NOTE: Another matching export is here:

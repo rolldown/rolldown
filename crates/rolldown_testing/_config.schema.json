@@ -652,6 +652,28 @@
             }
           }
         },
+        "extensionAlias": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
         "extensions": {
           "type": [
             "array",

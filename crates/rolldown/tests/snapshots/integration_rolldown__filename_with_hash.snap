@@ -2052,6 +2052,10 @@ expression: output
 
 - package-!~{000}~.mjs => package-KMaYQx9J.mjs
 
+# tests/rolldown/function/resolve/extension_alias
+
+- main-!~{000}~.mjs => main-Shia6zBw.mjs
+
 # tests/rolldown/function/resolve/node_modules_as_entries
 
 - is-plain-obj-!~{000}~.mjs => is-plain-obj-Ly48xYH9.mjs

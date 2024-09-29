@@ -91,7 +91,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       exports_fields: raw_resolve
         .exports_fields
         .unwrap_or_else(|| vec![vec!["exports".to_string()]]),
-      extension_alias: vec![],
+      extension_alias: raw_resolve.extension_alias.unwrap_or_default(),
       extensions: raw_resolve.extensions.unwrap_or_else(|| {
         [".jsx", ".js", ".ts", ".tsx"].into_iter().map(str::to_string).collect()
       }),

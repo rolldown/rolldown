@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region foo.ts
+var foo_default = "foo";
+
+//#endregion
+//#region main.ts
+console.log(foo_default);
+
+//#endregion
+```

@@ -2054,7 +2054,7 @@ expression: output
 
 # tests/rolldown/function/resolve/extension_alias
 
-- main-!~{000}~.mjs => main-Shia6zBw.mjs
+- main-!~{000}~.mjs => main-deB7BKJg.mjs
 
 # tests/rolldown/function/resolve/node_modules_as_entries
 

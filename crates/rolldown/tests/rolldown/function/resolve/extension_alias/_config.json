@@ -2,7 +2,7 @@
   "config": {
     
     "resolve": {
-      "extensionAlias": [[".js", [".ts",".js"]]]
+      "extensionAlias": [[".js", [".js",".ts"]]]
     }
   }
 }

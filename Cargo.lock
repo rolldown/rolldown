@@ -2531,8 +2531,8 @@ name = "rolldown_plugin_replace"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "fancy-regex",
  "regex",
+ "regress",
  "rolldown",
  "rolldown_plugin",
  "rolldown_testing",

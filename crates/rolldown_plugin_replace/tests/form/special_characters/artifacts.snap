@@ -1,6 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "one" is imported by "input.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## input.mjs
@@ -8,7 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region input.js
-const one = 1;
+const one = require("one");
 console.log(one);
 
 //#endregion

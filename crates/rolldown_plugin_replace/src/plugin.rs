@@ -1,6 +1,8 @@
+use std::ops::Range;
 use std::{cmp::Reverse, collections::HashMap, sync::LazyLock};
 
-use fancy_regex::{Regex, RegexBuilder};
+// use fancy_regex::Regex;
+use regex::Regex;
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
@@ -11,7 +13,7 @@ use crate::utils::expand_typeof_replacements;
 pub struct ReplaceOptions {
   pub values: HashMap</* Target */ String, /* Replacement */ String>,
   /// Default to `("\\b", "\\b(?!\\.)")`. To prevent `typeof window.document` from being replaced by config item `typeof window` => `"object"`.
-  pub delimiters: (String, String),
+  pub delimiters: Option<(String, String)>,
   pub prevent_assignment: bool,
   pub object_guards: bool,
 }
@@ -20,16 +22,24 @@ impl Default for ReplaceOptions {
   fn default() -> Self {
     Self {
       values: HashMap::default(),
-      delimiters: ("\\b".to_string(), "\\b(?!\\.)".to_string()),
+      delimiters: None,
       prevent_assignment: false,
       object_guards: false,
     }
   }
 }
 
+// We don't reuse `HybridRegex` in `rolldown_utils`, since
+// only the enum is needed
+#[derive(Debug)]
+enum HybridRegex {
+  Optimize(regex::Regex),
+  Ecma(regress::Regex),
+}
+
 #[derive(Debug)]
 pub struct ReplacePlugin {
-  matcher: Regex,
+  matcher: HybridRegex,
   prevent_assignment: bool,
   values: FxHashMap</* Target */ String, /* Replacement */ String>,
 }
@@ -54,22 +64,26 @@ impl ReplacePlugin {
 
     let lookahead = if options.prevent_assignment { "(?!\\s*=[^=])" } else { "" };
 
-    let joined_keys = keys.iter().map(|key| fancy_regex::escape(key)).collect::<Vec<_>>().join("|");
-    let (delimiter_left, delimiter_right) = &options.delimiters;
+    let joined_keys = keys.iter().map(|key| regex::escape(key)).collect::<Vec<_>>().join("|");
+    let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
+      HybridRegex::Ecma(
+        regress::Regex::new(&format!(
+          "{delimiter_left}({joined_keys}){delimiter_right}{lookahead}"
+        ))
+        .unwrap(),
+      )
+    } else {
+      HybridRegex::Optimize(regex::Regex::new(&format!("\\b({joined_keys})")).unwrap())
+    };
+    // println!("{}", pattern);
     // https://rustexp.lpil.uk/
-    let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
-    Self {
-      matcher: RegexBuilder::new(&pattern)
-        // Set `backtrack_limit` for `delimiters` and `lookahead` because they contain backtracking pattern `!?` and `*`.
-        // Cannot set the number too low or it will be ignored by `fancy_regex::Error::RuntimeError` in `try_replace`.
-        // Setting `backtrack_limit` to a large number will cause huge performance regression.
-        // See <https://github.com/fancy-regex/fancy-regex/blob/main/PERFORMANCE.md#fancy-regex>.
-        .backtrack_limit(1_000_000)
-        .build()
-        .unwrap_or_else(|_| panic!("Invalid regex {pattern:?}")),
+    // println!("{}", pattern);
+    let ret = Self {
+      matcher,
       prevent_assignment: options.prevent_assignment,
       values: values.into_iter().collect(),
-    }
+    };
+    ret
   }
 
   fn try_replace<'text>(
@@ -77,27 +91,25 @@ impl ReplacePlugin {
     code: &'text str,
     magic_string: &mut MagicString<'text>,
   ) -> anyhow::Result<bool> {
-    let mut changed = false;
-    for captures in self.matcher.captures_iter(code) {
-      // We expect the regex we used will always have one `Captures`.
+    match self.matcher {
+      HybridRegex::Optimize(ref regex) => self.optimized_replace(code, magic_string, regex),
+      HybridRegex::Ecma(_) => self.fallback_replace(code, magic_string),
+    }
+  }
 
-      let captures = match captures {
-        Ok(inner) => inner,
-        Err(err) => match err {
-          fancy_regex::Error::RuntimeError(_) => {
-            // Mostly due to backtrack limit exceeded. There's nothing we can do about runtime error.
-            // So if we encounter one, we just consider this as a failed match and skip it.
-            break;
-          }
-          _ => return Err(err.into()),
-        },
-      };
+  fn optimized_replace<'text>(
+    &'text self,
+    code: &'text str,
+    magic_string: &mut MagicString<'text>,
+    regex: &regex::Regex,
+  ) -> anyhow::Result<bool> {
+    let mut changed = false;
+    for captures in regex.captures_iter(code) {
       let Some(matched) = captures.get(1) else {
         break;
       };
-      if self.prevent_assignment
-        && NON_ASSIGNMENT_MATCHER.is_match(&code[0..matched.start()]).unwrap_or(false)
-      {
+      // dbg!(&matched, self.prevent_assignment);
+      if self.look_around_assert(code, matched.range()) {
         continue;
       }
       let Some(replacement) = self.values.get(matched.as_str()) else {
@@ -108,6 +120,40 @@ impl ReplacePlugin {
     }
 
     Ok(changed)
+  }
+
+  fn look_around_assert(&self, code: &str, matched_range: Range<usize>) -> bool {
+    if self.prevent_assignment {
+      let before = &code[..matched_range.start];
+      let stripped_before = before.trim_end();
+      if stripped_before.ends_with("let")
+        || stripped_before.ends_with("const")
+        || stripped_before.ends_with("var")
+      {
+        return true;
+      }
+    }
+    let after = &code[matched_range.end..];
+    if after.starts_with(".") {
+      return true;
+    }
+    if self.prevent_assignment {
+      let stripped_after = after.trim_start();
+      if stripped_after.starts_with("=") {
+        if !stripped_after[1..].starts_with("=") {
+          return true;
+        }
+      }
+    }
+    false
+  }
+
+  fn fallback_replace<'text>(
+    &'text self,
+    code: &'text str,
+    magic_string: &mut MagicString<'text>,
+  ) -> anyhow::Result<bool> {
+    Ok(false)
   }
 }
 

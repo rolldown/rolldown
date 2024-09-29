@@ -19,7 +19,7 @@ async fn special_characters() {
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
         values: [("require('one')".to_string(), "1".to_string())].into(),
-        delimiters: (String::new(), String::new()),
+        delimiters: Some((String::new(), String::new())),
         ..Default::default()
       }))],
     )

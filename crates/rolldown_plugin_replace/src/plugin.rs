@@ -66,16 +66,12 @@ impl ReplacePlugin {
 
     let joined_keys = keys.iter().map(|key| regex::escape(key)).collect::<Vec<_>>().join("|");
     let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
-      HybridRegex::Ecma(
-        regress::Regex::new(&format!(
-          "{delimiter_left}({joined_keys}){delimiter_right}{lookahead}"
-        ))
-        .unwrap(),
-      )
+      let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
+      HybridRegex::Ecma(regress::Regex::new(&pattern).unwrap())
     } else {
-      HybridRegex::Optimize(regex::Regex::new(&format!("\\b({joined_keys})")).unwrap())
+      HybridRegex::Optimize(regex::Regex::new(&format!("\\b({joined_keys})\\b")).unwrap())
     };
-    // println!("{}", pattern);
+    // dbg!(&matcher);
     // https://rustexp.lpil.uk/
     // println!("{}", pattern);
     let ret = Self {
@@ -93,7 +89,7 @@ impl ReplacePlugin {
   ) -> anyhow::Result<bool> {
     match self.matcher {
       HybridRegex::Optimize(ref regex) => self.optimized_replace(code, magic_string, regex),
-      HybridRegex::Ecma(_) => self.fallback_replace(code, magic_string),
+      HybridRegex::Ecma(ref regex) => self.fallback_replace(code, magic_string, regex),
     }
   }
 
@@ -108,7 +104,6 @@ impl ReplacePlugin {
       let Some(matched) = captures.get(1) else {
         break;
       };
-      // dbg!(&matched, self.prevent_assignment);
       if self.look_around_assert(code, matched.range()) {
         continue;
       }
@@ -152,8 +147,25 @@ impl ReplacePlugin {
     &'text self,
     code: &'text str,
     magic_string: &mut MagicString<'text>,
+    regex: &regress::Regex,
   ) -> anyhow::Result<bool> {
-    Ok(false)
+    let mut changed = false;
+    for captures in regex.find_iter(code) {
+      // We expect the regex we used will always have one `Captures`.
+      dbg!(&captures);
+      let Some(Some(matched)) = captures.captures.get(0) else {
+        break;
+      };
+      if self.prevent_assignment && NON_ASSIGNMENT_MATCHER.is_match(&code[0..matched.start]) {
+        continue;
+      }
+      let Some(replacement) = self.values.get(&code[matched.clone()]) else {
+        break;
+      };
+      changed = true;
+      magic_string.update(matched.start, matched.end, replacement);
+    }
+    Ok(changed)
   }
 }
 

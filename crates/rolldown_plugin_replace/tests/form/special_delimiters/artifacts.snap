@@ -9,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region input.js
 console.log(`
-  special
-  (special)
+  replaced
+  (replaced)
   specially
   especial
-  special.doSomething()
+  replaced.doSomething()
 `);
 
 //#endregion

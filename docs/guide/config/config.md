@@ -2,7 +2,7 @@
 
 It is recommended to utilize a configuration file rather than directly invoking the CLI to access Rolldown during development. You can create a `rolldown.config.js` file within the root directory of your project.
 
-```js
+```js [rolldown.config.js]
 export default {
   input: 'src/main.ts',
   output: {
@@ -15,7 +15,7 @@ At present, our support is limited to JavaScript files. TypeScript and JSON conf
 
 It is more recommended to utilize the `defineConfig` method to support type annotation and intellisense.
 
-```js
+```js [rolldown.config.js]
 import { defineConfig } from 'rolldown'
 
 export default defineConfig({
@@ -28,7 +28,7 @@ export default defineConfig({
 
 You can also specify multiple configurations as an array, and Rolldown will bundle them in parallel.
 
-```js
+```js [rolldown.config.js]
 import { defineConfig } from 'rolldown'
 
 export default defineConfig([

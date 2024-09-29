@@ -14,8 +14,7 @@ Rolldown uses the extension of the file to determine what the `Module Type` is, 
 
 In this case, users need to tell rolldown what the `Module Type` is for `.data` extension by configuring `moduleTypes` field in `rolldown.config.mjs`.
 
-```js
-// rolldown.config.mjs
+```js [rolldown.config.mjs]
 export default {
   moduleTypes: {
     '.data': 'json',

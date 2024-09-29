@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 import {
   groupIconMdPlugin,
   groupIconVitePlugin,
+  localIconLoader,
 } from 'vitepress-plugin-group-icons'
 
 // https://vitepress.dev/reference/site-config
@@ -140,6 +141,10 @@ export default defineConfig({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
+          rolldown: localIconLoader(
+            import.meta.url,
+            '../public/lightning-down.svg',
+          ),
         },
       }),
     ],

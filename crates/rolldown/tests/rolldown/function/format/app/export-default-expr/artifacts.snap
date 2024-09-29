@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+//#region main.js
+__toCommonJS(exports);
+__export(exports, { default: () => main_default });
+var main_default = 1;
+
+//#endregion
+```

@@ -20,6 +20,7 @@ __toCommonJS(exports);
 var external = require("external");
 var cjs_exports = __toESM(require("cjs.js"));
 var commonjs_exports = __toESM(require("commonjs.mjs"), 1);
+console.log(external.external, cjs_exports.foo, cjs_exports.bar);
 
 //#endregion
 ```

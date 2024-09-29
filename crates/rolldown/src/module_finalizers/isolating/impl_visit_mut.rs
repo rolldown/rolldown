@@ -75,28 +75,24 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
         .and_then(|symbol_ref| self.ctx.module.named_imports.get(&symbol_ref))
       {
         let rec = &self.ctx.module.import_records[named_import.record_id];
-        match &self.ctx.modules[rec.resolved_module] {
-          Module::Normal(importee) => {
-            // TODO deconflict namespace_ref
-            let namespace_ref = self.ctx.symbols.get_original_name(importee.namespace_object_ref);
 
-            match &named_import.imported {
-              rolldown_common::Specifier::Star => {
-                ident.name = self.snippet.atom(namespace_ref.as_str());
-              }
-              rolldown_common::Specifier::Literal(imported) => {
-                *expr = Expression::StaticMemberExpression(
-                  self.snippet.builder.alloc_static_member_expression(
-                    ident.span,
-                    self.snippet.id_ref_expr(namespace_ref, SPAN),
-                    self.snippet.builder.identifier_name(SPAN, imported.as_str()),
-                    false,
-                  ),
-                );
-              }
-            }
+        let namespace_object_ref =
+          self.create_namespace_object_ref_for_module(&self.ctx.modules[rec.resolved_module]);
+
+        match &named_import.imported {
+          rolldown_common::Specifier::Star => {
+            ident.name = self.snippet.atom(namespace_object_ref.as_str());
           }
-          Module::External(_) => {}
+          rolldown_common::Specifier::Literal(imported) => {
+            *expr = Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
+                ident.span,
+                self.snippet.id_ref_expr(namespace_object_ref.as_str(), SPAN),
+                self.snippet.builder.identifier_name(SPAN, imported.as_str()),
+                false,
+              ),
+            );
+          }
         }
       };
     }

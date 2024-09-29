@@ -166,30 +166,27 @@ impl IntegrationTest {
       snapshot.push_str(&rendered);
     }
 
-    // Make the snapshot consistent
-    let mut warnings = bundle_output.warnings;
+    let warnings = bundle_output.warnings;
     if !warnings.is_empty() {
-      warnings.sort_by(|a, b| {
-        let a = a.to_string();
-        let b = b.to_string();
-        a.cmp(&b)
-      });
       snapshot.push_str("# warnings\n\n");
       let diagnostics = warnings
         .into_iter()
         .map(|e| (e.kind(), e.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
-      let rendered = diagnostics
-        .flat_map(|(code, diagnostic)| {
+      let mut rendered_diagnostics = diagnostics
+        .map(|(code, diagnostic)| {
           [
             Cow::Owned(format!("## {code}\n")),
             "```text".into(),
             Cow::Owned(diagnostic.to_string()),
             "```".into(),
           ]
+          .join("\n")
         })
-        .collect::<Vec<_>>()
-        .join("\n");
-      snapshot.push_str(&rendered);
+        .collect::<Vec<_>>();
+
+      // Make the snapshot consistent
+      rendered_diagnostics.sort();
+      snapshot.push_str(&rendered_diagnostics.join("\n"));
       snapshot.push('\n');
     }
 

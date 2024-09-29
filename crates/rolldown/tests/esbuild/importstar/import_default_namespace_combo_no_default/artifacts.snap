@@ -80,11 +80,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry-prop.js:1:42]
+   ╭─[entry-default-ns-prop.js:1:56]
    │
- 1 │ import * as ns from './foo'; console.log(ns.default)
-   │                                          ─────┬────  
-   │                                               ╰────── 
+ 1 │ import def, * as ns from './foo'; console.log(def, ns, ns.default)
+   │                                                        ─────┬────  
+   │                                                             ╰────── 
 ───╯
 
 ```
@@ -104,11 +104,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry-default-ns-prop.js:1:56]
+   ╭─[entry-prop.js:1:42]
    │
- 1 │ import def, * as ns from './foo'; console.log(def, ns, ns.default)
-   │                                                        ─────┬────  
-   │                                                             ╰────── 
+ 1 │ import * as ns from './foo'; console.log(ns.default)
+   │                                          ─────┬────  
+   │                                               ╰────── 
 ───╯
 
 ```

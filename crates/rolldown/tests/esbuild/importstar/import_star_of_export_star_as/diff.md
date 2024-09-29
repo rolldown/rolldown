@@ -45,16 +45,21 @@ assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,6 +1,7 @@
+@@ -1,10 +1,11 @@
 -var foo_exports = {};
--__export(foo_exports, { bar_ns: () => bar_exports });
+-__export(foo_exports, {
+-    bar_ns: () => bar_exports
+-});
  var bar_exports = {};
- __export(bar_exports, { bar: () => bar });
+ __export(bar_exports, {
+     bar: () => bar
+ });
  var bar = 123;
 +var foo_exports = {};
-+__export(foo_exports, { bar_ns: () => bar_exports });
-+console.log(foo_exports);
++__export(foo_exports, {
++    bar_ns: () => bar_exports
++});
  console.log(foo_exports);
-\ No newline at end of file
++console.log(foo_exports);
 
 ```

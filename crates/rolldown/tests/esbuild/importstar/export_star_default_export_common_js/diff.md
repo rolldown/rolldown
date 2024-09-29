@@ -26,16 +26,13 @@ export { foo };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,4 +1,4 @@
+@@ -1,6 +1,2 @@
 -var entry_exports = {};
--__export(entry_exports, { foo: () => foo });
+-__export(entry_exports, {
+-    foo: () => foo
+-});
 -module.exports = __toCommonJS(entry_exports);
--var foo = 'foo';
-\ No newline at end of file
-+var foo = 'foo';
-+export {
-+    foo
-+};
-\ No newline at end of file
+ var foo = "foo";
++export {foo};
 
 ```

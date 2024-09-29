@@ -36,14 +36,11 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,6 +1,10 @@
+@@ -1,8 +1,10 @@
 -var someName = (() => {
 -    var entry_exports = {};
--    __export(entry_exports, { foo: () => foo });
--    var foo = 123;
--    return __toCommonJS(entry_exports);
--})();
-\ No newline at end of file
+-    __export(entry_exports, {
+-        foo: () => foo
 +(function (exports) {
 +    const foo = 123;
 +    Object.defineProperty(exports, 'foo', {
@@ -51,9 +48,11 @@ return exports;
 +        get: function () {
 +            return foo;
 +        }
-+    });
+     });
+-    var foo = 123;
+-    return __toCommonJS(entry_exports);
+-})();
 +    return exports;
-+}({}));
-\ No newline at end of file
++})({});
 
 ```

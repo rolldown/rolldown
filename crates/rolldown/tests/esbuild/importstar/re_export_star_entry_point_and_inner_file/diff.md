@@ -22,13 +22,14 @@ __reExport(inner_exports, require("b"));
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	
-@@ -1,6 +0,0 @@
+@@ -1,8 +0,0 @@
 -var entry_exports = {};
--__export(entry_exports, { inner: () => inner_exports });
+-__export(entry_exports, {
+-    inner: () => inner_exports
+-});
 -module.exports = __toCommonJS(entry_exports);
--__reExport(entry_exports, require('a'), module.exports);
+-__reExport(entry_exports, require("a"), module.exports);
 -var inner_exports = {};
--__reExport(inner_exports, require('b'));
-\ No newline at end of file
+-__reExport(inner_exports, require("b"));
 
 ```

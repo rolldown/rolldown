@@ -31,19 +31,16 @@ console.log(
 ===================================================================
 --- esbuild	/out/entry-nope.js
 +++ rolldown	
-@@ -1,11 +0,0 @@
+@@ -1,9 +0,0 @@
 -var require_empty = __commonJS({
--    'empty.js'() {
--    }
+-    "empty.js"() {}
 -});
 -var require_empty2 = __commonJS({
--    'empty.cjs'() {
--    }
+-    "empty.cjs"() {}
 -});
 -var js = __toESM(require_empty());
 -var cjs = __toESM(require_empty2());
 -console.log(void 0, void 0, void 0);
-\ No newline at end of file
 
 ```
 ## /out/entry-default.js
@@ -79,18 +76,15 @@ console.log(
 ===================================================================
 --- esbuild	/out/entry-default.js
 +++ rolldown	
-@@ -1,11 +0,0 @@
+@@ -1,9 +0,0 @@
 -var require_empty = __commonJS({
--    'empty.js'() {
--    }
+-    "empty.js"() {}
 -});
 -var require_empty2 = __commonJS({
--    'empty.cjs'() {
--    }
+-    "empty.cjs"() {}
 -});
 -var js = __toESM(require_empty());
 -var cjs = __toESM(require_empty2());
 -console.log(js.default, void 0, cjs.default);
-\ No newline at end of file
 
 ```

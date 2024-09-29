@@ -39,17 +39,15 @@ assert.equal(foo, 234);
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -2,7 +2,7 @@
-     'foo.js'(exports) {
+     "foo.js"(exports) {
          exports.foo = 123;
      }
  });
 -var ns = __toESM(require_foo());
 -var foo2 = 234;
 -console.log(ns.foo, ns.foo, foo2);
-\ No newline at end of file
 +var import_foo = __toESM(require_foo());
 +var foo = 234;
 +console.log(import_foo.foo, foo);
-\ No newline at end of file
 
 ```

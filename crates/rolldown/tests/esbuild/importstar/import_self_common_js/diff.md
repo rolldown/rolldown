@@ -35,7 +35,7 @@ export default require_entry();
 +++ rolldown	entry_js.mjs
 @@ -1,8 +1,8 @@
  var require_entry = __commonJS({
-     'entry.js'(exports) {
+     "entry.js"(exports) {
          var import_entry = __toESM(require_entry());
          exports.foo = 123;
 -        console.log(import_entry.foo);
@@ -43,8 +43,6 @@ export default require_entry();
      }
  });
 -module.exports = require_entry();
-\ No newline at end of file
 +export default require_entry();
-\ No newline at end of file
 
 ```

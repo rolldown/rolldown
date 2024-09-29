@@ -31,6 +31,7 @@
     "@types/lodash-es": "^4.17.12",
     "@types/markdown-it": "^14.1.2",
     "acorn": "^8.12.1",
+    "astring": "^1.9.0",
     "diff": "^7.0.0",
     "escodegen": "^2.1.0",
     "estree-toolkit": "^1.7.8",

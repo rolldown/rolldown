@@ -1,5 +1,5 @@
 import * as acorn from 'acorn'
-import * as gen from 'escodegen'
+import * as gen from 'astring'
 import { traverse, builders as b, Scope, NodePath } from 'estree-toolkit'
 
 export function rewriteRolldown(code: string) {
@@ -82,7 +82,9 @@ export function rewriteRolldown(code: string) {
       }
     },
   })
-  return gen.generate(ast, {})
+  return gen.generate(ast, {
+    indent: '    ',
+  })
 }
 
 function extractAssertArgument(
@@ -110,5 +112,7 @@ export function rewriteEsbuild(code: string) {
     ecmaVersion: 'latest',
     sourceType: 'module',
   })
-  return gen.generate(ast, {})
+  return gen.generate(ast, {
+    indent: '    ',
+  })
 }

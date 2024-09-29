@@ -34,13 +34,12 @@ assert.deepEqual(foo_exports, { x: 123 });
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,4 +1,4 @@
- var foo_exports = {};
- __export(foo_exports, { x: () => x });
+@@ -2,5 +2,5 @@
+ __export(foo_exports, {
+     x: () => x
+ });
  var x = 123;
 -console.log(foo_exports, void 0);
-\ No newline at end of file
 +console.log(foo_exports.foo, foo_exports);
-\ No newline at end of file
 
 ```

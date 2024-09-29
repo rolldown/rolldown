@@ -33,10 +33,8 @@ assert.equal(foo, 234);
 -var foo = 123;
 -var foo2 = 234;
 -console.log(foo, foo, foo2);
-\ No newline at end of file
 +var foo$1 = 123;
 +var foo = 234;
 +console.log(foo$1, foo);
-\ No newline at end of file
 
 ```

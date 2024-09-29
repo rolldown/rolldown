@@ -46,23 +46,22 @@ Object.defineProperty(exports, 'ns', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -2,8 +2,11 @@
-     'foo.js'(exports) {
+@@ -2,10 +2,11 @@
+     "foo.js"(exports) {
          exports.foo = 123;
      }
  });
 -var entry_exports = {};
--__export(entry_exports, { ns: () => ns });
--module.exports = __toCommonJS(entry_exports);
--var ns = __toESM(require_foo());
-\ No newline at end of file
+-__export(entry_exports, {
+-    ns: () => ns
 +var import_foo = __toESM(require_foo());
 +Object.defineProperty(exports, 'ns', {
 +    enumerable: true,
 +    get: function () {
 +        return import_foo;
 +    }
-+});
-\ No newline at end of file
+ });
+-module.exports = __toCommonJS(entry_exports);
+-var ns = __toESM(require_foo());
 
 ```

@@ -139,10 +139,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
           self.snippet.id_ref_expr(default_export_ref, SPAN),
           false,
         ));
-        self
-          .snippet
-          .builder
-          .statement_expression(SPAN, decl.to_expression_mut().take_in(self.alloc))
+        self.snippet.var_decl_stmt(default_export_ref, decl.to_expression_mut().take_in(self.alloc))
       }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
         let from =

@@ -1813,6 +1813,18 @@ expression: output
 
 - main-!~{000}~.mjs => main-vclaJcDx.mjs
 
+# tests/rolldown/function/format/app/export-default-class
+
+- main-!~{000}~.mjs => main-xXhq9HEJ.mjs
+
+# tests/rolldown/function/format/app/export-default-expr
+
+- main-!~{000}~.mjs => main-PScP31tp.mjs
+
+# tests/rolldown/function/format/app/export-default-fn
+
+- main-!~{000}~.mjs => main-fjqASYdK.mjs
+
 # tests/rolldown/function/format/app/export-named
 
 - main-!~{000}~.mjs => main-oltTnqxz.mjs

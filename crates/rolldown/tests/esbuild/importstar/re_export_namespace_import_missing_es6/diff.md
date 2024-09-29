@@ -1,30 +1,30 @@
 ## /out.js
 ### esbuild
 ```js
-// foo.js
-var foo_exports = {};
-__export(foo_exports, {
+// bar.js
+var bar_exports = {};
+__export(bar_exports, {
   x: () => x
 });
 var x = 123;
 
 // entry.js
-console.log(foo_exports, void 0);
+console.log(bar_exports, bar_exports.foo);
 ```
 ### rolldown
 ```js
 import { default as assert } from "node:assert";
 
 
-//#region foo.js
-var foo_exports = {};
-__export(foo_exports, { x: () => x });
+//#region bar.js
+var bar_exports = {};
+__export(bar_exports, { x: () => x });
 const x = 123;
 
 //#endregion
 //#region entry.js
-assert.equal(foo_exports.foo, undefined);
-assert.deepEqual(foo_exports, { x: 123 });
+assert.deepEqual(bar_exports, { x: 123 });
+assert.equal(void 0, undefined);
 
 //#endregion
 
@@ -35,11 +35,11 @@ assert.deepEqual(foo_exports, { x: 123 });
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
 @@ -2,5 +2,5 @@
- __export(foo_exports, {
+ __export(bar_exports, {
      x: () => x
  });
  var x = 123;
--console.log(foo_exports, void 0);
-+console.log(foo_exports.foo, foo_exports);
+-console.log(bar_exports, bar_exports.foo);
++console.log(bar_exports, void 0);
 
 ```

@@ -73,15 +73,11 @@
   diff
 ## [namespace_import_missing_common_js](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_common_js/diff.md)
   diff
-## [namespace_import_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_es6/diff.md)
-  diff
 ## [namespace_import_re_export_star_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_re_export_star_missing_es6/diff.md)
-  diff
-## [namespace_import_re_export_star_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6/diff.md)
   diff
 ## [namespace_import_unused_missing_common_js](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_common_js/diff.md)
   diff
-## [namespace_import_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_es6/diff.md)
+## [re_export_namespace_import_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_namespace_import_missing_es6/diff.md)
   diff
 ## [re_export_namespace_import_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6/diff.md)
   diff
@@ -118,9 +114,11 @@
 ## [import_star_export_star_as_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_as_unused)
 ## [import_star_export_star_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_unused)
 ## [import_star_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_unused)
+## [namespace_import_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_es6)
+## [namespace_import_re_export_star_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6)
+## [namespace_import_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_es6)
 ## [other_file_export_self_as_namespace_unused_es6](../../../crates/rolldown/tests/esbuild/importstar/other_file_export_self_as_namespace_unused_es6)
 ## [other_file_import_export_self_as_namespace_unused_es6](../../../crates/rolldown/tests/esbuild/importstar/other_file_import_export_self_as_namespace_unused_es6)
-## [re_export_namespace_import_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_namespace_import_missing_es6)
 ## [re_export_other_file_export_self_as_namespace_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_other_file_export_self_as_namespace_es6)
 ## [re_export_other_file_import_export_self_as_namespace_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_other_file_import_export_self_as_namespace_es6)
 ## [re_export_star_as_es6_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_es6_no_bundle)

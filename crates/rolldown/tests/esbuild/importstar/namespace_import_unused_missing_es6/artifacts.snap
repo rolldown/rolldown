@@ -8,15 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { default as assert } from "node:assert";
 
-
-//#region foo.js
-var foo_exports = {};
-__export(foo_exports, { x: () => x });
-const x = 123;
-
-//#endregion
 //#region entry.js
-assert.equal(foo_exports.foo, undefined);
+assert.equal(void 0, undefined);
 
 //#endregion
 ```

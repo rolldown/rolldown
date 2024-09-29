@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use arcstr::ArcStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
@@ -258,7 +256,7 @@ impl<'link> LinkStage<'link> {
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
   fn resolve_member_expr_refs(&mut self) {
-    let mut warnings = append_only_vec::AppendOnlyVec::new();
+    let warnings = append_only_vec::AppendOnlyVec::new();
     let resolved_maps = self
       .module_table
       .modules
@@ -341,7 +339,7 @@ impl<'link> LinkStage<'link> {
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_maps.len());
-    self.warnings.extend(warnings.into_iter());
+    self.warnings.extend(warnings);
     self.metas.par_iter_mut().zip(resolved_maps).for_each(|(meta, resolved_map)| {
       meta.resolved_member_expr_refs = resolved_map;
     });

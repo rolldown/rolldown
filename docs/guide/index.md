@@ -2,9 +2,7 @@
 
 ## Installation
 
-### package.json
-
-```json
+```json [package.json]
 {
   "name": "project",
   "type": "module",
@@ -17,9 +15,7 @@
 }
 ```
 
-### rolldown.config.js
-
-```js
+```js [rolldown.config.js]
 import { defineConfig } from 'rolldown'
 
 export default defineConfig({

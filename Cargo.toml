@@ -118,7 +118,6 @@ daachorse           = "1.0.0"
 dashmap             = "6.0.0"
 derivative          = "2.2.0"
 dunce               = "1.0.4"                                                                        # Normalize Windows paths to the most compatible format, avoiding UNC where possible
-fancy-regex         = "0.13.0"
 futures             = "0.3.30"
 glob                = "0.3.1"
 glob-match          = "0.2.1"

@@ -26,15 +26,21 @@ export function getEsbuildSnapFile(
   return ret
 }
 
-export function run(includeList: string[]) {
+export function run(includeList: string[], debug: boolean) {
   let snapfileList = getEsbuildSnapFile(includeList)
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
+    if (debug) {
+      console.log('category:', snapFile.normalizedName)
+    }
     let { normalizedName: snapCategory, content } = snapFile
     let parsedEsbuildSnap = parseEsbuildSnap(content)
     // singleEsbuildSnapshot
     let diffList = []
     for (let snap of parsedEsbuildSnap) {
+      if (debug) {
+        console.log('processing', snap.name)
+      }
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name)
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)

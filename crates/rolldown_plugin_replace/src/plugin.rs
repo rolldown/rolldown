@@ -106,15 +106,13 @@ impl ReplacePlugin {
   fn look_around_assert(&self, code: &str, matched_range: Range<usize>) -> bool {
     if self.prevent_assignment {
       let before = &code[..matched_range.start];
-      let stripped_before = before.trim_end();
-      if stripped_before.ends_with("let")
-        || stripped_before.ends_with("const")
-        || stripped_before.ends_with("var")
-      {
+      if NON_ASSIGNMENT_MATCHER.is_match(before) {
         return true;
       }
     }
     let after = &code[matched_range.end..];
+    // default delimiters[1] == `\\b(?!\\.)`, we use regex matched `\\b` before
+    // needs to test `(?!\\.)` here
     if after.starts_with('.') {
       return true;
     }

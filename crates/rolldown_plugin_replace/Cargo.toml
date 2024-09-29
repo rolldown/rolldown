@@ -7,7 +7,6 @@ repository.workspace = true
 version              = "0.1.0"
 
 [dependencies]
-anyhow          = { workspace = true }
 regex           = { workspace = true }
 regress         = { workspace = true }
 rolldown_plugin = { path = "../rolldown_plugin" }

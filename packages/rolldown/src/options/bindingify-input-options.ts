@@ -53,13 +53,19 @@ export function bindingifyInputOptions(
       : undefined,
     resolve: options.resolve
       ? (function bindingifyResolve() {
-          const { alias, ...rest } = options.resolve
+          const { alias, extensionAlias, ...rest } = options.resolve
 
           return {
             alias: alias
               ? Object.entries(alias).map(([name, replacement]) => ({
                   find: name,
                   replacements: [replacement],
+                }))
+              : undefined,
+            extensionAlias: extensionAlias
+              ? Object.entries(extensionAlias).map(([name, value]) => ({
+                  target: name,
+                  replacements: value,
                 }))
               : undefined,
             ...rest,

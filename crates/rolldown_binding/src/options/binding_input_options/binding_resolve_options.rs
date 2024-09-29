@@ -1,4 +1,5 @@
 use crate::types::binding_resolve_alias_item::AliasItem;
+use crate::types::binding_resolve_extension_alias::ExtensionAliasItem;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]
@@ -11,6 +12,7 @@ pub struct BindingResolveOptions {
   pub condition_names: Option<Vec<String>>,
   pub exports_fields: Option<Vec<Vec<String>>>,
   pub extensions: Option<Vec<String>>,
+  pub extension_alias: Option<Vec<ExtensionAliasItem>>,
   pub main_fields: Option<Vec<String>>,
   pub main_files: Option<Vec<String>>,
   pub modules: Option<Vec<String>>,
@@ -31,6 +33,9 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
       condition_names: value.condition_names,
       exports_fields: value.exports_fields,
       extensions: value.extensions,
+      extension_alias: value.extension_alias.map(|alias| {
+        alias.into_iter().map(|item| (item.target, item.replacements)).collect::<Vec<_>>()
+      }),
       main_fields: value.main_fields,
       main_files: value.main_files,
       modules: value.modules,

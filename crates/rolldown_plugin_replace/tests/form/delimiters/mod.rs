@@ -18,7 +18,7 @@ async fn replace_strings() {
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
         values: [("original".to_string(), "replaced".to_string())].into(),
-        delimiters: ("<%".to_string(), "%>".to_string()),
+        delimiters: Some(("<%".to_string(), "%>".to_string())),
         ..Default::default()
       }))],
     )

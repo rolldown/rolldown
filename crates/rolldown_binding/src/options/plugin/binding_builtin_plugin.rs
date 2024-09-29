@@ -286,10 +286,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(ReplacePlugin::with_options(config.map_or_else(ReplaceOptions::default, |opts| {
           ReplaceOptions {
             values: opts.values,
-            delimiters: opts.delimiters.map_or_else(
-              || ReplaceOptions::default().delimiters,
-              |raw| (raw[0].clone(), raw[1].clone()),
-            ),
+            delimiters: opts.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
             prevent_assignment: opts.prevent_assignment.unwrap_or(false),
             object_guards: opts.object_guards.unwrap_or(false),
           }

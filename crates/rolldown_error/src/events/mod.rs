@@ -12,6 +12,7 @@ pub mod export_undefined_variable;
 pub mod external_entry;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
+pub mod import_is_undefined;
 pub mod invalid_export_option;
 pub mod invalid_option;
 pub mod missing_export;

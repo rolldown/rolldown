@@ -1,6 +1,32 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'foo/no-side-effects.mjs'
+   ╭─[entry-default.js:6:2]
+   │
+ 6 │     mjs.default,
+   │     ─────┬─────  
+   │          ╰─────── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `nope` will always be undefined because there is no matching export in 'foo/no-side-effects.mjs'
+   ╭─[entry-nope.js:6:2]
+   │
+ 6 │     mjs.nope,
+   │     ────┬───  
+   │         ╰───── 
+───╯
+
+```
 # Assets
 
 ## entry-default_js.mjs

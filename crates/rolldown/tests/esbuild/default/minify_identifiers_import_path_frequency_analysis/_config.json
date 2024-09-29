@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "import_js",
+        "import": "import.js"
+      },
+      {
+        "name": "require_js",
+        "import": "require.js"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "esm_js",
+        "import": "esm.js"
+      },
+      {
+        "name": "cjs_js",
+        "import": "cjs.js"
+      }
+    ]
+  }
+}

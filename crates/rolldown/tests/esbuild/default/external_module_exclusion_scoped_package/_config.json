@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index_js",
+        "import": "index.js"
+      }
+    ]
+  }
+}

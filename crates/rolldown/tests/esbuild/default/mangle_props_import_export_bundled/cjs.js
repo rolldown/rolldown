@@ -1,0 +1,1 @@
+exports.cjs_foo_ = 'foo'

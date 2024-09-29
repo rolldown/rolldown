@@ -1,0 +1,1 @@
+console.log(<></>) // @jsxFrag 123

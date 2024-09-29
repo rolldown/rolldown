@@ -1,0 +1,1 @@
+export {}; console.log(this)

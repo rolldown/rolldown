@@ -359,6 +359,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      astring:
+        specifier: ^1.9.0
+        version: 1.9.0
       chalk:
         specifier: ^5.3.0
         version: 5.3.0

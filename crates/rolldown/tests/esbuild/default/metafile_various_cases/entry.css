@@ -1,0 +1,5 @@
+@import "extern.css";
+a { background: url(inline.svg) }
+b { background: url(file.file) }
+c { background: url(copy.copy) }
+d { background: url(extern.png) }

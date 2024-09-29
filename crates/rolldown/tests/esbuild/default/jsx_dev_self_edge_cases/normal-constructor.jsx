@@ -1,0 +1,1 @@
+export class Foo { constructor() { this.foo = <div/> } }

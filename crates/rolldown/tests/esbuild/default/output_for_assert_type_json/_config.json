@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "js-entry_js",
+        "import": "js-entry.js"
+      },
+      {
+        "name": "ts-entry_ts",
+        "import": "ts-entry.ts"
+      }
+    ]
+  }
+}

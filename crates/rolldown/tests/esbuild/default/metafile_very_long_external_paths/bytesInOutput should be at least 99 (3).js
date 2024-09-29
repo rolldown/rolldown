@@ -1,0 +1,1 @@
+import('./` + strings.Repeat("3", 99) + `.js').then(console.log)

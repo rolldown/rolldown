@@ -1,0 +1,1 @@
+namespace ns { export enum Foo {} } console.log(this)

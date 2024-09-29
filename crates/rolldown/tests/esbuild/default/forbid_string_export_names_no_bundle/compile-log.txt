@@ -1,0 +1,5 @@
+entry.js: ERROR: Using the string "not ok" as an export name is not supported in the configured target environment
+entry.js: ERROR: Using the string "same name" as an export name is not supported in the configured target environment
+entry.js: ERROR: Using the string "name 1" as an import name is not supported in the configured target environment
+entry.js: ERROR: Using the string "name 2" as an export name is not supported in the configured target environment
+entry.js: ERROR: Using the string "name space" as an export name is not supported in the configured target environment

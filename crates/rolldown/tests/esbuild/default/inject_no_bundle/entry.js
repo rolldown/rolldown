@@ -1,0 +1,11 @@
+let sideEffects = console.log('side effects')
+let collide = 123
+console.log(obj.prop)
+console.log(obj.defined)
+console.log(injectedAndDefined)
+console.log(injected.and.defined)
+console.log(chain.prop.test)
+console.log(chain2.prop2.test)
+console.log(collide)
+console.log(re_export)
+console.log(reexpo.rt)

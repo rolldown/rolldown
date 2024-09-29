@@ -1,0 +1,1 @@
+export class Foo extends Object { foo = <div/> }

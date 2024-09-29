@@ -47,6 +47,5 @@ assert.equal(void 0, undefined);
  });
 -var x = 123;
  console.log(foo_exports, void 0);
-\ No newline at end of file
 
 ```

@@ -1,7 +1,8 @@
 use oxc::minifier::InjectGlobalVariablesConfig;
-use rolldown_common::{InjectImport, ModuleType, NormalizedBundlerOptions, Platform};
+use rolldown_common::{InjectImport, InputItem, ModuleType, NormalizedBundlerOptions, Platform};
 use rustc_hash::FxHashMap;
-
+use std::env;
+use sugar_path::SugarPath;
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
   pub resolve_options: rolldown_resolver::ResolveOptions,
@@ -74,8 +75,19 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_default(),
   );
 
+  let mut input_list: Vec<InputItem> = raw_options.input.unwrap_or_default();
+  if env::consts::OS == "windows" && input_list.is_empty() {
+    input_list = input_list
+      .iter()
+      .map(|input_item| InputItem {
+        name: input_item.name.clone(),
+        import: input_item.import.to_slash_lossy().into(),
+      })
+      .collect::<Vec<_>>();
+  }
+
   let normalized = NormalizedBundlerOptions {
-    input: raw_options.input.unwrap_or_default(),
+    input: input_list,
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),

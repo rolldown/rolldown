@@ -29,6 +29,7 @@ pub enum EventKind {
   // Derive from esbuild
   CommonJsVariableInEsm,
   ExportUndefinedVariable,
+  ImportIsUndefined,
 }
 
 impl Display for EventKind {
@@ -57,6 +58,7 @@ impl Display for EventKind {
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
       EventKind::ExportUndefinedVariable => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
       EventKind::DiagnosableResolveError => write!(f, "DIAGNOSABLE_RESOLVE_ERROR"),
+      EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
     }
   }
 }

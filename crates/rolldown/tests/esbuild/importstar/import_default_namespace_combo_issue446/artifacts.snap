@@ -3,6 +3,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `def` will always be undefined because there is no matching export in 'internal.js'
+   ╭─[internal-def.js:2:18]
+   │
+ 2 │ console.log(def, ns.def)
+   │                  ───┬──  
+   │                     ╰──── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `def` will always be undefined because there is no matching export in 'internal.js'
+   ╭─[internal-ns-def.js:2:22]
+   │
+ 2 │ console.log(def, ns, ns.def)
+   │                      ───┬──  
+   │                         ╰──── 
+───╯
+
+```
 ## UNRESOLVED_IMPORT
 
 ```text

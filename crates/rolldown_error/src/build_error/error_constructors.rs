@@ -7,6 +7,7 @@ use rolldown_resolver::ResolveError;
 
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
+use crate::events::import_is_undefined::ImportIsUndefined;
 use crate::events::invalid_option::{InvalidOption, InvalidOptionTypes};
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -153,6 +154,16 @@ impl BuildDiagnostic {
       esm_export_span,
       cjs_export_ident_span,
     })
+  }
+
+  pub fn import_is_undefined(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    name: ArcStr,
+    stable_importer: String,
+  ) -> Self {
+    Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
   // --- Rolldown related

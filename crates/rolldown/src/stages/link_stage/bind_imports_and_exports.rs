@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
@@ -255,6 +256,7 @@ impl<'link> LinkStage<'link> {
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
   fn resolve_member_expr_refs(&mut self) {
+    let warnings = append_only_vec::AppendOnlyVec::new();
     let resolved_maps = self
       .module_table
       .modules
@@ -286,6 +288,16 @@ impl<'link> LinkStage<'link> {
                     // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
                       resolved.insert(member_expr_ref.span, None);
+                      warnings.push(
+                        BuildDiagnostic::import_is_undefined(
+                          ArcStr::from(module.id.as_str()),
+                          module.source.clone(),
+                          member_expr_ref.span,
+                          ArcStr::from(name.as_str()),
+                          canonical_ref_owner.stable_id.to_string(),
+                        )
+                        .with_severity_warning(),
+                      );
                     }
                     break;
                   };
@@ -327,6 +339,7 @@ impl<'link> LinkStage<'link> {
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_maps.len());
+    self.warnings.extend(warnings);
     self.metas.par_iter_mut().zip(resolved_maps).for_each(|(meta, resolved_map)| {
       meta.resolved_member_expr_refs = resolved_map;
     });

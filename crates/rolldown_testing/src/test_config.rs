@@ -1,13 +1,13 @@
 use std::fs;
 
-use jsonschema::{Draft, JSONSchema};
+use jsonschema::{Draft, Validator};
 use std::sync::LazyLock;
 
 pub use rolldown_testing_config::{TestConfig, TestMeta};
 
 use crate::workspace;
 
-static COMPILED_SCHEMA: LazyLock<JSONSchema> = LazyLock::new(|| {
+static COMPILED_SCHEMA: LazyLock<Validator> = LazyLock::new(|| {
   let schema_path = workspace::crate_dir("rolldown_testing").join("_config.schema.json");
 
   let schema_str = fs::read_to_string(&schema_path)
@@ -17,9 +17,9 @@ static COMPILED_SCHEMA: LazyLock<JSONSchema> = LazyLock::new(|| {
     panic!("Failed to parse test config file ${schema_path:?} in json. Got {e:?}")
   });
 
-  JSONSchema::options()
+  Validator::options()
     .with_draft(Draft::Draft7)
-    .compile(&schema_json)
+    .build(&schema_json)
     .unwrap_or_else(|e| panic!("Failed to compile {schema_path:?} to json schema. Got {e:?}"))
 });
 

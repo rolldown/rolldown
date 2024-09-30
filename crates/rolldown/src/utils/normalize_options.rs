@@ -2,7 +2,7 @@ use oxc::minifier::InjectGlobalVariablesConfig;
 use rolldown_common::{InjectImport, InputItem, ModuleType, NormalizedBundlerOptions, Platform};
 use rustc_hash::FxHashMap;
 use std::env;
-use sugar_path::SugarPath;
+
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
   pub resolve_options: rolldown_resolver::ResolveOptions,
@@ -81,7 +81,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .iter()
       .map(|input_item| InputItem {
         name: input_item.name.clone(),
-        import: input_item.import.to_slash_lossy().into(),
+        import: normalize_path(&input_item.import),
       })
       .collect::<Vec<_>>();
   }
@@ -138,4 +138,17 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }
+}
+
+fn normalize_path(path: &str) -> String {
+  let window_sep = "\\";
+  path.replace(window_sep, "/")
+}
+
+#[test]
+fn test_normalize_path() {
+  let normalized_path = normalize_path("foo\\bar");
+  assert_eq!(normalized_path, "foo/bar".to_string());
+  let normalized_path = normalize_path("foo\\bar\\baz\\quzz");
+  assert_eq!(normalized_path, "foo/bar/baz/quzz".to_string());
 }

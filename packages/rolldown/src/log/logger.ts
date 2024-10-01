@@ -20,11 +20,18 @@ import { getLogHandler, normalizeLog } from './logHandler'
 import type { InputOptions } from '../options/input-options'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import path from 'node:path'
+import { VERSION } from '..'
+
+export interface PluginContextMeta {
+  rollupVersion: string
+  rolldownVersion: string
+  watchMode: boolean
+}
 
 export class MinimalPluginContext {
   debug: LoggingFunction
   info: LoggingFunction
-  // meta: PluginContextMeta;
+  meta: PluginContextMeta
   warn: LoggingFunction
   readonly error: (error: RollupError | string) => never
 
@@ -55,6 +62,11 @@ export class MinimalPluginContext {
     )
     this.error = (e): never => {
       return error(logPluginError(normalizeLog(e), pluginName))
+    }
+    this.meta = {
+      rollupVersion: '4.23.0',
+      rolldownVersion: VERSION,
+      watchMode: false,
     }
   }
 }
@@ -97,7 +109,11 @@ export function getLogger(
               error: (log: RollupError | string): never =>
                 error(normalizeLog(log)),
               info: getLogHandler(LOG_LEVEL_INFO),
-              // meta: { rollupVersion, watchMode },
+              meta: {
+                rollupVersion: '4.23.0',
+                rolldownVersion: VERSION,
+                watchMode: false,
+              },
               warn: getLogHandler(LOG_LEVEL_WARN),
             },
             level,

@@ -88,6 +88,7 @@ allow = [
   "BSL-1.0",
   "Unicode-3.0",
   "MPL-2.0",
+  "MIT-0",
   #"Apache-2.0 WITH LLVM-exception",
 ]
 # Lint level for licenses considered copyleft

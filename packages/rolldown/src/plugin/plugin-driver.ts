@@ -5,7 +5,7 @@ import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
-import { InputOptions, OutputOptions } from '..'
+import { InputOptions, OutputOptions, VERSION } from '..'
 import { getLogger, getOnLog } from '../log/logger'
 import { BuiltinPlugin } from './builtin-plugin'
 
@@ -44,7 +44,11 @@ export class PluginDriver {
               name,
               logLevel,
             ),
-            // meta: { rollupVersion, watchMode },
+            meta: {
+              rollupVersion: '4.23.0',
+              rolldownVersion: VERSION,
+              watchMode: false,
+            },
             warn: getLogHandler(
               LOG_LEVEL_WARN,
               'PLUGIN_WARNING',

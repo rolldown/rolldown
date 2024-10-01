@@ -76,7 +76,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   );
 
   let mut input_list: Vec<InputItem> = raw_options.input.unwrap_or_default();
-  if env::consts::OS == "windows" && input_list.is_empty() {
+  if env::consts::OS == "windows" && !input_list.is_empty() {
     input_list = input_list
       .iter()
       .map(|input_item| InputItem {

@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "xyz" is imported by "cjs.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "xyz" is imported by "esm.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## cjs_js.mjs
+
+```js
+
+
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports) {
+	exports.foo_ = 123;
+	let bar_ = require("xyz").bar_;
+} });
+
+//#endregion
+export default require_cjs();
+
+```
+## esm_js.mjs
+
+```js
+import "xyz";
+
+//#region esm.js
+let foo_ = 123;
+
+//#endregion
+export { foo_ };
+```

@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+import * as fs from "fs";
+import { readFileSync } from "fs";
+
+
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"(exports) {
+	exports.fs = fs;
+	exports.readFileSync = readFileSync;
+	exports.foo = 123;
+} });
+
+//#endregion
+export default require_entry();
+
+```

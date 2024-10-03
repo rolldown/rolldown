@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+function entry_default(x) {
+	x.foo_;
+	x.foo_?.();
+	x?.foo_;
+	x?.foo_();
+	x?.foo_.bar_;
+	x?.foo_.bar_();
+	x?.["foo_"].bar_;
+	x?.foo_["bar_"];
+}
+
+//#endregion
+export { entry_default as default };
+```

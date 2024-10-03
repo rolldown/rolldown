@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+class Foo {
+	foo_ = 123;
+	static bar_ = 234;
+}
+Foo.bar_ = new Foo().foo_;
+
+//#endregion
+```

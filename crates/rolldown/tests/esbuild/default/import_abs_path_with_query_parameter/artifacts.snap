@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "/Users/user/project/file.txt#bar" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "/Users/user/project/file.txt?foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+import { default as foo } from "/Users/user/project/file.txt?foo";
+import { default as bar } from "/Users/user/project/file.txt#bar";
+
+//#region entry.js
+console.log(foo, bar);
+
+//#endregion
+```

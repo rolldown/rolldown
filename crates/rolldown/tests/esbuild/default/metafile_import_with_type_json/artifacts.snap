@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region data.json
+const some = "data";
+var data_default = { some };
+
+//#endregion
+//#region entry.js
+x = [
+	data_default,
+	data_default,
+	data_default
+];
+
+//#endregion
+```

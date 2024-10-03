@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+ok(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
+(() => {
+	ok(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
+})();
+(function() {
+	doNotSubstitute(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
+})();
+
+//#endregion
+```

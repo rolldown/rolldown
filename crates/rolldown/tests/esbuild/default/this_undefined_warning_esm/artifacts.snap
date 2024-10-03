@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region file1.js
+var file1_default = [this, this];
+
+//#endregion
+//#region node_modules/pkg/file2.js
+var file2_default = [this, this];
+
+//#endregion
+//#region entry.js
+console.log(file1_default, file2_default);
+
+//#endregion
+```

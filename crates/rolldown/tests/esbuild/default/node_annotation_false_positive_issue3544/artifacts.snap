@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## COMMONJS_VARIABLE_IN_ESM
+
+```text
+[COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `exports` variable is treated as a global variable in an ECMAScript module and may not work as expected
+   ╭─[entry.mjs:6:2]
+   │
+ 1 │ export function confuseNode(exports) {
+   │ ───┬──  
+   │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
+   │ 
+ 6 │     exports.notAnExport = function() {
+   │     ───┬───  
+   │        ╰───── 
+───╯
+
+```
+# Assets
+
+## entry_mjs.mjs
+
+```js
+
+//#region entry.mjs
+function confuseNode(exports) {
+	exports.notAnExport = function() {};
+}
+
+//#endregion
+export { confuseNode };
+```

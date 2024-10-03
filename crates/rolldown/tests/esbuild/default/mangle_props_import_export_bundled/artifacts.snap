@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## cjs.mjs
+
+```js
+
+
+//#region esm.js
+var esm_exports, esm_foo_;
+var init_esm = __esm({ "esm.js"() {
+	esm_exports = {};
+	__export(esm_exports, { esm_foo_: () => esm_foo_ });
+	esm_foo_ = "foo";
+} });
+
+//#endregion
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports) {
+	exports.cjs_foo_ = "foo";
+} });
+
+//#endregion
+export { __commonJS, __toCommonJS, __toESM, esm_exports, esm_foo_, init_esm, require_cjs };
+```
+## entry-cjs_js.mjs
+
+```js
+import { __commonJS, __toCommonJS, esm_exports, init_esm, require_cjs } from "./cjs.mjs";
+
+//#region entry-cjs.js
+var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
+	let { esm_foo_ } = (init_esm(), __toCommonJS(esm_exports));
+	let { cjs_foo_ } = require_cjs();
+	exports.bar_ = [esm_foo_, cjs_foo_];
+} });
+
+//#endregion
+export default require_entry_cjs();
+
+```
+## entry-esm_js.mjs
+
+```js
+import { __toESM, esm_foo_, init_esm, require_cjs } from "./cjs.mjs";
+
+//#region entry-esm.js
+init_esm();
+var import_cjs = __toESM(require_cjs());
+init_esm();
+var import_cjs$1 = __toESM(require_cjs());
+let bar_ = [
+	esm_foo_,
+	import_cjs.cjs_foo_,
+	esm_foo_,
+	import_cjs$1.cjs_foo_
+];
+
+//#endregion
+export { bar_ };
+```

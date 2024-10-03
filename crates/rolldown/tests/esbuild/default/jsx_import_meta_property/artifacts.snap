@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "factory.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "fragment.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## factory_jsx.mjs
+
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region factory.jsx
+console.log([_jsx("x", {}), /* @__PURE__ */ import.meta.factory("x", null)]);
+f = function() {
+	console.log([_jsx("y", {}), /* @__PURE__ */ import.meta.factory("y", null)]);
+};
+
+//#endregion
+```
+## fragment_jsx.mjs
+
+```js
+import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+
+//#region fragment.jsx
+console.log([_jsx(_Fragment, { children: "x" }), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x")]), f = function() {
+	console.log([_jsx(_Fragment, { children: "y" }), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y")]);
+};
+
+//#endregion
+```

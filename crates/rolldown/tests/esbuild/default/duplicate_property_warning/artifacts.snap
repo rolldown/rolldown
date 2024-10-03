@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "node_modules/inside-node-modules/index.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "outside-node-modules/index.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+import { jsx as _jsx, jsx as _jsx$1 } from "react/jsx-runtime";
+
+//#region outside-node-modules/index.jsx
+console.log({
+	a: 1,
+	a: 2
+}, _jsx$1("div", {
+	a2: true,
+	a2: 3
+}));
+
+//#endregion
+//#region node_modules/inside-node-modules/index.jsx
+console.log({
+	c: 1,
+	c: 2
+}, _jsx("div", {
+	c2: true,
+	c2: 3
+}));
+
+//#endregion
+```

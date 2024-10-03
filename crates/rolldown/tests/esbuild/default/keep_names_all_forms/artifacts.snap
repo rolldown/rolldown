@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## do-not-keep_js.mjs
+
+```js
+
+```
+## keep_js.mjs
+
+```js
+
+//#region keep.js
+function fn() {}
+var fn = function() {};
+var obj = { "f n": function() {} };
+fn = function() {};
+fn ||= function() {};
+fn &&= function() {};
+fn ??= function() {};
+var [fn = function() {}] = [];
+var { fn = function() {} } = {};
+for (var [fn = function() {}] = [];;);
+for (var { fn = function() {} } = {};;);
+for (var [fn = function() {}] in obj);
+for (var { fn = function() {} } in obj);
+for (var [fn = function() {}] of obj);
+for (var { fn = function() {} } of obj);
+[fn = function() {}] = [];
+({fn = function() {}} = {});
+
+//#endregion
+```

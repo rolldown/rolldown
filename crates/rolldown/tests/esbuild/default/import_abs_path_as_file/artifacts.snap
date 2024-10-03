@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "/Users/user/project/node_modules/pkg/index" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+import { default as pkg } from "/Users/user/project/node_modules/pkg/index";
+
+//#region entry.js
+console.log(pkg);
+
+//#endregion
+```

@@ -24,6 +24,7 @@ futures                  = { workspace = true }
 indexmap                 = { workspace = true }
 itertools                = { workspace = true }
 itoa                     = { workspace = true }
+lightningcss             = { workspace = true, features = ["into_owned", "visitor"] }
 memchr                   = { workspace = true }
 oxc                      = { workspace = true }
 regex                    = { workspace = true }

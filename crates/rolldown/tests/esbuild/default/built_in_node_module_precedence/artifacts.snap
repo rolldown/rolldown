@@ -1,43 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "node:foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
-## entry_js.mjs
+## entry_js.cjs
 
 ```js
 
 
-//#region node_modules/fs/index.js
-var require_fs_index = __commonJS({ "node_modules/fs/index.js"() {
-	console.log("include this too");
-} });
-
-//#endregion
-//#region node_modules/fs/promises.js
-var require_promises = __commonJS({ "node_modules/fs/promises.js"() {
-	throw "DO NOT INCLUDE THIS";
-} });
-
-//#endregion
 //#region node_modules/fs/abc.js
 var require_abc = __commonJS({ "node_modules/fs/abc.js"() {
 	console.log("include this");
 } });
 
 //#endregion
+//#region node_modules/fs/index.js
+var require_fs_index = __commonJS({ "node_modules/fs/index.js"() {
+	console.log("include this too");
+} });
+
+//#endregion
 //#region entry.js
 console.log([
-	require_fs_index(),
-	require_promises(),
+	require("node:fs"),
+	require("node:fs/promises"),
 	require("node:foo"),
 	require_abc(),
 	require_fs_index()

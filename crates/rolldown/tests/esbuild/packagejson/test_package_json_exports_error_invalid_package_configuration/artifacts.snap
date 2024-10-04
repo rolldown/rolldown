@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg1' in src/entry.js
+   ╭─[src/entry.js:1:8]
+   │
+ 1 │ import 'pkg1'
+   │        ───┬──  
+   │           ╰──── Package subpath is not defined by exports
+───╯
+
+```
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg2/foo' in src/entry.js
+   ╭─[src/entry.js:2:8]
+   │
+ 2 │ import 'pkg2/foo'
+   │        ─────┬────  
+   │             ╰────── Package subpath is not defined by exports
+───╯
+
+```

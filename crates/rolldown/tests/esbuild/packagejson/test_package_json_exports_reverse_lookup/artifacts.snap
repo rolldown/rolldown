@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg/path/to/real/file' in src/entry.js
+   ╭─[src/entry.js:1:9]
+   │
+ 1 │ require('pkg/path/to/real/file')
+   │         ───────────┬───────────  
+   │                    ╰───────────── Package subpath is not defined by exports
+───╯
+
+```
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg/path/to/other/file' in src/entry.js
+   ╭─[src/entry.js:2:9]
+   │
+ 2 │ require('pkg/path/to/other/file')
+   │         ────────────┬───────────  
+   │                     ╰───────────── Package subpath is not defined by exports
+───╯
+
+```

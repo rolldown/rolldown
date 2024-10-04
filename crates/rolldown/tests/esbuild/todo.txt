@@ -1,6 +1,0 @@
-    test_tests__esbuild__default__call_import_namespace_warning__config_json
-    test_tests__esbuild__default__jsx_constant_fragments__config_json
-    test_tests__esbuild__default__mangle_props_jsx_transform_namespace__config_json
-    test_tests__esbuild__default__mangle_props_type_script_features__config_json
-    test_tests__esbuild__default__this_with_es6_syntax__config_json
-

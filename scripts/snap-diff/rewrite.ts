@@ -116,25 +116,3 @@ export function rewriteEsbuild(code: string) {
     indent: '    ',
   })
 }
-
-
-const res = rewriteEsbuild(`
-
-class _Foo {
-  static foo = new _Foo();
-};
-var foo = Foo.foo;
-console.log(foo);
-var Bar = class {
-};
-var bar = 123;
-export {
-  Bar,
-  bar
-};
-
-
-
-`)
-
-console.log( res)

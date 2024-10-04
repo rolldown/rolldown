@@ -45,8 +45,16 @@ export function diffCase(
         return snap.filename == esbuildSource.name
       })
     }) ?? { content: '', filename: '' }
-    let esbuildContent = rewriteEsbuild(esbuildSource.content)
-    let rolldownContent = rewriteRolldown(matchedSource.content)
+    let esbuildContent = esbuildSource.content
+    let rolldownContent = matchedSource.content
+    try {
+      esbuildContent = rewriteEsbuild(esbuildSource.content)
+      rolldownContent = rewriteRolldown(matchedSource.content)
+    } catch (err) {
+      console.error(esbuildSnap.name)
+      console.error(`err: `, err)
+      continue
+    }
 
     if (matchedSource.content !== esbuildSource.content) {
       let structuredPatch = diff.structuredPatch(

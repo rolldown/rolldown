@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg1" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg2" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg3" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg4" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg5" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg6" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.mjs
+
+```js
+import "pkg1";
+import "pkg2";
+import "pkg3";
+import "pkg4";
+import "pkg5";
+import "pkg6";
+
+```

@@ -10,5 +10,5 @@
       "mainFields": ["some", "fields"]
     }
   },
-  "expectError": true
+  "expectExecuted": false
 }

@@ -8,5 +8,5 @@
     ],
     "platform": "neutral"
   },
-  "expectError": true
+  "expectExecuted": false
 }

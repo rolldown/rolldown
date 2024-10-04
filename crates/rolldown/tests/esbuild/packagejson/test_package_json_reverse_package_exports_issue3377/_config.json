@@ -8,5 +8,5 @@
     ],
     "platform": "node"
   },
-  "expectError": true
+  "expectExecuted": false
 }

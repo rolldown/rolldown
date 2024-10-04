@@ -359,9 +359,6 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
-      astring:
-        specifier: ^1.9.0
-        version: 1.9.0
       chalk:
         specifier: ^5.3.0
         version: 5.3.0
@@ -2007,7 +2004,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 

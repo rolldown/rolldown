@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {
   "config": {
     "input": [
@@ -10,17 +9,3 @@
   },
   "expectExecuted": false
 }
-||||||| parent of 4763c50f (update esbuild tests)
-=======
-{
-  "config": {
-    "input": [
-      {
-        "name": "entry",
-        "import": "./src/entry.js"
-      }
-    ]
-  },
-  "expectExecuted": false
-}
->>>>>>> 4763c50f (update esbuild tests)

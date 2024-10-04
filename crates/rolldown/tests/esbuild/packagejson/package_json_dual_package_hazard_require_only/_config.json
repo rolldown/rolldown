@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {
   "config": {
     "input": [
@@ -9,24 +8,3 @@
     ]
   }
 }
-||||||| parent of 4763c50f (update esbuild tests)
-=======
-{
-  "config": {
-    "input": [
-      {
-        "name": "entry",
-        "import": "./src/entry.js"
-      }
-    ]
-<<<<<<< HEAD
-  },
-  "expectExecuted": false
-||||||| parent of 18d3109a (chore: 🤖 enable packagejson)
-  },
-  "expectError": true
-=======
-  }
->>>>>>> 18d3109a (chore: 🤖 enable packagejson)
-}
->>>>>>> 4763c50f (update esbuild tests)

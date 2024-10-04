@@ -1,0 +1,96 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "x" is imported by "a.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "x" is imported by "b.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "x" is imported by "c.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "x" is imported by "d.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "x" is imported by "e.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+import * as ns$3 from "x";
+import * as ns$2 from "x";
+import * as ns$1 from "x";
+import { ns } from "x";
+
+
+//#region a.js
+var a_exports;
+var init_a = __esm({ "a.js"() {
+	a_exports = {};
+	__export(a_exports, { ns: () => ns$3 });
+} });
+
+//#endregion
+//#region b.js
+var b_exports;
+var init_b = __esm({ "b.js"() {
+	b_exports = {};
+	__export(b_exports, { ns: () => ns$2 });
+} });
+
+//#endregion
+//#region c.js
+var c_exports;
+var init_c = __esm({ "c.js"() {
+	c_exports = {};
+	__export(c_exports, { ns: () => ns$1 });
+} });
+
+//#endregion
+//#region d.js
+var d_exports;
+var init_d = __esm({ "d.js"() {
+	d_exports = {};
+	__export(d_exports, { ns: () => ns });
+} });
+
+//#endregion
+//#region e.js
+import * as import_x from "x";
+var e_exports;
+var init_e = __esm({ "e.js"() {
+	e_exports = {};
+	__reExport(e_exports, import_x);
+} });
+
+//#endregion
+//#region entry.js
+init_a(), __toCommonJS(a_exports);
+init_b(), __toCommonJS(b_exports);
+init_c(), __toCommonJS(c_exports);
+init_d(), __toCommonJS(d_exports);
+init_e(), __toCommonJS(e_exports);
+
+//#endregion
+```

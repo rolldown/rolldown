@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "some-path" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+
+
+//#region example.json
+var example_exports, works, example_default;
+var init_example = __esm({ "example.json"() {
+	example_exports = {};
+	__export(example_exports, {
+		default: () => example_default,
+		works: () => works
+	});
+	works = true;
+	example_default = { works };
+} });
+
+//#endregion
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"(exports, module) {
+	console.log([
+		require,
+		typeof require,
+		(init_example(), __toCommonJS(example_exports).default),
+		(init_example(), __toCommonJS(example_exports).default),
+		require(window.SOME_PATH),
+		module.require("./example.json"),
+		module.require("./example.json", { type: "json" }),
+		module.require(window.SOME_PATH),
+		require.resolve("some-path"),
+		require.resolve(window.SOME_PATH),
+		import("some-path"),
+		import(window.SOME_PATH)
+	]);
+} });
+
+//#endregion
+export default require_entry();
+
+```

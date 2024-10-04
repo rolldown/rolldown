@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "../../../out/in-out-dir.js" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "../../sha256.min.js" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "./foo.js" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "/api/config?a=1&b=2" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## index_js.mjs
+
+```js
+import { default as foo } from "./foo.js";
+import { default as out } from "../../../out/in-out-dir.js";
+import { default as sha256 } from "../../sha256.min.js";
+import { default as config } from "/api/config?a=1&b=2";
+
+//#region nested/folder/test.js
+console.log(foo, out, sha256, config);
+
+//#endregion
+```

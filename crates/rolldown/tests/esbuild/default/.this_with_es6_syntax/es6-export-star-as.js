@@ -1,0 +1,1 @@
+export * as ns from './dummy'; console.log(this)

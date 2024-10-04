@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "cjs-in-esm_js",
+        "import": "cjs-in-esm.js"
+      },
+      {
+        "name": "import-in-cjs_js",
+        "import": "import-in-cjs.js"
+      },
+      {
+        "name": "no-warnings-here_js",
+        "import": "no-warnings-here.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

@@ -9,5 +9,6 @@
     "external": [
       "supports-color"
     ]
-  }
+  },
+  "expectExecuted": false
 }

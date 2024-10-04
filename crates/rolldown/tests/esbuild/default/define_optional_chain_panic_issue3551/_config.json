@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "id-define_js",
+        "import": "id-define.js"
+      },
+      {
+        "name": "dot-define_js",
+        "import": "dot-define.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

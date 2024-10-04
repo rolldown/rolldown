@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@scope/foo" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@scope/foo/bar" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## index_js.mjs
+
+```js
+import { Foo } from "@scope/foo";
+import { Bar } from "@scope/foo/bar";
+
+//#region index.js
+const foo = new Foo();
+const bar = new Bar();
+
+//#endregion
+export { bar, foo };
+```

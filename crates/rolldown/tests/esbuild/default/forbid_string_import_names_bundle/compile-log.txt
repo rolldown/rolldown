@@ -1,0 +1,1 @@
+nested.js: ERROR: Using the string "some import" as an import name is not supported in the configured target environment

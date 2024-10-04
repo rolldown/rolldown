@@ -1,0 +1,84 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "extern-cjs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "extern-esm" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## dynamic.mjs
+
+```js
+
+//#region dynamic.js
+var dynamic_default = 5;
+
+//#endregion
+export { dynamic_default as default };
+```
+## entry_css.css
+
+```css
+@import "extern.css";
+a { background: url(inline.svg) }
+b { background: url(file.file) }
+c { background: url(copy.copy) }
+d { background: url(extern.png) }
+```
+## entry_css.mjs
+
+```js
+
+```
+## entry_js.mjs
+
+```js
+import { default as a } from "extern-esm";
+
+
+//#region esm.js
+var esm_default = 1;
+
+//#endregion
+//#region <data:application/json,2>
+var json_2_default = 2;
+
+//#endregion
+//#region file.file
+var require_file = __commonJS({ "file.file"() {
+	file;
+} });
+
+//#endregion
+//#region copy.copy
+var require_copy = __commonJS({ "copy.copy"() {
+	copy;
+} });
+
+//#endregion
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	module.exports = 4;
+} });
+
+//#endregion
+//#region entry.js
+var import_file = __toESM(require_file());
+var import_copy = __toESM(require_copy());
+console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.mjs"));
+let exported;
+
+//#endregion
+export { exported };
+```

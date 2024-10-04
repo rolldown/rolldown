@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+x("_doNotMangleThis", `_doNotMangleThis`);
+x._mangleThis("_mangleThis", `_mangleThis`);
+x._mangleThisToo("_mangleThisToo", `_mangleThisToo`);
+x._someKey = "_someKey" in y;
+x([`foo.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `foo.${"notMangled"} = bar.${"notMangledEither"}`]);
+
+//#endregion
+```

@@ -1,0 +1,15 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "a_js",
+        "import": "a.js"
+      },
+      {
+        "name": "b_js",
+        "import": "b.js"
+      }
+    ]
+  }
+}

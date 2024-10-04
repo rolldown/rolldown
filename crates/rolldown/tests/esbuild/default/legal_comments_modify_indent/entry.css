@@ -1,0 +1,6 @@
+@media (x: y) {
+	/**
+	 * @preserve
+	 */
+	z { zoom: 2 }
+}

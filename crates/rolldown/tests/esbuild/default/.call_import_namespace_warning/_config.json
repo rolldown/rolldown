@@ -1,0 +1,32 @@
+{
+  "expectError": true,
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "js_js",
+        "import": "js.js"
+      },
+      {
+        "name": "ts_ts",
+        "import": "ts.ts"
+      },
+      {
+        "name": "jsx-components_jsx",
+        "import": "jsx-components.jsx"
+      },
+      {
+        "name": "jsx-a_jsx",
+        "import": "jsx-a.jsx"
+      },
+      {
+        "name": "jsx-b_jsx",
+        "import": "jsx-b.jsx"
+      },
+      {
+        "name": "jsx-c_jsx",
+        "import": "jsx-c.jsx"
+      }
+    ]
+  }
+}

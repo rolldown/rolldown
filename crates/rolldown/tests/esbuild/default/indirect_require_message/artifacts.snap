@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## array_js.mjs
+
+```js
+
+//#region array.js
+let x = [require];
+
+//#endregion
+```
+## assign_js.mjs
+
+```js
+
+//#region assign.js
+require = x;
+
+//#endregion
+```
+## dot_js.mjs
+
+```js
+
+//#region dot.js
+let x = require.cache;
+
+//#endregion
+```
+## ident_js.mjs
+
+```js
+
+//#region ident.js
+let x = require;
+
+//#endregion
+```
+## index_js.mjs
+
+```js
+
+//#region index.js
+let x = require[cache];
+
+//#endregion
+```

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_css.css
+
+```css
+@import "./a.css";
+@import "./b.css";
+@import "./c.css";
+```
+## entry_css.mjs
+
+```js
+
+```
+## entry_js.mjs
+
+```js
+
+//#region a.js
+console.log("in a");
+
+//#endregion
+//#region b.js
+console.log("in b");
+
+//#endregion
+//#region c.js
+console.log("in c");
+
+//#endregion
+```

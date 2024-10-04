@@ -1,0 +1,167 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "e00_js",
+        "import": "e00.js"
+      },
+      {
+        "name": "e01_js",
+        "import": "e01.js"
+      },
+      {
+        "name": "e02_js",
+        "import": "e02.js"
+      },
+      {
+        "name": "e03_js",
+        "import": "e03.js"
+      },
+      {
+        "name": "e04_js",
+        "import": "e04.js"
+      },
+      {
+        "name": "e05_js",
+        "import": "e05.js"
+      },
+      {
+        "name": "e06_js",
+        "import": "e06.js"
+      },
+      {
+        "name": "e07_js",
+        "import": "e07.js"
+      },
+      {
+        "name": "e08_js",
+        "import": "e08.js"
+      },
+      {
+        "name": "e09_js",
+        "import": "e09.js"
+      },
+      {
+        "name": "e10_js",
+        "import": "e10.js"
+      },
+      {
+        "name": "e11_js",
+        "import": "e11.js"
+      },
+      {
+        "name": "e12_js",
+        "import": "e12.js"
+      },
+      {
+        "name": "e13_js",
+        "import": "e13.js"
+      },
+      {
+        "name": "e14_js",
+        "import": "e14.js"
+      },
+      {
+        "name": "e15_js",
+        "import": "e15.js"
+      },
+      {
+        "name": "e16_js",
+        "import": "e16.js"
+      },
+      {
+        "name": "e17_js",
+        "import": "e17.js"
+      },
+      {
+        "name": "e18_js",
+        "import": "e18.js"
+      },
+      {
+        "name": "e19_js",
+        "import": "e19.js"
+      },
+      {
+        "name": "e20_js",
+        "import": "e20.js"
+      },
+      {
+        "name": "e21_js",
+        "import": "e21.js"
+      },
+      {
+        "name": "e22_js",
+        "import": "e22.js"
+      },
+      {
+        "name": "e23_js",
+        "import": "e23.js"
+      },
+      {
+        "name": "e24_js",
+        "import": "e24.js"
+      },
+      {
+        "name": "e25_js",
+        "import": "e25.js"
+      },
+      {
+        "name": "e26_js",
+        "import": "e26.js"
+      },
+      {
+        "name": "e27_js",
+        "import": "e27.js"
+      },
+      {
+        "name": "e28_js",
+        "import": "e28.js"
+      },
+      {
+        "name": "e29_js",
+        "import": "e29.js"
+      },
+      {
+        "name": "e30_js",
+        "import": "e30.js"
+      },
+      {
+        "name": "e31_js",
+        "import": "e31.js"
+      },
+      {
+        "name": "e32_js",
+        "import": "e32.js"
+      },
+      {
+        "name": "e33_js",
+        "import": "e33.js"
+      },
+      {
+        "name": "e34_js",
+        "import": "e34.js"
+      },
+      {
+        "name": "e35_js",
+        "import": "e35.js"
+      },
+      {
+        "name": "e36_js",
+        "import": "e36.js"
+      },
+      {
+        "name": "e37_js",
+        "import": "e37.js"
+      },
+      {
+        "name": "e38_js",
+        "import": "e38.js"
+      },
+      {
+        "name": "e39_js",
+        "import": "e39.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

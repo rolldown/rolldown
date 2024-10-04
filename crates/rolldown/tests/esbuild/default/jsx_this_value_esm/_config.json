@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "factory_jsx",
+        "import": "factory.jsx"
+      },
+      {
+        "name": "fragment_jsx",
+        "import": "fragment.jsx"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_css.css
+
+```css
+@import "css-pkg"; a { b: c } /*! </style> */
+```
+## entry_css.mjs
+
+```js
+
+```
+## entry_js.mjs
+
+```js
+
+//#region node_modules/js-pkg/index.js
+x;
+
+//#endregion
+//#region entry.js
+a;
+
+//#endregion
+```

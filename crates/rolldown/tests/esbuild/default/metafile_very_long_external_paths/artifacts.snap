@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "./1111111111111111111111111111111111111111111111111111111111111111111111.file" is imported by "bytesInOutput should be at least 99 (1).js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "./2222222222222222222222222222222222222222222222222222222222222222222222.copy" is imported by "bytesInOutput should be at least 99 (2).js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "./3333333333333333333333333333333333333333333333333333333333333333333333.js" is imported by "bytesInOutput should be at least 99 (3).js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## bytesInOutput should be at least 99 (1)_js.mjs
+
+```js
+import { default as a } from "./1111111111111111111111111111111111111111111111111111111111111111111111.file";
+
+//#region bytesInOutput should be at least 99 (1).js
+console.log(a);
+
+//#endregion
+```
+## bytesInOutput should be at least 99 (2)_js.mjs
+
+```js
+import { default as a } from "./2222222222222222222222222222222222222222222222222222222222222222222222.copy";
+
+//#region bytesInOutput should be at least 99 (2).js
+console.log(a);
+
+//#endregion
+```
+## bytesInOutput should be at least 99 (3)_js.mjs
+
+```js
+
+//#region bytesInOutput should be at least 99 (3).js
+import("./3333333333333333333333333333333333333333333333333333333333333333333333.js").then(console.log);
+
+//#endregion
+```
+## bytesInOutput should be at least 99_css.css
+
+```css
+a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
+
+```
+## bytesInOutput should be at least 99_css.mjs
+
+```js
+
+```

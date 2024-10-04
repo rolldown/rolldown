@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "bytesInOutput should be at least 99 (1)_js",
+        "import": "bytesInOutput should be at least 99 (1).js"
+      },
+      {
+        "name": "bytesInOutput should be at least 99 (2)_js",
+        "import": "bytesInOutput should be at least 99 (2).js"
+      },
+      {
+        "name": "bytesInOutput should be at least 99 (3)_js",
+        "import": "bytesInOutput should be at least 99 (3).js"
+      },
+      {
+        "name": "bytesInOutput should be at least 99_css",
+        "import": "bytesInOutput should be at least 99.css"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

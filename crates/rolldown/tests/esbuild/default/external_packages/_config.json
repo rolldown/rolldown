@@ -8,6 +8,9 @@
         "import": "entry.js"
       }
     ],
-    "external": ["pkg1", "pkg2"]
+    "external": [
+      "pkg1",
+      "pkg2"
+    ]
   }
 }

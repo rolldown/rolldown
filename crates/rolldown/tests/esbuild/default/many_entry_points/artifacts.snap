@@ -1,0 +1,415 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e00_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e00.js
+console.log(shared_default);
+
+//#endregion
+```
+## e01_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e01.js
+console.log(shared_default);
+
+//#endregion
+```
+## e02_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e02.js
+console.log(shared_default);
+
+//#endregion
+```
+## e03_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e03.js
+console.log(shared_default);
+
+//#endregion
+```
+## e04_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e04.js
+console.log(shared_default);
+
+//#endregion
+```
+## e05_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e05.js
+console.log(shared_default);
+
+//#endregion
+```
+## e06_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e06.js
+console.log(shared_default);
+
+//#endregion
+```
+## e07_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e07.js
+console.log(shared_default);
+
+//#endregion
+```
+## e08_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e08.js
+console.log(shared_default);
+
+//#endregion
+```
+## e09_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e09.js
+console.log(shared_default);
+
+//#endregion
+```
+## e10_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e10.js
+console.log(shared_default);
+
+//#endregion
+```
+## e11_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e11.js
+console.log(shared_default);
+
+//#endregion
+```
+## e12_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e12.js
+console.log(shared_default);
+
+//#endregion
+```
+## e13_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e13.js
+console.log(shared_default);
+
+//#endregion
+```
+## e14_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e14.js
+console.log(shared_default);
+
+//#endregion
+```
+## e15_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e15.js
+console.log(shared_default);
+
+//#endregion
+```
+## e16_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e16.js
+console.log(shared_default);
+
+//#endregion
+```
+## e17_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e17.js
+console.log(shared_default);
+
+//#endregion
+```
+## e18_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e18.js
+console.log(shared_default);
+
+//#endregion
+```
+## e19_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e19.js
+console.log(shared_default);
+
+//#endregion
+```
+## e20_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e20.js
+console.log(shared_default);
+
+//#endregion
+```
+## e21_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e21.js
+console.log(shared_default);
+
+//#endregion
+```
+## e22_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e22.js
+console.log(shared_default);
+
+//#endregion
+```
+## e23_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e23.js
+console.log(shared_default);
+
+//#endregion
+```
+## e24_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e24.js
+console.log(shared_default);
+
+//#endregion
+```
+## e25_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e25.js
+console.log(shared_default);
+
+//#endregion
+```
+## e26_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e26.js
+console.log(shared_default);
+
+//#endregion
+```
+## e27_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e27.js
+console.log(shared_default);
+
+//#endregion
+```
+## e28_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e28.js
+console.log(shared_default);
+
+//#endregion
+```
+## e29_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e29.js
+console.log(shared_default);
+
+//#endregion
+```
+## e30_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e30.js
+console.log(shared_default);
+
+//#endregion
+```
+## e31_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e31.js
+console.log(shared_default);
+
+//#endregion
+```
+## e32_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e32.js
+console.log(shared_default);
+
+//#endregion
+```
+## e33_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e33.js
+console.log(shared_default);
+
+//#endregion
+```
+## e34_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e34.js
+console.log(shared_default);
+
+//#endregion
+```
+## e35_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e35.js
+console.log(shared_default);
+
+//#endregion
+```
+## e36_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e36.js
+console.log(shared_default);
+
+//#endregion
+```
+## e37_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e37.js
+console.log(shared_default);
+
+//#endregion
+```
+## e38_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e38.js
+console.log(shared_default);
+
+//#endregion
+```
+## e39_js.mjs
+
+```js
+import { shared_default } from "./shared.mjs";
+
+//#region e39.js
+console.log(shared_default);
+
+//#endregion
+```
+## shared.mjs
+
+```js
+
+//#region shared.js
+var shared_default = 123;
+
+//#endregion
+export { shared_default };
+```

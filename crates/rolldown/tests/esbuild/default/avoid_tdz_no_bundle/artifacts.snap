@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+class Foo {
+	static foo = new Foo();
+}
+let foo = Foo.foo;
+console.log(foo);
+class Bar {}
+let bar = 123;
+
+//#endregion
+export { Bar, bar };
+```

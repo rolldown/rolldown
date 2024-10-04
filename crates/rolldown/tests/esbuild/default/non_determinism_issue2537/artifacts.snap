@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+//#region entry.ts
+function aap(noot, wim) {
+	let mies = "teun";
+	if (noot) {
+		function vuur(v) {
+			return v * 2;
+		}
+		function schaap(s) {
+			return s / 2;
+		}
+		mies = vuur(wim) + schaap(wim);
+	}
+	return mies;
+}
+
+//#endregion
+export { aap };
+```

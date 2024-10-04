@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+
+//#region internal.js
+let ok = true;
+
+//#endregion
+//#region very-nested.js
+let nested$1 = 2;
+
+//#endregion
+//#region nested.js
+var nested_exports = {};
+__export(nested_exports, {
+	"nested name": () => nested,
+	"very nested name": () => nested$1
+});
+let nested = 1;
+
+//#endregion
+export { nested_exports as 'name space', nested as 'nested name', ok as 'not ok', ok, nested$1 as 'very nested name' };
+```

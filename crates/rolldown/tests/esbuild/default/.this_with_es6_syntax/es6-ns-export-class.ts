@@ -1,0 +1,1 @@
+namespace ns { export class Foo {} } console.log(this)

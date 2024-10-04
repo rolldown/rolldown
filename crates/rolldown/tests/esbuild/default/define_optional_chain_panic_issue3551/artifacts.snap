@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dot-define_js.mjs
+
+```js
+
+//#region dot-define.js
+a?.b.c;
+a?.b.c;
+a?.b["c"];
+a?.b["c"];
+a?.b();
+a?.b();
+a?.b.c();
+a?.b.c();
+a?.b["c"]();
+a?.b["c"]();
+delete a?.b.c;
+delete a?.b.c;
+delete a?.b["c"];
+delete a?.b["c"];
+
+//#endregion
+```
+## id-define_js.mjs
+
+```js
+
+//#region id-define.js
+x?.y.z;
+x?.y.z;
+x?.y["z"];
+x?.y["z"];
+x?.y();
+x?.y();
+x?.y.z();
+x?.y.z();
+x?.y["z"]();
+x?.y["z"]();
+delete x?.y.z;
+delete x?.y.z;
+delete x?.y["z"];
+delete x?.y["z"];
+
+//#endregion
+```

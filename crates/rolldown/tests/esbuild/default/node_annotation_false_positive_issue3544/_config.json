@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry_mjs",
+        "import": "entry.mjs"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

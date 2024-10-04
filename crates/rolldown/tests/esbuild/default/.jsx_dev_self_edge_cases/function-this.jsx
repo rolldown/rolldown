@@ -1,0 +1,1 @@
+export function Foo() { return <div/> }

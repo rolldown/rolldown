@@ -1,0 +1,73 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a_js.mjs
+
+```js
+import { b_exports } from "./b.mjs";
+
+//#region a.js
+var a_default = 123;
+var varName = 234;
+let letName = 234;
+const constName = 234;
+function Func2() {}
+class Class2 {}
+function Func() {}
+class Class {}
+
+//#endregion
+export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
+```
+## b.mjs
+
+```js
+
+
+//#region b.js
+var b_exports = {};
+__export(b_exports, { default: () => b_default });
+function b_default() {}
+
+//#endregion
+export { b_default, b_exports };
+```
+## b_js.mjs
+
+```js
+import { b_default } from "./b.mjs";
+
+export { b_default as default };
+```
+## c_js.mjs
+
+```js
+
+//#region c.js
+function foo() {}
+
+//#endregion
+export { foo as default };
+```
+## d_js.mjs
+
+```js
+
+//#region d.js
+class d_default {}
+
+//#endregion
+export { d_default as default };
+```
+## e_js.mjs
+
+```js
+
+//#region e.js
+class Foo {}
+
+//#endregion
+export { Foo as default };
+```

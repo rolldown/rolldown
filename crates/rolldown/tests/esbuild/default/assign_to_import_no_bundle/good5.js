@@ -1,0 +1,1 @@
+import x from "foo"; x['y z'] = 1

@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "parameter-properties_ts",
+        "import": "parameter-properties.ts"
+      },
+      {
+        "name": "namespace-exports_ts",
+        "import": "namespace-exports.ts"
+      },
+      {
+        "name": "enum-values_ts",
+        "import": "enum-values.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

@@ -1,0 +1,1 @@
+export * from './dummy'; console.log(this)

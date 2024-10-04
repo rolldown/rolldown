@@ -1,0 +1,88 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bare_js.mjs
+
+```js
+import { __toESM, require_foo } from "./foo2.mjs";
+
+//#region bare.js
+var import_foo = __toESM(require_foo());
+
+//#endregion
+```
+## foo.mjs
+
+```js
+import { require_foo } from "./foo2.mjs";
+
+export default require_foo();
+
+```
+## foo2.mjs
+
+```js
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"() {
+	console.log("no exports here");
+} });
+
+//#endregion
+export { __toESM, require_foo };
+```
+## import_js.mjs
+
+```js
+
+//#region import.js
+console.log(import("./foo.mjs"));
+
+//#endregion
+```
+## named_js.mjs
+
+```js
+import { __toESM, require_foo } from "./foo2.mjs";
+
+//#region named.js
+var import_foo = __toESM(require_foo());
+console.log((0, import_foo.default)(import_foo.x, import_foo.y));
+
+//#endregion
+```
+## require_js.mjs
+
+```js
+import { require_foo } from "./foo2.mjs";
+
+//#region require.js
+console.log(require_foo());
+
+//#endregion
+```
+## star-capture_js.mjs
+
+```js
+import { __toESM, require_foo } from "./foo2.mjs";
+
+//#region star-capture.js
+var import_foo = __toESM(require_foo());
+console.log(import_foo);
+
+//#endregion
+```
+## star_js.mjs
+
+```js
+import { __toESM, require_foo } from "./foo2.mjs";
+
+//#region star.js
+var import_foo = __toESM(require_foo());
+console.log(import_foo.default(import_foo.x, import_foo.y));
+
+//#endregion
+```

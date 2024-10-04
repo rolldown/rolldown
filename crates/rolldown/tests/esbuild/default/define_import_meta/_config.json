@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      }
+    ],
+    "define": {
+      "import.meta.foo": "2",
+      "import.meta.foo.bar": "3"
+    }
+  },
+  "expectExecuted": false
+}

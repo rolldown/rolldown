@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `prop` will always be undefined because there is no matching export in 'foo.json'
+   ╭─[js-entry.js:5:21]
+   │
+ 5 │ use(all, copy, def, ns.prop)
+   │                     ───┬───  
+   │                        ╰───── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `prop` will always be undefined because there is no matching export in 'foo.json'
+   ╭─[ts-entry.ts:6:21]
+   │
+ 6 │ use(all, copy, def, ns.prop)
+   │                     ───┬───  
+   │                        ╰───── 
+───╯
+
+```
+# Assets
+
+## foo.mjs
+
+```js
+
+
+//#region foo.json
+var foo_default = {};
+
+//#endregion
+//#region foo.copy
+var require_foo = __commonJS({ "foo.copy"() {} });
+
+//#endregion
+export { __toESM, foo_default, require_foo };
+```
+## js-entry_js.mjs
+
+```js
+import { __toESM, foo_default, require_foo } from "./foo.mjs";
+
+//#region js-entry.js
+var import_foo = __toESM(require_foo());
+use(foo_default, import_foo.default, foo_default, void 0);
+
+//#endregion
+export { foo_default as default };
+```
+## ts-entry_ts.mjs
+
+```js
+import { __toESM, foo_default, require_foo } from "./foo.mjs";
+
+//#region ts-entry.ts
+var import_foo = __toESM(require_foo());
+use(foo_default, import_foo.default, foo_default, void 0);
+
+//#endregion
+export { foo_default as default };
+```

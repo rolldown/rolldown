@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry-esm_js",
+        "import": "entry-esm.js"
+      },
+      {
+        "name": "entry-cjs_js",
+        "import": "entry-cjs.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

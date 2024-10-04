@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+(() => {
+	let local = 1;
+	let outer = 2;
+	let outerDead = 3;
+	with({}) {
+		var hoisted = 4;
+		let local$1 = 5;
+		hoisted++;
+		local$1++;
+		outer++;
+	}
+	{
+		hoisted++;
+		local++;
+		outer++;
+		outerDead++;
+	}
+})();
+
+//#endregion
+```

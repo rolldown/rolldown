@@ -1,0 +1,3 @@
+entry.js: ERROR: Using the string "an import" as an import name is not supported in the configured target environment
+entry.js: ERROR: Using the string "another import" as an import name is not supported in the configured target environment
+entry.js: ERROR: Using the string "an export" as an export name is not supported in the configured target environment

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "app_jsx",
+        "import": "app.jsx"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

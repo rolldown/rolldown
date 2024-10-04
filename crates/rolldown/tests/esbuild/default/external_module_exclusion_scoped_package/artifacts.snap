@@ -1,0 +1,96 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@a1" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@a1-a2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@a1/a2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@b1" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@b1/b2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@b1/b2-b3" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@b1/b2/b3" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@c1" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@c1/c2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@c1/c2/c3" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@c1/c2/c3-c4" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "@c1/c2/c3/c4" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## index_js.mjs
+
+```js
+import "@a1";
+import "@a1/a2";
+import "@a1-a2";
+import "@b1";
+import "@b1/b2";
+import "@b1/b2/b3";
+import "@b1/b2-b3";
+import "@c1";
+import "@c1/c2";
+import "@c1/c2/c3";
+import "@c1/c2/c3/c4";
+import "@c1/c2/c3-c4";
+
+```

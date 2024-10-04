@@ -7,5 +7,6 @@
       }
     ],
     "treeshake": false
-  }
+  },
+  "expectExecuted": false
 }

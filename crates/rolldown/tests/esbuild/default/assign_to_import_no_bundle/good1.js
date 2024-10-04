@@ -1,0 +1,1 @@
+import x from "foo"; ({[x]: y} = 1)

@@ -1,0 +1,1 @@
+namespace ns { export abstract class Foo {} } console.log(this)

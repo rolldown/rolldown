@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a_js.mjs
+
+```js
+
+//#region a.js
+require(x ? "a" : y ? "./b" : "c");
+require(x ? y ? "a" : "./b" : c);
+
+//#endregion
+```

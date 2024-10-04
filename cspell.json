@@ -23,6 +23,7 @@
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+    "crates/rolldown/tests/esbuild/**/*",
     "/crates/rolldown_utils/src/light_guess.rs",
     "/pnpm-lock.yaml",
     "*.wasm",

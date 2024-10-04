@@ -22,5 +22,6 @@
         "import": "index.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

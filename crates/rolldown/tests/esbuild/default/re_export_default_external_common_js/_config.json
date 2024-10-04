@@ -8,6 +8,9 @@
       }
     ],
     "format": "cjs",
-    "external": ["foo", "bar"]
+    "external": [
+      "foo",
+      "bar"
+    ]
   }
 }

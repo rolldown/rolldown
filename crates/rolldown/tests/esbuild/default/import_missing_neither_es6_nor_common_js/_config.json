@@ -26,5 +26,6 @@
         "import": "import.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

@@ -10,5 +10,6 @@
         "import": "entry2.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

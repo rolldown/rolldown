@@ -14,5 +14,6 @@
         "import": "c.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

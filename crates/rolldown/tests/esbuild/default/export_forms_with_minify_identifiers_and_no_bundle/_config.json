@@ -22,5 +22,6 @@
         "import": "e.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

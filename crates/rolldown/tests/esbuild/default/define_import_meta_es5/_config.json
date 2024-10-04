@@ -14,5 +14,6 @@
         "import": "dead-code.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

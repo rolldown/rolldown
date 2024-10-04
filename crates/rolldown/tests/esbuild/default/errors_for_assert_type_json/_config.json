@@ -10,5 +10,6 @@
         "import": "ts-entry.ts"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

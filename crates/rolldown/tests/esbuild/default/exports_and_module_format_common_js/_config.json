@@ -6,6 +6,7 @@
         "import": "./entry.js"
       }
     ],
-    "format":"cjs"
-  }
+    "format": "cjs"
+  },
+  "expectExecuted": false
 }

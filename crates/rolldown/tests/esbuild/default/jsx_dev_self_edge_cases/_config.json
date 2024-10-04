@@ -6,5 +6,6 @@
         "import": "*"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

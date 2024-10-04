@@ -10,5 +10,6 @@
         "import": "mangle.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

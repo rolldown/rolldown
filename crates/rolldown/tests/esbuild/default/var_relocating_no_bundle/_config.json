@@ -22,5 +22,6 @@
         "import": "function-nested.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

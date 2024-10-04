@@ -21,6 +21,6 @@
       }
     ]
   },
-  "expectError": true
+  "expectExecuted": false
 }
 >>>>>>> 4763c50f (update esbuild tests)

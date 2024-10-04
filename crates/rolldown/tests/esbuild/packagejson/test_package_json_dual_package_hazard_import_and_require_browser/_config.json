@@ -13,6 +13,7 @@
 ||||||| parent of 4763c50f (update esbuild tests)
 =======
 {
+  "expectExecuted": false,
   "config": {
     "input": [
       {

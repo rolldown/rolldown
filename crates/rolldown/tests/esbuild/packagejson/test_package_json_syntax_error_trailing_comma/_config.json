@@ -20,6 +20,7 @@
         "import": "./src/entry.js"
       }
     ]
-  }
+  },
+  "expectError": true
 }
 >>>>>>> 4763c50f (update esbuild tests)

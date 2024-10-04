@@ -2,8 +2,20 @@
   "config": {
     "input": [
       {
-        "name": "*",
-        "import": "*"
+        "name": "import_computed",
+        "import": "import-computed.js"
+      },
+      {
+        "name": "import_normal",
+        "import": "import-normal.js"
+      },
+      {
+        "name": "local_computed",
+        "import": "local-computed.js"
+      },
+      {
+        "name": "local_normal",
+        "import": "local-normal.js"
       }
     ]
   },

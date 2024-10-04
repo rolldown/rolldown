@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[test.bad:1:5]
+   │
+ 1 │ This is a test.
+   │     │ 
+   │     ╰─ 
+   │ 
+   │ Help: Try insert a semicolon here
+───╯
+
+```

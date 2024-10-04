@@ -5,7 +5,10 @@
         "name": "entry_js",
         "import": "entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".js": "jsx"
+    }
   },
   "expectExecuted": false
 }

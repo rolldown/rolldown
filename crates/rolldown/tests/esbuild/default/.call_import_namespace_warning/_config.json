@@ -1,4 +1,5 @@
 {
+  "expectError": true,
   "expectExecuted": false,
   "config": {
     "input": [

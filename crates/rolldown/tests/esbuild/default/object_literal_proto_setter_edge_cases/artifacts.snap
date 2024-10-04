@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "import-normal.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "import-shorthand.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## import_normal.mjs
+
+```js
+import "foo";
+
+```
+## import_shorthand.mjs
+
+```js
+import "foo";
+
+```
+## local_normal.mjs
+
+```js
+
+```
+## local_shorthand.mjs
+
+```js
+
+```

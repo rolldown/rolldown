@@ -1,2 +1,2 @@
-import a from './` + strings.Repeat("1", 99) + `.file'
+import a from './1111111111111111111111111111111111111111111111111111111111111111111111.file'
 console.log(a)

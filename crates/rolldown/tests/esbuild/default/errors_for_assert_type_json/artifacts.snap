@@ -1,0 +1,148 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "unused" is not exported by "foo.json".
+   ╭─[js-entry.js:3:10]
+   │
+ 3 │ import { unused } from './foo.json' assert { type: 'json' }
+   │          ───┬──  
+   │             ╰──── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "exported" is not exported by "foo.json".
+   ╭─[js-entry.js:7:10]
+   │
+ 7 │ export { exported } from './foo.json' assert { type: 'json' }
+   │          ────┬───  
+   │              ╰───── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "def3" is not exported by "foo.json".
+   ╭─[js-entry.js:9:10]
+   │
+ 9 │ export { def3 as default } from './foo.json' assert { type: 'json' }
+   │          ──┬─  
+   │            ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "used" is not exported by "foo.json".
+   ╭─[js-entry.js:4:10]
+   │
+ 4 │ import { used } from './foo.json' assert { type: 'json' }
+   │          ──┬─  
+   │            ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "used" is not exported by "foo.json".
+   ╭─[ts-entry.ts:4:10]
+   │
+ 4 │ import { used } from './foo.json' assert { type: 'json' }
+   │          ──┬─  
+   │            ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "exported" is not exported by "foo.json".
+   ╭─[ts-entry.ts:7:10]
+   │
+ 7 │ export { exported } from './foo.json' assert { type: 'json' }
+   │          ────┬───  
+   │              ╰───── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "def3" is not exported by "foo.json".
+   ╭─[ts-entry.ts:9:10]
+   │
+ 9 │ export { def3 as default } from './foo.json' assert { type: 'json' }
+   │          ──┬─  
+   │            ╰─── Missing export
+───╯
+
+```# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `prop` will always be undefined because there is no matching export in 'foo.json'
+   ╭─[js-entry.js:6:11]
+   │
+ 6 │ use(used, ns.prop)
+   │           ───┬───  
+   │              ╰───── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `prop` will always be undefined because there is no matching export in 'foo.json'
+   ╭─[ts-entry.ts:6:11]
+   │
+ 6 │ use(used, ns.prop)
+   │           ───┬───  
+   │              ╰───── 
+───╯
+
+```
+# Assets
+
+## foo.mjs
+
+```js
+
+//#region foo.json
+var foo_default = {};
+
+//#endregion
+export { foo_default };
+```
+## js-entry_js.mjs
+
+```js
+import { foo_default } from "./foo.mjs";
+
+//#region js-entry.js
+use(used, void 0);
+
+//#endregion
+export { foo_default as def2, foo_default$1 as default, exported };
+```
+## ts-entry_ts.mjs
+
+```js
+import { foo_default } from "./foo.mjs";
+
+//#region ts-entry.ts
+use(used, void 0);
+
+//#endregion
+export { foo_default as def2, foo_default$1 as default, exported };
+```

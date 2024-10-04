@@ -1,2 +1,2 @@
-import a from './` + strings.Repeat("2", 99) + `.copy'
+import a from './2222222222222222222222222222222222222222222222222222222222222222222222.copy'
 console.log(a)

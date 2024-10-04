@@ -1,1 +1,1 @@
-import('./` + strings.Repeat("3", 99) + `.js').then(console.log)
+import('./3333333333333333333333333333333333333333333333333333333333333333333333.js').then(console.log)

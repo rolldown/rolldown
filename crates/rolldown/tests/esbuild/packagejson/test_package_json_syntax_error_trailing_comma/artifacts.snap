@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'demo-pkg' in src/entry.js
+   ╭─[src/entry.js:1:16]
+   │
+ 1 │ import fn from 'demo-pkg'
+   │                ─────┬────  
+   │                     ╰────── JSON parse error
+───╯
+
+```

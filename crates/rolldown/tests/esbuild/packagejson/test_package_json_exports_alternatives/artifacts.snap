@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg/apples/red.js" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg/books/red" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.mjs
+
+```js
+import { default as redApple } from "pkg/apples/red.js";
+import { default as redBook } from "pkg/books/red";
+
+//#region node_modules/pkg/good-apples/green.js
+var green_default = "🍏";
+
+//#endregion
+//#region node_modules/pkg/good-books/green-book.js
+var green_book_default = "📗";
+
+//#endregion
+//#region src/entry.js
+console.log({
+	redApple,
+	greenApple: green_default,
+	redBook,
+	greenBook: green_book_default
+});
+
+//#endregion
+```

@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg1/foo/bar' in src/entry.js
+   ╭─[src/entry.js:1:8]
+   │
+ 1 │ import 'pkg1/foo/bar'
+   │        ───────┬──────  
+   │               ╰──────── Expecting folder to folder mapping
+───╯
+
+```

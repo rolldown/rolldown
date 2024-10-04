@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./lib/msw-config.ts"
+      }
+    ],
+    "platform": "node"
+  },
+  "expectExecuted": false
+}

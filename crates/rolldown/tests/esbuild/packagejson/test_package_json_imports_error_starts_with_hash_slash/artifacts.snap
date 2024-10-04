@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## DIAGNOSABLE_RESOLVE_ERROR
+
+```text
+[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve '#/foo' in src/entry.js
+   ╭─[src/entry.js:1:8]
+   │
+ 1 │ import '#/foo'
+   │        ───┬───  
+   │           ╰───── Invalid module specifier
+───╯
+
+```

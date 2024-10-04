@@ -256,7 +256,7 @@ impl ModuleLoader {
           } = task_result;
           all_warnings.extend(warnings);
 
-          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ImportRecord> =
+          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
               .into_iter()
               .zip(resolved_deps)
@@ -278,7 +278,7 @@ impl ModuleLoader {
                 {
                   dynamic_import_entry_ids.insert(id);
                 }
-                raw_rec.into_import_record(id)
+                raw_rec.into_resolved(id)
               })
               .collect::<IndexVec<ImportRecordIdx, _>>();
 

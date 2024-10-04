@@ -1,3 +1,4 @@
+// cSpell:ignore packagejson
 import { run } from './runner'
 
 const args = process.argv.slice(2)

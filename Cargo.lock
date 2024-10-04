@@ -2338,6 +2338,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
+ "rolldown_std_utils",
  "rolldown_testing",
  "rolldown_tracing",
  "rolldown_utils",
@@ -2651,6 +2652,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_std_utils"
+version = "0.1.0"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "rolldown_testing"
 version = "0.1.0"
 dependencies = [
@@ -2708,6 +2716,7 @@ dependencies = [
  "rayon",
  "regex",
  "regress",
+ "rolldown_std_utils",
  "rustc-hash 2.0.0",
  "sugar_path",
  "xxhash-rust",

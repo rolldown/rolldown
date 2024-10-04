@@ -9,6 +9,7 @@ use oxc::{
 use rolldown_common::ImportKind;
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
+use rolldown_std_utils::OptionExt;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -32,7 +33,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
-    let symbol_id = ident.symbol_id.get().unwrap();
+    let symbol_id = ident.symbol_id.get().unpack();
     if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
     }

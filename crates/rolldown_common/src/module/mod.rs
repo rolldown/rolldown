@@ -4,8 +4,8 @@ pub mod normal_module;
 use oxc::index::IndexVec;
 
 use crate::{
-  types::interop, EcmaAstIdx, ExternalModule, ImportRecord, ImportRecordIdx, ModuleIdx,
-  NormalModule,
+  types::interop, EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule,
+  ResolvedImportRecord,
 };
 
 #[derive(Debug)]
@@ -86,14 +86,14 @@ impl Module {
     }
   }
 
-  pub fn import_records(&self) -> &IndexVec<ImportRecordIdx, ImportRecord> {
+  pub fn import_records(&self) -> &IndexVec<ImportRecordIdx, ResolvedImportRecord> {
     match self {
       Module::Normal(v) => &v.import_records,
       Module::External(v) => &v.import_records,
     }
   }
 
-  pub fn set_import_records(&mut self, records: IndexVec<ImportRecordIdx, ImportRecord>) {
+  pub fn set_import_records(&mut self, records: IndexVec<ImportRecordIdx, ResolvedImportRecord>) {
     match self {
       Module::Normal(v) => v.import_records = records,
       Module::External(v) => v.import_records = records,

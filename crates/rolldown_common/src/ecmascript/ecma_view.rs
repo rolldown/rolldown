@@ -5,8 +5,8 @@ use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use crate::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaAstIdx, ExportsKind, ImportRecord,
-  ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport, StmtInfos, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaAstIdx, ExportsKind, ImportRecordIdx,
+  LocalExport, ModuleDefFormat, ModuleId, NamedImport, ResolvedImportRecord, StmtInfos, SymbolRef,
 };
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct EcmaView {
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
-  pub import_records: IndexVec<ImportRecordIdx, ImportRecord>,
+  pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
   /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<Span, ImportRecordIdx>,

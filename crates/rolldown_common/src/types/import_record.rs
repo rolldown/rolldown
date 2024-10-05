@@ -1,3 +1,8 @@
+use std::{
+  fmt::Debug,
+  ops::{Deref, DerefMut},
+};
+
 use rolldown_rstr::Rstr;
 
 use crate::{ImportKind, ModuleIdx, SymbolRef};
@@ -6,19 +11,17 @@ oxc::index::define_index_type! {
   pub struct ImportRecordIdx = u32;
 }
 
-/// See [ImportRecord] for more details.
 #[derive(Debug)]
-pub struct RawImportRecord {
-  // Module Request
-  pub module_request: Rstr,
-  pub kind: ImportKind,
-  /// See [ImportRecord] for more details.
-  pub namespace_ref: SymbolRef,
+pub struct ImportRecordStateStart {
   /// Why use start_offset instead of `Span`? Cause, directly pass `Span` will increase the type
   /// size from `40` to `48`(8 bytes alignment). Since the `RawImportRecord` will be created multiple time,
   /// Using this trick could save some memory.
   pub module_request_start: u32,
-  pub meta: ImportRecordMeta,
+}
+
+#[derive(Debug)]
+pub struct ImportRecordStateResolved {
+  pub resolved_module: ModuleIdx,
 }
 
 bitflags::bitflags! {
@@ -33,19 +36,47 @@ bitflags::bitflags! {
   }
 }
 
+#[derive(Debug)]
+pub struct ImportRecord<State: Debug> {
+  pub state: State,
+  /// `./lib.js` in `import { foo } from './lib.js';`
+  pub module_request: Rstr,
+  pub kind: ImportKind,
+  /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
+  /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
+  pub namespace_ref: SymbolRef,
+  pub meta: ImportRecordMeta,
+}
+
+impl<T: Debug> Deref for ImportRecord<T> {
+  type Target = T;
+
+  fn deref(&self) -> &Self::Target {
+    &self.state
+  }
+}
+
+impl<T: Debug> DerefMut for ImportRecord<T> {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.state
+  }
+}
+
+pub type RawImportRecord = ImportRecord<ImportRecordStateStart>;
+
 impl RawImportRecord {
   pub fn new(
     specifier: Rstr,
     kind: ImportKind,
     namespace_ref: SymbolRef,
     module_request_start: u32,
-  ) -> Self {
-    Self {
+  ) -> RawImportRecord {
+    RawImportRecord {
       module_request: specifier,
       kind,
       namespace_ref,
-      module_request_start,
       meta: ImportRecordMeta::empty(),
+      state: ImportRecordStateStart { module_request_start },
     }
   }
 
@@ -54,10 +85,10 @@ impl RawImportRecord {
     self.module_request_start + self.module_request.len() as u32 + 2u32 // +2 for quotes
   }
 
-  pub fn into_import_record(self, resolved_module: ModuleIdx) -> ImportRecord {
-    ImportRecord {
+  pub fn into_resolved(self, resolved_module: ModuleIdx) -> ResolvedImportRecord {
+    ResolvedImportRecord {
+      state: ImportRecordStateResolved { resolved_module },
       module_request: self.module_request,
-      resolved_module,
       kind: self.kind,
       namespace_ref: self.namespace_ref,
       meta: self.meta,
@@ -65,14 +96,4 @@ impl RawImportRecord {
   }
 }
 
-#[derive(Debug)]
-pub struct ImportRecord {
-  // Module Request
-  pub module_request: Rstr,
-  pub resolved_module: ModuleIdx,
-  pub kind: ImportKind,
-  /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
-  /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
-  pub namespace_ref: SymbolRef,
-  pub meta: ImportRecordMeta,
-}
+pub type ResolvedImportRecord = ImportRecord<ImportRecordStateResolved>;

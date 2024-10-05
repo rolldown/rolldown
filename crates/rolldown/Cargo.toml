@@ -38,6 +38,7 @@ rolldown_plugin_data_url = { workspace = true }
 rolldown_resolver        = { workspace = true }
 rolldown_rstr            = { workspace = true }
 rolldown_sourcemap       = { workspace = true }
+rolldown_std_utils       = { workspace = true }
 rolldown_tracing         = { workspace = true }
 rolldown_utils           = { workspace = true }
 rustc-hash               = { workspace = true }

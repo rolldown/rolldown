@@ -1,0 +1,13 @@
+[package]
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown_std_utils"
+repository.workspace = true
+version              = "0.1.0"
+
+[dependencies]
+regex = { workspace = true }
+
+[lints]
+workspace = true

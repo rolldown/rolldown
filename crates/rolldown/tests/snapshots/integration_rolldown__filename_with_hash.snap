@@ -2115,336 +2115,336 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-vA_zzJkf.mjs
 
-# tests/esbuild/packagejson/test_common_js_variable_in_esm_type_module
+# tests/esbuild/packagejson/common_js_variable_in_esm_type_module
 
 - entry-!~{000}~.mjs => entry-8hcIFNl2.mjs
 
-# tests/esbuild/packagejson/test_package_json_bad_main
+# tests/esbuild/packagejson/package_json_bad_main
 
 - entry-!~{000}~.mjs => entry-f1q42s2m.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_index_no_ext
+# tests/esbuild/packagejson/package_json_browser_index_no_ext
 
 - entry-!~{000}~.mjs => entry-kZL3VZSd.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_issue2002_a
+# tests/esbuild/packagejson/package_json_browser_issue2002_a
 
 - entry-!~{000}~.mjs => entry-WP5tj1UL.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_issue2002_b
+# tests/esbuild/packagejson/package_json_browser_issue2002_b
 
 - entry-!~{000}~.mjs => entry-E1WxyOnJ.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_issue2002_c
+# tests/esbuild/packagejson/package_json_browser_issue2002_c
 
 - entry-!~{000}~.mjs => entry-awWa096F.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_avoid_missing
+# tests/esbuild/packagejson/package_json_browser_map_avoid_missing
 
 - entry-!~{000}~.mjs => entry-XHGF1e8m.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_module_disabled
+# tests/esbuild/packagejson/package_json_browser_map_module_disabled
 
 - entry-!~{000}~.mjs => entry-Uvx0SWcy.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_module_to_module
+# tests/esbuild/packagejson/package_json_browser_map_module_to_module
 
 - entry-!~{000}~.mjs => entry-Pmqsubk6.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_module_to_relative
+# tests/esbuild/packagejson/package_json_browser_map_module_to_relative
 
 - entry-!~{000}~.mjs => entry-iPny_4nX.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_native_module_disabled
+# tests/esbuild/packagejson/package_json_browser_map_native_module_disabled
 
 - entry-!~{000}~.mjs => entry-CmVHGu8L.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_relative_disabled
+# tests/esbuild/packagejson/package_json_browser_map_relative_disabled
 
 - entry-!~{000}~.mjs => entry-0eGMEAbx.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_relative_to_module
+# tests/esbuild/packagejson/package_json_browser_map_relative_to_module
 
 - entry-!~{000}~.mjs => entry-SlTpwygY.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_map_relative_to_relative
+# tests/esbuild/packagejson/package_json_browser_map_relative_to_relative
 
 - entry-!~{000}~.mjs => entry-1absx7C6.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_no_ext
+# tests/esbuild/packagejson/package_json_browser_no_ext
 
 - entry-!~{000}~.mjs => entry-9FypxhWE.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_node_modules_index_no_ext
+# tests/esbuild/packagejson/package_json_browser_node_modules_index_no_ext
 
 - entry-!~{000}~.mjs => entry-7RgPKlt6.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_node_modules_no_ext
+# tests/esbuild/packagejson/package_json_browser_node_modules_no_ext
 
 - entry-!~{000}~.mjs => entry-fe5td3oS.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_over_main_node
+# tests/esbuild/packagejson/package_json_browser_over_main_node
 
 - entry-!~{000}~.mjs => entry-GDYIkPy-.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_over_module_browser
+# tests/esbuild/packagejson/package_json_browser_over_module_browser
 
 - entry-!~{000}~.mjs => entry-TGoHAdQw.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_string
+# tests/esbuild/packagejson/package_json_browser_string
 
 - entry-!~{000}~.mjs => entry-7Gi7uYgP.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_with_main_node
+# tests/esbuild/packagejson/package_json_browser_with_main_node
 
 - entry-!~{000}~.mjs => entry-GDYIkPy-.mjs
 
-# tests/esbuild/packagejson/test_package_json_browser_with_module_browser
+# tests/esbuild/packagejson/package_json_browser_with_module_browser
 
 - entry-!~{000}~.mjs => entry-SeOuNfaT.mjs
 
-# tests/esbuild/packagejson/test_package_json_disabled_type_module_issue3367
+# tests/esbuild/packagejson/package_json_disabled_type_module_issue3367
 
-- entry-!~{000}~.mjs => entry-B-WO7lxR.mjs
+- entry-!~{000}~.mjs => entry-lgDw-wm1.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_browser
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_browser
 
 - entry-!~{000}~.mjs => entry-k-QdO28q.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_force_module_before_main
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_force_module_before_main
 
 - entry-!~{000}~.mjs => entry-NN5r57vu.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_implicit_main
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main
 
 - entry-!~{000}~.mjs => entry-edpLZjLm.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
 
 - entry-!~{000}~.mjs => entry-OZlgvSWd.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_same_file
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_same_file
 
 - entry-!~{000}~.mjs => entry-AM3L7Gvf.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_separate_files
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_separate_files
 
 - entry-!~{000}~.mjs => entry-fATFrsV9.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_only
+# tests/esbuild/packagejson/package_json_dual_package_hazard_import_only
 
 - entry-!~{000}~.mjs => entry-Va3qZlld.mjs
 
-# tests/esbuild/packagejson/test_package_json_dual_package_hazard_require_only
+# tests/esbuild/packagejson/package_json_dual_package_hazard_require_only
 
 - entry-!~{000}~.mjs => entry-Q26FZUFP.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_alternatives
+# tests/esbuild/packagejson/package_json_exports_alternatives
 
 - entry-!~{000}~.mjs => entry-qM8NzLJ_.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_browser
+# tests/esbuild/packagejson/package_json_exports_browser
 
 - entry-!~{000}~.mjs => entry-u7rYDlP7.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_custom_conditions
+# tests/esbuild/packagejson/package_json_exports_custom_conditions
 
 - entry-!~{000}~.mjs => entry-10KV5Rmv.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_default_over_import_and_require
+# tests/esbuild/packagejson/package_json_exports_default_over_import_and_require
 
 - entry-!~{000}~.mjs => entry-xswNM0_s.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_entry_point_import_over_require
+# tests/esbuild/packagejson/package_json_exports_entry_point_import_over_require
 
 - entry-!~{000}~.mjs => entry-9Pp2yg1o.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_entry_point_main_only
+# tests/esbuild/packagejson/package_json_exports_entry_point_main_only
 
 - entry-!~{000}~.mjs => entry-npmHaipt.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_entry_point_module_over_main
+# tests/esbuild/packagejson/package_json_exports_entry_point_module_over_main
 
 - entry-!~{000}~.mjs => entry-JDIKuuoT.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_entry_point_require_only
+# tests/esbuild/packagejson/package_json_exports_entry_point_require_only
 
 
-# tests/esbuild/packagejson/test_package_json_exports_error_invalid_module_specifier
+# tests/esbuild/packagejson/package_json_exports_error_invalid_module_specifier
 
 - entry-!~{000}~.mjs => entry-n2NPkOXZ.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_error_invalid_package_configuration
+# tests/esbuild/packagejson/package_json_exports_error_invalid_package_configuration
 
 
-# tests/esbuild/packagejson/test_package_json_exports_error_invalid_package_target
+# tests/esbuild/packagejson/package_json_exports_error_invalid_package_target
 
 
-# tests/esbuild/packagejson/test_package_json_exports_error_missing_trailing_slash
+# tests/esbuild/packagejson/package_json_exports_error_missing_trailing_slash
 
 
-# tests/esbuild/packagejson/test_package_json_exports_error_module_not_found
+# tests/esbuild/packagejson/package_json_exports_error_module_not_found
 
 - entry-!~{000}~.mjs => entry-Gx1FBivm.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_error_package_path_not_exported
+# tests/esbuild/packagejson/package_json_exports_error_package_path_not_exported
 
 
-# tests/esbuild/packagejson/test_package_json_exports_error_unsupported_directory_import
+# tests/esbuild/packagejson/package_json_exports_error_unsupported_directory_import
 
 - entry-!~{000}~.mjs => entry-wzX7O5qV.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_exact_missing_extension
+# tests/esbuild/packagejson/package_json_exports_exact_missing_extension
 
 - entry-!~{000}~.mjs => entry-0UwmrJqW.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_import_over_require
+# tests/esbuild/packagejson/package_json_exports_import_over_require
 
 - entry-!~{000}~.mjs => entry-psXLz4PT.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_must_use_import
+# tests/esbuild/packagejson/package_json_exports_must_use_import
 
 
-# tests/esbuild/packagejson/test_package_json_exports_must_use_require
+# tests/esbuild/packagejson/package_json_exports_must_use_require
 
 
-# tests/esbuild/packagejson/test_package_json_exports_neutral
+# tests/esbuild/packagejson/package_json_exports_neutral
 
 - entry-!~{000}~.mjs => entry-xswNM0_s.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_no_conditions_match
+# tests/esbuild/packagejson/package_json_exports_no_conditions_match
 
 
-# tests/esbuild/packagejson/test_package_json_exports_node
+# tests/esbuild/packagejson/package_json_exports_node
 
 - entry-!~{000}~.mjs => entry-TYIgHLBy.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_not_exact_missing_extension
+# tests/esbuild/packagejson/package_json_exports_not_exact_missing_extension
 
 - entry-!~{000}~.mjs => entry-0UwmrJqW.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_not_exact_missing_extension_pattern
+# tests/esbuild/packagejson/package_json_exports_not_exact_missing_extension_pattern
 
 - entry-!~{000}~.mjs => entry-0UwmrJqW.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_order_independent
+# tests/esbuild/packagejson/package_json_exports_order_independent
 
 - entry-!~{000}~.mjs => entry-PWMM6UHJ.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_pattern_trailers
+# tests/esbuild/packagejson/package_json_exports_pattern_trailers
 
 - entry-!~{000}~.mjs => entry-FQrA81C2.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_require_over_import
+# tests/esbuild/packagejson/package_json_exports_require_over_import
 
 - entry-!~{000}~.mjs => entry-164-VFbZ.mjs
 
-# tests/esbuild/packagejson/test_package_json_exports_reverse_lookup
+# tests/esbuild/packagejson/package_json_exports_reverse_lookup
 
 
-# tests/esbuild/packagejson/test_package_json_exports_wildcard
+# tests/esbuild/packagejson/package_json_exports_wildcard
 
 - entry-!~{000}~.mjs => entry-uXwal-BU.mjs
 
-# tests/esbuild/packagejson/test_package_json_import_self_using_import
+# tests/esbuild/packagejson/package_json_import_self_using_import
 
 - entry-!~{000}~.mjs => entry-CuOLGe-P.mjs
 
-# tests/esbuild/packagejson/test_package_json_import_self_using_import_failure
+# tests/esbuild/packagejson/package_json_import_self_using_import_failure
 
 
-# tests/esbuild/packagejson/test_package_json_import_self_using_import_scoped
+# tests/esbuild/packagejson/package_json_import_self_using_import_scoped
 
 - entry-!~{000}~.mjs => entry-4LQmmTVL.mjs
 
-# tests/esbuild/packagejson/test_package_json_import_self_using_require
+# tests/esbuild/packagejson/package_json_import_self_using_require
 
 - entry-!~{000}~.mjs => entry-oT9el5CE.mjs
 
-# tests/esbuild/packagejson/test_package_json_import_self_using_require_failure
+# tests/esbuild/packagejson/package_json_import_self_using_require_failure
 
 
-# tests/esbuild/packagejson/test_package_json_import_self_using_require_scoped
+# tests/esbuild/packagejson/package_json_import_self_using_require_scoped
 
 - entry-!~{000}~.mjs => entry-oT9el5CE.mjs
 
-# tests/esbuild/packagejson/test_package_json_imports
+# tests/esbuild/packagejson/package_json_imports
 
 - entry-!~{000}~.mjs => entry-QDowCB0b.mjs
 
-# tests/esbuild/packagejson/test_package_json_imports_error_equals_hash
+# tests/esbuild/packagejson/package_json_imports_error_equals_hash
 
 
-# tests/esbuild/packagejson/test_package_json_imports_error_missing_remapped_package
+# tests/esbuild/packagejson/package_json_imports_error_missing_remapped_package
 
 - entry-!~{000}~.mjs => entry-KSu1izlk.mjs
 
-# tests/esbuild/packagejson/test_package_json_imports_error_starts_with_hash_slash
+# tests/esbuild/packagejson/package_json_imports_error_starts_with_hash_slash
 
 
-# tests/esbuild/packagejson/test_package_json_imports_error_unsupported_directory_import
+# tests/esbuild/packagejson/package_json_imports_error_unsupported_directory_import
 
 - entry-!~{000}~.mjs => entry-13W1Zybs.mjs
 
-# tests/esbuild/packagejson/test_package_json_imports_invalid_package_configuration
+# tests/esbuild/packagejson/package_json_imports_invalid_package_configuration
 
 - entry-!~{000}~.mjs => entry-KSu1izlk.mjs
 
-# tests/esbuild/packagejson/test_package_json_imports_remap_to_other_package
+# tests/esbuild/packagejson/package_json_imports_remap_to_other_package
 
 - entry-!~{000}~.mjs => entry-xFeh21ME.mjs
 
-# tests/esbuild/packagejson/test_package_json_main
+# tests/esbuild/packagejson/package_json_main
 
 - entry-!~{000}~.mjs => entry-qV6TXe8u.mjs
 
-# tests/esbuild/packagejson/test_package_json_main_fields_a
+# tests/esbuild/packagejson/package_json_main_fields_a
 
 - entry-!~{000}~.mjs => entry-b6nW88NG.mjs
 
-# tests/esbuild/packagejson/test_package_json_main_fields_b
+# tests/esbuild/packagejson/package_json_main_fields_b
 
 - entry-!~{000}~.mjs => entry-bOOA_eLW.mjs
 
-# tests/esbuild/packagejson/test_package_json_main_fields_error_message_default
+# tests/esbuild/packagejson/package_json_main_fields_error_message_default
 
 - entry-!~{000}~.mjs => entry-IpfED-Od.mjs
 
-# tests/esbuild/packagejson/test_package_json_main_fields_error_message_empty
+# tests/esbuild/packagejson/package_json_main_fields_error_message_empty
 
 - entry-!~{000}~.mjs => entry-IpfED-Od.mjs
 
-# tests/esbuild/packagejson/test_package_json_main_fields_error_message_not_included
+# tests/esbuild/packagejson/package_json_main_fields_error_message_not_included
 
 - entry-!~{000}~.mjs => entry-IpfED-Od.mjs
 
-# tests/esbuild/packagejson/test_package_json_module
+# tests/esbuild/packagejson/package_json_module
 
 - entry-!~{000}~.mjs => entry-Odxfwsx-.mjs
 
-# tests/esbuild/packagejson/test_package_json_neutral_explicit_main_fields
+# tests/esbuild/packagejson/package_json_neutral_explicit_main_fields
 
 - entry-!~{000}~.mjs => entry-GDYIkPy-.mjs
 
-# tests/esbuild/packagejson/test_package_json_neutral_no_default_main_fields
+# tests/esbuild/packagejson/package_json_neutral_no_default_main_fields
 
 - entry-!~{000}~.mjs => entry-SSwtL5oS.mjs
 
-# tests/esbuild/packagejson/test_package_json_reverse_package_exports_issue3377
+# tests/esbuild/packagejson/package_json_reverse_package_exports_issue3377
 
 - entry-!~{000}~.mjs => entry-Q2Mq36vn.mjs
 
-# tests/esbuild/packagejson/test_package_json_subpath_import_node_builtin_issue3485
+# tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485
 
 - entry-!~{000}~.mjs => entry-V95wKFfB.mjs
 
-# tests/esbuild/packagejson/test_package_json_syntax_error_comment
+# tests/esbuild/packagejson/package_json_syntax_error_comment
 
 
-# tests/esbuild/packagejson/test_package_json_syntax_error_trailing_comma
+# tests/esbuild/packagejson/package_json_syntax_error_trailing_comma
 
 
-# tests/esbuild/packagejson/test_package_json_type_should_be_types
+# tests/esbuild/packagejson/package_json_type_should_be_types
 
 - entry-!~{000}~.mjs => entry-6RW6pzd1.mjs
 

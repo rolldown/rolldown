@@ -12,7 +12,7 @@ use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
-  types::ast_symbols::AstSymbols,
+  types::{ast_symbols::AstSymbols, symbol_ref_db::SymbolRefDbForModule},
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
 pub struct RuntimeModuleTask {
@@ -23,7 +23,7 @@ pub struct RuntimeModuleTask {
 
 pub struct RuntimeModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
-  pub ast_symbols: AstSymbols,
+  pub local_symbol_ref_db: SymbolRefDbForModule,
   pub ast: EcmaAst,
   // pub warnings: Vec<BuildError>,
   pub module: NormalModule,
@@ -74,7 +74,10 @@ impl RuntimeModuleTask {
       has_eval,
       errors: _,
       ast_usage,
+      mut symbol_ref_db,
     } = scan_result;
+
+    symbol_ref_db.fill_classic_data(ast_symbols);
 
     let module = NormalModule {
       idx: self.module_id,
@@ -118,7 +121,7 @@ impl RuntimeModuleTask {
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
       // warnings: self.warnings,
-      ast_symbols,
+      local_symbol_ref_db: symbol_ref_db,
       module,
       runtime,
       ast,

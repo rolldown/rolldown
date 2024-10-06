@@ -57,14 +57,14 @@ pub struct ModuleLoader {
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
-  symbols: SymbolRefDb,
+  symbol_ref_db: SymbolRefDb,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
-  pub symbols: SymbolRefDb,
+  pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
@@ -135,7 +135,7 @@ impl ModuleLoader {
       // runtime module is always there
       remaining: 1,
       intermediate_normal_modules,
-      symbols,
+      symbol_ref_db: symbols,
     })
   }
 
@@ -173,8 +173,9 @@ impl ModuleLoader {
             }
           };
           // FIXME: ---- This is hack and should be removed
-          let symbol_ref =
-            self.symbols.create_symbol(idx, legitimize_identifier_name(&resolved_id.id).into());
+          let symbol_ref = self
+            .symbol_ref_db
+            .create_symbol(idx, legitimize_identifier_name(&resolved_id.id).into());
           // --- End of hack
           let ext = ExternalModule::new(
             idx,
@@ -287,17 +288,18 @@ impl ModuleLoader {
           if let Some((ast, ast_symbol)) = ecma_related {
             let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx()));
             module.set_ecma_ast_idx(ast_idx);
-            self.symbols.add_ast_symbols(module_idx, ast_symbol);
+            self.symbol_ref_db.store_local_db(module_idx, ast_symbol);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeModuleTaskResult { ast_symbols, mut module, runtime, ast } = task_result;
+          let RuntimeModuleTaskResult { local_symbol_ref_db, mut module, runtime, ast } =
+            task_result;
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
           module.ecma_ast_idx = Some(ast_idx);
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
 
-          self.symbols.add_ast_symbols(self.runtime_id, ast_symbols);
+          self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
         }
         Msg::BuildErrors(e) => {
@@ -362,7 +364,7 @@ impl ModuleLoader {
 
     Ok(Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
-      symbols: self.symbols,
+      symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),

@@ -30,7 +30,7 @@ pub struct ScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
   pub entry_points: Vec<EntryPoint>,
-  pub symbols: SymbolRefDb,
+  pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
@@ -69,7 +69,7 @@ impl ScanStage {
     let ModuleLoaderOutput {
       module_table,
       entry_points,
-      symbols,
+      symbol_ref_db,
       runtime,
       warnings,
       index_ecma_ast,
@@ -83,7 +83,7 @@ impl ScanStage {
     Ok(Ok(ScanStageOutput {
       module_table,
       entry_points,
-      symbols,
+      symbol_ref_db,
       runtime,
       warnings,
       index_ecma_ast,

@@ -19,7 +19,14 @@ console.log(
 ```js
 
 //#region entry.js
-console.log(both === "define", bo.th === "defi.ne", first === "success (identifier)", fir.st === "success (dot name)");
+console.log(
+	// define wins over inject
+	both === "define",
+	bo.th === "defi.ne",
+	// define forwards to inject
+	first === "success (identifier)",
+	fir.st === "success (dot name)"
+);
 
 //#endregion
 

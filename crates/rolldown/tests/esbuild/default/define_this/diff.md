@@ -35,7 +35,16 @@ ok(
 ```js
 
 //#region entry.js
-ok(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
+ok(
+	// These should be fully substituted
+	this,
+	this.foo,
+	this.foo.bar,
+	// Should just substitute "this.foo"
+	this.foo.baz,
+	// This should not be substituted
+	this.bar
+);
 (() => {
 	ok(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
 })();

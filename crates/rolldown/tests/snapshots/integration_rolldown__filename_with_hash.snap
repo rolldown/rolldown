@@ -62,7 +62,7 @@ expression: output
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-wCaU5wcS.mjs
+- entry_js-!~{000}~.mjs => entry_js-WJeRFAi0.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -248,7 +248,7 @@ expression: output
 
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
-- entry_js-!~{000}~.mjs => entry_js-F2d68Dz7.mjs
+- entry_js-!~{000}~.mjs => entry_js--I1JM8LZ.mjs
 
 # tests/esbuild/dce/text_loader_remove_unused
 
@@ -378,7 +378,7 @@ expression: output
 
 # tests/esbuild/default/comment_preservation
 
-- entry_js-!~{000}~.mjs => entry_js-7POZPS-p.mjs
+- entry_js-!~{000}~.mjs => entry_js-K14MaNNz.mjs
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -386,11 +386,11 @@ expression: output
 
 # tests/esbuild/default/comment_preservation_preserve_jsx
 
-- entry_jsx-!~{000}~.mjs => entry_jsx-vxFJK5m9.mjs
+- entry_jsx-!~{000}~.mjs => entry_jsx-Pn9-01xx.mjs
 
 # tests/esbuild/default/comment_preservation_transform_jsx
 
-- entry_jsx-!~{000}~.mjs => entry_jsx-vxFJK5m9.mjs
+- entry_jsx-!~{000}~.mjs => entry_jsx-Pn9-01xx.mjs
 
 # tests/esbuild/default/common_js_from_es6
 
@@ -428,7 +428,7 @@ expression: output
 
 # tests/esbuild/default/define_import_meta
 
-- entry_js-!~{000}~.mjs => entry_js-YkXRFTth.mjs
+- entry_js-!~{000}~.mjs => entry_js-jlbXNtsP.mjs
 
 # tests/esbuild/default/define_import_meta_es5
 
@@ -455,7 +455,7 @@ expression: output
 
 # tests/esbuild/default/define_this
 
-- entry_js-!~{000}~.mjs => entry_js-0tKx_zln.mjs
+- entry_js-!~{000}~.mjs => entry_js-BHysPz54.mjs
 
 # tests/esbuild/default/direct_eval_tainting_no_bundle
 
@@ -754,7 +754,7 @@ expression: output
 
 # tests/esbuild/default/inject_import_meta
 
-- entry_js-!~{000}~.mjs => entry_js-B_MBqo1J.mjs
+- entry_js-!~{000}~.mjs => entry_js-3u9StIUV.mjs
 
 # tests/esbuild/default/inject_import_order
 
@@ -782,7 +782,7 @@ expression: output
 
 # tests/esbuild/default/inject_with_define
 
-- entry_js-!~{000}~.mjs => entry_js-CjrYev1K.mjs
+- entry_js-!~{000}~.mjs => entry_js-EP0IOEGE.mjs
 
 # tests/esbuild/default/inject_with_string_export_name_bundle
 
@@ -986,7 +986,7 @@ expression: output
 
 # tests/esbuild/default/mangle_props_key_comment
 
-- entry_js-!~{000}~.mjs => entry_js-x5zUXOBP.mjs
+- entry_js-!~{000}~.mjs => entry_js-xgLkSln9.mjs
 
 # tests/esbuild/default/mangle_props_key_comment_minify
 
@@ -1241,7 +1241,7 @@ expression: output
 
 # tests/esbuild/default/preserve_key_comment
 
-- entry_js-!~{000}~.mjs => entry_js--ETIe-kX.mjs
+- entry_js-!~{000}~.mjs => entry_js-rndUuJpD.mjs
 
 # tests/esbuild/default/quoted_property
 
@@ -1977,7 +1977,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_text_java_script_plus_character
 
-- entry_js-!~{000}~.mjs => entry_js-KkOuFAbd.mjs
+- entry_js-!~{000}~.mjs => entry_js-0jYHCVo_.mjs
 
 # tests/esbuild/loader/loader_data_url_unknown_mime
 

@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::index::IndexVec;
-use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
+use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
   side_effects::HookSideEffects, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleIdx,
   ModuleType, RawImportRecord, ResolvedId, StrOrBytes,

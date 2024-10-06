@@ -85,7 +85,6 @@ impl Plugin for TransformPlugin {
       Transformer::new(
         fields.allocator,
         Path::new(args.id),
-        source_type,
         fields.source,
         trivias,
         transformer_options,
@@ -96,20 +95,20 @@ impl Plugin for TransformPlugin {
       // TODO: better error handling
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
-    let CodegenReturn { source_text, source_map } =
+    let CodegenReturn { code, map } =
       CodeGenerator::new().enable_source_map(args.id, args.code).build(ast.program());
     let code = if let Some(ref inject) = self.jsx_inject {
-      let mut ret = String::with_capacity(source_text.len() + 1 + inject.len());
+      let mut ret = String::with_capacity(code.len() + 1 + inject.len());
       ret.push_str(inject);
       ret.push(';');
-      ret.push_str(&source_text);
+      ret.push_str(&code);
       ret
     } else {
-      source_text
+      code
     };
     Ok(Some(rolldown_plugin::HookTransformOutput {
       code: Some(code),
-      map: source_map,
+      map,
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))

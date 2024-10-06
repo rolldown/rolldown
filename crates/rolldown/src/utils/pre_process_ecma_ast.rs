@@ -1,13 +1,12 @@
 use std::path::Path;
 
 use oxc::ast::VisitMut;
-use oxc::minifier::{
-  CompressOptions, Compressor, InjectGlobalVariables, ReplaceGlobalDefines,
-  ReplaceGlobalDefinesConfig,
-};
+use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
-use oxc::span::SourceType;
-use oxc::transformer::{TransformOptions, Transformer};
+use oxc::transformer::{
+  InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig, TransformOptions,
+  Transformer,
+};
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
@@ -34,7 +33,6 @@ impl PreProcessEcmaAst {
     mut ast: EcmaAst,
     parse_type: &OxcParseType,
     path: &Path,
-    source_type: SourceType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
   ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
@@ -64,15 +62,8 @@ impl PreProcessEcmaAst {
           OxcParseType::Ts => {}
         }
 
-        Transformer::new(
-          fields.allocator,
-          path,
-          source_type,
-          fields.source,
-          trivias,
-          transformer_options,
-        )
-        .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+        Transformer::new(fields.allocator, path, fields.source, trivias, transformer_options)
+          .build_with_symbols_and_scopes(symbols, scopes, fields.program)
       });
 
       if !ret.errors.is_empty() {

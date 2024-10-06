@@ -42,11 +42,17 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
     rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
       file: value.file,
-      mappings: value.mappings,
+      mappings: value.mappings.unwrap_or_default(),
       source_root: value.source_root,
-      sources: value.sources,
+      sources: value
+        .sources
+        .unwrap_or_default()
+        .into_iter()
+        .map(Option::unwrap_or_default)
+        .collect(),
       sources_content: value.sources_content,
-      names: value.names,
+      names: value.names.unwrap_or_default(),
+      debug_id: None,
     })
     .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))
   }

@@ -2,9 +2,9 @@ use std::path::Path;
 
 use arcstr::ArcStr;
 use oxc::{
-  minifier::ReplaceGlobalDefinesConfig,
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
+  transformer::ReplaceGlobalDefinesConfig,
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
@@ -112,7 +112,7 @@ pub fn parse_to_ecma_ast(
   })?;
 
   PreProcessEcmaAst::default()
-    .build(ecma_ast, &parsed_type, path, oxc_source_type, replace_global_define_config, options)
+    .build(ecma_ast, &parsed_type, path, replace_global_define_config, options)
     .map(|(ast, symbol_table, scope_tree)| {
       Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, source })
     })

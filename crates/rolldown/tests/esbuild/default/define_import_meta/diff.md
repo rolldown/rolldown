@@ -17,7 +17,15 @@ console.log(
 ```js
 
 //#region entry.js
-console.log(import.meta, 2, 3, 2 .baz, 3);
+console.log(
+	// These should be fully substituted
+	import.meta,
+	2,
+	3,
+	// Should just substitute "import.meta.foo"
+	2 .baz,
+	3
+);
 
 //#endregion
 

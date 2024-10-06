@@ -30,14 +30,10 @@ let new_nested_no = [
 	/* @__PURE__ */ new foo(bar()),
 	2
 ];
-let single_at_no = // @__PURE__
-foo(bar());
-let new_single_at_no = // @__PURE__
-new foo(bar());
-let single_num_no = // #__PURE__
-foo(bar());
-let new_single_num_no = // #__PURE__
-new foo(bar());
+let single_at_no = /* @__PURE__*/ foo(bar());
+let new_single_at_no = /* @__PURE__*/ new foo(bar());
+let single_num_no = /* #__PURE__*/ foo(bar());
+let new_single_num_no = /* #__PURE__*/ new foo(bar());
 let bad_no = foo(bar);
 let new_bad_no = new foo(bar);
 let parens_no = foo(bar);

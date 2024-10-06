@@ -18,14 +18,14 @@ fn criterion_benchmark(c: &mut Criterion) {
   let source_type = SourceType::from_path(&filename).unwrap();
   let allocator = Allocator::default();
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text } =
+  let CodegenReturn { map, code } =
     CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
-  sourcemap_chain.push(source_map.as_ref().unwrap());
+  sourcemap_chain.push(map.as_ref().unwrap());
 
-  let ret2 = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text: _ } =
-    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret2.program);
-  sourcemap_chain.push(source_map.as_ref().unwrap());
+  let ret2 = Parser::new(&allocator, &code, source_type).parse();
+  let CodegenReturn { map, code: _ } =
+    CodeGenerator::new().enable_source_map(&filename, &code).build(&ret2.program);
+  sourcemap_chain.push(map.as_ref().unwrap());
 
   group.sample_size(20);
   group.bench_with_input("remapping", &sourcemap_chain, move |b, sourcemap_chain| {
@@ -37,14 +37,14 @@ fn criterion_benchmark(c: &mut Criterion) {
 
   // simulate render-chunk-remapping
   let mut sourcemap_chain = vec![];
-  let line = source_text.matches('\n').count() as u32;
+  let line = code.matches('\n').count() as u32;
   let mut concat_source = ConcatSource::default();
   let mut sources = vec![];
   for i in 0..3 {
     sources.push(format!("{i}.js"));
     concat_source.add_source(Box::new(SourceMapSource::new(
-      source_text.clone(),
-      source_map.as_ref().unwrap().clone(),
+      code.clone(),
+      map.as_ref().unwrap().clone(),
       line,
     )));
   }
@@ -54,9 +54,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   sourcemap_chain.push(source_map.as_ref().unwrap());
 
   let ret3 = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text: _ } =
+  let CodegenReturn { map, code: _ } =
     CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret3.program);
-  sourcemap_chain.push(source_map.as_ref().unwrap());
+  sourcemap_chain.push(map.as_ref().unwrap());
 
   group.bench_with_input("render-chunk-remapping", &sourcemap_chain, move |b, sourcemap_chain| {
     b.iter(|| {

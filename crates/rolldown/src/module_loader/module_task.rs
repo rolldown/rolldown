@@ -6,19 +6,15 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use anyhow::Result;
-use rolldown_common::{
-  ModuleId, ModuleIdx, ModuleType, ModuleView, NormalModule, ResolvedId, StrOrBytes,
-};
+use rolldown_common::{ModuleId, ModuleIdx, ModuleType, NormalModule, ResolvedId, StrOrBytes};
 use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
   css::create_css_view,
-  ecmascript::ecma_module_view_factory::EcmaModuleViewFactory,
+  ecmascript::ecma_module_view_factory::{create_ecma_view, CreateEcmaViewReturn},
   module_loader::NormalModuleTaskResult,
-  types::module_factory::{
-    CreateModuleContext, CreateModuleViewArgs, CreateModuleViewReturn, ModuleViewFactory,
-  },
+  types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
 };
 
@@ -143,7 +139,7 @@ impl ModuleTask {
       None
     };
 
-    let ret = EcmaModuleViewFactory::create_module_view(
+    let ret = create_ecma_view(
       &mut CreateModuleContext {
         module_index: self.module_idx,
         plugin_driver: &self.ctx.plugin_driver,
@@ -158,19 +154,14 @@ impl ModuleTask {
     )
     .await?;
 
-    let CreateModuleViewReturn { view, resolved_deps, ecma_related, raw_import_records } = match ret
-    {
-      Ok(ret) => ret,
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
-
-    let ecma_view = match view {
-      ModuleView::Ecma(view) => view,
-      ModuleView::Css(_) => unreachable!(),
-    };
+    let CreateEcmaViewReturn { view: ecma_view, resolved_deps, ast, symbols, raw_import_records } =
+      match ret {
+        Ok(ret) => ret,
+        Err(errs) => {
+          self.errors.extend(errs);
+          return Ok(());
+        }
+      };
 
     let module = NormalModule {
       repr_name: repr_name.into_owned(),
@@ -194,7 +185,7 @@ impl ModuleTask {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,
-        ecma_related,
+        ecma_related: Some((ast, symbols)),
         module: module.into(),
         raw_import_records,
       }))

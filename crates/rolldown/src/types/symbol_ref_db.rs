@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 use super::{ast_symbols::AstSymbols, namespace_alias::NamespaceAlias};
 
 #[derive(Debug)]
-pub struct SymbolInfo {
+pub struct SymbolRefData {
   /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
   /// We use `namespace_alias` to represent this situation. If `namespace_alias` is not `None`, then this symbol must be rewritten to a property access.
@@ -19,33 +19,40 @@ pub struct SymbolInfo {
   pub chunk_id: Option<ChunkIdx>,
 }
 
+#[derive(Debug, Default)]
+pub struct SymbolRefDbForModule {
+  pub data: IndexVec<SymbolId, SymbolRefData>,
+}
+
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct SymbolRefDb {
-  inner: IndexVec<ModuleIdx, IndexVec<SymbolId, SymbolInfo>>,
+  inner: IndexVec<ModuleIdx, SymbolRefDbForModule>,
 }
 
 impl SymbolRefDb {
   fn ensure_exact_capacity(&mut self, module_idx: ModuleIdx) {
     let new_len = module_idx.index() + 1;
     if self.inner.len() < new_len {
-      self.inner.resize_with(new_len, IndexVec::default);
+      self.inner.resize_with(new_len, SymbolRefDbForModule::default);
     }
   }
 
   pub fn add_ast_symbols(&mut self, module_id: ModuleIdx, ast_symbols: AstSymbols) {
     self.ensure_exact_capacity(module_id);
 
-    self.inner[module_id] = ast_symbols
-      .names
-      .into_iter()
-      .map(|name| SymbolInfo { name, link: None, chunk_id: None, namespace_alias: None })
-      .collect();
+    self.inner[module_id] = SymbolRefDbForModule {
+      data: ast_symbols
+        .names
+        .into_iter()
+        .map(|name| SymbolRefData { name, link: None, chunk_id: None, namespace_alias: None })
+        .collect(),
+    };
   }
 
   pub fn create_symbol(&mut self, owner: ModuleIdx, name: CompactString) -> SymbolRef {
     self.ensure_exact_capacity(owner);
-    let symbol_id = self.inner[owner].push(SymbolInfo {
+    let symbol_id = self.inner[owner].data.push(SymbolRefData {
       name,
       link: None,
       chunk_id: None,
@@ -83,12 +90,12 @@ impl SymbolRefDb {
     })
   }
 
-  pub fn get(&self, refer: SymbolRef) -> &SymbolInfo {
-    &self.inner[refer.owner][refer.symbol]
+  pub fn get(&self, refer: SymbolRef) -> &SymbolRefData {
+    &self.inner[refer.owner].data[refer.symbol]
   }
 
-  pub fn get_mut(&mut self, refer: SymbolRef) -> &mut SymbolInfo {
-    &mut self.inner[refer.owner][refer.symbol]
+  pub fn get_mut(&mut self, refer: SymbolRef) -> &mut SymbolRefData {
+    &mut self.inner[refer.owner].data[refer.symbol]
   }
 
   pub fn canonical_ref_for(&mut self, target: SymbolRef) -> SymbolRef {

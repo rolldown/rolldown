@@ -7,14 +7,14 @@ use rolldown_common::{AstScopes, IndexModules, NormalModule};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashSet;
 
-use crate::types::symbols::Symbols;
+use crate::types::symbol_ref_db::SymbolRefDb;
 
 mod impl_visit_mut;
 
 pub struct IsolatingModuleFinalizerContext<'me> {
   pub module: &'me NormalModule,
   pub modules: &'me IndexModules,
-  pub symbols: &'me Symbols,
+  pub symbols: &'me SymbolRefDb,
 }
 
 pub struct IsolatingModuleFinalizer<'me, 'ast> {

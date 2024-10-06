@@ -1,5 +1,5 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
-use crate::types::symbols::Symbols;
+use crate::types::symbol_ref_db::SymbolRefDb;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
@@ -13,7 +13,7 @@ use super::LinkStage;
 
 struct Context<'a> {
   modules: &'a IndexModules,
-  symbols: &'a Symbols,
+  symbols: &'a SymbolRefDb,
   is_included_vec: &'a mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
   is_module_included_vec: &'a mut IndexVec<ModuleIdx, bool>,
   tree_shaking: bool,

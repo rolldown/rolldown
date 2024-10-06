@@ -8,7 +8,7 @@ use crate::{
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbols::Symbols,
+    symbol_ref_db::SymbolRefDb,
   },
   SharedOptions,
 };
@@ -19,7 +19,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
-  pub symbols: &'me Symbols,
+  pub symbols: &'me SymbolRefDb,
   pub canonical_names: &'me FxHashMap<SymbolRef, Rstr>,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,

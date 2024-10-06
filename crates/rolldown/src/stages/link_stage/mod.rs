@@ -17,7 +17,7 @@ use crate::{
   type_alias::IndexEcmaAst,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbols::Symbols,
+    symbol_ref_db::SymbolRefDb,
   },
   SharedOptions,
 };
@@ -38,7 +38,7 @@ pub struct LinkStageOutput {
   pub ast_table: IndexEcmaAst,
   // pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
-  pub symbols: Symbols,
+  pub symbols: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
@@ -49,7 +49,7 @@ pub struct LinkStageOutput {
 pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub symbols: Symbols,
+  pub symbols: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,

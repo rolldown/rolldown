@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 use super::{ast_symbols::AstSymbols, namespace_alias::NamespaceAlias};
 
 #[derive(Debug)]
-pub struct Symbol {
+pub struct SymbolInfo {
   /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
   /// We use `namespace_alias` to represent this situation. If `namespace_alias` is not `None`, then this symbol must be rewritten to a property access.
@@ -21,37 +21,48 @@ pub struct Symbol {
 
 // Information about symbols for all modules
 #[derive(Debug, Default)]
-pub struct Symbols {
-  inner: IndexVec<ModuleIdx, IndexVec<SymbolId, Symbol>>,
+pub struct SymbolRefDb {
+  inner: IndexVec<ModuleIdx, IndexVec<SymbolId, SymbolInfo>>,
 }
 
-impl Symbols {
-  pub fn alloc_one(&mut self) {
-    self.inner.push(IndexVec::default());
+impl SymbolRefDb {
+  fn ensure_exact_capacity(&mut self, module_idx: ModuleIdx) {
+    let new_len = module_idx.index() + 1;
+    if self.inner.len() < new_len {
+      self.inner.resize_with(new_len, IndexVec::default);
+    }
   }
+
   pub fn add_ast_symbols(&mut self, module_id: ModuleIdx, ast_symbols: AstSymbols) {
+    self.ensure_exact_capacity(module_id);
+
     self.inner[module_id] = ast_symbols
       .names
       .into_iter()
-      .map(|name| Symbol { name, link: None, chunk_id: None, namespace_alias: None })
+      .map(|name| SymbolInfo { name, link: None, chunk_id: None, namespace_alias: None })
       .collect();
   }
 
   pub fn create_symbol(&mut self, owner: ModuleIdx, name: CompactString) -> SymbolRef {
-    let symbol_id =
-      self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });
+    self.ensure_exact_capacity(owner);
+    let symbol_id = self.inner[owner].push(SymbolInfo {
+      name,
+      link: None,
+      chunk_id: None,
+      namespace_alias: None,
+    });
     SymbolRef { owner, symbol: symbol_id }
   }
 
-  /// Make a point to b
-  pub fn union(&mut self, a: SymbolRef, b: SymbolRef) {
-    // a link to b
-    let root_a = self.canonical_ref_for(a);
-    let root_b = self.canonical_ref_for(b);
-    if root_a == root_b {
+  /// Make `base` point to `target`
+  pub fn link(&mut self, base: SymbolRef, target: SymbolRef) {
+    let base_root = self.canonical_ref_for(base);
+    let target_root = self.canonical_ref_for(target);
+    if base_root == target_root {
+      // already linked
       return;
     }
-    self.get_mut(root_a).link = Some(root_b);
+    self.get_mut(base_root).link = Some(target_root);
   }
 
   pub fn get_original_name(&self, refer: SymbolRef) -> &CompactString {
@@ -72,11 +83,11 @@ impl Symbols {
     })
   }
 
-  pub fn get(&self, refer: SymbolRef) -> &Symbol {
+  pub fn get(&self, refer: SymbolRef) -> &SymbolInfo {
     &self.inner[refer.owner][refer.symbol]
   }
 
-  pub fn get_mut(&mut self, refer: SymbolRef) -> &mut Symbol {
+  pub fn get_mut(&mut self, refer: SymbolRef) -> &mut SymbolInfo {
     &mut self.inner[refer.owner][refer.symbol]
   }
 

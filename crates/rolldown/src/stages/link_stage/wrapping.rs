@@ -8,7 +8,7 @@ use crate::{
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbols::Symbols,
+    symbol_ref_db::SymbolRefDb,
   },
 };
 
@@ -138,7 +138,7 @@ impl LinkStage<'_> {
 pub fn create_wrapper(
   module: &mut NormalModule,
   linking_info: &mut LinkingMetadata,
-  symbols: &mut Symbols,
+  symbols: &mut SymbolRefDb,
   runtime: &RuntimeModuleBrief,
   options: &NormalizedBundlerOptions,
 ) {

@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 
-use crate::types::symbols::Symbols;
+use crate::types::symbol_ref_db::SymbolRefDb;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
@@ -30,11 +30,11 @@ pub struct Renamer<'name> {
   ///
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
-  symbols: &'name Symbols,
+  symbols: &'name SymbolRefDb,
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name Symbols, _modules_len: usize, format: &OutputFormat) -> Self {
+  pub fn new(symbols: &'name SymbolRefDb, _modules_len: usize, format: &OutputFormat) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let manual_reserved = match format {
       OutputFormat::Esm | OutputFormat::App => vec![],

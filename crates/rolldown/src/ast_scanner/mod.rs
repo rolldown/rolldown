@@ -4,6 +4,8 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
+use oxc::semantic::{NodeId, SymbolFlags, SymbolTable};
+use oxc::span::SPAN;
 use oxc::{
   ast::{
     ast::{
@@ -30,8 +32,6 @@ use sugar_path::SugarPath;
 
 use crate::types::symbol_ref_db::SymbolRefDbForModule;
 
-use super::types::ast_symbols::AstSymbols;
-
 #[derive(Debug)]
 pub struct ScanResult {
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
@@ -56,7 +56,7 @@ pub struct AstScanner<'me> {
   file_path: &'me ModuleId,
   scopes: &'me AstScopes,
   trivias: &'me Trivias,
-  symbols: &'me mut AstSymbols,
+  symbol_table: SymbolTable,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -79,7 +79,7 @@ impl<'me> AstScanner<'me> {
   pub fn new(
     idx: ModuleIdx,
     scope: &'me AstScopes,
-    symbols: &'me mut AstSymbols,
+    mut symbol_table: SymbolTable,
     repr_name: &'me str,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
@@ -88,12 +88,26 @@ impl<'me> AstScanner<'me> {
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
-    let symbol_id_for_default_export_ref = symbols
-      .create_symbol(format!("{legitimized_repr_name}_default").into(), scope.root_scope_id());
+    let symbol_id_for_default_export_ref = symbol_table.create_symbol(
+      SPAN,
+      format!("{legitimized_repr_name}_default").into(),
+      SymbolFlags::empty(),
+      scope.root_scope_id(),
+      NodeId::DUMMY,
+    );
 
     let name = format!("{legitimized_repr_name}_exports");
-    let namespace_object_ref: SymbolRef =
-      (idx, symbols.create_symbol(name.into(), scope.root_scope_id())).into();
+    let namespace_object_ref: SymbolRef = (
+      idx,
+      symbol_table.create_symbol(
+        SPAN,
+        name.into(),
+        SymbolFlags::empty(),
+        scope.root_scope_id(),
+        NodeId::DUMMY,
+      ),
+    )
+      .into();
 
     let result = ScanResult {
       named_imports: FxHashMap::default(),
@@ -119,7 +133,7 @@ impl<'me> AstScanner<'me> {
     Self {
       idx,
       scopes: scope,
-      symbols,
+      symbol_table,
       current_stmt_info: StmtInfo::default(),
       result,
       esm_export_keyword: None,
@@ -196,7 +210,7 @@ impl<'me> AstScanner<'me> {
         .collect::<FxHashSet<_>>();
       for (name, symbol_id) in self.scopes.get_bindings(self.scopes.root_scope_id()) {
         let symbol_ref: SymbolRef = (self.idx, *symbol_id).into();
-        let scope_id = self.symbols.scope_id_for(*symbol_id);
+        let scope_id = self.symbol_table.get_scope_id(*symbol_id);
         if !scanned_top_level_symbols.remove(&symbol_ref) {
           return Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
@@ -210,6 +224,7 @@ impl<'me> AstScanner<'me> {
       // }
     }
     self.result.ast_usage = self.ast_usage;
+    self.result.symbol_ref_db.fill_classic_data(self.symbol_table);
     Ok(self.result)
   }
 
@@ -236,13 +251,16 @@ impl<'me> AstScanner<'me> {
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
     let namespace_ref: SymbolRef = (
       self.idx,
-      self.symbols.create_symbol(
+      self.symbol_table.create_symbol(
+        SPAN,
         format!(
           "#LOCAL_NAMESPACE_IN_{}#",
           itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default())
         )
         .into(),
+        SymbolFlags::empty(),
         self.scopes.root_scope_id(),
+        NodeId::DUMMY,
       ),
     )
       .into();
@@ -332,7 +350,8 @@ impl<'me> AstScanner<'me> {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = (
       self.idx,
-      self.symbols.create_symbol(
+      self.symbol_table.create_symbol(
+        SPAN,
         if export_name == "default" {
           let importee_repr = self.result.import_records[record_id]
             .module_request
@@ -343,7 +362,9 @@ impl<'me> AstScanner<'me> {
         } else {
           export_name.into()
         },
+        SymbolFlags::empty(),
         self.scopes.root_scope_id(),
+        NodeId::DUMMY,
       ),
     )
       .into();
@@ -371,9 +392,17 @@ impl<'me> AstScanner<'me> {
     record_id: ImportRecordIdx,
     span_for_export_name: Span,
   ) {
-    let generated_imported_as_ref =
-      (self.idx, self.symbols.create_symbol(export_name.into(), self.scopes.root_scope_id()))
-        .into();
+    let generated_imported_as_ref = (
+      self.idx,
+      self.symbol_table.create_symbol(
+        SPAN,
+        export_name.into(),
+        SymbolFlags::empty(),
+        self.scopes.root_scope_id(),
+        NodeId::DUMMY,
+      ),
+    )
+      .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
       imported: Specifier::Star,
@@ -568,20 +597,22 @@ impl<'me> AstScanner<'me> {
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
-    self.scopes.root_scope_id() == self.symbols.scope_id_for(symbol_id)
+    self.scopes.root_scope_id() == self.symbol_table.get_scope_id(symbol_id)
   }
 
   fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) {
     match (self.resolve_symbol_from_reference(id_ref), id_ref.reference_id.get()) {
-      (Some(symbol_id), Some(ref_id)) if self.symbols.get_flag(symbol_id).is_const_variable() => {
+      (Some(symbol_id), Some(ref_id))
+        if self.symbol_table.get_flags(symbol_id).is_const_variable() =>
+      {
         let reference = &self.scopes.references[ref_id];
         if reference.is_write() {
           self.result.warnings.push(
             BuildDiagnostic::forbid_const_assign(
               self.file_path.to_string(),
               self.source.clone(),
-              self.symbols.get_name(symbol_id).into(),
-              self.symbols.get_span(symbol_id),
+              self.symbol_table.get_name(symbol_id).into(),
+              self.symbol_table.get_span(symbol_id),
               id_ref.span(),
             )
             .with_severity_warning(),

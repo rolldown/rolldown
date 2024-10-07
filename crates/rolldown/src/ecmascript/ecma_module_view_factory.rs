@@ -16,7 +16,6 @@ use sugar_path::SugarPath;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   types::{
-    ast_symbols::AstSymbols,
     module_factory::{CreateModuleContext, CreateModuleViewArgs},
     symbol_ref_db::SymbolRefDbForModule,
   },
@@ -33,8 +32,8 @@ fn scan_ast(
   symbols: SymbolTable,
   scopes: ScopeTree,
   module_def_format: ModuleDefFormat,
-) -> UnhandleableResult<(AstScopes, ScanResult, AstSymbols, SymbolRef)> {
-  let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
+) -> UnhandleableResult<(AstScopes, ScanResult, SymbolRef)> {
+  let (symbol_table, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
   let module_id = ModuleId::new(ArcStr::clone(id));
   let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
@@ -42,7 +41,7 @@ fn scan_ast(
   let scanner = AstScanner::new(
     module_idx,
     &ast_scopes,
-    &mut ast_symbols,
+    symbol_table,
     &repr_name,
     module_def_format,
     ast.source(),
@@ -52,7 +51,7 @@ fn scan_ast(
   let namespace_object_ref = scanner.namespace_object_ref;
   let scan_result = scanner.scan(ast.program())?;
 
-  Ok((ast_scopes, scan_result, ast_symbols, namespace_object_ref))
+  Ok((ast_scopes, scan_result, namespace_object_ref))
 }
 pub struct CreateEcmaViewReturn {
   pub view: EcmaView,
@@ -87,7 +86,7 @@ pub async fn create_ecma_view<'any>(
     }
   };
 
-  let (scope, scan_result, ast_symbol, namespace_object_ref) = scan_ast(
+  let (scope, scan_result, namespace_object_ref) = scan_ast(
     ctx.module_index,
     &ctx.resolved_id.id,
     &mut ast,
@@ -116,7 +115,7 @@ pub async fn create_ecma_view<'any>(
     has_eval,
     errors,
     ast_usage,
-    mut symbol_ref_db,
+    symbol_ref_db,
   } = scan_result;
   if !errors.is_empty() {
     return Ok(Err(errors));
@@ -200,8 +199,6 @@ pub async fn create_ecma_view<'any>(
     has_eval,
     ast_usage,
   };
-
-  symbol_ref_db.fill_classic_data(ast_symbol);
 
   Ok(Ok(CreateEcmaViewReturn {
     view,

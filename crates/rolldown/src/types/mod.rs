@@ -2,7 +2,6 @@
 // and enums do not have complex logic, and are used to store data. They are not used to perform any
 // operations on the data they store or only have simple getters and setters.
 
-pub mod ast_symbols;
 pub mod bundle_output;
 pub mod bundler_fs;
 pub mod generator;

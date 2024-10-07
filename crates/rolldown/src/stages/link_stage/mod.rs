@@ -90,7 +90,7 @@ impl<'a> LinkStage<'a> {
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
-      symbols: scan_stage_output.symbols,
+      symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,

@@ -3,7 +3,7 @@ use rolldown_common::{ImportRecordIdx, Module, ModuleIdx, RawImportRecord, Resol
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 
-use crate::types::ast_symbols::AstSymbols;
+use crate::types::symbol_ref_db::SymbolRefDbForModule;
 
 pub struct NormalModuleTaskResult {
   pub module_idx: ModuleIdx,
@@ -11,5 +11,5 @@ pub struct NormalModuleTaskResult {
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub warnings: Vec<BuildDiagnostic>,
   pub module: Module,
-  pub ecma_related: Option<(EcmaAst, AstSymbols)>,
+  pub ecma_related: Option<(EcmaAst, SymbolRefDbForModule)>,
 }

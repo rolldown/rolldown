@@ -18,6 +18,7 @@ use crate::{
   types::{
     ast_symbols::AstSymbols,
     module_factory::{CreateModuleContext, CreateModuleViewArgs},
+    symbol_ref_db::SymbolRefDbForModule,
   },
   utils::{
     make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
@@ -58,7 +59,7 @@ pub struct CreateEcmaViewReturn {
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub ast: EcmaAst,
-  pub symbols: AstSymbols,
+  pub symbols: SymbolRefDbForModule,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -115,6 +116,7 @@ pub async fn create_ecma_view<'any>(
     has_eval,
     errors,
     ast_usage,
+    mut symbol_ref_db,
   } = scan_result;
   if !errors.is_empty() {
     return Ok(Err(errors));
@@ -199,11 +201,13 @@ pub async fn create_ecma_view<'any>(
     ast_usage,
   };
 
+  symbol_ref_db.fill_classic_data(ast_symbol);
+
   Ok(Ok(CreateEcmaViewReturn {
     view,
     resolved_deps,
     raw_import_records: import_records,
     ast,
-    symbols: ast_symbol,
+    symbols: symbol_ref_db,
   }))
 }

@@ -28,6 +28,8 @@ use rolldown_utils::path_ext::PathExt;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
+use crate::types::symbol_ref_db::SymbolRefDbForModule;
+
 use super::types::ast_symbols::AstSymbols;
 
 #[derive(Debug)]
@@ -44,6 +46,7 @@ pub struct ScanResult {
   pub errors: Vec<BuildDiagnostic>,
   pub has_eval: bool,
   pub ast_usage: EcmaModuleAstUsage,
+  pub symbol_ref_db: SymbolRefDbForModule,
 }
 
 pub struct AstScanner<'me> {
@@ -110,6 +113,7 @@ impl<'me> AstScanner<'me> {
       has_eval: false,
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty(),
+      symbol_ref_db: SymbolRefDbForModule::default(),
     };
 
     Self {

@@ -9,7 +9,7 @@ export const cliOptionsSchema = z
     config: z
       .string()
       .or(z.boolean())
-      .describe('Path to the config file (default: `rollup.config.js`)')
+      .describe('Path to the config file (default: `rolldown.config.js`)')
       .optional(),
     help: z.boolean().describe('Show help').optional(),
     version: z.boolean().describe('Show version number').optional(),

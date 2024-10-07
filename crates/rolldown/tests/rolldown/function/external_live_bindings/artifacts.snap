@@ -14,12 +14,7 @@ const { read, readFile, readFileSync, readSync } = __toESM(require("node:fs"));
 const nonExternal = "nonExternal";
 
 //#endregion
-Object.defineProperty(exports, 'nonExternal', {
-  enumerable: true,
-  get: function () {
-    return nonExternal;
-  }
-});
+exports.nonExternal = nonExternal
 exports.read = read
 exports.readFile = readFile
 exports.readFileSync = readFileSync

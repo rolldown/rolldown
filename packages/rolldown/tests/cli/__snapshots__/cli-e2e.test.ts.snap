@@ -75,12 +75,7 @@ const { read, readFile, readFileSync, readSync } = node_fs;
 const nonExternal = "nonExternal";
 
 //#endregion
-Object.defineProperty(exports, 'nonExternal', {
-  enumerable: true,
-  get: function () {
-    return nonExternal;
-  }
-});
+exports.nonExternal = nonExternal
 exports.read = read
 exports.readFile = readFile
 exports.readFileSync = readFileSync

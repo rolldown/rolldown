@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+//#region main.js
+const short1 = "";
+let short2 = "";
+function short3() {}
+class short4 {}
+let nonShort1 = "";
+nonShort1 = "";
+function nonShort2() {}
+nonShort2 = () => {};
+
+//#endregion
+Object.defineProperty(exports, 'nonShort1', {
+  enumerable: true,
+  get: function () {
+    return nonShort1;
+  }
+});
+Object.defineProperty(exports, 'nonShort2', {
+  enumerable: true,
+  get: function () {
+    return nonShort2;
+  }
+});
+exports.short1 = short1
+exports.short2 = short2
+exports.short3 = short3
+exports.short4 = short4
+```

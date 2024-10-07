@@ -16,18 +16,8 @@ const validator = "if_default_prop_false";
 const value = true;
 
 //#endregion
-Object.defineProperty(exports, 'validator', {
-  enumerable: true,
-  get: function () {
-    return validator;
-  }
-});
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return value;
-  }
-});
+exports.validator = validator
+exports.value = value
 return exports;
 })({});
 ```

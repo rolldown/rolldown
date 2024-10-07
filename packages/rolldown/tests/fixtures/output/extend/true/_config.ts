@@ -16,38 +16,28 @@ export default defineTest({
   afterTest: (output) => {
     isComposingJs
       ? expect(output.output[0].code).toMatchInlineSnapshot(`
-      "(function(exports) {
+        "(function(exports) {
 
-      "use strict";
+        "use strict";
 
-      //#region main.js
-      const main = "main";
+        //#region main.js
+        const main = "main";
 
-      //#endregion
-      Object.defineProperty(exports, 'main', {
-        enumerable: true,
-        get: function () {
-          return main;
-        }
-      });
-      })(this.module = this.module || {});"
-    `)
+        //#endregion
+        exports.main = main
+        })(this.module = this.module || {});"
+      `)
       : expect(output.output[0].code).toMatchInlineSnapshot(`
-      "(function(exports) {
+        "(function(exports) {
 
-      "use strict";
+        "use strict";
 
-      //#region main.js
-      const main = "main";
+        //#region main.js
+        const main = "main";
 
-      //#endregion
-      Object.defineProperty(exports, 'main', {
-        enumerable: true,
-        get: function () {
-          return main;
-        }
-      });
-      })(this.module = this.module || {});"
-    `)
+        //#endregion
+        exports.main = main
+        })(this.module = this.module || {});"
+      `)
   },
 })

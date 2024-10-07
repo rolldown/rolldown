@@ -32,12 +32,7 @@ function aaa() {
 }
 
 //#endregion
-Object.defineProperty(exports, 'aaa', {
-  enumerable: true,
-  get: function () {
-    return aaa;
-  }
-});
+exports.aaa = aaa
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {

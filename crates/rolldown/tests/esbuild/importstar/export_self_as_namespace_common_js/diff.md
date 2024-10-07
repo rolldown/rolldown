@@ -24,12 +24,7 @@ __export(entry_exports, {
 const foo = 123;
 
 //#endregion
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 Object.defineProperty(exports, 'ns', {
   enumerable: true,
   get: function () {
@@ -43,19 +38,14 @@ Object.defineProperty(exports, 'ns', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -2,6 +2,17 @@
+@@ -2,6 +2,12 @@
  __export(entry_exports, {
      foo: () => foo,
      ns: () => entry_exports
  });
 -module.exports = __toCommonJS(entry_exports);
  var foo = 123;
-+Object.defineProperty(exports, 'foo', {
-+    enumerable: true,
-+    get: function () {
-+        return foo;
-+    }
-+});
++exports.foo = foo;
 +Object.defineProperty(exports, 'ns', {
 +    enumerable: true,
 +    get: function () {

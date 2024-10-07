@@ -24,12 +24,7 @@ var main_default = 1;
 const a = 2;
 
 //#endregion
-Object.defineProperty(exports, 'a', {
-  enumerable: true,
-  get: function () {
-    return a;
-  }
-});
+exports.a = a
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {

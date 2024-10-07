@@ -20,10 +20,5 @@ var init_entry = __esm({ "entry.js"() {
 
 //#endregion
 init_entry();
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 ```

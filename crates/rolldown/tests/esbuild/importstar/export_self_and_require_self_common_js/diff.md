@@ -32,12 +32,7 @@ var init_entry = __esm({ "entry.js"() {
 
 //#endregion
 init_entry();
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 
 ```
 ### diff
@@ -45,7 +40,7 @@ Object.defineProperty(exports, 'foo', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.cjs
-@@ -1,13 +1,18 @@
+@@ -1,13 +1,13 @@
 -var entry_exports = {};
 -__export(entry_exports, {
 -    foo: () => foo
@@ -64,11 +59,6 @@ Object.defineProperty(exports, 'foo', {
      }
  });
  init_entry();
-+Object.defineProperty(exports, 'foo', {
-+    enumerable: true,
-+    get: function () {
-+        return foo;
-+    }
-+});
++exports.foo = foo;
 
 ```

@@ -19,18 +19,8 @@ const a = 1;
 const b = 2;
 
 //#endregion
-Object.defineProperty(exports, 'a', {
-  enumerable: true,
-  get: function () {
-    return a;
-  }
-});
-Object.defineProperty(exports, 'b', {
-  enumerable: true,
-  get: function () {
-    return b;
-  }
-});
+exports.a = a
+exports.b = b
 })(this.test.module = this.test.module || {});
   }
 }

@@ -24,13 +24,13 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
-use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-use crate::types::symbol_ref_db::SymbolRefDbForModule;
+use crate::types::symbol_ref_db::{SymbolRefDbForModule, SymbolRefFlags};
 
 #[derive(Debug)]
 pub struct ScanResult {
@@ -303,6 +303,21 @@ impl<'me> AstScanner<'me> {
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
+    let flags = self.result.symbol_ref_db.flags.entry(local).or_default();
+    let is_const = self.symbol_table.get_flags(local).is_const_variable();
+    let mut is_reassigned = false;
+
+    self.scopes.get_resolved_references(local).for_each(|refer| {
+      if refer.is_write() {
+        is_reassigned = true;
+      }
+    });
+    if is_const {
+      flags.insert(SymbolRefFlags::IS_CONST);
+    }
+    if !is_reassigned {
+      flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
+    }
     self
       .result
       .named_exports
@@ -470,13 +485,7 @@ impl<'me> AstScanner<'me> {
           ast::Declaration::VariableDeclaration(var_decl) => {
             var_decl.declarations.iter().for_each(|decl| {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
-                self.result.named_exports.insert(
-                  id.name.to_rstr(),
-                  LocalExport {
-                    referenced: (self.idx, id.expect_symbol_id()).into(),
-                    span: id.span,
-                  },
-                );
+                self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
               });
             });
           }

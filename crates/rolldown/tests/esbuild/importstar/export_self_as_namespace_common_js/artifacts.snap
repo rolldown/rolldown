@@ -18,12 +18,7 @@ __export(entry_exports, {
 const foo = 123;
 
 //#endregion
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 Object.defineProperty(exports, 'ns', {
   enumerable: true,
   get: function () {

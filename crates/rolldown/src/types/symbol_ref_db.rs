@@ -20,15 +20,19 @@ pub struct SymbolRefDataClassic {
   pub chunk_id: Option<ChunkIdx>,
 }
 
-#[derive(Debug)]
-pub struct SymbolRefData {
-  /// `None` means we don't know if this symbol is reassigned or not.
-  pub is_reassigned: Option<bool>,
+bitflags::bitflags! {
+  #[derive(Debug, Default)]
+  pub struct SymbolRefFlags: u8 {
+    const IS_NOT_REASSIGNED = 1;
+    /// If this symbol is declared by `const`. Eg. `const a = 1;`
+    const IS_CONST = 1 << 1;
+  }
 }
 
 #[derive(Debug, Default)]
 pub struct SymbolRefDbForModule {
-  pub data: FxHashMap<SymbolId, SymbolRefData>,
+  // Only some symbols would be cared about, so we use a hashmap to store the flags.
+  pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
 }
 
@@ -127,5 +131,9 @@ impl SymbolRefDb {
       canonical = founded;
     }
     canonical
+  }
+
+  pub fn get_flags(&self, refer: SymbolRef) -> Option<&SymbolRefFlags> {
+    self.inner[refer.owner].flags.get(&refer.symbol)
   }
 }

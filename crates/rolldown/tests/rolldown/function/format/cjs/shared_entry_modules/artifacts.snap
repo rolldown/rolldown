@@ -9,12 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 "use strict";
 const require_main = require('./main.cjs');
 
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return require_main.value;
-  }
-});
+exports.value = require_main.value
 ```
 ## entry2.cjs
 
@@ -22,12 +17,7 @@ Object.defineProperty(exports, 'value', {
 "use strict";
 const require_main = require('./main.cjs');
 
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return require_main.value;
-  }
-});
+exports.value = require_main.value
 ```
 ## main.cjs
 

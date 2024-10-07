@@ -14,10 +14,5 @@ function a() {
 }
 
 //#endregion
-Object.defineProperty(exports, 'a', {
-  enumerable: true,
-  get: function () {
-    return a;
-  }
-});
+exports.a = a
 ```

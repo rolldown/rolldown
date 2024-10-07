@@ -14,12 +14,7 @@ var module = (function(exports) {
 const value = 1;
 
 //#endregion
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return value;
-  }
-});
+exports.value = value
 return exports;
 })({});
 ```

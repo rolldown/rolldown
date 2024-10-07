@@ -15,12 +15,7 @@ Object.defineProperty(exports, 'default', {
     return require_main.main_default;
   }
 });
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return require_main.foo;
-  }
-});
+exports.foo = require_main.foo
 ```
 ## entry2.cjs
 
@@ -34,12 +29,7 @@ Object.defineProperty(exports, 'default', {
     return require_main.main_default;
   }
 });
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return require_main.foo;
-  }
-});
+exports.foo = require_main.foo
 ```
 ## main.cjs
 

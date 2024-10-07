@@ -7,7 +7,7 @@ USAGE rolldown -c <config> or rolldown <input> <options>
 
 OPTIONS
 
-  --config -c, <filename>     Path to the config file (default: \`rollup.config.js\`).
+  --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\`.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
@@ -102,7 +102,7 @@ USAGE rolldown -c <config> or rolldown <input> <options>
 
 OPTIONS
 
-  --config -c, <filename>     Path to the config file (default: \`rollup.config.js\`).
+  --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\`.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).

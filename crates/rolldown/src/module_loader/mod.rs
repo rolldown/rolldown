@@ -1,3 +1,4 @@
+pub mod hmr_module_loader;
 pub mod module_loader;
 mod module_task;
 mod runtime_module_task;

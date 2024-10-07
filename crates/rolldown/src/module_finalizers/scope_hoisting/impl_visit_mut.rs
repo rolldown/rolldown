@@ -316,8 +316,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     if let Some(symbol_id) = ident.symbol_id.get() {
       let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
 
-      let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-      let symbol = self.ctx.symbols.get(canonical_ref);
+      let canonical_ref = self.ctx.symbol_db.par_canonical_ref_for(symbol_ref);
+      let symbol = self.ctx.symbol_db.get(canonical_ref);
       assert!(symbol.namespace_alias.is_none());
       let canonical_name = self.canonical_name_for(symbol_ref);
       if ident.name != canonical_name.as_str() {

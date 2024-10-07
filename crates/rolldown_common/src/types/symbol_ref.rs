@@ -1,4 +1,4 @@
-use oxc::semantic::SymbolId;
+use oxc::{semantic::SymbolId, span::CompactStr};
 
 use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 
@@ -16,6 +16,10 @@ impl From<(ModuleIdx, SymbolId)> for SymbolRef {
 }
 
 impl SymbolRef {
+  pub fn name<'db>(&self, db: &'db SymbolRefDb) -> &'db CompactStr {
+    &db.get(*self).name
+  }
+
   pub fn flags<'db>(&self, db: &'db SymbolRefDb) -> Option<&'db SymbolRefFlags> {
     db.get_flags(*self)
   }
@@ -40,6 +44,15 @@ impl SymbolRef {
       // Not having this flag means we don't know
       None
     }
+  }
+
+  #[must_use]
+  pub fn canonical_ref(&self, db: &SymbolRefDb) -> SymbolRef {
+    db.par_canonical_ref_for(*self)
+  }
+
+  pub fn set_canonical_ref(&self, db: &mut SymbolRefDb, canonical_ref: SymbolRef) {
+    db.link(*self, canonical_ref);
   }
 
   pub fn is_created_by_import_stmt_that_target_external(

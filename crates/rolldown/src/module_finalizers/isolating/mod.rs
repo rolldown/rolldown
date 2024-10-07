@@ -12,7 +12,7 @@ mod impl_visit_mut;
 pub struct IsolatingModuleFinalizerContext<'me> {
   pub module: &'me NormalModule,
   pub modules: &'me IndexModules,
-  pub symbols: &'me SymbolRefDb,
+  pub symbol_db: &'me SymbolRefDb,
 }
 
 pub struct IsolatingModuleFinalizer<'me, 'ast> {

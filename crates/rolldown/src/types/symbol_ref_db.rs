@@ -1,10 +1,11 @@
 use oxc::index::IndexVec;
+use oxc::semantic::SymbolTable;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
-use super::{ast_symbols::AstSymbols, namespace_alias::NamespaceAlias};
+use super::namespace_alias::NamespaceAlias;
 
 #[derive(Debug)]
 pub struct SymbolRefDataClassic {
@@ -32,7 +33,7 @@ pub struct SymbolRefDbForModule {
 }
 
 impl SymbolRefDbForModule {
-  pub fn fill_classic_data(&mut self, ast_symbols: AstSymbols) {
+  pub fn fill_classic_data(&mut self, ast_symbols: SymbolTable) {
     self.classic_data = ast_symbols
       .names
       .into_iter()

@@ -12,7 +12,7 @@ use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
-  types::{ast_symbols::AstSymbols, symbol_ref_db::SymbolRefDbForModule},
+  types::symbol_ref_db::SymbolRefDbForModule,
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
 pub struct RuntimeModuleTask {
@@ -33,7 +33,6 @@ pub struct MakeEcmaAstResult {
   ast: EcmaAst,
   ast_scope: AstScopes,
   scan_result: ScanResult,
-  ast_symbols: AstSymbols,
   namespace_object_ref: SymbolRef,
 }
 
@@ -56,8 +55,7 @@ impl RuntimeModuleTask {
       }
     };
 
-    let MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref } =
-      ecma_ast_result;
+    let MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref } = ecma_ast_result;
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &ast_scope);
 
@@ -74,10 +72,8 @@ impl RuntimeModuleTask {
       has_eval,
       errors: _,
       ast_usage,
-      mut symbol_ref_db,
+      symbol_ref_db,
     } = scan_result;
-
-    symbol_ref_db.fill_classic_data(ast_symbols);
 
     let module = NormalModule {
       idx: self.module_id,
@@ -155,12 +151,11 @@ impl RuntimeModuleTask {
       std::mem::take(&mut symbol_table.references),
       std::mem::take(&mut symbol_table.resolved_references),
     );
-    let mut ast_symbols = AstSymbols::from_symbol_table(symbol_table);
     let facade_path = ModuleId::new("runtime");
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
-      &mut ast_symbols,
+      symbol_table,
       "rolldown_runtime",
       ModuleDefFormat::EsmMjs,
       source,
@@ -170,6 +165,6 @@ impl RuntimeModuleTask {
     let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program())?;
 
-    Ok(Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref }))
+    Ok(Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref }))
   }
 }

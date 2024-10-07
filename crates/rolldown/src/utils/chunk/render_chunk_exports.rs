@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+  OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::{is_validate_identifier_name, property_access_str};
@@ -199,7 +199,7 @@ pub fn get_chunk_export_names(
 
 fn must_keep_live_binding(
   export_ref: SymbolRef,
-  symbol_ref_db: &SymbolRefDb,
+  symbol_db: &SymbolRefDb,
   options: &NormalizedBundlerOptions,
   modules: &IndexModules,
 ) -> bool {
@@ -207,14 +207,16 @@ fn must_keep_live_binding(
     return false;
   }
 
-  let canonical_ref = symbol_ref_db.par_canonical_ref_for(export_ref);
+  let canonical_ref = symbol_db.par_canonical_ref_for(export_ref);
 
-  let canonical_ref_flags = symbol_ref_db.get_flags(canonical_ref);
+  if canonical_ref.is_declared_by_const(symbol_db).unwrap_or(false) {
+    // For unknown case, we consider it as not declared by `const`.
+    return false;
+  }
 
-  if let Some(flags) = canonical_ref_flags {
-    if flags.intersects(SymbolRefFlags::IS_CONST | SymbolRefFlags::IS_NOT_REASSIGNED) {
-      return false;
-    }
+  if canonical_ref.is_not_reassigned(symbol_db).unwrap_or(false) {
+    // For unknown case, we consider it as reassigned.
+    return false;
   }
 
   if !options.external_live_bindings && export_ref.is_created_by_import_from_external(modules) {

@@ -1,7 +1,7 @@
 use oxc::semantic::SymbolId;
 use rustc_hash::FxHashSet;
 
-use crate::{IndexModules, Module, ModuleIdx, Specifier};
+use crate::{IndexModules, Module, ModuleIdx, Specifier, SymbolRefDb, SymbolRefFlags};
 
 /// `SymbolRef` is used to represent a symbol in a module when there are multiple modules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -17,6 +17,32 @@ impl From<(ModuleIdx, SymbolId)> for SymbolRef {
 }
 
 impl SymbolRef {
+  pub fn flags<'db>(&self, db: &'db SymbolRefDb) -> Option<&'db SymbolRefFlags> {
+    db.get_flags(*self)
+  }
+
+  // `None` means we don't know if it's declared by `const`.
+  pub fn is_declared_by_const(&self, db: &SymbolRefDb) -> Option<bool> {
+    let flags = self.flags(db)?;
+    if flags.contains(SymbolRefFlags::IS_CONST) {
+      Some(true)
+    } else {
+      // Not having this flag means we don't know if it's declared by `const` instead of it's not declared by `const`.
+      None
+    }
+  }
+
+  /// `None` means we don't know if it gets reassigned.
+  pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> Option<bool> {
+    let flags = self.flags(db)?;
+    if flags.contains(SymbolRefFlags::IS_NOT_REASSIGNED) {
+      Some(true)
+    } else {
+      // Not having this flag means we don't know
+      None
+    }
+  }
+
   pub fn is_created_by_import_from_external(&self, modules: &IndexModules) -> bool {
     self.inner_is_created_by_import_from_external(modules, &mut FxHashSet::default())
   }

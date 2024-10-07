@@ -5,9 +5,8 @@ use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
 use rolldown_common::{
   side_effects::HookSideEffects, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleIdx,
-  ModuleType, ModuleView, RawImportRecord, ResolvedId, StrOrBytes,
+  ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
 };
-use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
@@ -15,8 +14,6 @@ use rolldown_sourcemap::SourceMap;
 use std::sync::Arc;
 
 use crate::{runtime::RUNTIME_MODULE_ID, SharedOptions, SharedResolver};
-
-use super::ast_symbols::AstSymbols;
 
 pub struct CreateModuleContext<'a> {
   pub module_index: ModuleIdx,
@@ -141,18 +138,4 @@ pub struct CreateModuleViewArgs {
   pub source: StrOrBytes,
   pub sourcemap_chain: Vec<SourceMap>,
   pub hook_side_effects: Option<HookSideEffects>,
-}
-
-pub struct CreateModuleViewReturn {
-  pub view: ModuleView,
-  pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
-  pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
-  pub ecma_related: Option<(EcmaAst, AstSymbols)>,
-}
-
-pub trait ModuleViewFactory {
-  async fn create_module_view(
-    ctx: &mut CreateModuleContext,
-    args: CreateModuleViewArgs,
-  ) -> anyhow::Result<DiagnosableResult<CreateModuleViewReturn>>;
 }

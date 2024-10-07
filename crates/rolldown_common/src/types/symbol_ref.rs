@@ -3,7 +3,7 @@ use rustc_hash::FxHashSet;
 
 use crate::{IndexModules, Module, ModuleIdx, Specifier};
 
-/// Crossing module ref between symbols
+/// `SymbolRef` is used to represent a symbol in a module when there are multiple modules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolRef {
   pub owner: ModuleIdx,

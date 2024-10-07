@@ -7,7 +7,7 @@ use crate::module_loader::runtime_module_task::RuntimeModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::type_alias::IndexEcmaAst;
-use crate::types::symbols::Symbols;
+use crate::types::symbol_ref_db::SymbolRefDb;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
@@ -42,10 +42,9 @@ impl IntermediateNormalModules {
     }
   }
 
-  pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> ModuleIdx {
+  pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
     let id = self.modules.push(None);
     self.importers.push(Vec::new());
-    symbols.alloc_one();
     id
   }
 }
@@ -58,14 +57,14 @@ pub struct ModuleLoader {
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
-  symbols: Symbols,
+  symbols: SymbolRefDb,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
-  pub symbols: Symbols,
+  pub symbols: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
@@ -110,8 +109,8 @@ impl ModuleLoader {
     });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
-    let mut symbols = Symbols::default();
-    let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx(&mut symbols);
+    let symbols = SymbolRefDb::default();
+    let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
     let task = RuntimeModuleTask::new(runtime_id, tx_to_runtime_module);
 
@@ -149,7 +148,7 @@ impl ModuleLoader {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if resolved_id.is_external {
-          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
           not_visited.insert(idx);
           let external_module_side_effects = if let Some(hook_side_effects) =
             resolved_id.side_effects
@@ -173,8 +172,10 @@ impl ModuleLoader {
               },
             }
           };
+          // FIXME: ---- This is hack and should be removed
           let symbol_ref =
             self.symbols.create_symbol(idx, legitimize_identifier_name(&resolved_id.id).into());
+          // --- End of hack
           let ext = ExternalModule::new(
             idx,
             ArcStr::clone(&resolved_id.id),
@@ -184,7 +185,7 @@ impl ModuleLoader {
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx
         } else {
-          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
           not_visited.insert(idx);
           self.remaining += 1;
 

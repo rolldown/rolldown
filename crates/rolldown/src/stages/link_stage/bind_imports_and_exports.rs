@@ -17,7 +17,8 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   types::{
-    linking_metadata::LinkingMetadataVec, namespace_alias::NamespaceAlias, symbols::Symbols,
+    linking_metadata::LinkingMetadataVec, namespace_alias::NamespaceAlias,
+    symbol_ref_db::SymbolRefDb,
   },
   SharedOptions,
 };
@@ -349,7 +350,7 @@ impl<'link> LinkStage<'link> {
 struct BindImportsAndExportsContext<'a> {
   pub normal_modules: &'a IndexModules,
   pub metas: &'a mut LinkingMetadataVec,
-  pub symbols: &'a mut Symbols,
+  pub symbols: &'a mut SymbolRefDb,
   pub options: &'a SharedOptions,
   pub errors: Vec<BuildDiagnostic>,
   pub warnings: Vec<BuildDiagnostic>,
@@ -433,10 +434,10 @@ impl<'a> BindImportsAndExportsContext<'a> {
           ));
         }
         MatchImportKind::Normal { symbol } => {
-          self.symbols.union(*imported_as_ref, symbol);
+          self.symbols.link(*imported_as_ref, symbol);
         }
         MatchImportKind::Namespace { namespace_ref } => {
-          self.symbols.union(*imported_as_ref, namespace_ref);
+          self.symbols.link(*imported_as_ref, namespace_ref);
         }
         MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
           self.symbols.get_mut(*imported_as_ref).namespace_alias =

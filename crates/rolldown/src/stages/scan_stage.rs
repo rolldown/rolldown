@@ -13,7 +13,7 @@ use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
   type_alias::IndexEcmaAst,
-  types::symbols::Symbols,
+  types::symbol_ref_db::SymbolRefDb,
   utils::resolve_id::resolve_id,
   SharedOptions, SharedResolver,
 };
@@ -30,7 +30,7 @@ pub struct ScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
   pub entry_points: Vec<EntryPoint>,
-  pub symbols: Symbols,
+  pub symbols: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,

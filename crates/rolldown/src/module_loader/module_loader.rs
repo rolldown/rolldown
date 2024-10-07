@@ -7,7 +7,6 @@ use crate::module_loader::runtime_module_task::RuntimeModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::type_alias::IndexEcmaAst;
-use crate::types::symbol_ref_db::SymbolRefDb;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::minifier::ReplaceGlobalDefinesConfig;
@@ -15,7 +14,7 @@ use oxc::span::Span;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, ResolvedId,
+  ModuleIdx, ModuleTable, ResolvedId, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;

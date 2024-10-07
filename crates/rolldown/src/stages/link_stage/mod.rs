@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, StmtInfo, SymbolRef, WrapKind,
+  OutputFormat, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -15,10 +15,7 @@ use rustc_hash::FxHashSet;
 use crate::{
   runtime::RuntimeModuleBrief,
   type_alias::IndexEcmaAst,
-  types::{
-    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbol_ref_db::SymbolRefDb,
-  },
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,
 };
 

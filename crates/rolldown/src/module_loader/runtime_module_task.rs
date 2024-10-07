@@ -3,7 +3,7 @@ use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaView, ExportsKind, ModuleDefFormat, ModuleId,
-  ModuleIdx, ModuleType, NormalModule, SymbolRef,
+  ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
@@ -12,7 +12,6 @@ use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
-  types::symbol_ref_db::SymbolRefDbForModule,
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
 pub struct RuntimeModuleTask {

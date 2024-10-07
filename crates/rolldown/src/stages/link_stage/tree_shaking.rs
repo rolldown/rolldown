@@ -1,10 +1,9 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
-use crate::types::symbol_ref_db::SymbolRefDb;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   IndexModules, Module, ModuleIdx, ModuleType, NormalModule, StmtInfoIdx, SymbolOrMemberExprRef,
-  SymbolRef,
+  SymbolRef, SymbolRefDb,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;

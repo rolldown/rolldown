@@ -1,4 +1,4 @@
-use rolldown_common::{IndexModules, ModuleIdx, NormalModule, SymbolRef};
+use rolldown_common::{IndexModules, ModuleIdx, NormalModule, SymbolRef, SymbolRefDb};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -6,10 +6,7 @@ use rustc_hash::FxHashMap;
 use crate::{
   chunk_graph::ChunkGraph,
   runtime::RuntimeModuleBrief,
-  types::{
-    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbol_ref_db::SymbolRefDb,
-  },
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,
 };
 

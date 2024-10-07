@@ -1,9 +1,9 @@
 use oxc::index::IndexVec;
-use rolldown_common::{ImportRecordIdx, Module, ModuleIdx, RawImportRecord, ResolvedId};
+use rolldown_common::{
+  ImportRecordIdx, Module, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
+};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
-
-use crate::types::symbol_ref_db::SymbolRefDbForModule;
 
 pub struct NormalModuleTaskResult {
   pub module_idx: ModuleIdx,

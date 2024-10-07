@@ -2316,7 +2316,6 @@ dependencies = [
  "anyhow",
  "append-only-vec",
  "arcstr",
- "bitflags 2.6.0",
  "daachorse",
  "dunce",
  "futures",

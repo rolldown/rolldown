@@ -1597,15 +1597,15 @@ expression: output
 
 # tests/esbuild/importstar/export_self_and_import_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-32I83GKt.cjs
+- entry_js-!~{000}~.cjs => entry_js-oU3JDK9e.cjs
 
 # tests/esbuild/importstar/export_self_and_require_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-LN6d6btj.cjs
+- entry_js-!~{000}~.cjs => entry_js-_3d1EiSj.cjs
 
 # tests/esbuild/importstar/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-lkGhL6zP.cjs
+- entry_js-!~{000}~.cjs => entry_js-gNYuDDcK.cjs
 
 # tests/esbuild/importstar/export_self_as_namespace_es6
 
@@ -1613,7 +1613,7 @@ expression: output
 
 # tests/esbuild/importstar/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-mKIoiJrd.cjs
+- entry_js-!~{000}~.cjs => entry_js-0ATAi2At.cjs
 
 # tests/esbuild/importstar/export_self_common_js_minified
 
@@ -1625,11 +1625,11 @@ expression: output
 
 # tests/esbuild/importstar/export_self_iife
 
-- entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
+- entry_js-!~{000}~.mjs => entry_js-6mga-qt9.mjs
 
 # tests/esbuild/importstar/export_self_iife_with_name
 
-- entry_js-!~{000}~.mjs => entry_js-MUKCSxUC.mjs
+- entry_js-!~{000}~.mjs => entry_js-6mga-qt9.mjs
 
 # tests/esbuild/importstar/export_star_default_export_common_js
 
@@ -2833,27 +2833,27 @@ expression: output
 
 # tests/rolldown/function/es_module/always
 
-- main-!~{000}~.mjs => main-GMcEoSM-.mjs
+- main-!~{000}~.mjs => main-yZBgcOx8.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_false
 
-- main-!~{000}~.cjs => main-T0mAU_XW.cjs
+- main-!~{000}~.cjs => main-30YAhiLI.cjs
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_true
 
-- main-!~{000}~.cjs => main-yN0ScSi8.cjs
+- main-!~{000}~.cjs => main-s6lBS-nX.cjs
 
 # tests/rolldown/function/es_module/if_default_prop_iife_false
 
-- main-!~{000}~.mjs => main-MTVu9T3l.mjs
+- main-!~{000}~.mjs => main-il7etjKO.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_iife_true
 
-- main-!~{000}~.mjs => main-6o0sUXXk.mjs
+- main-!~{000}~.mjs => main-mXJljSaH.mjs
 
 # tests/rolldown/function/es_module/never
 
-- main-!~{000}~.mjs => main-MTVu9T3l.mjs
+- main-!~{000}~.mjs => main-il7etjKO.mjs
 
 # tests/rolldown/function/experimental/disable_live_bindings
 
@@ -2889,7 +2889,7 @@ expression: output
 
 # tests/rolldown/function/export_mode/cjs/auto/named
 
-- main-!~{000}~.cjs => main-5VkOU269.cjs
+- main-!~{000}~.cjs => main-YgL8NzzT.cjs
 
 # tests/rolldown/function/export_mode/cjs/auto/none
 
@@ -2901,7 +2901,7 @@ expression: output
 
 # tests/rolldown/function/export_mode/cjs/named
 
-- main-!~{000}~.cjs => main-sFhd45Xb.cjs
+- main-!~{000}~.cjs => main-0e3VMrlb.cjs
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
@@ -2913,7 +2913,7 @@ expression: output
 
 # tests/rolldown/function/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-okYdXZxm.mjs
+- main-!~{000}~.mjs => main-HAK-qBWy.mjs
 
 # tests/rolldown/function/extend/iife/namespace_default
 
@@ -2921,7 +2921,7 @@ expression: output
 
 # tests/rolldown/function/extend/iife/namespace_named
 
-- main-!~{000}~.mjs => main-qFuUsGqX.mjs
+- main-!~{000}~.mjs => main-rL3LHKnm.mjs
 
 # tests/rolldown/function/extend/iife/no_name_default
 
@@ -2929,7 +2929,7 @@ expression: output
 
 # tests/rolldown/function/extend/iife/no_name_named
 
-- main-!~{000}~.mjs => main-tJ5KtzCN.mjs
+- main-!~{000}~.mjs => main-ns0qmxoX.mjs
 
 # tests/rolldown/function/extend/iife/non_namespace_default
 
@@ -2937,7 +2937,7 @@ expression: output
 
 # tests/rolldown/function/extend/iife/non_namespace_named
 
-- main-!~{000}~.mjs => main-4I1iemMj.mjs
+- main-!~{000}~.mjs => main-hQyvdNWe.mjs
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -2967,7 +2967,7 @@ expression: output
 
 # tests/rolldown/function/external_live_bindings
 
-- main-!~{000}~.cjs => main-9oedPrfh.cjs
+- main-!~{000}~.cjs => main-GR0OBaTv.cjs
 
 # tests/rolldown/function/format/app/export-all
 
@@ -3009,11 +3009,11 @@ expression: output
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
-- main-!~{000}~.cjs => main-MV9F9603.cjs
+- main-!~{000}~.cjs => main-jdlDcA1w.cjs
 
 # tests/rolldown/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-7KKR3ylp.cjs
+- main-!~{000}~.cjs => main-f8iv2A1p.cjs
 
 # tests/rolldown/function/format/cjs/plain_import_should_not_introduce_to_esm
 
@@ -3027,8 +3027,8 @@ expression: output
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-i7oOHHhW.cjs
-- entry2-!~{001}~.cjs => entry2-TTCbXWhM.cjs
+- entry1-!~{000}~.cjs => entry1-PgX-GK0n.cjs
+- entry2-!~{001}~.cjs => entry2-CBMQoYM-.cjs
 - main-!~{002}~.cjs => main-g4RbwWfd.cjs
 
 # tests/rolldown/function/format/esm/import_export_unicode
@@ -3037,11 +3037,11 @@ expression: output
 
 # tests/rolldown/function/format/iife/conflict_exports_key
 
-- main-!~{000}~.mjs => main-oG2zLm_0.mjs
+- main-!~{000}~.mjs => main-9xKZl1DX.mjs
 
 # tests/rolldown/function/format/iife/conflict_exports_key_loop
 
-- main-!~{000}~.mjs => main-jqeYIu7y.mjs
+- main-!~{000}~.mjs => main-V-atYJ0A.mjs
 
 # tests/rolldown/function/format/iife/external_modules
 
@@ -3053,15 +3053,15 @@ expression: output
 
 # tests/rolldown/function/format/iife/iife_with_name
 
-- main-!~{000}~.mjs => main--FmiP1j0.mjs
+- main-!~{000}~.mjs => main-rjxy_9GP.mjs
 
 # tests/rolldown/function/format/iife/namespaced_name
 
-- main-!~{000}~.mjs => main-ELPzdqJs.mjs
+- main-!~{000}~.mjs => main-C9oGkn5P.mjs
 
 # tests/rolldown/function/format/iife/namespaced_name_reserved
 
-- main-!~{000}~.mjs => main-i2p4fCcn.mjs
+- main-!~{000}~.mjs => main-rnVxjHfw.mjs
 
 # tests/rolldown/function/inject
 
@@ -3429,7 +3429,7 @@ expression: output
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.cjs => entry-9O3jXKw7.cjs
+- entry-!~{000}~.cjs => entry-jl1ZvnLv.cjs
 
 # tests/rolldown/sourcemap/inline_url_relative_to_file
 
@@ -3442,7 +3442,7 @@ expression: output
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
-- main-!~{000}~.cjs => main-HEXq7EWu.cjs
+- main-!~{000}~.cjs => main-p3qJDBr-.cjs
 
 # tests/rolldown/topics/css/basic
 
@@ -3512,7 +3512,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_binding_cjs
 
-- main-!~{000}~.cjs => main-M49-3Ili.cjs
+- main-!~{000}~.cjs => main-Pxgut0pz.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks
 
@@ -3530,7 +3530,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_expr_cjs
 
-- main-!~{000}~.cjs => main-uib-aQoT.cjs
+- main-!~{000}~.cjs => main-XVReus72.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks
 
@@ -3548,7 +3548,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/named_exports_cjs
 
-- main-!~{000}~.cjs => main-QjzSNBfw.cjs
+- main-!~{000}~.cjs => main-SywckwVS.cjs
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
@@ -3558,9 +3558,13 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.cjs => main-h7mF_ZsM.cjs
+- main-!~{000}~.cjs => main-TRJKnzGC.cjs
 - async-entry-!~{003}~.cjs => async-entry-bLPO79el.cjs
 - shared-!~{001}~.cjs => shared-PsOvd2ew.cjs
+
+# tests/rolldown/topics/live_bindings/on_demand_shorthand_pattern_cjs
+
+- main-!~{000}~.cjs => main-Bl7D8wL8.cjs
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 
@@ -3572,7 +3576,7 @@ expression: output
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_cjs
 
-- main-!~{000}~.cjs => main-XnUXw2Fp.cjs
+- main-!~{000}~.cjs => main-MYJJIqOM.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
 
@@ -3582,8 +3586,8 @@ expression: output
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-Mw6RYPz7.cjs
-- entry2-!~{001}~.cjs => entry2-gf69CcN4.cjs
+- entry-!~{000}~.cjs => entry-w-f9pX8F.cjs
+- entry2-!~{001}~.cjs => entry2-7png3w-D.cjs
 - main-!~{002}~.cjs => main--L-FB-fk.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
@@ -3598,7 +3602,7 @@ expression: output
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
-- main-!~{000}~.cjs => main-p3cPDql9.cjs
+- main-!~{000}~.cjs => main-Gf0fLxp1.cjs
 
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 
@@ -3675,7 +3679,7 @@ expression: output
 
 # tests/rolldown/warnings/mixed_export
 
-- main-!~{000}~.mjs => main-1v1Ck7af.mjs
+- main-!~{000}~.mjs => main-zXjtdAhE.mjs
 
 # tests/rolldown/warnings/unresolved_import_treated_as_external
 

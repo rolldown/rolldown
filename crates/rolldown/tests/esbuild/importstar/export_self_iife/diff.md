@@ -16,12 +16,7 @@
 const foo = 123;
 
 //#endregion
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 return exports;
 })({});
 
@@ -31,18 +26,13 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,3 +1,10 @@
+@@ -1,3 +1,5 @@
 -(() => {
 -    var foo = 123;
 -})();
 +(function (exports) {
 +    const foo = 123;
-+    Object.defineProperty(exports, 'foo', {
-+        enumerable: true,
-+        get: function () {
-+            return foo;
-+        }
-+    });
++    exports.foo = foo;
 +    return exports;
 +})({});
 

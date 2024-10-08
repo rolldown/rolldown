@@ -17,40 +17,30 @@ export default defineTest({
   afterTest: (output) => {
     isComposingJs
       ? expect(output.output[0].code).toMatchInlineSnapshot(`
-      "var module = (function(exports) {
+        "var module = (function(exports) {
 
-      "use strict";
+        "use strict";
 
-      //#region main.js
-      const main = "main";
+        //#region main.js
+        const main = "main";
 
-      //#endregion
-      Object.defineProperty(exports, 'main', {
-        enumerable: true,
-        get: function () {
-          return main;
-        }
-      });
-      return exports;
-      })({});"
-    `)
+        //#endregion
+        exports.main = main
+        return exports;
+        })({});"
+      `)
       : expect(output.output[0].code).toMatchInlineSnapshot(`
-      "var module = (function(exports) {
+        "var module = (function(exports) {
 
-      "use strict";
+        "use strict";
 
-      //#region main.js
-      const main = "main";
+        //#region main.js
+        const main = "main";
 
-      //#endregion
-      Object.defineProperty(exports, 'main', {
-        enumerable: true,
-        get: function () {
-          return main;
-        }
-      });
-      return exports;
-      })({});"
-    `)
+        //#endregion
+        exports.main = main
+        return exports;
+        })({});"
+      `)
   },
 })

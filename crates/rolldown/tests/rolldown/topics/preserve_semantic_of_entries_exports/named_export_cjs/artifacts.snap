@@ -20,10 +20,5 @@ Object.defineProperty(exports, 'default', {
     return main_default;
   }
 });
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 ```

@@ -21,12 +21,7 @@ var someName = (() => {
 const foo = 123;
 
 //#endregion
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.foo = foo
 return exports;
 })({});
 
@@ -36,22 +31,18 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry_js.mjs
-@@ -1,8 +1,10 @@
+@@ -1,8 +1,5 @@
 -var someName = (() => {
 -    var entry_exports = {};
 -    __export(entry_exports, {
 -        foo: () => foo
-+(function (exports) {
-+    const foo = 123;
-+    Object.defineProperty(exports, 'foo', {
-+        enumerable: true,
-+        get: function () {
-+            return foo;
-+        }
-     });
+-    });
 -    var foo = 123;
 -    return __toCommonJS(entry_exports);
 -})();
++(function (exports) {
++    const foo = 123;
++    exports.foo = foo;
 +    return exports;
 +})({});
 

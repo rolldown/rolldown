@@ -25,16 +25,6 @@ Object.defineProperty(exports, 'default', {
     return count;
   }
 });
-Object.defineProperty(exports, 'inc', {
-  enumerable: true,
-  get: function () {
-    return inc;
-  }
-});
-Object.defineProperty(exports, 'reset', {
-  enumerable: true,
-  get: function () {
-    return reset;
-  }
-});
+exports.inc = inc
+exports.reset = reset
 ```

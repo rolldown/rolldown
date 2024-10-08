@@ -22,12 +22,7 @@ Object.defineProperty(exports, 'default', {
     return main_default;
   }
 });
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return value;
-  }
-});
+exports.value = value
 return exports;
 })({});
 ```

@@ -1,9 +1,15 @@
-use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
+use crate::{
+  stages::link_stage::LinkStageOutput,
+  types::{
+    generator::GenerateContext,
+    symbol_ref_db::{SymbolRefDb, SymbolRefFlags},
+  },
+};
 use std::borrow::Cow;
 
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
-  WrapKind,
+  Chunk, ChunkKind, ExportsKind, IndexModules, NormalizedBundlerOptions, OutputExports,
+  OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::{is_validate_identifier_name, property_access_str};
@@ -81,16 +87,12 @@ pub fn render_chunk_exports(
 
                 match export_mode {
                   Some(OutputExports::Named) => {
-                    if options.experimental.is_disable_live_bindings_enabled()
-                      || (!options.external_live_bindings
-                        && export_ref
-                          .is_created_by_import_from_external(&link_output.module_table.modules))
-                    {
-                      format!(
-                        "{left_value} = {exported_value}",
-                        left_value = property_access_str("exports", &exported_name)
-                      )
-                    } else {
+                    if must_keep_live_binding(
+                      export_ref,
+                      &link_output.symbols,
+                      options,
+                      &link_output.module_table.modules,
+                    ) {
                       format!(
                         "Object.defineProperty(exports, '{exported_name}', {{
   enumerable: true,
@@ -98,6 +100,11 @@ pub fn render_chunk_exports(
     return {exported_value};
   }}
 }});"
+                      )
+                    } else {
+                      format!(
+                        "{left_value} = {exported_value}",
+                        left_value = property_access_str("exports", &exported_name)
                       )
                     }
                   }
@@ -194,4 +201,31 @@ pub fn get_chunk_export_names(
     .into_iter()
     .map(|(exported_name, _)| exported_name.to_string())
     .collect::<Vec<_>>()
+}
+
+fn must_keep_live_binding(
+  export_ref: SymbolRef,
+  symbol_ref_db: &SymbolRefDb,
+  options: &NormalizedBundlerOptions,
+  modules: &IndexModules,
+) -> bool {
+  if options.experimental.is_disable_live_bindings_enabled() {
+    return false;
+  }
+
+  let canonical_ref = symbol_ref_db.par_canonical_ref_for(export_ref);
+
+  let canonical_ref_flags = symbol_ref_db.get_flags(canonical_ref);
+
+  if let Some(flags) = canonical_ref_flags {
+    if flags.intersects(SymbolRefFlags::IS_CONST | SymbolRefFlags::IS_NOT_REASSIGNED) {
+      return false;
+    }
+  }
+
+  if !options.external_live_bindings && export_ref.is_created_by_import_from_external(modules) {
+    return false;
+  }
+
+  true
 }

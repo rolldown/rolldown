@@ -1,6 +1,7 @@
 use oxc::minifier::InjectGlobalVariablesConfig;
-use rolldown_common::{InjectImport, ModuleType, NormalizedBundlerOptions, Platform};
+use rolldown_common::{InjectImport, InputItem, ModuleType, NormalizedBundlerOptions, Platform};
 use rustc_hash::FxHashMap;
+use std::env;
 
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
@@ -74,8 +75,19 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_default(),
   );
 
+  let mut input_list: Vec<InputItem> = raw_options.input.unwrap_or_default();
+  if env::consts::OS == "windows" && !input_list.is_empty() {
+    input_list = input_list
+      .iter()
+      .map(|input_item| InputItem {
+        name: input_item.name.clone(),
+        import: normalize_path(&input_item.import),
+      })
+      .collect::<Vec<_>>();
+  }
+
   let normalized = NormalizedBundlerOptions {
-    input: raw_options.input.unwrap_or_default(),
+    input: input_list,
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
@@ -126,4 +138,17 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }
+}
+
+fn normalize_path(path: &str) -> String {
+  let window_sep = "\\";
+  path.replace(window_sep, "/")
+}
+
+#[test]
+fn test_normalize_path() {
+  let normalized_path = normalize_path("foo\\bar");
+  assert_eq!(normalized_path, "foo/bar".to_string());
+  let normalized_path = normalize_path("foo\\bar\\baz\\quzz");
+  assert_eq!(normalized_path, "foo/bar/baz/quzz".to_string());
 }

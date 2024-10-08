@@ -189,7 +189,7 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<External
       if let RenderImportStmt::ExternalRenderImportStmt(external_stmt) = stmt {
         let symbol_name = ctx
           .link_output
-          .symbols
+          .symbol_db
           .canonical_name_for(external_stmt.symbol_ref, &ctx.chunk.canonical_names);
         match &external_stmt.specifiers {
           RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
@@ -251,7 +251,7 @@ fn render_iife_arguments(
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
     let symbol_name =
-      ctx.link_output.symbols.canonical_name_for(external.symbol_ref, &ctx.chunk.canonical_names);
+      ctx.link_output.symbol_db.canonical_name_for(external.symbol_ref, &ctx.chunk.canonical_names);
     input_args.push(symbol_name.as_str());
 
     if let Some(global) = globals.get(external.path.as_str()) {

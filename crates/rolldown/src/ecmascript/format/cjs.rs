@@ -59,7 +59,7 @@ pub fn render_cjs(
         meta.require_bindings_for_star_exports.iter().for_each(|(importee_idx, binding_ref)| {
           let importee = &ctx.link_output.module_table.modules[*importee_idx];
           let binding_ref_name =
-            ctx.link_output.symbols.canonical_name_for(*binding_ref, &ctx.chunk.canonical_names);
+            ctx.link_output.symbol_db.canonical_name_for(*binding_ref, &ctx.chunk.canonical_names);
             let import_stmt =
 "Object.keys($NAME).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
@@ -118,14 +118,14 @@ pub fn render_cjs(
         // init_xxx()
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
-          ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+          ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
         concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
-          ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+          ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
         concat_source
           .add_source(Box::new(RawSource::new(format!("export default {wrapper_ref_name}();\n"))));
       }
@@ -196,7 +196,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             if stmt.is_external() {
               let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
                 .link_output
-                .symbols
+                .symbol_db
                 .par_canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
               format!("{to_esm_fn_name}({require_path_str})")
@@ -212,7 +212,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           if stmt.is_external() {
             let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
               .link_output
-              .symbols
+              .symbol_db
               .par_canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
             format!("{to_esm_fn_name}({require_path_str})")

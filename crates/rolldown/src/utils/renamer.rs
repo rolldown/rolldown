@@ -30,7 +30,7 @@ pub struct Renamer<'name> {
   ///
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
-  symbols: &'name SymbolRefDb,
+  symbol_db: &'name SymbolRefDb,
 }
 
 impl<'name> Renamer<'name> {
@@ -43,7 +43,7 @@ impl<'name> Renamer<'name> {
     };
     Self {
       canonical_names: FxHashMap::default(),
-      symbols,
+      symbol_db: symbols,
       used_canonical_names: manual_reserved
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
@@ -58,8 +58,8 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
-    let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
-    let original_name = self.symbols.get_original_name(canonical_ref).to_rstr();
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    let original_name = canonical_ref.name(self.symbol_db).to_rstr();
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();

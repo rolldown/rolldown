@@ -33,7 +33,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
-    self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
+    self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
@@ -86,12 +86,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     symbol_ref: SymbolRef,
     preserve_this_semantic_if_needed: bool,
   ) -> ast::Expression<'ast> {
-    let mut canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-    let mut canonical_symbol = self.ctx.symbols.get(canonical_ref);
+    let mut canonical_ref = self.ctx.symbol_db.par_canonical_ref_for(symbol_ref);
+    let mut canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
       canonical_ref = ns_alias.namespace_ref;
-      canonical_symbol = self.ctx.symbols.get(canonical_ref);
+      canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
 
     let mut expr = match self.ctx.options.format {
@@ -102,7 +102,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         } else {
           let chunk_idx_of_canonical_symbol =
             canonical_symbol.chunk_id.unwrap_or_else(|| {
-              let symbol_name = self.ctx.symbols.get_original_name(canonical_ref);
+              let symbol_name = canonical_ref.name(self.ctx.symbol_db);
               eprintln!(
                 "{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",
               );

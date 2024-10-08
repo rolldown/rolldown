@@ -151,7 +151,7 @@ impl<'a> GenerateStage<'a> {
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
   ) {
-    let symbols = &self.link_output.symbols;
+    let symbols = &self.link_output.symbol_db;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
     let chunks_iter = multizip((
@@ -231,7 +231,8 @@ impl<'a> GenerateStage<'a> {
                   if let Some(sym_ref) = member_expr.resolved_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
-                    let mut canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
+                    let mut canonical_ref =
+                      self.link_output.symbol_db.par_canonical_ref_for(sym_ref);
                     let symbol = symbols.get(canonical_ref);
                     if let Some(ref ns_alias) = symbol.namespace_alias {
                       canonical_ref = ns_alias.namespace_ref;
@@ -278,7 +279,7 @@ impl<'a> GenerateStage<'a> {
       },
     );
     // shadowing previous immutable borrow
-    let symbols = &mut self.link_output.symbols;
+    let symbols = &mut self.link_output.symbol_db;
     for (chunk_id, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let symbol = symbols.get_mut(declared);
@@ -311,10 +312,10 @@ impl<'a> GenerateStage<'a> {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;
         }
-        let import_symbol = self.link_output.symbols.get(import_ref);
+        let import_symbol = self.link_output.symbol_db.get(import_ref);
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
-          let symbol_name = self.link_output.symbols.get_original_name(import_ref);
+          let symbol_name = import_ref.name(&self.link_output.symbol_db);
           panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
         });
         // Check if the import is from another chunk
@@ -363,7 +364,7 @@ impl<'a> GenerateStage<'a> {
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
       for chunk_export in index_chunk_exported_symbols[chunk_id].iter().copied() {
         let original_name: rolldown_rstr::Rstr =
-          self.link_output.symbols.get_original_name(chunk_export).to_rstr();
+          chunk_export.name(&self.link_output.symbol_db).to_rstr();
         let key: Cow<'_, Rstr> = Cow::Owned(original_name.clone());
         let count = name_count.entry(key).or_insert(0u32);
         let alias = if *count == 0 {

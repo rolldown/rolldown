@@ -130,7 +130,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     export_default_decl: &mut ast::ExportDefaultDeclaration<'ast>,
   ) -> Statement<'ast> {
     // TODO deconflict default_export_ref
-    let default_export_ref = self.ctx.symbols.get_original_name(self.ctx.module.default_export_ref);
+    let default_export_ref = self.ctx.module.default_export_ref.name(self.ctx.symbol_db);
 
     match &mut export_default_decl.declaration {
       decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
@@ -359,7 +359,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     match module {
       Module::Normal(importee) => {
         // TODO deconflict namespace_ref
-        self.ctx.symbols.get_original_name(importee.namespace_object_ref).clone()
+        importee.namespace_object_ref.name(self.ctx.symbol_db).clone()
       }
       Module::External(external_module) => {
         // TODO need to generate one symbol and deconflict it

@@ -89,10 +89,6 @@ impl SymbolRefDb {
     self.get_mut(base_root).link = Some(target_root);
   }
 
-  pub fn get_original_name(&self, refer: SymbolRef) -> &CompactString {
-    &self.get(refer).name
-  }
-
   pub fn canonical_name_for<'name>(
     &self,
     refer: SymbolRef,
@@ -102,7 +98,7 @@ impl SymbolRefDb {
     canonical_names.get(&canonical_ref).unwrap_or_else(|| {
       panic!(
         "canonical name not found for {canonical_ref:?}, original_name: {:?}",
-        self.get_original_name(refer)
+        refer.name(self)
       );
     })
   }
@@ -134,7 +130,7 @@ impl SymbolRefDb {
     canonical
   }
 
-  pub fn get_flags(&self, refer: SymbolRef) -> Option<&SymbolRefFlags> {
+  pub(crate) fn get_flags(&self, refer: SymbolRef) -> Option<&SymbolRefFlags> {
     self.inner[refer.owner].flags.get(&refer.symbol)
   }
 }

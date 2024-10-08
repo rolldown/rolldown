@@ -83,7 +83,7 @@ impl<'a> GenerateStage<'a> {
             ScopeHoistingFinalizerContext {
               canonical_names: &chunk.canonical_names,
               id: module.idx,
-              symbols: &self.link_output.symbols,
+              symbol_db: &self.link_output.symbol_db,
               linking_info,
               module,
               modules: &self.link_output.module_table.modules,
@@ -103,7 +103,7 @@ impl<'a> GenerateStage<'a> {
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.modules,
-                symbols: &self.link_output.symbols,
+                symbol_db: &self.link_output.symbol_db,
               },
               snippet: AstSnippet::new(alloc),
               generated_imports_set: FxHashSet::default(),

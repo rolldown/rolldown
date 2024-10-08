@@ -219,7 +219,9 @@ fn must_keep_live_binding(
     return false;
   }
 
-  if !options.external_live_bindings && export_ref.is_created_by_import_from_external(modules) {
+  if !options.external_live_bindings
+    && canonical_ref.is_created_by_import_stmt_that_target_external(symbol_db, modules)
+  {
     return false;
   }
 

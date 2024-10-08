@@ -1,7 +1,6 @@
 use oxc::semantic::SymbolId;
-use rustc_hash::FxHashSet;
 
-use crate::{IndexModules, Module, ModuleIdx, Specifier, SymbolRefDb, SymbolRefFlags};
+use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 
 /// `SymbolRef` is used to represent a symbol in a module when there are multiple modules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,37 +42,26 @@ impl SymbolRef {
     }
   }
 
-  pub fn is_created_by_import_from_external(&self, modules: &IndexModules) -> bool {
-    self.inner_is_created_by_import_from_external(modules, &mut FxHashSet::default())
-  }
-  fn inner_is_created_by_import_from_external(
-    self,
+  pub fn is_created_by_import_stmt_that_target_external(
+    &self,
+    db: &SymbolRefDb,
     modules: &IndexModules,
-    visited: &mut FxHashSet<SymbolRef>,
   ) -> bool {
-    let is_not_inserted_before = visited.insert(self);
-    if !is_not_inserted_before {
-      // We are in a cycle
-      return false;
-    }
+    let canonical_ref = db.par_canonical_ref_for(*self);
 
-    let Module::Normal(owner) = &modules[self.owner] else { return false };
+    let Module::Normal(owner) = &modules[canonical_ref.owner] else { return false };
 
-    let Some(named_import) = owner.named_imports.get(&self) else {
+    let Some(named_import) = owner.named_imports.get(self) else {
       return false;
     };
 
     let rec = &owner.import_records[named_import.record_id];
 
     match &modules[rec.resolved_module] {
-      Module::Normal(normal) => {
-        let Specifier::Literal(imported) = &named_import.imported else {
-          return false;
-        };
-        let Some(named_export) = normal.named_exports.get(imported) else {
-          return false;
-        };
-        named_export.referenced.is_created_by_import_from_external(modules)
+      Module::Normal(_) => {
+        // This branch should be unreachable. By `par_canonical_ref_for`, we should get the canonical ref.
+        // An canonical ref is either declared by the module itself or a `import { foo } from 'bar'` statement.
+        false
       }
       Module::External(_) => true,
     }

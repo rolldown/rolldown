@@ -1,13 +1,13 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolRef};
+use rolldown_common::{
+  IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
+};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-
-use crate::types::symbol_ref_db::SymbolRefDb;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {

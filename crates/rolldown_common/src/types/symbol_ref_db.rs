@@ -1,9 +1,10 @@
 use oxc::index::IndexVec;
 use oxc::semantic::SymbolTable;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
-use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
+
+use crate::{ChunkIdx, ModuleIdx, SymbolRef};
 
 use super::namespace_alias::NamespaceAlias;
 

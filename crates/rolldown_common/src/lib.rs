@@ -81,6 +81,7 @@ pub use crate::{
   types::module_view::ModuleView,
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
+  types::namespace_alias::NamespaceAlias,
   types::output::{Output, OutputAsset},
   types::output_chunk::OutputChunk,
   types::package_json::PackageJson,
@@ -94,6 +95,7 @@ pub use crate::{
   types::str_or_bytes::StrOrBytes,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
   types::symbol_ref::SymbolRef,
+  types::symbol_ref_db::{SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

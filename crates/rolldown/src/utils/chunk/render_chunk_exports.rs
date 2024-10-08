@@ -1,15 +1,9 @@
-use crate::{
-  stages::link_stage::LinkStageOutput,
-  types::{
-    generator::GenerateContext,
-    symbol_ref_db::{SymbolRefDb, SymbolRefFlags},
-  },
-};
+use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 use std::borrow::Cow;
 
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, SymbolRef, WrapKind,
+  OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::{is_validate_identifier_name, property_access_str};

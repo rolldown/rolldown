@@ -1,5 +1,6 @@
-use rolldown_common::SymbolRef;
 use rolldown_rstr::Rstr;
+
+use crate::SymbolRef;
 
 #[derive(Debug)]
 pub struct NamespaceAlias {

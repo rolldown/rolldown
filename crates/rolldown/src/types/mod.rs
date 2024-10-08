@@ -7,6 +7,4 @@ pub mod bundler_fs;
 pub mod generator;
 pub mod linking_metadata;
 pub mod module_factory;
-pub mod namespace_alias;
 pub mod oxc_parse_type;
-pub mod symbol_ref_db;

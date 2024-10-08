@@ -6,7 +6,7 @@ use oxc::{
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, EcmaView, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
-  RawImportRecord, ResolvedId, SymbolRef, TreeshakeOptions,
+  RawImportRecord, ResolvedId, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{DiagnosableResult, UnhandleableResult};
@@ -15,10 +15,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  types::{
-    module_factory::{CreateModuleContext, CreateModuleViewArgs},
-    symbol_ref_db::SymbolRefDbForModule,
-  },
+  types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{
     make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
     parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},

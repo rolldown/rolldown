@@ -1,15 +1,12 @@
 use oxc::index::IndexVec;
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions, StmtInfo,
-  WrapKind,
+  SymbolRefDb, WrapKind,
 };
 
 use crate::{
   runtime::RuntimeModuleBrief,
-  types::{
-    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbol_ref_db::SymbolRefDb,
-  },
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
 use super::LinkStage;

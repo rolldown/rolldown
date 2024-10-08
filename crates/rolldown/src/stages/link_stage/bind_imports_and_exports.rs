@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier,
-  SymbolOrMemberExprRef, SymbolRef,
+  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, ResolvedExport,
+  Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -15,13 +15,7 @@ use rolldown_utils::rayon::{
 
 use rustc_hash::FxHashMap;
 
-use crate::{
-  types::{
-    linking_metadata::LinkingMetadataVec, namespace_alias::NamespaceAlias,
-    symbol_ref_db::SymbolRefDb,
-  },
-  SharedOptions,
-};
+use crate::{types::linking_metadata::LinkingMetadataVec, SharedOptions};
 
 use super::LinkStage;
 

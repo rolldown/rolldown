@@ -98,5 +98,6 @@
         "import": "stmt-export-default-after-async-gen-fn-name.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

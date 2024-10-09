@@ -1,8 +1,6 @@
-import { trimStart } from 'lodash-es'
 import { snakeCase } from 'change-case'
 import markdown from 'markdown-it'
 import assert from 'node:assert'
-
 export function parseEsbuildSnap(source: string) {
   let cases = source.split(
     '================================================================================',
@@ -16,7 +14,8 @@ function parseEsbuildCase(source: string): {
 } {
   let lines = source.trimStart().split('\n')
   let [name, ...rest] = lines
-  let normalizedName = snakeCase(trimStart(name, 'Test'))
+  let trimmedName = name.slice(4)
+  let normalizedName = snakeCase(trimmedName)
   let content = rest.join('\n')
   return { name: normalizedName, sourceList: parseContent(content) }
 }

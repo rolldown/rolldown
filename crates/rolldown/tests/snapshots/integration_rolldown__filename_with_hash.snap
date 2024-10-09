@@ -12,6 +12,63 @@ expression: output
 - const-assign_js-!~{000}~.mjs => const-assign_js-HdoE_V08.mjs
 - const-update_js-!~{001}~.mjs => const-update_js-EjXlLtDz.mjs
 
+# tests/esbuild/dce/const_value_inlining_bundle
+
+- exported-entry_js-!~{000}~.mjs => exported-entry_js-eG4-x-ko.mjs
+- re-exported-entry_js-!~{001}~.mjs => re-exported-entry_js-BrAlvWfP.mjs
+- re-exported-2-entry_js-!~{002}~.mjs => re-exported-2-entry_js-zfIkXTQs.mjs
+- re-exported-star-entry_js-!~{003}~.mjs => re-exported-star-entry_js-Z4Jl8uNr.mjs
+- cross-module-entry_js-!~{004}~.mjs => cross-module-entry_js-szfA1ztU.mjs
+- print-shorthand-entry_js-!~{005}~.mjs => print-shorthand-entry_js-rcEgC7KY.mjs
+- circular-import-entry_js-!~{006}~.mjs => circular-import-entry_js-glYgvKeO.mjs
+- circular-re-export-entry_js-!~{007}~.mjs => circular-re-export-entry_js-6ghyFvn-.mjs
+- circular-re-export-star-entry_js-!~{008}~.mjs => circular-re-export-star-entry_js-Pu3UCNa_.mjs
+- non-circular-export-entry_js-!~{009}~.mjs => non-circular-export-entry_js-YxawQn8Z.mjs
+
+# tests/esbuild/dce/const_value_inlining_direct_eval
+
+- top-level-no-eval_js-!~{000}~.mjs => top-level-no-eval_js-1x3rhT6t.mjs
+- top-level-eval_js-!~{001}~.mjs => top-level-eval_js-mSdWpjlh.mjs
+- nested-no-eval_js-!~{002}~.mjs => nested-no-eval_js-AhGPdj9n.mjs
+- nested-eval_js-!~{003}~.mjs => nested-eval_js-wtClIyX9.mjs
+- ts-namespace-no-eval_ts-!~{004}~.mjs => ts-namespace-no-eval_ts-bVEfDysQ.mjs
+- ts-namespace-eval_ts-!~{005}~.mjs => ts-namespace-eval_ts-iofw7wwl.mjs
+
+# tests/esbuild/dce/const_value_inlining_no_bundle
+
+- top-level_js-!~{000}~.mjs => top-level_js-HWEcSNQn.mjs
+- nested-block_js-!~{001}~.mjs => nested-block_js-VtFmjYGl.mjs
+- nested-function_js-!~{002}~.mjs => nested-function_js-IijGPTZk.mjs
+- namespace-export_ts-!~{003}~.mjs => namespace-export_ts-J07bWsqH.mjs
+- comment-before_js-!~{004}~.mjs => comment-before_js-vmWjrSqw.mjs
+- directive-before_js-!~{005}~.mjs => directive-before_js-LkPBuFzx.mjs
+- semicolon-before_js-!~{006}~.mjs => semicolon-before_js-kkCoQmj0.mjs
+- debugger-before_js-!~{007}~.mjs => debugger-before_js-GYDDFOUu.mjs
+- type-before_ts-!~{008}~.mjs => type-before_ts-24tU6WmZ.mjs
+- exprs-before_js-!~{009}~.mjs => exprs-before_js-zB1bD4k3.mjs
+- disabled-tdz_js-!~{00a}~.mjs => disabled-tdz_js-1MG0Vkco.mjs
+- backwards-reference-top-level_js-!~{00b}~.mjs => backwards-reference-top-level_js-g5_go-sf.mjs
+- backwards-reference-nested-function_js-!~{00c}~.mjs => backwards-reference-nested-function_js-2vO1MvU2.mjs
+- issue-3125_js-!~{00d}~.mjs => issue-3125_js-ATdhCAjb.mjs
+
+# tests/esbuild/dce/cross_module_constant_folding
+
+- enum-entry_ts-!~{000}~.mjs => enum-entry_ts-g3lnJzXP.mjs
+- const-entry_js-!~{001}~.mjs => const-entry_js-yz9EmOLI.mjs
+- nested-entry_ts-!~{002}~.mjs => nested-entry_ts-OqCgdMF-.mjs
+
+# tests/esbuild/dce/cross_module_constant_folding_number
+
+- enum-entry_ts-!~{000}~.mjs => enum-entry_ts-HuP8d0xx.mjs
+- const-entry_js-!~{001}~.mjs => const-entry_js-_OF8o4KP.mjs
+- nested-entry_ts-!~{002}~.mjs => nested-entry_ts-OqCgdMF-.mjs
+
+# tests/esbuild/dce/cross_module_constant_folding_string
+
+- enum-entry_ts-!~{000}~.mjs => enum-entry_ts-DjJLY6rc.mjs
+- const-entry_js-!~{001}~.mjs => const-entry_js-qMRJZIw2.mjs
+- nested-entry_ts-!~{002}~.mjs => nested-entry_ts-BDFLv9fN.mjs
+
 # tests/esbuild/dce/data_url_loader_remove_unused
 
 - entry_js-!~{000}~.mjs => entry_js-Taqabkgf.mjs
@@ -20,9 +77,30 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-5berjFJC.mjs
 
+# tests/esbuild/dce/dce_class_static_blocks_minify_syntax
+
+- entry_js-!~{000}~.mjs => entry_js-5berjFJC.mjs
+
+# tests/esbuild/dce/dce_of_decorators
+
+- keep-these_js-!~{000}~.mjs => keep-these_js-KEG_c8Rg.mjs
+
 # tests/esbuild/dce/dce_of_destructuring
 
 - entry_js-!~{000}~.mjs => entry_js-R3dH_Idl.mjs
+
+# tests/esbuild/dce/dce_of_experimental_decorators
+
+- keep-these_ts-!~{000}~.mjs => keep-these_ts-yttTZ0Oe.mjs
+
+# tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
+
+- entry_js-!~{000}~.mjs => entry_js-cYZBbhaq.mjs
+
+# tests/esbuild/dce/dce_of_iife
+
+- remove-these_js-!~{000}~.mjs => remove-these_js-4ftRLiZC.mjs
+- keep-these_js-!~{001}~.mjs => keep-these_js-_--VMdNr.mjs
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -41,7 +119,19 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-qZjSwIEn.mjs
 
+# tests/esbuild/dce/dce_type_of_compare_string_guard_condition
+
+- entry_js-!~{000}~.mjs => entry_js-I_3wMs5L.mjs
+
 # tests/esbuild/dce/dce_type_of_equals_string
+
+- entry_js-!~{000}~.mjs => entry_js-cR2TA8sN.mjs
+
+# tests/esbuild/dce/dce_type_of_equals_string_guard_condition
+
+- entry_js-!~{000}~.mjs => entry_js-NLJJ_OB9.mjs
+
+# tests/esbuild/dce/dce_type_of_equals_string_mangle
 
 - entry_js-!~{000}~.mjs => entry_js-cR2TA8sN.mjs
 
@@ -52,6 +142,10 @@ expression: output
 - c_js-!~{002}~.mjs => c_js-GgeYVT0V.mjs
 - chunk-!~{003}~.mjs => chunk-KJOOg9Uw.mjs
 
+# tests/esbuild/dce/dead_code_following_jump
+
+- entry_js-!~{000}~.mjs => entry_js-Y01s6zCm.mjs
+
 # tests/esbuild/dce/disable_tree_shaking
 
 - entry_jsx-!~{000}~.mjs => entry_jsx-Kvq1KCNV.mjs
@@ -60,13 +154,63 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js--S33i_qr.mjs
 
+# tests/esbuild/dce/drop_labels
+
+- entry_js-!~{000}~.mjs => entry_js-egYuub3r.mjs
+
+# tests/esbuild/dce/file_loader_remove_unused
+
+- entry_js-!~{000}~.mjs => entry_js-Taqabkgf.mjs
+
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
 - entry_js-!~{000}~.mjs => entry_js-WJeRFAi0.mjs
 
+# tests/esbuild/dce/inline_empty_function_calls
+
+- empty_js-!~{000}~.mjs => empty_js--l4AxKZR.mjs
+- empty-comma_js-!~{001}~.mjs => empty-comma_js-U4XGlo35.mjs
+- empty-if-else_js-!~{002}~.mjs => empty-if-else_js-3EliSwSb.mjs
+- empty-last_js-!~{003}~.mjs => empty-last_js-8JFF4iLU.mjs
+- empty-cross-module_js-!~{004}~.mjs => empty-cross-module_js-S8rnV9dx.mjs
+- empty-first_js-!~{005}~.mjs => empty-first_js-9ZW6M44m.mjs
+- empty-generator_js-!~{006}~.mjs => empty-generator_js-F0FuWV2T.mjs
+- empty-async_js-!~{007}~.mjs => empty-async_js-pWZPG9AT.mjs
+- reassign_js-!~{008}~.mjs => reassign_js-Xrpi1d_x.mjs
+- reassign-inc_js-!~{009}~.mjs => reassign-inc_js-GzpdxXEy.mjs
+- reassign-div_js-!~{00a}~.mjs => reassign-div_js-reADHkTs.mjs
+- reassign-array_js-!~{00b}~.mjs => reassign-array_js-IzkLUZYD.mjs
+- reassign-object_js-!~{00c}~.mjs => reassign-object_js-JV8RCDvi.mjs
+
+# tests/esbuild/dce/inline_function_call_behavior_changes
+
+- entry_js-!~{000}~.mjs => entry_js-5tNNhDMp.mjs
+
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
 - entry_js-!~{000}~.mjs => entry_js-Juq-gdp_.mjs
+
+# tests/esbuild/dce/inline_identity_function_calls
+
+- identity_js-!~{000}~.mjs => identity_js-Ni8fdrUr.mjs
+- identity-last_js-!~{001}~.mjs => identity-last_js-zVZK9560.mjs
+- identity-first_js-!~{002}~.mjs => identity-first_js-jRHP5snE.mjs
+- identity-generator_js-!~{003}~.mjs => identity-generator_js-QF2tnxJ8.mjs
+- identity-async_js-!~{004}~.mjs => identity-async_js-uoagVnbU.mjs
+- identity-cross-module_js-!~{005}~.mjs => identity-cross-module_js-a8biwsqU.mjs
+- identity-no-args_js-!~{006}~.mjs => identity-no-args_js-W8P_lJ97.mjs
+- identity-two-args_js-!~{007}~.mjs => identity-two-args_js-UOVFYnl5.mjs
+- reassign_js-!~{008}~.mjs => reassign_js-sp-noti9.mjs
+- reassign-inc_js-!~{009}~.mjs => reassign-inc_js-gSTMYZFm.mjs
+- reassign-div_js-!~{00a}~.mjs => reassign-div_js-3bXhUH7T.mjs
+- reassign-array_js-!~{00b}~.mjs => reassign-array_js-Ct5BSi-j.mjs
+- reassign-object_js-!~{00c}~.mjs => reassign-object_js-ybdkF57R.mjs
+- not-identity-two-args_js-!~{00d}~.mjs => not-identity-two-args_js-Ono7zMDm.mjs
+- not-identity-default_js-!~{00e}~.mjs => not-identity-default_js-T1xhjt9R.mjs
+- not-identity-array_js-!~{00f}~.mjs => not-identity-array_js-KFfG2c3i.mjs
+- not-identity-object_js-!~{00g}~.mjs => not-identity-object_js-34qLjHLN.mjs
+- not-identity-rest_js-!~{00h}~.mjs => not-identity-rest_js-HstxvjEn.mjs
+- not-identity-return_js-!~{00i}~.mjs => not-identity-return_js-myMWjM14.mjs
 
 # tests/esbuild/dce/json_loader_remove_unused
 
@@ -78,6 +222,18 @@ expression: output
 - var3_js-!~{001}~.mjs => var3_js-Xb9YUCVA.mjs
 - function2_js-!~{002}~.mjs => function2_js-Kq5hd7IL.mjs
 - function3_js-!~{003}~.mjs => function3_js-F1RckUBF.mjs
+
+# tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax
+
+- var2_js-!~{000}~.mjs => var2_js-MWROqWbu.mjs
+- var3_js-!~{001}~.mjs => var3_js-Xb9YUCVA.mjs
+- function2_js-!~{002}~.mjs => function2_js-Kq5hd7IL.mjs
+- function3_js-!~{003}~.mjs => function3_js-F1RckUBF.mjs
+
+# tests/esbuild/dce/nested_function_inlining_with_spread
+
+- entry_js-!~{000}~.mjs => entry_js-A4sHMwS3.mjs
+- entry-outer_js-!~{001}~.mjs => entry-outer_js-XGilVHIy.mjs
 
 # tests/esbuild/dce/no_side_effects_comment
 
@@ -108,6 +264,13 @@ expression: output
 
 - entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
 
+# tests/esbuild/dce/no_side_effects_comment_unused_calls
+
+- stmt-fn_js-!~{000}~.mjs => stmt-fn_js-Io0v4BOR.mjs
+- stmt-local_js-!~{001}~.mjs => stmt-local_js-0QOtG1TU.mjs
+- expr-fn_js-!~{002}~.mjs => expr-fn_js-Fiijsw8N.mjs
+- stmt-export-default-fn_js-!~{003}~.mjs => stmt-export-default-fn_js-F_mDLf0W.mjs
+
 # tests/esbuild/dce/package_json_side_effects_array_glob
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-3DlGGF0x.mjs
@@ -124,13 +287,25 @@ expression: output
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
 
+# tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
+
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_use_module
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
 
+# tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-SxHvPP8j.mjs
+
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-Fw4tiV0F.mjs
+
+# tests/esbuild/dce/package_json_side_effects_array_keep_module_use_main
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-T8viO-MO.mjs
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_use_module
 
@@ -145,7 +320,19 @@ expression: output
 - src_entry_js-!~{000}~.mjs => src_entry_js-NsAv8sjh.mjs
 - a_index-!~{001}~.mjs => a_index-pPoU04AR.mjs
 
+# tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-NHSvRQru.mjs
+
 # tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-gzsgei6H.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-gzsgei6H.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-gzsgei6H.mjs
 
@@ -190,11 +377,23 @@ expression: output
 - src_entry_js-!~{000}~.mjs => src_entry_js-NsAv8sjh.mjs
 - a_index-!~{001}~.mjs => a_index-pPoU04AR.mjs
 
+# tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
+
 # tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
 
+# tests/esbuild/dce/package_json_side_effects_false_remove_named_import_common_js
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
+
 # tests/esbuild/dce/package_json_side_effects_false_remove_named_import_es6
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_remove_star_import_common_js
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-3GVJDMG-.mjs
 
@@ -218,9 +417,21 @@ expression: output
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-1_ineKqS.mjs
 
+# tests/esbuild/dce/preserve_directives_minify_bundle
+
+- entry_js-!~{000}~.mjs => entry_js-usmmBk_s.mjs
+
+# tests/esbuild/dce/preserve_directives_minify_iife
+
+- entry_js-!~{000}~.mjs => entry_js-Dj8PT5ag.mjs
+
 # tests/esbuild/dce/preserve_directives_minify_pass_through
 
 - entry_js-!~{000}~.mjs => entry_js-Dj8PT5ag.mjs
+
+# tests/esbuild/dce/pure_calls_with_spread
+
+- entry_js-!~{000}~.mjs => entry_js-2P1g8pgy.mjs
 
 # tests/esbuild/dce/remove_code_after_label_with_return
 
@@ -246,6 +457,10 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-0R20SjjQ.mjs
 
+# tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
+
+- entry_js-!~{000}~.mjs => entry_js-W92Ph-Ce.mjs
+
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
 - entry_js-!~{000}~.mjs => entry_js--I1JM8LZ.mjs
@@ -253,6 +468,11 @@ expression: output
 # tests/esbuild/dce/text_loader_remove_unused
 
 - entry_js-!~{000}~.mjs => entry_js-Taqabkgf.mjs
+
+# tests/esbuild/dce/top_level_function_inlining_with_spread
+
+- entry_js-!~{000}~.mjs => entry_js-zLOGHKIU.mjs
+- entry-outer_js-!~{001}~.mjs => entry-outer_js-41mbzXZI.mjs
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
@@ -274,6 +494,51 @@ expression: output
 
 - entry_js-!~{000}~.mjs => entry_js-NRg9zN7s.mjs
 
+# tests/esbuild/dce/tree_shaking_js_with_associated_css
+
+- test_jsx-!~{000}~.mjs => test_jsx-rRrAY-kL.mjs
+- test_jsx.css
+
+# tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
+
+- test_jsx-!~{000}~.mjs => test_jsx-Ag7icjF0.mjs
+- test_jsx.css
+
+# tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
+
+- test_jsx-!~{000}~.mjs => test_jsx-Ag7icjF0.mjs
+- test_jsx.css
+
+# tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
+
+- test_jsx-!~{000}~.mjs => test_jsx-Ag7icjF0.mjs
+- test_jsx.css
+
+# tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
+
+- test_jsx-!~{000}~.mjs => test_jsx-Ag7icjF0.mjs
+- test_jsx.css
+
+# tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
+
+- test_jsx-!~{000}~.mjs => test_jsx-jxPJpIxQ.mjs
+
+# tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
+
+- test_jsx-!~{000}~.mjs => test_jsx-jxPJpIxQ.mjs
+
+# tests/esbuild/dce/tree_shaking_lowered_class_static_field
+
+- entry_js-!~{000}~.mjs => entry_js-VeJ0q4E6.mjs
+
+# tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
+
+- entry_ts-!~{000}~.mjs => entry_ts--lkht866.mjs
+
+# tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
+
+- entry_js-!~{000}~.mjs => entry_js-VeJ0q4E6.mjs
+
 # tests/esbuild/dce/tree_shaking_no_bundle_cjs
 
 - entry_js-!~{000}~.cjs => entry_js-ZqhylOSu.cjs
@@ -289,6 +554,10 @@ expression: output
 # tests/esbuild/dce/tree_shaking_object_property
 
 - entry_js-!~{000}~.mjs => entry_js-1aZpt2VL.mjs
+
+# tests/esbuild/dce/tree_shaking_react_elements
+
+- entry_jsx-!~{000}~.mjs => entry_jsx-KloqorXk.mjs
 
 # tests/esbuild/dce/tree_shaking_unary_operators
 

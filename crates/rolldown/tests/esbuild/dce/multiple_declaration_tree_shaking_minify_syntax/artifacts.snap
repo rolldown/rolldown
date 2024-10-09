@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## function2_js.mjs
+
+```js
+
+//#region function2.js
+function x() {
+	return 1;
+}
+console.log(x());
+function x() {
+	return 2;
+}
+
+//#endregion
+```
+## function3_js.mjs
+
+```js
+
+//#region function3.js
+function x() {
+	return 1;
+}
+console.log(x());
+function x() {
+	return 2;
+}
+console.log(x());
+function x() {
+	return 3;
+}
+
+//#endregion
+```
+## var2_js.mjs
+
+```js
+
+//#region var2.js
+var x = 1;
+console.log(x);
+var x = 2;
+
+//#endregion
+```
+## var3_js.mjs
+
+```js
+
+//#region var3.js
+var x = 1;
+console.log(x);
+var x = 2;
+console.log(x);
+var x = 3;
+
+//#endregion
+```

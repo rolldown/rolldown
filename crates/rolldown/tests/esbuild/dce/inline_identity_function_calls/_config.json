@@ -1,0 +1,83 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "identity_js",
+        "import": "identity.js"
+      },
+      {
+        "name": "identity-last_js",
+        "import": "identity-last.js"
+      },
+      {
+        "name": "identity-first_js",
+        "import": "identity-first.js"
+      },
+      {
+        "name": "identity-generator_js",
+        "import": "identity-generator.js"
+      },
+      {
+        "name": "identity-async_js",
+        "import": "identity-async.js"
+      },
+      {
+        "name": "identity-cross-module_js",
+        "import": "identity-cross-module.js"
+      },
+      {
+        "name": "identity-no-args_js",
+        "import": "identity-no-args.js"
+      },
+      {
+        "name": "identity-two-args_js",
+        "import": "identity-two-args.js"
+      },
+      {
+        "name": "reassign_js",
+        "import": "reassign.js"
+      },
+      {
+        "name": "reassign-inc_js",
+        "import": "reassign-inc.js"
+      },
+      {
+        "name": "reassign-div_js",
+        "import": "reassign-div.js"
+      },
+      {
+        "name": "reassign-array_js",
+        "import": "reassign-array.js"
+      },
+      {
+        "name": "reassign-object_js",
+        "import": "reassign-object.js"
+      },
+      {
+        "name": "not-identity-two-args_js",
+        "import": "not-identity-two-args.js"
+      },
+      {
+        "name": "not-identity-default_js",
+        "import": "not-identity-default.js"
+      },
+      {
+        "name": "not-identity-array_js",
+        "import": "not-identity-array.js"
+      },
+      {
+        "name": "not-identity-object_js",
+        "import": "not-identity-object.js"
+      },
+      {
+        "name": "not-identity-rest_js",
+        "import": "not-identity-rest.js"
+      },
+      {
+        "name": "not-identity-return_js",
+        "import": "not-identity-return.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

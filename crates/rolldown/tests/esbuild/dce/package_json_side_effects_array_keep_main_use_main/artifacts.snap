@@ -1,0 +1,14 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+
+//#region src/entry.js
+console.log("unused import");
+
+//#endregion
+```

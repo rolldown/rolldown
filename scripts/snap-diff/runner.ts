@@ -44,7 +44,7 @@ export function run(includeList: string[], debug: boolean) {
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name)
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
-      let diffResult = diffCase(snap, parsedRolldownSnap)
+      let diffResult = diffCase(snap, parsedRolldownSnap, debug)
       // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')

@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## expr-fn_js.mjs
+
+```js
+
+//#region expr-fn.js
+const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
+	sideEffect(y);
+};
+const g = /* @__NO_SIDE_EFFECTS__ */ function* (y) {
+	sideEffect(y);
+};
+f("removeThisCall");
+g("removeThisCall");
+f(onlyKeepThisIdentifier);
+g(onlyKeepThisIdentifier);
+x(f("keepThisCall"));
+x(g("keepThisCall"));
+
+//#endregion
+```
+## stmt-export-default-fn_js.mjs
+
+```js
+
+//#region stmt-export-default-fn.js
+function f(y) {
+	sideEffect(y);
+}
+f("removeThisCall");
+f(onlyKeepThisIdentifier);
+x(f("keepThisCall"));
+
+//#endregion
+export { f as default };
+```
+## stmt-fn_js.mjs
+
+```js
+
+//#region stmt-fn.js
+/* @__NO_SIDE_EFFECTS__ */ function f(y) {
+	sideEffect(y);
+}
+/* @__NO_SIDE_EFFECTS__ */ function* g(y) {
+	sideEffect(y);
+}
+f("removeThisCall");
+g("removeThisCall");
+f(onlyKeepThisIdentifier);
+g(onlyKeepThisIdentifier);
+x(f("keepThisCall"));
+x(g("keepThisCall"));
+
+//#endregion
+```
+## stmt-local_js.mjs
+
+```js
+
+//#region stmt-local.js
+const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
+	sideEffect(y);
+};
+const g = /* @__NO_SIDE_EFFECTS__ */ function* (y) {
+	sideEffect(y);
+};
+f("removeThisCall");
+g("removeThisCall");
+f(onlyKeepThisIdentifier);
+g(onlyKeepThisIdentifier);
+x(f("keepThisCall"));
+x(g("keepThisCall"));
+
+//#endregion
+```

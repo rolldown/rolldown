@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "remove-these_js",
+        "import": "remove-these.js"
+      },
+      {
+        "name": "keep-these_js",
+        "import": "keep-these.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

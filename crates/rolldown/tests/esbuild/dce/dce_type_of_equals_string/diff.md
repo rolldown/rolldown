@@ -1,0 +1,29 @@
+## /out.js
+### esbuild
+```js
+(() => {
+  // entry.js
+  if (false) console.log(hasBar);
+})();
+```
+### rolldown
+```js
+
+//#region entry.js
+var hasBar = typeof bar !== "undefined";
+
+//#endregion
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out.js
++++ rolldown	entry_js.mjs
+@@ -1,3 +1,1 @@
+-(() => {
+-    if (false) console.log(hasBar);
+-})();
++var hasBar = typeof bar !== "undefined";
+
+```

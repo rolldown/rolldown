@@ -1,0 +1,283 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## identity-async_js.mjs
+
+```js
+
+//#region identity-async.js
+async function keep(x) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## identity-cross-module_js.mjs
+
+```js
+
+//#region identity-cross-module-def.js
+function DROP(x) {
+	return x;
+}
+
+//#endregion
+//#region identity-cross-module.js
+console.log(DROP(1));
+DROP(foo());
+DROP(1);
+
+//#endregion
+```
+## identity-first_js.mjs
+
+```js
+
+//#region identity-first.js
+function keep(x) {
+	return x;
+}
+function keep(x) {
+	return [x];
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## identity-generator_js.mjs
+
+```js
+
+//#region identity-generator.js
+function* keep(x) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## identity-last_js.mjs
+
+```js
+
+//#region identity-last.js
+function DROP(x) {
+	return [x];
+}
+function DROP(x) {
+	return x;
+}
+console.log(DROP(1));
+DROP(foo());
+DROP(1);
+
+//#endregion
+```
+## identity-no-args_js.mjs
+
+```js
+
+//#region identity-no-args.js
+function keep(x) {
+	return x;
+}
+console.log(keep());
+keep();
+
+//#endregion
+```
+## identity-two-args_js.mjs
+
+```js
+
+//#region identity-two-args.js
+function keep(x) {
+	return x;
+}
+console.log(keep(1, 2));
+keep(1, 2);
+
+//#endregion
+```
+## identity_js.mjs
+
+```js
+
+//#region identity.js
+function DROP(x) {
+	return x;
+}
+console.log(DROP(1));
+DROP(foo());
+DROP(1);
+
+//#endregion
+```
+## not-identity-array_js.mjs
+
+```js
+
+//#region not-identity-array.js
+function keep([x]) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## not-identity-default_js.mjs
+
+```js
+
+//#region not-identity-default.js
+function keep(x = foo()) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## not-identity-object_js.mjs
+
+```js
+
+//#region not-identity-object.js
+function keep({ x }) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## not-identity-rest_js.mjs
+
+```js
+
+//#region not-identity-rest.js
+function keep(...x) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## not-identity-return_js.mjs
+
+```js
+
+//#region not-identity-return.js
+function keep(x) {
+	return [x];
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## not-identity-two-args_js.mjs
+
+```js
+
+//#region not-identity-two-args.js
+function keep(x, y) {
+	return x;
+}
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-array_js.mjs
+
+```js
+
+//#region reassign-array.js
+function keep(x) {
+	return x;
+}
+[keep] = reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-div_js.mjs
+
+```js
+
+//#region reassign-div.js
+function keep(x) {
+	return x;
+}
+keep /= reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-inc_js.mjs
+
+```js
+
+//#region reassign-inc.js
+function keep(x) {
+	return x;
+}
+keep++;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-object_js.mjs
+
+```js
+
+//#region reassign-object.js
+function keep(x) {
+	return x;
+}
+({keep} = reassigned);
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign_js.mjs
+
+```js
+
+//#region reassign.js
+function keep(x) {
+	return x;
+}
+keep = reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```

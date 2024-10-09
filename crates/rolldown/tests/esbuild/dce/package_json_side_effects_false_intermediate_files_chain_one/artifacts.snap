@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+
+//#region node_modules/d/index.js
+const foo = 123;
+
+//#endregion
+//#region src/entry.js
+console.log(foo);
+
+//#endregion
+```

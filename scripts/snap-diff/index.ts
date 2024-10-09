@@ -7,5 +7,6 @@ const includeList = [
   'snapshots_importstar.txt',
   'snapshots_default.txt',
   'snapshots_packagejson.txt',
+  'snapshots_dce.txt',
 ]
 run(includeList, debug)

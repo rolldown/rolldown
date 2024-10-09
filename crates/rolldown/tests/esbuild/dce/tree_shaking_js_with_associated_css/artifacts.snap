@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "test.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## test_jsx.css
+
+```css
+button { color: red }
+```
+## test_jsx.mjs
+
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region node_modules/pkg/button.js
+let Button;
+
+//#endregion
+//#region test.jsx
+render(_jsx(Button, {}));
+
+//#endregion
+```

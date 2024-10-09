@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.ts
+class A_keep {
+	static {
+		foo;
+	}
+}
+class B_keep {
+	static {
+		this.foo;
+	}
+}
+class C_keep {
+	static {
+		try {
+			foo;
+		} catch {}
+	}
+}
+class D_keep {
+	static {
+		try {} finally {
+			foo;
+		}
+	}
+}
+
+//#endregion
+```

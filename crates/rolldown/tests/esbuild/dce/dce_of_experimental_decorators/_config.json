@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "keep-these_ts",
+        "import": "keep-these.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

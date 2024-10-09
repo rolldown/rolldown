@@ -190,9 +190,13 @@ pub fn normalize_binding_options(
           .into_iter()
           .map(|item| MatchGroup {
             name: item.name,
-            test: item
-              .test
-              .map(|inner| HybridRegex::new(&inner).expect("Invalid regex pass to test")),
+            test: item.test.map(|inner| {
+              (match inner {
+                Either::A(value) => value.try_into(),
+                Either::B(value) => HybridRegex::new(&value),
+              })
+              .expect("Invalid regex pass to test")
+            }),
             priority: item.priority,
             min_size: item.min_size,
             min_share_count: item.min_share_count,

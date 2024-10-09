@@ -59,7 +59,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let canonical_ref = self.ctx.symbol_db.par_canonical_ref_for(symbol_ref);
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
     if let Some(ns_alias) = &symbol.namespace_alias {
@@ -114,7 +114,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let canonical_ref = self.ctx.symbol_db.par_canonical_ref_for(symbol_ref);
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
     if let Some(ns_alias) = &symbol.namespace_alias {

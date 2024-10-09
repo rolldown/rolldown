@@ -80,8 +80,8 @@ impl SymbolRefDb {
 
   /// Make `base` point to `target`
   pub fn link(&mut self, base: SymbolRef, target: SymbolRef) {
-    let base_root = self.canonical_ref_for(base);
-    let target_root = self.canonical_ref_for(target);
+    let base_root = self.find_mut(base);
+    let target_root = self.find_mut(target);
     if base_root == target_root {
       // already linked
       return;
@@ -94,7 +94,7 @@ impl SymbolRefDb {
     refer: SymbolRef,
     canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
   ) -> &'name Rstr {
-    let canonical_ref = self.par_canonical_ref_for(refer);
+    let canonical_ref = self.canonical_ref_for(refer);
     canonical_names.get(&canonical_ref).unwrap_or_else(|| {
       panic!(
         "canonical name not found for {canonical_ref:?}, original_name: {:?}",
@@ -111,17 +111,20 @@ impl SymbolRefDb {
     &mut self.inner[refer.owner].classic_data[refer.symbol]
   }
 
-  pub fn canonical_ref_for(&mut self, target: SymbolRef) -> SymbolRef {
-    let canonical = self.par_canonical_ref_for(target);
-    if target != canonical {
-      // update the link to the canonical so that the next time we can get the canonical directly
-      self.get_mut(target).link = Some(canonical);
+  /// https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+  /// See Path halving
+  pub fn find_mut(&mut self, target: SymbolRef) -> SymbolRef {
+    let mut canonical = target;
+    while let Some(parent) = self.get_mut(canonical).link {
+      self.get_mut(canonical).link = self.get_mut(parent).link;
+      canonical = parent;
     }
+
     canonical
   }
 
   // Used for the situation where rust require `&self`
-  pub fn par_canonical_ref_for(&self, target: SymbolRef) -> SymbolRef {
+  pub fn canonical_ref_for(&self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(founded) = self.get(canonical).link {
       debug_assert!(founded != target);

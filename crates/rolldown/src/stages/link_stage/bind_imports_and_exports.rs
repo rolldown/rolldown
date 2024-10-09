@@ -159,10 +159,10 @@ impl<'link> LinkStage<'link> {
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
-          let main_ref = self.symbols.par_canonical_ref_for(resolved_export.symbol_ref);
+          let main_ref = self.symbols.canonical_ref_for(resolved_export.symbol_ref);
 
           for ambiguous_ref in potentially_ambiguous_symbol_refs {
-            let ambiguous_ref = self.symbols.par_canonical_ref_for(*ambiguous_ref);
+            let ambiguous_ref = self.symbols.canonical_ref_for(*ambiguous_ref);
             if main_ref != ambiguous_ref {
               continue 'next_export;
             }
@@ -264,8 +264,7 @@ impl<'link> LinkStage<'link> {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
-                let mut canonical_ref =
-                  self.symbols.par_canonical_ref_for(member_expr_ref.object_ref);
+                let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner = self.module_table.modules[canonical_ref.owner]
                   .as_normal()
                   .expect("only normal module");
@@ -311,7 +310,7 @@ impl<'link> LinkStage<'link> {
                     break;
                   }
                   ns_symbol_list.push((canonical_ref, name.to_rstr()));
-                  canonical_ref = self.symbols.par_canonical_ref_for(export_symbol.symbol_ref);
+                  canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
                   canonical_ref_owner =
                     self.module_table.modules[canonical_ref.owner].as_normal().unwrap();
                   cursor += 1;

@@ -197,7 +197,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
               let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
                 .link_output
                 .symbol_db
-                .par_canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+                .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
               format!("{to_esm_fn_name}({require_path_str})")
             } else {
@@ -213,7 +213,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
               .link_output
               .symbol_db
-              .par_canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+              .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
             format!("{to_esm_fn_name}({require_path_str})")
           } else {

@@ -5,10 +5,10 @@
   diff
 ## [const_value_inlining_no_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_no_bundle/diff.md)
   diff
-## cross_module_constant_folding_number
-  missing
-## cross_module_constant_folding_string
-  missing
+## [cross_module_constant_folding_number](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number/diff.md)
+  diff
+## [cross_module_constant_folding_string](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string/diff.md)
+  diff
 ## [dce_class_static_blocks](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks/diff.md)
   diff
 ## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/diff.md)

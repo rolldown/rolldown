@@ -1,3 +1,4 @@
+# Diff
 ## /out/do-not-keep.js
 ### esbuild
 ```js

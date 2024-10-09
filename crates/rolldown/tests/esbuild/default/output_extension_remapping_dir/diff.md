@@ -1,3 +1,4 @@
+# Diff
 ## /out/entry.notjs
 ### esbuild
 ```js

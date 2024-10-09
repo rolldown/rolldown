@@ -1,3 +1,4 @@
+# Diff
 ## /out/entry-nope.js
 ### esbuild
 ```js

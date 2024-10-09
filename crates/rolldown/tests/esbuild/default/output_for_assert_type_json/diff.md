@@ -1,3 +1,4 @@
+# Diff
 ## /out/foo-FYKHFNL2.copy
 ### esbuild
 ```js

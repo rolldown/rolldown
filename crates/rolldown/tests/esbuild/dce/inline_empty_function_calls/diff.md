@@ -1,3 +1,4 @@
+# Diff
 ## /out/empty.js
 ### esbuild
 ```js

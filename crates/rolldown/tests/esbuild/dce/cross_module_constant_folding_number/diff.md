@@ -1,3 +1,4 @@
+# Diff
 ## /out/enum-entry.js
 ### esbuild
 ```js

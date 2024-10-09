@@ -1,3 +1,4 @@
+# Diff
 ## /out/var2.js
 ### esbuild
 ```js

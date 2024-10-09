@@ -6,6 +6,7 @@ export function rewriteRolldown(code: string) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
+    allowReturnOutsideFunction: true
   })
   let programScope: Scope | null | undefined
   let collapsedAssertArgs: acorn.Expression[] = []
@@ -111,6 +112,7 @@ export function rewriteEsbuild(code: string) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
+    allowReturnOutsideFunction: true
   })
   return gen.generate(ast, {
     indent: '    ',

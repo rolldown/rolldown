@@ -1,0 +1,190 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## empty-async_js.mjs
+
+```js
+
+//#region empty-async.js
+async function keep() {}
+console.log(keep());
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## empty-comma_js.mjs
+
+```js
+
+//#region empty-comma.js
+function DROP() {}
+console.log((DROP(), DROP(), foo()));
+console.log((DROP(), foo(), DROP()));
+console.log((foo(), DROP(), DROP()));
+for (DROP(); DROP(); DROP()) DROP();
+DROP(), DROP(), foo();
+DROP(), foo(), DROP();
+foo(), DROP(), DROP();
+
+//#endregion
+```
+## empty-cross-module_js.mjs
+
+```js
+
+//#region empty-cross-module-def.js
+function DROP() {}
+
+//#endregion
+//#region empty-cross-module.js
+console.log(DROP());
+DROP();
+
+//#endregion
+```
+## empty-first_js.mjs
+
+```js
+
+//#region empty-first.js
+function keep() {
+	return;
+}
+function keep() {
+	return x;
+}
+console.log(keep());
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## empty-generator_js.mjs
+
+```js
+
+//#region empty-generator.js
+function* keep() {}
+console.log(keep());
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## empty-if-else_js.mjs
+
+```js
+
+//#region empty-if-else.js
+function DROP() {}
+if (foo) {
+	let bar = baz();
+	bar();
+	bar();
+} else DROP();
+
+//#endregion
+```
+## empty-last_js.mjs
+
+```js
+
+//#region empty-last.js
+function DROP() {
+	return x;
+}
+function DROP() {
+	return;
+}
+console.log(DROP());
+DROP();
+
+//#endregion
+```
+## empty_js.mjs
+
+```js
+
+//#region empty.js
+function DROP() {}
+console.log(DROP(foo(), bar()));
+console.log(DROP(foo(), 1));
+console.log(DROP(1, foo()));
+console.log(DROP(1));
+console.log(DROP());
+DROP(foo(), bar());
+DROP(foo(), 1);
+DROP(1, foo());
+DROP(1);
+DROP();
+
+//#endregion
+```
+## reassign-array_js.mjs
+
+```js
+
+//#region reassign-array.js
+function keep() {}
+[keep] = reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-div_js.mjs
+
+```js
+
+//#region reassign-div.js
+function keep() {}
+keep /= reassigned;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-inc_js.mjs
+
+```js
+
+//#region reassign-inc.js
+function keep() {}
+keep++;
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign-object_js.mjs
+
+```js
+
+//#region reassign-object.js
+function keep() {}
+({keep} = reassigned);
+console.log(keep(1));
+keep(foo());
+keep(1);
+
+//#endregion
+```
+## reassign_js.mjs
+
+```js
+
+//#region reassign.js
+function keep() {}
+keep = reassigned;
+console.log(keep());
+keep(foo());
+keep(1);
+
+//#endregion
+```

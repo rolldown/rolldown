@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+
+
+//#region node_modules/demo-pkg/index-module.js
+var index_module_exports, foo;
+var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
+	index_module_exports = {};
+	__export(index_module_exports, { foo: () => foo });
+	foo = 123;
+	console.log("TEST FAILED");
+} });
+
+//#endregion
+//#region src/require-demo-pkg.js
+init_index_module(), __toCommonJS(index_module_exports);
+
+//#endregion
+//#region src/entry.js
+init_index_module();
+console.log("unused import");
+
+//#endregion
+```

@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "node_modules/pkg/components.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "test.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## test_jsx.css
+
+```css
+button { color: red }
+```
+## test_jsx.mjs
+
+```js
+import { jsx as _jsx, jsx as _jsx$1 } from "react/jsx-runtime";
+
+
+//#region node_modules/pkg/button.css
+var button_exports;
+var init_button = __esm({ "node_modules/pkg/button.css"() {
+	button_exports = {};
+} });
+
+//#endregion
+//#region node_modules/pkg/components.jsx
+init_button(), __toCommonJS(button_exports);
+const Button = () => _jsx$1("button", {});
+
+//#endregion
+//#region test.jsx
+render(_jsx(Button, {}));
+
+//#endregion
+```

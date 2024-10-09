@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-outer_js.mjs
+
+```js
+
+//#region inner.js
+function empty1() {}
+function empty2() {}
+function empty3() {}
+function identity1(x) {
+	return x;
+}
+function identity2(x) {
+	return x;
+}
+function identity3(x) {
+	return x;
+}
+
+//#endregion
+//#region entry-outer.js
+empty1();
+empty2(args);
+empty3(...args);
+identity1();
+identity2(args);
+identity3(...args);
+
+//#endregion
+```
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+function empty1() {}
+function empty2() {}
+function empty3() {}
+function identity1(x) {
+	return x;
+}
+function identity2(x) {
+	return x;
+}
+function identity3(x) {
+	return x;
+}
+empty1();
+empty2(args);
+empty3(...args);
+identity1();
+identity2(args);
+identity3(...args);
+
+//#endregion
+```

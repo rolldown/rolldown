@@ -169,7 +169,7 @@ impl<'a> GenerateStage<'a> {
 
     output.extend(output_assets);
 
-    Ok(BundleOutput { assets: output, errors, warnings })
+    Ok(BundleOutput { assets: output, errors, warnings, watch_files: vec![] })
   }
 
   async fn instantiate_chunks(

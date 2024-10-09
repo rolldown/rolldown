@@ -111,7 +111,8 @@ impl SymbolRefDb {
     &mut self.inner[refer.owner].classic_data[refer.symbol]
   }
 
-  /// path compression
+  /// https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+  /// See Path halving
   pub fn find_mut(&mut self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(parent) = self.get_mut(canonical).link {

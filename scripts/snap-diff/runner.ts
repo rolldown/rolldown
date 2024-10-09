@@ -58,7 +58,10 @@ export function run(includeList: string[], debug: boolean) {
         diffResult = 'bypass'
       } else {
         if (typeof diffResult !== 'string') {
-          updateBypassOrDiffMarkdown(path.join(rolldownTestPath, 'diff.md'), diffResult)
+          updateBypassOrDiffMarkdown(
+            path.join(rolldownTestPath, 'diff.md'),
+            diffResult,
+          )
         } else {
           if (diffResult === 'same' && fs.existsSync(diffMarkdownPath)) {
             // this happens when we fixing some issues and the snapshot is align with esbuild,
@@ -85,7 +88,6 @@ function getRolldownSnap(caseDir: string) {
     return fs.readFileSync(artifactsPath, 'utf-8')
   }
 }
-
 
 function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
   if (typeof diffResult === 'string') {
@@ -165,9 +167,9 @@ function updateBypassOrDiffMarkdown(
   markdownPath: string,
   diffResult: ReturnType<typeof diffCase>,
 ) {
-  let bypassContent = ""
+  let bypassContent = ''
   if (fs.existsSync(markdownPath)) {
-    bypassContent = fs.readFileSync(markdownPath, 'utf-8') 
+    bypassContent = fs.readFileSync(markdownPath, 'utf-8')
   }
 
   let res = /# Diff/.exec(bypassContent)

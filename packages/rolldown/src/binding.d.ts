@@ -91,7 +91,7 @@ export interface AliasItem {
   replacements: Array<string>
 }
 
-export interface ArrowFunctionsBindingOptions {
+export interface ArrowFunctionsOptions {
   /**
    * This option enables the following:
    * * Wrap the generated function in .bind(this) and keeps uses of this inside the function as-is, instead of using a renamed this.
@@ -440,9 +440,9 @@ export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
-export interface Es2015BindingOptions {
+export interface Es2015Options {
   /** Transform arrow functions into function expressions. */
-  arrowFunction?: ArrowFunctionsBindingOptions
+  arrowFunction?: ArrowFunctionsOptions
 }
 
 export interface ExtensionAliasItem {
@@ -472,21 +472,12 @@ export interface IsolatedDeclarationsResult {
   errors: Array<string>
 }
 
-export interface PreRenderedChunk {
-  name: string
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
-}
-
 /**
  * Configure how TSX and JSX are transformed.
  *
  * @see {@link https://babeljs.io/docs/babel-plugin-transform-react-jsx#options}
  */
-export interface ReactBindingOptions {
+export interface JsxOptions {
   /**
    * Decides which runtime to use.
    *
@@ -566,11 +557,26 @@ export interface ReactBindingOptions {
    * @default false
    */
   useSpread?: boolean
-  /** Enable react fast refresh transform */
-  refresh?: ReactRefreshBindingOptions
+  /**
+   * Enable React Fast Refresh .
+   *
+   * Conforms to the implementation in {@link https://github.com/facebook/react/tree/main/packages/react-refresh}
+   *
+   * @default false
+   */
+  refresh?: boolean | ReactRefreshOptions
 }
 
-export interface ReactRefreshBindingOptions {
+export interface PreRenderedChunk {
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId?: string
+  moduleIds: Array<string>
+  exports: Array<string>
+}
+
+export interface ReactRefreshOptions {
   /**
    * Specify the identifier of the refresh registration variable.
    *
@@ -603,11 +609,11 @@ export interface RenderedChunk {
 
 export interface SourceMap {
   file?: string
-  mappings?: string
-  names?: Array<string>
+  mappings: string
+  names: Array<string>
   sourceRoot?: string
-  sources?: Array<string | undefined | null>
-  sourcesContent?: Array<string | undefined | null>
+  sources: Array<string>
+  sourcesContent?: Array<string>
   version: number
   x_google_ignoreList?: Array<number>
 }
@@ -633,23 +639,13 @@ export declare function transform(filename: string, sourceText: string, options?
  */
 export interface TransformOptions {
   sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  /** Treat the source text as `js`, `jsx`, `ts`, or `tsx`. */
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx'
   /**
    * The current working directory. Used to resolve relative paths in other
    * options.
    */
   cwd?: string
-  /**
-   * Force jsx parsing,
-   *
-   * @default false
-   */
-  jsx?: boolean
-  /** Configure how TypeScript is transformed. */
-  typescript?: TypeScriptBindingOptions
-  /** Configure how TSX and JSX are transformed. */
-  react?: ReactBindingOptions
-  /** Enable ES2015 transformations. */
-  es2015?: Es2015BindingOptions
   /**
    * Enable source map generation.
    *
@@ -660,6 +656,16 @@ export interface TransformOptions {
    * @see {@link SourceMap}
    */
   sourcemap?: boolean
+  /** Configure how TypeScript is transformed. */
+  typescript?: TypeScriptOptions
+  /** Configure how TSX and JSX are transformed. */
+  jsx?: JsxOptions
+  /** Enable ES2015 transformations. */
+  es2015?: Es2015Options
+  /** Define Plugin */
+  define?: Record<string, string>
+  /** Inject Plugin */
+  inject?: Record<string, string | [string, string]>
 }
 
 export interface TransformResult {
@@ -682,13 +688,13 @@ export interface TransformResult {
    *
    * If parsing failed and `declaration` is set, this will be an empty string.
    *
-   * @see {@link TypeScriptBindingOptions#declaration}
+   * @see {@link TypeScriptOptions#declaration}
    * @see [declaration tsconfig option](https://www.typescriptlang.org/tsconfig/#declaration)
    */
   declaration?: string
   /**
    * Declaration source map. Only generated if both
-   * {@link TypeScriptBindingOptions#declaration declaration} and
+   * {@link TypeScriptOptions#declaration declaration} and
    * {@link TransformOptions#sourcemap sourcemap} are set to `true`.
    */
   declarationMap?: SourceMap
@@ -702,7 +708,7 @@ export interface TransformResult {
   errors: Array<string>
 }
 
-export interface TypeScriptBindingOptions {
+export interface TypeScriptOptions {
   jsxPragma?: string
   jsxPragmaFrag?: string
   onlyRemoveTypeImports?: boolean

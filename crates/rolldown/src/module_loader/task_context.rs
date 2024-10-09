@@ -1,4 +1,4 @@
-use oxc::minifier::ReplaceGlobalDefinesConfig;
+use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 

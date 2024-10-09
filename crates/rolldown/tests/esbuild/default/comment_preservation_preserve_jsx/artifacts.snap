@@ -17,7 +17,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 
 //#region entry.jsx
-console.log(_jsx("div", { x }), _jsx("div", { x: "y" }), _jsx("div", { x: true }), _jsx("div", { ...x }), _jsx("div", { children: x }), _jsx(_Fragment, { children: x }), _jsxs("div", { children: ["before", "after"] }), _jsxs("div", { children: ["before", "after"] }), _jsxs("div", { children: ["before", "after"] }), _jsxs(_Fragment, { children: ["before", "after"] }), _jsxs(_Fragment, { children: ["before", "after"] }), _jsxs(_Fragment, { children: ["before", "after"] }));
+console.log(
+	_jsx("div", { x }),
+	_jsx("div", { x: "y" }),
+	_jsx("div", { x: true }),
+	_jsx("div", { ...x }),
+	_jsx("div", { children: x }),
+	_jsx(_Fragment, { children: x }),
+	// Comments on absent AST nodes
+	_jsxs("div", { children: ["before", "after"] }),
+	_jsxs("div", { children: ["before", "after"] }),
+	_jsxs("div", { children: ["before", "after"] }),
+	_jsxs(_Fragment, { children: ["before", "after"] }),
+	_jsxs(_Fragment, { children: ["before", "after"] }),
+	_jsxs(_Fragment, { children: ["before", "after"] })
+);
 
 //#endregion
 ```

@@ -1,4 +1,4 @@
-use oxc::minifier::InjectGlobalVariablesConfig;
+use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{InjectImport, ModuleType, NormalizedBundlerOptions, Platform};
 use rustc_hash::FxHashMap;
 
@@ -59,14 +59,14 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
           .iter()
           .map(|raw| match raw {
             InjectImport::Named { imported, alias, from } => {
-              oxc::minifier::InjectImport::named_specifier(
+              oxc::transformer::InjectImport::named_specifier(
                 from,
                 Some(imported),
                 alias.as_deref().unwrap_or(imported),
               )
             }
             InjectImport::Namespace { alias, from } => {
-              oxc::minifier::InjectImport::namespace_specifier(from, alias)
+              oxc::transformer::InjectImport::namespace_specifier(from, alias)
             }
           })
           .collect()

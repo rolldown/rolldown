@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use oxc::minifier::InjectGlobalVariablesConfig;
+use oxc::transformer::InjectGlobalVariablesConfig;
 use rustc_hash::FxHashMap;
 
 use super::advanced_chunks_options::AdvancedChunksOptions;

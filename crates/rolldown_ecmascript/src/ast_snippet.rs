@@ -520,7 +520,7 @@ impl<'ast> AstSnippet<'ast> {
   #[inline]
   /// `undefined` is acting like identifier, it might be shadowed by user code.
   pub fn void_zero(&self) -> ast::Expression<'ast> {
-    self.builder.void_0()
+    self.builder.void_0(SPAN)
   }
 
   pub fn alloc_string_literal(

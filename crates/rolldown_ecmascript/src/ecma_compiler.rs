@@ -89,13 +89,13 @@ impl EcmaCompiler {
       if enable_sourcemap { codegen.enable_source_map(filename, source_text) } else { codegen };
 
     let ret = codegen.build(program);
-    Ok((ret.source_text, ret.source_map))
+    Ok((ret.code, ret.map))
   }
 }
 
 #[test]
 fn basic_test() {
   let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
-  let code = EcmaCompiler::print(&ast, "", false).source_text;
+  let code = EcmaCompiler::print(&ast, "", false).code;
   assert_eq!(code, "const a = 1;\n");
 }

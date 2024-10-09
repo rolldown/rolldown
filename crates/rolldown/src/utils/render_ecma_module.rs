@@ -7,7 +7,7 @@ pub fn render_ecma_module(
   options: &NormalizedBundlerOptions,
   render_output: CodegenReturn,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
-  if render_output.source_text.is_empty() {
+  if render_output.code.is_empty() {
     None
   } else {
     let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send>> = vec![];
@@ -24,27 +24,23 @@ pub fn render_ecma_module(
 
     if enable_sourcemap {
       let sourcemap = if module.sourcemap_chain.is_empty() {
-        render_output.source_map
+        render_output.map
       } else {
         let mut sourcemap_chain = module.sourcemap_chain.iter().collect::<Vec<_>>();
-        if let Some(sourcemap) = render_output.source_map.as_ref() {
+        if let Some(sourcemap) = render_output.map.as_ref() {
           sourcemap_chain.push(sourcemap);
         }
         Some(collapse_sourcemaps(sourcemap_chain))
       };
 
       if let Some(sourcemap) = sourcemap {
-        let lines_count = lines_count(&render_output.source_text);
-        sources.push(Box::new(SourceMapSource::new(
-          render_output.source_text,
-          sourcemap,
-          lines_count,
-        )));
+        let lines_count = lines_count(&render_output.code);
+        sources.push(Box::new(SourceMapSource::new(render_output.code, sourcemap, lines_count)));
       } else {
-        sources.push(Box::new(RawSource::new(render_output.source_text)));
+        sources.push(Box::new(RawSource::new(render_output.code)));
       }
     } else {
-      sources.push(Box::new(RawSource::new(render_output.source_text)));
+      sources.push(Box::new(RawSource::new(render_output.code)));
     }
 
     sources.push(Box::new(RawSource::new("//#endregion".to_string())));

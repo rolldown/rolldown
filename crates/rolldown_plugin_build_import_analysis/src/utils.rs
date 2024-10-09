@@ -146,7 +146,7 @@ fn construct_vite_preload_call<'a>(
         SPAN,
         ast_builder.expression_identifier_reference(SPAN, IS_MODERN_FLAG),
         ast_builder.expression_identifier_reference(SPAN, "__VITE_PRELOAD__"),
-        ast_builder.void_0(),
+        ast_builder.void_0(SPAN),
       )));
       if append_import_meta_url {
         items.push(ast_builder.argument_expression(ast_builder.expression_member(

@@ -86,7 +86,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     symbol_ref: SymbolRef,
     preserve_this_semantic_if_needed: bool,
   ) -> ast::Expression<'ast> {
-    let mut canonical_ref = self.ctx.symbol_db.par_canonical_ref_for(symbol_ref);
+    let mut canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let mut canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {

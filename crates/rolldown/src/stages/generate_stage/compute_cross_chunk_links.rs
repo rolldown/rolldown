@@ -221,7 +221,7 @@ impl<'a> GenerateStage<'a> {
             stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
               match reference_ref {
                 rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                  let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
+                  let mut canonical_ref = symbols.canonical_ref_for(*referenced);
                   if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
                     canonical_ref = namespace_alias.namespace_ref;
                   }
@@ -231,8 +231,7 @@ impl<'a> GenerateStage<'a> {
                   if let Some(sym_ref) = member_expr.resolved_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
-                    let mut canonical_ref =
-                      self.link_output.symbol_db.par_canonical_ref_for(sym_ref);
+                    let mut canonical_ref = self.link_output.symbol_db.canonical_ref_for(sym_ref);
                     let symbol = symbols.get(canonical_ref);
                     if let Some(ref ns_alias) = symbol.namespace_alias {
                       canonical_ref = ns_alias.namespace_ref;
@@ -254,7 +253,7 @@ impl<'a> GenerateStage<'a> {
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
             for export_ref in entry_meta.resolved_exports.values() {
-              let mut canonical_ref = symbols.par_canonical_ref_for(export_ref.symbol_ref);
+              let mut canonical_ref = symbols.canonical_ref_for(export_ref.symbol_ref);
               let symbol = symbols.get(canonical_ref);
               if let Some(ns_alias) = &symbol.namespace_alias {
                 canonical_ref = ns_alias.namespace_ref;

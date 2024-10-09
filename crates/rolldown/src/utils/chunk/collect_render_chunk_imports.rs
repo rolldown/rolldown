@@ -63,7 +63,7 @@ pub fn collect_render_chunk_imports(
     let mut specifiers = items
       .iter()
       .map(|item| {
-        let canonical_ref = graph.symbol_db.par_canonical_ref_for(item.import_ref);
+        let canonical_ref = graph.symbol_db.canonical_ref_for(item.import_ref);
         let local_binding = &chunk.canonical_names[&canonical_ref];
         let Specifier::Literal(export_alias) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
@@ -98,7 +98,7 @@ pub fn collect_render_chunk_imports(
     let mut specifiers = named_imports
       .iter()
       .filter_map(|item| {
-        let canonical_ref = graph.symbol_db.par_canonical_ref_for(item.imported_as);
+        let canonical_ref = graph.symbol_db.canonical_ref_for(item.imported_as);
         if !graph.used_symbol_refs.contains(&canonical_ref) {
           return None;
         };

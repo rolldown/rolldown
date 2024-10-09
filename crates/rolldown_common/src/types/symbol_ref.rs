@@ -48,7 +48,7 @@ impl SymbolRef {
 
   #[must_use]
   pub fn canonical_ref(&self, db: &SymbolRefDb) -> SymbolRef {
-    db.par_canonical_ref_for(*self)
+    db.canonical_ref_for(*self)
   }
 
   pub fn set_canonical_ref(&self, db: &mut SymbolRefDb, canonical_ref: SymbolRef) {
@@ -60,7 +60,7 @@ impl SymbolRef {
     db: &SymbolRefDb,
     modules: &IndexModules,
   ) -> bool {
-    let canonical_ref = db.par_canonical_ref_for(*self);
+    let canonical_ref = db.canonical_ref_for(*self);
 
     let Module::Normal(owner) = &modules[canonical_ref.owner] else { return false };
 

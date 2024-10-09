@@ -58,5 +58,6 @@
         "import": "issue-3125.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

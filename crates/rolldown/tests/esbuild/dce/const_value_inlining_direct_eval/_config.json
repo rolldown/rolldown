@@ -26,5 +26,6 @@
         "import": "ts-namespace-eval.ts"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

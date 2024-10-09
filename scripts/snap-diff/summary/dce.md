@@ -147,8 +147,8 @@
   diff
 ## [tree_shaking_lowered_class_static_field](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   diff
-## tree_shaking_lowered_class_static_field_assignment
-  missing
+## [tree_shaking_lowered_class_static_field_assignment](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment/diff.md)
+  diff
 ## [tree_shaking_lowered_class_static_field_minified](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified/diff.md)
   diff
 ## [tree_shaking_no_bundle_cjs](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_cjs/diff.md)

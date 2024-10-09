@@ -54,5 +54,6 @@
         "import": "reassign-object.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

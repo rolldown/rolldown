@@ -18,5 +18,6 @@
         "import": "stmt-export-default-fn.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

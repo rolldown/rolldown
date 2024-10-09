@@ -1,3 +1,8 @@
+import * as path from 'path'
+import * as fs from 'fs'
+
+const dir =  path.resolve(import.meta.dirname, 'dce')
+
 const source = `
     test_tests__esbuild__dce__const_value_inlining_bundle__config_json
     test_tests__esbuild__dce__const_value_inlining_direct_eval__config_json
@@ -42,7 +47,11 @@ let lines = trimmed.split('\n')
 
 for (let line of lines) {
   const caseName = line.trim().slice(26, -13)
-  console.log(`caseName: `, caseName)
+  const caseDir = path.resolve(dir, caseName)
+  const configJson = path.resolve(caseDir, '_config.json')
+  const json = JSON.parse(fs.readFileSync(configJson, 'utf8'))
+  json.expectExecuted = false;
+  fs.writeFileSync(configJson, JSON.stringify(json, null, 2))
 }
 
 

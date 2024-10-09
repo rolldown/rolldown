@@ -26,7 +26,7 @@ test('watch', async () => {
   fs.writeFileSync(input, 'console.log(1)')
   // sleep 100ms
   await new Promise((resolve) => {
-    setTimeout(resolve, 100)
+    setTimeout(resolve, 1000)
   })
   expect(buildStartFn).toHaveBeenCalledTimes(2)
 

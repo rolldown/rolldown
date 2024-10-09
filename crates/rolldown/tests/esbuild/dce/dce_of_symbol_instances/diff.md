@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Diff
 ## /out/class.js
 ### esbuild

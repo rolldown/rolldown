@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Diff
 ## /out/empty.js
 ### esbuild

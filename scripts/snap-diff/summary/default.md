@@ -101,14 +101,6 @@
   diff
 ## [false_require](../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
   diff
-## his_inside_function
-  missing
-## his_outside_function
-  missing
-## his_undefined_warning_esm
-  missing
-## his_with_es6_syntax
-  missing
 ## [iife_es5](../../../crates/rolldown/tests/esbuild/default/iife_es5/diff.md)
   diff
 ## [import_abs_path_as_dir](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_dir/diff.md)
@@ -323,38 +315,10 @@
   diff
 ## [non_determinism_issue2537](../../../crates/rolldown/tests/esbuild/default/non_determinism_issue2537/diff.md)
   diff
-## o_esm_wrapper_omission
-  missing
 ## [object_literal_proto_setter_edge_cases](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases/diff.md)
   diff
 ## [object_literal_proto_setter_edge_cases_minify_syntax](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax/diff.md)
   diff
-## op_level_await_allowed_import_with_splitting
-  missing
-## op_level_await_allowed_import_without_splitting
-  missing
-## op_level_await_cjs_dead_branch
-  missing
-## op_level_await_esm
-  missing
-## op_level_await_esm_dead_branch
-  missing
-## op_level_await_forbidden_require_dead_branch
-  missing
-## op_level_await_iife_dead_branch
-  missing
-## op_level_await_no_bundle
-  missing
-## op_level_await_no_bundle_common_js_dead_branch
-  missing
-## op_level_await_no_bundle_dead_branch
-  missing
-## op_level_await_no_bundle_esm
-  missing
-## op_level_await_no_bundle_esm_dead_branch
-  missing
-## op_level_await_no_bundle_iife_dead_branch
-  missing
 ## [outbase](../../../crates/rolldown/tests/esbuild/default/outbase/diff.md)
   diff
 ## [output_extension_remapping_dir](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_dir/diff.md)
@@ -427,6 +391,36 @@
   diff
 ## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/diff.md)
   diff
+## [this_inside_function](../../../crates/rolldown/tests/esbuild/default/this_inside_function/diff.md)
+  diff
+## [this_outside_function](../../../crates/rolldown/tests/esbuild/default/this_outside_function/diff.md)
+  diff
+## [this_undefined_warning_esm](../../../crates/rolldown/tests/esbuild/default/this_undefined_warning_esm/diff.md)
+  diff
+## this_with_es6_syntax
+  missing
+## [to_esm_wrapper_omission](../../../crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission/diff.md)
+  diff
+## [top_level_await_allowed_import_with_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting/diff.md)
+  diff
+## [top_level_await_allowed_import_without_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting/diff.md)
+  diff
+## [top_level_await_cjs_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch/diff.md)
+  diff
+## [top_level_await_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm_dead_branch/diff.md)
+  diff
+## [top_level_await_forbidden_require_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch/diff.md)
+  diff
+## [top_level_await_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch/diff.md)
+  diff
+## [top_level_await_no_bundle_common_js_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch/diff.md)
+  diff
+## [top_level_await_no_bundle_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_dead_branch/diff.md)
+  diff
+## [top_level_await_no_bundle_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_esm_dead_branch/diff.md)
+  diff
+## [top_level_await_no_bundle_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch/diff.md)
+  diff
 ## [use_strict_directive_bundle_cjs_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264/diff.md)
   diff
 ## [use_strict_directive_bundle_iife_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_iife_issue2264/diff.md)
@@ -475,6 +469,9 @@
 ## [simple_common_js](../../../crates/rolldown/tests/esbuild/default/simple_common_js)
 ## [string_export_names_common_js](../../../crates/rolldown/tests/esbuild/default/string_export_names_common_js)
 ## [string_export_names_iife](../../../crates/rolldown/tests/esbuild/default/string_export_names_iife)
+## [top_level_await_esm](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm)
+## [top_level_await_no_bundle](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle)
+## [top_level_await_no_bundle_esm](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_esm)
 ## [use_strict_directive_bundle_esm_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_esm_issue2264)
 ## [with_statement_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/with_statement_tainting_no_bundle)
 # Bypassed Cases

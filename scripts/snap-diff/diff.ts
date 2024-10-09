@@ -21,6 +21,7 @@ export function diffCase(
     sourceList: Array<{ name: string; content: string }>
   },
   rolldownSnap: Array<{ filename: string; content: string }> | undefined,
+  debug?: boolean
 ):
   | 'bypass'
   | 'missing'
@@ -53,7 +54,7 @@ export function diffCase(
     } catch (err) {
       console.error(esbuildSnap.name)
       console.error(esbuildSource.name)
-      if (esbuildSource.name.endsWith(".mjs") || esbuildSource.name.endsWith(".js")) {
+      if (debug && (esbuildSource.name.endsWith(".mjs") || esbuildSource.name.endsWith(".js"))) {
         console.error(`err: `, err)
       }
       continue

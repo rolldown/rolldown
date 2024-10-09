@@ -1,0 +1,35 @@
+## /out.js
+### esbuild
+```js
+(() => {
+  function keep() {
+  }
+  keep();
+})();
+```
+### rolldown
+```js
+(function() {
+
+
+//#region entry.js
+function keep() {}
+keep();
+
+//#endregion
+})();
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out.js
++++ rolldown	entry_js.mjs
+@@ -1,4 +1,4 @@
+-(() => {
++(function () {
+     function keep() {}
+     keep();
+ })();
+
+```

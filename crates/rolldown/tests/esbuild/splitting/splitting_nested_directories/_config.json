@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "pageA_page_js",
+        "import": "pageA/page.js"
+      },
+      {
+        "name": "pageB_page_js",
+        "import": "pageB/page.js"
+      }
+    ]
+  }
+}

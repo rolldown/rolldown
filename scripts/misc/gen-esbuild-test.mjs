@@ -86,7 +86,7 @@ const suites = /** @type {const} */ ({
     ],
   },
   importstar: {
-    name: 'import_star',
+    name: 'importstar',
     sourcePath: './bundler_importstar_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_test.go',
@@ -94,7 +94,7 @@ const suites = /** @type {const} */ ({
     ignoreCases: [],
   },
   importstar_ts: {
-    name: 'import_star_ts',
+    name: 'importstar_ts',
     sourcePath: './bundler_importstar_ts_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_ts_test.go',
@@ -135,6 +135,13 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_loader_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_loader_test.go',
+    ignoreCases: [],
+  },
+  splitting: {
+    name: 'splitting',
+    sourcePath: './bundler_splitting_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_splitting_test.go',
     ignoreCases: [],
   },
 })
@@ -193,7 +200,6 @@ async function readTestSuiteSource(testSuiteName) {
 
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
-console.log(source)
 
 // This is up to suit name
 // const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []

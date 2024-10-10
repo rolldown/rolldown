@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.js
+
+```js
+import { __toESM, require_foo } from "./foo2.js";
+
+//#region entry.js
+var import_foo = __toESM(require_foo());
+import("./foo.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
+
+//#endregion
+```
+## foo.js
+
+```js
+import { require_foo } from "./foo2.js";
+
+export default require_foo();
+
+```
+## foo2.js
+
+```js
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports) {
+	exports.bar = 123;
+} });
+
+//#endregion
+export { __toESM, require_foo };
+```

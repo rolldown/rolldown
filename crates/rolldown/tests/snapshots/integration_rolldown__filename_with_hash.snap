@@ -2717,104 +2717,139 @@ expression: output
 
 - entry-!~{000}~.js => entry-jF2aLy7c.js
 
-# tests/esbuild/splitting/assign-to-local
+# tests/esbuild/splitting/edge_case_issue2793_with_splitting
 
-- a-!~{000}~.js => a-67AImsJ0.js
-- b-!~{001}~.js => b-Tw06swfa.js
+- index_js-!~{000}~.js => index_js-pt26xCGf.js
+
+# tests/esbuild/splitting/edge_case_issue2793_without_splitting
+
+- index_js-!~{000}~.js => index_js-pt26xCGf.js
+
+# tests/esbuild/splitting/splitting_assign_to_local
+
+- a_js-!~{000}~.js => a_js-4c2aav69.js
+- b_js-!~{001}~.js => b_js-zwnugfm5.js
 - shared-!~{002}~.js => shared-SL8KV1eg.js
 
-# tests/esbuild/splitting/circular_reference_issue251
+# tests/esbuild/splitting/splitting_chunk_path_dir_placeholder_implicit_outbase
 
-- a-!~{000}~.js => a-nVmqUPIA.js
-- b-!~{001}~.js => b-tf9NkM-P.js
+- entry_js-!~{000}~.js => entry_js-nPs5-7hB.js
+- file-!~{001}~.js => file-cCCwxyGC.js
+
+# tests/esbuild/splitting/splitting_circular_reference_issue251
+
+- a_js-!~{000}~.js => a_js-9mV_nqcN.js
+- b_js-!~{001}~.js => b_js-vt9TqGHS.js
 - a-!~{002}~.js => a-g9oOjGfj.js
 
-# tests/esbuild/splitting/cross_chunk_assignment_dependencies
+# tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies
 
-- a-!~{000}~.js => a-A79csWT5.js
-- b-!~{001}~.js => b-5eeBXqYb.js
+- a_js-!~{000}~.js => a_js-3epabIPH.js
+- b_js-!~{001}~.js => b_js-YdZCaBr4.js
 - shared-!~{002}~.js => shared-9UoaavsN.js
 
-# tests/esbuild/splitting/duplicate_chunk_collision
+# tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive
 
-- a-!~{000}~.js => a-fyXY4XIo.js
-- b-!~{001}~.js => b-SsAgBQqE.js
-- c-!~{002}~.js => c-lPR2QMqk.js
-- d-!~{003}~.js => d-GELaRcJ2.js
+- a_js-!~{000}~.js => a_js-nbRrQK1a.js
+- b_js-!~{001}~.js => b_js-Cgnbx958.js
+- c_js-!~{002}~.js => c_js-61iwRKL-.js
+- x-!~{003}~.js => x-qImUwvQG.js
+- z-!~{005}~.js => z-YArtGb9W.js
+
+# tests/esbuild/splitting/splitting_duplicate_chunk_collision
+
+- a_js-!~{000}~.js => a_js-Eo2st9Ns.js
+- b_js-!~{001}~.js => b_js-VMC6k6xG.js
+- c_js-!~{002}~.js => c_js-zYhdaLKu.js
+- d_js-!~{003}~.js => d_js-lxOeoYze.js
 - ab-!~{004}~.js => ab-uf9gwwt-.js
-- d-!~{006}~.js => d-_Swz2rgN.js
+- cd-!~{006}~.js => cd-fpwt7cKp.js
 
-# tests/esbuild/splitting/dynamic-commonjs-into-es6
+# tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- main-!~{000}~.js => main-ggTG4azo.js
-- foo-!~{001}~.js => foo-mwMIS57X.js
-
-# tests/esbuild/splitting/dynamic-es6-into-es6
-
-- main-!~{000}~.js => main-562FEkoD.js
-- foo-!~{001}~.js => foo-eemiSXkp.js
-
-# tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
-
-- main-!~{002}~.js => main-H6_fE0SP.js
+- entry_js-!~{002}~.js => entry_js-DTI8bkJN.js
 - foo-!~{000}~.js => foo-DR38vHdt.js
 - foo-!~{003}~.js => foo-pOzcZepM.js
 
-# tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
+# tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- main-!~{002}~.js => main--TPZJois.js
+- entry_js-!~{002}~.js => entry_js-HoEr7-dc.js
 - foo-!~{000}~.js => foo-jwWKTqrh.js
 - foo-!~{003}~.js => foo-mHGG3AWi.js
 
-# tests/esbuild/splitting/dynamic_import_issue_272
+# tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
-- a-!~{000}~.js => a-40Y48ErX.js
-- b-!~{001}~.js => b-AIUIx_Ob.js
+- entry_js-!~{000}~.js => entry_js-7Z0hIWG2.js
+- foo-!~{001}~.js => foo-mwMIS57X.js
 
-# tests/esbuild/splitting/edge_case_issue2793_with_splitting
+# tests/esbuild/splitting/splitting_dynamic_es6_into_es6
 
-- index-!~{000}~.js => index--PLFCZNA.js
+- entry_js-!~{000}~.js => entry_js-lmva7Npx.js
+- foo-!~{001}~.js => foo-eemiSXkp.js
 
-# tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
+# tests/esbuild/splitting/splitting_dynamic_import_issue272
 
-- a-!~{000}~.js => a-VdG2JTbZ.js
-- b-!~{001}~.js => b-2UjUbClJ.js
+- a_js-!~{000}~.js => a_js-G42tjqNy.js
+- b_js-!~{001}~.js => b_js-MzD7kX3n.js
+
+# tests/esbuild/splitting/splitting_dynamic_import_outside_source_tree_issue264
+
+- src_entry1_js-!~{000}~.js => src_entry1_js-fL914jS5.js
+- src_entry2_js-!~{001}~.js => src_entry2_js-mp2peOq_.js
+- package_index-!~{002}~.js => package_index-Z5vruZ52.js
+
+# tests/esbuild/splitting/splitting_hybrid_esm_and_cjs_issue617
+
+- a_js-!~{000}~.js => a_js-wxR8LZD2.js
+- b_js-!~{001}~.js => b_js-oO_F5t7n.js
 - a-!~{002}~.js => a-bE4DsUSm.js
 
-# tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
+# tests/esbuild/splitting/splitting_minify_identifiers_crash_issue437
 
-- a-!~{000}~.js => a-T9TiUHy0.js
-- b-!~{001}~.js => b-iJo_T6v3.js
+- a_js-!~{000}~.js => a_js-J1RNyQv2.js
+- b_js-!~{001}~.js => b_js-f9pSMsiy.js
+- c_js-!~{002}~.js => c_js-s_fKmKlj.js
+- shared-!~{003}~.js => shared-tQVkWq9k.js
+
+# tests/esbuild/splitting/splitting_missing_lazy_export
+
+- a_js-!~{000}~.js => a_js-PdFnaSYn.js
+- b_js-!~{001}~.js => b_js-hVUmbhw2.js
 - common-!~{002}~.js => common-w9Lk9Ks-.js
 
-# tests/esbuild/splitting/nested_directories
+# tests/esbuild/splitting/splitting_nested_directories
 
-- a-!~{000}~.js => a-bunoHOWx.js
-- b-!~{001}~.js => b-2yzd55pP.js
+- pageA_page_js-!~{000}~.js => pageA_page_js-2pZIBCgo.js
+- pageB_page_js-!~{001}~.js => pageB_page_js-FC0gvAk_.js
 - shared-!~{002}~.js => shared-jzh52SAD.js
 
-# tests/esbuild/splitting/re_export_issue273
+# tests/esbuild/splitting/splitting_public_path_entry_name
 
-- a-!~{000}~.js => a-MuvSGfOQ.js
-- b-!~{001}~.js => b-7m7DcwWg.js
+- a_js-!~{000}~.js => a_js--4_MXxZX.js
+- b-!~{001}~.js => b-uy4y4ld2.js
+
+# tests/esbuild/splitting/splitting_re_export_issue273
+
+- a_js-!~{000}~.js => a_js-LSAmbaBB.js
+- b_js-!~{001}~.js => b_js-ZEIyjpGK.js
 - a-!~{002}~.js => a-xkF2_pW_.js
 
-# tests/esbuild/splitting/shared-commonjs-into-es6
+# tests/esbuild/splitting/splitting_shared_common_js_into_es6
 
-- a-!~{000}~.js => a-o4L6PGLp.js
-- b-!~{001}~.js => b-djtosICJ.js
-- shared-!~{002}~.js => shared-0AKzmtve.js
+- a_js-!~{000}~.js => a_js-gxjIAQWV.js
+- b_js-!~{001}~.js => b_js-1Y4U1eiU.js
+- shared-!~{002}~.js => shared-niRvzgbJ.js
 
-# tests/esbuild/splitting/shared-es6-into-es6
+# tests/esbuild/splitting/splitting_shared_es6_into_es6
 
-- a-!~{000}~.js => a-0Sh12GRq.js
-- b-!~{001}~.js => b-s6o66bq_.js
+- a_js-!~{000}~.js => a_js-xizD5z38.js
+- b_js-!~{001}~.js => b_js-aLV_q4-8.js
 - shared-!~{002}~.js => shared-pNItaKST.js
 
-# tests/esbuild/splitting/side_effects_without_dependencies
+# tests/esbuild/splitting/splitting_side_effects_without_dependencies
 
-- a-!~{000}~.js => a-p5EhFqCb.js
-- b-!~{001}~.js => b-aEqftCGG.js
+- a_js-!~{000}~.js => a_js-JAMSN5-k.js
+- b_js-!~{001}~.js => b_js-16wAy4GV.js
 - shared-!~{002}~.js => shared-U4GB83Pl.js
 
 # tests/esbuild/ts/ts_abstract_class_field_use_define

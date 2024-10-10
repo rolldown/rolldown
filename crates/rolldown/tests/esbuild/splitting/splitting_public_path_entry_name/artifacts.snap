@@ -3,17 +3,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## index_js.js
+## a_js.js
 
 ```js
 
 //#region a.js
-const A = 42;
+import("./b.js");
 
 //#endregion
+```
+## b.js
+
+```js
+
 //#region b.js
-const B = async () => (await import("./index_js.js")).A;
+console.log("b");
 
 //#endregion
-export { A, B };
 ```

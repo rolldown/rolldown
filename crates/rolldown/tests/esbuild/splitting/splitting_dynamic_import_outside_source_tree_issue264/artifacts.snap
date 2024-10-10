@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## package_index.js
+
+```js
+
+//#region node_modules/package/index.js
+console.log("imported");
+
+//#endregion
+```
+## src_entry1_js.js
+
+```js
+
+//#region src/entry1.js
+import("./package_index.js");
+
+//#endregion
+```
+## src_entry2_js.js
+
+```js
+
+//#region src/entry2.js
+import("./package_index.js");
+
+//#endregion
+```

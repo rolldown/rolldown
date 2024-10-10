@@ -1,0 +1,1 @@
+import("./foo.js").then(({default: {bar}}) => console.log(bar))

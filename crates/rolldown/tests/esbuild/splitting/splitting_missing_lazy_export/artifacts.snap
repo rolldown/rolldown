@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a_js.js
+
+```js
+import { foo } from "./common.js";
+
+//#region a.js
+console.log(foo());
+
+//#endregion
+```
+## b_js.js
+
+```js
+import { bar } from "./common.js";
+
+//#region b.js
+console.log(bar());
+
+//#endregion
+```
+## common.js
+
+```js
+
+
+//#region empty.js
+var require_empty = __commonJS({ "empty.js"() {} });
+
+//#endregion
+//#region common.js
+var import_empty = __toESM(require_empty());
+function foo() {
+	return [import_empty, import_empty.missing];
+}
+function bar() {
+	return [import_empty.missing];
+}
+
+//#endregion
+export { bar, foo };
+```

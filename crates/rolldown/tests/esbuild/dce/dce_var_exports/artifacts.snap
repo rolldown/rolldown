@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.mjs
+## a_js.js
 
 ```js
-import { __commonJS } from "./chunk.mjs";
+import { __commonJS } from "./chunk.js";
 
 //#region a.js
 var require_a = __commonJS({ "a.js"(exports, module) {
@@ -18,10 +18,10 @@ var require_a = __commonJS({ "a.js"(exports, module) {
 export default require_a();
 
 ```
-## b_js.mjs
+## b_js.js
 
 ```js
-import { __commonJS } from "./chunk.mjs";
+import { __commonJS } from "./chunk.js";
 
 //#region b.js
 var require_b = __commonJS({ "b.js"(exports, module) {
@@ -33,10 +33,10 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 export default require_b();
 
 ```
-## c_js.mjs
+## c_js.js
 
 ```js
-import { __commonJS } from "./chunk.mjs";
+import { __commonJS } from "./chunk.js";
 
 //#region c.js
 var require_c = __commonJS({ "c.js"(exports) {
@@ -48,7 +48,7 @@ var require_c = __commonJS({ "c.js"(exports) {
 export default require_c();
 
 ```
-## chunk.mjs
+## chunk.js
 
 ```js
 

@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## common_b.mjs
+## common_b.js
 
 ```js
 
@@ -12,10 +12,10 @@ console.log("0000000000000000000000000000000000000000000000000000000000000000000
 
 //#endregion
 ```
-## main.mjs
+## main.js
 
 ```js
-import "./common_b.mjs";
+import "./common_b.js";
 
 //#region a.js
 console.log("a");

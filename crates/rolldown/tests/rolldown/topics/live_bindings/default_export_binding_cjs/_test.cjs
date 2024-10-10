@@ -1,5 +1,5 @@
 const assert = require('node:assert')
-const main = require('./dist/main.cjs')
+const main = require('./dist/main.js')
 
 main.reset()
 assert.strictEqual(main.default, 0)

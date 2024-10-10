@@ -3,14 +3,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import { p, q } from "./a2.mjs";
+import { p, q } from "./a2.js";
 
 export { p, q };
 ```
-## a2.mjs
+## a2.js
 
 ```js
 
@@ -24,10 +24,10 @@ var p = 5;
 //#endregion
 export { p, q };
 ```
-## b.mjs
+## b.js
 
 ```js
-import { p, q } from "./a2.mjs";
+import { p, q } from "./a2.js";
 
 export { p, q };
 ```

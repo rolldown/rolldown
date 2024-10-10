@@ -3,21 +3,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry.mjs
+## entry.js
 
 ```js
-import { foo, main_default } from "./main.mjs";
+import { foo, main_default } from "./main.js";
 
 export { main_default as default, foo };
 ```
-## entry2.mjs
+## entry2.js
 
 ```js
-import { foo, main_default } from "./main.mjs";
+import { foo, main_default } from "./main.js";
 
 export { main_default as default, foo };
 ```
-## main.mjs
+## main.js
 
 ```js
 

@@ -42,14 +42,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## chunk.mjs
+## chunk.js
 
 ```js
 
 
 export { __commonJS };
 ```
-## cjs-in-esm_js.mjs
+## cjs-in-esm_js.js
 
 ```js
 
@@ -61,10 +61,10 @@ module.exports = 3;
 //#endregion
 export { foo };
 ```
-## import-in-cjs_js.mjs
+## import-in-cjs_js.js
 
 ```js
-import { __commonJS } from "./chunk.mjs";
+import { __commonJS } from "./chunk.js";
 import { foo } from "bar";
 
 //#region import-in-cjs.js
@@ -77,10 +77,10 @@ var require_import_in_cjs = __commonJS({ "import-in-cjs.js"(exports, module) {
 export default require_import_in_cjs();
 
 ```
-## no-warnings-here_js.mjs
+## no-warnings-here_js.js
 
 ```js
-import { __commonJS } from "./chunk.mjs";
+import { __commonJS } from "./chunk.js";
 
 //#region no-warnings-here.js
 var require_no_warnings_here = __commonJS({ "no-warnings-here.js"(exports, module) {

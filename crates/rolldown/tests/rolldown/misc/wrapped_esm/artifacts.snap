@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
 
@@ -37,7 +37,7 @@ var init_foo = __esm({ "foo.js"() {
 init_foo(), __toCommonJS(foo_exports);
 
 //#endregion
-//# sourceMappingURL=main.mjs.map
+//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
@@ -78,5 +78,5 @@ init_foo(), __toCommonJS(foo_exports);
 (4:25-4:28) " { " --> (49:13-49:14) " "
 (4:28-0:0) "" --> (49:14-50:0) "{};"
 (0:0-8:1) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport function foo() { }\nexport class bar { }\nexport default class baz { }\n\n\nexport { }\n" --> (50:0-54:0) "\n} });\n\n//#endregion\n//#region main.js"
-(0:0-1:1) "require('./foo')\n" --> (54:0-57:34) "\ninit_foo(), __toCommonJS(foo_exports);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-1:1) "require('./foo')\n" --> (54:0-57:33) "\ninit_foo(), __toCommonJS(foo_exports);\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

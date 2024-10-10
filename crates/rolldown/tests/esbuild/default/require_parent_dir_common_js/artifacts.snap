@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## dir_entry_js.mjs
+## dir_entry_js.js
 
 ```js
 import { default as assert } from "node:assert";

@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## empty-async_js.mjs
+## empty-async_js.js
 
 ```js
 
@@ -15,7 +15,7 @@ keep(1);
 
 //#endregion
 ```
-## empty-comma_js.mjs
+## empty-comma_js.js
 
 ```js
 
@@ -31,7 +31,7 @@ foo(), DROP(), DROP();
 
 //#endregion
 ```
-## empty-cross-module_js.mjs
+## empty-cross-module_js.js
 
 ```js
 
@@ -45,7 +45,7 @@ DROP();
 
 //#endregion
 ```
-## empty-first_js.mjs
+## empty-first_js.js
 
 ```js
 
@@ -62,7 +62,7 @@ keep(1);
 
 //#endregion
 ```
-## empty-generator_js.mjs
+## empty-generator_js.js
 
 ```js
 
@@ -74,7 +74,7 @@ keep(1);
 
 //#endregion
 ```
-## empty-if-else_js.mjs
+## empty-if-else_js.js
 
 ```js
 
@@ -88,7 +88,7 @@ if (foo) {
 
 //#endregion
 ```
-## empty-last_js.mjs
+## empty-last_js.js
 
 ```js
 
@@ -104,7 +104,7 @@ DROP();
 
 //#endregion
 ```
-## empty_js.mjs
+## empty_js.js
 
 ```js
 
@@ -123,7 +123,7 @@ DROP();
 
 //#endregion
 ```
-## reassign-array_js.mjs
+## reassign-array_js.js
 
 ```js
 
@@ -136,7 +136,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-div_js.mjs
+## reassign-div_js.js
 
 ```js
 
@@ -149,7 +149,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-inc_js.mjs
+## reassign-inc_js.js
 
 ```js
 
@@ -162,7 +162,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-object_js.mjs
+## reassign-object_js.js
 
 ```js
 
@@ -175,7 +175,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign_js.mjs
+## reassign_js.js
 
 ```js
 

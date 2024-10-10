@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry1_js.mjs
+## entry1_js.js
 
 ```js
 
@@ -48,7 +48,7 @@ function shouldNotMangle() {
 //#endregion
 export { shouldMangle, shouldNotMangle };
 ```
-## entry2_js.mjs
+## entry2_js.js
 
 ```js
 

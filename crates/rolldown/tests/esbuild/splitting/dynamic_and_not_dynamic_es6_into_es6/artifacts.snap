@@ -3,14 +3,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.mjs
+## foo.js
 
 ```js
-import { bar } from "./foo2.mjs";
+import { bar } from "./foo2.js";
 
 export { bar };
 ```
-## foo2.mjs
+## foo2.js
 
 ```js
 
@@ -20,14 +20,14 @@ let bar = 123;
 //#endregion
 export { bar };
 ```
-## main.mjs
+## main.js
 
 ```js
-import { bar } from "./foo2.mjs";
+import { bar } from "./foo2.js";
 import { default as assert } from "node:assert";
 
 //#region main.js
-import("./foo.mjs").then(({ bar: b }) => {
+import("./foo.js").then(({ bar: b }) => {
 	assert.equal(bar, 123);
 	assert.equal(b, 123);
 });

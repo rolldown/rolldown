@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## cube.mjs
+## cube.js
 
 ```js
 //#region square.js
@@ -24,7 +24,7 @@ function cube(x) {
 
 //#endregion
 ```
-## main.mjs
+## main.js
 
 ```js
 //#region hyper-cube.js
@@ -43,7 +43,7 @@ console.log(hyper_cube_exports.default(5));
 
 //#endregion
 ```
-## other-entry.mjs
+## other-entry.js
 
 ```js
 //#region other-entry.js

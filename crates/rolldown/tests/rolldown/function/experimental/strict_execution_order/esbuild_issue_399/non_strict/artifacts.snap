@@ -3,27 +3,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry1.mjs
+## entry1.js
 
 ```js
-import "./run-dep.mjs";
+import "./run-dep.js";
 
 //#region init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 
 //#endregion
 ```
-## entry2.mjs
+## entry2.js
 
 ```js
-import "./run-dep.mjs";
+import "./run-dep.js";
 
 //#region init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 
 //#endregion
 ```
-## run-dep.mjs
+## run-dep.js
 
 ```js
 

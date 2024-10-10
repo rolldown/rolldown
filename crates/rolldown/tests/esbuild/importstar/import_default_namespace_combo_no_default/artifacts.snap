@@ -114,83 +114,83 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry-dead_js.mjs
+## entry-dead_js.js
 
 ```js
-import "./foo.mjs";
+import "./foo.js";
 
 ```
-## entry-default-ns-prop_js.mjs
+## entry-default-ns-prop_js.js
 
 ```js
-import { foo_exports } from "./foo.mjs";
+import { foo_exports } from "./foo.js";
 
 //#region entry-default-ns-prop.js
 console.log(def, foo_exports, void 0);
 
 //#endregion
 ```
-## entry-default-ns_js.mjs
+## entry-default-ns_js.js
 
 ```js
-import { foo_exports } from "./foo.mjs";
+import { foo_exports } from "./foo.js";
 
 //#region entry-default-ns.js
 console.log(def, foo_exports);
 
 //#endregion
 ```
-## entry-default-prop_js.mjs
+## entry-default-prop_js.js
 
 ```js
-import "./foo.mjs";
+import "./foo.js";
 
 //#region entry-default-prop.js
 console.log(def, void 0);
 
 //#endregion
 ```
-## entry-default_js.mjs
+## entry-default_js.js
 
 ```js
-import "./foo.mjs";
+import "./foo.js";
 
 //#region entry-default.js
 console.log(def);
 
 //#endregion
 ```
-## entry-prop_js.mjs
+## entry-prop_js.js
 
 ```js
-import "./foo.mjs";
+import "./foo.js";
 
 //#region entry-prop.js
 console.log(void 0);
 
 //#endregion
 ```
-## entry-typo-indirect_js.mjs
+## entry-typo-indirect_js.js
 
 ```js
-import "./foo.mjs";
+import "./foo.js";
 
 //#region entry-typo-indirect.js
 console.log(void 0);
 
 //#endregion
 ```
-## entry-typo_js.mjs
+## entry-typo_js.js
 
 ```js
-import "./foo.mjs";
+import "./foo.js";
 
 //#region entry-typo.js
 console.log(void 0);
 
 //#endregion
 ```
-## foo.mjs
+## foo.js
 
 ```js
 

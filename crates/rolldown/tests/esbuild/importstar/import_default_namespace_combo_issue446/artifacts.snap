@@ -65,7 +65,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## external-def_js.mjs
+## external-def_js.js
 
 ```js
 import * as ns from "external";
@@ -76,7 +76,7 @@ console.log(def, ns.def);
 
 //#endregion
 ```
-## external-default2_js.mjs
+## external-default2_js.js
 
 ```js
 import { default as def, default as default2 } from "external";
@@ -86,7 +86,7 @@ console.log(def, default2);
 
 //#endregion
 ```
-## external-default_js.mjs
+## external-default_js.js
 
 ```js
 import * as ns from "external";
@@ -97,7 +97,7 @@ console.log(def, ns.default);
 
 //#endregion
 ```
-## external-ns-def_js.mjs
+## external-ns-def_js.js
 
 ```js
 import * as ns from "external";
@@ -108,7 +108,7 @@ console.log(def, ns, ns.def);
 
 //#endregion
 ```
-## external-ns-default_js.mjs
+## external-ns-default_js.js
 
 ```js
 import * as ns from "external";
@@ -119,7 +119,7 @@ console.log(def, ns, ns.default);
 
 //#endregion
 ```
-## external-ns_js.mjs
+## external-ns_js.js
 
 ```js
 import * as ns from "external";
@@ -130,67 +130,67 @@ console.log(def, ns);
 
 //#endregion
 ```
-## internal-def_js.mjs
+## internal-def_js.js
 
 ```js
-import { internal_default } from "./internal.mjs";
+import { internal_default } from "./internal.js";
 
 //#region internal-def.js
 console.log(internal_default, void 0);
 
 //#endregion
 ```
-## internal-default2_js.mjs
+## internal-default2_js.js
 
 ```js
-import { internal_default } from "./internal.mjs";
+import { internal_default } from "./internal.js";
 
 //#region internal-default2.js
 console.log(internal_default, internal_default);
 
 //#endregion
 ```
-## internal-default_js.mjs
+## internal-default_js.js
 
 ```js
-import { internal_default } from "./internal.mjs";
+import { internal_default } from "./internal.js";
 
 //#region internal-default.js
 console.log(internal_default, internal_default);
 
 //#endregion
 ```
-## internal-ns-def_js.mjs
+## internal-ns-def_js.js
 
 ```js
-import { internal_default, internal_exports } from "./internal.mjs";
+import { internal_default, internal_exports } from "./internal.js";
 
 //#region internal-ns-def.js
 console.log(internal_default, internal_exports, void 0);
 
 //#endregion
 ```
-## internal-ns-default_js.mjs
+## internal-ns-default_js.js
 
 ```js
-import { internal_default, internal_exports } from "./internal.mjs";
+import { internal_default, internal_exports } from "./internal.js";
 
 //#region internal-ns-default.js
 console.log(internal_default, internal_exports, internal_default);
 
 //#endregion
 ```
-## internal-ns_js.mjs
+## internal-ns_js.js
 
 ```js
-import { internal_default, internal_exports } from "./internal.mjs";
+import { internal_default, internal_exports } from "./internal.js";
 
 //#region internal-ns.js
 console.log(internal_default, internal_exports);
 
 //#endregion
 ```
-## internal.mjs
+## internal.js
 
 ```js
 

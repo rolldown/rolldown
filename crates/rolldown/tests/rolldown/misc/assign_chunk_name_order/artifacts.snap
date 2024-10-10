@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## file.mjs
+## file.js
 
 ```js
-import "./file2.mjs";
+import "./file2.js";
 
 ```
-## file2.mjs
+## file2.js
 
 ```js
 
@@ -18,7 +18,7 @@ console.log("file");
 
 //#endregion
 ```
-## file3.mjs
+## file3.js
 
 ```js
 
@@ -28,7 +28,7 @@ const value = "a";
 //#endregion
 export { value };
 ```
-## file4.mjs
+## file4.js
 
 ```js
 
@@ -38,7 +38,7 @@ const value = "b";
 //#endregion
 export { value };
 ```
-## file5.mjs
+## file5.js
 
 ```js
 
@@ -48,7 +48,7 @@ const value = "c";
 //#endregion
 export { value };
 ```
-## file6.mjs
+## file6.js
 
 ```js
 
@@ -58,7 +58,7 @@ const value = "d";
 //#endregion
 export { value };
 ```
-## file7.mjs
+## file7.js
 
 ```js
 
@@ -68,7 +68,7 @@ const value = "e";
 //#endregion
 export { value };
 ```
-## file8.mjs
+## file8.js
 
 ```js
 
@@ -78,7 +78,7 @@ const value = "f";
 //#endregion
 export { value };
 ```
-## file9.mjs
+## file9.js
 
 ```js
 
@@ -88,19 +88,19 @@ const value = "g";
 //#endregion
 export { value };
 ```
-## main.mjs
+## main.js
 
 ```js
-import "./file2.mjs";
+import "./file2.js";
 
 //#region main.js
-import("./file3.mjs");
-import("./file4.mjs");
-import("./file5.mjs");
-import("./file6.mjs");
-import("./file7.mjs");
-import("./file8.mjs");
-import("./file9.mjs");
+import("./file3.js");
+import("./file4.js");
+import("./file5.js");
+import("./file6.js");
+import("./file7.js");
+import("./file8.js");
+import("./file9.js");
 
 //#endregion
 ```

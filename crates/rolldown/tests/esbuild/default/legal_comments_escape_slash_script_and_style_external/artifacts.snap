@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```css
 @import "css-pkg"; a { b: c } /*! </style> */
 ```
-## entry_css.mjs
+## entry_css.js
 
 ```js
 
 ```
-## entry_js.mjs
+## entry_js.js
 
 ```js
 

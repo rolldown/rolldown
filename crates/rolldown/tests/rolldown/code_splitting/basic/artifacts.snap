@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## dynamic.mjs
+## dynamic.js
 
 ```js
 
@@ -12,23 +12,23 @@ console.log("dynamic");
 
 //#endregion
 ```
-## main1.mjs
+## main1.js
 
 ```js
-import "./share.mjs";
+import "./share.js";
 
 //#region main1.js
-import("./dynamic.mjs");
+import("./dynamic.js");
 
 //#endregion
 ```
-## main2.mjs
+## main2.js
 
 ```js
-import "./share.mjs";
+import "./share.js";
 
 ```
-## share.mjs
+## share.js
 
 ```js
 
@@ -40,7 +40,7 @@ console.log("shared");
 
 ## Output Stats
 
-- dynamic.mjs, is_entry false, is_dynamic_entry true, exports []
-- main1.mjs, is_entry true, is_dynamic_entry false, exports []
-- main2.mjs, is_entry true, is_dynamic_entry false, exports []
-- share.mjs, is_entry false, is_dynamic_entry false, exports []
+- dynamic.js, is_entry false, is_dynamic_entry true, exports []
+- main1.js, is_entry true, is_dynamic_entry false, exports []
+- main2.js, is_entry true, is_dynamic_entry false, exports []
+- share.js, is_entry false, is_dynamic_entry false, exports []

@@ -3,23 +3,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.mjs
+## foo.js
 
 ```js
-import { import_sub, main } from "./main2.mjs";
+import { import_sub, main } from "./main2.js";
 
 var sub = import_sub.sub;
 export { main, sub };
 ```
-## main.mjs
+## main.js
 
 ```js
-import { import_sub, main } from "./main2.mjs";
+import { import_sub, main } from "./main2.js";
 
 var sub = import_sub.sub;
 export { main, sub };
 ```
-## main2.mjs
+## main2.js
 
 ```js
 

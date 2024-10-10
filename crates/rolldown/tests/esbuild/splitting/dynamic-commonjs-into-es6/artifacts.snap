@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.mjs
+## foo.js
 
 ```js
 
@@ -17,13 +17,13 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 export default require_foo();
 
 ```
-## main.mjs
+## main.js
 
 ```js
 import { default as assert } from "node:assert";
 
 //#region main.js
-import("./foo.mjs").then(({ bar }) => {
+import("./foo.js").then(({ bar }) => {
 	assert.equal(bar, undefined);
 });
 

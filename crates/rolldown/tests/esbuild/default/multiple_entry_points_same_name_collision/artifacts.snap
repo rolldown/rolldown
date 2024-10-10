@@ -3,27 +3,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_entry_js.mjs
+## a_entry_js.js
 
 ```js
-import { foo } from "./common.mjs";
+import { foo } from "./common.js";
 
 //#region a/entry.js
 console.log(foo);
 
 //#endregion
 ```
-## b_entry_js.mjs
+## b_entry_js.js
 
 ```js
-import { foo } from "./common.mjs";
+import { foo } from "./common.js";
 
 //#region b/entry.js
 console.log(foo);
 
 //#endregion
 ```
-## common.mjs
+## common.js
 
 ```js
 

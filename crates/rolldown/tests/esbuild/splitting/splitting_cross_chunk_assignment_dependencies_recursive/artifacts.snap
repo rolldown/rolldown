@@ -1,0 +1,84 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a_js.mjs
+
+```js
+import { setX } from "./x.mjs";
+
+//#region a.js
+setX();
+
+//#endregion
+```
+## b_js.mjs
+
+```js
+import "./x.mjs";
+import { setZ } from "./z.mjs";
+
+//#region b.js
+setZ();
+
+//#endregion
+```
+## c_js.mjs
+
+```js
+import { setX2 } from "./x.mjs";
+import { setY2, setZ2 } from "./z.mjs";
+
+//#region c.js
+setX2();
+setY2();
+setZ2();
+
+//#endregion
+```
+## x.mjs
+
+```js
+
+//#region x.js
+let _x;
+function setX(v) {
+	_x = v;
+}
+function setX2(v) {
+	_x = v;
+}
+
+//#endregion
+export { setX, setX2 };
+```
+## z.mjs
+
+```js
+import { setX } from "./x.mjs";
+
+//#region y.js
+let _y;
+function setY(v) {
+	_y = v;
+}
+function setY2(v) {
+	setX(v);
+	_y = v;
+}
+
+//#endregion
+//#region z.js
+let _z;
+function setZ(v) {
+	_z = v;
+}
+function setZ2(v) {
+	setY(v);
+	_z = v;
+}
+
+//#endregion
+export { setY2, setZ, setZ2 };
+```

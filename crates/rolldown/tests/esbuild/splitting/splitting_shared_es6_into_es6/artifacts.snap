@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a_js.mjs
+
+```js
+import { foo } from "./shared.mjs";
+
+//#region a.js
+console.log(foo);
+
+//#endregion
+```
+## b_js.mjs
+
+```js
+import { foo } from "./shared.mjs";
+
+//#region b.js
+console.log(foo);
+
+//#endregion
+```
+## shared.mjs
+
+```js
+
+//#region shared.js
+let foo = 123;
+
+//#endregion
+export { foo };
+```

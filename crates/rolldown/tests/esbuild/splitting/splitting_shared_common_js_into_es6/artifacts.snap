@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a_js.mjs
+
+```js
+import { require_shared } from "./shared.mjs";
+
+//#region a.js
+const { foo } = require_shared();
+console.log(foo);
+
+//#endregion
+```
+## b_js.mjs
+
+```js
+import { require_shared } from "./shared.mjs";
+
+//#region b.js
+const { foo } = require_shared();
+console.log(foo);
+
+//#endregion
+```
+## shared.mjs
+
+```js
+
+
+//#region shared.js
+var require_shared = __commonJS({ "shared.js"(exports) {
+	exports.foo = 123;
+} });
+
+//#endregion
+export { require_shared };
+```

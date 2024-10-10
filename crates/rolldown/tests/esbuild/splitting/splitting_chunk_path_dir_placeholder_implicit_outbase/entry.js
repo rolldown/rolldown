@@ -1,0 +1,1 @@
+console.log(import('./output-path/should-contain/this-text/file'))

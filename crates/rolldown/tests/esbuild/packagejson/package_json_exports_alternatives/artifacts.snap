@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry.mjs
+## entry.js
 
 ```js
 import { default as redApple } from "pkg/apples/red.js";

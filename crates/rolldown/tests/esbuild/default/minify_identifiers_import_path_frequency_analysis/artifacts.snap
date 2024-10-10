@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## import_js.mjs
+## import_js.js
 
 ```js
 
@@ -16,7 +16,7 @@ console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in 
 
 //#endregion
 ```
-## require_js.mjs
+## require_js.js
 
 ```js
 

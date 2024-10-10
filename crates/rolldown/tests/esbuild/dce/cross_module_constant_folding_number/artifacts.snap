@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## const-entry_js.mjs
+## const-entry_js.js
 
 ```js
 
@@ -53,7 +53,7 @@ console.log([
 
 //#endregion
 ```
-## enum-entry_ts.mjs
+## enum-entry_ts.js
 
 ```js
 
@@ -106,7 +106,7 @@ console.log([
 
 //#endregion
 ```
-## nested-entry_ts.mjs
+## nested-entry_ts.js
 
 ```js
 

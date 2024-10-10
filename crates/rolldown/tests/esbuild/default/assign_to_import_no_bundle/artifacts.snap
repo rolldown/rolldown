@@ -137,7 +137,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## bad0_js.mjs
+## bad0_js.js
 
 ```js
 import { default as x } from "foo";
@@ -147,19 +147,19 @@ x = 1;
 
 //#endregion
 ```
-## bad11_js.mjs
+## bad11_js.js
 
 ```js
 import "foo";
 
 ```
-## bad12_js.mjs
+## bad12_js.js
 
 ```js
 import "foo";
 
 ```
-## bad1_js.mjs
+## bad1_js.js
 
 ```js
 import { default as x } from "foo";
@@ -169,7 +169,7 @@ x++;
 
 //#endregion
 ```
-## bad2_js.mjs
+## bad2_js.js
 
 ```js
 import { default as x } from "foo";
@@ -179,7 +179,7 @@ import { default as x } from "foo";
 
 //#endregion
 ```
-## bad3_js.mjs
+## bad3_js.js
 
 ```js
 import { default as x } from "foo";
@@ -189,7 +189,7 @@ import { default as x } from "foo";
 
 //#endregion
 ```
-## bad4_js.mjs
+## bad4_js.js
 
 ```js
 import { default as x } from "foo";
@@ -199,7 +199,7 @@ import { default as x } from "foo";
 
 //#endregion
 ```
-## bad5_js.mjs
+## bad5_js.js
 
 ```js
 import { x } from "foo";
@@ -209,7 +209,7 @@ x++;
 
 //#endregion
 ```
-## bad6_js.mjs
+## bad6_js.js
 
 ```js
 import * as x from "foo";
@@ -219,7 +219,7 @@ x++;
 
 //#endregion
 ```
-## good0_js.mjs
+## good0_js.js
 
 ```js
 import { default as x } from "foo";
@@ -229,7 +229,7 @@ import { default as x } from "foo";
 
 //#endregion
 ```
-## good1_js.mjs
+## good1_js.js
 
 ```js
 import { default as x } from "foo";
@@ -239,7 +239,7 @@ import { default as x } from "foo";
 
 //#endregion
 ```
-## good2_js.mjs
+## good2_js.js
 
 ```js
 import { default as x } from "foo";
@@ -249,7 +249,7 @@ x.y = 1;
 
 //#endregion
 ```
-## good3_js.mjs
+## good3_js.js
 
 ```js
 import { default as x } from "foo";
@@ -259,7 +259,7 @@ x[y] = 1;
 
 //#endregion
 ```
-## good4_js.mjs
+## good4_js.js
 
 ```js
 import { default as x } from "foo";
@@ -269,7 +269,7 @@ x["y"] = 1;
 
 //#endregion
 ```
-## good5_js.mjs
+## good5_js.js
 
 ```js
 import { default as x } from "foo";
@@ -279,7 +279,7 @@ x["y z"] = 1;
 
 //#endregion
 ```
-## uncaught10_js.mjs
+## uncaught10_js.js
 
 ```js
 import * as x from "foo";
@@ -289,7 +289,7 @@ x["y z"] = 1;
 
 //#endregion
 ```
-## uncaught13_js.mjs
+## uncaught13_js.js
 
 ```js
 import * as x from "foo";
@@ -299,7 +299,7 @@ delete x.y;
 
 //#endregion
 ```
-## uncaught14_js.mjs
+## uncaught14_js.js
 
 ```js
 import * as x from "foo";
@@ -309,7 +309,7 @@ delete x["y"];
 
 //#endregion
 ```
-## uncaught15_js.mjs
+## uncaught15_js.js
 
 ```js
 import * as x from "foo";
@@ -319,7 +319,7 @@ delete x[y];
 
 //#endregion
 ```
-## uncaught7_js.mjs
+## uncaught7_js.js
 
 ```js
 import * as x from "foo";
@@ -329,7 +329,7 @@ x.y = 1;
 
 //#endregion
 ```
-## uncaught8_js.mjs
+## uncaught8_js.js
 
 ```js
 import * as x from "foo";
@@ -339,7 +339,7 @@ x[y] = 1;
 
 //#endregion
 ```
-## uncaught9_js.mjs
+## uncaught9_js.js
 
 ```js
 import * as x from "foo";

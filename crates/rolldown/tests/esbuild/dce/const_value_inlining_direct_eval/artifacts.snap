@@ -41,7 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## nested-eval_js.mjs
+## nested-eval_js.js
 
 ```js
 
@@ -53,7 +53,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#endregion
 ```
-## nested-no-eval_js.mjs
+## nested-no-eval_js.js
 
 ```js
 
@@ -65,7 +65,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#endregion
 ```
-## top-level-eval_js.mjs
+## top-level-eval_js.js
 
 ```js
 
@@ -75,7 +75,7 @@ console.log(x, eval("x"));
 
 //#endregion
 ```
-## top-level-no-eval_js.mjs
+## top-level-no-eval_js.js
 
 ```js
 
@@ -85,7 +85,7 @@ console.log(x, evil("x"));
 
 //#endregion
 ```
-## ts-namespace-eval_ts.mjs
+## ts-namespace-eval_ts.js
 
 ```js
 
@@ -98,7 +98,7 @@ let z;
 
 //#endregion
 ```
-## ts-namespace-no-eval_ts.mjs
+## ts-namespace-no-eval_ts.js
 
 ```js
 

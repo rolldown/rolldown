@@ -20,7 +20,7 @@ x.y();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,2 +1,2 @@
 -b.c();
 -y();

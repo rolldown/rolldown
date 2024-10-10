@@ -1,3 +1,3 @@
 import assert from 'node:assert'
-import { a } from './dist/main.mjs'
+import { a } from './dist/main.js'
 assert.equal(a, 1)

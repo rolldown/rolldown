@@ -1,4 +1,4 @@
-import buffer from './dist/main.mjs';
+import buffer from './dist/main.js';
 import assert from 'node:assert';
 import fs from 'node:fs/promises';
 import path from 'node:path';

@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## async-entry.cjs
+## async-entry.js
 
 ```js
 "use strict";
@@ -31,12 +31,12 @@ assert.strictEqual(shared_default, shared_default);
 
 //#endregion
 ```
-## main.cjs
+## main.js
 
 ```js
 
 //#region main.js
-import("./async-entry.cjs");
+import("./async-entry.js");
 
 //#endregion
 ```

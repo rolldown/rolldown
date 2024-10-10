@@ -3,16 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.mjs
+## entry_js.js
 
 ```js
 
 //#region entry.js
-import("./foo.mjs").then(({ default: { bar } }) => console.log(bar));
+import("./foo.js").then(({ default: { bar } }) => console.log(bar));
 
 //#endregion
 ```
-## foo.mjs
+## foo.js
 
 ```js
 

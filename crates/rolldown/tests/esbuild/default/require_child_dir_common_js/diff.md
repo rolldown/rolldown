@@ -32,7 +32,7 @@ console.log(require_dir_index());
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,6 +1,6 @@
 -var require_dir = __commonJS({
 -    "Users/user/project/src/dir/index.js"(exports, module) {

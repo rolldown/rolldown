@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry-outer_js.mjs
+## entry-outer_js.js
 
 ```js
 
@@ -32,7 +32,7 @@ identity3(...args);
 
 //#endregion
 ```
-## entry_js.mjs
+## entry_js.js
 
 ```js
 

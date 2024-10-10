@@ -33,7 +33,7 @@ export default require_entry();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,5 +1,11 @@
 -keep_1: require("foo1");
 -exports.bar = function () {

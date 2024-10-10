@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## keep-these_js.mjs
+## keep-these_js.js
 
 ```js
 
@@ -34,7 +34,7 @@ use(isNotPure);
 
 //#endregion
 ```
-## remove-these_js.mjs
+## remove-these_js.js
 
 ```js
 

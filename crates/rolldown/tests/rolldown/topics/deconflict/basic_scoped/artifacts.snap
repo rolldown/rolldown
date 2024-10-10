@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
 import { default as assert } from "assert";
@@ -28,7 +28,7 @@ assert.deepEqual(foo("foo"), [
 ]);
 
 //#endregion
-//# sourceMappingURL=main.mjs.map
+//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
@@ -63,5 +63,5 @@ assert.deepEqual(foo("foo"), [
 (9:37-9:48) " 'main.js'," --> (17:1-18:1) "\t\"main.js\",\n"
 (9:48-9:55) " 'a.js'" --> (18:1-19:0) "\t\"a.js\""
 (9:55-9:56) "]" --> (19:0-19:2) "\n]"
-(9:56-10:1) ")\n" --> (19:2-22:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(9:56-10:1) ")\n" --> (19:2-22:33) ");\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

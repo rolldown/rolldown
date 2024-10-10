@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## cjs.mjs
+## cjs.js
 
 ```js
 
@@ -17,12 +17,12 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 export default require_cjs();
 
 ```
-## main.mjs
+## main.js
 
 ```js
 
 //#region main.js
-var main_default = import("./cjs.mjs");
+var main_default = import("./cjs.js");
 
 //#endregion
 export { main_default as default };

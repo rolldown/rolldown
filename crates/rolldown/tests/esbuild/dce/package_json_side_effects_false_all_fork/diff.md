@@ -36,7 +36,7 @@ Promise.resolve().then(() => (init_a(), a_exports)).then((x) => assert(x.foo ===
 ```js
 
 //#region src/entry.js
-import("./a_index.mjs").then((x) => assert(x.foo === "foo"));
+import("./a_index.js").then((x) => assert(x.foo === "foo"));
 
 //#endregion
 
@@ -45,7 +45,7 @@ import("./a_index.mjs").then((x) => assert(x.foo === "foo"));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.mjs
++++ rolldown	src_entry_js.js
 @@ -1,21 +1,1 @@
 -var foo;
 -var init_c = __esm({
@@ -68,6 +68,6 @@ import("./a_index.mjs").then((x) => assert(x.foo === "foo"));
 -    }
 -});
 -Promise.resolve().then(() => (init_a(), a_exports)).then(x => assert(x.foo === "foo"));
-+import("./a_index.mjs").then(x => assert(x.foo === "foo"));
++import("./a_index.js").then(x => assert(x.foo === "foo"));
 
 ```

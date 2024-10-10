@@ -19,7 +19,7 @@ class Bar extends Foo {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,6 +0,0 @@
 -class Foo {}
 -class Bar extends Foo {

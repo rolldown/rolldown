@@ -42,7 +42,7 @@ c();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,14 +1,12 @@
 -(() => {
 -    function e(n = arguments) {

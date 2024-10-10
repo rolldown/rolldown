@@ -1,6 +1,6 @@
 import assert from 'node:assert'
-import * as entry from './dist/entry.mjs'
-import * as entry2 from './dist/entry2.mjs'
+import * as entry from './dist/entry.js'
+import * as entry2 from './dist/entry2.js'
 assert.deepStrictEqual(entry.foo, 'foo')
 assert.deepStrictEqual(entry.foo, entry2.foo)
 assert.deepStrictEqual(entry.default, 'main')

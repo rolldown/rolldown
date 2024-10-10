@@ -23,7 +23,7 @@ console.log("unused import");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.mjs
++++ rolldown	src_entry_js.js
 @@ -1,1 +1,2 @@
 +console.log("TEST FAILED");
  console.log("unused import");

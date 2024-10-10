@@ -1,5 +1,11 @@
 use core::str;
-use std::{borrow::Cow, ffi::OsStr, path::Path, process::Command};
+use std::{
+  borrow::Cow,
+  ffi::OsStr,
+  io::{Read, Write},
+  path::Path,
+  process::Command,
+};
 
 use anyhow::Context;
 use rolldown::{
@@ -10,6 +16,7 @@ use rolldown_common::Output;
 use rolldown_error::DiagnosticOptions;
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
+use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
 use crate::utils::RUNTIME_MODULE_OUTPUT_RE;
@@ -108,10 +115,7 @@ impl IntegrationTest {
     //   options.cwd = Some(fixture_path.to_path_buf());
     // }
 
-    let output_ext = match options.format {
-      Some(OutputFormat::Cjs) => "cjs",
-      _ => "mjs",
-    };
+    let output_ext = "js";
 
     if options.entry_filenames.is_none() {
       if self.test_meta.hash_in_filename {
@@ -292,7 +296,26 @@ impl IntegrationTest {
   fn execute_output_assets(bundler: &Bundler) {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().dir);
+
     let is_output_cjs = matches!(bundler.options().format, OutputFormat::Cjs);
+
+    // add a dummy `package.json` to allow `import and export` when output module format is `esm`
+    if !is_output_cjs {
+      let package_json_path = dist_folder.join("package.json");
+      let mut package_json = std::fs::File::options()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .read(true)
+        .open(package_json_path)
+        .unwrap();
+      let mut json_string = String::new();
+      package_json.read_to_string(&mut json_string).unwrap();
+      let mut json: Value =
+        serde_json::from_str(&json_string).unwrap_or(Value::Object(Map::default()));
+      json["type"] = "module".into();
+      package_json.write_all(serde_json::to_string_pretty(&json).unwrap().as_bytes()).unwrap();
+    }
 
     let test_script = if is_output_cjs { cwd.join("_test.cjs") } else { cwd.join("_test.mjs") };
 
@@ -307,7 +330,7 @@ impl IntegrationTest {
         .iter()
         .map(|item| {
           let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
-          let ext = if is_output_cjs { "cjs" } else { "mjs" };
+          let ext = "js";
           format!("{name}.{ext}",)
         })
         .map(|name| dist_folder.join(name))

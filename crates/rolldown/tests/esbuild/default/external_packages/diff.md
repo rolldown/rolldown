@@ -33,7 +33,7 @@ console.log("pkg3");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,4 +1,4 @@
  import "pkg1";
 +import "pkg2";

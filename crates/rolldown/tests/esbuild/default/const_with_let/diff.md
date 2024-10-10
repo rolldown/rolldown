@@ -35,7 +35,7 @@ for (const e of x) console.log(e);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,6 +1,13 @@
 -console.log(1);
 -console.log(2);

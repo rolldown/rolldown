@@ -14,7 +14,7 @@ console.log("injected");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,1 +0,0 @@
 -console.log("injected");
 

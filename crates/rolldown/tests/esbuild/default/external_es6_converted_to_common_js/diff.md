@@ -125,7 +125,7 @@ init_e(), __toCommonJS(e_exports);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,44 +1,53 @@
 -var a_exports = {};
 -__export(a_exports, {

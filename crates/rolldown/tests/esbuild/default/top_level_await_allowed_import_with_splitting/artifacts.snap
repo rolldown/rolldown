@@ -3,26 +3,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import "./c.mjs";
-import "./b.mjs";
+import "./c.js";
+import "./b.js";
 
 ```
-## b.mjs
+## b.js
 
 ```js
 
 ```
-## b2.mjs
+## b2.js
 
 ```js
-import "./c.mjs";
-import "./b.mjs";
+import "./c.js";
+import "./b.js";
 
 ```
-## c.mjs
+## c.js
 
 ```js
 
@@ -31,21 +31,21 @@ await 0;
 
 //#endregion
 ```
-## c2.mjs
+## c2.js
 
 ```js
-import "./c.mjs";
+import "./c.js";
 
 ```
-## entry_js.mjs
+## entry_js.js
 
 ```js
 
 //#region entry.js
-import("./a.mjs");
-import("./b2.mjs");
-import("./c2.mjs");
-import("./entry_js.mjs");
+import("./a.js");
+import("./b2.js");
+import("./c2.js");
+import("./entry_js.js");
 await 0;
 
 //#endregion

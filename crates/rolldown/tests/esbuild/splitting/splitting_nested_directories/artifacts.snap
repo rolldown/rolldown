@@ -3,27 +3,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## pageA_page_js.mjs
+## pageA_page_js.js
 
 ```js
-import { shared_default } from "./shared.mjs";
+import { shared_default } from "./shared.js";
 
 //#region pageA/page.js
 console.log(shared_default);
 
 //#endregion
 ```
-## pageB_page_js.mjs
+## pageB_page_js.js
 
 ```js
-import { shared_default } from "./shared.mjs";
+import { shared_default } from "./shared.js";
 
 //#region pageB/page.js
 console.log(-shared_default);
 
 //#endregion
 ```
-## shared.mjs
+## shared.js
 
 ```js
 

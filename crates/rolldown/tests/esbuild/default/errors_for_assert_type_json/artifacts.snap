@@ -114,7 +114,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## foo.mjs
+## foo.js
 
 ```js
 
@@ -124,10 +124,10 @@ var foo_default = {};
 //#endregion
 export { foo_default };
 ```
-## js-entry_js.mjs
+## js-entry_js.js
 
 ```js
-import { foo_default } from "./foo.mjs";
+import { foo_default } from "./foo.js";
 
 //#region js-entry.js
 use(used, void 0);
@@ -135,10 +135,10 @@ use(used, void 0);
 //#endregion
 export { foo_default as def2, foo_default$1 as default, exported };
 ```
-## ts-entry_ts.mjs
+## ts-entry_ts.js
 
 ```js
-import { foo_default } from "./foo.mjs";
+import { foo_default } from "./foo.js";
 
 //#region ts-entry.ts
 use(used, void 0);

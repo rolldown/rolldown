@@ -3,19 +3,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import "./shared.mjs";
+import "./shared.js";
 
 ```
-## b.mjs
+## b.js
 
 ```js
-import "./shared.mjs";
+import "./shared.js";
 
 ```
-## shared.mjs
+## shared.js
 
 ```js
 

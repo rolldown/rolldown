@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import { result } from "./b.mjs";
+import { result } from "./b.js";
 
 //#region a.js
 var a_default = result();
@@ -14,7 +14,7 @@ var a_default = result();
 //#endregion
 export { a_default as default };
 ```
-## b.mjs
+## b.js
 
 ```js
 
@@ -29,23 +29,23 @@ function test() {
 //#endregion
 export { result, test };
 ```
-## b2.mjs
+## b2.js
 
 ```js
-import { result, test } from "./b.mjs";
+import { result, test } from "./b.js";
 
 export { result, test };
 ```
-## main.mjs
+## main.js
 
 ```js
 import { default as assert } from "node:assert";
 
 //#region main.js
-import("./b2.mjs").then((mod) => {
+import("./b2.js").then((mod) => {
 	assert.strictEqual(mod.result(), "result");
 });
-import("./a.mjs").then((mod) => {
+import("./a.js").then((mod) => {
 	assert.strictEqual(mod.default, "result");
 });
 

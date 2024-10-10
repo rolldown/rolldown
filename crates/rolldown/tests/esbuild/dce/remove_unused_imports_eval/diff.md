@@ -24,7 +24,7 @@ eval("foo(a, b, c)");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,4 +1,4 @@
 -import a from "a";
 +import {default as a} from "a";

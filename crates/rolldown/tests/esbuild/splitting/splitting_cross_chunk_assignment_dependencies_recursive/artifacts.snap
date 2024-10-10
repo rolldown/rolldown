@@ -3,32 +3,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.mjs
+## a_js.js
 
 ```js
-import { setX } from "./x.mjs";
+import { setX } from "./x.js";
 
 //#region a.js
 setX();
 
 //#endregion
 ```
-## b_js.mjs
+## b_js.js
 
 ```js
-import "./x.mjs";
-import { setZ } from "./z.mjs";
+import "./x.js";
+import { setZ } from "./z.js";
 
 //#region b.js
 setZ();
 
 //#endregion
 ```
-## c_js.mjs
+## c_js.js
 
 ```js
-import { setX2 } from "./x.mjs";
-import { setY2, setZ2 } from "./z.mjs";
+import { setX2 } from "./x.js";
+import { setY2, setZ2 } from "./z.js";
 
 //#region c.js
 setX2();
@@ -37,7 +37,7 @@ setZ2();
 
 //#endregion
 ```
-## x.mjs
+## x.js
 
 ```js
 
@@ -53,10 +53,10 @@ function setX2(v) {
 //#endregion
 export { setX, setX2 };
 ```
-## z.mjs
+## z.js
 
 ```js
-import { setX } from "./x.mjs";
+import { setX } from "./x.js";
 
 //#region y.js
 let _y;

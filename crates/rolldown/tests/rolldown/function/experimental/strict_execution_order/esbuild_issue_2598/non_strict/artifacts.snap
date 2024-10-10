@@ -3,20 +3,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lazy-chunk.mjs
+## lazy-chunk.js
 
 ```js
-import { foo } from "./user-lib.mjs";
+import { foo } from "./user-lib.js";
 
 //#region lazy-chunk.js
 foo();
 
 //#endregion
 ```
-## main.mjs
+## main.js
 
 ```js
-import { foo } from "./user-lib.mjs";
+import { foo } from "./user-lib.js";
 
 //#region polyfill.js
 Object.somePolyfilledFunction = () => {};
@@ -27,14 +27,14 @@ foo();
 
 //#endregion
 ```
-## user-lib.mjs
+## user-lib.js
 
 ```js
 
 //#region user-lib.js
 Object.somePolyfilledFunction();
 async function foo() {
-	return import("./lazy-chunk.mjs");
+	return import("./lazy-chunk.js");
 }
 
 //#endregion

@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## hoist-directive_js.mjs
+## hoist-directive_js.js
 
 ```js
 
@@ -33,7 +33,7 @@ using a = b;
 
 //#endregion
 ```
-## hoist-export-class-direct_js.mjs
+## hoist-export-class-direct_js.js
 
 ```js
 
@@ -54,7 +54,7 @@ using c = d;
 //#endregion
 export { Bar1, Foo1 };
 ```
-## hoist-export-class-indirect_js.mjs
+## hoist-export-class-indirect_js.js
 
 ```js
 
@@ -75,7 +75,7 @@ using c = d;
 //#endregion
 export { Bar1, Foo1 };
 ```
-## hoist-export-clause_js.mjs
+## hoist-export-clause_js.js
 
 ```js
 
@@ -86,7 +86,7 @@ using c = d;
 //#endregion
 export { a, c as 'c!' };
 ```
-## hoist-export-default-class-anonymous_js.mjs
+## hoist-export-default-class-anonymous_js.js
 
 ```js
 
@@ -100,7 +100,7 @@ using c = d;
 //#endregion
 export { hoist_export_default_class_anonymous_default as default };
 ```
-## hoist-export-default-class-name-unused_js.mjs
+## hoist-export-default-class-name-unused_js.js
 
 ```js
 
@@ -114,7 +114,7 @@ using c = d;
 //#endregion
 export { Foo as default };
 ```
-## hoist-export-default-class-name-used_js.mjs
+## hoist-export-default-class-name-used_js.js
 
 ```js
 
@@ -132,7 +132,7 @@ using c = d;
 //#endregion
 export { Foo as default };
 ```
-## hoist-export-default-expr_js.mjs
+## hoist-export-default-expr_js.js
 
 ```js
 
@@ -144,7 +144,7 @@ using c = d;
 //#endregion
 export { hoist_export_default_expr_default as default };
 ```
-## hoist-export-default-function-anonymous_js.mjs
+## hoist-export-default-function-anonymous_js.js
 
 ```js
 
@@ -158,7 +158,7 @@ using c = d;
 //#endregion
 export { hoist_export_default_function_anonymous_default as default };
 ```
-## hoist-export-default-function-name-unused_js.mjs
+## hoist-export-default-function-name-unused_js.js
 
 ```js
 
@@ -172,7 +172,7 @@ using c = d;
 //#endregion
 export { foo as default };
 ```
-## hoist-export-default-function-name-used_js.mjs
+## hoist-export-default-function-name-used_js.js
 
 ```js
 
@@ -190,7 +190,7 @@ using c = d;
 //#endregion
 export { foo as default };
 ```
-## hoist-export-from_js.mjs
+## hoist-export-from_js.js
 
 ```js
 import { x, y } from "./foo";
@@ -202,7 +202,7 @@ using c = d;
 //#endregion
 export { x, y };
 ```
-## hoist-export-function-direct_js.mjs
+## hoist-export-function-direct_js.js
 
 ```js
 
@@ -223,7 +223,7 @@ using c = d;
 //#endregion
 export { bar1, foo1 };
 ```
-## hoist-export-function-indirect_js.mjs
+## hoist-export-function-indirect_js.js
 
 ```js
 
@@ -244,7 +244,7 @@ using c = d;
 //#endregion
 export { bar1, foo1 };
 ```
-## hoist-export-local-direct_js.mjs
+## hoist-export-local-direct_js.js
 
 ```js
 
@@ -264,7 +264,7 @@ using c = d;
 //#endregion
 export { a1, ac1, c1, x1, y1, z1 };
 ```
-## hoist-export-local-indirect_js.mjs
+## hoist-export-local-indirect_js.js
 
 ```js
 
@@ -281,7 +281,7 @@ using c = d;
 //#endregion
 export { x1, y1, z1 };
 ```
-## hoist-export-star_js.mjs
+## hoist-export-star_js.js
 
 ```js
 import "./foo";
@@ -294,7 +294,7 @@ using c = d;
 
 //#endregion
 ```
-## hoist-import_js.mjs
+## hoist-import_js.js
 
 ```js
 import "./foo";
@@ -305,7 +305,7 @@ using c = d;
 
 //#endregion
 ```
-## hoist-use-strict_js.mjs
+## hoist-use-strict_js.js
 
 ```js
 

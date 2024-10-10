@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry1.mjs
+## entry1.js
 
 ```js
-import { __esm, init_run_dep } from "./run-dep.mjs";
+import { __esm, init_run_dep } from "./run-dep.js";
 
 //#region init-dep-1.js
 var init_init_dep_1 = __esm({ "init-dep-1.js"() {
@@ -23,10 +23,10 @@ var init_entry1 = __esm({ "entry1.js"() {
 //#endregion
 init_entry1();
 ```
-## entry2.mjs
+## entry2.js
 
 ```js
-import { __esm, init_run_dep } from "./run-dep.mjs";
+import { __esm, init_run_dep } from "./run-dep.js";
 
 //#region init-dep-2.js
 var init_init_dep_2 = __esm({ "init-dep-2.js"() {
@@ -43,7 +43,7 @@ var init_entry2 = __esm({ "entry2.js"() {
 //#endregion
 init_entry2();
 ```
-## run-dep.mjs
+## run-dep.js
 
 ```js
 

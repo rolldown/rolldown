@@ -44,10 +44,10 @@ await init_entry();
 ```js
 
 //#region entry.js
-import("./a.mjs");
-import("./b2.mjs");
-import("./c2.mjs");
-import("./entry_js.mjs");
+import("./a.js");
+import("./b2.js");
+import("./c2.js");
+import("./entry_js.js");
 await 0;
 
 //#endregion
@@ -57,7 +57,7 @@ await 0;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,29 +1,5 @@
 -var c_exports = {};
 -var init_c = __esm({
@@ -88,10 +88,10 @@ await 0;
 -    }
 -});
 -await init_entry();
-+import("./a.mjs");
-+import("./b2.mjs");
-+import("./c2.mjs");
-+import("./entry_js.mjs");
++import("./a.js");
++import("./b2.js");
++import("./c2.js");
++import("./entry_js.js");
 +await 0;
 
 ```

@@ -43,7 +43,7 @@ new clsExprKeep();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,17 +1,8 @@
  function fnStmtKeep() {}
 -__name(fnStmtKeep, "fnStmtKeep");

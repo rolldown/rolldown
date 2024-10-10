@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.mjs
+## a_js.js
 
 ```js
-import "./ab.mjs";
+import "./ab.js";
 
 ```
-## ab.mjs
+## ab.js
 
 ```js
 
@@ -18,19 +18,19 @@ console.log(123);
 
 //#endregion
 ```
-## b_js.mjs
+## b_js.js
 
 ```js
-import "./ab.mjs";
+import "./ab.js";
 
 ```
-## c_js.mjs
+## c_js.js
 
 ```js
-import "./cd.mjs";
+import "./cd.js";
 
 ```
-## cd.mjs
+## cd.js
 
 ```js
 
@@ -39,9 +39,9 @@ console.log(123);
 
 //#endregion
 ```
-## d_js.mjs
+## d_js.js
 
 ```js
-import "./cd.mjs";
+import "./cd.js";
 
 ```

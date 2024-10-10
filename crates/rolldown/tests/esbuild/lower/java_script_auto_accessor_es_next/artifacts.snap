@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## js-define_js.mjs
+## js-define_js.js
 
 ```js
 
@@ -19,7 +19,7 @@ class Foo {
 
 //#endregion
 ```
-## ts-assign_ts-assign_ts.mjs
+## ts-assign_ts-assign_ts.js
 
 ```js
 
@@ -51,7 +51,7 @@ class StaticPrivate {
 
 //#endregion
 ```
-## ts-define_ts-define_ts.mjs
+## ts-define_ts-define_ts.js
 
 ```js
 

@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
 import { default as assert } from "assert";
@@ -17,7 +17,7 @@ const value = { foo: foo_default };
 assert.strictEqual(value.foo, "foo");
 
 //#endregion
-//# sourceMappingURL=main.mjs.map
+//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
@@ -37,5 +37,5 @@ assert.strictEqual(value.foo, "foo");
 (5:19-5:25) "(value" --> (8:19-8:25) "(value"
 (5:25-5:30) ".foo," --> (8:25-8:30) ".foo,"
 (5:30-5:36) " 'foo'" --> (8:30-8:36) " \"foo\""
-(5:36-5:37) ")" --> (8:36-11:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(5:36-5:37) ")" --> (8:36-11:33) ");\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

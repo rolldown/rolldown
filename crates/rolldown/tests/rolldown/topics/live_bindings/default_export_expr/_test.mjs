@@ -1,6 +1,6 @@
 import assert from 'node:assert';
-import { default as countInDefault, inc, reset } from './dist/main.mjs';
-import * as star from './dist/main.mjs';
+import { default as countInDefault, inc, reset } from './dist/main.js';
+import * as star from './dist/main.js';
 
 reset()
 assert.strictEqual(countInDefault, 0)

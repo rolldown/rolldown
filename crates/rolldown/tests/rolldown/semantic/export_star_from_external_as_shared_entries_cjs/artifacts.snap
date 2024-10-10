@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry.cjs
+## entry.js
 
 ```js
 "use strict";
@@ -14,10 +14,10 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-require('./main.cjs');
+require('./main.js');
 
 ```
-## entry2.cjs
+## entry2.js
 
 ```js
 "use strict";
@@ -28,10 +28,10 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-require('./main.cjs');
+require('./main.js');
 
 ```
-## main.cjs
+## main.js
 
 ```js
 "use strict";

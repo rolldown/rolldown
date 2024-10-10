@@ -31,7 +31,7 @@ foo`remove this part ${keep} and this ${alsoKeep}`;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,4 +1,7 @@
  function foo() {}
 +foo`remove`;

@@ -45,7 +45,7 @@ nestedScope();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -6,7 +6,7 @@
      }
  });

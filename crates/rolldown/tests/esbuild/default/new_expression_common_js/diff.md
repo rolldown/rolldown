@@ -35,7 +35,7 @@ new (require_foo()).Foo();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,7 +1,7 @@
  var require_foo = __commonJS({
      "foo.js"(exports, module) {

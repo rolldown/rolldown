@@ -69,7 +69,7 @@ let keep8 = class {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,26 +1,26 @@
 -let keep1 = class {
 +var keep1 = class {

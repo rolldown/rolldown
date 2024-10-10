@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## async-entry.cjs
+## async-entry.js
 
 ```js
 "use strict";
 
-const require_shared = require('./shared.cjs');
+const require_shared = require('./shared.js');
 const { default: assert } = __toESM(require("node:assert"));
 
 //#region async-entry.js
@@ -24,14 +24,14 @@ assert.strictEqual(require_shared.count, require_shared.count);
 
 //#endregion
 ```
-## main.cjs
+## main.js
 
 ```js
 "use strict";
-const require_shared = require('./shared.cjs');
+const require_shared = require('./shared.js');
 
 //#region main.js
-import("./async-entry.cjs");
+import("./async-entry.js");
 
 //#endregion
 Object.defineProperty(exports, 'count', {
@@ -43,7 +43,7 @@ Object.defineProperty(exports, 'count', {
 exports.inc = require_shared.inc
 exports.reset = require_shared.reset
 ```
-## shared.cjs
+## shared.js
 
 ```js
 "use strict";

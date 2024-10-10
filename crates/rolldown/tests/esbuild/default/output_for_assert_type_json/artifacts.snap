@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## foo.mjs
+## foo.js
 
 ```js
 
@@ -44,10 +44,10 @@ var require_foo = __commonJS({ "foo.copy"() {} });
 //#endregion
 export { __toESM, foo_default, require_foo };
 ```
-## js-entry_js.mjs
+## js-entry_js.js
 
 ```js
-import { __toESM, foo_default, require_foo } from "./foo.mjs";
+import { __toESM, foo_default, require_foo } from "./foo.js";
 
 //#region js-entry.js
 var import_foo = __toESM(require_foo());
@@ -56,10 +56,10 @@ use(foo_default, import_foo.default, foo_default, void 0);
 //#endregion
 export { foo_default as default };
 ```
-## ts-entry_ts.mjs
+## ts-entry_ts.js
 
 ```js
-import { __toESM, foo_default, require_foo } from "./foo.mjs";
+import { __toESM, foo_default, require_foo } from "./foo.js";
 
 //#region ts-entry.ts
 var import_foo = __toESM(require_foo());

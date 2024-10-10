@@ -11,12 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 @import "./c.css";
 @import 'some-pkg/css';
 ```
-## entry_css.mjs
+## entry_css.js
 
 ```js
 
 ```
-## entry_js.mjs
+## entry_js.js
 
 ```js
 

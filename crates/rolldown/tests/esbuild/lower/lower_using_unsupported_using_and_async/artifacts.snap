@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.mjs
+## entry_js.js
 
 ```js
 
 ```
-## loops_js.mjs
+## loops_js.js
 
 ```js
 
@@ -20,7 +20,7 @@ if (nested) {
 
 //#endregion
 ```
-## switch_js.mjs
+## switch_js.js
 
 ```js
 

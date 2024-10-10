@@ -3,25 +3,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## bare_js.mjs
+## bare_js.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.mjs";
+import { __toESM, require_foo } from "./foo2.js";
 
 //#region bare.js
 var import_foo = __toESM(require_foo());
 
 //#endregion
 ```
-## foo.mjs
+## foo.js
 
 ```js
-import { require_foo } from "./foo2.mjs";
+import { require_foo } from "./foo2.js";
 
 export default require_foo();
 
 ```
-## foo2.mjs
+## foo2.js
 
 ```js
 
@@ -34,19 +34,19 @@ var require_foo = __commonJS({ "foo.js"() {
 //#endregion
 export { __toESM, require_foo };
 ```
-## import_js.mjs
+## import_js.js
 
 ```js
 
 //#region import.js
-console.log(import("./foo.mjs"));
+console.log(import("./foo.js"));
 
 //#endregion
 ```
-## named_js.mjs
+## named_js.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.mjs";
+import { __toESM, require_foo } from "./foo2.js";
 
 //#region named.js
 var import_foo = __toESM(require_foo());
@@ -54,20 +54,20 @@ console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 //#endregion
 ```
-## require_js.mjs
+## require_js.js
 
 ```js
-import { require_foo } from "./foo2.mjs";
+import { require_foo } from "./foo2.js";
 
 //#region require.js
 console.log(require_foo());
 
 //#endregion
 ```
-## star-capture_js.mjs
+## star-capture_js.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.mjs";
+import { __toESM, require_foo } from "./foo2.js";
 
 //#region star-capture.js
 var import_foo = __toESM(require_foo());
@@ -75,10 +75,10 @@ console.log(import_foo);
 
 //#endregion
 ```
-## star_js.mjs
+## star_js.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.mjs";
+import { __toESM, require_foo } from "./foo2.js";
 
 //#region star.js
 var import_foo = __toESM(require_foo());

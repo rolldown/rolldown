@@ -52,7 +52,7 @@ assert.deepEqual(common_exports, {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,8 +1,8 @@
 +var x = 1;
 +var z = 4;

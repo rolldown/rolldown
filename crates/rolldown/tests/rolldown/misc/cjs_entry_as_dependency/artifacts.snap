@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
-import { __commonJS, __toESM, require_main2 } from "./main22.mjs";
+import { __commonJS, __toESM, require_main2 } from "./main22.js";
 
 //#region main.js
 var require_main = __commonJS({ "main.js"(exports, module) {
@@ -18,15 +18,15 @@ var require_main = __commonJS({ "main.js"(exports, module) {
 export default require_main();
 
 ```
-## main2.mjs
+## main2.js
 
 ```js
-import { require_main2 } from "./main22.mjs";
+import { require_main2 } from "./main22.js";
 
 export default require_main2();
 
 ```
-## main22.mjs
+## main22.js
 
 ```js
 

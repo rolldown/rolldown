@@ -3,17 +3,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import "./at_least_share_by_2.mjs";
+import "./at_least_share_by_2.js";
 
 //#region share-by-1.js
 console.log("share-by-1");
 
 //#endregion
 ```
-## at_least_share_by_2.mjs
+## at_least_share_by_2.js
 
 ```js
 
@@ -26,15 +26,15 @@ console.log("share-by-3");
 
 //#endregion
 ```
-## b.mjs
+## b.js
 
 ```js
-import "./at_least_share_by_2.mjs";
+import "./at_least_share_by_2.js";
 
 ```
-## c.mjs
+## c.js
 
 ```js
-import "./at_least_share_by_2.mjs";
+import "./at_least_share_by_2.js";
 
 ```

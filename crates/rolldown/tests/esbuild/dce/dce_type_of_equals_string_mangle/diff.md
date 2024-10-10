@@ -19,7 +19,7 @@ var hasBar = typeof bar !== "undefined";
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,1 +1,1 @@
 -(() => {})();
 +var hasBar = typeof bar !== "undefined";

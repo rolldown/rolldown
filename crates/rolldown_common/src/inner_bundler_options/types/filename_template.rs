@@ -33,9 +33,11 @@ impl FilenameTemplate {
       tmp = tmp.replace("[name]", name);
     }
     if let Some(hash) = options.hash {
-      if let Some(start) = tmp.find("[hash") {
+      while let Some(start) = tmp.find("[hash") {
         if let Some(end) = tmp[start + 5..].find(']') {
           tmp.replace_range(start..=start + end + 5, hash);
+        } else {
+          break;
         }
       }
     }
@@ -61,4 +63,28 @@ fn hash_with_len() {
   });
 
   assert_eq!(str, "hello-abc.js");
+}
+
+#[test]
+fn multiple_hash_with_len() {
+  let file_template = FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string());
+  let str = file_template.render(&FileNameRenderOptions {
+    name: Some("hello"),
+    hash: Some("abc"),
+    ext: None,
+  });
+
+  assert_eq!(str, "hello-abc-abc.js");
+}
+
+#[test]
+fn multiple_hash_without_len() {
+  let file_template = FilenameTemplate::new("[name]-[hash]-[hash].js".to_string());
+  let str = file_template.render(&FileNameRenderOptions {
+    name: Some("hello"),
+    hash: Some("abc"),
+    ext: None,
+  });
+
+  assert_eq!(str, "hello-abc-abc.js");
 }

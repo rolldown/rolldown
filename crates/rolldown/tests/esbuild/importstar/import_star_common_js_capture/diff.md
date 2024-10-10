@@ -42,7 +42,7 @@ assert.equal(foo, 234);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -2,7 +2,7 @@
      "foo.js"(exports) {
          exports.foo = 123;

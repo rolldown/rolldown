@@ -36,7 +36,7 @@ class Bar {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,20 +0,0 @@
 -class Foo {
 -    #foo;

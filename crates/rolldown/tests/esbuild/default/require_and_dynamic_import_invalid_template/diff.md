@@ -81,7 +81,7 @@ try {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,41 +1,18 @@
 -var globRequire;
 -var init_ = __esm({

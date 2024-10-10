@@ -22,7 +22,7 @@ function loop() {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,9 +0,0 @@
 -function earlyReturn() {
 -    onlyWithKeep();

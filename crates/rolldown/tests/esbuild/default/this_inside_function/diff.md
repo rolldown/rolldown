@@ -95,7 +95,7 @@ if (nested) {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -5,24 +5,23 @@
      foo(x = this) {
          console.log(this);

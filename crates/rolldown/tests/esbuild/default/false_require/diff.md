@@ -18,7 +18,7 @@
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,1 +1,1 @@
 -(require2 => require2("/test.txt"))();
 +(require => require("/test.txt"))();

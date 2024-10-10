@@ -32,7 +32,7 @@ entry();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,6 +1,4 @@
  "use 1";
  "use 2";

@@ -45,7 +45,7 @@ assert.equal(
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,6 +1,6 @@
  var require_foo = __commonJS({
 -    "Users/user/project/node_modules/pkg/foo.js"(exports, module) {

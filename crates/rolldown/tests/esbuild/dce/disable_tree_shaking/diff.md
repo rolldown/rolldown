@@ -49,7 +49,7 @@ let keepMe6 = some.fn();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.mjs
++++ rolldown	entry_jsx.js
 @@ -1,7 +1,12 @@
 +import {jsx as _jsx} from "react/jsx-runtime";
 +var remove_me_default = "unused";

@@ -45,7 +45,7 @@ Object.defineProperty(exports, 'y', {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.cjs
++++ rolldown	entry_js.js
 @@ -2,10 +2,11 @@
      "foo.js"(exports) {
          exports.foo = 123;

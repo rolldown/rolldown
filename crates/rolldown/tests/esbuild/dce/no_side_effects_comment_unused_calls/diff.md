@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+# Diff
 ## /out/stmt-fn.js
 ### esbuild
 ```js

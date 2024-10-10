@@ -1,3 +1,4 @@
+# Diff
 ## /Users/user/project/out/index.js
 ### esbuild
 ```js

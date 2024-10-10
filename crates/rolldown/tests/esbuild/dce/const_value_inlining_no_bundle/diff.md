@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+# Diff
 ## /out/top-level.js
 ### esbuild
 ```js

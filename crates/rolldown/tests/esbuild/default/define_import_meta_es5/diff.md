@@ -1,3 +1,4 @@
+# Diff
 ## /out/replaced.js
 ### esbuild
 ```js

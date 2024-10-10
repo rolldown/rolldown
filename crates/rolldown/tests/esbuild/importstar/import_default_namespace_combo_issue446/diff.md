@@ -1,3 +1,4 @@
+# Diff
 ## /out/external-default2.js
 ### esbuild
 ```js

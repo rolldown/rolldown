@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+# Diff
 ## /out/top-level-no-eval.js
 ### esbuild
 ```js

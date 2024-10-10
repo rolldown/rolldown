@@ -1,3 +1,4 @@
+# Diff
 ## /out/entry1.js
 ### esbuild
 ```js

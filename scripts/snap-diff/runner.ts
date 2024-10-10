@@ -54,11 +54,14 @@ export function run(includeList: string[], debug: boolean) {
         if (fs.existsSync(diffMarkdownPath)) {
           fs.rmSync(diffMarkdownPath, {})
         }
-        updateBypassMarkdown(bypassMarkdownPath, diffResult)
+        updateBypassOrDiffMarkdown(bypassMarkdownPath, diffResult)
         diffResult = 'bypass'
       } else {
         if (typeof diffResult !== 'string') {
-          writeDiffMarkdownToTestcaseDir(diffResult, rolldownTestPath)
+          updateBypassOrDiffMarkdown(
+            path.join(rolldownTestPath, 'diff.md'),
+            diffResult,
+          )
         } else {
           if (diffResult === 'same' && fs.existsSync(diffMarkdownPath)) {
             // this happens when we fixing some issues and the snapshot is align with esbuild,
@@ -84,18 +87,6 @@ function getRolldownSnap(caseDir: string) {
   if (fs.existsSync(artifactsPath)) {
     return fs.readFileSync(artifactsPath, 'utf-8')
   }
-}
-
-function writeDiffMarkdownToTestcaseDir(
-  diffResult: ReturnType<typeof diffCase>,
-  dir: string,
-) {
-  // this seems redundant, just help ts type infer
-  if (typeof diffResult === 'string') {
-    return
-  }
-  let markdown = getDiffMarkdown(diffResult)
-  fs.writeFileSync(path.join(dir, 'diff.md'), markdown)
 }
 
 function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
@@ -172,11 +163,14 @@ function getSummaryMarkdown(
   return markdown
 }
 
-function updateBypassMarkdown(
-  bypassMarkdownPath: string,
+function updateBypassOrDiffMarkdown(
+  markdownPath: string,
   diffResult: ReturnType<typeof diffCase>,
 ) {
-  let bypassContent = fs.readFileSync(bypassMarkdownPath, 'utf-8')
+  let bypassContent = ''
+  if (fs.existsSync(markdownPath)) {
+    bypassContent = fs.readFileSync(markdownPath, 'utf-8')
+  }
 
   let res = /# Diff/.exec(bypassContent)
   if (res) {
@@ -186,5 +180,5 @@ function updateBypassMarkdown(
   bypassContent = bypassContent.trimEnd()
   bypassContent += '\n# Diff\n'
   bypassContent += diffMarkdown
-  fs.writeFileSync(bypassMarkdownPath, bypassContent)
+  fs.writeFileSync(markdownPath, bypassContent.trim())
 }

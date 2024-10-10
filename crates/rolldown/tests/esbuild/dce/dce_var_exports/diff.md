@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+# Diff
 ## /out/a.js
 ### esbuild
 ```js

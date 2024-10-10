@@ -26,28 +26,28 @@
   "bin": {
     "rolldown": "./bin/cli.js"
   },
-  "main": "./dist/cjs/index.js",
+  "main": "./dist/cjs/index.cjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js"
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.mjs"
     },
     "./experimental": {
       "types": "./dist/types/experimental-index.d.ts",
-      "require": "./dist/cjs/experimental-index.js",
-      "import": "./dist/esm/experimental-index.js"
+      "require": "./dist/cjs/experimental-index.cjs",
+      "import": "./dist/esm/experimental-index.mjs"
     },
     "./parallel-plugin": {
       "types": "./dist/types/parallel-plugin.d.ts",
-      "require": "./dist/cjs/parallel-plugin.js",
-      "import": "./dist/esm/parallel-plugin.js"
+      "require": "./dist/cjs/parallel-plugin.cjs",
+      "import": "./dist/esm/parallel-plugin.mjs"
     },
     "./package.json": "./package.json"
   },
   "imports": {
-    "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.js"
+    "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

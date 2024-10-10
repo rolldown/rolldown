@@ -31,7 +31,7 @@ For all available options, you could refer to
 - https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_config.schema.json
 
 - `main.js` is the default entry of the test case, if `config.input` is not specified in `_config.json`.
-- Rolldown will bundle the input into `/dist`, and execute every entry file in `/dist` orderly. You might thinking it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.js --eval ""`.
+- Rolldown will bundle the input into `/dist`, and execute every entry file in `/dist` orderly. You might thinking it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
   - If there is a `_test.mjs`/`_test.cjs` in the test case folder, only `_test.mjs`/`_test.cjs` will be executed. If you want to execute compiled entries, you need to import them manually in `_test.mjs`/`_test.cjs`.
 
 ### Function-complete tests in rust

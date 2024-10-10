@@ -26,6 +26,9 @@ pub struct PluginDriver {
   contexts: IndexPluginContext,
   order_indicates: HookOrderIndicates,
   index_plugin_filters: IndexPluginFilter,
+  resolver: Arc<Resolver>,
+  file_emitter: SharedFileEmitter,
+  options: SharedNormalizedBundlerOptions,
 }
 
 impl PluginDriver {
@@ -67,6 +70,49 @@ impl PluginDriver {
         plugins: index_plugins,
         contexts: index_contexts,
         index_plugin_filters,
+        resolver: Arc::clone(resolver),
+        file_emitter: Arc::clone(file_emitter),
+        options: Arc::clone(options),
+      }
+    })
+  }
+
+  pub fn new_shared_from_self(&self) -> SharedPluginDriver {
+    Arc::new_cyclic(|plugin_driver| {
+      let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
+      let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
+      let mut index_plugin_filters = IndexPluginFilter::with_capacity(self.plugins.len());
+
+      self.plugins.iter().for_each(|plugin| {
+        let plugin_idx = index_plugins.push(Arc::clone(plugin));
+        // TODO: Error handling
+        index_plugin_filters.push(HookFilterOptions {
+          load: plugin.call_load_filter().unwrap(),
+          resolve_id: plugin.call_resolve_id_filter().unwrap(),
+          transform: plugin.call_transform_filter().unwrap(),
+        });
+        index_contexts.push(
+          PluginContextImpl {
+            skipped_resolve_calls: vec![],
+            plugin_idx,
+            plugin_driver: Weak::clone(plugin_driver),
+            resolver: Arc::clone(&self.resolver),
+            file_emitter: Arc::clone(&self.file_emitter),
+            module_table: OnceLock::default(),
+            options: Arc::clone(&self.options),
+          }
+          .into(),
+        );
+      });
+
+      Self {
+        order_indicates: HookOrderIndicates::new(&index_plugins),
+        plugins: index_plugins,
+        contexts: index_contexts,
+        index_plugin_filters,
+        resolver: Arc::clone(&self.resolver),
+        file_emitter: Arc::clone(&self.file_emitter),
+        options: Arc::clone(&self.options),
       }
     })
   }

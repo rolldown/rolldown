@@ -7,6 +7,11 @@ export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {
   return new RolldownBuild(input)
 }
 
+// Compat to `rollup.watch`
+export const watch = async (input: InputOptions) => {
+  new RolldownBuild(input).watch()
+}
+
 /**
  * @description
  * This is an experimental API. It's behavior may change in the future.

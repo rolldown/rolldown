@@ -192,6 +192,7 @@
     "Yunfei",
     "lvalue",
     "snapFile",
+    "unwatch",
     // Example unicode strings used in `crates/rolldown_plugin_replace/src/utils.rs`
     "कुत्तेपरपानी",
     "पतलूनमे",

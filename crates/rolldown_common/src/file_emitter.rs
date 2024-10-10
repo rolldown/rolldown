@@ -136,6 +136,14 @@ impl FileEmitter {
       })));
     });
   }
+
+  pub fn clear(&self) {
+    self.files.clear();
+    self.names.clear();
+    self.source_hash_to_reference_id.clear();
+    self.base_reference_id.store(0, Ordering::Relaxed);
+    self.emitted_files.clear();
+  }
 }
 
 pub type SharedFileEmitter = Arc<FileEmitter>;

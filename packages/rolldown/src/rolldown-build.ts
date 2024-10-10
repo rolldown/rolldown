@@ -46,6 +46,11 @@ export class RolldownBuild {
     await this.#stopWorkers?.()
     await bundler.close()
   }
+
+  async watch(): Promise<void> {
+    const bundler = await this.#getBundler({})
+    await bundler.watch()
+  }
 }
 
 function _assert() {

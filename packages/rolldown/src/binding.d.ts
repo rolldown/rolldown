@@ -69,6 +69,7 @@ export declare class Bundler {
   generate(): Promise<FinalBindingOutputs>
   scan(): Promise<void>
   close(): Promise<void>
+  watch(): Promise<void>
 }
 
 /**

@@ -11,6 +11,7 @@ mod stages;
 mod type_alias;
 mod types;
 mod utils;
+mod watcher;
 
 use std::sync::Arc;
 

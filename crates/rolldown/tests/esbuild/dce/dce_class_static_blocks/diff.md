@@ -67,7 +67,7 @@ class D_keep {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,24 +1,24 @@
 -var A_keep = class {
 +class A_keep {

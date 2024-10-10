@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import { __toESM, require_shared } from "./shared.mjs";
+import { __toESM, require_shared } from "./shared.js";
 import { default as assert } from "node:assert";
 
 //#region a.js
@@ -15,10 +15,10 @@ assert.equal(import_shared.foo, 123);
 
 //#endregion
 ```
-## b.mjs
+## b.js
 
 ```js
-import { require_shared } from "./shared.mjs";
+import { require_shared } from "./shared.js";
 import { default as assert } from "node:assert";
 
 //#region b.js
@@ -27,7 +27,7 @@ assert.equal(foo, 123);
 
 //#endregion
 ```
-## shared.mjs
+## shared.js
 
 ```js
 

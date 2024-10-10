@@ -1,5 +1,5 @@
-const { readFile: readFile2 } = require('./dist/entry.cjs')
-const { readFile: readFile3 } = require('./dist/entry2.cjs')
+const { readFile: readFile2 } = require('./dist/entry.js')
+const { readFile: readFile3 } = require('./dist/entry2.js')
 const { readFile } = require('node:fs')
 const assert = require('node:assert')
 

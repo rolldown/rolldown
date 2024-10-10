@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```# Assets
 
-## lib.mjs
+## lib.js
 
 ```js
 var wrap = (function() {
@@ -24,14 +24,14 @@ var lib_default = 2;
 return lib_default;
 })();
 ```
-## main.mjs
+## main.js
 
 ```js
 (function() {
 
 
 //#region main.js
-import("./lib.mjs").then(console.log);
+import("./lib.js").then(console.log);
 
 //#endregion
 })();

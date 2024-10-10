@@ -1,5 +1,5 @@
-import './dist/a.mjs'
-import './dist/b.mjs'
+import './dist/a.js'
+import './dist/b.js'
 
 import assert from 'assert';
 assert(globalThis.sideEffectExecuted, 'side effect not executed')

@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_jsx.mjs
+## entry_jsx.js
 
 ```js
 import "foo";

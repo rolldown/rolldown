@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## async-entry.mjs
+## async-entry.js
 
 ```js
 import { default as assert } from "node:assert";
@@ -28,12 +28,12 @@ assert.strictEqual(count, count);
 
 //#endregion
 ```
-## main.mjs
+## main.js
 
 ```js
 
 //#region main.js
-import("./async-entry.mjs");
+import("./async-entry.js");
 
 //#endregion
 ```

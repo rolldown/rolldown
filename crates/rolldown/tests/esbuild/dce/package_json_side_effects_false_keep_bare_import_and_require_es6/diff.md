@@ -46,7 +46,7 @@ console.log("unused import");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.mjs
++++ rolldown	src_entry_js.js
 @@ -1,13 +1,14 @@
 -var demo_pkg_exports = {};
 -__export(demo_pkg_exports, {

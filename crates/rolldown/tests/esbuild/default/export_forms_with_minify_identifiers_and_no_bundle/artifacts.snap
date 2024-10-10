@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.mjs
+## a_js.js
 
 ```js
-import { b_exports } from "./b.mjs";
+import { b_exports } from "./b.js";
 
 //#region a.js
 var a_default = 123;
@@ -21,7 +21,7 @@ class Class {}
 //#endregion
 export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
 ```
-## b.mjs
+## b.js
 
 ```js
 
@@ -34,14 +34,14 @@ function b_default() {}
 //#endregion
 export { b_default, b_exports };
 ```
-## b_js.mjs
+## b_js.js
 
 ```js
-import { b_default } from "./b.mjs";
+import { b_default } from "./b.js";
 
 export { b_default as default };
 ```
-## c_js.mjs
+## c_js.js
 
 ```js
 
@@ -51,7 +51,7 @@ function foo() {}
 //#endregion
 export { foo as default };
 ```
-## d_js.mjs
+## d_js.js
 
 ```js
 
@@ -61,7 +61,7 @@ class d_default {}
 //#endregion
 export { d_default as default };
 ```
-## e_js.mjs
+## e_js.js
 
 ```js
 

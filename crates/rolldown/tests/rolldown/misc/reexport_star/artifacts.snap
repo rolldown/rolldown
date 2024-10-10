@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
 
@@ -16,17 +16,17 @@ const abc = undefined;
 //#endregion
 export { a_exports };
 ```
-## entry.mjs
+## entry.js
 
 ```js
-import { a_exports } from "./a.mjs";
+import { a_exports } from "./a.js";
 
 export { a_exports as a };
 ```
-## main.mjs
+## main.js
 
 ```js
-import { a_exports } from "./a.mjs";
+import { a_exports } from "./a.js";
 
 export { a_exports as a };
 ```

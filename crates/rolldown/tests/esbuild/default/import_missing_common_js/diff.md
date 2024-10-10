@@ -33,7 +33,7 @@ var import_foo = __toESM(require_foo());
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -3,5 +3,4 @@
          exports.x = 123;
      }

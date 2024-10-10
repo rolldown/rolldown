@@ -3,11 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry.cjs
+## entry.js
 
 ```js
 "use strict";
-const require_main = require('./main.cjs');
+const require_main = require('./main.js');
 
 Object.defineProperty(exports, 'default', {
   enumerable: true,
@@ -17,11 +17,11 @@ Object.defineProperty(exports, 'default', {
 });
 exports.foo = require_main.foo
 ```
-## entry2.cjs
+## entry2.js
 
 ```js
 "use strict";
-const require_main = require('./main.cjs');
+const require_main = require('./main.js');
 
 Object.defineProperty(exports, 'default', {
   enumerable: true,
@@ -31,7 +31,7 @@ Object.defineProperty(exports, 'default', {
 });
 exports.foo = require_main.foo
 ```
-## main.cjs
+## main.js
 
 ```js
 "use strict";

@@ -3,15 +3,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import { foo, init_a } from "./a2.mjs";
+import { foo, init_a } from "./a2.js";
 
 init_a();
 export { foo };
 ```
-## a2.mjs
+## a2.js
 
 ```js
 
@@ -26,10 +26,10 @@ var init_a = __esm({ "a.js"() {
 //#endregion
 export { __toCommonJS, a_exports, foo, init_a };
 ```
-## b.mjs
+## b.js
 
 ```js
-import { __toCommonJS, a_exports, init_a } from "./a2.mjs";
+import { __toCommonJS, a_exports, init_a } from "./a2.js";
 
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));

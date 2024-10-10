@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
 import { default as assert } from "node:assert";
@@ -18,7 +18,7 @@ assert.equal(a, "index.js");
 assert.equal(a$1, "shared.js");
 
 //#endregion
-//# sourceMappingURL=main.mjs.map
+//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
@@ -41,5 +41,5 @@ assert.equal(a$1, "shared.js");
 (4:7-4:13) ".equal" --> (9:7-9:13) ".equal"
 (4:13-4:17) "(a2," --> (9:13-9:18) "(a$1,"
 (4:17-4:29) " 'shared.js'" --> (9:18-9:30) " \"shared.js\""
-(4:29-6:1) ")\n\n" --> (9:30-12:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(4:29-6:1) ")\n\n" --> (9:30-12:33) ");\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

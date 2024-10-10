@@ -141,7 +141,7 @@ let f2 = class {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,8 +1,5 @@
  class A {
 -    static {

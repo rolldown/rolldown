@@ -17,7 +17,7 @@ while (foo());
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,3 +1,1 @@
 -(() => {
 -    while (foo()) ;

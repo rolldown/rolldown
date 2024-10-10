@@ -3,15 +3,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.mjs
+## foo.js
 
 ```js
-import { require_foo } from "./foo2.mjs";
+import { require_foo } from "./foo2.js";
 
 export default require_foo();
 
 ```
-## foo2.mjs
+## foo2.js
 
 ```js
 
@@ -24,15 +24,15 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 //#endregion
 export { __toESM, require_foo };
 ```
-## main.mjs
+## main.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.mjs";
+import { __toESM, require_foo } from "./foo2.js";
 import { default as assert } from "node:assert";
 
 //#region main.js
 var import_foo = __toESM(require_foo());
-import("./foo.mjs").then(({ default: { bar: b } }) => {
+import("./foo.js").then(({ default: { bar: b } }) => {
 	assert.equal(import_foo.bar, 123);
 	assert.equal(b, 123);
 });

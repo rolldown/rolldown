@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## commonjs.mjs
+## commonjs.js
 
 ```js
 
@@ -16,10 +16,10 @@ var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 //#endregion
 export { __reExport, __toESM, require_commonjs };
 ```
-## entry.mjs
+## entry.js
 
 ```js
-import { __toESM, require_commonjs } from "./commonjs.mjs";
+import { __toESM, require_commonjs } from "./commonjs.js";
 
 //#region entry.js
 var import_commonjs = __toESM(require_commonjs(), 1);
@@ -27,10 +27,10 @@ console.log(import_commonjs.default);
 
 //#endregion
 ```
-## main.mjs
+## main.js
 
 ```js
-import { __reExport, __toESM, require_commonjs } from "./commonjs.mjs";
+import { __reExport, __toESM, require_commonjs } from "./commonjs.js";
 
 //#region star-export.js
 var star_export_exports = {};

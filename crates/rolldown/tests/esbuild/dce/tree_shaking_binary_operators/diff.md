@@ -72,7 +72,7 @@ keep &&= keep2;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,26 +1,5 @@
 -var keep;
 -var keep2;

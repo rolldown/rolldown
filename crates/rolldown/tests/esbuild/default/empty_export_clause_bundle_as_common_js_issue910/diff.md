@@ -34,7 +34,7 @@ assert.deepEqual((init_types(), __toCommonJS(types_exports)), {});
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,5 +1,7 @@
 -var types_exports = {};
 +var types_exports;

@@ -26,7 +26,7 @@ console.log(demo_pkg_index_default);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.mjs
++++ rolldown	src_entry_js.js
 @@ -1,2 +1,2 @@
 -var demo_pkg_default = exprWithSideEffects();
 -console.log(demo_pkg_default);

@@ -35,7 +35,7 @@ new Keep();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,3 +1,3 @@
 -var Base = class {};
 -var Keep = class extends Base {};

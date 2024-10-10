@@ -15,7 +15,7 @@ req("./entry");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,2 +0,0 @@
 -var req = __require;
 -req("./entry");

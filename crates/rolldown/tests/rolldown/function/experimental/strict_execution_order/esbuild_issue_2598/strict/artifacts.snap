@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lazy-chunk.mjs
+## lazy-chunk.js
 
 ```js
-import { __esm, foo, init_user_lib } from "./user-lib.mjs";
+import { __esm, foo, init_user_lib } from "./user-lib.js";
 
 //#region lazy-chunk.js
 var init_lazy_chunk = __esm({ "lazy-chunk.js"() {
@@ -17,10 +17,10 @@ var init_lazy_chunk = __esm({ "lazy-chunk.js"() {
 //#endregion
 init_lazy_chunk();
 ```
-## main.mjs
+## main.js
 
 ```js
-import { __esm, foo, init_user_lib } from "./user-lib.mjs";
+import { __esm, foo, init_user_lib } from "./user-lib.js";
 
 //#region polyfill.js
 var init_polyfill = __esm({ "polyfill.js"() {
@@ -38,14 +38,14 @@ var init_main = __esm({ "main.js"() {
 //#endregion
 init_main();
 ```
-## user-lib.mjs
+## user-lib.js
 
 ```js
 
 
 //#region user-lib.js
 async function foo() {
-	return import("./lazy-chunk.mjs");
+	return import("./lazy-chunk.js");
 }
 var init_user_lib = __esm({ "user-lib.js"() {
 	Object.somePolyfilledFunction();

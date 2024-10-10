@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.mjs
+## a.js
 
 ```js
-import { import_c } from "./b.mjs";
+import { import_c } from "./b.js";
 
 //#region a.js
 let a = import_c.test;
@@ -14,7 +14,7 @@ let a = import_c.test;
 //#endregion
 export { a };
 ```
-## b.mjs
+## b.js
 
 ```js
 
@@ -32,24 +32,24 @@ var import_c = __toESM(require_c());
 //#endregion
 export { import_c };
 ```
-## b2.mjs
+## b2.js
 
 ```js
-import { import_c } from "./b.mjs";
+import { import_c } from "./b.js";
 
 var test = import_c.test;
 export { test };
 ```
-## main.mjs
+## main.js
 
 ```js
 import { default as assert } from "node:assert";
 
 //#region main.js
-import("./a.mjs").then((mod) => {
+import("./a.js").then((mod) => {
 	assert.strictEqual(mod.a, 1000);
 });
-import("./b2.mjs").then((mod) => {
+import("./b2.js").then((mod) => {
 	assert.strictEqual(mod.test, 1000);
 });
 

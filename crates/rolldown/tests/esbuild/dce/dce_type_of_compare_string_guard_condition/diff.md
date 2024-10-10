@@ -99,7 +99,7 @@ var keep_2 = "u" < typeof x && x;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,34 +1,48 @@
 -(() => {
 -    var keep_1 = typeof x <= "u" ? y : null;

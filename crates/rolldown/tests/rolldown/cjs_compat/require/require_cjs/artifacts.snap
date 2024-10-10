@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
 
@@ -19,7 +19,7 @@ require_cjs();
 var cjs = require_cjs();
 
 //#endregion
-//# sourceMappingURL=main.mjs.map
+//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
@@ -35,5 +35,5 @@ var cjs = require_cjs();
 (0:0-1:0) "require('./cjs.js');" --> (15:0-16:0) "\nrequire_cjs();"
 (1:0-1:4) "\nvar" --> (16:0-16:4) "\nvar"
 (1:4-0:0) "" --> (16:4-16:10) " cjs ="
-(0:0-2:1) "require('./cjs.js');\nvar cjs = require('./cjs.js');\n" --> (16:10-19:34) " require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-2:1) "require('./cjs.js');\nvar cjs = require('./cjs.js');\n" --> (16:10-19:33) " require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

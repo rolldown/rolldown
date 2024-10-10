@@ -3,23 +3,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry1.cjs
+## entry1.js
 
 ```js
 "use strict";
-const require_main = require('./main.cjs');
+const require_main = require('./main.js');
 
 exports.value = require_main.value
 ```
-## entry2.cjs
+## entry2.js
 
 ```js
 "use strict";
-const require_main = require('./main.cjs');
+const require_main = require('./main.js');
 
 exports.value = require_main.value
 ```
-## main.cjs
+## main.js
 
 ```js
 "use strict";

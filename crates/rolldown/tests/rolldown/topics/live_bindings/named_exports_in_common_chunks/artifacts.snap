@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## async-entry.mjs
+## async-entry.js
 
 ```js
-import { count, inc, reset } from "./shared.mjs";
+import { count, inc, reset } from "./shared.js";
 import { default as assert } from "node:assert";
 
 //#region async-entry.js
@@ -22,18 +22,18 @@ assert.strictEqual(count, count);
 
 //#endregion
 ```
-## main.mjs
+## main.js
 
 ```js
-import { count, inc, reset } from "./shared.mjs";
+import { count, inc, reset } from "./shared.js";
 
 //#region main.js
-import("./async-entry.mjs");
+import("./async-entry.js");
 
 //#endregion
 export { count, inc, reset };
 ```
-## shared.mjs
+## shared.js
 
 ```js
 

@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## expr-fn_js.mjs
+## expr-fn_js.js
 
 ```js
 
@@ -23,7 +23,7 @@ x(g("keepThisCall"));
 
 //#endregion
 ```
-## stmt-export-default-fn_js.mjs
+## stmt-export-default-fn_js.js
 
 ```js
 
@@ -38,7 +38,7 @@ x(f("keepThisCall"));
 //#endregion
 export { f as default };
 ```
-## stmt-fn_js.mjs
+## stmt-fn_js.js
 
 ```js
 
@@ -58,7 +58,7 @@ x(g("keepThisCall"));
 
 //#endregion
 ```
-## stmt-local_js.mjs
+## stmt-local_js.js
 
 ```js
 

@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## b.mjs
+## b.js
 
 ```js
 
@@ -12,7 +12,7 @@ console.log("b");
 
 //#endregion
 ```
-## c.mjs
+## c.js
 
 ```js
 
@@ -21,24 +21,24 @@ console.log("c");
 
 //#endregion
 ```
-## entry1.mjs
+## entry1.js
 
 ```js
-import "./c.mjs";
+import "./c.js";
 
 ```
-## entry2.mjs
+## entry2.js
 
 ```js
-import "./c.mjs";
-import "./b.mjs";
+import "./c.js";
+import "./b.js";
 
 ```
-## entry3.mjs
+## entry3.js
 
 ```js
-import "./c.mjs";
-import "./b.mjs";
+import "./c.js";
+import "./b.js";
 
 //#region a.js
 console.log("a");

@@ -23,7 +23,7 @@ console.log(fs, readFileSync, defaultValue);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,4 +1,3 @@
  import * as fs from "fs";
 -import defaultValue from "fs";

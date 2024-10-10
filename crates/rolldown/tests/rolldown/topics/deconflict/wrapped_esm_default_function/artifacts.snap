@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.js
 
 ```js
 import { default as assert, default as assert$1 } from "node:assert";
@@ -34,7 +34,7 @@ assert.strictEqual(typeof foo, "function");
 init_foo(), __toCommonJS(foo_exports);
 
 //#endregion
-//# sourceMappingURL=main.mjs.map
+//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
@@ -80,5 +80,5 @@ init_foo(), __toCommonJS(foo_exports);
 (7:31-7:42) " 'function'" --> (50:31-50:42) " \"function\""
 (7:42-9:0) ")\n" --> (50:42-51:0) ");"
 (9:0-0:0) "" --> (51:0-51:0) ""
-(0:0-10:1) "import assert from 'node:assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')\n" --> (51:0-54:34) "\ninit_foo(), __toCommonJS(foo_exports);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-10:1) "import assert from 'node:assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')\n" --> (51:0-54:33) "\ninit_foo(), __toCommonJS(foo_exports);\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

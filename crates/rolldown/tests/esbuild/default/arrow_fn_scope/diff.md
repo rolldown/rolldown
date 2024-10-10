@@ -36,7 +36,7 @@ tests = {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -1,10 +1,10 @@
  tests = {
 -    0: (s = e => s + e, t) => s + t,

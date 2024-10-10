@@ -18,7 +18,7 @@ typeof x_REMOVE;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.mjs
++++ rolldown	entry_js.js
 @@ -0,0 +1,1 @@
 +typeof x_REMOVE;
 

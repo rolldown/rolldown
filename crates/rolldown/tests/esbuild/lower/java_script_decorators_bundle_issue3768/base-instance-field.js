@@ -1,0 +1,1 @@
+class Foo { @dec foo = Foo }

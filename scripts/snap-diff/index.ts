@@ -9,5 +9,6 @@ const includeList = [
   'snapshots_packagejson.txt',
   'snapshots_dce.txt',
   'snapshots_splitting.txt',
+  'snapshots_lower.txt',
 ]
 run(includeList, debug)

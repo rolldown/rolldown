@@ -1,0 +1,1 @@
+class Foo { @dec static foo() { return Foo } }

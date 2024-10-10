@@ -1,0 +1,1 @@
+class Foo { @dec static accessor foo = Foo }

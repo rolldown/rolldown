@@ -2,10 +2,9 @@ use core::str;
 use std::{
   borrow::Cow,
   ffi::OsStr,
-  io::{BufReader, Read, Write},
+  io::{Read, Write},
   path::Path,
   process::Command,
-  time::Duration,
 };
 
 use anyhow::Context;
@@ -115,11 +114,6 @@ impl IntegrationTest {
     // if options.cwd.is_none() {
     //   options.cwd = Some(fixture_path.to_path_buf());
     // }
-
-    let output_ext = match options.format {
-      Some(OutputFormat::Cjs) => "cjs",
-      _ => "mjs",
-    };
 
     let output_ext = "js";
 
@@ -311,6 +305,7 @@ impl IntegrationTest {
       let mut package_json = std::fs::File::options()
         .create(true)
         .write(true)
+        .truncate(true)
         .read(true)
         .open(package_json_path)
         .unwrap();

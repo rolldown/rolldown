@@ -10,5 +10,7 @@ const includeList = [
   'snapshots_dce.txt',
   'snapshots_splitting.txt',
   'snapshots_lower.txt',
+  'snapshots_glob.txt',
+  'snapshots_importstar_ts.txt',
 ]
 run(includeList, debug)

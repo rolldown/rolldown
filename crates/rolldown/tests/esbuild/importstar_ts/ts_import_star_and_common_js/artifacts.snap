@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-import { default as assert } from "node:assert";
 
 
 //#region foo.ts
@@ -21,8 +20,7 @@ var init_foo = __esm({ "foo.ts"() {
 //#region entry.js
 init_foo();
 const ns2 = (init_foo(), __toCommonJS(foo_exports));
-assert.equal(foo, 123);
-assert.equal(ns2.foo, 123);
+console.log(foo, ns2.foo);
 
 //#endregion
 ```

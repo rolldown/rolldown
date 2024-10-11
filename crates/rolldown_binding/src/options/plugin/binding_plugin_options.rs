@@ -3,8 +3,10 @@ use serde::Deserialize;
 use std::fmt::Debug;
 
 use crate::types::{
-  binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
-  binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallback,
+  binding_module_info::BindingModuleInfo,
+  binding_outputs::{BindingOutputs, JsChangedOutputs},
+  binding_rendered_chunk::RenderedChunk,
+  js_callback::MaybeAsyncJsCallback,
 };
 
 use super::{
@@ -131,17 +133,18 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub generate_bundle:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs, bool), ()>>,
+    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs, bool), JsChangedOutputs>>,
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
-  pub write_bundle: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs), ()>>,
+  pub write_bundle:
+    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs), JsChangedOutputs>>,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]

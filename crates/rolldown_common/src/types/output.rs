@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 
 use crate::{AssetSource, OutputChunk};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OutputAsset {
   pub name: Option<String>,
   pub original_file_name: Option<String>,
@@ -10,7 +10,7 @@ pub struct OutputAsset {
   pub source: AssetSource,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Output {
   Chunk(Box<OutputChunk>),
   Asset(Box<OutputAsset>),

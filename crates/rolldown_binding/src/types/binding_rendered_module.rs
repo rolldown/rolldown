@@ -18,3 +18,9 @@ impl From<rolldown_common::RenderedModule> for BindingRenderedModule {
     Self { code: value.code }
   }
 }
+
+impl From<BindingRenderedModule> for rolldown_common::RenderedModule {
+  fn from(value: BindingRenderedModule) -> Self {
+    Self { code: value.code }
+  }
+}

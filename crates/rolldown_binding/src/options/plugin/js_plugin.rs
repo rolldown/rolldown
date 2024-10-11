@@ -1,18 +1,12 @@
 use crate::types::{
-  binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
+  binding_module_info::BindingModuleInfo, binding_outputs::update_outputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{
   Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, ResolvedIdHookFilter,
   TransformHookFilter,
 };
-use rolldown_utils::unique_arc::UniqueArc;
-use std::{
-  borrow::Cow,
-  mem,
-  ops::Deref,
-  sync::{Arc, Mutex},
-};
+use std::{borrow::Cow, ops::Deref, sync::Arc};
 
 use super::{
   binding_transform_context::BindingTransformPluginContext,
@@ -365,10 +359,8 @@ impl Plugin for JsPlugin {
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
-      let old_bundle = UniqueArc::new(Mutex::new(mem::take(bundle)));
-      cb.await_call((ctx.clone().into(), BindingOutputs::new(old_bundle.weak_ref()), is_write))
-        .await?;
-      *bundle = old_bundle.into_inner().into_inner()?;
+      let changed = cb.await_call((ctx.clone().into(), bundle.clone().into(), is_write)).await?;
+      update_outputs(bundle, changed)?;
     }
     Ok(())
   }
@@ -383,9 +375,8 @@ impl Plugin for JsPlugin {
     bundle: &mut Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
-      let old_bundle = UniqueArc::new(Mutex::new(mem::take(bundle)));
-      cb.await_call((ctx.clone().into(), BindingOutputs::new(old_bundle.weak_ref()))).await?;
-      *bundle = old_bundle.into_inner().into_inner()?;
+      let changed = cb.await_call((ctx.clone().into(), bundle.clone().into())).await?;
+      update_outputs(bundle, changed)?;
     }
     Ok(())
   }

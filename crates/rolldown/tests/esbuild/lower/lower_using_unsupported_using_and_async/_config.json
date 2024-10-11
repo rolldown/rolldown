@@ -14,5 +14,6 @@
         "import": "switch.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

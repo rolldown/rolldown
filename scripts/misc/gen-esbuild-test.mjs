@@ -325,9 +325,13 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     // entry
     /** @type {{config: {input: Array<{name: string; import: string}>}}} */
     const config = { config: Object.create({}) }
-    const entryPaths = jsConfig['entryPaths'] ?? []
+    let entryPaths = jsConfig['entryPaths'] ?? []
     if (!entryPaths.length) {
       console.error(chalk.red(`No entryPaths found`))
+    }
+    console.log(`entryPaths: `, entryPaths)
+    if (entryPaths.length === 1 && entryPaths[0] === "/*") {
+      entryPaths = fileList.map((item) => item.name)
     }
     let input = entryPaths.map((p) => {
       let normalizedName = p.slice(prefix.length)
@@ -335,7 +339,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
         normalizedName = normalizedName.slice(1)
       }
       return {
-        name: normalizedName.split('/').join('_').split('.').join('_'),
+        name: normalizedName.split('/').filter(Boolean).join('_').split('.').join('_'),
         import: normalizedName,
       }
     })

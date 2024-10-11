@@ -14,5 +14,6 @@
         "import": "ts-assign/ts-assign.ts"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

@@ -1,11 +1,9 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/lower/lower_template_object
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.mjs
+## entry_js.js
 
 ```js
 

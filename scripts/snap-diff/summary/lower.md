@@ -5,8 +5,8 @@
   diff
 ## [java_script_auto_accessor_es2022](../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2022/diff.md)
   diff
-## java_script_decorators_bundle_issue3768
-  missing
+## [java_script_decorators_bundle_issue3768](../../../crates/rolldown/tests/esbuild/lower/java_script_decorators_bundle_issue3768/diff.md)
+  diff
 ## [lower_async_arrow_super_es2016](../../../crates/rolldown/tests/esbuild/lower/lower_async_arrow_super_es2016/diff.md)
   diff
 ## [lower_async_arrow_super_setter_es2016](../../../crates/rolldown/tests/esbuild/lower/lower_async_arrow_super_setter_es2016/diff.md)
@@ -117,8 +117,8 @@
   diff
 ## [lower_using_hoisting](../../../crates/rolldown/tests/esbuild/lower/lower_using_hoisting/diff.md)
   diff
-## lower_using_inside_ts_namespace
-  missing
+## [lower_using_inside_ts_namespace](../../../crates/rolldown/tests/esbuild/lower/lower_using_inside_ts_namespace/diff.md)
+  diff
 ## [lower_using_unsupported_using_and_async](../../../crates/rolldown/tests/esbuild/lower/lower_using_unsupported_using_and_async/diff.md)
   diff
 ## [static_class_block_es_next](../../../crates/rolldown/tests/esbuild/lower/static_class_block_es_next/diff.md)
@@ -131,10 +131,10 @@
   diff
 ## [ts_lower_class_private_field_next_no_bundle](../../../crates/rolldown/tests/esbuild/lower/ts_lower_class_private_field_next_no_bundle/diff.md)
   diff
-## ts_lower_object_rest2017_no_bundle
-  missing
-## ts_lower_object_rest2018_no_bundle
-  missing
+## [ts_lower_object_rest2017_no_bundle](../../../crates/rolldown/tests/esbuild/lower/ts_lower_object_rest2017_no_bundle/diff.md)
+  diff
+## [ts_lower_object_rest2018_no_bundle](../../../crates/rolldown/tests/esbuild/lower/ts_lower_object_rest2018_no_bundle/diff.md)
+  diff
 ## [ts_lower_private_field_and_method_avoid_name_collision2015](../../../crates/rolldown/tests/esbuild/lower/ts_lower_private_field_and_method_avoid_name_collision2015/diff.md)
   diff
 ## [ts_lower_private_field_optional_chain2015_no_bundle](../../../crates/rolldown/tests/esbuild/lower/ts_lower_private_field_optional_chain2015_no_bundle/diff.md)

@@ -34,5 +34,6 @@
         "import": "8.js"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

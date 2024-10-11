@@ -19,6 +19,7 @@ anyhow                   = { workspace = true }
 append-only-vec          = { workspace = true }
 arcstr                   = { workspace = true }
 daachorse                = { workspace = true }
+dashmap                  = { workspace = true }
 dunce                    = { workspace = true }
 futures                  = { workspace = true }
 indexmap                 = { workspace = true }
@@ -26,6 +27,7 @@ itertools                = { workspace = true }
 itoa                     = { workspace = true }
 lightningcss             = { workspace = true, features = ["into_owned", "visitor"] }
 memchr                   = { workspace = true }
+notify                   = { workspace = true }
 oxc                      = { workspace = true }
 regex                    = { workspace = true }
 rolldown_common          = { workspace = true }

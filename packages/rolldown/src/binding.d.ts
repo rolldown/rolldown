@@ -20,7 +20,6 @@ export declare class BindingOutputAsset {
   get fileName(): string
   get originalFileName(): string | null
   get source(): BindingAssetSource
-  set source(source: BindingAssetSource)
   get name(): string | null
 }
 
@@ -33,22 +32,17 @@ export declare class BindingOutputChunk {
   get fileName(): string
   get modules(): Record<string, BindingRenderedModule>
   get imports(): Array<string>
-  set imports(imports: Array<string>)
   get dynamicImports(): Array<string>
   get code(): string
-  set code(code: string)
   get map(): string | null
-  set map(map: string)
   get sourcemapFileName(): string | null
   get preliminaryFileName(): string
   get name(): string
 }
 
-/** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  delete(fileName: string): void
 }
 
 export declare class BindingPluginContext {
@@ -65,19 +59,10 @@ export declare class BindingTransformPluginContext {
 
 export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
-  write(): Promise<FinalBindingOutputs>
-  generate(): Promise<FinalBindingOutputs>
+  write(): Promise<BindingOutputs>
+  generate(): Promise<BindingOutputs>
   scan(): Promise<void>
   close(): Promise<void>
-}
-
-/**
- * The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.
- * TODO find a way to export it gracefully.
- */
-export declare class FinalBindingOutputs {
-  get chunks(): Array<BindingOutputChunk>
-  get assets(): Array<BindingOutputAsset>
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -350,9 +335,9 @@ export interface BindingPluginOptions {
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: string) => void
   renderErrorMeta?: BindingPluginHookMeta
-  generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
-  writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
@@ -470,6 +455,36 @@ export interface IsolatedDeclarationsResult {
   code: string
   map?: SourceMap
   errors: Array<string>
+}
+
+export interface JsChangedOutputs {
+  chunks: Array<JsOutputChunk>
+  assets: Array<JsOutputAsset>
+  deleted: Array<string>
+}
+
+export interface JsOutputAsset {
+  name?: string
+  originalFileName?: string
+  filename: string
+  source: BindingAssetSource
+}
+
+export interface JsOutputChunk {
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId?: string
+  moduleIds: Array<string>
+  exports: Array<string>
+  filename: string
+  modules: Record<string, BindingRenderedModule>
+  imports: Array<string>
+  dynamicImports: Array<string>
+  code: string
+  map?: BindingSourcemap
+  sourcemapFilename?: string
+  preliminaryFilename: string
 }
 
 /**

@@ -147,20 +147,21 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingModuleInfo_struct_62']?.()
   __napiInstance.exports['__napi_register__BindingModuleInfo_impl_64']?.()
   __napiInstance.exports['__napi_register__BindingOutputAsset_struct_65']?.()
-  __napiInstance.exports['__napi_register__BindingOutputAsset_impl_71']?.()
+  __napiInstance.exports['__napi_register__BindingOutputAsset_impl_70']?.()
+  __napiInstance.exports['__napi_register__JsOutputAsset_struct_71']?.()
   __napiInstance.exports['__napi_register__BindingOutputChunk_struct_72']?.()
-  __napiInstance.exports['__napi_register__BindingOutputChunk_impl_90']?.()
-  __napiInstance.exports['__napi_register__BindingOutputs_struct_91']?.()
-  __napiInstance.exports['__napi_register__BindingOutputs_impl_95']?.()
-  __napiInstance.exports['__napi_register__FinalBindingOutputs_struct_96']?.()
-  __napiInstance.exports['__napi_register__FinalBindingOutputs_impl_99']?.()
-  __napiInstance.exports['__napi_register__PreRenderedChunk_struct_100']?.()
-  __napiInstance.exports['__napi_register__RenderedChunk_struct_101']?.()
-  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_102']?.()
-  __napiInstance.exports['__napi_register__AliasItem_struct_103']?.()
-  __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_104']?.()
-  __napiInstance.exports['__napi_register__BindingSourcemap_struct_105']?.()
-  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_106']?.()
+  __napiInstance.exports['__napi_register__BindingOutputChunk_impl_87']?.()
+  __napiInstance.exports['__napi_register__JsOutputChunk_struct_88']?.()
+  __napiInstance.exports['__napi_register__BindingOutputs_struct_89']?.()
+  __napiInstance.exports['__napi_register__BindingOutputs_impl_92']?.()
+  __napiInstance.exports['__napi_register__JsChangedOutputs_struct_93']?.()
+  __napiInstance.exports['__napi_register__PreRenderedChunk_struct_94']?.()
+  __napiInstance.exports['__napi_register__RenderedChunk_struct_95']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_96']?.()
+  __napiInstance.exports['__napi_register__AliasItem_struct_97']?.()
+  __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_98']?.()
+  __napiInstance.exports['__napi_register__BindingSourcemap_struct_99']?.()
+  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_100']?.()
 }
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
@@ -170,7 +171,6 @@ module.exports.BindingOutputs = __napiModule.exports.BindingOutputs
 module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 module.exports.Bundler = __napiModule.exports.Bundler
-module.exports.FinalBindingOutputs = __napiModule.exports.FinalBindingOutputs
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects

@@ -2,7 +2,11 @@ import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { Plugin } from './index'
-import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
+import {
+  ChangedOutputs,
+  collectChangedBundle,
+  transformToOutputBundle,
+} from '../utils/transform-to-rollup-output'
 import { PluginContext } from './plugin-context'
 import { bindingifySourcemap } from '../types/sourcemap'
 import { NormalizedOutputOptions } from '../options/normalized-output-options'
@@ -136,12 +140,18 @@ export function bindingifyGenerateBundle(
 
   return {
     plugin: async (ctx, bundle, isWrite) => {
+      const changed = {
+        updated: new Set(),
+        deleted: new Set(),
+      } as ChangedOutputs
+      const output = transformToOutputBundle(bundle, changed)
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         outputOptions,
-        transformToOutputBundle(bundle),
+        output,
         isWrite,
       )
+      return collectChangedBundle(changed, output)
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -160,11 +170,17 @@ export function bindingifyWriteBundle(
 
   return {
     plugin: async (ctx, bundle) => {
+      const changed = {
+        updated: new Set(),
+        deleted: new Set(),
+      } as ChangedOutputs
+      const output = transformToOutputBundle(bundle, changed)
       await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         outputOptions,
-        transformToOutputBundle(bundle),
+        output,
       )
+      return collectChangedBundle(changed, output)
     },
     meta: bindingifyPluginHookMeta(meta),
   }

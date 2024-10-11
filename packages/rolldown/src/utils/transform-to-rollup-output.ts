@@ -2,105 +2,185 @@ import type {
   RolldownOutput,
   RolldownOutputAsset,
   RolldownOutputChunk,
-  SourceMap,
 } from '../types/rolldown-output'
 import type { OutputBundle } from '../types/output-bundle'
 import type {
   BindingOutputAsset,
   BindingOutputChunk,
   BindingOutputs,
-  FinalBindingOutputs,
+  JsChangedOutputs,
+  JsOutputAsset,
+  JsOutputChunk,
 } from '../binding'
 import {
   AssetSource,
   bindingAssetSource,
   transformAssetSource,
 } from './asset-source'
+import { bindingifySourcemap } from '../types/sourcemap'
 
 function transformToRollupOutputChunk(
-  chunk: BindingOutputChunk,
+  bindingChunk: BindingOutputChunk,
+  changed?: ChangedOutputs,
 ): RolldownOutputChunk {
-  return {
+  const chunk = {
     type: 'chunk',
     get code() {
-      return chunk.code
+      return bindingChunk.code
     },
-    set code(code: string) {
-      chunk.code = code
-    },
-    fileName: chunk.fileName,
-    name: chunk.name,
+    fileName: bindingChunk.fileName,
+    name: bindingChunk.name,
     get modules() {
       return Object.fromEntries(
-        Object.entries(chunk.modules).map(([key, _]) => [key, {}]),
+        Object.entries(bindingChunk.modules).map(([key, _]) => [key, {}]),
       )
     },
     get imports() {
-      return chunk.imports
-    },
-    set imports(imports: string[]) {
-      chunk.imports = imports
+      return bindingChunk.imports
     },
     get dynamicImports() {
-      return chunk.dynamicImports
+      return bindingChunk.dynamicImports
     },
-    exports: chunk.exports,
-    isEntry: chunk.isEntry,
-    facadeModuleId: chunk.facadeModuleId || null,
-    isDynamicEntry: chunk.isDynamicEntry,
+    exports: bindingChunk.exports,
+    isEntry: bindingChunk.isEntry,
+    facadeModuleId: bindingChunk.facadeModuleId || null,
+    isDynamicEntry: bindingChunk.isDynamicEntry,
     get moduleIds() {
-      return chunk.moduleIds
+      return bindingChunk.moduleIds
     },
     get map() {
-      return chunk.map ? JSON.parse(chunk.map) : null
+      return bindingChunk.map ? JSON.parse(bindingChunk.map) : null
     },
-    set map(map: SourceMap) {
-      chunk.map = JSON.stringify(map)
+    sourcemapFileName: bindingChunk.sourcemapFileName || null,
+    preliminaryFileName: bindingChunk.preliminaryFileName,
+  } as RolldownOutputChunk
+  const cache: Record<string | symbol, any> = {}
+  return new Proxy(chunk, {
+    get(target, p) {
+      if (p in cache) {
+        return cache[p]
+      }
+      return target[p as keyof RolldownOutputChunk]
     },
-    sourcemapFileName: chunk.sourcemapFileName || null,
-    preliminaryFileName: chunk.preliminaryFileName,
-  }
+    set(target, p, newValue): boolean {
+      cache[p] = newValue
+      changed?.updated.add(bindingChunk.fileName)
+      return true
+    },
+  })
 }
 
 function transformToRollupOutputAsset(
-  asset: BindingOutputAsset,
+  bindingAsset: BindingOutputAsset,
+  changed?: ChangedOutputs,
 ): RolldownOutputAsset {
-  return {
+  const asset = {
     type: 'asset',
-    fileName: asset.fileName,
-    originalFileName: asset.originalFileName || null,
+    fileName: bindingAsset.fileName,
+    originalFileName: bindingAsset.originalFileName || null,
     get source(): AssetSource {
-      return transformAssetSource(asset.source)
+      return transformAssetSource(bindingAsset.source)
     },
-    set source(source: AssetSource) {
-      asset.source = bindingAssetSource(source)
+    name: bindingAsset.name ?? undefined,
+  } as RolldownOutputAsset
+  const cache: Record<string | symbol, any> = {}
+  return new Proxy(asset, {
+    get(target, p) {
+      if (p in cache) {
+        return cache[p]
+      }
+      return target[p as keyof RolldownOutputAsset]
     },
-    name: asset.name ?? undefined,
-  }
+    set(target, p, newValue): boolean {
+      cache[p] = newValue
+      changed?.updated.add(bindingAsset.fileName)
+      return true
+    },
+  })
 }
 
 export function transformToRollupOutput(
-  output: BindingOutputs | FinalBindingOutputs,
+  output: BindingOutputs,
+  changed?: ChangedOutputs,
 ): RolldownOutput {
   const { chunks, assets } = output
   return {
     output: [
-      ...chunks.map(transformToRollupOutputChunk),
-      ...assets.map(transformToRollupOutputAsset),
+      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk, changed)),
+      ...assets.map((asset) => transformToRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput
 }
 
-export function transformToOutputBundle(output: BindingOutputs): OutputBundle {
+export function transformToOutputBundle(
+  output: BindingOutputs,
+  changed: ChangedOutputs,
+): OutputBundle {
   const bundle = Object.fromEntries(
-    transformToRollupOutput(output).output.map((item) => [item.fileName, item]),
+    transformToRollupOutput(output, changed).output.map((item) => [
+      item.fileName,
+      item,
+    ]),
   )
   return new Proxy(bundle, {
     deleteProperty(target, property): boolean {
       if (typeof property === 'string') {
-        output.delete(property)
+        changed.deleted.add(property)
       }
       return true
     },
   })
+}
+
+export interface ChangedOutputs {
+  updated: Set<string>
+  deleted: Set<string>
+}
+
+// TODO find a way only transfer the changed part to rust side.
+export function collectChangedBundle(
+  changed: ChangedOutputs,
+  bundle: OutputBundle,
+): JsChangedOutputs {
+  const assets: Array<JsOutputAsset> = []
+  const chunks: Array<JsOutputChunk> = []
+
+  for (const key in bundle) {
+    if (changed.deleted.has(key) || !changed.updated.has(key)) {
+      continue
+    }
+    const item = bundle[key]
+    if (item.type === 'asset') {
+      assets.push({
+        filename: item.fileName,
+        originalFileName: item.originalFileName || undefined,
+        source: bindingAssetSource(item.source),
+        name: item.name,
+      })
+    } else {
+      chunks.push({
+        code: item.code,
+        filename: item.fileName,
+        name: item.name,
+        isEntry: item.isEntry,
+        exports: item.exports,
+        modules: Object.fromEntries(
+          Object.entries(item.modules).map(([key, _]) => [key, {}]),
+        ),
+        imports: item.imports,
+        dynamicImports: item.dynamicImports,
+        facadeModuleId: item.facadeModuleId || undefined,
+        isDynamicEntry: item.isDynamicEntry,
+        moduleIds: item.moduleIds,
+        map: bindingifySourcemap(item.map),
+        sourcemapFilename: item.sourcemapFileName || undefined,
+        preliminaryFilename: item.preliminaryFileName,
+      })
+    }
+  }
+  return {
+    assets,
+    chunks,
+    deleted: Array.from(changed.deleted),
+  }
 }

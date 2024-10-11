@@ -8,6 +8,7 @@ use crate::{
   bundler_builder::BundlerBuilder,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
+  watcher::{emitter::WatcherEmitter, watcher::setup_watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
@@ -153,7 +154,9 @@ impl Bundler {
 
     let mut link_stage_output = match self.try_build().await? {
       Ok(v) => v,
-      Err(errors) => return Ok(BundleOutput { assets: vec![], warnings: vec![], errors }),
+      Err(errors) => {
+        return Ok(BundleOutput { assets: vec![], warnings: vec![], errors, watch_files: vec![] })
+      }
     };
 
     self.plugin_driver.set_module_table(unsafe {
@@ -184,6 +187,13 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
+    output.watch_files = link_stage_output
+      .module_table
+      .modules
+      .iter()
+      .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
+      .collect();
+
     Ok(output)
   }
 
@@ -199,6 +209,12 @@ impl Bundler {
 
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
+  }
+
+  pub async fn watch(&mut self) -> Result<Arc<WatcherEmitter>> {
+    let emitter = Arc::new(WatcherEmitter::new());
+    setup_watcher(Arc::clone(&emitter), self).await?;
+    Ok(emitter)
   }
 }
 

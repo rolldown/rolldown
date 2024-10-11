@@ -4,12 +4,12 @@ use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
 
 #[napi]
 pub struct BindingOutputAsset {
-  inner: &'static mut rolldown_common::OutputAsset,
+  inner: rolldown_common::OutputAsset,
 }
 
 #[napi]
 impl BindingOutputAsset {
-  pub fn new(inner: &'static mut rolldown_common::OutputAsset) -> Self {
+  pub fn new(inner: rolldown_common::OutputAsset) -> Self {
     Self { inner }
   }
 
@@ -28,13 +28,27 @@ impl BindingOutputAsset {
     self.inner.source.clone().into()
   }
 
-  #[napi(setter, js_name = "source")]
-  pub fn set_source(&mut self, source: BindingAssetSource) {
-    self.inner.source = source.into();
-  }
-
   #[napi(getter)]
   pub fn name(&self) -> Option<String> {
     self.inner.name.clone()
+  }
+}
+
+#[napi(object)]
+pub struct JsOutputAsset {
+  pub name: Option<String>,
+  pub original_file_name: Option<String>,
+  pub filename: String,
+  pub source: BindingAssetSource,
+}
+
+impl From<JsOutputAsset> for rolldown_common::OutputAsset {
+  fn from(asset: JsOutputAsset) -> Self {
+    Self {
+      name: asset.name,
+      original_file_name: asset.original_file_name,
+      filename: asset.filename.into(),
+      source: asset.source.into(),
+    }
   }
 }

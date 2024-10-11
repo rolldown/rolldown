@@ -6,7 +6,7 @@ use crate::ModuleId;
 
 use super::rendered_module::RenderedModule;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OutputChunk {
   // PreRenderedChunk
   pub name: ArcStr,

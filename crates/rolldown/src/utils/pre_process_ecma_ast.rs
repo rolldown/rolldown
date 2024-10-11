@@ -1,6 +1,8 @@
 use std::path::Path;
 
+use itertools::Itertools;
 use oxc::ast::VisitMut;
+use oxc::diagnostics::Severity;
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
 use oxc::transformer::{
@@ -66,8 +68,15 @@ impl PreProcessEcmaAst {
           .build_with_symbols_and_scopes(symbols, scopes, fields.program)
       });
 
-      if !ret.errors.is_empty() {
-        return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
+      // TODO: emit diagnostic, aiming to pass more tests,
+      // we ignore warning for now
+      let errors = ret
+        .errors
+        .into_iter()
+        .filter(|item| matches!(item.severity, Severity::Error))
+        .collect_vec();
+      if !errors.is_empty() {
+        return Err(anyhow::anyhow!("Transform failed, got {:#?}", errors));
       }
 
       symbols = ret.symbols;

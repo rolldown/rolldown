@@ -14,15 +14,15 @@ test('watch', async () => {
   await new Promise((resolve) => {
     setTimeout(resolve, 50)
   })
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log()')).toBe(true)
+  expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
 
   // edit file
-  fs.writeFileSync(input, 'console.log(1)')
+  fs.writeFileSync(input, 'console.log(2)')
   // sleep 50ms
   await new Promise((resolve) => {
     setTimeout(resolve, 50)
   })
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
+  expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
 
   // revert change
   fs.writeFileSync(input, '')

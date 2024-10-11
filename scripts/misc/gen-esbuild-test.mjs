@@ -112,7 +112,7 @@ const suites = /** @type {const} */ ({
     name: 'lower',
     sourcePath: './bundler_lower_test.go',
     sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_lower_test.go'
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_lower_test.go',
   },
   loader: {
     name: 'loader',
@@ -330,7 +330,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
       console.error(chalk.red(`No entryPaths found`))
     }
     console.log(`entryPaths: `, entryPaths)
-    if (entryPaths.length === 1 && entryPaths[0] === "/*") {
+    if (entryPaths.length === 1 && entryPaths[0] === '/*') {
       entryPaths = fileList.map((item) => item.name)
     }
     let input = entryPaths.map((p) => {
@@ -339,7 +339,12 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
         normalizedName = normalizedName.slice(1)
       }
       return {
-        name: normalizedName.split('/').filter(Boolean).join('_').split('.').join('_'),
+        name: normalizedName
+          .split('/')
+          .filter(Boolean)
+          .join('_')
+          .split('.')
+          .join('_'),
         import: normalizedName,
       }
     })

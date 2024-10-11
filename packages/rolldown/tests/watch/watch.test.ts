@@ -25,5 +25,5 @@ test('watch', async () => {
   expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
 
   // revert change
-  fs.writeFileSync(input, '')
+  fs.writeFileSync(input, 'console.log(1)')
 })

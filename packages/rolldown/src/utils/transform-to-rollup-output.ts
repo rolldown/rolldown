@@ -146,35 +146,36 @@ export function collectChangedBundle(
   const chunks: Array<JsOutputChunk> = []
 
   for (const key in bundle) {
-    if (changed.updated.has(key)) {
-      const item = bundle[key]
-      if (item.type === 'asset') {
-        assets.push({
-          filename: item.fileName,
-          originalFileName: item.originalFileName || undefined,
-          source: bindingAssetSource(item.source),
-          name: item.name,
-        })
-      } else {
-        chunks.push({
-          code: item.code,
-          filename: item.fileName,
-          name: item.name,
-          isEntry: item.isEntry,
-          exports: item.exports,
-          modules: Object.fromEntries(
-            Object.entries(item.modules).map(([key, _]) => [key, {}]),
-          ),
-          imports: item.imports,
-          dynamicImports: item.dynamicImports,
-          facadeModuleId: item.facadeModuleId || undefined,
-          isDynamicEntry: item.isDynamicEntry,
-          moduleIds: item.moduleIds,
-          map: bindingifySourcemap(item.map),
-          sourcemapFilename: item.sourcemapFileName || undefined,
-          preliminaryFilename: item.preliminaryFileName,
-        })
-      }
+    if (changed.deleted.has(key) || !changed.updated.has(key)) {
+      continue
+    }
+    const item = bundle[key]
+    if (item.type === 'asset') {
+      assets.push({
+        filename: item.fileName,
+        originalFileName: item.originalFileName || undefined,
+        source: bindingAssetSource(item.source),
+        name: item.name,
+      })
+    } else {
+      chunks.push({
+        code: item.code,
+        filename: item.fileName,
+        name: item.name,
+        isEntry: item.isEntry,
+        exports: item.exports,
+        modules: Object.fromEntries(
+          Object.entries(item.modules).map(([key, _]) => [key, {}]),
+        ),
+        imports: item.imports,
+        dynamicImports: item.dynamicImports,
+        facadeModuleId: item.facadeModuleId || undefined,
+        isDynamicEntry: item.isDynamicEntry,
+        moduleIds: item.moduleIds,
+        map: bindingifySourcemap(item.map),
+        sourcemapFilename: item.sourcemapFileName || undefined,
+        preliminaryFilename: item.preliminaryFileName,
+      })
     }
   }
   return {

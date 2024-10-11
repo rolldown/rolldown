@@ -124,7 +124,7 @@ pub async fn setup_watcher(emitter: SharedWatcherEmitter, bundler: &mut Bundler)
                 WatcherChange { path, kind: WatcherChangeKind::Create }.into(),
               );
             }
-            notify::EventKind::Modify(ModifyKind::Data(_)) => {
+            notify::EventKind::Modify(ModifyKind::Data(_) | ModifyKind::Any /* windows*/) => {
               emitter.emit(
                 WatcherEvent::Change,
                 WatcherChange { path, kind: WatcherChangeKind::Update }.into(),

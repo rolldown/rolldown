@@ -113,22 +113,6 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_lower_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_lower_test.go',
-    ignoreCases: [
-      'lower_async_arrow_super_es2016',
-      'lower_async_arrow_super_setter_es2016',
-      'lower_export_star_as_name_collision',
-      'lower_forbid_strict_mode_syntax',
-      'lower_nested_function_direct_eval',
-      'lower_private_super_es2021',
-      'lower_private_super_es2022',
-      'lower_static_async_arrow_super_es2016',
-      'lower_static_async_arrow_super_setter_es2016',
-      'lower_strict_mode_syntax',
-      'lower_using',
-      'lower_using_hoisting',
-      'lower_using_unsupported_async',
-      'lower_using_unsupported_using_and_async',
-    ],
   },
   loader: {
     name: 'loader',
@@ -341,9 +325,13 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     // entry
     /** @type {{config: {input: Array<{name: string; import: string}>}}} */
     const config = { config: Object.create({}) }
-    const entryPaths = jsConfig['entryPaths'] ?? []
+    let entryPaths = jsConfig['entryPaths'] ?? []
     if (!entryPaths.length) {
       console.error(chalk.red(`No entryPaths found`))
+    }
+    console.log(`entryPaths: `, entryPaths)
+    if (entryPaths.length === 1 && entryPaths[0] === '/*') {
+      entryPaths = fileList.map((item) => item.name)
     }
     let input = entryPaths.map((p) => {
       let normalizedName = p.slice(prefix.length)
@@ -351,7 +339,12 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
         normalizedName = normalizedName.slice(1)
       }
       return {
-        name: normalizedName.split('/').join('_').split('.').join('_'),
+        name: normalizedName
+          .split('/')
+          .filter(Boolean)
+          .join('_')
+          .split('.')
+          .join('_'),
         import: normalizedName,
       }
     })

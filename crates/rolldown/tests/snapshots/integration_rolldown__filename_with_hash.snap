@@ -2276,9 +2276,82 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-tsFdHliI.js
 
+# tests/esbuild/lower/class_super_this_issue242_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-DgmCC8QJ.js
+
+# tests/esbuild/lower/java_script_auto_accessor_es2021
+
+- js-define_js-!~{000}~.js => js-define_js-wKw0oKC9.js
+- ts-define_ts-define_ts-!~{001}~.js => ts-define_ts-define_ts-VtZuKBYL.js
+- ts-assign_ts-assign_ts-!~{002}~.js => ts-assign_ts-assign_ts-vXQrG-6-.js
+
+# tests/esbuild/lower/java_script_auto_accessor_es2022
+
+- js-define_js-!~{000}~.js => js-define_js-wKw0oKC9.js
+- ts-define_ts-define_ts-!~{001}~.js => ts-define_ts-define_ts-VtZuKBYL.js
+- ts-assign_ts-assign_ts-!~{002}~.js => ts-assign_ts-assign_ts-vXQrG-6-.js
+
+# tests/esbuild/lower/java_script_auto_accessor_es_next
+
+- js-define_js-!~{000}~.js => js-define_js-wKw0oKC9.js
+- ts-define_ts-define_ts-!~{001}~.js => ts-define_ts-define_ts-VtZuKBYL.js
+- ts-assign_ts-assign_ts-!~{002}~.js => ts-assign_ts-assign_ts-vXQrG-6-.js
+
+# tests/esbuild/lower/java_script_decorators_bundle_issue3768
+
+- base-instance-method_js-!~{000}~.js => base-instance-method_js-ZV6hkEpG.js
+- base-instance-field_js-!~{001}~.js => base-instance-field_js-bibB1WMf.js
+- base-instance-accessor_js-!~{002}~.js => base-instance-accessor_js-sLbJo7Wj.js
+- base-static-method_js-!~{003}~.js => base-static-method_js-8O4nZgqE.js
+- base-static-field_js-!~{004}~.js => base-static-field_js-t_ZISgwV.js
+- base-static-accessor_js-!~{005}~.js => base-static-accessor_js-l8_mrGZo.js
+- derived-instance-method_js-!~{006}~.js => derived-instance-method_js-hL6hiDcu.js
+- derived-instance-field_js-!~{007}~.js => derived-instance-field_js-uBxclsrM.js
+- derived-instance-accessor_js-!~{008}~.js => derived-instance-accessor_js-RWcR-mO3.js
+- derived-static-method_js-!~{009}~.js => derived-static-method_js-tijXkSR5.js
+- derived-static-field_js-!~{00a}~.js => derived-static-field_js-My-Gr3Sm.js
+- derived-static-accessor_js-!~{00b}~.js => derived-static-accessor_js-2VeWEuas.js
+
+# tests/esbuild/lower/java_script_decorators_es_next
+
+- entry_js-!~{000}~.js => entry_js-xbsy35rw.js
+
+# tests/esbuild/lower/lower_async2016_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-roAvlN98.js
+
+# tests/esbuild/lower/lower_async2017_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-S1slGHlo.js
+
+# tests/esbuild/lower/lower_async_arrow_super_es2016
+
+- entry_js-!~{000}~.js => entry_js-KC06YAjl.js
+
+# tests/esbuild/lower/lower_async_arrow_super_setter_es2016
+
+- entry_js-!~{000}~.js => entry_js-sCDnFJX7.js
+
 # tests/esbuild/lower/lower_async_es5
 
 - entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_async_generator
+
+- entry_ts-!~{000}~.js => entry_ts-Qg7mZcJB.js
+
+# tests/esbuild/lower/lower_async_generator_no_await
+
+- entry_ts-!~{000}~.js => entry_ts-Qg7mZcJB.js
+
+# tests/esbuild/lower/lower_async_super_es2016_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-0sRum3iQ.js
+
+# tests/esbuild/lower/lower_async_super_es2017_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-0sRum3iQ.js
 
 # tests/esbuild/lower/lower_async_this2016_common_js
 
@@ -2288,6 +2361,30 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-4cLW0KOy.js
 
+# tests/esbuild/lower/lower_class_field2020_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_class_field_next_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_class_field_strict_tsconfig_json2020
+
+- entry_js-!~{000}~.js => entry_js-j52H3gzF.js
+
+# tests/esbuild/lower/lower_exponentiation_operator_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-VVlfz2fb.js
+
+# tests/esbuild/lower/lower_export_star_as_name_collision
+
+- entry_js-!~{000}~.js => entry_js--Vbu2Jjn.js
+
+# tests/esbuild/lower/lower_export_star_as_name_collision_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-LZgk9VPt.js
+
 # tests/esbuild/lower/lower_for_await2015
 
 - entry_js-!~{000}~.js => entry_js-8ksRC6-0.js
@@ -2296,9 +2393,32 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-8ksRC6-0.js
 
+# tests/esbuild/lower/lower_forbid_strict_mode_syntax
+
+- entry_js-!~{000}~.js => entry_js-HTTb0MJu.js
+
+# tests/esbuild/lower/lower_nested_function_direct_eval
+
+- 1_js-!~{000}~.js => 1_js-yc66cKUY.js
+- 2_js-!~{001}~.js => 2_js-dxs9Uv8T.js
+- 3_js-!~{002}~.js => 3_js-SH09LV0l.js
+- 4_js-!~{003}~.js => 4_js-wwNkssg_.js
+- 5_js-!~{004}~.js => 5_js-SxTFs2t2.js
+- 6_js-!~{005}~.js => 6_js-2R1fpFFa.js
+- 7_js-!~{006}~.js => 7_js-BFRLdBT3.js
+- 8_js-!~{007}~.js => 8_js-NqZbUx1F.js
+
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
 - entry_js-!~{000}~.js => entry_js-F8NfLZbg.js
+
+# tests/esbuild/lower/lower_object_spread_no_bundle
+
+- entry_jsx-!~{000}~.js => entry_jsx-jd07ckNS.js
+
+# tests/esbuild/lower/lower_optional_catch_name_collision_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
 
 # tests/esbuild/lower/lower_private_class_accessor_order
 
@@ -2311,6 +2431,10 @@ expression: output
 # tests/esbuild/lower/lower_private_class_brand_check_unsupported
 
 - entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_class_expr2020_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-W8scN0WZ.js
 
 # tests/esbuild/lower/lower_private_class_field_order
 
@@ -2335,6 +2459,34 @@ expression: output
 # tests/esbuild/lower/lower_private_class_static_method_order
 
 - entry_js-!~{000}~.js => entry_js-sbFvjfLP.js
+
+# tests/esbuild/lower/lower_private_field_assignments2015_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_field_assignments2019_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_field_assignments2020_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_field_assignments_next_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_field_optional_chain2019_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_field_optional_chain2020_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_private_field_optional_chain_next_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
 
 # tests/esbuild/lower/lower_private_getter_setter2015
 
@@ -2368,6 +2520,14 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-smX1bR5S.js
 
+# tests/esbuild/lower/lower_private_super_es2021
+
+- entry_js-!~{000}~.js => entry_js-KX4x12dh.js
+
+# tests/esbuild/lower/lower_private_super_es2022
+
+- entry_js-!~{000}~.js => entry_js-KX4x12dh.js
+
 # tests/esbuild/lower/lower_private_super_static_bundle_issue2158
 
 - entry_js-!~{000}~.js => entry_js-lAQU_q-4.js
@@ -2376,6 +2536,82 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-Rxutrcc3.js
 
+# tests/esbuild/lower/lower_static_async_arrow_super_es2016
+
+- entry_js-!~{000}~.js => entry_js-0LunlGYs.js
+
+# tests/esbuild/lower/lower_static_async_arrow_super_setter_es2016
+
+- entry_js-!~{000}~.js => entry_js-rSLBP999.js
+
+# tests/esbuild/lower/lower_static_async_super_es2016_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_static_async_super_es2021_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_static_super_es2016_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_static_super_es2021_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_strict_mode_syntax
+
+- entry_js-!~{000}~.js => entry_js-lirDnc--.js
+
+# tests/esbuild/lower/lower_template_object
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/lower/lower_using
+
+- entry_js-!~{000}~.js => entry_js-x07c-u0c.js
+- loops_js-!~{001}~.js => loops_js-eYZJhNpl.js
+- switch_js-!~{002}~.js => switch_js-rSIeeuB0.js
+
+# tests/esbuild/lower/lower_using_hoisting
+
+- hoist-use-strict_js-!~{000}~.js => hoist-use-strict_js-WtVYhjJK.js
+- hoist-directive_js-!~{001}~.js => hoist-directive_js-gd9Y6X6X.js
+- hoist-import_js-!~{002}~.js => hoist-import_js-0ZMuoWy_.js
+- hoist-export-star_js-!~{003}~.js => hoist-export-star_js-QkOTK1GJ.js
+- hoist-export-from_js-!~{004}~.js => hoist-export-from_js-eF8hMhUJ.js
+- hoist-export-clause_js-!~{005}~.js => hoist-export-clause_js-LHsMsRW-.js
+- hoist-export-local-direct_js-!~{006}~.js => hoist-export-local-direct_js-KyZAt_gl.js
+- hoist-export-local-indirect_js-!~{007}~.js => hoist-export-local-indirect_js-3R0VaNKu.js
+- hoist-export-class-direct_js-!~{008}~.js => hoist-export-class-direct_js-uzjqiC8q.js
+- hoist-export-class-indirect_js-!~{009}~.js => hoist-export-class-indirect_js-GvwqP264.js
+- hoist-export-function-direct_js-!~{00a}~.js => hoist-export-function-direct_js-fIH3TUWu.js
+- hoist-export-function-indirect_js-!~{00b}~.js => hoist-export-function-indirect_js-N5qgnZ_X.js
+- hoist-export-default-class-name-unused_js-!~{00c}~.js => hoist-export-default-class-name-unused_js-5iGMIKxJ.js
+- hoist-export-default-class-name-used_js-!~{00d}~.js => hoist-export-default-class-name-used_js-P8l950yG.js
+- hoist-export-default-class-anonymous_js-!~{00e}~.js => hoist-export-default-class-anonymous_js-fBESYLt_.js
+- hoist-export-default-function-name-unused_js-!~{00f}~.js => hoist-export-default-function-name-unused_js-FncS3YQT.js
+- hoist-export-default-function-name-used_js-!~{00g}~.js => hoist-export-default-function-name-used_js-z8vz6LNn.js
+- hoist-export-default-function-anonymous_js-!~{00h}~.js => hoist-export-default-function-anonymous_js-AgT7FSQr.js
+- hoist-export-default-expr_js-!~{00i}~.js => hoist-export-default-expr_js-ktJ3ku-U.js
+
+# tests/esbuild/lower/lower_using_inside_ts_namespace
+
+- entry_ts-!~{000}~.js => entry_ts-jRZIc67J.js
+
+# tests/esbuild/lower/lower_using_unsupported_async
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+- loops_js-!~{001}~.js => loops_js-CVx4nby4.js
+- switch_js-!~{002}~.js => switch_js-HR65TZ8q.js
+
+# tests/esbuild/lower/lower_using_unsupported_using_and_async
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+- loops_js-!~{001}~.js => loops_js-CVx4nby4.js
+- switch_js-!~{002}~.js => switch_js-HR65TZ8q.js
+
 # tests/esbuild/lower/static_class_block_es2021
 
 - entry_js-!~{000}~.js => entry_js-Xrk9aGWz.js
@@ -2383,6 +2619,38 @@ expression: output
 # tests/esbuild/lower/static_class_block_es_next
 
 - entry_js-!~{000}~.js => entry_js-Xrk9aGWz.js
+
+# tests/esbuild/lower/ts_lower_class_field2020_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
+
+# tests/esbuild/lower/ts_lower_class_field_strict_tsconfig_json2020
+
+- entry_js-!~{000}~.js => entry_js-4-CXKC-R.js
+
+# tests/esbuild/lower/ts_lower_class_private_field_next_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
+
+# tests/esbuild/lower/ts_lower_object_rest2017_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-9r6RI83J.js
+
+# tests/esbuild/lower/ts_lower_object_rest2018_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-9r6RI83J.js
+
+# tests/esbuild/lower/ts_lower_private_field_and_method_avoid_name_collision2015
+
+- entry_ts-!~{000}~.js => entry_ts-ejpF90rj.js
+
+# tests/esbuild/lower/ts_lower_private_field_optional_chain2015_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
+
+# tests/esbuild/lower/ts_lower_private_static_members2015_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
 
 # tests/esbuild/packagejson/common_js_variable_in_esm_type_module
 

@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entries_entry_css.css
+
+```css
+@import "../shared/common.css";
+```
+## entries_entry_css.js
+
+```js
+
+```
+## entries_other_entry_css.css
+
+```css
+@import "../../shared/common.css";
+```
+## entries_other_entry_css.js
+
+```js
+
+```

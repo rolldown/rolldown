@@ -32,7 +32,7 @@ describe('basic arguments', () => {
 describe('cli options for bundling', () => {
   it('should handle single boolean option', async () => {
     const cwd = cliFixturesDir('cli-option-boolean')
-    const status = await $({ cwd })`rolldown --minify -d dist`
+    const status = await $({ cwd })`rolldown index.ts --minify -d dist`
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })

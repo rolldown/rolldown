@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks'
-import { rolldown } from '../../rolldown'
+import { rolldown, watch as rolldownWatch } from '../../rolldown'
 import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
 import { arraify } from '../../utils/misc'
 import { ensureConfig, logger } from '../utils'
@@ -20,15 +20,19 @@ export async function bundleWithConfig(
   const configList = arraify(config)
 
   for (const config of configList) {
-    await bundleInner(config, cliOptions)
+    cliOptions.watch
+      ? await watchInner(config, cliOptions)
+      : bundleInner(config, cliOptions)
   }
 }
 
 export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
   // TODO when supports `output.file`, we should modify it here.
   if (cliOptions.output.dir) {
-    await bundleInner({}, cliOptions)
-  } else {
+    cliOptions.watch
+      ? await watchInner({}, cliOptions)
+      : await bundleInner({}, cliOptions)
+  } else if (!cliOptions.watch) {
     const build = await rolldown(cliOptions.input)
     const { output } = await build.generate(cliOptions.output)
     if (output.length > 1) {
@@ -40,7 +44,23 @@ export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
     } else {
       logger.log(output[0].code)
     }
+  } else {
+    logger.error('You must specify `output.dir` to use watch mode')
+    process.exit(1)
   }
+}
+
+async function watchInner(
+  options: RolldownOptions,
+  cliOptions: NormalizedCliOptions,
+) {
+  // Only if watch is true in CLI can we use watch mode.
+  // We should not make it `await`, as it never ends.
+  await rolldownWatch({
+    ...options,
+    ...cliOptions.input,
+  })
+  logger.log(`Waiting for changes...`)
 }
 
 async function bundleInner(

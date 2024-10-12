@@ -13,6 +13,10 @@ export const cliOptionsSchema = z
       .optional(),
     help: z.boolean().describe('Show help').optional(),
     version: z.boolean().describe('Show version number').optional(),
+    watch: z
+      .boolean()
+      .describe('Watch files in bundle and rebuild on changes')
+      .optional(),
   })
   .merge(inputCliOptionsSchema)
   .merge(outputCliOptionsSchema)

@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "Users_user_project_src_index_copy",
+        "name": "Users_user_project_src_index",
         "import": "Users/user/project/src/index.copy"
       }
     ]

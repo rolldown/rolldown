@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## e00_js.js
+## e00.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -13,7 +13,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e01_js.js
+## e01.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -23,7 +23,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e02_js.js
+## e02.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -33,7 +33,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e03_js.js
+## e03.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -43,7 +43,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e04_js.js
+## e04.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -53,7 +53,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e05_js.js
+## e05.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -63,7 +63,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e06_js.js
+## e06.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -73,7 +73,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e07_js.js
+## e07.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -83,7 +83,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e08_js.js
+## e08.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -93,7 +93,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e09_js.js
+## e09.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -103,7 +103,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e10_js.js
+## e10.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -113,7 +113,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e11_js.js
+## e11.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -123,7 +123,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e12_js.js
+## e12.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -133,7 +133,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e13_js.js
+## e13.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -143,7 +143,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e14_js.js
+## e14.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -153,7 +153,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e15_js.js
+## e15.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -163,7 +163,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e16_js.js
+## e16.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -173,7 +173,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e17_js.js
+## e17.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -183,7 +183,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e18_js.js
+## e18.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -193,7 +193,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e19_js.js
+## e19.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -203,7 +203,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e20_js.js
+## e20.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -213,7 +213,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e21_js.js
+## e21.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -223,7 +223,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e22_js.js
+## e22.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -233,7 +233,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e23_js.js
+## e23.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -243,7 +243,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e24_js.js
+## e24.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -253,7 +253,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e25_js.js
+## e25.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -263,7 +263,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e26_js.js
+## e26.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -273,7 +273,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e27_js.js
+## e27.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -283,7 +283,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e28_js.js
+## e28.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -293,7 +293,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e29_js.js
+## e29.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -303,7 +303,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e30_js.js
+## e30.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -313,7 +313,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e31_js.js
+## e31.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -323,7 +323,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e32_js.js
+## e32.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -333,7 +333,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e33_js.js
+## e33.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -343,7 +343,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e34_js.js
+## e34.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -353,7 +353,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e35_js.js
+## e35.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -363,7 +363,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e36_js.js
+## e36.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -373,7 +373,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e37_js.js
+## e37.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -383,7 +383,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e38_js.js
+## e38.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -393,7 +393,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## e39_js.js
+## e39.js
 
 ```js
 import { shared_default } from "./shared.js";

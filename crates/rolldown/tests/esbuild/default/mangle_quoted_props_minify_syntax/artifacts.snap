@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## keep_js.js
+## keep.js
 
 ```js
 
@@ -22,7 +22,7 @@ foo("_keepThisProperty") in x;
 
 //#endregion
 ```
-## mangle_js.js
+## mangle.js
 
 ```js
 

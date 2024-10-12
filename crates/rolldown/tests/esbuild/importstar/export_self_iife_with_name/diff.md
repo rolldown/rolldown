@@ -31,7 +31,7 @@ return exports;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,5 @@
 -var someName = (() => {
 -    var entry_exports = {};

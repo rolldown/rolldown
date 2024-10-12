@@ -56,13 +56,77 @@ mustBeComputed(
 ### rolldown
 ```js
 
+//#region cross-file.ts
+let CrossFileGood = function(CrossFileGood$1) {
+	CrossFileGood$1["STR"] = "str 2";
+	CrossFileGood$1[CrossFileGood$1["NUM"] = 321] = "NUM";
+	return CrossFileGood$1;
+}({});
+let CrossFileBad = function(CrossFileBad$1) {
+	CrossFileBad$1["PROTO"] = "__proto__";
+	CrossFileBad$1["CONSTRUCTOR"] = "constructor";
+	CrossFileBad$1["PROTOTYPE"] = "prototype";
+	return CrossFileBad$1;
+}({});
+
+//#endregion
+//#region entry.ts
+var SameFileGood = function(SameFileGood$1) {
+	SameFileGood$1["STR"] = "str 1";
+	SameFileGood$1[SameFileGood$1["NUM"] = 123] = "NUM";
+	return SameFileGood$1;
+}(SameFileGood || {});
+var SameFileBad = function(SameFileBad$1) {
+	SameFileBad$1["PROTO"] = "__proto__";
+	SameFileBad$1["CONSTRUCTOR"] = "constructor";
+	SameFileBad$1["PROTOTYPE"] = "prototype";
+	return SameFileBad$1;
+}(SameFileBad || {});
+class Foo {
+	[100] = 100;
+	"200" = 200;
+	["300"] = 300;
+	[SameFileGood.STR] = SameFileGood.STR;
+	[SameFileGood.NUM] = SameFileGood.NUM;
+	[CrossFileGood.STR] = CrossFileGood.STR;
+	[CrossFileGood.NUM] = CrossFileGood.NUM;
+}
+shouldNotBeComputed(class {
+	[100] = 100;
+	"200" = 200;
+	["300"] = 300;
+	[SameFileGood.STR] = SameFileGood.STR;
+	[SameFileGood.NUM] = SameFileGood.NUM;
+	[CrossFileGood.STR] = CrossFileGood.STR;
+	[CrossFileGood.NUM] = CrossFileGood.NUM;
+}, {
+	[100]: 100,
+	"200": 200,
+	["300"]: 300,
+	[SameFileGood.STR]: SameFileGood.STR,
+	[SameFileGood.NUM]: SameFileGood.NUM,
+	[CrossFileGood.STR]: CrossFileGood.STR,
+	[CrossFileGood.NUM]: CrossFileGood.NUM
+});
+mustBeComputed({ [SameFileBad.PROTO]: null }, { [CrossFileBad.PROTO]: null }, class {
+	[SameFileBad.CONSTRUCTOR]() {}
+}, class {
+	[CrossFileBad.CONSTRUCTOR]() {}
+}, class {
+	static [SameFileBad.PROTOTYPE]() {}
+}, class {
+	static [CrossFileBad.PROTOTYPE]() {}
+});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,39 +0,0 @@
++++ rolldown	entry.js
+@@ -1,39 +1,61 @@
 -var Foo = class {
 -    100 = 100;
 -    200 = 200;
@@ -72,7 +136,38 @@ mustBeComputed(
 -    "str 2" = "str 2";
 -    321 = 321;
 -};
--shouldNotBeComputed(class {
++var CrossFileGood = (function (CrossFileGood$1) {
++    CrossFileGood$1["STR"] = "str 2";
++    CrossFileGood$1[CrossFileGood$1["NUM"] = 321] = "NUM";
++    return CrossFileGood$1;
++})({});
++var CrossFileBad = (function (CrossFileBad$1) {
++    CrossFileBad$1["PROTO"] = "__proto__";
++    CrossFileBad$1["CONSTRUCTOR"] = "constructor";
++    CrossFileBad$1["PROTOTYPE"] = "prototype";
++    return CrossFileBad$1;
++})({});
++var SameFileGood = (function (SameFileGood$1) {
++    SameFileGood$1["STR"] = "str 1";
++    SameFileGood$1[SameFileGood$1["NUM"] = 123] = "NUM";
++    return SameFileGood$1;
++})(SameFileGood || ({}));
++var SameFileBad = (function (SameFileBad$1) {
++    SameFileBad$1["PROTO"] = "__proto__";
++    SameFileBad$1["CONSTRUCTOR"] = "constructor";
++    SameFileBad$1["PROTOTYPE"] = "prototype";
++    return SameFileBad$1;
++})(SameFileBad || ({}));
++class Foo {
++    [100] = 100;
++    "200" = 200;
++    ["300"] = 300;
++    [SameFileGood.STR] = SameFileGood.STR;
++    [SameFileGood.NUM] = SameFileGood.NUM;
++    [CrossFileGood.STR] = CrossFileGood.STR;
++    [CrossFileGood.NUM] = CrossFileGood.NUM;
++}
+ shouldNotBeComputed(class {
 -    100 = 100;
 -    200 = 200;
 -    300 = 300;
@@ -80,7 +175,14 @@ mustBeComputed(
 -    123 = 123;
 -    "str 2" = "str 2";
 -    321 = 321;
--}, {
++    [100] = 100;
++    "200" = 200;
++    ["300"] = 300;
++    [SameFileGood.STR] = SameFileGood.STR;
++    [SameFileGood.NUM] = SameFileGood.NUM;
++    [CrossFileGood.STR] = CrossFileGood.STR;
++    [CrossFileGood.NUM] = CrossFileGood.NUM;
+ }, {
 -    100: 100,
 -    200: 200,
 -    300: 300,
@@ -88,19 +190,32 @@ mustBeComputed(
 -    123: 123,
 -    "str 2": "str 2",
 -    321: 321
--});
--mustBeComputed({
++    [100]: 100,
++    "200": 200,
++    ["300"]: 300,
++    [SameFileGood.STR]: SameFileGood.STR,
++    [SameFileGood.NUM]: SameFileGood.NUM,
++    [CrossFileGood.STR]: CrossFileGood.STR,
++    [CrossFileGood.NUM]: CrossFileGood.NUM
+ });
+ mustBeComputed({
 -    ["__proto__"]: null
--}, {
++    [SameFileBad.PROTO]: null
+ }, {
 -    ["__proto__"]: null
--}, class {
++    [CrossFileBad.PROTO]: null
+ }, class {
 -    ["constructor"]() {}
--}, class {
++    [SameFileBad.CONSTRUCTOR]() {}
+ }, class {
 -    ["constructor"]() {}
--}, class {
++    [CrossFileBad.CONSTRUCTOR]() {}
+ }, class {
 -    static ["prototype"]() {}
--}, class {
++    static [SameFileBad.PROTOTYPE]() {}
+ }, class {
 -    static ["prototype"]() {}
--});
++    static [CrossFileBad.PROTOTYPE]() {}
+ });
 
 ```

@@ -3,22 +3,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entries_entry_css.css
+## entries_entry.css
 
 ```css
 @import "../shared/common.css";
 ```
-## entries_entry_css.js
+## entries_entry.js
 
 ```js
 
 ```
-## entries_other_entry_css.css
+## entries_other_entry.css
 
 ```css
 @import "../../shared/common.css";
 ```
-## entries_other_entry_css.js
+## entries_other_entry.js
 
 ```js
 

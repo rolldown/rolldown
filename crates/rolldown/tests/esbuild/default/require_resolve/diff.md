@@ -58,7 +58,7 @@ console.log(true);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -11,12 +11,9 @@
  console.log(require.resolve("@scope/external-pkg"));
  try {

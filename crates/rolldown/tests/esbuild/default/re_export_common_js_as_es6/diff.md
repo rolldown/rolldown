@@ -38,7 +38,7 @@ export { bar };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -3,6 +3,6 @@
          exports.bar = 123;
      }

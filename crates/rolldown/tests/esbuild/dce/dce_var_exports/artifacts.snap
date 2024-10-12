@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.js
+## a.js
 
 ```js
 import { __commonJS } from "./chunk.js";
@@ -18,7 +18,7 @@ var require_a = __commonJS({ "a.js"(exports, module) {
 export default require_a();
 
 ```
-## b_js.js
+## b.js
 
 ```js
 import { __commonJS } from "./chunk.js";
@@ -33,7 +33,7 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 export default require_b();
 
 ```
-## c_js.js
+## c.js
 
 ```js
 import { __commonJS } from "./chunk.js";

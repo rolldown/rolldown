@@ -26,7 +26,7 @@ switch (bar) {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,4 @@
 -switch (foo) {
 -    default:

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "js-entry_js",
+        "name": "js-entry",
         "import": "js-entry.js"
       },
       {
-        "name": "ts-entry_ts",
+        "name": "ts-entry",
         "import": "ts-entry.ts"
       }
     ]

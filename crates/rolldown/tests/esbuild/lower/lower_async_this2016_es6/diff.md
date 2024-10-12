@@ -33,7 +33,7 @@ export { bar, foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,3 @@
 -var bar = () => __async(void 0, null, function* () {});
 -var foo = () => __async(void 0, null, function* () {

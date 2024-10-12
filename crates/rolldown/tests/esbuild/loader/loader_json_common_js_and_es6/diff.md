@@ -62,7 +62,7 @@ console.log(x_json, y_default, small, key_2);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,15 +1,24 @@
 -var require_x = __commonJS({
 -    "x.json"(exports, module) {

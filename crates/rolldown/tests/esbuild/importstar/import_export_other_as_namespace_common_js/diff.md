@@ -38,7 +38,7 @@ export { import_foo as ns };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -2,10 +2,6 @@
      "foo.js"(exports) {
          exports.foo = 123;

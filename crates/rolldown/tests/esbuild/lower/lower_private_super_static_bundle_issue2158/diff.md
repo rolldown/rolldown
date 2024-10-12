@@ -34,7 +34,7 @@ export { Foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,8 @@
 -var Foo = class extends Object {
 +class Foo extends Object {

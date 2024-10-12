@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## class_js.js
+## class.js
 
 ```js
 
@@ -22,7 +22,7 @@ class Keep3 {
 
 //#endregion
 ```
-## object_js.js
+## object.js
 
 ```js
 

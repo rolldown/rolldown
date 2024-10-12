@@ -41,7 +41,7 @@ console.log(
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +1,1 @@
 -var foo = 1;
 -var bar = 2;

@@ -2,99 +2,99 @@
   "config": {
     "input": [
       {
-        "name": "expr-fn_js",
+        "name": "expr-fn",
         "import": "expr-fn.js"
       },
       {
-        "name": "expr-arrow_js",
+        "name": "expr-arrow",
         "import": "expr-arrow.js"
       },
       {
-        "name": "stmt-fn_js",
+        "name": "stmt-fn",
         "import": "stmt-fn.js"
       },
       {
-        "name": "stmt-export-fn_js",
+        "name": "stmt-export-fn",
         "import": "stmt-export-fn.js"
       },
       {
-        "name": "stmt-local_js",
+        "name": "stmt-local",
         "import": "stmt-local.js"
       },
       {
-        "name": "stmt-export-local_js",
+        "name": "stmt-export-local",
         "import": "stmt-export-local.js"
       },
       {
-        "name": "ns-export-fn_ts",
+        "name": "ns-export-fn",
         "import": "ns-export-fn.ts"
       },
       {
-        "name": "ns-export-local_ts",
+        "name": "ns-export-local",
         "import": "ns-export-local.ts"
       },
       {
-        "name": "stmt-export-default-before-fn-anon_js",
+        "name": "stmt-export-default-before-fn-anon",
         "import": "stmt-export-default-before-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-before-fn-name_js",
+        "name": "stmt-export-default-before-fn-name",
         "import": "stmt-export-default-before-fn-name.js"
       },
       {
-        "name": "stmt-export-default-before-gen-fn-anon_js",
+        "name": "stmt-export-default-before-gen-fn-anon",
         "import": "stmt-export-default-before-gen-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-before-gen-fn-name_js",
+        "name": "stmt-export-default-before-gen-fn-name",
         "import": "stmt-export-default-before-gen-fn-name.js"
       },
       {
-        "name": "stmt-export-default-before-async-fn-anon_js",
+        "name": "stmt-export-default-before-async-fn-anon",
         "import": "stmt-export-default-before-async-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-before-async-fn-name_js",
+        "name": "stmt-export-default-before-async-fn-name",
         "import": "stmt-export-default-before-async-fn-name.js"
       },
       {
-        "name": "stmt-export-default-before-async-gen-fn-anon_js",
+        "name": "stmt-export-default-before-async-gen-fn-anon",
         "import": "stmt-export-default-before-async-gen-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-before-async-gen-fn-name_js",
+        "name": "stmt-export-default-before-async-gen-fn-name",
         "import": "stmt-export-default-before-async-gen-fn-name.js"
       },
       {
-        "name": "stmt-export-default-after-fn-anon_js",
+        "name": "stmt-export-default-after-fn-anon",
         "import": "stmt-export-default-after-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-after-fn-name_js",
+        "name": "stmt-export-default-after-fn-name",
         "import": "stmt-export-default-after-fn-name.js"
       },
       {
-        "name": "stmt-export-default-after-gen-fn-anon_js",
+        "name": "stmt-export-default-after-gen-fn-anon",
         "import": "stmt-export-default-after-gen-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-after-gen-fn-name_js",
+        "name": "stmt-export-default-after-gen-fn-name",
         "import": "stmt-export-default-after-gen-fn-name.js"
       },
       {
-        "name": "stmt-export-default-after-async-fn-anon_js",
+        "name": "stmt-export-default-after-async-fn-anon",
         "import": "stmt-export-default-after-async-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-after-async-fn-name_js",
+        "name": "stmt-export-default-after-async-fn-name",
         "import": "stmt-export-default-after-async-fn-name.js"
       },
       {
-        "name": "stmt-export-default-after-async-gen-fn-anon_js",
+        "name": "stmt-export-default-after-async-gen-fn-anon",
         "import": "stmt-export-default-after-async-gen-fn-anon.js"
       },
       {
-        "name": "stmt-export-default-after-async-gen-fn-name_js",
+        "name": "stmt-export-default-after-async-gen-fn-name",
         "import": "stmt-export-default-after-async-gen-fn-name.js"
       }
     ]

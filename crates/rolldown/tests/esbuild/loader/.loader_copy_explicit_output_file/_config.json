@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "project_TEST FAILED_copy",
+        "name": "project_TEST FAILED",
         "import": "project/TEST FAILED.copy"
       }
     ]

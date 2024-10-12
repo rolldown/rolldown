@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "entries_entry_js",
+        "name": "entries_entry",
         "import": "entries/entry.js"
       }
     ]

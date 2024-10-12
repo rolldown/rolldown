@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## class_ts.js
+## class.js
 
 ```js
 
@@ -20,7 +20,7 @@ let x;
 //#endregion
 export { x };
 ```
-## enum_ts.js
+## enum.js
 
 ```js
 
@@ -39,7 +39,7 @@ let x;
 //#endregion
 export { x };
 ```
-## function_ts.js
+## function.js
 
 ```js
 
@@ -56,7 +56,7 @@ let x;
 //#endregion
 export { x };
 ```
-## let_ts.js
+## let.js
 
 ```js
 
@@ -72,7 +72,7 @@ let x;
 //#endregion
 export { x };
 ```
-## namespace_ts.js
+## namespace.js
 
 ```js
 

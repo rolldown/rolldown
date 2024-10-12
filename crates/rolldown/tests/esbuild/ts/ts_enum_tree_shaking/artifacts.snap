@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## namespace-after_ts.js
+## namespace-after.js
 
 ```js
 
@@ -18,7 +18,7 @@ var x = function(x$1) {
 
 //#endregion
 ```
-## namespace-before_ts.js
+## namespace-before.js
 
 ```js
 
@@ -34,7 +34,7 @@ var x = function(x$1) {
 
 //#endregion
 ```
-## sibling-enum-after_ts.js
+## sibling-enum-after.js
 
 ```js
 
@@ -51,7 +51,7 @@ console.log(x);
 
 //#endregion
 ```
-## sibling-enum-before_ts.js
+## sibling-enum-before.js
 
 ```js
 
@@ -68,7 +68,7 @@ x = function(x$1) {
 
 //#endregion
 ```
-## sibling-enum-middle_ts.js
+## sibling-enum-middle.js
 
 ```js
 
@@ -85,7 +85,7 @@ x = function(x$1) {
 
 //#endregion
 ```
-## sibling-member_ts.js
+## sibling-member.js
 
 ```js
 
@@ -102,7 +102,7 @@ console.log(x.y, x.z);
 
 //#endregion
 ```
-## simple-enum_ts.js
+## simple-enum.js
 
 ```js
 
@@ -115,7 +115,7 @@ console.log(x);
 
 //#endregion
 ```
-## simple-member_ts.js
+## simple-member.js
 
 ```js
 

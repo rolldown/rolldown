@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -16,7 +15,7 @@ if (false) for (foo of bar) ;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,2 +0,0 @@
 -if (false) foo;
 -if (false) for (foo of bar) ;

@@ -3,17 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_css.css
-
-```css
-@import "css-pkg"; a { b: c } /*! </style> */
-```
-## entry_css.js
-
-```js
-
-```
-## entry_js.js
+## entry.js
 
 ```js
 
@@ -25,4 +15,14 @@ x;
 a;
 
 //#endregion
+```
+## entry2.css
+
+```css
+@import "css-pkg"; a { b: c } /*! </style> */
+```
+## entry2.js
+
+```js
+
 ```

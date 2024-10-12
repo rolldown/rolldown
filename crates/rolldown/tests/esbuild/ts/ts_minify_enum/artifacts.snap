@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_ts.js
+## a.js
 
 ```js
 
@@ -17,7 +17,7 @@ var Foo = function(Foo$1) {
 
 //#endregion
 ```
-## b_ts.js
+## b.js
 
 ```js
 

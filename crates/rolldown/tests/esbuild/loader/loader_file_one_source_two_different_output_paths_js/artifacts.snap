@@ -20,13 +20,13 @@ console.log(import_common.default);
 
 //#endregion
 ```
-## entries_entry_js.js
+## entries_entry.js
 
 ```js
 import "./common.js";
 
 ```
-## entries_other_entry_js.js
+## entries_other_entry.js
 
 ```js
 import "./common.js";

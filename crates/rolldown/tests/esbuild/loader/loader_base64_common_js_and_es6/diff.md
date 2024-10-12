@@ -46,7 +46,7 @@ assert.equal(y_default, "eQ==");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,13 @@
 -var require_x = __commonJS({
 -    "x.b64"(exports, module) {

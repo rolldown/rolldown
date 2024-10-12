@@ -6,7 +6,7 @@
         "import": "./.htaccess"
       },
       {
-        "name": "entry_js",
+        "name": "entry",
         "import": "./entry.js"
       },
       {

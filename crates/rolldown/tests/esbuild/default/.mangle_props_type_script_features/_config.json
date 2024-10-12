@@ -2,15 +2,15 @@
   "config": {
     "input": [
       {
-        "name": "parameter-properties_ts",
+        "name": "parameter-properties",
         "import": "parameter-properties.ts"
       },
       {
-        "name": "namespace-exports_ts",
+        "name": "namespace-exports",
         "import": "namespace-exports.ts"
       },
       {
-        "name": "enum-values_ts",
+        "name": "enum-values",
         "import": "enum-values.ts"
       }
     ]

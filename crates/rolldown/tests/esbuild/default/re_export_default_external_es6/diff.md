@@ -24,7 +24,7 @@ export { bar, foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,3 @@
 -import {default as default3} from "foo";
 -import {default as default2} from "bar";

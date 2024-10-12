@@ -40,7 +40,7 @@ export { Foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,12 +1,11 @@
 -var _field, _Foo_instances, method_fn, _a, _staticField, _Foo_static, staticMethod_fn;
 -export let Foo = (_a = class {

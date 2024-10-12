@@ -3,7 +3,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_css.css
+## entry.js
+
+```js
+
+//#region entry.js
+var entry_default = () => {};
+
+//#endregion
+export { entry_default as default };
+```
+## entry2.css
 
 ```css
 @media (x: y) {
@@ -13,18 +23,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 	z { zoom: 2 }
 }
 ```
-## entry_css.js
+## entry2.js
 
 ```js
 
-```
-## entry_js.js
-
-```js
-
-//#region entry.js
-var entry_default = () => {};
-
-//#endregion
-export { entry_default as default };
 ```

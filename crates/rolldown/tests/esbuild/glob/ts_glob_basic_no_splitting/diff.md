@@ -44,13 +44,28 @@ console.log({
 ### rolldown
 ```js
 
+//#region entry.ts
+const ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+console.log({
+	concat: {
+		require: require("./src/" + ab),
+		import: import("./src/" + ab)
+	},
+	template: {
+		require: require(`./src/${ab}`),
+		import: import(`./src/${ab}`)
+	}
+});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,29 +0,0 @@
++++ rolldown	entry.js
+@@ -1,29 +1,11 @@
 -var require_a = __commonJS({
 -    "src/a.ts"(exports, module) {
 -        module.exports = "a";
@@ -69,16 +84,20 @@ console.log({
 -    "./src/a.ts": () => Promise.resolve().then(() => __toESM(require_a())),
 -    "./src/b.ts": () => Promise.resolve().then(() => __toESM(require_b()))
 -});
--var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
--console.log({
--    concat: {
+ var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+ console.log({
+     concat: {
 -        require: globRequire_src("./src/" + ab),
 -        import: globImport_src("./src/" + ab)
--    },
--    template: {
++        require: require("./src/" + ab),
++        import: import("./src/" + ab)
+     },
+     template: {
 -        require: globRequire_src(`./src/${ab}`),
 -        import: globImport_src(`./src/${ab}`)
--    }
--});
++        require: require(`./src/${ab}`),
++        import: import(`./src/${ab}`)
+     }
+ });
 
 ```

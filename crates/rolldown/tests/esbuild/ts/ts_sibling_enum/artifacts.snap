@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## nested-number_ts.js
+## nested-number.js
 
 ```js
 
@@ -35,7 +35,7 @@ let foo;
 //#endregion
 export { foo };
 ```
-## nested-propagation_ts.js
+## nested-propagation.js
 
 ```js
 
@@ -70,7 +70,7 @@ let n;
 //#endregion
 export { n };
 ```
-## nested-string_ts.js
+## nested-string.js
 
 ```js
 
@@ -102,7 +102,7 @@ let foo;
 //#endregion
 export { foo };
 ```
-## number_ts.js
+## number.js
 
 ```js
 
@@ -124,7 +124,7 @@ console.log(x.y, x.z);
 //#endregion
 export { x };
 ```
-## propagation_ts.js
+## propagation.js
 
 ```js
 
@@ -149,7 +149,7 @@ console.log(a.b, a["b"], x.g, x["g"]);
 //#endregion
 export { a, x };
 ```
-## string_ts.js
+## string.js
 
 ```js
 

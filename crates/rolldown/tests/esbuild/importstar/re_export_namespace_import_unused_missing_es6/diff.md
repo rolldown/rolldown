@@ -33,7 +33,7 @@ assert.deepEqual(bar_exports, { x: 123 });
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -2,5 +2,5 @@
  __export(bar_exports, {
      x: () => x

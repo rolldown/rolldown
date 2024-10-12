@@ -24,7 +24,7 @@ const x = _createElement(Link, {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -var import_react = require("react");
 -var import_react2 = require("@remix-run/react");

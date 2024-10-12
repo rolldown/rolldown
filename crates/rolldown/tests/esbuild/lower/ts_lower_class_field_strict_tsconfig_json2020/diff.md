@@ -41,7 +41,7 @@ console.log(loose_index_default, strict_index_default);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,7 @@
 -var loose_default = class {};
 -var strict_default = class {

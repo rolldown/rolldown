@@ -7,16 +7,29 @@ function o(){return 123}console.log(o());
 ### rolldown
 ```js
 
+//#region a.ts
+function foo() {
+	return 123;
+}
+
+//#endregion
+//#region entry.ts
+console.log(foo());
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entry.js
+@@ -1,4 +1,4 @@
 -function o() {
--    return 123;
--}
++function foo() {
+     return 123;
+ }
 -console.log(o());
++console.log(foo());
 
 ```

@@ -180,7 +180,7 @@ export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,75 +1,41 @@
 -var _default_instances, foo_fn;
 -var _foo1_default = class _foo1_default extends x {

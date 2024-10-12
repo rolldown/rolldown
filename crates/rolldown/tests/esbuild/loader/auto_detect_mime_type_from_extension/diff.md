@@ -35,7 +35,7 @@ console.log((init_test(), __toCommonJS(test_exports)));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,11 @@
 -var require_test = __commonJS({
 -    "test.svg"(exports, module) {

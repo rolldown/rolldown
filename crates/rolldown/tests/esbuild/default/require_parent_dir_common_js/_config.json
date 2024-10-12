@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "dir_entry_js",
+        "name": "dir_entry",
         "import": "dir/entry.js"
       }
     ]

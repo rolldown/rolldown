@@ -3,14 +3,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entries_entry_css.css
+## entries_entry.css
 
 ```css
 div {
 	background: url(../images/image.png);
 }
 ```
-## entries_entry_css.js
+## entries_entry.js
 
 ```js
 

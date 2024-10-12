@@ -21,7 +21,7 @@ console.log(foo);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,3 @@
  import "./foo";
 -let foo = 234;

@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "test_json",
+        "name": "test",
         "import": "test.json"
       }
     ]

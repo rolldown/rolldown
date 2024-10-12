@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_css.css
+## entry.css
 
 ```css
 @import "data:text/css,body{color:%72%65%64}";
@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 @import "data:text/css;charset=UTF-8,body{color:%72%65%64}";
 @import "data:text/css;charset=UTF-8;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
 ```
-## entry_css.js
+## entry.js
 
 ```js
 

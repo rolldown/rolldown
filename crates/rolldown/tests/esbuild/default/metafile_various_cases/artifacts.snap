@@ -27,21 +27,7 @@ var dynamic_default = 5;
 //#endregion
 export { dynamic_default as default };
 ```
-## entry_css.css
-
-```css
-@import "extern.css";
-a { background: url(inline.svg) }
-b { background: url(file.file) }
-c { background: url(copy.copy) }
-d { background: url(extern.png) }
-```
-## entry_css.js
-
-```js
-
-```
-## entry_js.js
+## entry.js
 
 ```js
 import { default as a } from "extern-esm";
@@ -81,4 +67,18 @@ let exported;
 
 //#endregion
 export { exported };
+```
+## entry2.css
+
+```css
+@import "extern.css";
+a { background: url(inline.svg) }
+b { background: url(file.file) }
+c { background: url(copy.copy) }
+d { background: url(extern.png) }
+```
+## entry2.js
+
+```js
+
 ```

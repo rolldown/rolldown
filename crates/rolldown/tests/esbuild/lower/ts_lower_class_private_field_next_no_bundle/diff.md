@@ -19,12 +19,13 @@ class Foo {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,13 +0,0 @@
 -class Foo {
 -    constructor() {

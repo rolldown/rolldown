@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_jsx.js
+## entry.js
 
 ```js
 import { Link } from "@remix-run/react";

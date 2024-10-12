@@ -27,7 +27,7 @@ console.log(_jsx("div", {}), _jsx(_Fragment, { children: "fragment" }));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,7 +1,4 @@
 -var require_custom_react = __commonJS({
 -    "custom-react.js"(exports, module) {

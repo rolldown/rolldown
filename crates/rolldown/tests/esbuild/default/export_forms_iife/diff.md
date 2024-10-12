@@ -69,7 +69,7 @@ export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,27 +1,13 @@
 -var globalName = (() => {
 -    var entry_exports = {};

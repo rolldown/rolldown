@@ -14,12 +14,13 @@ class Foo extends Bar {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,8 +0,0 @@
 -class Foo extends Bar {
 -    constructor() {

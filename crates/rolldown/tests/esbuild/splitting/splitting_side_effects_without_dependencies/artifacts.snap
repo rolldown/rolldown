@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.js
+## a.js
 
 ```js
 import { a } from "./shared.js";
@@ -13,7 +13,7 @@ console.log(a);
 
 //#endregion
 ```
-## b_js.js
+## b.js
 
 ```js
 import { b } from "./shared.js";

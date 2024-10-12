@@ -52,7 +52,7 @@ let B = class {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,13 +1,13 @@
 -var A = class _A {
 +class A {

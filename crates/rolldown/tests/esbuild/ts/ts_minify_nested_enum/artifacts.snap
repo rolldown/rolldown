@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_ts.js
+## a.js
 
 ```js
 
 ```
-## b_ts.js
+## b.js
 
 ```js
 

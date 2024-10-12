@@ -31,7 +31,7 @@ console.log(_jsx("div", { jsx }), _jsx(_Fragment, { children: _jsx(Fragment, {})
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,8 +1,8 @@
 +import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
  function jsx() {}

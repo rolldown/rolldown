@@ -29,7 +29,7 @@ try {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -__require();
 -__require("a", "b");

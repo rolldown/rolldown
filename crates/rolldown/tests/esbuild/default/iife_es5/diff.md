@@ -20,7 +20,7 @@ console.log("test");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,1 @@
 -(function () {
 -    console.log("test");

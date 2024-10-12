@@ -2,59 +2,59 @@
   "config": {
     "input": [
       {
-        "name": "top-level_js",
+        "name": "top-level",
         "import": "top-level.js"
       },
       {
-        "name": "nested-block_js",
+        "name": "nested-block",
         "import": "nested-block.js"
       },
       {
-        "name": "nested-function_js",
+        "name": "nested-function",
         "import": "nested-function.js"
       },
       {
-        "name": "namespace-export_ts",
+        "name": "namespace-export",
         "import": "namespace-export.ts"
       },
       {
-        "name": "comment-before_js",
+        "name": "comment-before",
         "import": "comment-before.js"
       },
       {
-        "name": "directive-before_js",
+        "name": "directive-before",
         "import": "directive-before.js"
       },
       {
-        "name": "semicolon-before_js",
+        "name": "semicolon-before",
         "import": "semicolon-before.js"
       },
       {
-        "name": "debugger-before_js",
+        "name": "debugger-before",
         "import": "debugger-before.js"
       },
       {
-        "name": "type-before_ts",
+        "name": "type-before",
         "import": "type-before.ts"
       },
       {
-        "name": "exprs-before_js",
+        "name": "exprs-before",
         "import": "exprs-before.js"
       },
       {
-        "name": "disabled-tdz_js",
+        "name": "disabled-tdz",
         "import": "disabled-tdz.js"
       },
       {
-        "name": "backwards-reference-top-level_js",
+        "name": "backwards-reference-top-level",
         "import": "backwards-reference-top-level.js"
       },
       {
-        "name": "backwards-reference-nested-function_js",
+        "name": "backwards-reference-nested-function",
         "import": "backwards-reference-nested-function.js"
       },
       {
-        "name": "issue-3125_js",
+        "name": "issue-3125",
         "import": "issue-3125.js"
       }
     ]

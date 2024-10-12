@@ -8,7 +8,7 @@ function defaultResolveFunction(
   esbuildFilename: string,
   rolldownFilename: string,
 ) {
-  if (esbuildFilename === '/out.js' && /entry_js\.*/.test(rolldownFilename)) {
+  if (esbuildFilename === '/out.js' && /entry\.js/.test(rolldownFilename)) {
     return true
   }
 }

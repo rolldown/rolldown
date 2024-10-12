@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## circular-import-entry_js.js
+## circular-import-entry.js
 
 ```js
 
@@ -19,7 +19,7 @@ function bar() {
 
 //#endregion
 ```
-## circular-re-export-entry_js.js
+## circular-re-export-entry.js
 
 ```js
 
@@ -40,7 +40,7 @@ console.log(baz);
 
 //#endregion
 ```
-## circular-re-export-star-entry_js.js
+## circular-re-export-star-entry.js
 
 ```js
 
@@ -56,7 +56,7 @@ function bar() {
 
 //#endregion
 ```
-## cross-module-entry_js.js
+## cross-module-entry.js
 
 ```js
 
@@ -74,7 +74,7 @@ console.log(x_REMOVE, y_keep);
 
 //#endregion
 ```
-## exported-entry_js.js
+## exported-entry.js
 
 ```js
 
@@ -86,7 +86,7 @@ console.log(x_REMOVE, y_keep);
 //#endregion
 export { y_keep };
 ```
-## non-circular-export-entry_js.js
+## non-circular-export-entry.js
 
 ```js
 
@@ -102,7 +102,7 @@ console.log(foo, bar());
 
 //#endregion
 ```
-## print-shorthand-entry_js.js
+## print-shorthand-entry.js
 
 ```js
 
@@ -119,7 +119,7 @@ console.log({
 
 //#endregion
 ```
-## re-exported-2-entry_js.js
+## re-exported-2-entry.js
 
 ```js
 
@@ -129,7 +129,7 @@ const y_keep = 2;
 //#endregion
 export { y_keep };
 ```
-## re-exported-entry_js.js
+## re-exported-entry.js
 
 ```js
 
@@ -144,7 +144,7 @@ console.log(x_REMOVE, y_keep);
 //#endregion
 export { y_keep };
 ```
-## re-exported-star-entry_js.js
+## re-exported-star-entry.js
 
 ```js
 

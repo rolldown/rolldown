@@ -29,7 +29,7 @@ console.log(data_default === data_default, data_default !== data_default);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,5 @@
 +var works = true;
  var data_default = {

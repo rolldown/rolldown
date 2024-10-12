@@ -3,11 +3,11 @@
   "config": {
     "input": [
       {
-        "name": "read_js",
+        "name": "read",
         "import": "read.js"
       },
       {
-        "name": "write_js",
+        "name": "write",
         "import": "write.js"
       }
     ]

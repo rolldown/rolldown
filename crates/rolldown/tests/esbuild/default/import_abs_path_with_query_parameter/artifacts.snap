@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
 import { default as foo } from "/Users/user/project/file.txt?foo";

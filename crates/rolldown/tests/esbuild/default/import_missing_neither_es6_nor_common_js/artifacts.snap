@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## bare_js.js
+## bare.js
 
 ```js
 import { __toESM, require_foo } from "./foo2.js";
@@ -34,7 +34,7 @@ var require_foo = __commonJS({ "foo.js"() {
 //#endregion
 export { __toESM, require_foo };
 ```
-## import_js.js
+## import.js
 
 ```js
 
@@ -43,7 +43,7 @@ console.log(import("./foo.js"));
 
 //#endregion
 ```
-## named_js.js
+## named.js
 
 ```js
 import { __toESM, require_foo } from "./foo2.js";
@@ -54,7 +54,7 @@ console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 //#endregion
 ```
-## require_js.js
+## require.js
 
 ```js
 import { require_foo } from "./foo2.js";
@@ -64,7 +64,7 @@ console.log(require_foo());
 
 //#endregion
 ```
-## star-capture_js.js
+## star-capture.js
 
 ```js
 import { __toESM, require_foo } from "./foo2.js";
@@ -75,7 +75,7 @@ console.log(import_foo);
 
 //#endregion
 ```
-## star_js.js
+## star.js
 
 ```js
 import { __toESM, require_foo } from "./foo2.js";

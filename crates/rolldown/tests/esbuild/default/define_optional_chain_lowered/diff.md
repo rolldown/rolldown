@@ -43,7 +43,7 @@ console.log([
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,2 +1,1 @@
 -var _a;
 -console.log([1, 1, 1], [1, 1, 1], [a[b][c], a == null ? void 0 : a[b][c], (_a = a[b]) == null ? void 0 : _a[c]]);

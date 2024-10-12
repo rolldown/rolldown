@@ -49,7 +49,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 export { __commonJS };
 ```
-## cjs-in-esm_js.js
+## cjs-in-esm.js
 
 ```js
 
@@ -61,7 +61,7 @@ module.exports = 3;
 //#endregion
 export { foo };
 ```
-## import-in-cjs_js.js
+## import-in-cjs.js
 
 ```js
 import { __commonJS } from "./chunk.js";
@@ -77,7 +77,7 @@ var require_import_in_cjs = __commonJS({ "import-in-cjs.js"(exports, module) {
 export default require_import_in_cjs();
 
 ```
-## no-warnings-here_js.js
+## no-warnings-here.js
 
 ```js
 import { __commonJS } from "./chunk.js";

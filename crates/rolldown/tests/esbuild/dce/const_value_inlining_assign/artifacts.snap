@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## const-assign_js.js
+## const-assign.js
 
 ```js
 
@@ -45,7 +45,7 @@ x = 2;
 
 //#endregion
 ```
-## const-update_js.js
+## const-update.js
 
 ```js
 

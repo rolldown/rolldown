@@ -3,8 +3,6 @@
   diff
 ## [empty_loader_js](../../../crates/rolldown/tests/esbuild/loader/empty_loader_js/diff.md)
   diff
-## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js/diff.md)
-  diff
 ## [jsx_automatic_no_name_collision](../../../crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision/diff.md)
   diff
 ## [jsx_syntax_in_js_with_jsx_loader](../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader/diff.md)
@@ -122,6 +120,7 @@
 # Passed Cases
 ## [empty_loader_css](../../../crates/rolldown/tests/esbuild/loader/empty_loader_css)
 ## [extensionless_loader_css](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css)
+## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js)
 ## [jsx_preserve_capital_letter](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter)
 ## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify)
 ## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested)

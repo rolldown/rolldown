@@ -33,7 +33,7 @@ console.log(data_default);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,9 @@
 +var key_0 = "The property below should be converted to a computed property:";
 +var __proto__ = {

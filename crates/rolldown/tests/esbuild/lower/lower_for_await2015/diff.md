@@ -134,7 +134,7 @@ export { entry_default as default };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,91 +1,10 @@
 -export default [() => __async(void 0, null, function* () {
 -    try {

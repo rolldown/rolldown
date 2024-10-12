@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## function2_js.js
+## function2.js
 
 ```js
 
@@ -18,7 +18,7 @@ function x() {
 
 //#endregion
 ```
-## function3_js.js
+## function3.js
 
 ```js
 
@@ -37,7 +37,7 @@ function x() {
 
 //#endregion
 ```
-## var2_js.js
+## var2.js
 
 ```js
 
@@ -48,7 +48,7 @@ var x = 2;
 
 //#endregion
 ```
-## var3_js.js
+## var3.js
 
 ```js
 

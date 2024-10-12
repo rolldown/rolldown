@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry-default_js.js
+## entry-default.js
 
 ```js
 import { __toESM, require_no_side_effects, require_no_side_effects$1 } from "./no-side-effects.js";
@@ -41,7 +41,7 @@ console.log(import_no_side_effects.default, void 0, import_no_side_effects$1.def
 
 //#endregion
 ```
-## entry-nope_js.js
+## entry-nope.js
 
 ```js
 import { __toESM, require_no_side_effects, require_no_side_effects$1 } from "./no-side-effects.js";

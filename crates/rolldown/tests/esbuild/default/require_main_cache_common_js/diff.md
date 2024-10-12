@@ -40,7 +40,7 @@ export default require_entry();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,13 @@
  var require_is_main = __commonJS({
 -    "is-main.js"(exports2, module2) {

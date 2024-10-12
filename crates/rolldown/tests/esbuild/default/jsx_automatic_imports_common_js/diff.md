@@ -36,7 +36,7 @@ console.log(_jsx("div", { jsx: import_custom_react.jsx }), _jsx(_Fragment, { chi
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,12 +1,12 @@
 +import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
  var require_custom_react = __commonJS({

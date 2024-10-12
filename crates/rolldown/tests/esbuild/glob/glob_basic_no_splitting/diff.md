@@ -64,7 +64,7 @@ console.log({
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,29 +1,11 @@
 -var require_a = __commonJS({
 -    "src/a.js"(exports, module) {

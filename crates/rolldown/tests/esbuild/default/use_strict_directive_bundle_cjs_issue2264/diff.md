@@ -26,7 +26,7 @@ export { a };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,2 @@
 -"use strict";
 -var entry_exports = {};

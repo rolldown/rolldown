@@ -2,79 +2,79 @@
   "config": {
     "input": [
       {
-        "name": "identity_js",
+        "name": "identity",
         "import": "identity.js"
       },
       {
-        "name": "identity-last_js",
+        "name": "identity-last",
         "import": "identity-last.js"
       },
       {
-        "name": "identity-first_js",
+        "name": "identity-first",
         "import": "identity-first.js"
       },
       {
-        "name": "identity-generator_js",
+        "name": "identity-generator",
         "import": "identity-generator.js"
       },
       {
-        "name": "identity-async_js",
+        "name": "identity-async",
         "import": "identity-async.js"
       },
       {
-        "name": "identity-cross-module_js",
+        "name": "identity-cross-module",
         "import": "identity-cross-module.js"
       },
       {
-        "name": "identity-no-args_js",
+        "name": "identity-no-args",
         "import": "identity-no-args.js"
       },
       {
-        "name": "identity-two-args_js",
+        "name": "identity-two-args",
         "import": "identity-two-args.js"
       },
       {
-        "name": "reassign_js",
+        "name": "reassign",
         "import": "reassign.js"
       },
       {
-        "name": "reassign-inc_js",
+        "name": "reassign-inc",
         "import": "reassign-inc.js"
       },
       {
-        "name": "reassign-div_js",
+        "name": "reassign-div",
         "import": "reassign-div.js"
       },
       {
-        "name": "reassign-array_js",
+        "name": "reassign-array",
         "import": "reassign-array.js"
       },
       {
-        "name": "reassign-object_js",
+        "name": "reassign-object",
         "import": "reassign-object.js"
       },
       {
-        "name": "not-identity-two-args_js",
+        "name": "not-identity-two-args",
         "import": "not-identity-two-args.js"
       },
       {
-        "name": "not-identity-default_js",
+        "name": "not-identity-default",
         "import": "not-identity-default.js"
       },
       {
-        "name": "not-identity-array_js",
+        "name": "not-identity-array",
         "import": "not-identity-array.js"
       },
       {
-        "name": "not-identity-object_js",
+        "name": "not-identity-object",
         "import": "not-identity-object.js"
       },
       {
-        "name": "not-identity-rest_js",
+        "name": "not-identity-rest",
         "import": "not-identity-rest.js"
       },
       {
-        "name": "not-identity-return_js",
+        "name": "not-identity-return",
         "import": "not-identity-return.js"
       }
     ]

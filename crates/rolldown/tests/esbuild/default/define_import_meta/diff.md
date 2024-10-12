@@ -35,7 +35,7 @@ console.log(
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,1 +1,1 @@
 -console.log(1, 2, 3, (2).baz, (1).bar);
 +console.log(import.meta, 2, 3, (2).baz, 3);

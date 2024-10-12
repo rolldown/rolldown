@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "Users_user_project_**_*_js",
+        "name": "Users_user_project_**_*",
         "import": "Users/user/project/**/*.js"
       }
     ]

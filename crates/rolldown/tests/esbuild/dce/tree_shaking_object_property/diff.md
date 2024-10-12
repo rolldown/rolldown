@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -39,7 +38,7 @@ let keep9 = { [{ toString() {} }]: "x" };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,29 +1,29 @@
 -let keep1 = {
 +var keep1 = {

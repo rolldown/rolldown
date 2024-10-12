@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_jsx.js
+## entry.js
 
 ```js
 import { jsx as _jsx } from "react/jsx-runtime";

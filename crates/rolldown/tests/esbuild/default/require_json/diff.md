@@ -51,7 +51,7 @@ console.log((init_test(), __toCommonJS(test_exports).default));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,10 +1,21 @@
 -var require_test = __commonJS({
 -    "test.json"(exports, module) {

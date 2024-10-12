@@ -16,7 +16,7 @@ export * from "foo"
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,1 +1,2 @@
 +import "foo";
  export * from "foo";

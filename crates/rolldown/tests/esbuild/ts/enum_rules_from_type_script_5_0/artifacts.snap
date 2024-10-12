@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## not-supported_ts.js
+## not-supported.js
 
 ```js
 
@@ -31,7 +31,7 @@ console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressi
 
 //#endregion
 ```
-## supported_ts.js
+## supported.js
 
 ```js
 

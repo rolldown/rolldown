@@ -6,5 +6,6 @@
         "import": "Users/user/project/src/index.copy"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

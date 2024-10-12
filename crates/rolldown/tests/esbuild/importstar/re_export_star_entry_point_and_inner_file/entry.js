@@ -1,3 +1,3 @@
-export * from './a.js'
+export * from 'a'
 import * as inner from './inner.js'
 export { inner }

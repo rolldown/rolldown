@@ -1,5 +1,5 @@
 # Reason 
-1.cjs module lexer can't recognize esbuild interop pattern 
+1.cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out.js
 ### esbuild

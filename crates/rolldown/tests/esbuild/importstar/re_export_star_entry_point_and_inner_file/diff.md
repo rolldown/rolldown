@@ -1,3 +1,5 @@
+# Reason
+1. rolldown has redundant `require('external')`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -16,6 +18,7 @@ __reExport(inner_exports, require("b"));
 ```
 ### rolldown
 ```js
+"use strict";
 
 
 //#region a.js
@@ -36,7 +39,14 @@ __export(inner_exports, {
 });
 
 //#endregion
-export { A, B, inner_exports as inner };
+exports.A = A
+exports.B = B
+Object.defineProperty(exports, 'inner', {
+  enumerable: true,
+  get: function () {
+    return inner_exports;
+  }
+});
 
 ```
 ### diff
@@ -44,7 +54,7 @@ export { A, B, inner_exports as inner };
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,8 +1,10 @@
+@@ -1,8 +1,17 @@
 -var entry_exports = {};
 -__export(entry_exports, {
 -    inner: () => inner_exports
@@ -61,6 +71,13 @@ export { A, B, inner_exports as inner };
 +    C: () => C,
 +    D: () => D
 +});
-+export {A, B, inner_exports as inner};
++exports.A = A;
++exports.B = B;
++Object.defineProperty(exports, 'inner', {
++    enumerable: true,
++    get: function () {
++        return inner_exports;
++    }
++});
 
 ```

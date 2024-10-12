@@ -18,5 +18,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 var import_foo = __toESM(require_foo());
 
 //#endregion
-export { import_foo as ns };
+Object.defineProperty(exports, 'ns', {
+  enumerable: true,
+  get: function () {
+    return import_foo;
+  }
+});
 ```

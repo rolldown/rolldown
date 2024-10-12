@@ -1,3 +1,6 @@
+# Reason 
+1. sub optimal
+2. different initialization strategy
 # Diff
 ## /out.js
 ### esbuild

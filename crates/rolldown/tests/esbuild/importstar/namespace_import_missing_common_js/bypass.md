@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal
+2. esbuild will reuse `ns` variable
 # Diff
 ## /out.js
 ### esbuild

@@ -1,3 +1,6 @@
+# Reason
+1. different deconflict naming style and order 
+2. rolldown implemented advanced barrel exports opt
 # Diff
 ## /out.js
 ### esbuild
@@ -11,22 +14,19 @@ var foo = 123;
 
 // entry.js
 var foo2 = 234;
-console.log(foo_exports, foo_exports.foo, foo2);
+console.log(foo_exports.foo, foo_exports.foo, foo2);
 ```
 ### rolldown
 ```js
 import { default as assert } from "node:assert";
 
-
 //#region foo.js
-var foo_exports = {};
-__export(foo_exports, { foo: () => foo$1 });
 const foo$1 = 123;
 
 //#endregion
 //#region entry.js
 let foo = 234;
-assert.deepEqual(foo_exports, { foo: 123 });
+assert.equal(foo$1, 123);
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
 
@@ -38,17 +38,16 @@ assert.equal(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,7 @@
- var foo_exports = {};
- __export(foo_exports, {
+@@ -1,7 +1,3 @@
+-var foo_exports = {};
+-__export(foo_exports, {
 -    foo: () => foo
-+    foo: () => foo$1
- });
+-});
 -var foo = 123;
 -var foo2 = 234;
--console.log(foo_exports, foo_exports.foo, foo2);
+-console.log(foo_exports.foo, foo_exports.foo, foo2);
 +var foo$1 = 123;
 +var foo = 234;
-+console.log(foo_exports, foo$1, foo);
++console.log(foo$1, foo$1, foo);
 
 ```

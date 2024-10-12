@@ -1,3 +1,5 @@
+# Reason 
+1. Wrong self iife
 # Diff
 ## /out.js
 ### esbuild

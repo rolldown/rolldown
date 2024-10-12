@@ -1,8 +1,9 @@
+# Reason
+1. cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out.js
 ### esbuild
 ```js
-// entry.js
 var entry_exports = {};
 __export(entry_exports, {
   out: () => out

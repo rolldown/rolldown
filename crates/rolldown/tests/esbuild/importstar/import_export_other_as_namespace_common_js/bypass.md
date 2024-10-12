@@ -1,3 +1,5 @@
+# Reason
+1. cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out.js
 ### esbuild
@@ -10,13 +12,15 @@ var require_foo = __commonJS({
 });
 
 // entry.js
+var entry_exports = {};
+__export(entry_exports, {
+  ns: () => ns
+});
+module.exports = __toCommonJS(entry_exports);
 var ns = __toESM(require_foo());
-var foo2 = 234;
-console.log(ns, ns.foo, foo2);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
 
 
 //#region foo.js
@@ -27,15 +31,14 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-let foo = 234;
-assert.deepEqual(import_foo, {
-	default: { foo: 123 },
-	foo: 123
-});
-assert.equal(import_foo.foo, 123);
-assert.equal(foo, 234);
 
 //#endregion
+Object.defineProperty(exports, 'ns', {
+  enumerable: true,
+  get: function () {
+    return import_foo;
+  }
+});
 
 ```
 ### diff
@@ -43,16 +46,22 @@ assert.equal(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,7 +2,7 @@
+@@ -2,10 +2,11 @@
      "foo.js"(exports) {
          exports.foo = 123;
      }
  });
--var ns = __toESM(require_foo());
--var foo2 = 234;
--console.log(ns, ns.foo, foo2);
+-var entry_exports = {};
+-__export(entry_exports, {
+-    ns: () => ns
 +var import_foo = __toESM(require_foo());
-+var foo = 234;
-+console.log(import_foo, import_foo.foo, foo);
++Object.defineProperty(exports, 'ns', {
++    enumerable: true,
++    get: function () {
++        return import_foo;
++    }
+ });
+-module.exports = __toCommonJS(entry_exports);
+-var ns = __toESM(require_foo());
 
 ```

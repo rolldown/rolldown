@@ -188,7 +188,16 @@ export interface FunctionPluginHooks {
   ) => void
 
   [DEFINED_HOOK_NAMES.closeBundle]: (this: PluginContext) => void
+
+  // --- watch hooks ---
+  [DEFINED_HOOK_NAMES.watchChange]: (
+    this: PluginContext,
+    id: string,
+    event: { event: ChangeEvent },
+  ) => void
 }
+
+export type ChangeEvent = 'create' | 'update' | 'delete'
 
 export type PluginOrder = 'pre' | 'post' | null
 

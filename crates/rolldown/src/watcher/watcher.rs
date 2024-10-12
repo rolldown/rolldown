@@ -4,15 +4,16 @@ use arcstr::ArcStr;
 use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
+use rolldown_common::{BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent};
+use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashSet;
 use tokio::sync::mpsc::channel;
 
 use crate::Bundler;
 
-use super::emitter::{
-  BundleEventKind, SharedWatcherEmitter, WatcherChange, WatcherChangeKind, WatcherEvent,
-};
 use anyhow::Result;
+
+use super::emitter::SharedWatcherEmitter;
 
 pub struct Watcher {
   inner: RecommendedWatcher,
@@ -117,25 +118,20 @@ pub async fn setup_watcher(emitter: SharedWatcherEmitter, bundler: &mut Bundler)
     match res {
       Ok(event) => {
         for path in event.paths {
+          let id = path.to_string_lossy();
           match event.kind {
             notify::EventKind::Create(_) => {
-              emitter.emit(
-                WatcherEvent::Change,
-                WatcherChange { path, kind: WatcherChangeKind::Create }.into(),
-              );
+              on_change(&emitter, &bundler.plugin_driver, id.as_ref(), WatcherChangeKind::Create)
+                .await?;
             }
             notify::EventKind::Modify(ModifyKind::Data(_) | ModifyKind::Any /* windows*/) => {
-              emitter.emit(
-                WatcherEvent::Change,
-                WatcherChange { path, kind: WatcherChangeKind::Update }.into(),
-              );
+              on_change(&emitter, &bundler.plugin_driver, id.as_ref(), WatcherChangeKind::Update)
+                .await?;
               watcher.invalidate(bundler);
             }
             notify::EventKind::Remove(_) => {
-              emitter.emit(
-                WatcherEvent::Change,
-                WatcherChange { path, kind: WatcherChangeKind::Delete }.into(),
-              );
+              on_change(&emitter, &bundler.plugin_driver, id.as_ref(), WatcherChangeKind::Delete)
+                .await?;
             }
             _ => {}
           }
@@ -145,5 +141,16 @@ pub async fn setup_watcher(emitter: SharedWatcherEmitter, bundler: &mut Bundler)
     }
   }
 
+  Ok(())
+}
+
+async fn on_change(
+  emitter: &SharedWatcherEmitter,
+  plugin_driver: &SharedPluginDriver,
+  path: &str,
+  kind: WatcherChangeKind,
+) -> Result<()> {
+  emitter.emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into());
+  plugin_driver.watch_change(path, kind).await?;
   Ok(())
 }

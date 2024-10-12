@@ -153,6 +153,13 @@ pub struct BindingPluginOptions {
   pub close_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>"
+  )]
+  pub watch_change: Option<MaybeAsyncJsCallback<(BindingPluginContext, String, String), ()>>,
+  pub watch_change_meta: Option<BindingPluginHookMeta>,
+
+  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub banner: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
   pub banner_meta: Option<BindingPluginHookMeta>,

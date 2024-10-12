@@ -1,6 +1,10 @@
-const MIN_MAJOR_VERSION = 20
-const MIN_MINOR_VERSION = 14
-const MIN_PATCH_VERSION = 0
+import { readFileSync } from 'node:fs'
+
+const nodeVersion = readFileSync('.node-version', 'utf8').trim()
+
+const [MIN_MAJOR_VERSION, MIN_MINOR_VERSION, MIN_PATCH_VERSION] = nodeVersion
+  .split('.')
+  .map(Number)
 
 const [major, minor, patch] = process.versions.node.split('.').map(Number)
 

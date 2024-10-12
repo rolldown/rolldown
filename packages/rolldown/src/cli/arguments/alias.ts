@@ -19,6 +19,9 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   version: {
     abbreviation: 'v',
   },
+  watch: {
+    abbreviation: 'w',
+  },
   dir: {
     abbreviation: 'd',
   },

@@ -8,14 +8,19 @@ console.log("here");
 ### rolldown
 ```js
 
+//#region entry.ts
+console.log("here");
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	entry.js
+@@ -1,2 +1,1 @@
 -console.log("must be present");
--console.log("here");
+ console.log("here");
 
 ```

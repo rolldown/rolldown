@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.js
+## a.js
 
 ```js
 
@@ -15,7 +15,7 @@ function a_default(one, two, three, four) {
 //#endregion
 export { a_default as default };
 ```
-## b_js.js
+## b.js
 
 ```js
 

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "entry-nope_js",
+        "name": "entry-nope",
         "import": "entry-nope.js"
       },
       {
-        "name": "entry-default_js",
+        "name": "entry-default",
         "import": "entry-default.js"
       }
     ]

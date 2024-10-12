@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "class_js",
+        "name": "class",
         "import": "class.js"
       },
       {
-        "name": "object_js",
+        "name": "object",
         "import": "object.js"
       }
     ]

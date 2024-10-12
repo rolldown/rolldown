@@ -40,7 +40,7 @@ console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,12 +1,23 @@
 -var t = e(r => {
 -    r.foo = function () {

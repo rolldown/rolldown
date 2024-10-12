@@ -77,7 +77,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## index_js.js
+## index.js
 
 ```js
 import "@a1";

@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## element_tsx.js
+## element.js
 
 ```js
 import { jsx as _jsx } from "react/jsx-runtime";
@@ -44,7 +44,7 @@ console.log(_jsx(Foo.Div, {}));
 //#endregion
 export { Foo };
 ```
-## fragment_tsx.js
+## fragment.js
 
 ```js
 import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
@@ -59,7 +59,7 @@ console.log(_jsx(_Fragment, { children: "test" }));
 //#endregion
 export { React };
 ```
-## nested-element_tsx.js
+## nested-element.js
 
 ```js
 import { jsx as _jsx } from "react/jsx-runtime";
@@ -85,7 +85,7 @@ let x;
 
 //#endregion
 ```
-## nested-fragment_tsx.js
+## nested-fragment.js
 
 ```js
 import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";

@@ -2,23 +2,23 @@
   "config": {
     "input": [
       {
-        "name": "let_ts",
+        "name": "let",
         "import": "let.ts"
       },
       {
-        "name": "function_ts",
+        "name": "function",
         "import": "function.ts"
       },
       {
-        "name": "class_ts",
+        "name": "class",
         "import": "class.ts"
       },
       {
-        "name": "namespace_ts",
+        "name": "namespace",
         "import": "namespace.ts"
       },
       {
-        "name": "enum_ts",
+        "name": "enum",
         "import": "enum.ts"
       }
     ]

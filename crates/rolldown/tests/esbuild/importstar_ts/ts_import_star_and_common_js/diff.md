@@ -44,7 +44,7 @@ console.log(foo, ns2.foo);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,11 +1,11 @@
 -var foo_exports = {};
 -__export(foo_exports, {

@@ -33,7 +33,7 @@ export { entry_default as default };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,8 @@
 -export default {
 -    c: 0,

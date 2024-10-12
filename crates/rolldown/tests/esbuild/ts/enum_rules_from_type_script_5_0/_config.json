@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "supported_ts",
+        "name": "supported",
         "import": "supported.ts"
       },
       {
-        "name": "not-supported_ts",
+        "name": "not-supported",
         "import": "not-supported.ts"
       }
     ]

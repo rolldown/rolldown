@@ -26,12 +26,13 @@ let Foo = _Foo;
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,17 +0,0 @@
 -var _x, _Foo_static, y_get, y_set, z_fn;
 -const _Foo = class _Foo {

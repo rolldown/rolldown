@@ -104,7 +104,7 @@ for (let i = 0; i < 3; i++) {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,44 +1,4 @@
 -class Derived extends Base {
 -    async test(key) {

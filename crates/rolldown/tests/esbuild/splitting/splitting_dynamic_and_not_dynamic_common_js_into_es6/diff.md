@@ -97,3 +97,42 @@ export default require_foo();
 -export default require_foo();
 
 ```
+## /out/chunk-X3UWZZCR.js
+### esbuild
+```js
+// foo.js
+var require_foo = __commonJS({
+  "foo.js"(exports) {
+    exports.bar = 123;
+  }
+});
+
+export {
+  __toESM,
+  require_foo
+};
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/chunk-X3UWZZCR.js
++++ rolldown	
+@@ -1,11 +0,0 @@
+-// foo.js
+-var require_foo = __commonJS({
+-  "foo.js"(exports) {
+-    exports.bar = 123;
+-  }
+-});
+-
+-export {
+-  __toESM,
+-  require_foo
+-};
+\ No newline at end of file
+
+```

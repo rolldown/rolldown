@@ -22,7 +22,7 @@ export { ns, ns$1 as sn };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +1,3 @@
  import * as ns from "path";
 -export {ns};

@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## cjs_js.js
+## cjs.js
 
 ```js
 
@@ -32,7 +32,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 export default require_cjs();
 
 ```
-## esm_js.js
+## esm.js
 
 ```js
 import "xyz";

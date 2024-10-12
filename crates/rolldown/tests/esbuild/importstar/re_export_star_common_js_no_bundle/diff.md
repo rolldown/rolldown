@@ -24,7 +24,7 @@ require("foo");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,10 @@
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);

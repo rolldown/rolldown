@@ -18,7 +18,7 @@ export { yyyyy };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,4 @@
 -export let yyyyy = ({y}) => ({
 -    y

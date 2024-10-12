@@ -46,7 +46,7 @@ let Derived = _Derived;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +0,0 @@
 -const _Derived = class _Derived extends Base {};
 -__publicField(_Derived, "test", key => {

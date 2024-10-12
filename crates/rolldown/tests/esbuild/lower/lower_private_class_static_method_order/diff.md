@@ -53,7 +53,7 @@ assert(FooThis.bar === 123);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,19 +1,14 @@
 -var _a, _Foo_static, foo_fn, _b, _FooThis_static, foo_fn2;
 -const _Foo = class _Foo {};

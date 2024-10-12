@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## index_js.js
+## index.js
 
 ```js
 import { default as foo } from "./foo.js";

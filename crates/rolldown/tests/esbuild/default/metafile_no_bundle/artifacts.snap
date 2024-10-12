@@ -35,20 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_css.css
-
-```css
-@import "pkg";
-@import "./file";
-a { background: url(pkg2) }
-a { background: url(./file2) }
-```
-## entry_css.js
-
-```js
-
-```
-## entry_js.js
+## entry.js
 
 ```js
 import { default as a } from "pkg";
@@ -60,4 +47,17 @@ let exported;
 
 //#endregion
 export { exported };
+```
+## entry2.css
+
+```css
+@import "pkg";
+@import "./file";
+a { background: url(pkg2) }
+a { background: url(./file2) }
+```
+## entry2.js
+
+```js
+
 ```

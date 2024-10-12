@@ -42,7 +42,7 @@ console.log([
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,1 +1,1 @@
 -console.log([1, 1, 1], [1, 1, 1], [a[b][c], a?.[b][c], a[b]?.[c]]);
 +console.log([a.b.c, a?.b.c, a.b?.c], [a["b"]["c"], a?.["b"]["c"], a["b"]?.["c"]], [a[b][c], a?.[b][c], a[b]?.[c]]);

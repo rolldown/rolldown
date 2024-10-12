@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## pageA_page_js.js
+## pageA_page.js
 
 ```js
 import { shared_default } from "./shared.js";
@@ -13,7 +13,7 @@ console.log(shared_default);
 
 //#endregion
 ```
-## pageB_page_js.js
+## pageB_page.js
 
 ```js
 import { shared_default } from "./shared.js";

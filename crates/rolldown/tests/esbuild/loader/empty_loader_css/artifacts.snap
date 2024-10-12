@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_css.css
+## entry.css
 
 ```css
 @import 'a.empty';
 a { background: url(b.empty) }
 ```
-## entry_css.js
+## entry.js
 
 ```js
 

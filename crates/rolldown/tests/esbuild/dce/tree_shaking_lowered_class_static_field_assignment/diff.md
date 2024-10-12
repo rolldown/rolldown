@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out/entry.js
 ### esbuild

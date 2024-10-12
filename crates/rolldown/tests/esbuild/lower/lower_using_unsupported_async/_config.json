@@ -2,15 +2,15 @@
   "config": {
     "input": [
       {
-        "name": "entry_js",
+        "name": "entry",
         "import": "entry.js"
       },
       {
-        "name": "loops_js",
+        "name": "loops",
         "import": "loops.js"
       },
       {
-        "name": "switch_js",
+        "name": "switch",
         "import": "switch.js"
       }
     ]

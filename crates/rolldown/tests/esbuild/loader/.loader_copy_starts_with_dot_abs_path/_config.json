@@ -2,15 +2,15 @@
   "config": {
     "input": [
       {
-        "name": "_htaccess",
+        "name": "",
         "import": ".htaccess"
       },
       {
-        "name": "entry_js",
+        "name": "entry",
         "import": "entry.js"
       },
       {
-        "name": "_ts",
+        "name": "",
         "import": ".ts"
       }
     ]

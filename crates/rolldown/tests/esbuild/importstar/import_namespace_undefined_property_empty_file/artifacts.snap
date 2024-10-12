@@ -44,7 +44,7 @@ var require_empty = __commonJS({ "empty.cjs"() {} });
 //#endregion
 export { __toESM, require_empty, require_empty$1 };
 ```
-## entry-default_js.js
+## entry-default.js
 
 ```js
 import { __toESM, require_empty, require_empty$1 } from "./empty.js";
@@ -56,7 +56,7 @@ console.log(import_empty.default, void 0, import_empty$1.default);
 
 //#endregion
 ```
-## entry-nope_js.js
+## entry-nope.js
 
 ```js
 import { __toESM, require_empty, require_empty$1 } from "./empty.js";

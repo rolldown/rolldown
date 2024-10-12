@@ -35,13 +35,25 @@ __decorateClass([
 ### rolldown
 ```js
 
+//#region entry.ts
+class Foo {
+	@dec(1) prop1 = null;
+	@dec(2) prop2_ = null;
+	@dec(3) ["prop3"] = null;
+	@dec(4) ["prop4_"] = null;
+	@dec(5) ["prop5"] = null;
+	@dec(6) ["prop6_"] = null;
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,16 +0,0 @@
++++ rolldown	entry.js
+@@ -1,16 +1,12 @@
 -var Foo = class {
 -    constructor() {
 -        this.prop1 = null;
@@ -58,5 +70,17 @@ __decorateClass([
 -__decorateClass([dec(4)], Foo.prototype, "prop4_", 2);
 -__decorateClass([dec(5)], Foo.prototype, "prop5", 2);
 -__decorateClass([dec(6)], Foo.prototype, "b", 2);
++
++//#region entry.ts
++class Foo {
++	@dec(1) prop1 = null;
++	@dec(2) prop2_ = null;
++	@dec(3) ["prop3"] = null;
++	@dec(4) ["prop4_"] = null;
++	@dec(5) ["prop5"] = null;
++	@dec(6) ["prop6_"] = null;
++}
++
++//#endregion
 
 ```

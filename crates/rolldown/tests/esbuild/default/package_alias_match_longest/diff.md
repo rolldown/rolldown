@@ -25,7 +25,7 @@ import "pkg/baz";
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -import "alias/pkg";
 -import "alias/pkg_foo";

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -64,7 +63,7 @@ assert.deepEqual((init_cjs(), __toCommonJS(cjs_exports)).default, "keep2");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -4,17 +4,17 @@
          keep1 = () => "keep1";
          keep2 = () => "keep2";

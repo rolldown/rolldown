@@ -39,7 +39,7 @@ export default require_entry();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,8 @@
  var require_entry = __commonJS({
      "entry.js"(exports) {

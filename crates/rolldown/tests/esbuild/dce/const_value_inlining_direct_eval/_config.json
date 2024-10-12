@@ -2,27 +2,27 @@
   "config": {
     "input": [
       {
-        "name": "top-level-no-eval_js",
+        "name": "top-level-no-eval",
         "import": "top-level-no-eval.js"
       },
       {
-        "name": "top-level-eval_js",
+        "name": "top-level-eval",
         "import": "top-level-eval.js"
       },
       {
-        "name": "nested-no-eval_js",
+        "name": "nested-no-eval",
         "import": "nested-no-eval.js"
       },
       {
-        "name": "nested-eval_js",
+        "name": "nested-eval",
         "import": "nested-eval.js"
       },
       {
-        "name": "ts-namespace-no-eval_ts",
+        "name": "ts-namespace-no-eval",
         "import": "ts-namespace-no-eval.ts"
       },
       {
-        "name": "ts-namespace-eval_ts",
+        "name": "ts-namespace-eval",
         "import": "ts-namespace-eval.ts"
       }
     ]

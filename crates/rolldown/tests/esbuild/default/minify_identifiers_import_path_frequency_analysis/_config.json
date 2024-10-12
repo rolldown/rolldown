@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "import_js",
+        "name": "import",
         "import": "import.js"
       },
       {
-        "name": "require_js",
+        "name": "require",
         "import": "require.js"
       }
     ]

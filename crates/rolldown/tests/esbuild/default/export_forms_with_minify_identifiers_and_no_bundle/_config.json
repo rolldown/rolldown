@@ -2,23 +2,23 @@
   "config": {
     "input": [
       {
-        "name": "a_js",
+        "name": "a",
         "import": "a.js"
       },
       {
-        "name": "b_js",
+        "name": "b",
         "import": "b.js"
       },
       {
-        "name": "c_js",
+        "name": "c",
         "import": "c.js"
       },
       {
-        "name": "d_js",
+        "name": "d",
         "import": "d.js"
       },
       {
-        "name": "e_js",
+        "name": "e",
         "import": "e.js"
       }
     ]

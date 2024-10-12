@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out/identity.js
 ### esbuild

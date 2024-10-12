@@ -25,7 +25,7 @@ console.log(binary_default);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,2 +1,2 @@
 -var binary_default = "data:text/plain;charset=utf-8;base64,/w==";
 +var binary_default = "data:text/plain;base64,/w==";

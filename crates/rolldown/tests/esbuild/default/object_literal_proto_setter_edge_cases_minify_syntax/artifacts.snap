@@ -17,24 +17,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## import_computed.js
+## import.js
 
 ```js
 import "foo";
 
 ```
-## import_normal.js
+## import2.js
 
 ```js
 import "foo";
 
 ```
-## local_computed.js
+## local.js
 
 ```js
 
 ```
-## local_normal.js
+## local2.js
 
 ```js
 

@@ -2,19 +2,19 @@
   "config": {
     "input": [
       {
-        "name": "import_shorthand",
+        "name": "import",
         "import": "import-shorthand.js"
       },
       {
-        "name": "import_normal",
+        "name": "import",
         "import": "import-normal.js"
       },
       {
-        "name": "local_shorthand",
+        "name": "local",
         "import": "local-shorthand.js"
       },
       {
-        "name": "local_normal",
+        "name": "local",
         "import": "local-normal.js"
       }
     ]

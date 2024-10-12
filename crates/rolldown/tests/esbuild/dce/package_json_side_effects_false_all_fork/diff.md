@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -45,7 +44,7 @@ import("./a_index.js").then((x) => assert(x.foo === "foo"));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,21 +1,1 @@
 -var foo;
 -var init_c = __esm({

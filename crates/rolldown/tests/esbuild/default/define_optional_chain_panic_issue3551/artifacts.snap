@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## dot-define_js.js
+## dot-define.js
 
 ```js
 
@@ -25,7 +25,7 @@ delete a?.b["c"];
 
 //#endregion
 ```
-## id-define_js.js
+## id-define.js
 
 ```js
 

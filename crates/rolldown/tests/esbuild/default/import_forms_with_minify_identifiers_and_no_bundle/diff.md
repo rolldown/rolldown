@@ -36,7 +36,7 @@ console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,11 +1,7 @@
 -import "foo";
 -import "foo";

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "pageA_page_js",
+        "name": "pageA_page",
         "import": "pageA/page.js"
       },
       {
-        "name": "pageB_page_js",
+        "name": "pageB_page",
         "import": "pageB/page.js"
       }
     ]

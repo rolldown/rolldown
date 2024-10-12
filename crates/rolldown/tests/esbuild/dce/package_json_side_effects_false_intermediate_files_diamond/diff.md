@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -32,7 +31,7 @@ console.log(foo);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,4 +1,2 @@
  var foo = 123;
 -throw "keep this 1";

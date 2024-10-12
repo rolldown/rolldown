@@ -47,7 +47,7 @@ console.log(fs, readFileSync, defaultValue);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +1,23 @@
 +var __create = Object.create;
 +var __defProp = Object.defineProperty;

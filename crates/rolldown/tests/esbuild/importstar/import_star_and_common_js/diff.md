@@ -46,7 +46,7 @@ assert.equal(ns2.foo, 123);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,11 +1,11 @@
 -var foo_exports = {};
 -__export(foo_exports, {

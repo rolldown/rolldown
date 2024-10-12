@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "c_js",
+        "name": "c",
         "import": "c.js"
       },
       {
-        "name": "d_js",
+        "name": "d",
         "import": "d.js"
       }
     ]

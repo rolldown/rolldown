@@ -19,7 +19,7 @@ console.log(_jsx("div", {}));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,1 +1,2 @@
 -console.log(React.createElement("div", null));
 +import {jsx as _jsx} from "react/jsx-runtime";

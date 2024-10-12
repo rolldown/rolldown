@@ -2,15 +2,15 @@
   "config": {
     "input": [
       {
-        "name": "src_entry_js",
+        "name": "src_entry",
         "import": "src/entry.js"
       },
       {
-        "name": "src_entry_css",
+        "name": "src_entry",
         "import": "src/entry.css"
       },
       {
-        "name": "assets_some_file",
+        "name": "assets_some",
         "import": "assets/some.file"
       }
     ]

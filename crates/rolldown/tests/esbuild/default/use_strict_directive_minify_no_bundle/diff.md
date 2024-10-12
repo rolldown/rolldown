@@ -19,7 +19,7 @@ b;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,3 @@
 -"use strict";
  "use loose";

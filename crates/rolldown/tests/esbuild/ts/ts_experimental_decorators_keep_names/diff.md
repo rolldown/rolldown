@@ -16,16 +16,28 @@ export {
 ### rolldown
 ```js
 
+//#region entry.ts
+@decoratorMustComeAfterName class Foo {}
+
+//#endregion
+export { Foo };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entry.js
+@@ -1,4 +1,6 @@
 -var Foo = class {};
 -__name(Foo, "Foo");
 -Foo = __decorateClass([decoratorMustComeAfterName], Foo);
 -export {Foo};
++
++//#region entry.ts
++@decoratorMustComeAfterName class Foo {}
++
++//#endregion
++export { Foo };
 
 ```

@@ -52,16 +52,53 @@ console.log("correct");
 ```
 ### rolldown
 ```js
+import "./pick-ts.js";
+import "./pick-tsx.jsx";
+import "./order-js.js";
+import "./order-jsx.jsx";
+import "pkg/foo-js.js";
+import "pkg/foo-jsx.jsx";
+import "pkg-exports/xyz-js";
+import "pkg-exports/xyz-jsx";
+import "pkg-exports/foo-js.js";
+import "pkg-exports/foo-jsx.jsx";
+import "#xyz-js";
+import "#xyz-jsx";
+import "#bar/foo-js.js";
+import "#bar/foo-jsx.jsx";
+
+//#region pick-js.js
+console.log("correct");
+
+//#endregion
+//#region pick-jsx.jsx
+console.log("correct");
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,16 +0,0 @@
--console.log("correct");
--console.log("correct");
++++ rolldown	entry.js
+@@ -1,16 +1,16 @@
++import "./pick-ts.js";
++import "./pick-tsx.jsx";
++import "./order-js.js";
++import "./order-jsx.jsx";
++import "pkg/foo-js.js";
++import "pkg/foo-jsx.jsx";
++import "pkg-exports/xyz-js";
++import "pkg-exports/xyz-jsx";
++import "pkg-exports/foo-js.js";
++import "pkg-exports/foo-jsx.jsx";
++import "#xyz-js";
++import "#xyz-jsx";
++import "#bar/foo-js.js";
++import "#bar/foo-jsx.jsx";
+ console.log("correct");
+ console.log("correct");
 -console.log("correct");
 -console.log("correct");
 -console.log("correct");

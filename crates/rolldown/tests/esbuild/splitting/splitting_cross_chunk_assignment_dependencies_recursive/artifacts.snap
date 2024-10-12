@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a_js.js
+## a.js
 
 ```js
 import { setX } from "./x.js";
@@ -13,7 +13,7 @@ setX();
 
 //#endregion
 ```
-## b_js.js
+## b.js
 
 ```js
 import "./x.js";
@@ -24,7 +24,7 @@ setZ();
 
 //#endregion
 ```
-## c_js.js
+## c.js
 
 ```js
 import { setX2 } from "./x.js";

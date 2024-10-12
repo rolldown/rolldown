@@ -21,12 +21,13 @@ Foo.s_foo = 123;
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,15 +0,0 @@
 -var _foo, _bar, _s_foo, _s_bar;
 -class Foo {

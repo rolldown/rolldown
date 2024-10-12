@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## base-instance-accessor_js.js
+## base-instance-accessor.js
 
 ```js
 
 ```
-## base-instance-field_js.js
+## base-instance-field.js
 
 ```js
 
@@ -19,7 +19,7 @@ class Foo {
 
 //#endregion
 ```
-## base-instance-method_js.js
+## base-instance-method.js
 
 ```js
 
@@ -32,12 +32,12 @@ class Foo {
 
 //#endregion
 ```
-## base-static-accessor_js.js
+## base-static-accessor.js
 
 ```js
 
 ```
-## base-static-field_js.js
+## base-static-field.js
 
 ```js
 
@@ -48,7 +48,7 @@ class Foo {
 
 //#endregion
 ```
-## base-static-method_js.js
+## base-static-method.js
 
 ```js
 
@@ -61,12 +61,12 @@ class Foo {
 
 //#endregion
 ```
-## derived-instance-accessor_js.js
+## derived-instance-accessor.js
 
 ```js
 
 ```
-## derived-instance-field_js.js
+## derived-instance-field.js
 
 ```js
 
@@ -77,7 +77,7 @@ class Foo extends Bar {
 
 //#endregion
 ```
-## derived-instance-method_js.js
+## derived-instance-method.js
 
 ```js
 
@@ -90,12 +90,12 @@ class Foo extends Bar {
 
 //#endregion
 ```
-## derived-static-accessor_js.js
+## derived-static-accessor.js
 
 ```js
 
 ```
-## derived-static-field_js.js
+## derived-static-field.js
 
 ```js
 
@@ -106,7 +106,7 @@ class Foo extends Bar {
 
 //#endregion
 ```
-## derived-static-method_js.js
+## derived-static-method.js
 
 ```js
 

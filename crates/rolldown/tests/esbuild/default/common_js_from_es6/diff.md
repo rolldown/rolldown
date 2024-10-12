@@ -73,7 +73,7 @@ const { bar } = (init_bar(), __toCommonJS(bar_exports));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,23 +1,27 @@
 -var foo_exports = {};
 -__export(foo_exports, {

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "a_ts",
+        "name": "a",
         "import": "a.ts"
       },
       {
-        "name": "b_ts",
+        "name": "b",
         "import": "b.ts"
       }
     ]

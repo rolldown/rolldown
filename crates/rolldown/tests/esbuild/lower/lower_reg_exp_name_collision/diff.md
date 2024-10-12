@@ -26,7 +26,7 @@ export { foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +1,4 @@
 -function foo(RegExp2) {
 -    return new RegExp2(new RegExp(".", "d"), "d");

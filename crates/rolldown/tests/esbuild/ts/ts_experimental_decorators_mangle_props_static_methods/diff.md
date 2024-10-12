@@ -39,13 +39,25 @@ __decorateClass([
 ### rolldown
 ```js
 
+//#region entry.ts
+class Foo {
+	@dec(1) static prop1() {}
+	@dec(2) static prop2_() {}
+	@dec(3) static ["prop3"]() {}
+	@dec(4) static ["prop4_"]() {}
+	@dec(5) static ["prop5"]() {}
+	@dec(6) static ["prop6_"]() {}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,14 +0,0 @@
++++ rolldown	entry.js
+@@ -1,14 +1,12 @@
 -var Foo = class {
 -    static prop1() {}
 -    static a() {}
@@ -60,5 +72,17 @@ __decorateClass([
 -__decorateClass([dec(4)], Foo, "prop4_", 1);
 -__decorateClass([dec(5)], Foo, "prop5", 1);
 -__decorateClass([dec(6)], Foo, "b", 1);
++
++//#region entry.ts
++class Foo {
++	@dec(1) static prop1() {}
++	@dec(2) static prop2_() {}
++	@dec(3) static ["prop3"]() {}
++	@dec(4) static ["prop4_"]() {}
++	@dec(5) static ["prop5"]() {}
++	@dec(6) static ["prop6_"]() {}
++}
++
++//#endregion
 
 ```

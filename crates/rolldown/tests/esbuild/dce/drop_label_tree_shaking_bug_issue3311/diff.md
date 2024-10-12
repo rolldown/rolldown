@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -32,7 +31,7 @@ export { entry_default as default };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,8 @@
  var myFunc = () => {
 +    DROP: {

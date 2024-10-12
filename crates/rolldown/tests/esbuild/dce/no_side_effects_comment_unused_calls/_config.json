@@ -2,19 +2,19 @@
   "config": {
     "input": [
       {
-        "name": "stmt-fn_js",
+        "name": "stmt-fn",
         "import": "stmt-fn.js"
       },
       {
-        "name": "stmt-local_js",
+        "name": "stmt-local",
         "import": "stmt-local.js"
       },
       {
-        "name": "expr-fn_js",
+        "name": "expr-fn",
         "import": "expr-fn.js"
       },
       {
-        "name": "stmt-export-default-fn_js",
+        "name": "stmt-export-default-fn",
         "import": "stmt-export-default-fn.js"
       }
     ]

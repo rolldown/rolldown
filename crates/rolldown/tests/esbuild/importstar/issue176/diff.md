@@ -37,7 +37,7 @@ console.log(JSON.stringify(folders_index_exports));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -var folders_exports = {};
 -__export(folders_exports, {

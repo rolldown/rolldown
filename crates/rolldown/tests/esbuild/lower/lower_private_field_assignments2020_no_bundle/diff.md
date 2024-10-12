@@ -43,7 +43,7 @@ _x = new WeakMap();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,31 +0,0 @@
 -var _x;
 -class Foo {

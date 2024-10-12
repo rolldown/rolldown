@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## identity-async_js.js
+## identity-async.js
 
 ```js
 
@@ -17,7 +17,7 @@ keep(1);
 
 //#endregion
 ```
-## identity-cross-module_js.js
+## identity-cross-module.js
 
 ```js
 
@@ -34,7 +34,7 @@ DROP(1);
 
 //#endregion
 ```
-## identity-first_js.js
+## identity-first.js
 
 ```js
 
@@ -51,7 +51,7 @@ keep(1);
 
 //#endregion
 ```
-## identity-generator_js.js
+## identity-generator.js
 
 ```js
 
@@ -65,7 +65,7 @@ keep(1);
 
 //#endregion
 ```
-## identity-last_js.js
+## identity-last.js
 
 ```js
 
@@ -82,7 +82,7 @@ DROP(1);
 
 //#endregion
 ```
-## identity-no-args_js.js
+## identity-no-args.js
 
 ```js
 
@@ -95,7 +95,7 @@ keep();
 
 //#endregion
 ```
-## identity-two-args_js.js
+## identity-two-args.js
 
 ```js
 
@@ -108,7 +108,7 @@ keep(1, 2);
 
 //#endregion
 ```
-## identity_js.js
+## identity.js
 
 ```js
 
@@ -122,7 +122,7 @@ DROP(1);
 
 //#endregion
 ```
-## not-identity-array_js.js
+## not-identity-array.js
 
 ```js
 
@@ -136,7 +136,7 @@ keep(1);
 
 //#endregion
 ```
-## not-identity-default_js.js
+## not-identity-default.js
 
 ```js
 
@@ -150,7 +150,7 @@ keep(1);
 
 //#endregion
 ```
-## not-identity-object_js.js
+## not-identity-object.js
 
 ```js
 
@@ -164,7 +164,7 @@ keep(1);
 
 //#endregion
 ```
-## not-identity-rest_js.js
+## not-identity-rest.js
 
 ```js
 
@@ -178,7 +178,7 @@ keep(1);
 
 //#endregion
 ```
-## not-identity-return_js.js
+## not-identity-return.js
 
 ```js
 
@@ -192,7 +192,7 @@ keep(1);
 
 //#endregion
 ```
-## not-identity-two-args_js.js
+## not-identity-two-args.js
 
 ```js
 
@@ -206,7 +206,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-array_js.js
+## reassign-array.js
 
 ```js
 
@@ -221,7 +221,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-div_js.js
+## reassign-div.js
 
 ```js
 
@@ -236,7 +236,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-inc_js.js
+## reassign-inc.js
 
 ```js
 
@@ -251,7 +251,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign-object_js.js
+## reassign-object.js
 
 ```js
 
@@ -266,7 +266,7 @@ keep(1);
 
 //#endregion
 ```
-## reassign_js.js
+## reassign.js
 
 ```js
 

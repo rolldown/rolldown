@@ -29,7 +29,7 @@ __publicField(Foo, "s_bar");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,17 +0,0 @@
 -var _foo, _bar, _s_foo, _s_bar;
 -class Foo {

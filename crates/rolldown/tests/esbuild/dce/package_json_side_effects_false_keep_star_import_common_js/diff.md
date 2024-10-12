@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -41,7 +40,7 @@ assert.deepEqual(import_demo_pkg_index, {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,8 +1,8 @@
 -var require_demo_pkg = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports) {

@@ -2,7 +2,7 @@
   "config": {
     "input": [
       {
-        "name": "keep-these_ts",
+        "name": "keep-these",
         "import": "keep-these.ts"
       }
     ]

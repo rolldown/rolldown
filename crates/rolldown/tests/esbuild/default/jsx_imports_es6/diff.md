@@ -25,7 +25,7 @@ console.log(_jsx("div", {}), _jsx(_Fragment, { children: "fragment" }));
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,3 +1,4 @@
 -function elem() {}
 -function frag() {}

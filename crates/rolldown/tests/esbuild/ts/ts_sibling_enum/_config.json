@@ -2,27 +2,27 @@
   "config": {
     "input": [
       {
-        "name": "number_ts",
+        "name": "number",
         "import": "number.ts"
       },
       {
-        "name": "string_ts",
+        "name": "string",
         "import": "string.ts"
       },
       {
-        "name": "propagation_ts",
+        "name": "propagation",
         "import": "propagation.ts"
       },
       {
-        "name": "nested-number_ts",
+        "name": "nested-number",
         "import": "nested-number.ts"
       },
       {
-        "name": "nested-string_ts",
+        "name": "nested-string",
         "import": "nested-string.ts"
       },
       {
-        "name": "nested-propagation_ts",
+        "name": "nested-propagation",
         "import": "nested-propagation.ts"
       }
     ]

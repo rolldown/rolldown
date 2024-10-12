@@ -58,7 +58,7 @@ assert((0, import_foo.foo)() === "foo" && (0, import_bar.bar)() === "bar");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -13,5 +13,5 @@
      }
  });

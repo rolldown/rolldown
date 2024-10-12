@@ -35,7 +35,7 @@ assert(import_dot_import_index.x === 123);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,7 @@
 -var require_index = __commonJS({
 +var require_dot_import_index = __commonJS({

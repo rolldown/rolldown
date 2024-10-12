@@ -3,19 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_css.css
-
-```css
-@import "./a.css";
-@import "./b.css";
-@import "./c.css";
-```
-## entry_css.js
-
-```js
-
-```
-## entry_js.js
+## entry.js
 
 ```js
 
@@ -31,4 +19,16 @@ console.log("in b");
 console.log("in c");
 
 //#endregion
+```
+## entry2.css
+
+```css
+@import "./a.css";
+@import "./b.css";
+@import "./c.css";
+```
+## entry2.js
+
+```js
+
 ```

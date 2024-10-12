@@ -26,7 +26,7 @@ assert.equal(require_parent_dir_es6_index_default, 123);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	dir_entry_js.js
++++ rolldown	dir_entry.js
 @@ -1,2 +1,2 @@
 -var src_default = 123;
 -console.log(src_default);

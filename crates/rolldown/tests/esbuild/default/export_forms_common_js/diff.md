@@ -256,7 +256,7 @@ init_h(), __toCommonJS(h_exports);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,36 +1,36 @@
  var abc;
  var init_a = __esm({

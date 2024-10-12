@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## function-nested_js.js
+## function-nested.js
 
 ```js
 
@@ -23,7 +23,7 @@ x();
 
 //#endregion
 ```
-## function_js.js
+## function.js
 
 ```js
 
@@ -41,7 +41,7 @@ x();
 
 //#endregion
 ```
-## let_js.js
+## let.js
 
 ```js
 
@@ -57,7 +57,7 @@ x();
 
 //#endregion
 ```
-## nested_js.js
+## nested.js
 
 ```js
 
@@ -74,7 +74,7 @@ x();
 
 //#endregion
 ```
-## top-level_js.js
+## top-level.js
 
 ```js
 

@@ -17,7 +17,7 @@ var e3;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +0,0 @@
 -try {} catch (e4) {
 -    var e, e2;

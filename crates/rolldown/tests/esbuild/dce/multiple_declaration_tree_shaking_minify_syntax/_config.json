@@ -2,19 +2,19 @@
   "config": {
     "input": [
       {
-        "name": "var2_js",
+        "name": "var2",
         "import": "var2.js"
       },
       {
-        "name": "var3_js",
+        "name": "var3",
         "import": "var3.js"
       },
       {
-        "name": "function2_js",
+        "name": "function2",
         "import": "function2.js"
       },
       {
-        "name": "function3_js",
+        "name": "function3",
         "import": "function3.js"
       }
     ]

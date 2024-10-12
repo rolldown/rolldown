@@ -46,7 +46,7 @@ assert.deepEqual(require_cjs(), { foo: process });
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,17 +1,6 @@
 -(() => {
 -    var import_process;

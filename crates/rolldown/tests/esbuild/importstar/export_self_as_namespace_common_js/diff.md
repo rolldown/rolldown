@@ -38,7 +38,7 @@ Object.defineProperty(exports, 'ns', {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -2,6 +2,12 @@
  __export(entry_exports, {
      foo: () => foo,

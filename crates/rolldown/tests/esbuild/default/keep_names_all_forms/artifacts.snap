@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## do-not-keep_js.js
+## do-not-keep.js
 
 ```js
 
 ```
-## keep_js.js
+## keep.js
 
 ```js
 

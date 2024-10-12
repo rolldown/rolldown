@@ -17,12 +17,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## test_jsx.css
+## test.css
 
 ```css
 button { color: red }
 ```
-## test_jsx.js
+## test.js
 
 ```js
 import { jsx as _jsx, jsx as _jsx$1 } from "react/jsx-runtime";

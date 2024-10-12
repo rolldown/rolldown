@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "id-define_js",
+        "name": "id-define",
         "import": "id-define.js"
       },
       {
-        "name": "dot-define_js",
+        "name": "dot-define",
         "import": "dot-define.js"
       }
     ]

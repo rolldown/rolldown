@@ -4,27 +4,27 @@
   "config": {
     "input": [
       {
-        "name": "js_js",
+        "name": "js",
         "import": "js.js"
       },
       {
-        "name": "ts_ts",
+        "name": "ts",
         "import": "ts.ts"
       },
       {
-        "name": "jsx-components_jsx",
+        "name": "jsx-components",
         "import": "jsx-components.jsx"
       },
       {
-        "name": "jsx-a_jsx",
+        "name": "jsx-a",
         "import": "jsx-a.jsx"
       },
       {
-        "name": "jsx-b_jsx",
+        "name": "jsx-b",
         "import": "jsx-b.jsx"
       },
       {
-        "name": "jsx-c_jsx",
+        "name": "jsx-c",
         "import": "jsx-c.jsx"
       }
     ]

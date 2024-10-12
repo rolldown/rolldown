@@ -16,19 +16,25 @@ console.log("third");
 ```
 ### rolldown
 ```js
+import "third";
+
+//#region entry.ts
+console.log("third");
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,6 +0,0 @@
++++ rolldown	entry.js
+@@ -1,6 +1,2 @@
 -import "first";
 -console.log("first");
 -import "second";
 -console.log("second");
--import "third";
--console.log("third");
+ import "third";
+ console.log("third");
 
 ```

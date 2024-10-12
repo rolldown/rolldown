@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -47,7 +46,7 @@ await init_entry();
 import("./a.js");
 import("./b2.js");
 import("./c2.js");
-import("./entry_js.js");
+import("./entry.js");
 await 0;
 
 //#endregion
@@ -57,7 +56,7 @@ await 0;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,29 +1,5 @@
 -var c_exports = {};
 -var init_c = __esm({
@@ -91,7 +90,7 @@ await 0;
 +import("./a.js");
 +import("./b2.js");
 +import("./c2.js");
-+import("./entry_js.js");
++import("./entry.js");
 +await 0;
 
 ```

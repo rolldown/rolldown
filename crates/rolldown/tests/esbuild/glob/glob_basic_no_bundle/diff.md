@@ -37,7 +37,7 @@ console.log({
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,5 @@
 -const ab = Math.random() < 0.5 ? "a.js" : "b.js";
 +var ab = Math.random() < 0.5 ? "a.js" : "b.js";

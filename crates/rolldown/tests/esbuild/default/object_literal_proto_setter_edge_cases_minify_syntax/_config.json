@@ -2,19 +2,19 @@
   "config": {
     "input": [
       {
-        "name": "import_computed",
+        "name": "import",
         "import": "import-computed.js"
       },
       {
-        "name": "import_normal",
+        "name": "import",
         "import": "import-normal.js"
       },
       {
-        "name": "local_computed",
+        "name": "local",
         "import": "local-computed.js"
       },
       {
-        "name": "local_normal",
+        "name": "local",
         "import": "local-normal.js"
       }
     ]

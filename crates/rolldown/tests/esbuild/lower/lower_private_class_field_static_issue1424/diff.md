@@ -48,7 +48,7 @@ new T().d();
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,18 +1,13 @@
 -var _T_instances, a_fn, b_fn;
 -var T = class {

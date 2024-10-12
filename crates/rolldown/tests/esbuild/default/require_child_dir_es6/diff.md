@@ -26,7 +26,7 @@ assert.equal(dir_index_default, 123);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,2 +1,2 @@
 -var dir_default = 123;
 -console.log(dir_default);

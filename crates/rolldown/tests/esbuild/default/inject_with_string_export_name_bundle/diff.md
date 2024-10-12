@@ -26,7 +26,7 @@ console.warn(test);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,3 @@
 -var old = console.log;
 -var fn = (...args) => old.apply(console, ["log:"].concat(args));

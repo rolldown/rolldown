@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "keep_js",
+        "name": "keep",
         "import": "keep.js"
       },
       {
-        "name": "mangle_js",
+        "name": "mangle",
         "import": "mangle.js"
       }
     ]

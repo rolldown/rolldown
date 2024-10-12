@@ -1,11 +1,19 @@
 # Failed Cases
 ## [auto_detect_mime_type_from_extension](../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension/diff.md)
   diff
+## [empty_loader_css](../../../crates/rolldown/tests/esbuild/loader/empty_loader_css/diff.md)
+  diff
 ## [empty_loader_js](../../../crates/rolldown/tests/esbuild/loader/empty_loader_js/diff.md)
   diff
-## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js/diff.md)
+## [extensionless_loader_css](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css/diff.md)
   diff
 ## [jsx_automatic_no_name_collision](../../../crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision/diff.md)
+  diff
+## [jsx_preserve_capital_letter](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter/diff.md)
+  diff
+## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/diff.md)
+  diff
+## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/diff.md)
   diff
 ## [jsx_syntax_in_js_with_jsx_loader](../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader/diff.md)
   diff
@@ -46,6 +54,8 @@
 ## [loader_data_url_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6/diff.md)
   diff
 ## [loader_data_url_extension_based_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_extension_based_mime/diff.md)
+  diff
+## [loader_data_url_text_css](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css/diff.md)
   diff
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script/diff.md)
   diff
@@ -120,11 +130,6 @@
 ## with_type_json_override_loader_glob
   missing
 # Passed Cases
-## [empty_loader_css](../../../crates/rolldown/tests/esbuild/loader/empty_loader_css)
-## [extensionless_loader_css](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css)
-## [jsx_preserve_capital_letter](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter)
-## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify)
-## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested)
+## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js)
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
-## [loader_data_url_text_css](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css)
 # Bypassed Cases

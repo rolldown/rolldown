@@ -83,13 +83,43 @@ console.log(({ x: _x } = _w = { x }, xx = __objRest(_x, []), _w));
 ### rolldown
 ```js
 
+//#region entry.ts
+const { ...local_const } = {};
+let { ...local_let } = {};
+var { ...local_var } = {};
+let ns;
+(function(_ns) {
+	let { ...x$1 } = {};
+	_ns.x = x$1;
+})(ns || (ns = {}));
+for (const { ...for_in_const } in { abc }) {}
+for (let { ...for_in_let } in { abc }) {}
+for (var { ...for_in_var } in { abc });
+for (const { ...for_of_const } of [{}]);
+for (let { ...for_of_let } of [{}]) x();
+for (var { ...for_of_var } of [{}]) x();
+for (const { ...for_const } = {}; x; x = null) {}
+for (let { ...for_let } = {}; x; x = null) {}
+for (var { ...for_var } = {}; x; x = null) {}
+for ({...x} in { abc }) {}
+for ({...x} of [{}]) {}
+for ({...x} = {}; x; x = null) {}
+({...assign} = {});
+({...x} = x);
+for ({...x} = x; 0;);
+console.log({...x} = x);
+console.log({x,...xx} = { x });
+console.log({x: {...xx}} = { x });
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,86 +0,0 @@
++++ rolldown	entry.js
+@@ -1,86 +1,38 @@
 -var _q, _r, _t, _u, _v, _w, _x;
 -const local_const = __objRest({}, []);
 -let local_let = __objRest({}, []);
@@ -114,25 +144,36 @@ console.log(({ x: _x } = _w = { x }, xx = __objRest(_x, []), _w));
 -        var x2 = __objRest(_i, []);
 -    }
 -}
--var ns;
++var {...local_const} = {};
++var {...local_let} = {};
++var {...local_var} = {};
+ var ns;
 -(ns2 => {
 -    ns2.x = __objRest({}, []);
--})(ns || (ns = {}));
++(function (_ns) {
++    let {...x$1} = {};
++    _ns.x = x$1;
+ })(ns || (ns = {}));
 -try {} catch (_j) {
 -    let catch_clause = __objRest(_j, []);
 -}
 -for (const _k in {
--    abc
++for (const {...for_in_const} in {
+     abc
 -}) {
 -    const for_in_const = __objRest(_k, []);
 -}
 -for (let _l in {
--    abc
++}) {}
++for (let {...for_in_let} in {
+     abc
 -}) {
 -    let for_in_let = __objRest(_l, []);
 -}
 -for (var _m in {
--    abc
++}) {}
++for (var {...for_in_var} in {
+     abc
 -}) {
 -    var for_in_var = __objRest(_m, []);
 -    ;
@@ -153,7 +194,15 @@ console.log(({ x: _x } = _w = { x }, xx = __objRest(_x, []), _w));
 -for (let for_let = __objRest({}, []); x; x = null) {}
 -for (var for_var = __objRest({}, []); x; x = null) {}
 -for (_q in {
--    abc
++}) ;
++for (const {...for_of_const} of [{}]) ;
++for (let {...for_of_let} of [{}]) x();
++for (var {...for_of_var} of [{}]) x();
++for (const {...for_const} = {}; x; x = null) {}
++for (let {...for_let} = {}; x; x = null) {}
++for (var {...for_var} = {}; x; x = null) {}
++for ({...x} in {
+     abc
 -}) {
 -    x = __objRest(_q, []);
 -}
@@ -166,15 +215,26 @@ console.log(({ x: _x } = _w = { x }, xx = __objRest(_x, []), _w));
 -    obj_method(_s) {
 -        var x2 = __objRest(_s, []);
 -    }
--});
++}) {}
++for ({...x} of [{}]) {}
++for ({...x} = {}; x; x = null) {}
++({...assign} = {});
++({...x} = x);
++for ({...x} = x; 0; ) ;
++console.log({...x} = x);
++console.log({x, ...xx} = {
++    x
+ });
 -x = __objRest(x, []);
 -for (x = __objRest(x, []); 0; ) ;
 -console.log((x = __objRest(_t = x, []), _t));
 -console.log((_v = _u = {
--    x
++console.log({x: {...xx}} = {
+     x
 -}, {x} = _v, xx = __objRest(_v, ["x"]), _u));
 -console.log(({x: _x} = _w = {
 -    x
 -}, xx = __objRest(_x, []), _w));
++});
 
 ```

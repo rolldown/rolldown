@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -24,7 +23,7 @@ eval("foo(a, b, c)");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +1,4 @@
 -import a from "a";
 +import {default as a} from "a";

@@ -131,3 +131,582 @@ export {
 -export {dynamic_default as default};
 
 ```
+## /out/chunk-MQN2VSL5.js
+### esbuild
+```js
+export {
+  __require,
+  __commonJS
+};
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/chunk-MQN2VSL5.js
++++ rolldown	
+@@ -1,4 +0,0 @@
+-export {
+-  __require,
+-  __commonJS
+-};
+\ No newline at end of file
+
+```
+## /out/entry.css
+### esbuild
+```js
+@import "extern.css";
+
+/* project/entry.css */
+a {
+  background: url(data:image/svg+xml,<svg/>);
+}
+b {
+  background: url("./file-NVISQQTV.file");
+}
+c {
+  background: url("./copy-O3Y5SCJE.copy");
+}
+d {
+  background: url(extern.png);
+}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/entry.css
++++ rolldown	
+@@ -1,15 +0,0 @@
+-@import "extern.css";
+-
+-/* project/entry.css */
+-a {
+-  background: url(data:image/svg+xml,<svg/>);
+-}
+-b {
+-  background: url("./file-NVISQQTV.file");
+-}
+-c {
+-  background: url("./copy-O3Y5SCJE.copy");
+-}
+-d {
+-  background: url(extern.png);
+-}
+\ No newline at end of file
+
+```
+## metafile.json
+### esbuild
+```js
+{
+  "inputs": {
+    "project/esm.js": {
+      "bytes": 16,
+      "imports": [],
+      "format": "esm"
+    },
+    "<data:application/json,2>": {
+      "bytes": 1,
+      "imports": []
+    },
+    "project/file.file": {
+      "bytes": 4,
+      "imports": []
+    },
+    "project/copy.copy": {
+      "bytes": 4,
+      "imports": []
+    },
+    "project/cjs.js": {
+      "bytes": 18,
+      "imports": [],
+      "format": "cjs"
+    },
+    "project/dynamic.js": {
+      "bytes": 16,
+      "imports": [],
+      "format": "esm"
+    },
+    "project/entry.js": {
+      "bytes": 333,
+      "imports": [
+        {
+          "path": "extern-esm",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "project/esm.js",
+          "kind": "import-statement",
+          "original": "./esm"
+        },
+        {
+          "path": "<data:application/json,2>",
+          "kind": "import-statement",
+          "original": "data:application/json,2"
+        },
+        {
+          "path": "project/file.file",
+          "kind": "import-statement",
+          "original": "./file.file"
+        },
+        {
+          "path": "project/copy.copy",
+          "kind": "import-statement",
+          "original": "./copy.copy"
+        },
+        {
+          "path": "extern-cjs",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "project/cjs.js",
+          "kind": "require-call",
+          "original": "./cjs"
+        },
+        {
+          "path": "project/dynamic.js",
+          "kind": "dynamic-import",
+          "original": "./dynamic"
+        }
+      ],
+      "format": "esm"
+    },
+    "project/inline.svg": {
+      "bytes": 6,
+      "imports": []
+    },
+    "project/entry.css": {
+      "bytes": 180,
+      "imports": [
+        {
+          "path": "extern.css",
+          "kind": "import-rule",
+          "external": true
+        },
+        {
+          "path": "project/inline.svg",
+          "kind": "url-token",
+          "original": "inline.svg"
+        },
+        {
+          "path": "project/file.file",
+          "kind": "url-token",
+          "original": "file.file"
+        },
+        {
+          "path": "project/copy.copy",
+          "kind": "url-token",
+          "original": "copy.copy"
+        },
+        {
+          "path": "extern.png",
+          "kind": "url-token",
+          "external": true
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "out/file-NVISQQTV.file": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/file.file": {
+          "bytesInOutput": 4
+        }
+      },
+      "bytes": 4
+    },
+    "out/copy-O3Y5SCJE.copy": {
+      "imports": [],
+      "exports": [],
+      "inputs": {
+        "project/copy.copy": {
+          "bytesInOutput": 4
+        }
+      },
+      "bytes": 4
+    },
+    "out/entry.js": {
+      "imports": [
+        {
+          "path": "out/chunk-MQN2VSL5.js",
+          "kind": "import-statement"
+        },
+        {
+          "path": "extern-esm",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "out/file-NVISQQTV.file",
+          "kind": "file-loader"
+        },
+        {
+          "path": "out/copy-O3Y5SCJE.copy",
+          "kind": "import-statement"
+        },
+        {
+          "path": "extern-cjs",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "out/dynamic-Q2DWDUFV.js",
+          "kind": "dynamic-import"
+        }
+      ],
+      "exports": [
+        "exported"
+      ],
+      "entryPoint": "project/entry.js",
+      "inputs": {
+        "project/cjs.js": {
+          "bytesInOutput": 101
+        },
+        "project/entry.js": {
+          "bytesInOutput": 233
+        },
+        "project/esm.js": {
+          "bytesInOutput": 21
+        },
+        "<data:application/json,2>": {
+          "bytesInOutput": 24
+        },
+        "project/file.file": {
+          "bytesInOutput": 43
+        }
+      },
+      "bytes": 642
+    },
+    "out/dynamic-Q2DWDUFV.js": {
+      "imports": [
+        {
+          "path": "out/chunk-MQN2VSL5.js",
+          "kind": "import-statement"
+        }
+      ],
+      "exports": [
+        "default"
+      ],
+      "entryPoint": "project/dynamic.js",
+      "inputs": {
+        "project/dynamic.js": {
+          "bytesInOutput": 25
+        }
+      },
+      "bytes": 119
+    },
+    "out/chunk-MQN2VSL5.js": {
+      "imports": [],
+      "exports": [
+        "__commonJS",
+        "__require"
+      ],
+      "inputs": {},
+      "bytes": 38
+    },
+    "out/entry.css": {
+      "imports": [
+        {
+          "path": "extern.css",
+          "kind": "import-rule",
+          "external": true
+        },
+        {
+          "path": "data:image/svg+xml,<svg/>",
+          "kind": "url-token"
+        },
+        {
+          "path": "out/file-NVISQQTV.file",
+          "kind": "url-token"
+        },
+        {
+          "path": "out/copy-O3Y5SCJE.copy",
+          "kind": "url-token"
+        },
+        {
+          "path": "extern.png",
+          "kind": "url-token",
+          "external": true
+        }
+      ],
+      "entryPoint": "project/entry.css",
+      "inputs": {
+        "project/entry.css": {
+          "bytesInOutput": 187
+        }
+      },
+      "bytes": 234
+    }
+  }
+}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	metafile.json
++++ rolldown	
+@@ -1,245 +0,0 @@
+-{
+-  "inputs": {
+-    "project/esm.js": {
+-      "bytes": 16,
+-      "imports": [],
+-      "format": "esm"
+-    },
+-    "<data:application/json,2>": {
+-      "bytes": 1,
+-      "imports": []
+-    },
+-    "project/file.file": {
+-      "bytes": 4,
+-      "imports": []
+-    },
+-    "project/copy.copy": {
+-      "bytes": 4,
+-      "imports": []
+-    },
+-    "project/cjs.js": {
+-      "bytes": 18,
+-      "imports": [],
+-      "format": "cjs"
+-    },
+-    "project/dynamic.js": {
+-      "bytes": 16,
+-      "imports": [],
+-      "format": "esm"
+-    },
+-    "project/entry.js": {
+-      "bytes": 333,
+-      "imports": [
+-        {
+-          "path": "extern-esm",
+-          "kind": "import-statement",
+-          "external": true
+-        },
+-        {
+-          "path": "project/esm.js",
+-          "kind": "import-statement",
+-          "original": "./esm"
+-        },
+-        {
+-          "path": "<data:application/json,2>",
+-          "kind": "import-statement",
+-          "original": "data:application/json,2"
+-        },
+-        {
+-          "path": "project/file.file",
+-          "kind": "import-statement",
+-          "original": "./file.file"
+-        },
+-        {
+-          "path": "project/copy.copy",
+-          "kind": "import-statement",
+-          "original": "./copy.copy"
+-        },
+-        {
+-          "path": "extern-cjs",
+-          "kind": "require-call",
+-          "external": true
+-        },
+-        {
+-          "path": "project/cjs.js",
+-          "kind": "require-call",
+-          "original": "./cjs"
+-        },
+-        {
+-          "path": "project/dynamic.js",
+-          "kind": "dynamic-import",
+-          "original": "./dynamic"
+-        }
+-      ],
+-      "format": "esm"
+-    },
+-    "project/inline.svg": {
+-      "bytes": 6,
+-      "imports": []
+-    },
+-    "project/entry.css": {
+-      "bytes": 180,
+-      "imports": [
+-        {
+-          "path": "extern.css",
+-          "kind": "import-rule",
+-          "external": true
+-        },
+-        {
+-          "path": "project/inline.svg",
+-          "kind": "url-token",
+-          "original": "inline.svg"
+-        },
+-        {
+-          "path": "project/file.file",
+-          "kind": "url-token",
+-          "original": "file.file"
+-        },
+-        {
+-          "path": "project/copy.copy",
+-          "kind": "url-token",
+-          "original": "copy.copy"
+-        },
+-        {
+-          "path": "extern.png",
+-          "kind": "url-token",
+-          "external": true
+-        }
+-      ]
+-    }
+-  },
+-  "outputs": {
+-    "out/file-NVISQQTV.file": {
+-      "imports": [],
+-      "exports": [],
+-      "inputs": {
+-        "project/file.file": {
+-          "bytesInOutput": 4
+-        }
+-      },
+-      "bytes": 4
+-    },
+-    "out/copy-O3Y5SCJE.copy": {
+-      "imports": [],
+-      "exports": [],
+-      "inputs": {
+-        "project/copy.copy": {
+-          "bytesInOutput": 4
+-        }
+-      },
+-      "bytes": 4
+-    },
+-    "out/entry.js": {
+-      "imports": [
+-        {
+-          "path": "out/chunk-MQN2VSL5.js",
+-          "kind": "import-statement"
+-        },
+-        {
+-          "path": "extern-esm",
+-          "kind": "import-statement",
+-          "external": true
+-        },
+-        {
+-          "path": "out/file-NVISQQTV.file",
+-          "kind": "file-loader"
+-        },
+-        {
+-          "path": "out/copy-O3Y5SCJE.copy",
+-          "kind": "import-statement"
+-        },
+-        {
+-          "path": "extern-cjs",
+-          "kind": "require-call",
+-          "external": true
+-        },
+-        {
+-          "path": "out/dynamic-Q2DWDUFV.js",
+-          "kind": "dynamic-import"
+-        }
+-      ],
+-      "exports": [
+-        "exported"
+-      ],
+-      "entryPoint": "project/entry.js",
+-      "inputs": {
+-        "project/cjs.js": {
+-          "bytesInOutput": 101
+-        },
+-        "project/entry.js": {
+-          "bytesInOutput": 233
+-        },
+-        "project/esm.js": {
+-          "bytesInOutput": 21
+-        },
+-        "<data:application/json,2>": {
+-          "bytesInOutput": 24
+-        },
+-        "project/file.file": {
+-          "bytesInOutput": 43
+-        }
+-      },
+-      "bytes": 642
+-    },
+-    "out/dynamic-Q2DWDUFV.js": {
+-      "imports": [
+-        {
+-          "path": "out/chunk-MQN2VSL5.js",
+-          "kind": "import-statement"
+-        }
+-      ],
+-      "exports": [
+-        "default"
+-      ],
+-      "entryPoint": "project/dynamic.js",
+-      "inputs": {
+-        "project/dynamic.js": {
+-          "bytesInOutput": 25
+-        }
+-      },
+-      "bytes": 119
+-    },
+-    "out/chunk-MQN2VSL5.js": {
+-      "imports": [],
+-      "exports": [
+-        "__commonJS",
+-        "__require"
+-      ],
+-      "inputs": {},
+-      "bytes": 38
+-    },
+-    "out/entry.css": {
+-      "imports": [
+-        {
+-          "path": "extern.css",
+-          "kind": "import-rule",
+-          "external": true
+-        },
+-        {
+-          "path": "data:image/svg+xml,<svg/>",
+-          "kind": "url-token"
+-        },
+-        {
+-          "path": "out/file-NVISQQTV.file",
+-          "kind": "url-token"
+-        },
+-        {
+-          "path": "out/copy-O3Y5SCJE.copy",
+-          "kind": "url-token"
+-        },
+-        {
+-          "path": "extern.png",
+-          "kind": "url-token",
+-          "external": true
+-        }
+-      ],
+-      "entryPoint": "project/entry.css",
+-      "inputs": {
+-        "project/entry.css": {
+-          "bytesInOutput": 187
+-        }
+-      },
+-      "bytes": 234
+-    }
+-  }
+-}
+\ No newline at end of file
+
+```

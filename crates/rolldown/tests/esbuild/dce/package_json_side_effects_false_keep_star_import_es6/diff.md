@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -36,7 +35,7 @@ assert.deepEqual(demo_pkg_index_exports, { foo: 123 });
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,7 +1,7 @@
 -var demo_pkg_exports = {};
 -__export(demo_pkg_exports, {

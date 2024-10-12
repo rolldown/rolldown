@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entries_entry_js.js
+## entries_entry.js
 
 ```js
 

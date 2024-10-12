@@ -51,7 +51,7 @@ console.log(shouldUsePercent_1_default, shouldUsePercent_2_default, shouldUseBas
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,5 @@
  var shouldUsePercent_1_default = "data:text/plain;charset=utf-8,%0A%0A%0A";
  var shouldUsePercent_2_default = "data:text/plain;charset=utf-8,%0A%0A%0A%0A";

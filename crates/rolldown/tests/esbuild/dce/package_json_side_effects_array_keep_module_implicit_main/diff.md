@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -51,7 +50,7 @@ console.log("unused import");
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,13 +1,14 @@
 -var index_main_exports = {};
 -__export(index_main_exports, {

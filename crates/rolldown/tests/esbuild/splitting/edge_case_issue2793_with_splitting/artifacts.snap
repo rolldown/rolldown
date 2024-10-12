@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## index_js.js
+## index.js
 
 ```js
 
@@ -12,7 +12,7 @@ const A = 42;
 
 //#endregion
 //#region b.js
-const B = async () => (await import("./index_js.js")).A;
+const B = async () => (await import("./index.js")).A;
 
 //#endregion
 export { A, B };

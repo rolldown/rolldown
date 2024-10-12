@@ -33,7 +33,7 @@ assert.deepEqual(require_require_parent_dir_common_js_index(), 123);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	dir_entry_js.js
++++ rolldown	dir_entry.js
 @@ -1,6 +1,6 @@
 -var require_src = __commonJS({
 -    "Users/user/project/src/index.js"(exports, module) {

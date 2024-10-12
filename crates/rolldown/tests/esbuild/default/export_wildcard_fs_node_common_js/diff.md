@@ -42,7 +42,7 @@ export { foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,13 +1,6 @@
 -var entry_exports = {};
 -__export(entry_exports, {

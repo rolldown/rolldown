@@ -51,7 +51,7 @@ console.log(test_exports["invalid-identifier"], test2_exports);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,11 +1,19 @@
 -var invalid_identifier = true;
 +var test_exports = {};

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -97,7 +96,7 @@ if (shouldBeThisNotExports) {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,43 +1,38 @@
 -var require_entry = __commonJS({
 -    "entry.js"(exports) {

@@ -11,16 +11,31 @@ class Foo {
 ### rolldown
 ```js
 
+//#region entry.ts
+const keepThis = Symbol("keepThis");
+class Foo {
+	REMOVE_THIS;
+	[keepThis];
+}
+(() => new Foo())();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entry.js
+@@ -1,4 +1,6 @@
 -const keepThis = Symbol("keepThis");
 -keepThis;
 -class Foo {}
--(() => new Foo())();
++var keepThis = Symbol("keepThis");
++class Foo {
++    REMOVE_THIS;
++    [keepThis];
++}
+ (() => new Foo())();
 
 ```

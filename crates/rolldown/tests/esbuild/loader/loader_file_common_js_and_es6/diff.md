@@ -80,7 +80,7 @@ console.log(x_url, y_default);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,13 @@
 -var require_x = __commonJS({
 -    "x.txt"(exports, module) {

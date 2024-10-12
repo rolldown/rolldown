@@ -27,7 +27,7 @@ Foo.bar_ = new Foo().foo_;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,5 @@
  class Foo {
 -    constructor() {

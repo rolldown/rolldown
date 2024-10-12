@@ -25,7 +25,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 //#endregion
 export { __commonJS, __toCommonJS, __toESM, esm_exports, esm_foo_, init_esm, require_cjs };
 ```
-## entry-cjs_js.js
+## entry-cjs.js
 
 ```js
 import { __commonJS, __toCommonJS, esm_exports, init_esm, require_cjs } from "./cjs.js";
@@ -41,7 +41,7 @@ var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
 export default require_entry_cjs();
 
 ```
-## entry-esm_js.js
+## entry-esm.js
 
 ```js
 import { __toESM, esm_foo_, init_esm, require_cjs } from "./cjs.js";

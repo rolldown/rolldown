@@ -96,7 +96,7 @@ let jsx = [
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,40 +1,55 @@
 -let tests = [__spreadValues(__spreadValues({}, a), b), __spreadValues({
 +import {jsx as _jsx} from "react/jsx-runtime";

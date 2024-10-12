@@ -13,7 +13,7 @@ let foo = "foo";
 //#endregion
 export { foo };
 ```
-## src_entry_js.js
+## src_entry.js
 
 ```js
 

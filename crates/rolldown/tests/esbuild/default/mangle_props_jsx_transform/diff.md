@@ -43,7 +43,7 @@ export { entry_default as default };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,15 +1,19 @@
 -let Foo = {
 -    b(props) {

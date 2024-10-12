@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -147,7 +146,7 @@ var keep_3 = "undefined" == typeof x && x;
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,50 +1,80 @@
 -(() => {
 -    var keep_1 = typeof x !== "object" ? x : null;

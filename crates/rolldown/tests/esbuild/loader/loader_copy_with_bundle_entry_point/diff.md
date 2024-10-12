@@ -38,3 +38,28 @@ console.log(x);
 -console.log(x);
 
 ```
+## /out/src/entry.css
+### esbuild
+```js
+/* Users/user/project/src/entry.css */
+body {
+  background: url("../assets/some.file");
+}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/src/entry.css
++++ rolldown	
+@@ -1,4 +0,0 @@
+-/* Users/user/project/src/entry.css */
+-body {
+-  background: url("../assets/some.file");
+-}
+\ No newline at end of file
+
+```

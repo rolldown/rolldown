@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -32,7 +31,7 @@ console.log(f);
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,5 +1,17 @@
 +import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
  function Foo() {}

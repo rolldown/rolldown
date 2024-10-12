@@ -114,7 +114,7 @@ export { Foo };
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,51 +1,45 @@
 -var _Foo_instances, foo_get, bar_set, prop_get, prop_set;
 -var Foo = class {

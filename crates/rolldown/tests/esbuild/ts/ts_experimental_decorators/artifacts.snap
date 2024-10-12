@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Optional chaining cannot appear in the callee of new expressions
+   ╭─[all_computed.ts:2:2]
+   │
+ 2 │ @new y?.[_ + 'x']()
+   │  ──┬──  
+   │    ╰──── 
+───╯
+
+```

@@ -3244,13 +3244,66 @@ expression: output
 - b_js-!~{001}~.js => b_js-16wAy4GV.js
 - shared-!~{002}~.js => shared-U4GB83Pl.js
 
+# tests/esbuild/ts/enum_rules_from_type_script_5_0
+
+- supported_ts-!~{000}~.js => supported_ts-GP5eaQCJ.js
+- not-supported_ts-!~{001}~.js => not-supported_ts-o9jdxxNN.js
+
+# tests/esbuild/ts/export_type_issue379
+
+- entry_ts-!~{000}~.js => entry_ts-smQ74qxp.js
+
+# tests/esbuild/ts/this_inside_function_ts
+
+- entry_ts-!~{000}~.js => entry_ts-Igqwkl8_.js
+
+# tests/esbuild/ts/this_inside_function_ts_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-Igqwkl8_.js
+
+# tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields
+
+- entry_ts-!~{000}~.js => entry_ts-Igqwkl8_.js
+
+# tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields
+
+- entry_ts-!~{000}~.js => entry_ts-Igqwkl8_.js
+
+# tests/esbuild/ts/ts_abstract_class_field_use_assign
+
+- entry_ts-!~{000}~.js => entry_ts-gvNfWbhS.js
+
 # tests/esbuild/ts/ts_abstract_class_field_use_define
 
 - entry_ts-!~{000}~.js => entry_ts-crTa1u4x.js
 
+# tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
+
+- entry_ts-!~{000}~.js => entry_ts-8MnXNymX.js
+
+# tests/esbuild/ts/ts_computed_class_field_use_define_false
+
+- entry_ts-!~{000}~.js => entry_ts-54TELRKI.js
+
+# tests/esbuild/ts/ts_computed_class_field_use_define_true
+
+- entry_ts-!~{000}~.js => entry_ts-54TELRKI.js
+
+# tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
+
+- entry_ts-!~{000}~.js => entry_ts-54TELRKI.js
+
+# tests/esbuild/ts/ts_const_enum_comments
+
+- foo_ts-!~{000}~.js => foo_ts-sYQOkXFu.js
+
 # tests/esbuild/ts/ts_declare_class
 
 - entry_ts-!~{000}~.js => entry_ts-M1uUp451.js
+
+# tests/esbuild/ts/ts_declare_class_fields
+
+- entry_ts-!~{000}~.js => entry_ts-1Di0z2hp.js
 
 # tests/esbuild/ts/ts_declare_const
 
@@ -3280,6 +3333,123 @@ expression: output
 
 - entry_ts-!~{000}~.js => entry_ts-M1uUp451.js
 
+# tests/esbuild/ts/ts_enum_cross_module_inlining_access
+
+- entry_ts-!~{000}~.js => entry_ts-N-uYB_qD.js
+
+# tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
+
+- entry_ts-!~{000}~.js => entry_ts-NCqhedN5.js
+
+# tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot
+
+- entry_ts-!~{000}~.js => entry_ts-4_XdACuk.js
+
+# tests/esbuild/ts/ts_enum_cross_module_inlining_re_export
+
+- entry_js-!~{000}~.js => entry_js-gxYpGxV2.js
+
+# tests/esbuild/ts/ts_enum_cross_module_tree_shaking
+
+- entry_ts-!~{000}~.js => entry_ts-tFkfIsXw.js
+
+# tests/esbuild/ts/ts_enum_define
+
+- entry_ts-!~{000}~.js => entry_ts-xKDxIhpk.js
+
+# tests/esbuild/ts/ts_enum_export_clause
+
+- entry_ts-!~{000}~.js => entry_ts-UmUTcH1a.js
+
+# tests/esbuild/ts/ts_enum_jsx
+
+- element_tsx-!~{000}~.js => element_tsx-3J11oa3d.js
+- fragment_tsx-!~{001}~.js => fragment_tsx-1XEngknP.js
+- nested-element_tsx-!~{002}~.js => nested-element_tsx-PogpWiQL.js
+- nested-fragment_tsx-!~{003}~.js => nested-fragment_tsx-kCrrBWov.js
+
+# tests/esbuild/ts/ts_enum_same_module_inlining_access
+
+- entry_ts-!~{000}~.js => entry_ts-ToiICwPa.js
+
+# tests/esbuild/ts/ts_enum_tree_shaking
+
+- simple-member_ts-!~{000}~.js => simple-member_ts-K39E9SJ-.js
+- simple-enum_ts-!~{001}~.js => simple-enum_ts-BQiSyZPD.js
+- sibling-member_ts-!~{002}~.js => sibling-member_ts-KzltPYTs.js
+- sibling-enum-before_ts-!~{003}~.js => sibling-enum-before_ts-w9DEWf-n.js
+- sibling-enum-middle_ts-!~{004}~.js => sibling-enum-middle_ts-oomugTF-.js
+- sibling-enum-after_ts-!~{005}~.js => sibling-enum-after_ts-hnXtLEW9.js
+- namespace-before_ts-!~{006}~.js => namespace-before_ts-IcZ-MVn0.js
+- namespace-after_ts-!~{007}~.js => namespace-after_ts-pdLxNxQ7.js
+
+# tests/esbuild/ts/ts_enum_use_before_declare
+
+- entry_ts-!~{000}~.js => entry_ts-1zjZ3Slb.js
+
+# tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
+
+- entry_ts-!~{000}~.js => entry_ts-1rJkvWsC.js
+
+# tests/esbuild/ts/ts_experimental_decorators
+
+
+# tests/esbuild/ts/ts_experimental_decorators_keep_names
+
+- entry_ts-!~{000}~.js => entry_ts-DUohuerJ.js
+
+# tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
+
+- entry_ts-!~{000}~.js => entry_ts-R-fJVHvu.js
+
+# tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
+
+- entry_ts-!~{000}~.js => entry_ts-R-fJVHvu.js
+
+# tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
+
+- entry_ts-!~{000}~.js => entry_ts-Ep2tRCZS.js
+
+# tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
+
+- entry_ts-!~{000}~.js => entry_ts-_DPwVeLv.js
+
+# tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
+
+- entry_ts-!~{000}~.js => entry_ts-_DPwVeLv.js
+
+# tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
+
+- entry_ts-!~{000}~.js => entry_ts-BXBCVIoH.js
+
+# tests/esbuild/ts/ts_experimental_decorators_no_config
+
+- entry_ts-!~{000}~.js => entry_ts-x9vjcXR6.js
+
+# tests/esbuild/ts/ts_export_default_type_issue316
+
+- entry_ts-!~{000}~.js => entry_ts-vHUj1hQE.js
+
+# tests/esbuild/ts/ts_export_equals
+
+- a_ts-!~{000}~.js => a_ts-zkbkC-fO.js
+
+# tests/esbuild/ts/ts_export_missing_es6
+
+- entry_js-!~{000}~.js => entry_js-wfRJ5UGg.js
+
+# tests/esbuild/ts/ts_export_namespace
+
+- a_ts-!~{000}~.js => a_ts-RP73-tOz.js
+
+# tests/esbuild/ts/ts_implicit_extensions
+
+- entry_ts-!~{000}~.js => entry_ts--111sOPN.js
+
+# tests/esbuild/ts/ts_implicit_extensions_missing
+
+- entry_ts-!~{000}~.js => entry_ts-IrjizI3r.js
+
 # tests/esbuild/ts/ts_import_cts
 
 - entry_ts-!~{000}~.js => entry_ts-NVxieEJ1.js
@@ -3288,13 +3458,158 @@ expression: output
 
 - entry_ts-!~{000}~.js => entry_ts-L3jmTKq4.js
 
+# tests/esbuild/ts/ts_import_equals_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-KHNu464V.js
+
+# tests/esbuild/ts/ts_import_equals_elimination_test
+
+- entry_ts-!~{000}~.js => entry_ts-E5vvnTqm.js
+
+# tests/esbuild/ts/ts_import_equals_tree_shaking_false
+
+- entry_ts-!~{000}~.js => entry_ts-KHNu464V.js
+
+# tests/esbuild/ts/ts_import_equals_tree_shaking_true
+
+- entry_ts-!~{000}~.js => entry_ts-KHNu464V.js
+
+# tests/esbuild/ts/ts_import_equals_undefined_import
+
+- entry_ts-!~{000}~.js => entry_ts-KlpwsuCl.js
+
+# tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
+
+- entry_ts-!~{000}~.js => entry_ts-Gg705hx0.js
+- entry_ts.css
+
+# tests/esbuild/ts/ts_import_missing_es6
+
+- entry_ts-!~{000}~.js => entry_ts-7ID9nfWx.js
+
+# tests/esbuild/ts/ts_import_missing_file
+
+- entry_ts-!~{000}~.js => entry_ts-AXLdLHiz.js
+
+# tests/esbuild/ts/ts_import_missing_unused_es6
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
+
+# tests/esbuild/ts/ts_import_mts
+
+- entry_ts-!~{000}~.js => entry_ts-cxfIJgad.js
+
 # tests/esbuild/ts/ts_import_type_only_file
 
 - entry_ts-!~{000}~.js => entry_ts-M1uUp451.js
 
+# tests/esbuild/ts/ts_import_vs_local_collision_all_types
+
+- entry_ts-!~{000}~.js => entry_ts-5zZzNdLf.js
+
+# tests/esbuild/ts/ts_import_vs_local_collision_mixed
+
+- entry_ts-!~{000}~.js => entry_ts-zqrYVDxa.js
+
+# tests/esbuild/ts/ts_minified_bundle_common_js
+
+- entry_ts-!~{000}~.js => entry_ts-qSAwI3HW.js
+
+# tests/esbuild/ts/ts_minified_bundle_es6
+
+- entry_ts-!~{000}~.js => entry_ts-xxcKLUwM.js
+
+# tests/esbuild/ts/ts_minify_derived_class
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
+
+# tests/esbuild/ts/ts_minify_enum
+
+- a_ts-!~{000}~.js => a_ts-x0ysKK2L.js
+- b_ts-!~{001}~.js => b_ts-nlGnf0ld.js
+
+# tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
+
+- entry_ts-!~{000}~.js => entry_ts-gqX2OI7B.js
+
+# tests/esbuild/ts/ts_minify_enum_property_names
+
+- entry_ts-!~{000}~.js => entry_ts--4UZEJlg.js
+
+# tests/esbuild/ts/ts_minify_namespace
+
+- a_ts-!~{000}~.js => a_ts-D7Gv6BgL.js
+- b_ts-!~{001}~.js => b_ts-1Izq_EoA.js
+
+# tests/esbuild/ts/ts_minify_namespace_no_arrow
+
+- a_ts-!~{000}~.js => a_ts-D7Gv6BgL.js
+- b_ts-!~{001}~.js => b_ts-1Izq_EoA.js
+
+# tests/esbuild/ts/ts_minify_namespace_no_logical_assignment
+
+- a_ts-!~{000}~.js => a_ts-D7Gv6BgL.js
+- b_ts-!~{001}~.js => b_ts-1Izq_EoA.js
+
+# tests/esbuild/ts/ts_minify_nested_enum
+
+- a_ts-!~{000}~.js => a_ts-SbcA_ILo.js
+- b_ts-!~{001}~.js => b_ts-wF_BwzIj.js
+
+# tests/esbuild/ts/ts_minify_nested_enum_no_arrow
+
+- a_ts-!~{000}~.js => a_ts-SbcA_ILo.js
+- b_ts-!~{001}~.js => b_ts-wF_BwzIj.js
+
+# tests/esbuild/ts/ts_minify_nested_enum_no_logical_assignment
+
+- a_ts-!~{000}~.js => a_ts-SbcA_ILo.js
+- b_ts-!~{001}~.js => b_ts-wF_BwzIj.js
+
+# tests/esbuild/ts/ts_namespace_keep_names
+
+- entry_ts-!~{000}~.js => entry_ts-xvYubrrY.js
+
+# tests/esbuild/ts/ts_namespace_keep_names_target_es2015
+
+- entry_ts-!~{000}~.js => entry_ts-xvYubrrY.js
+
 # tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
 
 - src_main_ts-!~{000}~.js => src_main_ts-P82AAMJQ.js
+
+# tests/esbuild/ts/ts_print_non_finite_number_inside_with
+
+- entry_ts-!~{000}~.js => entry_ts-0ZIsiA94.js
+
+# tests/esbuild/ts/ts_sibling_enum
+
+- number_ts-!~{000}~.js => number_ts-lSMSmkb4.js
+- string_ts-!~{001}~.js => string_ts-b2WgKCTc.js
+- propagation_ts-!~{002}~.js => propagation_ts-2gwHh2Np.js
+- nested-number_ts-!~{003}~.js => nested-number_ts-kkNxKBdZ.js
+- nested-string_ts-!~{004}~.js => nested-string_ts-uOoKja-X.js
+- nested-propagation_ts-!~{005}~.js => nested-propagation_ts-VrXJB-Le.js
+
+# tests/esbuild/ts/ts_sibling_namespace
+
+- let_ts-!~{000}~.js => let_ts-vS0wtgG2.js
+- function_ts-!~{001}~.js => function_ts-Sp6JS_Xy.js
+- class_ts-!~{002}~.js => class_ts-yoZBdyT2.js
+- namespace_ts-!~{003}~.js => namespace_ts-ozcshG3M.js
+- enum_ts-!~{004}~.js => enum_ts-25XlBx3_.js
+
+# tests/esbuild/ts/ts_side_effects_false_warning_type_declarations
+
+- entry_ts-!~{000}~.js => entry_ts-oQ3-ZZUZ.js
+
+# tests/esbuild/ts/ts_this_is_undefined_warning
+
+- warning1_ts-!~{000}~.js => warning1_ts--v_1qAp4.js
+- warning2_ts-!~{001}~.js => warning2_ts-z-qqzZxk.js
+- warning3_ts-!~{002}~.js => warning3_ts-gNfE7BK_.js
+- silent1_ts-!~{003}~.js => silent1_ts-nUOdqF9a.js
+- silent2_ts-!~{004}~.js => silent2_ts-oVB59MTJ.js
 
 # tests/rolldown/cjs_compat/basic_commonjs
 

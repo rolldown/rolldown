@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## silent1_ts.js
+
+```js
+
+//#region silent1.ts
+var foo = this && this.foo;
+
+//#endregion
+export { foo };
+```
+## silent2_ts.js
+
+```js
+
+//#region silent2.ts
+var foo = this && (() => this.foo);
+
+//#endregion
+export { foo };
+```
+## warning1_ts.js
+
+```js
+
+//#region warning1.ts
+var foo = this;
+
+//#endregion
+export { foo };
+```
+## warning2_ts.js
+
+```js
+
+//#region warning2.ts
+var foo = this || this.foo;
+
+//#endregion
+export { foo };
+```
+## warning3_ts.js
+
+```js
+
+//#region warning3.ts
+var foo = this ? this.foo : null;
+
+//#endregion
+export { foo };
+```

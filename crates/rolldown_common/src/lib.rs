@@ -96,6 +96,9 @@ pub use crate::{
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
   types::symbol_ref::SymbolRef,
   types::symbol_ref_db::{SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
+  types::watch::{
+    BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
+  },
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

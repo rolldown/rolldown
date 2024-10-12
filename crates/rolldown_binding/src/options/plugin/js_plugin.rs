@@ -399,6 +399,22 @@ impl Plugin for JsPlugin {
     self.close_bundle_meta.as_ref().map(Into::into)
   }
 
+  async fn watch_change(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    path: &str,
+    event: rolldown_common::WatcherChangeKind,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.watch_change {
+      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string())).await?;
+    }
+    Ok(())
+  }
+
+  fn watch_change_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.watch_change_meta.as_ref().map(Into::into)
+  }
+
   fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
     match self.inner.transform_filter {
       Some(ref item) => {

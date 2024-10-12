@@ -342,6 +342,8 @@ export interface BindingPluginOptions {
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
+  watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
+  watchChangeMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   bannerMeta?: BindingPluginHookMeta
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
@@ -752,3 +754,4 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
+

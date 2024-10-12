@@ -131,6 +131,15 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
+
+        case 'watchChange': {
+          const handlers = batchedHooks.watchChange ?? []
+          batchedHooks.watchChange = handlers
+          if (plugin.watchChange) {
+            handlers.push([plugin.watchChange, plugin])
+          }
+          break
+        }
         default: {
           // All known hooks should be handled above.
           // User-defined custom properties will hit this branch and it's ok. Just ignore them.
@@ -382,6 +391,24 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               batchedHandlers.map(([handler, plugin]) => {
                 const { handler: handlerFn } = normalizeHook(handler)
                 return handlerFn.call(applyFixedPluginResolveFn(this, plugin))
+              }),
+            )
+          }
+        }
+        break
+      }
+      case 'watchChange': {
+        if (batchedHooks.watchChange) {
+          const batchedHandlers = batchedHooks.watchChange
+          composed.watchChange = async function (id, event) {
+            await Promise.all(
+              batchedHandlers.map(([handler, plugin]) => {
+                const { handler: handlerFn } = normalizeHook(handler)
+                return handlerFn.call(
+                  applyFixedPluginResolveFn(this, plugin),
+                  id,
+                  event,
+                )
               }),
             )
           }

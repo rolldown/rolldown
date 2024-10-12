@@ -193,3 +193,28 @@ export {
 -export {require_b};
 
 ```
+## /out/chunk-WCFE7E2E.js
+### esbuild
+```js
+export {
+  __glob,
+  __commonJS
+};
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/chunk-WCFE7E2E.js
++++ rolldown	
+@@ -1,4 +0,0 @@
+-export {
+-  __glob,
+-  __commonJS
+-};
+\ No newline at end of file
+
+```

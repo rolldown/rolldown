@@ -13,13 +13,19 @@
   diff
 ## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/diff.md)
   diff
+## [dce_of_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
+  diff
 ## [dce_of_destructuring](../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring/diff.md)
+  diff
+## [dce_of_experimental_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators/diff.md)
   diff
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/diff.md)
   diff
 ## [dce_of_iife](../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   diff
 ## [dce_of_symbol_instances](../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances/diff.md)
+  diff
+## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/diff.md)
   diff
 ## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal/diff.md)
   diff
@@ -161,12 +167,11 @@
   diff
 ## [tree_shaking_react_elements](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
   diff
+## [tree_shaking_unary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators/diff.md)
+  diff
 # Passed Cases
 ## [base64_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [data_url_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
-## [dce_of_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators)
-## [dce_of_experimental_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators)
-## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations)
 ## [file_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/file_loader_remove_unused)
 ## [json_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/json_loader_remove_unused)
 ## [package_json_side_effects_array_glob](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_glob)
@@ -193,5 +198,4 @@
 ## [remove_unused_imports_eval_ts](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval_ts)
 ## [remove_unused_pure_comment_calls](../../../crates/rolldown/tests/esbuild/dce/remove_unused_pure_comment_calls)
 ## [text_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/text_loader_remove_unused)
-## [tree_shaking_unary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators)
 # Bypassed Cases

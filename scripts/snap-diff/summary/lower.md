@@ -1,15 +1,23 @@
 # Failed Cases
 ## [class_super_this_issue242_no_bundle](../../../crates/rolldown/tests/esbuild/lower/class_super_this_issue242_no_bundle/diff.md)
   diff
+## [java_script_auto_accessor_es_next](../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es_next/diff.md)
+  diff
 ## [java_script_auto_accessor_es2021](../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2021/diff.md)
   diff
 ## [java_script_auto_accessor_es2022](../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2022/diff.md)
   diff
 ## [java_script_decorators_bundle_issue3768](../../../crates/rolldown/tests/esbuild/lower/java_script_decorators_bundle_issue3768/diff.md)
   diff
+## [java_script_decorators_es_next](../../../crates/rolldown/tests/esbuild/lower/java_script_decorators_es_next/diff.md)
+  diff
 ## [lower_async_arrow_super_es2016](../../../crates/rolldown/tests/esbuild/lower/lower_async_arrow_super_es2016/diff.md)
   diff
 ## [lower_async_arrow_super_setter_es2016](../../../crates/rolldown/tests/esbuild/lower/lower_async_arrow_super_setter_es2016/diff.md)
+  diff
+## [lower_async_generator](../../../crates/rolldown/tests/esbuild/lower/lower_async_generator/diff.md)
+  diff
+## [lower_async_generator_no_await](../../../crates/rolldown/tests/esbuild/lower/lower_async_generator_no_await/diff.md)
   diff
 ## [lower_async_super_es2016_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_async_super_es2016_no_bundle/diff.md)
   diff
@@ -109,7 +117,13 @@
   diff
 ## [lower_static_async_super_es2016_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_static_async_super_es2016_no_bundle/diff.md)
   diff
+## [lower_static_async_super_es2021_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_static_async_super_es2021_no_bundle/diff.md)
+  diff
 ## [lower_static_super_es2016_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_static_super_es2016_no_bundle/diff.md)
+  diff
+## [lower_static_super_es2021_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_static_super_es2021_no_bundle/diff.md)
+  diff
+## [lower_strict_mode_syntax](../../../crates/rolldown/tests/esbuild/lower/lower_strict_mode_syntax/diff.md)
   diff
 ## [lower_template_object](../../../crates/rolldown/tests/esbuild/lower/lower_template_object/diff.md)
   diff
@@ -118,6 +132,8 @@
 ## [lower_using_hoisting](../../../crates/rolldown/tests/esbuild/lower/lower_using_hoisting/diff.md)
   diff
 ## [lower_using_inside_ts_namespace](../../../crates/rolldown/tests/esbuild/lower/lower_using_inside_ts_namespace/diff.md)
+  diff
+## [lower_using_unsupported_async](../../../crates/rolldown/tests/esbuild/lower/lower_using_unsupported_async/diff.md)
   diff
 ## [lower_using_unsupported_using_and_async](../../../crates/rolldown/tests/esbuild/lower/lower_using_unsupported_using_and_async/diff.md)
   diff
@@ -142,12 +158,4 @@
 ## [ts_lower_private_static_members2015_no_bundle](../../../crates/rolldown/tests/esbuild/lower/ts_lower_private_static_members2015_no_bundle/diff.md)
   diff
 # Passed Cases
-## [java_script_auto_accessor_es_next](../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es_next)
-## [java_script_decorators_es_next](../../../crates/rolldown/tests/esbuild/lower/java_script_decorators_es_next)
-## [lower_async_generator](../../../crates/rolldown/tests/esbuild/lower/lower_async_generator)
-## [lower_async_generator_no_await](../../../crates/rolldown/tests/esbuild/lower/lower_async_generator_no_await)
-## [lower_static_async_super_es2021_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_static_async_super_es2021_no_bundle)
-## [lower_static_super_es2021_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_static_super_es2021_no_bundle)
-## [lower_strict_mode_syntax](../../../crates/rolldown/tests/esbuild/lower/lower_strict_mode_syntax)
-## [lower_using_unsupported_async](../../../crates/rolldown/tests/esbuild/lower/lower_using_unsupported_async)
 # Bypassed Cases

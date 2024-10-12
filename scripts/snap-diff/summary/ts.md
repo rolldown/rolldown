@@ -17,6 +17,12 @@
   diff
 ## [ts_common_js_variable_in_esm_type_module](../../../crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module/diff.md)
   diff
+## [ts_computed_class_field_use_define_false](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false/diff.md)
+  diff
+## [ts_computed_class_field_use_define_true](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true/diff.md)
+  diff
+## [ts_computed_class_field_use_define_true_lower](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower/diff.md)
+  diff
 ## [ts_const_enum_comments](../../../crates/rolldown/tests/esbuild/ts/ts_const_enum_comments/diff.md)
   diff
 ## [ts_declare_class_fields](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class_fields/diff.md)
@@ -43,6 +49,26 @@
   diff
 ## [ts_enum_use_before_declare](../../../crates/rolldown/tests/esbuild/ts/ts_enum_use_before_declare/diff.md)
   diff
+## [ts_experimental_decorator_scope_issue2147](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147/diff.md)
+  diff
+## [ts_experimental_decorators](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators/diff.md)
+  diff
+## [ts_experimental_decorators_keep_names](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_keep_names/diff.md)
+  diff
+## [ts_experimental_decorators_mangle_props_assign_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics/diff.md)
+  diff
+## [ts_experimental_decorators_mangle_props_define_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics/diff.md)
+  diff
+## [ts_experimental_decorators_mangle_props_methods](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods/diff.md)
+  diff
+## [ts_experimental_decorators_mangle_props_static_assign_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics/diff.md)
+  diff
+## [ts_experimental_decorators_mangle_props_static_define_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics/diff.md)
+  diff
+## [ts_experimental_decorators_mangle_props_static_methods](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods/diff.md)
+  diff
+## [ts_experimental_decorators_no_config](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_no_config/diff.md)
+  diff
 ## [ts_export_default_type_issue316](../../../crates/rolldown/tests/esbuild/ts/ts_export_default_type_issue316/diff.md)
   diff
 ## [ts_export_equals](../../../crates/rolldown/tests/esbuild/ts/ts_export_equals/diff.md)
@@ -62,6 +88,8 @@
 ## [ts_import_equals_tree_shaking_true](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true/diff.md)
   diff
 ## [ts_import_equals_undefined_import](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import/diff.md)
+  diff
+## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css/diff.md)
   diff
 ## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts/diff.md)
   diff
@@ -99,6 +127,8 @@
   diff
 ## [ts_prefer_js_over_ts_inside_node_modules](../../../crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules/diff.md)
   diff
+## [ts_print_non_finite_number_inside_with](../../../crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with/diff.md)
+  diff
 ## [ts_sibling_enum](../../../crates/rolldown/tests/esbuild/ts/ts_sibling_enum/diff.md)
   diff
 ## [ts_sibling_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_sibling_namespace/diff.md)
@@ -106,9 +136,6 @@
 ## [ts_this_is_undefined_warning](../../../crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning/diff.md)
   diff
 # Passed Cases
-## [ts_computed_class_field_use_define_false](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false)
-## [ts_computed_class_field_use_define_true](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true)
-## [ts_computed_class_field_use_define_true_lower](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower)
 ## [ts_declare_class](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class)
 ## [ts_declare_const](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const)
 ## [ts_declare_const_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const_enum)
@@ -117,21 +144,9 @@
 ## [ts_declare_let](../../../crates/rolldown/tests/esbuild/ts/ts_declare_let)
 ## [ts_declare_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_declare_namespace)
 ## [ts_declare_var](../../../crates/rolldown/tests/esbuild/ts/ts_declare_var)
-## [ts_experimental_decorator_scope_issue2147](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147)
-## [ts_experimental_decorators](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators)
-## [ts_experimental_decorators_keep_names](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_keep_names)
-## [ts_experimental_decorators_mangle_props_assign_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics)
-## [ts_experimental_decorators_mangle_props_define_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics)
-## [ts_experimental_decorators_mangle_props_methods](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods)
-## [ts_experimental_decorators_mangle_props_static_assign_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics)
-## [ts_experimental_decorators_mangle_props_static_define_semantics](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics)
-## [ts_experimental_decorators_mangle_props_static_methods](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods)
-## [ts_experimental_decorators_no_config](../../../crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_no_config)
 ## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts)
 ## [ts_import_empty_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
-## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css)
 ## [ts_import_missing_unused_es6](../../../crates/rolldown/tests/esbuild/ts/ts_import_missing_unused_es6)
 ## [ts_import_type_only_file](../../../crates/rolldown/tests/esbuild/ts/ts_import_type_only_file)
-## [ts_print_non_finite_number_inside_with](../../../crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with)
 ## [ts_side_effects_false_warning_type_declarations](../../../crates/rolldown/tests/esbuild/ts/ts_side_effects_false_warning_type_declarations)
 # Bypassed Cases

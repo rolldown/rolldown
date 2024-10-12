@@ -17,3 +17,28 @@ x
 -x;
 
 ```
+## /out/entries/entry.css
+### esbuild
+```js
+/* src/entries/entry.css */
+div {
+  background: url("../image-LSAMBFUD.png");
+}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/entries/entry.css
++++ rolldown	
+@@ -1,4 +0,0 @@
+-/* src/entries/entry.css */
+-div {
+-  background: url("../image-LSAMBFUD.png");
+-}
+\ No newline at end of file
+
+```

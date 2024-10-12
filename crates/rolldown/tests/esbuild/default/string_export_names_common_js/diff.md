@@ -1,0 +1,41 @@
+# Diff
+## /out.js
+### esbuild
+```js
+var entry_exports = {};
+__export(entry_exports, {
+  "all the stuff": () => all_the_stuff,
+  "some export": () => import_foo["some import"]
+});
+module.exports = __toCommonJS(entry_exports);
+var import_foo = require("./foo");
+var all_the_stuff = __toESM(require("./foo"));
+```
+### rolldown
+```js
+import * as all the stuff from "./foo";
+import { some import as someImport } from "./foo";
+
+export { all the stuff, someImport as 'some export' };
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out.js
++++ rolldown	entry.js
+@@ -1,8 +1,4 @@
+-var entry_exports = {};
+-__export(entry_exports, {
+-    "all the stuff": () => all_the_stuff,
+-    "some export": () => import_foo["some import"]
+-});
+-module.exports = __toCommonJS(entry_exports);
+-var import_foo = require("./foo");
+-var all_the_stuff = __toESM(require("./foo"));
++import * as all the stuff from "./foo";
++import { some import as someImport } from "./foo";
++
++export { all the stuff, someImport as 'some export' };
+
+```

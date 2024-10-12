@@ -1,5 +1,6 @@
 import * as diff from 'diff'
 import { rewriteEsbuild, rewriteRolldown } from './rewrite.js'
+import { DebugConfig } from './types'
 /**
  * our filename generate logic is not the same as esbuild
  * so hardcode some filename remapping
@@ -21,7 +22,7 @@ export function diffCase(
     sourceList: Array<{ name: string; content: string }>
   },
   rolldownSnap: Array<{ filename: string; content: string }> | undefined,
-  debug?: boolean,
+  debugConfig?: DebugConfig,
 ):
   | 'bypass'
   | 'missing'
@@ -55,13 +56,12 @@ export function diffCase(
       console.error(esbuildSnap.name)
       console.error(esbuildSource.name)
       if (
-        debug &&
+        debugConfig?.debug &&
         (esbuildSource.name.endsWith('.mjs') ||
           esbuildSource.name.endsWith('.js'))
       ) {
         console.error(`err: `, err)
       }
-      continue
     }
 
     if (matchedSource.content !== esbuildSource.content) {

@@ -113,3 +113,54 @@ export {
 -export {bar};
 
 ```
+## /out/chunk-PDZFCFBH.js
+### esbuild
+```js
+// a.js
+var a_exports = {};
+__export(a_exports, {
+  foo: () => foo
+});
+var foo;
+var init_a = __esm({
+  "a.js"() {
+  }
+});
+
+export {
+  __toCommonJS,
+  foo,
+  a_exports,
+  init_a
+};
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/chunk-PDZFCFBH.js
++++ rolldown	
+@@ -1,17 +0,0 @@
+-// a.js
+-var a_exports = {};
+-__export(a_exports, {
+-  foo: () => foo
+-});
+-var foo;
+-var init_a = __esm({
+-  "a.js"() {
+-  }
+-});
+-
+-export {
+-  __toCommonJS,
+-  foo,
+-  a_exports,
+-  init_a
+-};
+\ No newline at end of file
+
+```

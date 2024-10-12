@@ -1,4 +1,35 @@
 # Diff
+## entry.js.map
+### esbuild
+```js
+{
+  "version": 3,
+  "sources": ["entry.js"],
+  "sourcesContent": ["\n\t\t\t\timport './a.empty'\n\t\t\t\timport * as ns from './b.empty'\n\t\t\t\timport def from './c.empty'\n\t\t\t\timport { named } from './d.empty'\n\t\t\t\tconsole.log(ns, def, named)\n\t\t\t"],
+  "mappings": ";;;;;;;;;;;;;AAEI,SAAoB;AACpB,eAAgB;AAEhB,QAAQ,IAAI,IAAI,SAAAA,SAAK,MAAK;",
+  "names": ["def"]
+}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	entry.js.map
++++ rolldown	
+@@ -1,7 +0,0 @@
+-{
+-  "version": 3,
+-  "sources": ["entry.js"],
+-  "sourcesContent": ["\n\t\t\t\timport './a.empty'\n\t\t\t\timport * as ns from './b.empty'\n\t\t\t\timport def from './c.empty'\n\t\t\t\timport { named } from './d.empty'\n\t\t\t\tconsole.log(ns, def, named)\n\t\t\t"],
+-  "mappings": ";;;;;;;;;;;;;AAEI,SAAoB;AACpB,eAAgB;AAEhB,QAAQ,IAAI,IAAI,SAAAA,SAAK,MAAK;",
+-  "names": ["def"]
+-}
+\ No newline at end of file
+
+```
 ## entry.js
 ### esbuild
 ```js
@@ -64,5 +95,164 @@ assert.equal(named, undefined);
 +var named = void 0;
 +console.log(b_exports, default$1, named);
 +console.log(b_exports, default$1, named);
+
+```
+## metafile.json
+### esbuild
+```js
+{
+  "inputs": {
+    "a.empty": {
+      "bytes": 0,
+      "imports": []
+    },
+    "b.empty": {
+      "bytes": 0,
+      "imports": []
+    },
+    "c.empty": {
+      "bytes": 0,
+      "imports": []
+    },
+    "d.empty": {
+      "bytes": 0,
+      "imports": []
+    },
+    "entry.js": {
+      "bytes": 165,
+      "imports": [
+        {
+          "path": "a.empty",
+          "kind": "import-statement",
+          "original": "./a.empty"
+        },
+        {
+          "path": "b.empty",
+          "kind": "import-statement",
+          "original": "./b.empty"
+        },
+        {
+          "path": "c.empty",
+          "kind": "import-statement",
+          "original": "./c.empty"
+        },
+        {
+          "path": "d.empty",
+          "kind": "import-statement",
+          "original": "./d.empty"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "entry.js.map": {
+      "imports": [],
+      "exports": [],
+      "inputs": {},
+      "bytes": 377
+    },
+    "entry.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "entry.js",
+      "inputs": {
+        "b.empty": {
+          "bytesInOutput": 53
+        },
+        "c.empty": {
+          "bytesInOutput": 53
+        },
+        "entry.js": {
+          "bytesInOutput": 111
+        }
+      },
+      "bytes": 253
+    }
+  }
+}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	metafile.json
++++ rolldown	
+@@ -1,71 +0,0 @@
+-{
+-  "inputs": {
+-    "a.empty": {
+-      "bytes": 0,
+-      "imports": []
+-    },
+-    "b.empty": {
+-      "bytes": 0,
+-      "imports": []
+-    },
+-    "c.empty": {
+-      "bytes": 0,
+-      "imports": []
+-    },
+-    "d.empty": {
+-      "bytes": 0,
+-      "imports": []
+-    },
+-    "entry.js": {
+-      "bytes": 165,
+-      "imports": [
+-        {
+-          "path": "a.empty",
+-          "kind": "import-statement",
+-          "original": "./a.empty"
+-        },
+-        {
+-          "path": "b.empty",
+-          "kind": "import-statement",
+-          "original": "./b.empty"
+-        },
+-        {
+-          "path": "c.empty",
+-          "kind": "import-statement",
+-          "original": "./c.empty"
+-        },
+-        {
+-          "path": "d.empty",
+-          "kind": "import-statement",
+-          "original": "./d.empty"
+-        }
+-      ],
+-      "format": "esm"
+-    }
+-  },
+-  "outputs": {
+-    "entry.js.map": {
+-      "imports": [],
+-      "exports": [],
+-      "inputs": {},
+-      "bytes": 377
+-    },
+-    "entry.js": {
+-      "imports": [],
+-      "exports": [],
+-      "entryPoint": "entry.js",
+-      "inputs": {
+-        "b.empty": {
+-          "bytesInOutput": 53
+-        },
+-        "c.empty": {
+-          "bytesInOutput": 53
+-        },
+-        "entry.js": {
+-          "bytesInOutput": 111
+-        }
+-      },
+-      "bytes": 253
+-    }
+-  }
+-}
+\ No newline at end of file
 
 ```

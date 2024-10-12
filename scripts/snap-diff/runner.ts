@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js'
 import { diffCase } from './diff'
+import { DebugConfig } from './types'
 const esbuildTestDir = path.join(
   import.meta.dirname,
   '../../crates/rolldown/tests/esbuild',
@@ -26,11 +27,11 @@ export function getEsbuildSnapFile(
   return ret
 }
 
-export function run(includeList: string[], debug: boolean) {
+export function run(includeList: string[], debugConfig: DebugConfig) {
   let snapfileList = getEsbuildSnapFile(includeList)
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
-    if (debug) {
+    if (debugConfig?.debug) {
       console.log('category:', snapFile.normalizedName)
     }
     let { normalizedName: snapCategory, content } = snapFile
@@ -38,13 +39,19 @@ export function run(includeList: string[], debug: boolean) {
     // singleEsbuildSnapshot
     let diffList = []
     for (let snap of parsedEsbuildSnap) {
-      if (debug) {
+      if (
+        debugConfig.caseNames?.length > 0 &&
+        !debugConfig.caseNames.includes(snap.name)
+      ) {
+        continue
+      }
+      if (debugConfig.debug) {
         console.log('processing', snap.name)
       }
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name)
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
-      let diffResult = diffCase(snap, parsedRolldownSnap, debug)
+      let diffResult = diffCase(snap, parsedRolldownSnap, debugConfig)
       // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')

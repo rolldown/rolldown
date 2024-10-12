@@ -2324,17 +2324,98 @@ expression: output
 
 - entry_ts-!~{000}~.js => entry_ts-gjbJyMIo.js
 
+# tests/esbuild/loader/assert_type_json_wrong_loader
+
+- entry_js-!~{000}~.js => entry_js-DTX2ydJs.js
+
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 
 - entry_js-!~{000}~.js => entry_js-qoz7XIFU.js
+
+# tests/esbuild/loader/empty_loader_css
+
+- entry_css-!~{000}~.js => entry_css-RAjZb4uk.js
+- entry_css.css
 
 # tests/esbuild/loader/empty_loader_js
 
 - entry_js-!~{000}~.js => entry_js-N4RaUQwf.js
 
+# tests/esbuild/loader/extensionless_loader_css
+
+- entry_css-!~{000}~.js => entry_css-RAjZb4uk.js
+- entry_css.css
+
+# tests/esbuild/loader/extensionless_loader_js
+
+- entry_js-!~{000}~.js => entry_js-LD57SaXr.js
+
+# tests/esbuild/loader/jsx_automatic_no_name_collision
+
+- entry_jsx-!~{000}~.js => entry_jsx-eLNJ7k8w.js
+
+# tests/esbuild/loader/jsx_preserve_capital_letter
+
+- entry_jsx-!~{000}~.js => entry_jsx-l5j8nTDF.js
+
+# tests/esbuild/loader/jsx_preserve_capital_letter_minify
+
+- entry_jsx-!~{000}~.js => entry_jsx-7FnWfodK.js
+
+# tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested
+
+- entry_jsx-!~{000}~.js => entry_jsx-KUS0kejY.js
+
+# tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
+
+- entry_js-!~{000}~.js => entry_js-JR25gIIg.js
+
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
 - entry_js-!~{000}~.js => entry_js-0WHj2iYj.js
+
+# tests/esbuild/loader/loader_bundle_with_import_attributes
+
+- entry_js-!~{000}~.js => entry_js-WlUEqQQe.js
+
+# tests/esbuild/loader/loader_bundle_with_type_json_only_default_export
+
+- entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/loader/loader_copy_with_bundle_entry_point
+
+- src_entry_js-!~{000}~.js => src_entry_js-5R0eUuy3.js
+- src_entry_css-!~{001}~.js => src_entry_css-SqsbX9-1.js
+- src_entry_css.css
+- assets_some_file-!~{002}~.js => assets_some_file-EDpzjufL.js
+- some-!~{003}~.js => some-JToJGczT.js
+
+# tests/esbuild/loader/loader_copy_with_bundle_from_css
+
+- src_entry_css-!~{000}~.js => src_entry_css-SUU58Psx.js
+- src_entry_css.css
+
+# tests/esbuild/loader/loader_copy_with_bundle_from_js
+
+- src_entry_js-!~{000}~.js => src_entry_js-Dof9WgmF.js
+
+# tests/esbuild/loader/loader_copy_with_format
+
+- src_entry_js-!~{000}~.js => src_entry_js-EhxLREhu.js
+- assets_some_file-!~{001}~.js => assets_some_file-9PqiXdkJ.js
+
+# tests/esbuild/loader/loader_copy_with_injected_file_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-LGLjxbc1.js
+
+# tests/esbuild/loader/loader_copy_with_injected_file_no_bundle
+
+- entry_ts-!~{000}~.js => entry_ts-LGLjxbc1.js
+
+# tests/esbuild/loader/loader_copy_with_transform
+
+- src_entry_js-!~{000}~.js => src_entry_js-EhxLREhu.js
+- assets_some_file-!~{001}~.js => assets_some_file-9PqiXdkJ.js
 
 # tests/esbuild/loader/loader_data_url_application_json
 
@@ -2360,6 +2441,16 @@ expression: output
 
 - entry_foo-!~{000}~.js => entry_foo-3q2hISdH.js
 
+# tests/esbuild/loader/loader_data_url_text_css
+
+- entry_css-!~{000}~.js => entry_css-RAjZb4uk.js
+- entry_css.css
+
+# tests/esbuild/loader/loader_data_url_text_css_cannot_import
+
+- entry_css-!~{000}~.js => entry_css-RAjZb4uk.js
+- entry_css.css
+
 # tests/esbuild/loader/loader_data_url_text_java_script
 
 - entry_js-!~{000}~.js => entry_js-RUKEJ112.js
@@ -2376,9 +2467,112 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-EjlWDd__.js
 
+# tests/esbuild/loader/loader_file_common_js_and_es6
+
+- entry_js-!~{000}~.js => entry_js-c5H9t0Sq.js
+
+# tests/esbuild/loader/loader_file_ext_path_asset_names_js
+
+- entries_entry_js-!~{000}~.js => entries_entry_js-E7Js_Tjv.js
+
+# tests/esbuild/loader/loader_file_multiple_no_collision
+
+- entry_js-!~{000}~.js => entry_js-bSLka1_i.js
+
+# tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
+
+- entries_entry_css-!~{000}~.js => entries_entry_css-TtLMbxt8.js
+- entries_entry_css.css
+- entries_other_entry_css-!~{001}~.js => entries_other_entry_css-wVPKfOnc.js
+- entries_other_entry_css.css
+
+# tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
+
+- entries_entry_js-!~{000}~.js => entries_entry_js-FTn2Ad9g.js
+- entries_other_entry_js-!~{001}~.js => entries_other_entry_js-eLkz2WGw.js
+- common-!~{002}~.js => common-Cx07bcdU.js
+
+# tests/esbuild/loader/loader_file_public_path_asset_names_css
+
+- entries_entry_css-!~{000}~.js => entries_entry_css-TtLMbxt8.js
+- entries_entry_css.css
+
+# tests/esbuild/loader/loader_file_public_path_asset_names_js
+
+- entries_entry_js-!~{000}~.js => entries_entry_js-AOEOYSxy.js
+
+# tests/esbuild/loader/loader_file_public_path_css
+
+- entries_entry_css-!~{000}~.js => entries_entry_css-TtLMbxt8.js
+- entries_entry_css.css
+
+# tests/esbuild/loader/loader_file_public_path_js
+
+- entries_entry_js-!~{000}~.js => entries_entry_js-AOEOYSxy.js
+
+# tests/esbuild/loader/loader_file_relative_path_asset_names_css
+
+- entries_entry_css-!~{000}~.js => entries_entry_css-TtLMbxt8.js
+- entries_entry_css.css
+
+# tests/esbuild/loader/loader_file_relative_path_asset_names_js
+
+- entries_entry_js-!~{000}~.js => entries_entry_js-AOEOYSxy.js
+
+# tests/esbuild/loader/loader_file_relative_path_css
+
+- entries_entry_css-!~{000}~.js => entries_entry_css-TtLMbxt8.js
+- entries_entry_css.css
+
+# tests/esbuild/loader/loader_file_relative_path_js
+
+- entries_entry_js-!~{000}~.js => entries_entry_js-AOEOYSxy.js
+
+# tests/esbuild/loader/loader_json_common_js_and_es6
+
+- entry_js-!~{000}~.js => entry_js-FuXVz5CZ.js
+
+# tests/esbuild/loader/loader_json_invalid_identifier_es6
+
+- entry_js-!~{000}~.js => entry_js-PCMwNd_B.js
+
 # tests/esbuild/loader/loader_json_missing_es6
 
 - entry_js-!~{000}~.js => entry_js-Bj__lVsc.js
+
+# tests/esbuild/loader/loader_json_no_bundle
+
+- test_json-!~{000}~.js => test_json-VwTMPkrS.js
+
+# tests/esbuild/loader/loader_json_no_bundle_common_js
+
+- test_json-!~{000}~.js => test_json-VwTMPkrS.js
+
+# tests/esbuild/loader/loader_json_no_bundle_es6
+
+- test_json-!~{000}~.js => test_json-VwTMPkrS.js
+
+# tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
+
+- test_json-!~{000}~.js => test_json-VwTMPkrS.js
+
+# tests/esbuild/loader/loader_json_no_bundle_iife
+
+- test_json-!~{000}~.js => test_json-VwTMPkrS.js
+
+# tests/esbuild/loader/loader_json_prototype
+
+- entry_js-!~{000}~.js => entry_js-dvn1hruo.js
+
+# tests/esbuild/loader/loader_json_prototype_es5
+
+- entry_js-!~{000}~.js => entry_js-GAI3AGAR.js
+
+# tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
+
+- a_js-!~{000}~.js => a_js-nLsZk8NZ.js
+- b_js-!~{001}~.js => b_js--u10_sHh.js
+- data-!~{002}~.js => data-wWSbA1rN.js
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
@@ -2399,6 +2593,17 @@ expression: output
 # tests/esbuild/loader/require_custom_extension_string
 
 - entry_js-!~{000}~.js => entry_js-tsFdHliI.js
+
+# tests/esbuild/loader/with_bad_attribute
+
+- entry_js-!~{000}~.js => entry_js-DTX2ydJs.js
+
+# tests/esbuild/loader/with_bad_type
+
+- entry_js-!~{000}~.js => entry_js-DTX2ydJs.js
+
+# tests/esbuild/loader/with_type_json_override_loader
+
 
 # tests/esbuild/lower/class_super_this_issue242_no_bundle
 

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "src_entry_js",
+        "import": "src/entry.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

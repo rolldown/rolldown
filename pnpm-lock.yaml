@@ -48,7 +48,7 @@ importers:
         specifier: workspace:*
         version: link:packages/rolldown
       typescript:
-        specifier: ^5.4.5
+        specifier: ^5.6.3
         version: 5.6.3
 
   crates/rolldown/tests/rolldown/topics/npm_packages:

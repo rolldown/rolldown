@@ -5,6 +5,7 @@ import path from 'node:path'
 
 test('watch', async () => {
   const input = path.join(import.meta.dirname, './main.js')
+  const inputSource = fs.readFileSync(input, 'utf-8')
   const output = path.join(import.meta.dirname, './dist/main.js')
   watch({
     input,
@@ -25,5 +26,5 @@ test('watch', async () => {
   expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
 
   // revert change
-  fs.writeFileSync(input, 'console.log(1)')
+  fs.writeFileSync(input, inputSource)
 })

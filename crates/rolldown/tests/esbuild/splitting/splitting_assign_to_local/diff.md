@@ -95,17 +95,25 @@ console.log(foo);
 ```
 ### rolldown
 ```js
+import { foo, setFoo } from "./shared.js";
+
+//#region a.js
+setFoo(123);
+console.log(foo);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	a.js
+@@ -1,3 +1,3 @@
 -import {foo, setFoo} from "./chunk-GX7G2SBE.js";
--setFoo(123);
--console.log(foo);
++import {foo, setFoo} from "./shared.js";
+ setFoo(123);
+ console.log(foo);
 
 ```
 ## /out/b.js
@@ -120,16 +128,23 @@ console.log(foo);
 ```
 ### rolldown
 ```js
+import { foo } from "./shared.js";
+
+//#region b.js
+console.log(foo);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	b.js
+@@ -1,2 +1,2 @@
 -import {foo} from "./chunk-GX7G2SBE.js";
--console.log(foo);
++import {foo} from "./shared.js";
+ console.log(foo);
 
 ```
 ## /out/chunk-GX7G2SBE.js

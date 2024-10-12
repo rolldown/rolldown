@@ -40,13 +40,28 @@ console.log({
 ### rolldown
 ```js
 
+//#region entry.ts
+const ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+console.log({
+	concat: {
+		require: require("./src/" + ab),
+		import: import("./src/" + ab)
+	},
+	template: {
+		require: require(`./src/${ab}`),
+		import: import(`./src/${ab}`)
+	}
+});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,22 +0,0 @@
++++ rolldown	entry.js
+@@ -1,22 +1,11 @@
 -import {require_a} from "./chunk-YMCIDKCT.js";
 -import {require_b} from "./chunk-2BST4PYI.js";
 -import {__glob} from "./chunk-WCFE7E2E.js";
@@ -58,17 +73,21 @@ console.log({
 -    "./src/a.ts": () => import("./a-YXM4MR7E.js"),
 -    "./src/b.ts": () => import("./b-IPMBSSGN.js")
 -});
--var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
--console.log({
--    concat: {
+ var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+ console.log({
+     concat: {
 -        require: globRequire_src("./src/" + ab),
 -        import: globImport_src("./src/" + ab)
--    },
--    template: {
++        require: require("./src/" + ab),
++        import: import("./src/" + ab)
+     },
+     template: {
 -        require: globRequire_src(`./src/${ab}`),
 -        import: globImport_src(`./src/${ab}`)
--    }
--});
++        require: require(`./src/${ab}`),
++        import: import(`./src/${ab}`)
+     }
+ });
 
 ```
 ## /out/a-YXM4MR7E.js

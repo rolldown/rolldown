@@ -14,14 +14,28 @@ class Foo {
 ### rolldown
 ```js
 
+//#region js-define.js
+class Foo {
+	accessor one = 1;
+	accessor #two = 2;
+	accessor [three()] = 3;
+	static accessor four = 4;
+	static accessor #five = 5;
+	static accessor [six()] = 6;
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/js-define.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
--class Foo {
++++ rolldown	js-define.js
+@@ -1,8 +1,12 @@
++
++//#region js-define.js
+ class Foo {
 -  accessor one = 1;
 -  accessor #two = 2;
 -  accessor [three()] = 3;
@@ -30,6 +44,15 @@ class Foo {
 -  static accessor [six()] = 6;
 -}
 \ No newline at end of file
++	accessor one = 1;
++	accessor #two = 2;
++	accessor [three()] = 3;
++	static accessor four = 4;
++	static accessor #five = 5;
++	static accessor [six()] = 6;
++}
++
++//#endregion
 
 ```
 ## /out/ts-define/ts-define.js

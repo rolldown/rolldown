@@ -26,14 +26,18 @@ body {
 ```
 ### rolldown
 ```js
+@import "data:text/css,body{color:%72%65%64}";
+@import "data:text/css;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
+@import "data:text/css;charset=UTF-8,body{color:%72%65%64}";
+@import "data:text/css;charset=UTF-8;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.css
-+++ rolldown	
-@@ -1,21 +0,0 @@
++++ rolldown	entry.css
+@@ -1,21 +1,4 @@
 -/* <data:text/css,body{color:%72%65%64}> */
 -body {
 -  color: red;
@@ -56,5 +60,9 @@ body {
 -
 -/* entry.css */
 \ No newline at end of file
++@import "data:text/css,body{color:%72%65%64}";
++@import "data:text/css;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
++@import "data:text/css;charset=UTF-8,body{color:%72%65%64}";
++@import "data:text/css;charset=UTF-8;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
 
 ```

@@ -13,20 +13,38 @@ export var x;
 ### rolldown
 ```js
 
+//#region let.ts
+let x;
+(function(_x) {
+	let y$1 = _x.y = 123;
+})(x || (x = {}));
+(function(_x2) {
+	let z = _x2.z = y;
+})(x || (x = {}));
+
+//#endregion
+export { x };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/let.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
++++ rolldown	let.js
+@@ -1,7 +1,8 @@
 -export var x;
 -(x2 => {
 -    x2.y = 123;
--})(x || (x = {}));
++var x;
++(function (_x) {
++    let y$1 = _x.y = 123;
+ })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
--})(x || (x = {}));
++(function (_x2) {
++    let z = _x2.z = y;
+ })(x || (x = {}));
++export {x};
 
 ```
 ## /out/function.js
@@ -45,21 +63,41 @@ export var x;
 ### rolldown
 ```js
 
+//#region function.ts
+let x;
+(function(_x) {
+	function y$1() {}
+	_x.y = y$1;
+})(x || (x = {}));
+(function(_x2) {
+	let z = _x2.z = y;
+})(x || (x = {}));
+
+//#endregion
+export { x };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/function.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
++++ rolldown	function.js
+@@ -1,8 +1,9 @@
 -export var x;
 -(x2 => {
 -    function y() {}
 -    x2.y = y;
--})(x || (x = {}));
++var x;
++(function (_x) {
++    function y$1() {}
++    _x.y = y$1;
+ })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
--})(x || (x = {}));
++(function (_x2) {
++    let z = _x2.z = y;
+ })(x || (x = {}));
++export {x};
 
 ```
 ## /out/class.js
@@ -78,21 +116,41 @@ export var x;
 ### rolldown
 ```js
 
+//#region class.ts
+let x;
+(function(_x) {
+	class y$1 {}
+	_x.y = y$1;
+})(x || (x = {}));
+(function(_x2) {
+	let z = _x2.z = y;
+})(x || (x = {}));
+
+//#endregion
+export { x };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/class.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
++++ rolldown	class.js
+@@ -1,8 +1,9 @@
 -export var x;
 -(x2 => {
 -    class y {}
 -    x2.y = y;
--})(x || (x = {}));
++var x;
++(function (_x) {
++    class y$1 {}
++    _x.y = y$1;
+ })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
--})(x || (x = {}));
++(function (_x2) {
++    let z = _x2.z = y;
+ })(x || (x = {}));
++export {x};
 
 ```
 ## /out/namespace.js
@@ -112,23 +170,46 @@ export var x;
 ### rolldown
 ```js
 
+//#region namespace.ts
+let x;
+(function(_x) {
+	let y$1;
+	(function(_y) {
+		0;
+	})(y$1 || (y$1 = _x.y || (_x.y = {})));
+})(x || (x = {}));
+(function(_x2) {
+	let z = _x2.z = y;
+})(x || (x = {}));
+
+//#endregion
+export { x };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/namespace.js
-+++ rolldown	
-@@ -1,10 +0,0 @@
++++ rolldown	namespace.js
+@@ -1,10 +1,11 @@
 -export var x;
 -(x2 => {
 -    let y;
 -    (y2 => {
--        0;
++var x;
++(function (_x) {
++    let y$1;
++    (function (_y) {
+         0;
 -    })(y = x2.y || (x2.y = {}));
--})(x || (x = {}));
++    })(y$1 || (y$1 = _x.y || (_x.y = {})));
+ })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
--})(x || (x = {}));
++(function (_x2) {
++    let z = _x2.z = y;
+ })(x || (x = {}));
++export {x};
 
 ```
 ## /out/enum.js
@@ -147,20 +228,44 @@ export var x;
 ### rolldown
 ```js
 
+//#region enum.ts
+let x;
+(function(_x) {
+	let y$1 = function(y$2) {
+		return y$2;
+	}({});
+	_x.y = y$1;
+})(x || (x = {}));
+(function(_x2) {
+	let z = _x2.z = y;
+})(x || (x = {}));
+
+//#endregion
+export { x };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/enum.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
++++ rolldown	enum.js
+@@ -1,8 +1,11 @@
 -export var x;
 -(x2 => {
 -    let y;
 -    (y2 => {})(y = x2.y || (x2.y = {}));
--})(x || (x = {}));
++var x;
++(function (_x) {
++    let y$1 = (function (y$2) {
++        return y$2;
++    })({});
++    _x.y = y$1;
+ })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
--})(x || (x = {}));
++(function (_x2) {
++    let z = _x2.z = y;
+ })(x || (x = {}));
++export {x};
 
 ```

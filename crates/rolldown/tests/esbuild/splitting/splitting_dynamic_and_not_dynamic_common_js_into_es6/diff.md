@@ -62,17 +62,26 @@ import("./foo-BJYZ44Z3.js").then(({ default: { bar: b } }) => console.log(import
 ```
 ### rolldown
 ```js
+import { __toESM, require_foo } from "./foo2.js";
+
+//#region entry.js
+var import_foo = __toESM(require_foo());
+import("./foo.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	entry.js
+@@ -1,3 +1,3 @@
 -import {__toESM, require_foo} from "./chunk-X3UWZZCR.js";
--var import_foo = __toESM(require_foo());
++import {__toESM, require_foo} from "./foo2.js";
+ var import_foo = __toESM(require_foo());
 -import("./foo-BJYZ44Z3.js").then(({default: {bar: b}}) => console.log(import_foo.bar, b));
++import("./foo.js").then(({default: {bar: b}}) => console.log(import_foo.bar, b));
 
 ```
 ## /out/foo-BJYZ44Z3.js

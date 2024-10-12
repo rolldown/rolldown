@@ -8,14 +8,28 @@ console.log(123 /* y */);
 ### rolldown
 ```js
 
+//#region simple-member.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+console.log(x.y);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/simple-member.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	simple-member.js
+@@ -1,1 +1,5 @@
 -console.log(123);
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
++})(x || ({}));
++console.log(x.y);
 
 ```
 ## /out/simple-enum.js
@@ -31,18 +45,30 @@ console.log(x);
 ### rolldown
 ```js
 
+//#region simple-enum.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+console.log(x);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/simple-enum.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	simple-enum.js
+@@ -1,5 +1,5 @@
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
--})(x || ({}));
--console.log(x);
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
+ })(x || ({}));
+ console.log(x);
 
 ```
 ## /out/sibling-member.js
@@ -54,14 +80,36 @@ console.log(123 /* y */, 246 /* z */);
 ### rolldown
 ```js
 
+//#region sibling-member.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+console.log(x.y, x.z);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/sibling-member.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	sibling-member.js
+@@ -1,1 +1,9 @@
 -console.log(123, 246);
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
++})(x || ({}));
++x = (function (x$1) {
++    x$1[x$1["z"] = 246] = "z";
++    return x$1;
++})(x || ({}));
++console.log(x.y, x.z);
 
 ```
 ## /out/sibling-enum-before.js
@@ -81,22 +129,41 @@ var x = /* @__PURE__ */ ((x2) => {
 ### rolldown
 ```js
 
+//#region sibling-enum-before.ts
+console.log(x);
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/sibling-enum-before.js
-+++ rolldown	
-@@ -1,9 +0,0 @@
--console.log(x);
++++ rolldown	sibling-enum-before.js
+@@ -1,9 +1,9 @@
+ console.log(x);
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
--})(x || ({}));
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
+ })(x || ({}));
 -var x = (x2 => {
 -    x2[x2["z"] = 246] = "z";
 -    return x2;
--})(x || ({}));
++x = (function (x$1) {
++    x$1[x$1["z"] = 246] = "z";
++    return x$1;
+ })(x || ({}));
 
 ```
 ## /out/sibling-enum-middle.js
@@ -116,22 +183,41 @@ var x = /* @__PURE__ */ ((x2) => {
 ### rolldown
 ```js
 
+//#region sibling-enum-middle.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+console.log(x);
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/sibling-enum-middle.js
-+++ rolldown	
-@@ -1,9 +0,0 @@
++++ rolldown	sibling-enum-middle.js
+@@ -1,9 +1,9 @@
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
--})(x || ({}));
--console.log(x);
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
+ })(x || ({}));
+ console.log(x);
 -var x = (x2 => {
 -    x2[x2["z"] = 246] = "z";
 -    return x2;
--})(x || ({}));
++x = (function (x$1) {
++    x$1[x$1["z"] = 246] = "z";
++    return x$1;
+ })(x || ({}));
 
 ```
 ## /out/sibling-enum-after.js
@@ -151,22 +237,41 @@ console.log(x);
 ### rolldown
 ```js
 
+//#region sibling-enum-after.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+console.log(x);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/sibling-enum-after.js
-+++ rolldown	
-@@ -1,9 +0,0 @@
++++ rolldown	sibling-enum-after.js
+@@ -1,9 +1,9 @@
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
--})(x || ({}));
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
+ })(x || ({}));
 -var x = (x2 => {
 -    x2[x2["z"] = 246] = "z";
 -    return x2;
--})(x || ({}));
--console.log(x);
++x = (function (x$1) {
++    x$1[x$1["z"] = 246] = "z";
++    return x$1;
+ })(x || ({}));
+ console.log(x);
 
 ```
 ## /out/namespace-before.js
@@ -184,20 +289,43 @@ var x = /* @__PURE__ */ ((x2) => {
 ### rolldown
 ```js
 
+//#region namespace-before.ts
+let x;
+(function(_x) {
+	console.log(x, y);
+})(x || (x = {}));
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/namespace-before.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
++++ rolldown	namespace-before.js
+@@ -1,7 +1,12 @@
 -(x2 => {
 -    console.log(x2, y);
--})(x || (x = {}));
++
++//#region namespace-before.ts
++let x;
++(function(_x) {
++	console.log(x, y);
+ })(x || (x = {}));
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
 -})(x || ({}));
++var x = function(x$1) {
++	x$1[x$1["y"] = 123] = "y";
++	return x$1;
++}(x || {});
++
++//#endregion
 
 ```
 ## /out/namespace-after.js
@@ -215,19 +343,35 @@ var x = /* @__PURE__ */ ((x2) => {
 ### rolldown
 ```js
 
+//#region namespace-after.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+(function(_x) {
+	console.log(x, y);
+})(x || (x = {}));
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/namespace-after.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
++++ rolldown	namespace-after.js
+@@ -1,7 +1,7 @@
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
--})(x || ({}));
++var x = (function (x$1) {
++    x$1[x$1["y"] = 123] = "y";
++    return x$1;
+ })(x || ({}));
 -(x2 => {
 -    console.log(x2, y);
--})(x || (x = {}));
++(function (_x) {
++    console.log(x, y);
+ })(x || (x = {}));
 
 ```

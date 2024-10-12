@@ -7,14 +7,34 @@ keepThisButRemoveTheIIFE;
 ### rolldown
 ```js
 
+//#region remove-these.js
+(() => {})();
+(() => {})(keepThisButRemoveTheIIFE);
+(() => {
+	/* @__PURE__ */ removeMe();
+})();
+var someVar;
+((x) => {})(someVar);
+var removeThis2 = (() => 123)();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/remove-these.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	remove-these.js
+@@ -1,1 +1,8 @@
 -keepThisButRemoveTheIIFE;
++(() => {})();
++(() => {})(keepThisButRemoveTheIIFE);
++(() => {
++    removeMe();
++})();
++var someVar;
++(x => {})(someVar);
++var removeThis2 = (() => 123)();
 
 ```
 ## /out/keep-these.js
@@ -49,37 +69,55 @@ use(isNotPure);
 ### rolldown
 ```js
 
+//#region keep-these.js
+undef = (() => {})();
+(() => {
+	keepMe();
+})();
+((x = keepMe()) => {})();
+var someVar;
+(([y]) => {})(someVar);
+(({ z }) => {})(someVar);
+var keepThis = /* @__PURE__ */ (() => stuff())();
+keepThis();
+((_ = keepMe()) => {})();
+var isPure = ((x, y) => 123)();
+use(isPure);
+var isNotPure = ((x = foo, y = bar) => 123)();
+use(isNotPure);
+(async () => ({ get then() {
+	notPure();
+} }))();
+(async function() {
+	return { get then() {
+		notPure();
+	} };
+})();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/keep-these.js
-+++ rolldown	
-@@ -1,25 +0,0 @@
++++ rolldown	keep-these.js
+@@ -1,11 +1,13 @@
 -undef = void 0;
 -keepMe();
--((x = keepMe()) => {})();
--var someVar;
--(([y]) => {})(someVar);
--(({z}) => {})(someVar);
++undef = (() => {})();
++(() => {
++    keepMe();
++})();
+ ((x = keepMe()) => {})();
+ var someVar;
+ (([y]) => {})(someVar);
+ (({z}) => {})(someVar);
 -var keepThis = stuff();
--keepThis();
--((_ = keepMe()) => {})();
--var isPure = ((x, y) => 123)();
--use(isPure);
--var isNotPure = ((x = foo, y = bar) => 123)();
--use(isNotPure);
--(async () => ({
--    get then() {
--        notPure();
--    }
--}))();
--(async function () {
--    return {
--        get then() {
--            notPure();
--        }
--    };
--})();
++var keepThis = (() => stuff())();
+ keepThis();
+ ((_ = keepMe()) => {})();
+ var isPure = ((x, y) => 123)();
+ use(isPure);
 
 ```

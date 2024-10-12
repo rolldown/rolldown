@@ -14,20 +14,37 @@ x = [data_default, data_default, data_default2];
 ### rolldown
 ```js
 
+//#region data.json
+const some = "data";
+var data_default = { some };
+
+//#endregion
+//#region entry.js
+x = [
+	data_default,
+	data_default,
+	data_default
+];
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
--var data_default = {
++++ rolldown	entry.js
+@@ -1,7 +1,5 @@
++var some = "data";
+ var data_default = {
 -    some: "data"
--};
++    some
+ };
 -var data_default2 = {
 -    some: "data"
 -};
 -x = [data_default, data_default, data_default2];
++x = [data_default, data_default, data_default];
 
 ```
 ## metafile.json

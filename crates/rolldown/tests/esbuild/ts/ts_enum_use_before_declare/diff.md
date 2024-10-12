@@ -17,19 +17,40 @@ export {
 ### rolldown
 ```js
 
+//#region entry.ts
+function before() {
+	console.log(Foo.FOO);
+}
+var Foo = function(Foo$1) {
+	Foo$1[Foo$1["FOO"] = 0] = "FOO";
+	return Foo$1;
+}(Foo || {});
+function after() {
+	console.log(Foo.FOO);
+}
+
+//#endregion
+export { after, before };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
--function before() {
++++ rolldown	entry.js
+@@ -1,7 +1,11 @@
+ function before() {
 -    console.log(0);
--}
--function after() {
++    console.log(Foo.FOO);
+ }
++var Foo = (function (Foo$1) {
++    Foo$1[Foo$1["FOO"] = 0] = "FOO";
++    return Foo$1;
++})(Foo || ({}));
+ function after() {
 -    console.log(0);
--}
--export {after, before};
++    console.log(Foo.FOO);
+ }
+ export {after, before};
 
 ```

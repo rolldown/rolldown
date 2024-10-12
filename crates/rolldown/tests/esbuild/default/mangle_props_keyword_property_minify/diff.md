@@ -7,12 +7,13 @@ class Foo{static t={get s(){return 123}}}
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,7 +0,0 @@
 -class Foo {
 -    static t = {

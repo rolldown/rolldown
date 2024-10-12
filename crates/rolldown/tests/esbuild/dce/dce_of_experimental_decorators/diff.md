@@ -69,21 +69,53 @@ __decorateClass([
 ### rolldown
 ```js
 
+//#region decorator.ts
+const fn = () => {
+	console.log("side effect");
+};
+
+//#endregion
+//#region keep-these.ts
+@fn class Class {}
+class Field {
+	@fn field;
+}
+class Method {
+	@fn method() {}
+}
+class Parameter {
+	foo(@fn bar) {}
+}
+class StaticField {
+	@fn static field;
+}
+class StaticMethod {
+	@fn static method() {}
+}
+class StaticParameter {
+	static foo(@fn bar) {}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/keep-these.js
-+++ rolldown	
-@@ -1,63 +0,0 @@
++++ rolldown	keep-these.js
+@@ -1,63 +1,29 @@
 -// decorator.ts
 -var fn = () => {
 -  console.log("side effect");
 -};
--
+ 
 -// keep-these.ts
 -var Class = class {
--};
++//#region decorator.ts
++const fn = () => {
++	console.log("side effect");
+ };
 -Class = __decorateClass([
 -  fn
 -], Class);
@@ -140,5 +172,29 @@ __decorateClass([
 -  __decorateParam(0, fn)
 -], StaticParameter, "foo", 1);
 \ No newline at end of file
++
++//#endregion
++//#region keep-these.ts
++@fn class Class {}
++class Field {
++	@fn field;
++}
++class Method {
++	@fn method() {}
++}
++class Parameter {
++	foo(@fn bar) {}
++}
++class StaticField {
++	@fn static field;
++}
++class StaticMethod {
++	@fn static method() {}
++}
++class StaticParameter {
++	static foo(@fn bar) {}
++}
++
++//#endregion
 
 ```

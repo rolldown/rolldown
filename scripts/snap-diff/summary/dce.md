@@ -27,8 +27,6 @@
   diff
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/diff.md)
   diff
-## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal/diff.md)
-  diff
 ## [dce_type_of](../../../crates/rolldown/tests/esbuild/dce/dce_type_of/diff.md)
   diff
 ## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/diff.md)
@@ -172,6 +170,7 @@
 # Passed Cases
 ## [base64_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [data_url_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
+## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal)
 ## [file_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/file_loader_remove_unused)
 ## [json_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/json_loader_remove_unused)
 ## [package_json_side_effects_array_glob](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_glob)

@@ -282,13 +282,61 @@ async function bar() {
 ### rolldown
 ```js
 
+//#region entry.ts
+async function* foo() {
+	yield;
+	yield x;
+	yield* x;
+	await using x = await y;
+	for await (let x$1 of y) {}
+	for await (await using x of y) {}
+}
+foo = async function* () {
+	yield;
+	yield x;
+	yield* x;
+	await using x = await y;
+	for await (let x$1 of y) {}
+	for await (await using x of y) {}
+};
+foo = { async *bar() {
+	yield;
+	yield x;
+	yield* x;
+	await using x = await y;
+	for await (let x$1 of y) {}
+	for await (await using x of y) {}
+} };
+class Foo {
+	async *bar() {
+		yield;
+		yield x;
+		yield* x;
+		await using x = await y;
+		for await (let x$1 of y) {}
+		for await (await using x of y) {}
+	}
+}
+Foo = class {
+	async *bar() {
+		yield;
+		yield x;
+		yield* x;
+		await using x = await y;
+		for await (let x$1 of y) {}
+		for await (await using x of y) {}
+	}
+};
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,276 +0,0 @@
++++ rolldown	entry.js
+@@ -1,276 +1,48 @@
 -function foo() {
 -  return __asyncGenerator(this, null, function* () {
 -    var _stack2 = [];
@@ -341,7 +389,16 @@ async function bar() {
 -      _promise2 && (yield new __await(_promise2));
 -    }
 -  });
--}
++
++//#region entry.ts
++async function* foo() {
++	yield;
++	yield x;
++	yield* x;
++	await using x = await y;
++	for await (let x$1 of y) {}
++	for await (await using x of y) {}
+ }
 -foo = function() {
 -  return __asyncGenerator(this, null, function* () {
 -    var _stack2 = [];
@@ -394,7 +451,14 @@ async function bar() {
 -      _promise2 && (yield new __await(_promise2));
 -    }
 -  });
--};
++foo = async function* () {
++	yield;
++	yield x;
++	yield* x;
++	await using x = await y;
++	for await (let x$1 of y) {}
++	for await (await using x of y) {}
+ };
 -foo = { bar() {
 -  return __asyncGenerator(this, null, function* () {
 -    var _stack2 = [];
@@ -447,8 +511,15 @@ async function bar() {
 -      _promise2 && (yield new __await(_promise2));
 -    }
 -  });
--} };
--class Foo {
++foo = { async *bar() {
++	yield;
++	yield x;
++	yield* x;
++	await using x = await y;
++	for await (let x$1 of y) {}
++	for await (await using x of y) {}
+ } };
+ class Foo {
 -  bar() {
 -    return __asyncGenerator(this, null, function* () {
 -      var _stack2 = [];
@@ -502,8 +573,16 @@ async function bar() {
 -      }
 -    });
 -  }
--}
--Foo = class {
++	async *bar() {
++		yield;
++		yield x;
++		yield* x;
++		await using x = await y;
++		for await (let x$1 of y) {}
++		for await (await using x of y) {}
++	}
+ }
+ Foo = class {
 -  bar() {
 -    return __asyncGenerator(this, null, function* () {
 -      var _stack2 = [];
@@ -557,7 +636,15 @@ async function bar() {
 -      }
 -    });
 -  }
--};
++	async *bar() {
++		yield;
++		yield x;
++		yield* x;
++		await using x = await y;
++		for await (let x$1 of y) {}
++		for await (await using x of y) {}
++	}
+ };
 -async function bar() {
 -  await using x = await y;
 -  for await (let x2 of y) {
@@ -566,5 +653,7 @@ async function bar() {
 -  }
 -}
 \ No newline at end of file
++
++//#endregion
 
 ```

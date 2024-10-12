@@ -24,25 +24,44 @@ console.log({
 ### rolldown
 ```js
 
+//#region entry.js
+const ab = Math.random() < 0.5 ? "a.js" : "b.js";
+console.log({
+	concat: {
+		require: require("./src/" + ab + ".json"),
+		import: import("./src/" + ab + ".json")
+	},
+	template: {
+		require: require(`./src/${ab}.json`),
+		import: import(`./src/${ab}.json`)
+	}
+});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,13 +0,0 @@
++++ rolldown	entry.js
+@@ -1,13 +1,11 @@
 -var globRequire_src_json = __glob({});
 -var globImport_src_json = __glob({});
--var ab = Math.random() < 0.5 ? "a.js" : "b.js";
--console.log({
--    concat: {
+ var ab = Math.random() < 0.5 ? "a.js" : "b.js";
+ console.log({
+     concat: {
 -        require: globRequire_src_json("./src/" + ab + ".json"),
 -        import: globImport_src_json("./src/" + ab + ".json")
--    },
--    template: {
++        require: require("./src/" + ab + ".json"),
++        import: import("./src/" + ab + ".json")
+     },
+     template: {
 -        require: globRequire_src_json(`./src/${ab}.json`),
 -        import: globImport_src_json(`./src/${ab}.json`)
--    }
--});
++        require: require(`./src/${ab}.json`),
++        import: import(`./src/${ab}.json`)
+     }
+ });
 
 ```

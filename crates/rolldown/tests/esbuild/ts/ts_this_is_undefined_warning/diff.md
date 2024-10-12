@@ -11,15 +11,22 @@ export {
 ### rolldown
 ```js
 
+//#region warning1.ts
+var foo = this;
+
+//#endregion
+export { foo };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/warning1.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	warning1.js
+@@ -1,2 +1,2 @@
 -var foo = void 0;
--export {foo};
++var foo = this;
+ export {foo};
 
 ```
 ## /out/warning2.js
@@ -34,15 +41,22 @@ export {
 ### rolldown
 ```js
 
+//#region warning2.ts
+var foo = this || this.foo;
+
+//#endregion
+export { foo };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/warning2.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	warning2.js
+@@ -1,2 +1,2 @@
 -var foo = (void 0).foo;
--export {foo};
++var foo = this || this.foo;
+ export {foo};
 
 ```
 ## /out/warning3.js
@@ -57,15 +71,22 @@ export {
 ### rolldown
 ```js
 
+//#region warning3.ts
+var foo = this ? this.foo : null;
+
+//#endregion
+export { foo };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/warning3.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	warning3.js
+@@ -1,2 +1,2 @@
 -var foo = void 0 ? (void 0).foo : null;
--export {foo};
++var foo = this ? this.foo : null;
+ export {foo};
 
 ```
 ## /out/silent1.js
@@ -80,15 +101,22 @@ export {
 ### rolldown
 ```js
 
+//#region silent1.ts
+var foo = this && this.foo;
+
+//#endregion
+export { foo };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/silent1.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	silent1.js
+@@ -1,2 +1,2 @@
 -var foo = void 0;
--export {foo};
++var foo = this && this.foo;
+ export {foo};
 
 ```
 ## /out/silent2.js
@@ -103,14 +131,21 @@ export {
 ### rolldown
 ```js
 
+//#region silent2.ts
+var foo = this && (() => this.foo);
+
+//#endregion
+export { foo };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/silent2.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	silent2.js
+@@ -1,2 +1,2 @@
 -var foo = void 0;
--export {foo};
++var foo = this && (() => this.foo);
+ export {foo};
 
 ```

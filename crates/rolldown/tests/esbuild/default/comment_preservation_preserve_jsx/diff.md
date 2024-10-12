@@ -51,16 +51,39 @@ console.log(
 ```
 ### rolldown
 ```js
+import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+
+//#region entry.jsx
+console.log(
+	_jsx("div", { x }),
+	_jsx("div", { x: "y" }),
+	_jsx("div", { x: true }),
+	_jsx("div", { ...x }),
+	_jsx("div", { children: x }),
+	_jsx(_Fragment, { children: x }),
+	// Comments on absent AST nodes
+	_jsxs("div", { children: ["before", "after"] }),
+	_jsxs("div", { children: ["before", "after"] }),
+	_jsxs("div", { children: ["before", "after"] }),
+	_jsxs(_Fragment, { children: ["before", "after"] }),
+	_jsxs(_Fragment, { children: ["before", "after"] }),
+	_jsxs(_Fragment, { children: ["before", "after"] })
+);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,46 +0,0 @@
++++ rolldown	entry.js
+@@ -1,46 +1,20 @@
 -// entry.jsx
--console.log(
++import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
++
++//#region entry.jsx
+ console.log(
 -  <div x={
 -    /*before*/
 -    x
@@ -106,5 +129,21 @@ console.log(
 -  }after</>
 -);
 \ No newline at end of file
++	_jsx("div", { x }),
++	_jsx("div", { x: "y" }),
++	_jsx("div", { x: true }),
++	_jsx("div", { ...x }),
++	_jsx("div", { children: x }),
++	_jsx(_Fragment, { children: x }),
++	// Comments on absent AST nodes
++	_jsxs("div", { children: ["before", "after"] }),
++	_jsxs("div", { children: ["before", "after"] }),
++	_jsxs("div", { children: ["before", "after"] }),
++	_jsxs(_Fragment, { children: ["before", "after"] }),
++	_jsxs(_Fragment, { children: ["before", "after"] }),
++	_jsxs(_Fragment, { children: ["before", "after"] })
++);
++
++//#endregion
 
 ```

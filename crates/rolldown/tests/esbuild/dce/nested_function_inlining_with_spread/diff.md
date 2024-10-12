@@ -21,20 +21,44 @@ check(
 ### rolldown
 ```js
 
+//#region entry.js
+function empty1() {}
+function empty2() {}
+function empty3() {}
+function identity1(x) {
+	return x;
+}
+function identity2(x) {
+	return x;
+}
+function identity3(x) {
+	return x;
+}
+check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
--function identity1(x) {
--    return x;
--}
--function identity3(x) {
--    return x;
--}
++++ rolldown	entry.js
+@@ -1,7 +1,13 @@
++function empty1() {}
++function empty2() {}
++function empty3() {}
+ function identity1(x) {
+     return x;
+ }
++function identity2(x) {
++    return x;
++}
+ function identity3(x) {
+     return x;
+ }
 -check(void 0, (args, void 0), ([...args], void 0), identity1(), args, identity3(...args));
++check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
 
 ```
 ## /out/entry-outer.js
@@ -61,19 +85,46 @@ check(
 ### rolldown
 ```js
 
+//#region inner.js
+function empty1() {}
+function empty2() {}
+function empty3() {}
+function identity1(x) {
+	return x;
+}
+function identity2(x) {
+	return x;
+}
+function identity3(x) {
+	return x;
+}
+
+//#endregion
+//#region entry-outer.js
+check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry-outer.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
--function identity1(x) {
--    return x;
--}
--function identity3(x) {
--    return x;
--}
++++ rolldown	entry-outer.js
+@@ -1,7 +1,13 @@
++function empty1() {}
++function empty2() {}
++function empty3() {}
+ function identity1(x) {
+     return x;
+ }
++function identity2(x) {
++    return x;
++}
+ function identity3(x) {
+     return x;
+ }
 -check(void 0, (args, void 0), ([...args], void 0), identity1(), args, identity3(...args));
++check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
 
 ```

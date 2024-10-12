@@ -10,18 +10,25 @@ console.log("a:", data_default);
 ```
 ### rolldown
 ```js
+import { data_default } from "./data.js";
+
+//#region a.js
+console.log("a:", data_default);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	a.js
+@@ -1,4 +1,2 @@
 -var data_default = {
 -    test: 123
 -};
--console.log("a:", data_default);
++import {data_default} from "./data.js";
+ console.log("a:", data_default);
 
 ```
 ## /out/b.js
@@ -35,17 +42,24 @@ console.log("b:", data_default);
 ```
 ### rolldown
 ```js
+import { data_default } from "./data.js";
+
+//#region b.js
+console.log("b:", data_default);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	b.js
+@@ -1,4 +1,2 @@
 -var data_default = {
 -    test: 123
 -};
--console.log("b:", data_default);
++import {data_default} from "./data.js";
+ console.log("b:", data_default);
 
 ```

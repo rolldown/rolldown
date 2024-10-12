@@ -15,13 +15,28 @@ foo();
 ### rolldown
 ```js
 
+//#region empty.js
+function DROP() {}
+console.log(DROP(foo(), bar()));
+console.log(DROP(foo(), 1));
+console.log(DROP(1, foo()));
+console.log(DROP(1));
+console.log(DROP());
+DROP(foo(), bar());
+DROP(foo(), 1);
+DROP(1, foo());
+DROP(1);
+DROP();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
++++ rolldown	empty.js
+@@ -1,8 +1,11 @@
 -console.log((foo(), bar(), void 0));
 -console.log((foo(), void 0));
 -console.log((foo(), void 0));
@@ -30,6 +45,17 @@ foo();
 -(foo(), bar());
 -foo();
 -foo();
++function DROP() {}
++console.log(DROP(foo(), bar()));
++console.log(DROP(foo(), 1));
++console.log(DROP(1, foo()));
++console.log(DROP(1));
++console.log(DROP());
++DROP(foo(), bar());
++DROP(foo(), 1);
++DROP(1, foo());
++DROP(1);
++DROP();
 
 ```
 ## /out/empty-comma.js
@@ -47,13 +73,25 @@ foo();
 ### rolldown
 ```js
 
+//#region empty-comma.js
+function DROP() {}
+console.log((DROP(), DROP(), foo()));
+console.log((DROP(), foo(), DROP()));
+console.log((foo(), DROP(), DROP()));
+for (DROP(); DROP(); DROP()) DROP();
+DROP(), DROP(), foo();
+DROP(), foo(), DROP();
+foo(), DROP(), DROP();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-comma.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
++++ rolldown	empty-comma.js
+@@ -1,7 +1,8 @@
 -console.log(foo());
 -console.log((foo(), void 0));
 -console.log((foo(), void 0));
@@ -61,6 +99,14 @@ foo();
 -foo();
 -foo();
 -foo();
++function DROP() {}
++console.log((DROP(), DROP(), foo()));
++console.log((DROP(), foo(), DROP()));
++console.log((foo(), DROP(), DROP()));
++for (DROP(); DROP(); DROP()) DROP();
++(DROP(), DROP(), foo());
++(DROP(), foo(), DROP());
++(foo(), DROP(), DROP());
 
 ```
 ## /out/empty-if-else.js
@@ -75,17 +121,31 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region empty-if-else.js
+function DROP() {}
+if (foo) {
+	let bar = baz();
+	bar();
+	bar();
+} else DROP();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-if-else.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--if (foo) {
--    let bar = baz();
++++ rolldown	empty-if-else.js
+@@ -1,4 +1,6 @@
++function DROP() {}
+ if (foo) {
+     let bar = baz();
 -    (bar(), bar());
 -}
++    bar();
++    bar();
++} else DROP();
 
 ```
 ## /out/empty-last.js
@@ -97,14 +157,38 @@ console.log(void 0);
 ### rolldown
 ```js
 
+//#region empty-last.js
+function DROP() {
+	return x;
+}
+function DROP() {
+	return;
+}
+console.log(DROP());
+DROP();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-last.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	empty-last.js
+@@ -1,1 +1,12 @@
 -console.log(void 0);
++
++//#region empty-last.js
++function DROP() {
++	return x;
++}
++function DROP() {
++	return;
++}
++console.log(DROP());
++DROP();
++
++//#endregion
 
 ```
 ## /out/empty-cross-module.js
@@ -116,14 +200,27 @@ console.log(void 0);
 ### rolldown
 ```js
 
+//#region empty-cross-module-def.js
+function DROP() {}
+
+//#endregion
+//#region empty-cross-module.js
+console.log(DROP());
+DROP();
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-cross-module.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	empty-cross-module.js
+@@ -1,1 +1,3 @@
 -console.log(void 0);
++function DROP() {}
++console.log(DROP());
++DROP();
 
 ```
 ## /out/empty-first.js
@@ -140,210 +237,39 @@ keep(1);
 ### rolldown
 ```js
 
+//#region empty-first.js
+function keep() {
+	return;
+}
+function keep() {
+	return x;
+}
+console.log(keep());
+keep(foo());
+keep(1);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-first.js
-+++ rolldown	
-@@ -1,6 +0,0 @@
--function keep() {
++++ rolldown	empty-first.js
+@@ -1,6 +1,13 @@
++
++//#region empty-first.js
+ function keep() {
 -    return x;
--}
--console.log(keep());
--keep(foo());
--keep(1);
-
-```
-## /out/empty-generator.js
-### esbuild
-```js
-// empty-generator.js
-function* keep() {
-}
-console.log(keep());
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/empty-generator.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--function* keep() {}
--console.log(keep());
--keep(foo());
--keep(1);
-
-```
-## /out/empty-async.js
-### esbuild
-```js
-// empty-async.js
-async function keep() {
-}
-console.log(keep());
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/empty-async.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--async function keep() {}
--console.log(keep());
--keep(foo());
--keep(1);
-
-```
-## /out/reassign.js
-### esbuild
-```js
-// reassign.js
-function keep() {
-}
-keep = reassigned;
-console.log(keep());
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/reassign.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--function keep() {}
--keep = reassigned;
--console.log(keep());
--keep(foo());
--keep(1);
-
-```
-## /out/reassign-inc.js
-### esbuild
-```js
-// reassign-inc.js
-function keep() {
-}
-keep++;
-console.log(keep(1));
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/reassign-inc.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--function keep() {}
--keep++;
--console.log(keep(1));
--keep(foo());
--keep(1);
-
-```
-## /out/reassign-div.js
-### esbuild
-```js
-// reassign-div.js
-function keep() {
-}
-keep /= reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/reassign-div.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--function keep() {}
--keep /= reassigned;
--console.log(keep(1));
--keep(foo());
--keep(1);
-
-```
-## /out/reassign-array.js
-### esbuild
-```js
-// reassign-array.js
-function keep() {
-}
-[keep] = reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/reassign-array.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--function keep() {}
--[keep] = reassigned;
--console.log(keep(1));
--keep(foo());
--keep(1);
-
-```
-## /out/reassign-object.js
-### esbuild
-```js
-// reassign-object.js
-function keep() {
-}
-({ keep } = reassigned);
-console.log(keep(1));
-keep(foo());
-keep(1);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/reassign-object.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--function keep() {}
--({keep} = reassigned);
--console.log(keep(1));
--keep(foo());
--keep(1);
++	return;
+ }
++function keep() {
++	return x;
++}
+ console.log(keep());
+ keep(foo());
+ keep(1);
++
++//#endregion
 
 ```

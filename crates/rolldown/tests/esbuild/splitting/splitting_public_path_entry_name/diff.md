@@ -46,14 +46,20 @@ import("/www/b-AQIID5BE.js");
 ### rolldown
 ```js
 
+//#region a.js
+import("./b.js");
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	a.js
+@@ -1,1 +1,1 @@
 -import("/www/b-AQIID5BE.js");
++import("./b.js");
 
 ```
 ## /out/b-AQIID5BE.js

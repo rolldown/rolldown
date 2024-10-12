@@ -27,14 +27,48 @@ console.log([
 ### rolldown
 ```js
 
+//#region enum-constants.ts
+let x = function(x$1) {
+	x$1["a"] = "foo";
+	x$1["b"] = "bar";
+	return x$1;
+}({});
+
+//#endregion
+//#region enum-entry.ts
+console.log([typeof x.b], [x.a + x.b], [
+	x.a < x.b,
+	x.a > x.b,
+	x.a <= x.b,
+	x.a >= x.b,
+	x.a == x.b,
+	x.a != x.b,
+	x.a === x.b,
+	x.a !== x.b
+], [
+	x.a && x.b,
+	x.a || x.b,
+	x.a ?? x.b,
+	x.a ? "y" : "n",
+	!x.b ? "y" : "n"
+]);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/enum-entry.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	enum-entry.js
+@@ -1,1 +1,6 @@
 -console.log([typeof "bar"], ["foobar"], [!1, !0, !1, !0, !1, !0, !1, !0], ["bar", "foo", "foo", "y", "n"]);
++var x = (function (x$1) {
++    x$1["a"] = "foo";
++    x$1["b"] = "bar";
++    return x$1;
++})({});
++console.log([typeof x.b], [x.a + x.b], [x.a < x.b, x.a > x.b, x.a <= x.b, x.a >= x.b, x.a == x.b, x.a != x.b, x.a === x.b, x.a !== x.b], [x.a && x.b, x.a || x.b, x.a ?? x.b, x.a ? "y" : "n", !x.b ? "y" : "n"]);
 
 ```
 ## /out/const-entry.js
@@ -68,15 +102,43 @@ console.log([
 ### rolldown
 ```js
 
+//#region const-constants.js
+const a = "foo";
+const b = "bar";
+
+//#endregion
+//#region const-entry.js
+console.log([typeof b], [a + b], [
+	a < b,
+	a > b,
+	a <= b,
+	a >= b,
+	a == b,
+	a != b,
+	a === b,
+	a !== b
+], [
+	a && b,
+	a || b,
+	a ?? b,
+	a ? "y" : "n",
+	!b ? "y" : "n"
+]);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/const-entry.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	const-entry.js
+@@ -1,2 +1,3 @@
 -var a = "foo", b = "bar";
 -console.log([typeof b], [a + b], [a < b, a > b, a <= b, a >= b, a == b, a != b, a === b, a !== b], [a && b, a || b, a ?? b, a ? "y" : "n", b ? "n" : "y"]);
++var a = "foo";
++var b = "bar";
++console.log([typeof b], [a + b], [a < b, a > b, a <= b, a >= b, a == b, a != b, a === b, a !== b], [a && b, a || b, a ?? b, a ? "y" : "n", !b ? "y" : "n"]);
 
 ```
 ## /out/nested-entry.js
@@ -94,17 +156,47 @@ console.log({
 ### rolldown
 ```js
 
+//#region nested-constants.ts
+const a = "foo";
+const b = "bar";
+const c = "baz";
+let x = function(x$1) {
+	x$1["a"] = "FOO";
+	x$1["b"] = "BAR";
+	x$1["c"] = "BAZ";
+	return x$1;
+}({});
+
+//#endregion
+//#region nested-entry.ts
+console.log({
+	"should be foobarbaz": a + b + c,
+	"should be FOOBARBAZ": x.a + x.b + x.c
+});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/nested-entry.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	nested-entry.js
+@@ -1,5 +1,13 @@
 -var a = "foo", b = "bar", c = "baz";
--console.log({
--    "should be foobarbaz": a + b + c,
++var a = "foo";
++var b = "bar";
++var c = "baz";
++var x = (function (x$1) {
++    x$1["a"] = "FOO";
++    x$1["b"] = "BAR";
++    x$1["c"] = "BAZ";
++    return x$1;
++})({});
+ console.log({
+     "should be foobarbaz": a + b + c,
 -    "should be FOOBARBAZ": "FOOBARBAZ"
--});
++    "should be FOOBARBAZ": x.a + x.b + x.c
+ });
 
 ```

@@ -27,14 +27,19 @@ console.log("in entry.ts");
 ### rolldown
 ```js
 
+//#region entry.ts
+console.log("in entry.ts");
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	entry.js
+@@ -1,2 +1,1 @@
 -import "./inject-IFR6YGWW.js";
--console.log("in entry.ts");
+ console.log("in entry.ts");
 
 ```

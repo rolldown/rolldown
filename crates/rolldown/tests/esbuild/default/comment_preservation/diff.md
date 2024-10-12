@@ -356,14 +356,198 @@ switch (
 ### rolldown
 ```js
 
+//#region entry.js
+console.log(import(
+	/* before */
+	foo
+), import(
+	/* before */
+	"foo"
+), import(
+	foo
+	/* after */
+), import(
+	"foo"
+	/* after */
+));
+console.log(import(
+	"foo",
+	{ assert: { type: "json" } }
+), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import(
+	"foo",
+	{ assert: { type: "json" } }
+	/* before */
+));
+console.log(require(
+	/* before */
+	foo
+), require(
+	/* before */
+	"foo"
+), require(
+	foo
+	/* after */
+), require(
+	"foo"
+	/* after */
+));
+console.log(require.resolve(
+	/* before */
+	foo
+), require.resolve(
+	/* before */
+	"foo"
+), require.resolve(
+	foo
+	/* after */
+), require.resolve(
+	"foo"
+	/* after */
+));
+let [] = [];
+let [] = [];
+let [ ...s] = [...s];
+let [ ...s2] = [...s2];
+let {} = {};
+let {} = {};
+let { ...s3 } = { ...s3 };
+let { ...s4 } = { ...s4 };
+let [x] = [x];
+let [x2] = [x2];
+let [x3] = [x3];
+let { y } = { y };
+let { y2 } = { y2 };
+let { y3 } = { y3 };
+let { [y4]: y4 } = { [y4]: y4 };
+let { [y5]: y5 } = { [y5]: y5 };
+let { [y6]: y6 } = { [y6]: y6 };
+foo[x] = foo[x];
+foo[x] = foo[x];
+console.log(
+	// before
+	foo,
+	/* comment before */
+	bar
+	// comment after
+);
+console.log([foo, bar]);
+console.log({
+	foo,
+	bar
+});
+console.log(class {
+	foo;
+	bar;
+});
+console.log(() => {
+	return null;
+}, () => {
+	throw null;
+}, () => {
+	return 1;
+}, () => {
+	throw 1;
+}, () => {
+	return 1;
+}, () => {
+	throw 1;
+});
+console.log(
+	/*a*/
+	a ? b : c,
+	a ? b : c
+);
+for (a;;);
+for (; a;);
+for (;; a);
+for (a in b);
+for (a in b);
+for (a of b);
+for (a of b);
+if (a);
+with(a);
+while (a);
+do {} while (a);
+switch (a) {}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,350 +0,0 @@
--console.log(
++++ rolldown	entry.js
+@@ -1,350 +1,116 @@
++
++//#region entry.js
++console.log(import(
++	/* before */
++	foo
++), import(
++	/* before */
++	"foo"
++), import(
++	foo
++	/* after */
++), import(
++	"foo"
++	/* after */
++));
++console.log(import(
++	"foo",
++	{ assert: { type: "json" } }
++), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import(
++	"foo",
++	{ assert: { type: "json" } }
++	/* before */
++));
++console.log(require(
++	/* before */
++	foo
++), require(
++	/* before */
++	"foo"
++), require(
++	foo
++	/* after */
++), require(
++	"foo"
++	/* after */
++));
++console.log(require.resolve(
++	/* before */
++	foo
++), require.resolve(
++	/* before */
++	"foo"
++), require.resolve(
++	foo
++	/* after */
++), require.resolve(
++	"foo"
++	/* after */
++));
++let [] = [];
++let [] = [];
++let [ ...s] = [...s];
++let [ ...s2] = [...s2];
++let {} = {};
++let {} = {};
++let { ...s3 } = { ...s3 };
++let { ...s4 } = { ...s4 };
++let [x] = [x];
++let [x2] = [x2];
++let [x3] = [x3];
++let { y } = { y };
++let { y2 } = { y2 };
++let { y3 } = { y3 };
++let { [y4]: y4 } = { [y4]: y4 };
++let { [y5]: y5 } = { [y5]: y5 };
++let { [y6]: y6 } = { [y6]: y6 };
++foo[x] = foo[x];
++foo[x] = foo[x];
+ console.log(
 -  import(
 -    /* before */
 -    foo
@@ -380,7 +564,12 @@ switch (
 -    "foo"
 -    /* after */
 -  )
--);
++	// before
++	foo,
++	/* comment before */
++	bar
++	// comment after
+ );
 -console.log(
 -  import(
 -    "foo",
@@ -594,21 +783,39 @@ switch (
 -  bar
 -  // comment after
 -]);
--console.log({
++console.log([foo, bar]);
+ console.log({
 -  // before
 -  foo,
 -  /* comment before */
 -  bar
 -  // comment after
--});
--console.log(class {
++	foo,
++	bar
+ });
+ console.log(class {
 -  // before
 -  foo;
 -  /* comment before */
 -  bar;
 -  // comment after
--});
--console.log(
++	foo;
++	bar;
+ });
++console.log(() => {
++	return null;
++}, () => {
++	throw null;
++}, () => {
++	return 1;
++}, () => {
++	throw 1;
++}, () => {
++	return 1;
++}, () => {
++	throw 1;
++});
+ console.log(
 -  () => {
 -    return (
 -      /* foo */
@@ -645,7 +852,10 @@ switch (
 -      null + 1
 -    );
 -  }
--);
++	/*a*/
++	a ? b : c,
++	a ? b : c
+ );
 -console.log(
 -  /*a*/
 -  a ? (
@@ -714,5 +924,19 @@ switch (
 -) {
 -}
 \ No newline at end of file
++for (a;;);
++for (; a;);
++for (;; a);
++for (a in b);
++for (a in b);
++for (a of b);
++for (a of b);
++if (a);
++with(a);
++while (a);
++do {} while (a);
++switch (a) {}
++
++//#endregion
 
 ```

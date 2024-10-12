@@ -96,17 +96,25 @@ console.log(foo);
 ```
 ### rolldown
 ```js
+import { require_shared } from "./shared.js";
+
+//#region a.js
+const { foo } = require_shared();
+console.log(foo);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	a.js
+@@ -1,3 +1,3 @@
 -import {require_shared} from "./chunk-JQJBVS2P.js";
--var {foo} = require_shared();
--console.log(foo);
++import {require_shared} from "./shared.js";
+ var {foo} = require_shared();
+ console.log(foo);
 
 ```
 ## /out/b.js
@@ -122,17 +130,25 @@ console.log(foo);
 ```
 ### rolldown
 ```js
+import { require_shared } from "./shared.js";
+
+//#region b.js
+const { foo } = require_shared();
+console.log(foo);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	b.js
+@@ -1,3 +1,3 @@
 -import {require_shared} from "./chunk-JQJBVS2P.js";
--var {foo} = require_shared();
--console.log(foo);
++import {require_shared} from "./shared.js";
+ var {foo} = require_shared();
+ console.log(foo);
 
 ```
 ## /out/chunk-JQJBVS2P.js

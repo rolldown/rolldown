@@ -98,16 +98,23 @@ console.log(foo());
 ```
 ### rolldown
 ```js
+import { foo } from "./common.js";
+
+//#region a.js
+console.log(foo());
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	a.js
+@@ -1,2 +1,2 @@
 -import {foo} from "./chunk-QVTGQSXT.js";
--console.log(foo());
++import {foo} from "./common.js";
+ console.log(foo());
 
 ```
 ## /out/b.js
@@ -122,16 +129,23 @@ console.log(bar());
 ```
 ### rolldown
 ```js
+import { bar } from "./common.js";
+
+//#region b.js
+console.log(bar());
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	b.js
+@@ -1,2 +1,2 @@
 -import {bar} from "./chunk-QVTGQSXT.js";
--console.log(bar());
++import {bar} from "./common.js";
+ console.log(bar());
 
 ```
 ## /out/chunk-QVTGQSXT.js

@@ -61,52 +61,24 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_dce_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_dce_test.go',
-    ignoreCases: [
-      'const_value_inlining_assign',
-      'const_value_inlining_bundle',
-      'dce_of_expr_after_keep_names_issue3195',
-      'dce_of_using_declarations',
-      'dce_type_of_compare_string_guard_condition',
-      'dce_type_of_equals_string_guard_condition',
-      'dead_code_following_jump',
-      'drop_labels',
-      'inline_empty_function_calls',
-      'inline_function_call_behavior_changes',
-      'inline_identity_function_calls',
-      'multiple_declaration_tree_shaking',
-      'nested_function_inlining_with_spread',
-      'pure_calls_with_spread',
-      'remove_unused_pure_comment_calls',
-      'top_level_function_inlining_with_spread',
-      'tree_shaking_class_property',
-      'tree_shaking_class_static_property',
-      'tree_shaking_lowered_class_static_field',
-      'tree_shaking_object_property',
-      'dce_of_using_declarations',
-    ],
   },
   importstar: {
     name: 'importstar',
     sourcePath: './bundler_importstar_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_test.go',
-
-    ignoreCases: [],
   },
   importstar_ts: {
     name: 'importstar_ts',
     sourcePath: './bundler_importstar_ts_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_ts_test.go',
-
-    ignoreCases: [],
   },
   ts: {
     name: 'bundler_ts',
     sourcePath: './bundler_ts_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_ts_test.go',
-    ignoreCases: [],
   },
   lower: {
     name: 'lower',
@@ -119,14 +91,18 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_loader_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_loader_test.go',
-    ignoreCases: [],
   },
   splitting: {
     name: 'splitting',
     sourcePath: './bundler_splitting_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_splitting_test.go',
-    ignoreCases: [],
+  },
+  glob: {
+    name: 'glob',
+    sourcePath: './bundler_glob_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_glob_test.go',
   },
 })
 /**
@@ -329,7 +305,6 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     if (!entryPaths.length) {
       console.error(chalk.red(`No entryPaths found`))
     }
-    console.log(`entryPaths: `, entryPaths)
     if (entryPaths.length === 1 && entryPaths[0] === '/*') {
       entryPaths = fileList.map((item) => item.name)
     }
@@ -420,7 +395,7 @@ function processFiles(node, binding) {
       if (!name) {
         throw new Error(`File has no name`)
       }
-      let content = child.namedChild(1)?.text.slice(1, -1).trim() ?? ''
+      let content = extractStringLiteral(child.namedChild(1)?.namedChild?.(0))
       content = dedent.default(content)
       fileList.push({
         name,
@@ -432,6 +407,29 @@ function processFiles(node, binding) {
     console.error(`Error occurred when processFiles: ${chalk.red(err)}`)
     return []
   }
+}
+
+/**
+ * @param {Parser.SyntaxNode} node
+ */
+function extractStringLiteral(node) {
+  if (!node) {
+    return ''
+  }
+  let ret = ''
+  switch (node.type) {
+    case 'binary_expression':
+      ret += extractStringLiteral(node.namedChild(0))
+      ret += extractStringLiteral(node.namedChild(1))
+      break
+    case 'raw_string_literal':
+    case 'interpreted_string_literal':
+      ret += node.text.slice(1, -1)
+      break
+    default:
+      throw new Error(`Unexpected node type: ${node.type}`)
+  }
+  return ret
 }
 
 /**

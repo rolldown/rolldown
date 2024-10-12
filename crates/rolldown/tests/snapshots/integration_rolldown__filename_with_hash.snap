@@ -1852,6 +1852,42 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-mM_nYtCM.js
 
+# tests/esbuild/glob/glob_basic_no_bundle
+
+- entry_js-!~{000}~.js => entry_js-aWMdQC7L.js
+
+# tests/esbuild/glob/glob_basic_no_splitting
+
+- entry_js-!~{000}~.js => entry_js-aWMdQC7L.js
+
+# tests/esbuild/glob/glob_basic_splitting
+
+- entry_js-!~{000}~.js => entry_js-aWMdQC7L.js
+
+# tests/esbuild/glob/glob_dir_does_not_exist
+
+- entry_js-!~{000}~.js => entry_js-aWMdQC7L.js
+
+# tests/esbuild/glob/glob_no_matches
+
+- entry_js-!~{000}~.js => entry_js-Mw8g15xn.js
+
+# tests/esbuild/glob/glob_wildcard_no_slash
+
+- entry_js-!~{000}~.js => entry_js-xFHGodS2.js
+
+# tests/esbuild/glob/glob_wildcard_slash
+
+- entry_js-!~{000}~.js => entry_js-r4Uv3hFJ.js
+
+# tests/esbuild/glob/ts_glob_basic_no_splitting
+
+- entry_ts-!~{000}~.js => entry_ts-4vDbDK-S.js
+
+# tests/esbuild/glob/ts_glob_basic_splitting
+
+- entry_ts-!~{000}~.js => entry_ts-4vDbDK-S.js
+
 # tests/esbuild/importstar/export_other_as_namespace_common_js
 
 - entry_js-!~{000}~.js => entry_js-E7S0LwxY.js
@@ -2198,7 +2234,95 @@ expression: output
 
 # tests/esbuild/importstar_ts/ts_import_star_and_common_js
 
-- entry_js-!~{000}~.js => entry_js-C281gfbF.js
+- entry_js-!~{000}~.js => entry_js-UAtZWHiI.js
+
+# tests/esbuild/importstar_ts/ts_import_star_capture
+
+- entry_ts-!~{000}~.js => entry_ts-MXsLYaqm.js
+
+# tests/esbuild/importstar_ts/ts_import_star_common_js_capture
+
+- entry_ts-!~{000}~.js => entry_ts-Tem9Z9JB.js
+
+# tests/esbuild/importstar_ts/ts_import_star_common_js_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-Hqz-udrB.js
+
+# tests/esbuild/importstar_ts/ts_import_star_common_js_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_import_star_capture
+
+- entry_ts-!~{000}~.js => entry_ts-MXsLYaqm.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_import_star_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-5y5ACgdO.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_import_star_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_star_as_capture
+
+- entry_ts-!~{000}~.js => entry_ts-MXsLYaqm.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_star_as_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-5y5ACgdO.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_star_as_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_star_capture
+
+- entry_ts-!~{000}~.js => entry_ts-D4w0uXGm.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_star_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-5y5ACgdO.js
+
+# tests/esbuild/importstar_ts/ts_import_star_export_star_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_capture
+
+- entry_ts-!~{000}~.js => entry_ts-IgbmqcvW.js
+
+# tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-91aXRnnQ.js
+
+# tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_import_star_no_bundle_capture
+
+- entry_ts-!~{000}~.js => entry_ts-IgbmqcvW.js
+
+# tests/esbuild/importstar_ts/ts_import_star_no_bundle_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-91aXRnnQ.js
+
+# tests/esbuild/importstar_ts/ts_import_star_no_bundle_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_import_star_no_capture
+
+- entry_ts-!~{000}~.js => entry_ts-5y5ACgdO.js
+
+# tests/esbuild/importstar_ts/ts_import_star_unused
+
+- entry_ts-!~{000}~.js => entry_ts-BSinVLYo.js
+
+# tests/esbuild/importstar_ts/ts_re_export_type_only_file_es6
+
+- entry_ts-!~{000}~.js => entry_ts-gjbJyMIo.js
 
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 

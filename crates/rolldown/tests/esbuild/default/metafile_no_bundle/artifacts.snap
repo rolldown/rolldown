@@ -63,8 +63,6 @@ export { exported };
 ## entry2.css
 
 ```css
-@import "pkg";
-@import "./file";
 a { background: url(pkg2) }
 a { background: url(./file2) }
 

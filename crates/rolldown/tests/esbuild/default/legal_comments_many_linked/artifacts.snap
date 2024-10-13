@@ -51,10 +51,7 @@ c {
 	zoom: 2
 }
 /* @preserve This is another comment */
-@import "./a.css";
-@import "./b.css";
-@import "./c.css";
-@import 'some-pkg/css';
+
 
 ```
 ## entry2.js

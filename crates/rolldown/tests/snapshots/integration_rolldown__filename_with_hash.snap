@@ -1357,7 +1357,7 @@ expression: output
 - entry-!~{000}~.js => entry-RNzVYqeW.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
-- dynamic-!~{002}~.js => dynamic-D_YVRUK9.js
+- dynamic-!~{002}~.js => dynamic-Z535ifNq.js
 
 # tests/esbuild/default/metafile_very_long_external_paths
 
@@ -2467,7 +2467,7 @@ expression: output
 
 - entries_entry-!~{000}~.js => entries_entry-2vyhQpop.js
 - entries_entry.css
-- entries_other_entry-!~{001}~.js => entries_other_entry-esYOV8Kb.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-dPdXM_6m.js
 - entries_other_entry.css
 - common-!~{002}~.js => common-QV0jCcba.js
 - common-QV0jCcba.css

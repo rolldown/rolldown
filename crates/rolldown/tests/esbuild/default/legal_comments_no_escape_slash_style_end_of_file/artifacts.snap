@@ -27,7 +27,7 @@ a;
 ## entry2.css
 
 ```css
-@import "css-pkg"; a { b: c } /*! </style> */
+ a { b: c } /*! </style> */
 
 ```
 ## entry2.js

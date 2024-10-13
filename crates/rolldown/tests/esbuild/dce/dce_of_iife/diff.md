@@ -1,3 +1,5 @@
+# Reason
+1. don't support dce iife
 # Diff
 ## /out/remove-these.js
 ### esbuild

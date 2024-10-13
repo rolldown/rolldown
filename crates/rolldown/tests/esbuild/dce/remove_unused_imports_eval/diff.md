@@ -1,3 +1,5 @@
+# Reason
+1. should use `import x from 'mod'` rather than `import {default as x } from 'mod'`
 # Diff
 ## /out.js
 ### esbuild

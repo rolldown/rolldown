@@ -1,3 +1,5 @@
+# Reason
+1. Rolldown generate same output as esbuild in bundle mode
 # Diff
 ## /out.js
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. sub optimal for pure call with spread
 # Diff
 ## /out.js
 ### esbuild

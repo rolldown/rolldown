@@ -1,3 +1,5 @@
+# Reason
+1. could be done in minifier
 # Diff
 ## /out/exported-entry.js
 ### esbuild

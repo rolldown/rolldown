@@ -1,3 +1,5 @@
+# Reason
+1. no sideEffect comment detect
 # Diff
 ## /out/stmt-fn.js
 ### esbuild

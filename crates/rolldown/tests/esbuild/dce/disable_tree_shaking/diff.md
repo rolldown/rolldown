@@ -1,3 +1,5 @@
+# Reason
+1. rolldown don't have `ignoreDCEAnnotations` option
 # Diff
 ## /out.js
 ### esbuild

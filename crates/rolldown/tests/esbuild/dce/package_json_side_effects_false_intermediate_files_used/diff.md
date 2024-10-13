@@ -1,3 +1,5 @@
+# Reason
+1. throw should be kept
 # Diff
 ## /out.js
 ### esbuild

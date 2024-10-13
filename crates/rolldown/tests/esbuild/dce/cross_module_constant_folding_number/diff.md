@@ -1,3 +1,5 @@
+# Reason
+1. cross module constant folding
 # Diff
 ## /out/enum-entry.js
 ### esbuild

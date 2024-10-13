@@ -1,3 +1,5 @@
+# Reason
+1. inline should be finished in minifier
 # Diff
 ## /out/entry.js
 ### esbuild

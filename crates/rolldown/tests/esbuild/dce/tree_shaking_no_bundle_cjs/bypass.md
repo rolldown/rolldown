@@ -1,3 +1,5 @@
+# Reason
+1. we don't have no bundle mode, output should be same if in bundle mode
 # Diff
 ## /out.js
 ### esbuild

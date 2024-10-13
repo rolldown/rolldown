@@ -1,3 +1,6 @@
+# Reason
+1. different file system
+2. different naming style
 # Diff
 ## /out.js
 ### esbuild
@@ -11,8 +14,8 @@ var require_demo_pkg = __commonJS({
 });
 
 // Users/user/project/src/entry.js
-require_demo_pkg();
-console.log("unused import");
+var import_demo_pkg = __toESM(require_demo_pkg());
+console.log(import_demo_pkg.foo);
 ```
 ### rolldown
 ```js
@@ -26,8 +29,8 @@ var require_demo_pkg_index = __commonJS({ "node_modules/demo-pkg/index.js"(expor
 
 //#endregion
 //#region src/entry.js
-require_demo_pkg_index();
-console.log("unused import");
+var import_demo_pkg_index = __toESM(require_demo_pkg_index());
+console.log(import_demo_pkg_index.foo);
 
 //#endregion
 
@@ -46,8 +49,9 @@ console.log("unused import");
          console.log("hello");
      }
  });
--require_demo_pkg();
-+require_demo_pkg_index();
- console.log("unused import");
+-var import_demo_pkg = __toESM(require_demo_pkg());
+-console.log(import_demo_pkg.foo);
++var import_demo_pkg_index = __toESM(require_demo_pkg_index());
++console.log(import_demo_pkg_index.foo);
 
 ```

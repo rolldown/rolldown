@@ -1,3 +1,5 @@
+# Reason
+1. rolldown don't support keep name, it is part of minifier
 # Diff
 ## /out.js
 ### esbuild

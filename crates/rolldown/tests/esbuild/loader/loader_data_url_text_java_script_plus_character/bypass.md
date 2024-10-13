@@ -1,5 +1,5 @@
 # Reason
-1. oxc constant folding 
+1. oxc constant folding
 # Diff
 ## /out/entry.js
 ### esbuild

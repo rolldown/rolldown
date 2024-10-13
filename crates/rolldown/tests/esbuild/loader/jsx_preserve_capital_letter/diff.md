@@ -1,5 +1,5 @@
 # Reason
-1. rolldown don't have `jsx.Preserve` and `jsx.Parse` option 
+1. rolldown don't have `jsx.Preserve` and `jsx.Parse` option
 # Diff
 ## /out.js
 ### esbuild

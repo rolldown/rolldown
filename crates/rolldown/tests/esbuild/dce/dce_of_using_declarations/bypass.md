@@ -1,5 +1,5 @@
 # Reason
-1. output should be same except the comment, acorn can not recognize using stmt 
+1. output should be same except the comment, acorn can not recognize using stmt
 # Diff
 ## /out/entry.js
 ### esbuild

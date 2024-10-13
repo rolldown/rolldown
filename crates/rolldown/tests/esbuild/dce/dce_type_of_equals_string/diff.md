@@ -11,11 +11,14 @@
 ```
 ### rolldown
 ```js
+(function() {
+
 
 //#region entry.js
 var hasBar = typeof bar !== "undefined";
 
 //#endregion
+})();
 
 ```
 ### diff
@@ -23,10 +26,11 @@ var hasBar = typeof bar !== "undefined";
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,3 @@
 -(() => {
 -    if (false) console.log(hasBar);
--})();
-+var hasBar = typeof bar !== "undefined";
++(function () {
++    var hasBar = typeof bar !== "undefined";
+ })();
 
 ```

@@ -1,3 +1,6 @@
+# Reason
+1. oxc define not support computed member expr
+2. not support member expr with write
 # Diff
 ## /out/read.js
 ### esbuild
@@ -14,16 +17,16 @@ console.log(
 
 //#region read.js
 console.log([
-	a,
-	b.c,
+	null,
+	null,
 	b["c"]
 ], [
-	d,
-	e.f,
+	ident,
+	ident,
 	e["f"]
 ], [
-	g,
-	h.i,
+	dot.chain,
+	dot.chain,
 	h["i"]
 ]);
 
@@ -37,7 +40,7 @@ console.log([
 +++ rolldown	read.js
 @@ -1,1 +1,1 @@
 -console.log([null, null, null], [ident, ident, ident], [dot.chain, dot.chain, dot.chain]);
-+console.log([a, b.c, b["c"]], [d, e.f, e["f"]], [g, h.i, h["i"]]);
++console.log([null, null, b["c"]], [ident, ident, e["f"]], [dot.chain, dot.chain, h["i"]]);
 
 ```
 ## /out/write.js

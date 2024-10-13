@@ -1,3 +1,6 @@
+# Reason
+1. should not transform `{default as fs}`
+2. `node:path` is side effects free
 # Diff
 ## /out/entry.js
 ### esbuild

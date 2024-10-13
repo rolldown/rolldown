@@ -1,3 +1,5 @@
+# Reason
+1. commonjs don't have `import.meta`, should rewrite
 # Diff
 ## /out.js
 ### esbuild

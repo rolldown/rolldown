@@ -1,3 +1,6 @@
+# Reason
+1. cjs module lexer can't recognize esbuild interop pattern
+2. Not sure if we needs to use `Object.define` pattern in iife
 # Diff
 ## /out.js
 ### esbuild
@@ -41,6 +44,10 @@ var globalName = (() => {
 ```
 ### rolldown
 ```js
+var globalName = (function(exports) {
+
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region a.js
@@ -62,7 +69,27 @@ function Fn() {}
 class Class {}
 
 //#endregion
-export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
+exports.C = Class
+exports.Class = Class
+exports.Fn = Fn
+exports.abc = abc
+Object.defineProperty(exports, 'b', {
+  enumerable: true,
+  get: function () {
+    return b_exports;
+  }
+});
+exports.c = c
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return entry_default;
+  }
+});
+exports.l = l
+exports.v = v
+return exports;
+})({});
 
 ```
 ### diff
@@ -70,7 +97,7 @@ export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,27 +1,13 @@
+@@ -1,27 +1,37 @@
 -var globalName = (() => {
 -    var entry_exports = {};
 -    __export(entry_exports, {
@@ -83,33 +110,49 @@ export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default
 -        default: () => entry_default,
 -        l: () => l,
 -        v: () => v
--    });
++var globalName = (function (exports) {
++    Object.defineProperty(exports, '__esModule', {
++        value: true
+     });
 -    var abc = void 0;
--    var b_exports = {};
--    __export(b_exports, {
--        xyz: () => xyz
--    });
++    const abc = undefined;
+     var b_exports = {};
+     __export(b_exports, {
+         xyz: () => xyz
+     });
 -    var xyz = null;
--    var entry_default = 123;
--    var v = 234;
++    const xyz = null;
+     var entry_default = 123;
+     var v = 234;
 -    var l = 234;
 -    var c = 234;
--    function Fn() {}
++    let l = 234;
++    const c = 234;
+     function Fn() {}
 -    var Class = class {};
 -    return __toCommonJS(entry_exports);
 -})();
-+var abc = undefined;
-+var b_exports = {};
-+__export(b_exports, {
-+    xyz: () => xyz
-+});
-+var xyz = null;
-+var entry_default = 123;
-+var v = 234;
-+var l = 234;
-+var c = 234;
-+function Fn() {}
-+class Class {}
-+export {Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v};
++    class Class {}
++    exports.C = Class;
++    exports.Class = Class;
++    exports.Fn = Fn;
++    exports.abc = abc;
++    Object.defineProperty(exports, 'b', {
++        enumerable: true,
++        get: function () {
++            return b_exports;
++        }
++    });
++    exports.c = c;
++    Object.defineProperty(exports, 'default', {
++        enumerable: true,
++        get: function () {
++            return entry_default;
++        }
++    });
++    exports.l = l;
++    exports.v = v;
++    return exports;
++})({});
 
 ```

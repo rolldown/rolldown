@@ -1,3 +1,5 @@
+# Reason
+1. rolldown try to extract common module when duplicate entry point
 # Diff
 ## /out.js/entry.js
 ### esbuild

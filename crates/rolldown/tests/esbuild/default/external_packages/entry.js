@@ -1,4 +1,4 @@
 import 'pkg1'
 import './file'
-import 'pkg2'
+import './node_modules/pkg2/index.js'
 import '#pkg3'

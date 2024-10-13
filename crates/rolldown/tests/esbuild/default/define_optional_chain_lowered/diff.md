@@ -1,3 +1,6 @@
+# Reason
+1. lowering optional chain
+2. oxc define do not support  optional chain
 # Diff
 ## /out.js
 ### esbuild

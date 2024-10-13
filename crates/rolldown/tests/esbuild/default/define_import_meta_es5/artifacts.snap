@@ -22,7 +22,7 @@ console.log(import.meta.y);
 ```js
 
 //#region replaced.js
-console.log(import.meta.x);
+console.log(1);
 
 //#endregion
 ```

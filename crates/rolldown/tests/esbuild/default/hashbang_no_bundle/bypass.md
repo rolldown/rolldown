@@ -1,3 +1,5 @@
+# Reason
+1. acorn could not parse hashban, rewrite failed, diff is only about comments
 # Diff
 ## /out.js
 ### esbuild

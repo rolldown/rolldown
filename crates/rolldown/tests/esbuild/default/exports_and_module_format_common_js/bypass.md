@@ -1,3 +1,5 @@
+# Reason
+1. different deconflict naming style and order
 # Diff
 ## /out.js
 ### esbuild
@@ -37,9 +39,9 @@ let bar = 123;
 
 //#endregion
 //#region entry.js
+console.log(exports, module.exports);
 assert.deepEqual(test_exports$1, { foo: 123 });
 assert.deepEqual(test_exports, { bar: 123 });
-console.log(exports, module.exports);
 
 //#endregion
 
@@ -49,7 +51,7 @@ console.log(exports, module.exports);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,14 @@
+@@ -1,11 +1,13 @@
 -var test_exports = {};
 -__export(test_exports, {
 +var {default: assert} = __toESM(require("node:assert"));
@@ -66,7 +68,6 @@ console.log(exports, module.exports);
  });
  var bar = 123;
 -console.log(exports, module.exports, test_exports, test_exports2);
-+console.log(test_exports$1, test_exports);
 +console.log(exports, module.exports);
 +console.log(test_exports$1, test_exports);
 

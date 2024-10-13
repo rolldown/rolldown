@@ -1,3 +1,5 @@
+# Reason
+1. different naming style
 # Diff
 ## /out.js
 ### esbuild
@@ -26,7 +28,7 @@ var require_dot_import_index = __commonJS({ "index.js"(exports) {
 //#endregion
 //#region entry.js
 var import_dot_import_index = __toESM(require_dot_import_index());
-assert(import_dot_import_index.x === 123);
+assert.equal(import_dot_import_index.x, 123);
 
 //#endregion
 
@@ -46,6 +48,6 @@ assert(import_dot_import_index.x === 123);
 -var import__ = __toESM(require_index());
 -console.log(import__.x);
 +var import_dot_import_index = __toESM(require_dot_import_index());
-+assert(import_dot_import_index.x === 123);
++console.log(import_dot_import_index.x);
 
 ```

@@ -1,3 +1,5 @@
+# Reason
+1. oxc define dont support this expr
 # Diff
 ## /out.js
 ### esbuild

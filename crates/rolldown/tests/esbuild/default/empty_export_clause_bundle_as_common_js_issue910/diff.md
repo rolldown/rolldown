@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal
+2. should init `type_exports` when decl
 # Diff
 ## /out.js
 ### esbuild

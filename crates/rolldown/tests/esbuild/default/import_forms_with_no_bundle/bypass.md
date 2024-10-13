@@ -1,3 +1,5 @@
+# Reason
+1. rolldown will try to merge import stmt that importee are same
 # Diff
 ## /out.js
 ### esbuild

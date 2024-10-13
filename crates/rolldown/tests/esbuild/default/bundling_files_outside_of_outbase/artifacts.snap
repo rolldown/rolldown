@@ -7,18 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
-//#region ../node_modules/node_modules/demo-pkg/index.js
-var require_demo_pkg_index = __commonJS({ "../node_modules/node_modules/demo-pkg/index.js"(exports, module) {
-	module.exports = function() {
-		return 123;
-	};
-} });
-
-//#endregion
-//#region ../node_modules/src/entry.js
-var import_demo_pkg_index = __toESM(require_demo_pkg_index());
-console.log((0, import_demo_pkg_index.default)());
+//#region src/entry.js
+console.log("test");
 
 //#endregion
 ```

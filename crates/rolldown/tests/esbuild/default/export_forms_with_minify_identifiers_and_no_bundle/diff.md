@@ -1,3 +1,5 @@
+# Reason
+1. needs to disable split chunks
 # Diff
 ## /out/a.js
 ### esbuild

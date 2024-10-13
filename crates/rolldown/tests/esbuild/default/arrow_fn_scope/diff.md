@@ -1,3 +1,5 @@
+# Reason
+1. the deconflict of no top level is sub optimal
 # Diff
 ## /out.js
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. inline could be done in minifier
 # Diff
 ## /out.js
 ### esbuild

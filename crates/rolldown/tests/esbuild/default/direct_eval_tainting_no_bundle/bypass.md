@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal
+2. eval in `test4` param position don't need to rename
 # Diff
 ## /out.js
 ### esbuild

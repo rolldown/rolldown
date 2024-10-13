@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region read.js
 console.log([
-	a,
-	b.c,
+	null,
+	null,
 	b["c"]
 ], [
-	d,
-	e.f,
+	ident,
+	ident,
 	e["f"]
 ], [
-	g,
-	h.i,
+	dot.chain,
+	dot.chain,
 	h["i"]
 ]);
 

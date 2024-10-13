@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal wrap impl, `__export`  should not be wrapped in module 
+initialization
 # Diff
 ## /out.js
 ### esbuild

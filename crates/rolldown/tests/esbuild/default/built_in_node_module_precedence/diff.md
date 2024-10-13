@@ -1,3 +1,5 @@
+# Reason
+1. It seems rolldown rewrite `fs` to `node:fs`
 # Diff
 ## /out/entry.js
 ### esbuild

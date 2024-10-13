@@ -8,19 +8,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region dot-define.js
+1 .c;
 a?.b.c;
-a?.b.c;
+1["c"];
 a?.b["c"];
-a?.b["c"];
+1();
 a?.b();
-a?.b();
+1 .c();
 a?.b.c();
-a?.b.c();
+1["c"]();
 a?.b["c"]();
-a?.b["c"]();
+delete 1 .c;
 delete a?.b.c;
-delete a?.b.c;
-delete a?.b["c"];
+delete 1["c"];
 delete a?.b["c"];
 
 //#endregion
@@ -30,20 +30,20 @@ delete a?.b["c"];
 ```js
 
 //#region id-define.js
-x?.y.z;
-x?.y.z;
-x?.y["z"];
-x?.y["z"];
-x?.y();
-x?.y();
-x?.y.z();
-x?.y.z();
-x?.y["z"]();
-x?.y["z"]();
-delete x?.y.z;
-delete x?.y.z;
-delete x?.y["z"];
-delete x?.y["z"];
+1?.y.z;
+1?.y.z;
+1?.y["z"];
+1?.y["z"];
+1?.y();
+1?.y();
+1?.y.z();
+1?.y.z();
+1?.y["z"]();
+1?.y["z"]();
+delete 1?.y.z;
+delete 1?.y.z;
+delete 1?.y["z"];
+delete 1?.y["z"];
 
 //#endregion
 ```

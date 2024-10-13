@@ -48,13 +48,42 @@ Object.defineProperty(exports, 'inner', {
   }
 });
 
+
+//#region a.js
+const A = 1;
+const B = "2";
+
+//#endregion
+//#region b.js
+const C = 1;
+const D = "2";
+
+//#endregion
+//#region inner.js
+var inner_exports = {};
+__export(inner_exports, {
+	C: () => C,
+	D: () => D
+});
+
+//#endregion
+export { A, B, inner_exports as inner };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
+<<<<<<< HEAD
 +++ rolldown	entry.js
 @@ -1,8 +1,17 @@
+||||||| bdde6fec1
++++ rolldown	
+@@ -1,8 +0,0 @@
+=======
++++ rolldown	entry.js
+@@ -1,8 +1,10 @@
+>>>>>>> main
 -var entry_exports = {};
 -__export(entry_exports, {
 -    inner: () => inner_exports

@@ -11,10 +11,6 @@
   diff
 ## [jsx_preserve_capital_letter](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter/diff.md)
   diff
-## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/diff.md)
-  diff
-## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/diff.md)
-  diff
 ## [jsx_syntax_in_js_with_jsx_loader](../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader/diff.md)
   diff
 ## [loader_base64_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6/diff.md)
@@ -45,8 +41,6 @@
   diff
 ## [loader_copy_with_transform](../../../crates/rolldown/tests/esbuild/loader/loader_copy_with_transform/diff.md)
   diff
-## [loader_data_url_application_json](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_application_json/diff.md)
-  diff
 ## [loader_data_url_base64_invalid_utf8](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8/diff.md)
   diff
 ## [loader_data_url_base64_vs_percent_encoding](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding/diff.md)
@@ -56,8 +50,6 @@
 ## [loader_data_url_extension_based_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_extension_based_mime/diff.md)
   diff
 ## [loader_data_url_text_css](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css/diff.md)
-  diff
-## [loader_data_url_text_java_script_plus_character](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script_plus_character/diff.md)
   diff
 ## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime/diff.md)
   diff
@@ -132,3 +124,7 @@
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)
 # Bypassed Cases
+## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/bypass.md)
+## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/bypass.md)
+## [loader_data_url_application_json](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_application_json/bypass.md)
+## [loader_data_url_text_java_script_plus_character](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script_plus_character/bypass.md)

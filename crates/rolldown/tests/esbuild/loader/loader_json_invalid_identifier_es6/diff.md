@@ -1,3 +1,5 @@
+# Reason
+1. json tree shaking
 # Diff
 ## /out.js
 ### esbuild

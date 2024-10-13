@@ -1,3 +1,5 @@
+# Reason
+1. seems esbuild mark static field as side effects whatever, should investigate
 # Diff
 ## /out/entry.js
 ### esbuild

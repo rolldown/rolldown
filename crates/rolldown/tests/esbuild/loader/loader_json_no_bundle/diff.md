@@ -1,3 +1,5 @@
+# Reason
+1. should treated it as cjs module
 # Diff
 ## /out.js
 ### esbuild

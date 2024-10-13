@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+(function() {
+
 
 //#region entry.js
 "use 1";
@@ -14,4 +16,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 entry();
 
 //#endregion
+})();
 ```

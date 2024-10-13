@@ -1,3 +1,5 @@
+# Reason
+1. `cjs_exports` initialized should not wrapped in `init_cjs`
 # Diff
 ## /out.js
 ### esbuild

@@ -20,8 +20,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { Link } from "@remix-run/react";
-import { createElement as _createElement } from "react";
+"use strict";
+
+const { Link } = __toESM(require("@remix-run/react"));
+const { createElement: _createElement } = __toESM(require("react"));
 
 //#region entry.jsx
 const x = _createElement(Link, {

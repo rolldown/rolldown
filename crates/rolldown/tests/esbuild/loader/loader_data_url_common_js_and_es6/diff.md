@@ -1,3 +1,5 @@
+# Reason
+1. esbuild treated `.txt` as cjs, rolldown treated it as esm
 # Diff
 ## /out.js
 ### esbuild

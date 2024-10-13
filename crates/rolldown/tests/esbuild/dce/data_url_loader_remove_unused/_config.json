@@ -7,7 +7,7 @@
       }
     ],
     "moduleTypes": {
-      ".data": "base64"
+      ".data": "dataurl"
     }
   }
 }

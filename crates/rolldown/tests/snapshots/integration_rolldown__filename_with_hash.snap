@@ -51,12 +51,6 @@ expression: output
 - backwards-reference-nested-function-!~{00c}~.js => backwards-reference-nested-function-8vtGv60k.js
 - issue-3125-!~{00d}~.js => issue-3125-tdhDm1z9.js
 
-# tests/esbuild/dce/cross_module_constant_folding
-
-- enum-entry-!~{000}~.js => enum-entry-CxUYyfb8.js
-- const-entry-!~{001}~.js => const-entry-KWSU6ZgY.js
-- nested-entry-!~{002}~.js => nested-entry-aIOnWJ01.js
-
 # tests/esbuild/dce/cross_module_constant_folding_number
 
 - enum-entry-!~{000}~.js => enum-entry-zuei9XNc.js
@@ -125,7 +119,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string
 
-- entry-!~{000}~.js => entry-wwIJBOXg.js
+- entry-!~{000}~.js => entry-854Tw2k4.js
 
 # tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 
@@ -133,7 +127,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string_mangle
 
-- entry-!~{000}~.js => entry-wwIJBOXg.js
+- entry-!~{000}~.js => entry-854Tw2k4.js
 
 # tests/esbuild/dce/dce_var_exports
 
@@ -148,7 +142,7 @@ expression: output
 
 # tests/esbuild/dce/disable_tree_shaking
 
-- entry-!~{000}~.js => entry-nQeBp0MD.js
+- entry-!~{000}~.js => entry-Ddf7ykCM.js
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
@@ -156,7 +150,7 @@ expression: output
 
 # tests/esbuild/dce/drop_labels
 
-- entry-!~{000}~.js => entry-KQVHEjC1.js
+- entry-!~{000}~.js => entry-6aKzeo3k.js
 
 # tests/esbuild/dce/file_loader_remove_unused
 
@@ -419,11 +413,11 @@ expression: output
 
 # tests/esbuild/dce/preserve_directives_minify_bundle
 
-- entry-!~{000}~.js => entry-jLUn0uxk.js
+- entry-!~{000}~.js => entry-NIu_zQi_.js
 
 # tests/esbuild/dce/preserve_directives_minify_iife
 
-- entry-!~{000}~.js => entry-xjfK9jpA.js
+- entry-!~{000}~.js => entry-CiOxqhyy.js
 
 # tests/esbuild/dce/preserve_directives_minify_pass_through
 

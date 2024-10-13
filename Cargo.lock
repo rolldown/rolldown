@@ -533,6 +533,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "css-module-lexer"
+version = "0.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c3cb070d213f1295804b62e861ba5d05435497591212a55826af6d54b2447c8"
+dependencies = [
+ "smallvec",
+]
+
+[[package]]
 name = "cssparser"
 version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2432,6 +2441,7 @@ dependencies = [
  "anyhow",
  "append-only-vec",
  "arcstr",
+ "css-module-lexer",
  "daachorse",
  "dashmap 6.1.0",
  "dunce",
@@ -2441,7 +2451,6 @@ dependencies = [
  "insta",
  "itertools 0.13.0",
  "itoa",
- "lightningcss",
  "memchr",
  "notify",
  "oxc",

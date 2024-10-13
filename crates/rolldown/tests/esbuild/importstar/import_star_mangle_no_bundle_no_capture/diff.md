@@ -1,3 +1,5 @@
+# Reason
+1. needs rewrite tool ignore top level `let` binding -> var
 # Diff
 ## /out.js
 ### esbuild

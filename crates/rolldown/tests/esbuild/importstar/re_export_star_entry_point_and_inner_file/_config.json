@@ -5,6 +5,9 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
-  }
+    ],
+    "format": "cjs",
+    "external": ["a", "b"]
+  },
+  "expectExecuted": false
 }

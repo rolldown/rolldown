@@ -1,3 +1,5 @@
+# Reason 
+1. Wrong impl when module.exports self
 # Diff
 ## /out.js
 ### esbuild

@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as assert } from "node:assert";
 
+const { default: assert } = __toESM(require("node:assert"));
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {

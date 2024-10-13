@@ -1,3 +1,5 @@
+# Reason
+1. Wrong default import linking output
 # Diff
 ## /out/external-default2.js
 ### esbuild

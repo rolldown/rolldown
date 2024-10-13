@@ -1,18 +1,18 @@
+# Reason
+1. rolldown implemented advanced barrel exports opt
 # Diff
 ## /out.js
 ### esbuild
 ```js
-// foo.js
-var foo_exports = {};
-__export(foo_exports, {
+// bar.js
+var bar_exports = {};
+__export(bar_exports, {
   x: () => x
 });
-
-// bar.js
 var x = 123;
 
 // entry.js
-console.log(foo_exports, void 0);
+console.log(bar_exports, bar_exports.foo);
 ```
 ### rolldown
 ```js
@@ -20,16 +20,13 @@ import { default as assert } from "node:assert";
 
 
 //#region bar.js
+var bar_exports = {};
+__export(bar_exports, { x: () => x });
 const x = 123;
 
 //#endregion
-//#region foo.js
-var foo_exports = {};
-__export(foo_exports, { x: () => x });
-
-//#endregion
 //#region entry.js
-assert.deepEqual(foo_exports, { x: 123 });
+assert.deepEqual(bar_exports, { x: 123 });
 assert.equal(void 0, undefined);
 
 //#endregion
@@ -40,13 +37,12 @@ assert.equal(void 0, undefined);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,6 @@
-+var x = 123;
- var foo_exports = {};
- __export(foo_exports, {
+@@ -2,5 +2,5 @@
+ __export(bar_exports, {
      x: () => x
  });
--var x = 123;
- console.log(foo_exports, void 0);
+ var x = 123;
+-console.log(bar_exports, bar_exports.foo);
++console.log(bar_exports, void 0);
 
 ```

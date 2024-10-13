@@ -1,3 +1,5 @@
+# Reason
+1. different iife impl
 # Diff
 ## /out.js
 ### esbuild
@@ -13,7 +15,7 @@ var mod = (() => {
 ```
 ### rolldown
 ```js
-(function(exports, foo) {
+var mod = (function(exports, foo) {
 
 "use strict";
 const out = foo;
@@ -38,7 +40,7 @@ return exports;
 -    var entry_exports = {};
 -    __export(entry_exports, {
 -        out: () => out
-+(function (exports, foo) {
++var mod = (function (exports, foo) {
 +    const out = foo;
 +    Object.defineProperty(exports, 'out', {
 +        enumerable: true,

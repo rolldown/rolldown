@@ -1,3 +1,5 @@
+# Reason
+1. Wrong output
 # Diff
 ## /out/entry-nope.js
 ### esbuild

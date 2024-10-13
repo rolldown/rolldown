@@ -6,10 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+"use strict";
 
 //#region foo.js
 let foo = "foo";
 
 //#endregion
-export { foo };
+exports.foo = foo
 ```

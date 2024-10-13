@@ -1,3 +1,5 @@
+# Reason
+1. rolldown has redundant `require('external')`
 # Diff
 ## /out.js
 ### esbuild

@@ -12,6 +12,10 @@ function defaultResolveFunction(
   if (esbuildFilename === '/out.js' && /entry\.js/.test(rolldownFilename)) {
     return true
   }
+  let extractedCaseName = /\/out\/(.*)/.exec(esbuildFilename)?.[1]
+  if (extractedCaseName === rolldownFilename) {
+    return true
+  }
 }
 /**
  * TODO: custom resolve

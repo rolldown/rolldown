@@ -83,16 +83,20 @@ export {
 ```
 ### rolldown
 ```js
+import { a } from "./a2.js";
+
+export { a };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	a.js
+@@ -1,2 +1,2 @@
 -import {a} from "./chunk-RLFZNZQZ.js";
--export {a};
++import {a} from "./a2.js";
+ export {a};
 
 ```
 ## /out/b.js
@@ -107,16 +111,20 @@ export {
 ```
 ### rolldown
 ```js
+import { a } from "./a2.js";
+
+export { a };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	b.js
+@@ -1,2 +1,2 @@
 -import {a} from "./chunk-RLFZNZQZ.js";
--export {a};
++import {a} from "./a2.js";
+ export {a};
 
 ```
 ## /out/chunk-RLFZNZQZ.js

@@ -10,16 +10,24 @@ console.log(__default);
 ```
 ### rolldown
 ```js
+import { default as a } from "./1111111111111111111111111111111111111111111111111111111111111111111111.file";
+
+//#region bytesInOutput should be at least 99 (1).js
+console.log(a);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99 (1).js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	bytesInOutput should be at least 99 (1).js
+@@ -1,2 +1,2 @@
 -var __default = "./111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-55DNWN2R.file";
 -console.log(__default);
++import {default as a} from "./1111111111111111111111111111111111111111111111111111111111111111111111.file";
++console.log(a);
 
 ```
 ## /out/bytesInOutput should be at least 99 (2).js
@@ -31,16 +39,23 @@ console.log(a);
 ```
 ### rolldown
 ```js
+import { default as a } from "./2222222222222222222222222222222222222222222222222222222222222222222222.copy";
+
+//#region bytesInOutput should be at least 99 (2).js
+console.log(a);
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99 (2).js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	bytesInOutput should be at least 99 (2).js
+@@ -1,2 +1,2 @@
 -import a from "./222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222-55DNWN2R.copy";
--console.log(a);
++import {default as a} from "./2222222222222222222222222222222222222222222222222222222222222222222222.copy";
+ console.log(a);
 
 ```
 ## /out/bytesInOutput should be at least 99 (3).js
@@ -52,14 +67,20 @@ import("./3333333333333333333333333333333333333333333333333333333333333333333333
 ### rolldown
 ```js
 
+//#region bytesInOutput should be at least 99 (3).js
+import("./3333333333333333333333333333333333333333333333333333333333333333333333.js").then(console.log);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99 (3).js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	bytesInOutput should be at least 99 (3).js
+@@ -1,1 +1,1 @@
 -import("./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js").then(console.log);
++import("./3333333333333333333333333333333333333333333333333333333333333333333333.js").then(console.log);
 
 ```
 ## /out/bytesInOutput should be at least 99.css
@@ -72,19 +93,23 @@ a {
 ```
 ### rolldown
 ```js
+a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
+
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99.css
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	bytesInOutput should be at least 99.css
+@@ -1,4 +1,2 @@
 -/* project/bytesInOutput should be at least 99.css */
 -a {
 -  background: url("./444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file");
 -}
 \ No newline at end of file
++a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
++
 
 ```
 ## metafile.json

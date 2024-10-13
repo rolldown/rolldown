@@ -1,44 +1,4 @@
 # Diff
-## /out/keep.js
-### esbuild
-```js
-foo("_keepThisProperty");
-foo((x, "_keepThisProperty"));
-foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
-x[foo("_keepThisProperty")];
-x?.[foo("_keepThisProperty")];
-({ [foo("_keepThisProperty")]: x });
-(class {
-  [foo("_keepThisProperty")] = x;
-});
-var { [foo("_keepThisProperty")]: x } = y;
-foo("_keepThisProperty") in x;
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/keep.js
-+++ rolldown	
-@@ -1,13 +0,0 @@
--foo("_keepThisProperty");
--foo((x, "_keepThisProperty"));
--foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
--x[foo("_keepThisProperty")];
--x?.[foo("_keepThisProperty")];
--({
--    [foo("_keepThisProperty")]: x
--});
--(class {
--    [foo("_keepThisProperty")] = x;
--});
--var {[foo("_keepThisProperty")]: x} = y;
--(foo("_keepThisProperty") in x);
-
-```
 ## /out/mangle.js
 ### esbuild
 ```js
@@ -73,13 +33,35 @@ var { [(z, "a")]: x } = y;
 ### rolldown
 ```js
 
+//#region mangle.js
+x["_mangleThis"];
+x?.["_mangleThis"];
+x[y ? "_mangleThis" : z];
+x?.[y ? "_mangleThis" : z];
+x[y ? z : "_mangleThis"];
+x?.[y ? z : "_mangleThis"];
+x[y, "_mangleThis"];
+x?.[y, "_mangleThis"];
+({ [(y, "_mangleThis")]: x });
+(class {
+	[(y, "_mangleThis")] = x;
+});
+var { "_mangleThis": x } = y;
+var { ["_mangleThis"]: x } = y;
+var { [(z, "_mangleThis")]: x } = y;
+(y ? "_mangleThis" : z) in x;
+(y ? z : "_mangleThis") in x;
+(y, "_mangleThis") in x;
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/mangle.js
-+++ rolldown	
-@@ -1,33 +0,0 @@
++++ rolldown	mangle.js
+@@ -1,33 +1,20 @@
 -x.a;
 -x?.a;
 -x[y ? "a" : z];
@@ -88,18 +70,28 @@ var { [(z, "a")]: x } = y;
 -x?.[y ? z : "a"];
 -x[(y, "a")];
 -x?.[(y, "a")];
--({
++x["_mangleThis"];
++x?.["_mangleThis"];
++x[y ? "_mangleThis" : z];
++x?.[y ? "_mangleThis" : z];
++x[y ? z : "_mangleThis"];
++x?.[y ? z : "_mangleThis"];
++x[(y, "_mangleThis")];
++x?.[(y, "_mangleThis")];
+ ({
 -    a: x
--});
++    [(y, "_mangleThis")]: x
+ });
 -({
 -    ["a"]: x
 -});
 -({
 -    [(y, "a")]: x
 -});
--(class {
+ (class {
 -    a = x;
--});
++    [(y, "_mangleThis")] = x;
+ });
 -(class {
 -    ["a"] = x;
 -});
@@ -113,5 +105,11 @@ var { [(z, "a")]: x } = y;
 -((y ? "a" : z) in x);
 -((y ? z : "a") in x);
 -((y, "a") in x);
++var {"_mangleThis": x} = y;
++var {["_mangleThis"]: x} = y;
++var {[(z, "_mangleThis")]: x} = y;
++((y ? "_mangleThis" : z) in x);
++((y ? z : "_mangleThis") in x);
++((y, "_mangleThis") in x);
 
 ```

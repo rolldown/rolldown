@@ -8,13 +8,19 @@ console.log(1 + 2);
 ### rolldown
 ```js
 
+//#region <data:text/javascript,console.log(1+2)>
+console.log(3);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	entry.js
+@@ -1,1 +1,1 @@
 -console.log(1 + 2);
++console.log(3);
 
 ```

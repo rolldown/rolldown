@@ -109,13 +109,34 @@ __name(foo, "foo");
 ### rolldown
 ```js
 
+//#region keep.js
+function fn() {}
+var fn = function() {};
+var obj = { "f n": function() {} };
+fn = function() {};
+fn ||= function() {};
+fn &&= function() {};
+fn ??= function() {};
+var [fn = function() {}] = [];
+var { fn = function() {} } = {};
+for (var [fn = function() {}] = [];;);
+for (var { fn = function() {} } = {};;);
+for (var [fn = function() {}] in obj);
+for (var { fn = function() {} } in obj);
+for (var [fn = function() {}] of obj);
+for (var { fn = function() {} } of obj);
+[fn = function() {}] = [];
+({fn = function() {}} = {});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/keep.js
-+++ rolldown	
-@@ -1,103 +0,0 @@
++++ rolldown	keep.js
+@@ -1,103 +1,21 @@
 -function fn() {
 -}
 -__name(fn, "fn");
@@ -220,6 +241,27 @@ __name(foo, "foo");
 -({ fn = /* @__PURE__ */ __name(function() {
 -}, "fn") } = {});
 \ No newline at end of file
++
++//#region keep.js
++function fn() {}
++var fn = function() {};
++var obj = { "f n": function() {} };
++fn = function() {};
++fn ||= function() {};
++fn &&= function() {};
++fn ??= function() {};
++var [fn = function() {}] = [];
++var { fn = function() {} } = {};
++for (var [fn = function() {}] = [];;);
++for (var { fn = function() {} } = {};;);
++for (var [fn = function() {}] in obj);
++for (var { fn = function() {} } in obj);
++for (var [fn = function() {}] of obj);
++for (var { fn = function() {} } of obj);
++[fn = function() {}] = [];
++({fn = function() {}} = {});
++
++//#endregion
 
 ```
 ## /out/do-not-keep.js
@@ -379,12 +421,13 @@ const Baz4 = { async fn() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/do-not-keep.js
-+++ rolldown	
++++ rolldown	do-not-keep.js
 @@ -1,135 +0,0 @@
 -class Foo0 {
 -    static {

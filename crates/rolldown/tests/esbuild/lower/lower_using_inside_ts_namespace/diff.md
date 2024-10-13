@@ -19,13 +19,23 @@ var ns;
 ### rolldown
 ```js
 
+//#region entry.ts
+let ns;
+(function(_ns) {
+	let a = _ns.a = b;
+	using c = d;
+	let e = _ns.e = f;
+})(ns || (ns = {}));
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,13 +0,0 @@
++++ rolldown	entry.js
+@@ -1,13 +1,10 @@
 -var ns;
 -(ns2 => {
 -    var _stack = [];
@@ -38,6 +48,15 @@ var ns;
 -    } finally {
 -        __callDispose(_stack, _error, _hasError);
 -    }
--})(ns || (ns = {}));
++
++//#region entry.ts
++let ns;
++(function(_ns) {
++	let a = _ns.a = b;
++	using c = d;
++	let e = _ns.e = f;
+ })(ns || (ns = {}));
++
++//#endregion
 
 ```

@@ -9,15 +9,37 @@ var { _doNotMangleThis: x } = y;
 ### rolldown
 ```js
 
+//#region entry.js
+x["_doNotMangleThis"];
+x?.["_doNotMangleThis"];
+x[y ? "_doNotMangleThis" : z];
+x?.[y ? "_doNotMangleThis" : z];
+x[y ? z : "_doNotMangleThis"];
+x?.[y ? z : "_doNotMangleThis"];
+var { "_doNotMangleThis": x } = y;
+(y ? "_doNotMangleThis" : z) in x;
+(y ? z : "_doNotMangleThis") in x;
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	entry.js
+@@ -1,3 +1,9 @@
 -(x._doNotMangleThis, x?._doNotMangleThis, x[y ? "_doNotMangleThis" : z], x?.[y ? "_doNotMangleThis" : z], x[y ? z : "_doNotMangleThis"], x?.[y ? z : "_doNotMangleThis"]);
 -var {_doNotMangleThis: x} = y;
 -(("_doNotMangleThis" in x), ((y ? "_doNotMangleThis" : z) in x), ((y ? z : "_doNotMangleThis") in x));
++x["_doNotMangleThis"];
++x?.["_doNotMangleThis"];
++x[y ? "_doNotMangleThis" : z];
++x?.[y ? "_doNotMangleThis" : z];
++x[y ? z : "_doNotMangleThis"];
++x?.[y ? z : "_doNotMangleThis"];
++var {"_doNotMangleThis": x} = y;
++((y ? "_doNotMangleThis" : z) in x);
++((y ? z : "_doNotMangleThis") in x);
 
 ```

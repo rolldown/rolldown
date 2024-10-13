@@ -51,15 +51,29 @@ class Foo {
 ### rolldown
 ```js
 
+//#region js-define.js
+class Foo {
+	accessor one = 1;
+	accessor #two = 2;
+	accessor [three()] = 3;
+	static accessor four = 4;
+	static accessor #five = 5;
+	static accessor [six()] = 6;
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/js-define.js
-+++ rolldown	
-@@ -1,45 +0,0 @@
++++ rolldown	js-define.js
+@@ -1,45 +1,12 @@
 -var _a, _b;
--class Foo {
++
++//#region js-define.js
+ class Foo {
 -    #one = 1;
 -    get one() {
 -        return this.#one;
@@ -102,7 +116,15 @@ class Foo {
 -    static set [_a](_) {
 -        this.#b = _;
 -    }
--}
++	accessor one = 1;
++	accessor #two = 2;
++	accessor [three()] = 3;
++	static accessor four = 4;
++	static accessor #five = 5;
++	static accessor [six()] = 6;
+ }
++
++//#endregion
 
 ```
 ## /out/ts-define/ts-define.js

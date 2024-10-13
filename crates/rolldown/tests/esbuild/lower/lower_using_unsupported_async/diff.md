@@ -38,13 +38,14 @@ function bar() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,32 +0,0 @@
++++ rolldown	entry.js
+@@ -1,32 +1,1 @@
 -function foo() {
 -  using a = b;
 -  if (nested) {
@@ -78,6 +79,7 @@ function bar() {
 -  });
 -}
 \ No newline at end of file
++
 
 ```
 ## /out/loops.js
@@ -111,17 +113,28 @@ function bar() {
 ### rolldown
 ```js
 
+//#region loops.js
+for (using a of b) c(() => a);
+if (nested) {
+	for (using a of b) c(() => a);
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/loops.js
-+++ rolldown	
-@@ -1,24 +0,0 @@
--for (using a of b) c(() => a);
--if (nested) {
++++ rolldown	loops.js
+@@ -1,24 +1,8 @@
++
++//#region loops.js
+ for (using a of b) c(() => a);
+ if (nested) {
 -  for (using a of b) c(() => a);
--}
++	for (using a of b) c(() => a);
+ }
 -function foo() {
 -  for (using a of b) c(() => a);
 -}
@@ -143,6 +156,8 @@ function bar() {
 -  });
 -}
 \ No newline at end of file
++
++//#endregion
 
 ```
 ## /out/switch.js
@@ -184,20 +199,44 @@ function foo() {
 ### rolldown
 ```js
 
+//#region switch.js
+using x = y;
+switch (foo) {
+	case 0: using c = d;
+	default: using e = f;
+}
+async function foo() {
+	using x$1 = y;
+	switch (foo) {
+		case 0: using c$1 = d;
+		default: using e$1 = f;
+	}
+	switch (foo) {
+		case 0: await using c$1 = d;
+		default: using e$1 = f;
+	}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/switch.js
-+++ rolldown	
-@@ -1,32 +0,0 @@
--using x = y;
--switch (foo) {
++++ rolldown	switch.js
+@@ -1,32 +1,20 @@
++
++//#region switch.js
+ using x = y;
+ switch (foo) {
 -  case 0:
 -    using c = d;
 -  default:
 -    using e = f;
--}
++	case 0: using c = d;
++	default: using e = f;
+ }
 -function foo() {
 -  return __async(this, null, function* () {
 -    using x2 = y;
@@ -224,5 +263,18 @@ function foo() {
 -  });
 -}
 \ No newline at end of file
++async function foo() {
++	using x$1 = y;
++	switch (foo) {
++		case 0: using c$1 = d;
++		default: using e$1 = f;
++	}
++	switch (foo) {
++		case 0: await using c$1 = d;
++		default: using e$1 = f;
++	}
++}
++
++//#endregion
 
 ```

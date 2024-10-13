@@ -13,17 +13,27 @@ export {
 ### rolldown
 ```js
 
+//#region a.js
+function a_default(one, two, three, four) {
+	return "the argument names must be the same";
+}
+
+//#endregion
+export { a_default as default };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	a.js
+@@ -1,4 +1,4 @@
 -function u(e, t, n, r) {
--    return "the argument names must be the same";
--}
++function a_default(one, two, three, four) {
+     return "the argument names must be the same";
+ }
 -export {u as default};
++export {a_default as default};
 
 ```
 ## /out/b.js
@@ -40,16 +50,26 @@ export {
 ### rolldown
 ```js
 
+//#region b.js
+function b_default(one, two, three, four) {
+	return "the argument names must be the same";
+}
+
+//#endregion
+export { b_default as default };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	b.js
+@@ -1,4 +1,4 @@
 -function u(e, t, n, r) {
--    return "the argument names must be the same";
--}
++function b_default(one, two, three, four) {
+     return "the argument names must be the same";
+ }
 -export {u as default};
++export {b_default as default};
 
 ```

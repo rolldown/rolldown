@@ -47,13 +47,74 @@ not_inlined = [
 ### rolldown
 ```js
 
+//#region enums.ts
+let a_num = function(a_num$1) {
+	a_num$1[a_num$1["x"] = 123] = "x";
+	return a_num$1;
+}({});
+let b_num = function(b_num$1) {
+	b_num$1[b_num$1["x"] = 123] = "x";
+	return b_num$1;
+}({});
+let c_num = function(c_num$1) {
+	c_num$1[c_num$1["x"] = 123] = "x";
+	return c_num$1;
+}({});
+let d_num = function(d_num$1) {
+	d_num$1[d_num$1["x"] = 123] = "x";
+	return d_num$1;
+}({});
+let e_num = function(e_num$1) {
+	e_num$1[e_num$1["x"] = 123] = "x";
+	return e_num$1;
+}({});
+let a_str = function(a_str$1) {
+	a_str$1["x"] = "abc";
+	return a_str$1;
+}({});
+let b_str = function(b_str$1) {
+	b_str$1["x"] = "abc";
+	return b_str$1;
+}({});
+let c_str = function(c_str$1) {
+	c_str$1["x"] = "abc";
+	return c_str$1;
+}({});
+let d_str = function(d_str$1) {
+	d_str$1["x"] = "abc";
+	return d_str$1;
+}({});
+let e_str = function(e_str$1) {
+	e_str$1["x"] = "abc";
+	return e_str$1;
+}({});
+
+//#endregion
+//#region entry.ts
+inlined = [
+	a_num.x,
+	b_num["x"],
+	a_str.x,
+	b_str["x"]
+];
+not_inlined = [
+	c_num?.x,
+	d_num?.["x"],
+	e_num,
+	c_str?.x,
+	d_str?.["x"],
+	e_str
+];
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,26 +0,0 @@
++++ rolldown	entry.js
+@@ -1,26 +1,42 @@
 -var c_num = (c_num2 => {
 -    c_num2[c_num2["x"] = 123] = "x";
 -    return c_num2;
@@ -79,6 +140,47 @@ not_inlined = [
 -    return e_str2;
 -})(e_str || ({}));
 -inlined = [123, 123, "abc", "abc"];
--not_inlined = [c_num?.x, d_num?.["x"], e_num, c_str?.x, d_str?.["x"], e_str];
++var a_num = (function (a_num$1) {
++    a_num$1[a_num$1["x"] = 123] = "x";
++    return a_num$1;
++})({});
++var b_num = (function (b_num$1) {
++    b_num$1[b_num$1["x"] = 123] = "x";
++    return b_num$1;
++})({});
++var c_num = (function (c_num$1) {
++    c_num$1[c_num$1["x"] = 123] = "x";
++    return c_num$1;
++})({});
++var d_num = (function (d_num$1) {
++    d_num$1[d_num$1["x"] = 123] = "x";
++    return d_num$1;
++})({});
++var e_num = (function (e_num$1) {
++    e_num$1[e_num$1["x"] = 123] = "x";
++    return e_num$1;
++})({});
++var a_str = (function (a_str$1) {
++    a_str$1["x"] = "abc";
++    return a_str$1;
++})({});
++var b_str = (function (b_str$1) {
++    b_str$1["x"] = "abc";
++    return b_str$1;
++})({});
++var c_str = (function (c_str$1) {
++    c_str$1["x"] = "abc";
++    return c_str$1;
++})({});
++var d_str = (function (d_str$1) {
++    d_str$1["x"] = "abc";
++    return d_str$1;
++})({});
++var e_str = (function (e_str$1) {
++    e_str$1["x"] = "abc";
++    return e_str$1;
++})({});
++inlined = [a_num.x, b_num["x"], a_str.x, b_str["x"]];
+ not_inlined = [c_num?.x, d_num?.["x"], e_num, c_str?.x, d_str?.["x"], e_str];
 
 ```

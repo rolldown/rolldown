@@ -15,16 +15,26 @@ export {
 ### rolldown
 ```js
 
+//#region exported-entry.js
+const x_REMOVE = 1;
+const y_keep = 2;
+console.log(x_REMOVE, y_keep);
+
+//#endregion
+export { y_keep };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/exported-entry.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
--var y_keep = 2;
++++ rolldown	exported-entry.js
+@@ -1,3 +1,4 @@
++var x_REMOVE = 1;
+ var y_keep = 2;
 -console.log(1, 2);
--export {y_keep};
++console.log(x_REMOVE, y_keep);
+ export {y_keep};
 
 ```
 ## /out/re-exported-entry.js
@@ -42,39 +52,29 @@ export {
 ### rolldown
 ```js
 
+//#region re-exported-constants.js
+const x_REMOVE = 1;
+const y_keep = 2;
+
+//#endregion
+//#region re-exported-entry.js
+console.log(x_REMOVE, y_keep);
+
+//#endregion
+export { y_keep };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/re-exported-entry.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
--var y_keep = 2;
++++ rolldown	re-exported-entry.js
+@@ -1,3 +1,4 @@
++var x_REMOVE = 1;
+ var y_keep = 2;
 -console.log(1, 2);
--export {y_keep};
-
-```
-## /out/re-exported-2-entry.js
-### esbuild
-```js
-// re-exported-2-constants.js
-var y_keep = 2;
-export {
-  y_keep
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/re-exported-2-entry.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--var y_keep = 2;
--export {y_keep};
++console.log(x_REMOVE, y_keep);
+ export {y_keep};
 
 ```
 ## /out/re-exported-star-entry.js
@@ -90,15 +90,24 @@ export {
 ### rolldown
 ```js
 
+//#region re-exported-star-constants.js
+const x_keep = 1;
+const y_keep = 2;
+
+//#endregion
+export { x_keep, y_keep };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/re-exported-star-entry.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	re-exported-star-entry.js
+@@ -1,2 +1,3 @@
 -var x_keep = 1, y_keep = 2;
--export {x_keep, y_keep};
++var x_keep = 1;
++var y_keep = 2;
+ export {x_keep, y_keep};
 
 ```
 ## /out/cross-module-entry.js
@@ -117,19 +126,36 @@ console.log(1, y_keep);
 ### rolldown
 ```js
 
+//#region cross-module-constants.js
+const x_REMOVE = 1;
+foo();
+const y_keep = 1;
+function foo() {
+	return [x_REMOVE, y_keep];
+}
+
+//#endregion
+//#region cross-module-entry.js
+console.log(x_REMOVE, y_keep);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/cross-module-entry.js
-+++ rolldown	
-@@ -1,6 +0,0 @@
--foo();
--var y_keep = 1;
--function foo() {
++++ rolldown	cross-module-entry.js
+@@ -1,6 +1,7 @@
++var x_REMOVE = 1;
+ foo();
+ var y_keep = 1;
+ function foo() {
 -    return [1, y_keep];
--}
++    return [x_REMOVE, y_keep];
+ }
 -console.log(1, y_keep);
++console.log(x_REMOVE, y_keep);
 
 ```
 ## /out/print-shorthand-entry.js
@@ -141,110 +167,34 @@ console.log({ foo: 123, a: -321 });
 ### rolldown
 ```js
 
+//#region print-shorthand-constants.js
+const foo = 123;
+const _bar = -321;
+
+//#endregion
+//#region print-shorthand-entry.js
+console.log({
+	foo,
+	_bar
+});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/print-shorthand-entry.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--console.log({
++++ rolldown	print-shorthand-entry.js
+@@ -1,4 +1,6 @@
++var foo = 123;
++var _bar = -321;
+ console.log({
 -    foo: 123,
 -    a: -321
--});
-
-```
-## /out/circular-import-entry.js
-### esbuild
-```js
-// circular-import-cycle.js
-console.log(bar());
-
-// circular-import-constants.js
-var foo = 123;
-function bar() {
-  return foo;
-}
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/circular-import-entry.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--console.log(bar());
--var foo = 123;
--function bar() {
--    return foo;
--}
-
-```
-## /out/circular-re-export-entry.js
-### esbuild
-```js
-// circular-re-export-cycle.js
-var baz = 0;
-console.log(bar());
-
-// circular-re-export-constants.js
-var foo = 123;
-function bar() {
-  return foo;
-}
-
-// circular-re-export-entry.js
-console.log(baz);
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/circular-re-export-entry.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
--var baz = 0;
--console.log(bar());
--var foo = 123;
--function bar() {
--    return foo;
--}
--console.log(baz);
-
-```
-## /out/circular-re-export-star-entry.js
-### esbuild
-```js
-// circular-re-export-star-cycle.js
-console.log(bar());
-
-// circular-re-export-star-constants.js
-var foo = 123;
-function bar() {
-  return foo;
-}
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/circular-re-export-star-entry.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--console.log(bar());
--var foo = 123;
--function bar() {
--    return foo;
--}
++    foo,
++    _bar
+ });
 
 ```
 ## /out/non-circular-export-entry.js
@@ -261,16 +211,31 @@ console.log(123, bar());
 ### rolldown
 ```js
 
+//#region non-circular-export-constants.js
+const foo = 123;
+function bar() {
+	return foo;
+}
+
+//#endregion
+//#region non-circular-export-entry.js
+console.log(foo, bar());
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/non-circular-export-entry.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--function bar() {
++++ rolldown	non-circular-export-entry.js
+@@ -1,4 +1,5 @@
++var foo = 123;
+ function bar() {
 -    return 123;
--}
++    return foo;
+ }
 -console.log(123, bar());
++console.log(foo, bar());
 
 ```

@@ -9,16 +9,26 @@ fs.readFile();
 ```
 ### rolldown
 ```js
+import { default as fs } from "node:fs/promises";
+import "node:path";
+import "node:what-is-this";
+
+//#region entry.js
+fs.readFile();
+
+//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	entry.js
+@@ -1,3 +1,4 @@
 -import fs from "node:fs/promises";
--import "node:what-is-this";
--fs.readFile();
++import {default as fs} from "node:fs/promises";
++import "node:path";
+ import "node:what-is-this";
+ fs.readFile();
 
 ```

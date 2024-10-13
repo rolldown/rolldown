@@ -10,12 +10,13 @@ let x = function(foo) {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,4 +0,0 @@
 -let x = function (foo) {
 -    var foo;

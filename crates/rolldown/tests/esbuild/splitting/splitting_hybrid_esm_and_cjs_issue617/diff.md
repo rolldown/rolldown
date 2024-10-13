@@ -70,17 +70,22 @@ export {
 ```
 ### rolldown
 ```js
+import { foo, init_a } from "./a2.js";
+
+init_a();
+export { foo };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	a.js
+@@ -1,3 +1,3 @@
 -import {foo, init_a} from "./chunk-PDZFCFBH.js";
--init_a();
--export {foo};
++import {foo, init_a} from "./a2.js";
+ init_a();
+ export {foo};
 
 ```
 ## /out/b.js
@@ -100,17 +105,25 @@ export {
 ```
 ### rolldown
 ```js
+import { __toCommonJS, a_exports, init_a } from "./a2.js";
+
+//#region b.js
+let bar = (init_a(), __toCommonJS(a_exports));
+
+//#endregion
+export { bar };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	b.js
+@@ -1,3 +1,3 @@
 -import {__toCommonJS, a_exports, init_a} from "./chunk-PDZFCFBH.js";
--var bar = (init_a(), __toCommonJS(a_exports));
--export {bar};
++import {__toCommonJS, a_exports, init_a} from "./a2.js";
+ var bar = (init_a(), __toCommonJS(a_exports));
+ export {bar};
 
 ```
 ## /out/chunk-PDZFCFBH.js

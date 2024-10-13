@@ -11,71 +11,25 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region 1.js
+if (foo) {
+	function x() {}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/1.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--if (foo) {
++++ rolldown	1.js
+@@ -1,4 +1,3 @@
+ if (foo) {
 -    let x2 = function () {};
 -    var x = x2;
--}
-
-```
-## /out/2.js
-### esbuild
-```js
-if (foo) {
-  function x() {
-  }
-  eval("");
-}
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/2.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--if (foo) {
--    function x() {}
--    eval("");
--}
-
-```
-## /out/3.js
-### esbuild
-```js
-if (foo) {
-  function x() {
-  }
-  if (bar) {
-    eval("");
-  }
-}
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/3.js
-+++ rolldown	
-@@ -1,6 +0,0 @@
--if (foo) {
--    function x() {}
--    if (bar) {
--        eval("");
--    }
--}
++    function x() {}
+ }
 
 ```
 ## /out/4.js
@@ -90,17 +44,26 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region 4.js
+if (foo) {
+	eval("");
+	function x() {}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/4.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--if (foo) {
++++ rolldown	4.js
+@@ -1,4 +1,4 @@
+ if (foo) {
 -    function x() {}
--    eval("");
--}
+     eval("");
++    function x() {}
+ }
 
 ```
 ## /out/5.js
@@ -115,17 +78,25 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region 5.js
+if (foo) {
+	function x() {}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/5.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	5.js
+@@ -1,4 +1,3 @@
 -"use strict";
--if (foo) {
+ if (foo) {
 -    let x = function () {};
--}
++    function x() {}
+ }
 
 ```
 ## /out/6.js
@@ -141,18 +112,26 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region 6.js
+if (foo) {
+	function x() {}
+	eval("");
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/6.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	6.js
+@@ -1,5 +1,4 @@
 -"use strict";
--if (foo) {
--    function x() {}
--    eval("");
--}
+ if (foo) {
+     function x() {}
+     eval("");
+ }
 
 ```
 ## /out/7.js
@@ -170,20 +149,28 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region 7.js
+if (foo) {
+	function x() {}
+	if (bar) {
+		eval("");
+	}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/7.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
++++ rolldown	7.js
+@@ -1,5 +1,4 @@
 -"use strict";
--if (foo) {
--    function x() {}
--    if (bar) {
--        eval("");
--    }
--}
+ if (foo) {
+     function x() {}
+     if (bar) {
+         eval("");
 
 ```
 ## /out/8.js
@@ -199,17 +186,26 @@ if (foo) {
 ### rolldown
 ```js
 
+//#region 8.js
+if (foo) {
+	eval("");
+	function x() {}
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/8.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	8.js
+@@ -1,5 +1,4 @@
 -"use strict";
--if (foo) {
+ if (foo) {
 -    function x() {}
--    eval("");
--}
+     eval("");
++    function x() {}
+ }
 
 ```

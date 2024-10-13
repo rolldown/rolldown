@@ -94,16 +94,20 @@ export {
 ```
 ### rolldown
 ```js
+import { p, q } from "./a2.js";
+
+export { p, q };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	a.js
+@@ -1,2 +1,2 @@
 -import {p, q} from "./chunk-HK23737J.js";
--export {p, q};
++import {p, q} from "./a2.js";
+ export {p, q};
 
 ```
 ## /out/b.js
@@ -120,16 +124,20 @@ export {
 ```
 ### rolldown
 ```js
+import { p, q } from "./a2.js";
+
+export { p, q };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	b.js
+@@ -1,2 +1,2 @@
 -import {p, q} from "./chunk-HK23737J.js";
--export {p, q};
++import {p, q} from "./a2.js";
+ export {p, q};
 
 ```
 ## /out/chunk-HK23737J.js

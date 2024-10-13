@@ -20,15 +20,43 @@ console.log(
 ### rolldown
 ```js
 
+//#region top-level.js
+const n_keep = null;
+const u_keep = undefined;
+const i_keep = 1234567;
+const f_keep = 123.456;
+const s_keep = "";
+console.log(
+	// These are doubled to avoid the "inline const/let into next statement if used once" optimization
+	n_keep,
+	n_keep,
+	u_keep,
+	u_keep,
+	i_keep,
+	i_keep,
+	f_keep,
+	f_keep,
+	s_keep,
+	s_keep
+);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/top-level.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	top-level.js
+@@ -1,2 +1,6 @@
 -const n_keep = null, u_keep = void 0, i_keep = 1234567, f_keep = 123.456, s_keep = "";
 -console.log(null, null, void 0, void 0, 1234567, 1234567, 123.456, 123.456, s_keep, s_keep);
++var n_keep = null;
++var u_keep = undefined;
++var i_keep = 1234567;
++var f_keep = 123.456;
++var s_keep = "";
++console.log(n_keep, n_keep, u_keep, u_keep, i_keep, i_keep, f_keep, f_keep, s_keep, s_keep);
 
 ```
 ## /out/nested-block.js
@@ -54,17 +82,46 @@ console.log(
 ### rolldown
 ```js
 
+//#region nested-block.js
+{
+	const REMOVE_n = null;
+	const REMOVE_u = undefined;
+	const REMOVE_i = 1234567;
+	const REMOVE_f = 123.456;
+	const s_keep = "";
+	console.log(
+		// These are doubled to avoid the "inline const/let into next statement if used once" optimization
+		REMOVE_n,
+		REMOVE_n,
+		REMOVE_u,
+		REMOVE_u,
+		REMOVE_i,
+		REMOVE_i,
+		REMOVE_f,
+		REMOVE_f,
+		s_keep,
+		s_keep
+);
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/nested-block.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--{
--    const s_keep = "";
++++ rolldown	nested-block.js
+@@ -1,4 +1,8 @@
+ {
++    const REMOVE_n = null;
++    const REMOVE_u = undefined;
++    const REMOVE_i = 1234567;
++    const REMOVE_f = 123.456;
+     const s_keep = "";
 -    console.log(null, null, void 0, void 0, 1234567, 1234567, 123.456, 123.456, s_keep, s_keep);
--}
++    console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
+ }
 
 ```
 ## /out/nested-function.js
@@ -90,12 +147,13 @@ function nested() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/nested-function.js
-+++ rolldown	
++++ rolldown	nested-function.js
 @@ -1,4 +0,0 @@
 -function nested() {
 -    const s_keep = "";
@@ -117,15 +175,30 @@ var ns;
 ### rolldown
 ```js
 
+//#region namespace-export.ts
+let ns;
+(function(_ns) {
+	const x_REMOVE = 1;
+	const y_keep = _ns.y_keep = 2;
+	console.log(x_REMOVE, x_REMOVE, y_keep, y_keep);
+})(ns || (ns = {}));
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/namespace-export.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--var ns;
++++ rolldown	namespace-export.js
+@@ -1,2 +1,6 @@
+ var ns;
 -(ns2 => (ns2.y_keep = 2, console.log(1, 1, 2, 2)))(ns ||= {});
++(function (_ns) {
++    const x_REMOVE = 1;
++    const y_keep = _ns.y_keep = 2;
++    console.log(x_REMOVE, x_REMOVE, y_keep, y_keep);
++})(ns || (ns = {}));
 
 ```
 ## /out/comment-before.js
@@ -139,16 +212,26 @@ var ns;
 ### rolldown
 ```js
 
+//#region comment-before.js
+{
+	const REMOVE = 1;
+	x = [REMOVE, REMOVE];
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/comment-before.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
--{
++++ rolldown	comment-before.js
+@@ -1,3 +1,4 @@
+ {
 -    x = [1, 1];
--}
++    const REMOVE = 1;
++    x = [REMOVE, REMOVE];
+ }
 
 ```
 ## /out/directive-before.js
@@ -162,12 +245,13 @@ function nested() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/directive-before.js
-+++ rolldown	
++++ rolldown	directive-before.js
 @@ -1,4 +0,0 @@
 -function nested() {
 -    "directive";
@@ -183,14 +267,26 @@ x = [1, 1];
 ### rolldown
 ```js
 
+//#region semicolon-before.js
+{
+	const REMOVE = 1;
+	x = [REMOVE, REMOVE];
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/semicolon-before.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	semicolon-before.js
+@@ -1,1 +1,4 @@
 -x = [1, 1];
++{
++    const REMOVE = 1;
++    x = [REMOVE, REMOVE];
++}
 
 ```
 ## /out/debugger-before.js
@@ -204,17 +300,28 @@ x = [1, 1];
 ### rolldown
 ```js
 
+//#region debugger-before.js
+{
+	debugger;
+	const REMOVE = 1;
+	x = [REMOVE, REMOVE];
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/debugger-before.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
--{
--    debugger;
++++ rolldown	debugger-before.js
+@@ -1,4 +1,5 @@
+ {
+     debugger;
 -    x = [1, 1];
--}
++    const REMOVE = 1;
++    x = [REMOVE, REMOVE];
+ }
 
 ```
 ## /out/type-before.js
@@ -225,14 +332,26 @@ x = [1, 1];
 ### rolldown
 ```js
 
+//#region type-before.ts
+{
+	const REMOVE = 1;
+	x = [REMOVE, REMOVE];
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/type-before.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	type-before.js
+@@ -1,1 +1,4 @@
 -x = [1, 1];
++{
++    const REMOVE = 1;
++    x = [REMOVE, REMOVE];
++}
 
 ```
 ## /out/exprs-before.js
@@ -250,12 +369,13 @@ function nested() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/exprs-before.js
-+++ rolldown	
++++ rolldown	exprs-before.js
 @@ -1,6 +0,0 @@
 -function nested() {
 -    const x = [, "", {}, 0n, /./, function () {}, () => {}];
@@ -277,18 +397,28 @@ function foo() {
 ### rolldown
 ```js
 
+//#region disabled-tdz.js
+foo();
+const x_keep = 1;
+function foo() {
+	return x_keep;
+}
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/disabled-tdz.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
--foo();
++++ rolldown	disabled-tdz.js
+@@ -1,5 +1,5 @@
+ foo();
 -const x_keep = 1;
--function foo() {
--    return x_keep;
--}
++var x_keep = 1;
+ function foo() {
+     return x_keep;
+ }
 
 ```
 ## /out/backwards-reference-top-level.js
@@ -305,15 +435,24 @@ console.log(
 ### rolldown
 ```js
 
+//#region backwards-reference-top-level.js
+const x = y;
+const y = 1;
+console.log(x, x, y, y);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/backwards-reference-top-level.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	backwards-reference-top-level.js
+@@ -1,2 +1,3 @@
 -const x = y, y = 1;
--console.log(x, x, y, y);
++var x = y;
++var y = 1;
+ console.log(x, x, y, y);
 
 ```
 ## /out/backwards-reference-nested-function.js
@@ -332,12 +471,13 @@ function foo() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/backwards-reference-nested-function.js
-+++ rolldown	
++++ rolldown	backwards-reference-nested-function.js
 @@ -1,4 +0,0 @@
 -function foo() {
 -    const x = y, y = 1;
@@ -356,12 +496,13 @@ function foo() {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/issue-3125.js
-+++ rolldown	
++++ rolldown	issue-3125.js
 @@ -1,4 +0,0 @@
 -function foo() {
 -    const f = () => x, x = 0;

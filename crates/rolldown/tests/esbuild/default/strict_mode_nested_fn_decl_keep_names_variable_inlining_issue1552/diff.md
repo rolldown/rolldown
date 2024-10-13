@@ -17,23 +17,43 @@ __name(outer, "outer"), outer();
 ### rolldown
 ```js
 
+//#region entry.js
+function outer() {
+	{
+		function inner() {
+			return Math.random();
+		}
+		const x = inner();
+		console.log(x);
+	}
+}
+outer();
+
+//#endregion
+export { outer };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,11 +0,0 @@
++++ rolldown	entry.js
+@@ -1,11 +1,11 @@
 -export function outer() {
--    {
++function outer() {
+     {
 -        let inner = function () {
--            return Math.random();
++        function inner() {
+             return Math.random();
 -        };
 -        __name(inner, "inner");
--        const x = inner();
--        console.log(x);
--    }
--}
++        }
+         const x = inner();
+         console.log(x);
+     }
+ }
 -(__name(outer, "outer"), outer());
++outer();
++export {outer};
 
 ```

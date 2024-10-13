@@ -11,17 +11,30 @@ var a = /* @__PURE__ */ ((a2) => {
 ### rolldown
 ```js
 
+//#region entry.ts
+var a = function(a$1) {
+	a$1[a$1["b"] = 123] = "b";
+	a$1[a$1["c"] = a$1.d] = "c";
+	return a$1;
+}(a || {});
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	entry.js
+@@ -1,5 +1,5 @@
 -var a = (a2 => {
 -    a2[a2["b"] = 123] = "b";
 -    a2[a2["c"] = 123] = "c";
 -    return a2;
--})(a || ({}));
++var a = (function (a$1) {
++    a$1[a$1["b"] = 123] = "b";
++    a$1[a$1["c"] = a$1.d] = "c";
++    return a$1;
+ })(a || ({}));
 
 ```

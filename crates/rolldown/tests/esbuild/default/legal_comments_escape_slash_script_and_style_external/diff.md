@@ -28,25 +28,6 @@ js-pkg/index.js:
 \ No newline at end of file
 
 ```
-## /out/entry.js
-### esbuild
-```js
-x;a;
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--x;
--a;
-
-```
 ## /out/entry.css.LEGAL.txt
 ### esbuild
 ```js

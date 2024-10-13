@@ -1,13 +1,9 @@
 # Failed Cases
-## [ambiguous_reexport_msg](../../../crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg/diff.md)
-  diff
 ## [argument_default_value_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle/diff.md)
   diff
 ## [arguments_special_case_no_bundle](../../../crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle/diff.md)
   diff
 ## [arrow_fn_scope](../../../crates/rolldown/tests/esbuild/default/arrow_fn_scope/diff.md)
-  diff
-## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external/diff.md)
   diff
 ## [auto_external_node](../../../crates/rolldown/tests/esbuild/default/auto_external_node/diff.md)
   diff
@@ -144,8 +140,6 @@
 ## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149/diff.md)
   diff
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch/diff.md)
-  diff
-## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path/diff.md)
   diff
 ## import_with_hash_parameter
   missing
@@ -349,8 +343,6 @@
   diff
 ## [package_alias_match_longest](../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest/diff.md)
   diff
-## [preserve_key_comment](../../../crates/rolldown/tests/esbuild/default/preserve_key_comment/diff.md)
-  diff
 ## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property/diff.md)
   diff
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
@@ -466,6 +458,8 @@
 ## [with_statement_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/with_statement_tainting_no_bundle/diff.md)
   diff
 # Passed Cases
+## [ambiguous_reexport_msg](../../../crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg)
+## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external)
 ## [await_import_inside_try](../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_fs_node](../../../crates/rolldown/tests/esbuild/default/export_fs_node)
@@ -473,8 +467,10 @@
 ## [external_wildcard_does_not_match_entry_point](../../../crates/rolldown/tests/esbuild/default/external_wildcard_does_not_match_entry_point)
 ## [import_meta_es6](../../../crates/rolldown/tests/esbuild/default/import_meta_es6)
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
+## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [output_extension_remapping_file](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_file)
+## [preserve_key_comment](../../../crates/rolldown/tests/esbuild/default/preserve_key_comment)
 ## [re_export_default_internal](../../../crates/rolldown/tests/esbuild/default/re_export_default_internal)
 ## [re_export_fs_node](../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
 ## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)

@@ -81,28 +81,82 @@ export {
 ```
 ### rolldown
 ```js
+import { default as a } from "extern-esm";
+
+
+//#region esm.js
+var esm_default = 1;
+
+//#endregion
+//#region <data:application/json,2>
+var json_2_default = 2;
+
+//#endregion
+//#region file.file
+var require_file = __commonJS({ "file.file"() {
+	file;
+} });
+
+//#endregion
+//#region copy.copy
+var require_copy = __commonJS({ "copy.copy"() {
+	copy;
+} });
+
+//#endregion
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	module.exports = 4;
+} });
+
+//#endregion
+//#region entry.js
+var import_file = __toESM(require_file());
+var import_copy = __toESM(require_copy());
+console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+let exported;
+
+//#endregion
+export { exported };
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,14 +0,0 @@
++++ rolldown	entry.js
+@@ -1,14 +1,23 @@
 -import {__commonJS, __require} from "./chunk-MQN2VSL5.js";
--var require_cjs = __commonJS({
++import {default as a} from "extern-esm";
++var esm_default = 1;
++var json_2_default = 2;
++var require_file = __commonJS({
++    "file.file"() {
++        file;
++    }
++});
++var require_copy = __commonJS({
++    "copy.copy"() {
++        copy;
++    }
++});
+ var require_cjs = __commonJS({
 -    "project/cjs.js"(exports, module) {
--        module.exports = 4;
--    }
--});
++    "cjs.js"(exports, module) {
+         module.exports = 4;
+     }
+ });
 -import a from "extern-esm";
 -var esm_default = 1;
 -var json_2_default = 2;
 -var file_default = "./file-NVISQQTV.file";
 -import e from "./copy-O3Y5SCJE.copy";
 -console.log(a, esm_default, json_2_default, file_default, e, __require("extern-cjs"), require_cjs(), import("./dynamic-Q2DWDUFV.js"));
--var exported;
--export {exported};
++var import_file = __toESM(require_file());
++var import_copy = __toESM(require_copy());
++console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+ var exported;
+ export {exported};
 
 ```
 ## /out/dynamic-Q2DWDUFV.js

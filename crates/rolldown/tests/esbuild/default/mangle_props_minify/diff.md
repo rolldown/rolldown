@@ -40,13 +40,54 @@ export function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
 ### rolldown
 ```js
 
+//#region entry1.js
+function shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX() {
+	let foo = {
+		bar_: 0,
+		baz_() {}
+	};
+	let { bar_ } = foo;
+	({bar_} = foo);
+	class foo_ {
+		bar_ = 0;
+		baz_() {}
+		static bar_ = 0;
+		static baz_() {}
+	}
+	return {
+		bar_,
+		foo_
+	};
+}
+function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
+	let foo = {
+		"bar_": 0,
+		"baz_"() {}
+	};
+	let { "bar_": bar_ } = foo;
+	({["bar_"]: bar_} = foo);
+	class foo_ {
+		"bar_" = 0;
+		"baz_"() {}
+		static "bar_" = 0;
+		static "baz_"() {}
+	}
+	return {
+		"bar_": bar_,
+		"foo_": foo_
+	};
+}
+
+//#endregion
+export { shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry1.js
-+++ rolldown	
-@@ -1,34 +0,0 @@
++++ rolldown	entry1.js
+@@ -1,34 +1,37 @@
 -export function shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX() {
 -    let X = {
 -        X: 0,
@@ -66,21 +107,48 @@ export function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
 -}
 -export function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
 -    let X = {
--        bar_: 0,
--        baz_() {}
++function shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX() {
++    let foo = {
+         bar_: 0,
+         baz_() {}
 -    }, {bar_: Y} = X;
 -    ({bar_: Y} = X);
 -    class t {
--        bar_ = 0;
--        baz_() {}
--        static bar_ = 0;
--        static baz_() {}
--    }
--    return {
++    };
++    let {bar_} = foo;
++    ({bar_} = foo);
++    class foo_ {
+         bar_ = 0;
+         baz_() {}
+         static bar_ = 0;
+         static baz_() {}
+     }
+     return {
 -        bar_: Y,
 -        foo_: t
--    };
--}
++        bar_,
++        foo_
+     };
+ }
++function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
++    let foo = {
++        "bar_": 0,
++        "baz_"() {}
++    };
++    let {"bar_": bar_} = foo;
++    ({["bar_"]: bar_} = foo);
++    class foo_ {
++        "bar_" = 0;
++        "baz_"() {}
++        static "bar_" = 0;
++        static "baz_"() {}
++    }
++    return {
++        "bar_": bar_,
++        "foo_": foo_
++    };
++}
++export {shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY};
 
 ```
 ## /out/entry2.js
@@ -94,16 +162,29 @@ export default {
 ### rolldown
 ```js
 
+//#region entry2.js
+var entry2_default = {
+	bar_: 0,
+	"baz_": 1
+};
+
+//#endregion
+export { entry2_default as default };
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry2.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entry2.js
+@@ -1,4 +1,5 @@
 -export default {
 -    a: 0,
 -    baz_: 1
--};
++var entry2_default = {
++    bar_: 0,
++    "baz_": 1
+ };
++export {entry2_default as default};
 
 ```

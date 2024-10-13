@@ -96,19 +96,21 @@ a {
 a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
 
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99.css
 +++ rolldown	bytesInOutput should be at least 99.css
-@@ -1,4 +1,2 @@
+@@ -1,4 +1,3 @@
 -/* project/bytesInOutput should be at least 99.css */
 -a {
 -  background: url("./444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file");
 -}
 \ No newline at end of file
 +a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
++
 +
 
 ```

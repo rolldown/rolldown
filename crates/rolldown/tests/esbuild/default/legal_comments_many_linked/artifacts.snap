@@ -1,6 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "some-pkg/css" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## entry.js
@@ -33,10 +41,21 @@ bar();
 ## entry2.css
 
 ```css
+a { zoom: 2 } /*! Copyright notice 1 */
+b { zoom: 2 } /*! Copyright notice 1 */
+/*
+ * @license
+ * Copyright notice 2
+ */
+c {
+	zoom: 2
+}
+/* @preserve This is another comment */
 @import "./a.css";
 @import "./b.css";
 @import "./c.css";
 @import 'some-pkg/css';
+
 ```
 ## entry2.js
 

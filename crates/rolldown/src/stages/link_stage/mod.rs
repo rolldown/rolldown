@@ -130,6 +130,7 @@ impl<'a> LinkStage<'a> {
     let compat_mode = true;
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
+      // TODO(hyf0): should check if importer is a js module
       importer.import_records.iter().for_each(|rec| {
         let importee_id = rec.resolved_module;
         let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
@@ -216,6 +217,9 @@ impl<'a> LinkStage<'a> {
                 }
               }
             }
+          }
+          ImportKind::AtImport => {
+            unreachable!("A Js module would never import a CSS module via `@import`");
           }
         }
       });
@@ -412,6 +416,9 @@ impl<'a> LinkStage<'a> {
                       }
                     }
                   }
+                }
+                ImportKind::AtImport => {
+                  unreachable!("A Js module would never import a CSS module via `@import`");
                 }
               }
             }

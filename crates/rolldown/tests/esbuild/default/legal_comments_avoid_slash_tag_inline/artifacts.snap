@@ -18,6 +18,7 @@ export { x };
 ```css
 /*! <style>foo</style> */
 x { y: z }
+
 ```
 ## entry2.js
 

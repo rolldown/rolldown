@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```css
 a:after { content: "entry1" }
+
 ```
 ## entries_entry1.js
 
@@ -22,6 +23,7 @@ console.log("entry1");
 
 ```css
 a:after { content: "entry2" }
+
 ```
 ## entries_entry2.js
 

@@ -6,7 +6,7 @@ use oxc::{
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, EcmaView, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
-  RawImportRecord, ResolvedId, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
+  RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{DiagnosableResult, UnhandleableResult};
@@ -52,7 +52,6 @@ fn scan_ast(
 }
 pub struct CreateEcmaViewReturn {
   pub view: EcmaView,
-  pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub ast: EcmaAst,
   pub symbols: SymbolRefDbForModule,
@@ -76,7 +75,7 @@ pub async fn create_ecma_view<'any>(
     ctx.replace_global_define_config.as_ref(),
   )?;
 
-  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, source } = match parse_result {
+  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree } = match parse_result {
     Ok(parse_result) => parse_result,
     Err(errs) => {
       return Ok(Err(errs));
@@ -91,13 +90,6 @@ pub async fn create_ecma_view<'any>(
     scope_tree,
     ctx.resolved_id.module_def_format,
   )?;
-
-  let resolved_deps = match ctx.resolve_dependencies(&scan_result.import_records, source).await? {
-    Ok(deps) => deps,
-    Err(errs) => {
-      return Ok(Err(errs));
-    }
-  };
 
   let ScanResult {
     named_imports,
@@ -119,16 +111,8 @@ pub async fn create_ecma_view<'any>(
   }
   ctx.warnings.extend(scan_warnings);
 
-  let mut imported_ids = vec![];
-  let mut dynamically_imported_ids = vec![];
-
-  for (record, info) in import_records.iter().zip(&resolved_deps) {
-    if record.kind.is_static() {
-      imported_ids.push(ArcStr::clone(&info.id).into());
-    } else {
-      dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
-    }
-  }
+  let imported_ids = vec![];
+  let dynamically_imported_ids = vec![];
 
   // The side effects priority is:
   // 1. Hook side effects
@@ -199,7 +183,6 @@ pub async fn create_ecma_view<'any>(
 
   Ok(Ok(CreateEcmaViewReturn {
     view,
-    resolved_deps,
     raw_import_records: import_records,
     ast,
     symbols: symbol_ref_db,

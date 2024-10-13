@@ -5,11 +5,12 @@ pub enum ImportKind {
   Import,
   DynamicImport,
   Require,
+  AtImport,
 }
 
 impl ImportKind {
   pub fn is_static(&self) -> bool {
-    matches!(self, Self::Import | Self::Require)
+    matches!(self, Self::Import | Self::Require | Self::AtImport)
   }
 }
 
@@ -32,6 +33,8 @@ impl Display for ImportKind {
       Self::Import => write!(f, "import-statement"),
       Self::DynamicImport => write!(f, "dynamic-import"),
       Self::Require => write!(f, "require-call"),
+      // TODO(hyf0): check if this literal is the same as esbuild's
+      Self::AtImport => write!(f, "at-import"),
     }
   }
 }

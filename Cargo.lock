@@ -2521,6 +2521,7 @@ dependencies = [
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash 2.0.0",
  "schemars",

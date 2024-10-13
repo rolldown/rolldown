@@ -19,28 +19,22 @@ __reExport(inner_exports, require("b"));
 ### rolldown
 ```js
 "use strict";
-
-
-//#region a.js
-const A = 1;
-const B = "2";
-
-//#endregion
-//#region b.js
-const C = 1;
-const D = "2";
-
-//#endregion
-//#region inner.js
-var inner_exports = {};
-__export(inner_exports, {
-	C: () => C,
-	D: () => D
+var a = require("a");
+Object.keys(a).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return a[k]; }
+  });
 });
 
+require("a");
+require("b");
+
+//#region inner.js
+var inner_exports = {};
+__reExport(inner_exports, require("b"));
+
 //#endregion
-exports.A = A
-exports.B = B
 Object.defineProperty(exports, 'inner', {
   enumerable: true,
   get: function () {
@@ -48,60 +42,31 @@ Object.defineProperty(exports, 'inner', {
   }
 });
 
-
-//#region a.js
-const A = 1;
-const B = "2";
-
-//#endregion
-//#region b.js
-const C = 1;
-const D = "2";
-
-//#endregion
-//#region inner.js
-var inner_exports = {};
-__export(inner_exports, {
-	C: () => C,
-	D: () => D
-});
-
-//#endregion
-export { A, B, inner_exports as inner };
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-<<<<<<< HEAD
 +++ rolldown	entry.js
-@@ -1,8 +1,17 @@
-||||||| bdde6fec1
-+++ rolldown	
-@@ -1,8 +0,0 @@
-=======
-+++ rolldown	entry.js
-@@ -1,8 +1,10 @@
->>>>>>> main
+@@ -1,8 +1,19 @@
 -var entry_exports = {};
 -__export(entry_exports, {
 -    inner: () => inner_exports
--});
++var a = require("a");
++Object.keys(a).forEach(function (k) {
++    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
++        enumerable: true,
++        get: function () {
++            return a[k];
++        }
++    });
+ });
 -module.exports = __toCommonJS(entry_exports);
 -__reExport(entry_exports, require("a"), module.exports);
-+var A = 1;
-+var B = "2";
-+var C = 1;
-+var D = "2";
++require("a");
++require("b");
  var inner_exports = {};
--__reExport(inner_exports, require("b"));
-+__export(inner_exports, {
-+    C: () => C,
-+    D: () => D
-+});
-+exports.A = A;
-+exports.B = B;
+ __reExport(inner_exports, require("b"));
 +Object.defineProperty(exports, 'inner', {
 +    enumerable: true,
 +    get: function () {

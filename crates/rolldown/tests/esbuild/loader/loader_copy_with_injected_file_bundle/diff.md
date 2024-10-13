@@ -1,3 +1,5 @@
+# Reason
+1. not support copy loader
 # Diff
 ## /out/inject-IFR6YGWW.js
 ### esbuild

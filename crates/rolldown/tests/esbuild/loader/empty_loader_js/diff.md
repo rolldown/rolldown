@@ -1,3 +1,5 @@
+# Reason
+1. esbuild will wrap `empty` module as a cjs module, rolldown did not
 # Diff
 ## entry.js.map
 ### esbuild

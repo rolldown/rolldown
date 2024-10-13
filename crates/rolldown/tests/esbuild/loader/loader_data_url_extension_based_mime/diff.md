@@ -1,3 +1,5 @@
+# Reason
+1. Not align with esbuild
 # Diff
 ## /out/entry.js
 ### esbuild

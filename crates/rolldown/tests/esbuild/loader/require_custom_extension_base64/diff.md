@@ -1,3 +1,6 @@
+# Reason
+1. `.custom` should be treated as cjs
+2. the base64 result is also wrong
 # Diff
 ## /out.js
 ### esbuild

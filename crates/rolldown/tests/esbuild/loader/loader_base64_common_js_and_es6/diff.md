@@ -1,3 +1,5 @@
+# Reason
+1. esbuild treated x.b64 as cjs, rolldown treated it as esm
 # Diff
 ## /out.js
 ### esbuild

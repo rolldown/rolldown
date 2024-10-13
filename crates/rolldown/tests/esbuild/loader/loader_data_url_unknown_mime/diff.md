@@ -1,3 +1,5 @@
+# Reason
+1. should not transform `ImoprtDefaultSpecifier` as `import {default as x}`
 # Diff
 ## /out/entry.js
 ### esbuild

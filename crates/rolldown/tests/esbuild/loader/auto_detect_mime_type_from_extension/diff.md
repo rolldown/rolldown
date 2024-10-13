@@ -1,3 +1,5 @@
+# Reason
+1. esbuild treated svg as commonjs module, rolldown treated it as esm
 # Diff
 ## /out.js
 ### esbuild

@@ -5,7 +5,8 @@
         "name": "entry",
         "import": "entry.jsx"
       }
-    ]
+    ],
+    "format": "cjs"
   },
   "expectExecuted": false
 }

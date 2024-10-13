@@ -1,3 +1,6 @@
+# Reason
+1. not fully align for `txt` dataurl
+
 # Diff
 ## /out.js
 ### esbuild

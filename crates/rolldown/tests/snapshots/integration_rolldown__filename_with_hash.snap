@@ -1934,11 +1934,11 @@ expression: output
 
 # tests/esbuild/importstar/export_self_iife_with_name
 
-- entry-!~{000}~.js => entry-yRAnra3R.js
+- entry-!~{000}~.js => entry-QcEYGXgl.js
 
 # tests/esbuild/importstar/export_star_default_export_common_js
 
-- entry-!~{000}~.js => entry-Xcg2DJiV.js
+- entry-!~{000}~.js => entry-RdAfWxtu.js
 
 # tests/esbuild/importstar/import_default_namespace_combo_issue446
 
@@ -1970,7 +1970,7 @@ expression: output
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
-- entry-!~{000}~.js => entry-CKLueuZZ.js
+- entry-!~{000}~.js => entry-UWq6URPc.js
 
 # tests/esbuild/importstar/import_export_self_as_namespace_es6
 
@@ -2006,7 +2006,7 @@ expression: output
 
 # tests/esbuild/importstar/import_self_common_js
 
-- entry-!~{000}~.js => entry-qixeGw--.js
+- entry-!~{000}~.js => entry-m9-RMSY9.js
 
 # tests/esbuild/importstar/import_star_and_common_js
 
@@ -2022,7 +2022,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_common_js_no_capture
 
-- entry-!~{000}~.js => entry-h4jo0751.js
+- entry-!~{000}~.js => entry-Er2C8SHS.js
 
 # tests/esbuild/importstar/import_star_common_js_unused
 
@@ -2030,7 +2030,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_export_import_star_capture
 
-- entry-!~{000}~.js => entry-YFkULPBK.js
+- entry-!~{000}~.js => entry-Oyhp9sEX.js
 
 # tests/esbuild/importstar/import_star_export_import_star_no_capture
 
@@ -2154,7 +2154,7 @@ expression: output
 
 # tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6
 
-- entry-!~{000}~.js => entry-39absOTw.js
+- entry-!~{000}~.js => entry-aMBCcm_0.js
 
 # tests/esbuild/importstar/re_export_other_file_export_self_as_namespace_es6
 
@@ -2182,11 +2182,11 @@ expression: output
 
 # tests/esbuild/importstar/re_export_star_as_external_iife
 
-- entry-!~{000}~.js => entry-br0RR3hA.js
+- entry-!~{000}~.js => entry-W6SWDSu8.js
 
 # tests/esbuild/importstar/re_export_star_as_iife_no_bundle
 
-- entry-!~{000}~.js => entry-br0RR3hA.js
+- entry-!~{000}~.js => entry-W6SWDSu8.js
 
 # tests/esbuild/importstar/re_export_star_common_js_no_bundle
 
@@ -2194,7 +2194,7 @@ expression: output
 
 # tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
-- entry-!~{000}~.js => entry-P45Lq4Xb.js
+- entry-!~{000}~.js => entry-t0yJ-A1D.js
 
 # tests/esbuild/importstar/re_export_star_es6_no_bundle
 

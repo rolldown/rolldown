@@ -12,7 +12,7 @@ console.log(pkg_default);
 ```
 ### rolldown
 ```js
-import { default as pkg } from "C:\Users\user\project\node_modules\pkg";
+import { default as pkg } from "/Users/user/project/node_modules/pkg/index";
 
 //#region entry.js
 console.log(pkg);
@@ -25,14 +25,10 @@ console.log(pkg);
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,2 +1,6 @@
+@@ -1,2 +1,2 @@
 -var pkg_default = 123;
 -console.log(pkg_default);
-+import { default as pkg } from "C:\Users\user\project\node_modules\pkg";
-+
-+//#region entry.js
++import {default as pkg} from "/Users/user/project/node_modules/pkg/index";
 +console.log(pkg);
-+
-+//#endregion
 
 ```

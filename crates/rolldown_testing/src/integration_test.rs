@@ -306,7 +306,9 @@ impl IntegrationTest {
       output_stats_section,
       visualize_sourcemap_section,
     ]
-    .join("\n");
+    .join("\n")
+    .trim()
+    .to_owned();
 
     // Configure insta to use the fixture path as the snapshot path
     let mut settings = insta::Settings::clone_current();

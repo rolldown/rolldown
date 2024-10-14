@@ -151,7 +151,7 @@ simdutf8            = { version = "0.1.4", features = ["aarch64_neon"] }
 smallvec            = "1.13.2"
 string_wizard       = "0.0.22"
 sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
-testing_macros      = "0.2.13"
+testing_macros      = "1.0.0"
 tokio               = { version = "1.38.0", default-features = false }
 tracing             = "0.1.40"
 tracing-chrome      = "0.7.2"

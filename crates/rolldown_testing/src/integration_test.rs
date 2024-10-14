@@ -146,6 +146,7 @@ impl IntegrationTest {
   }
 
   #[allow(clippy::too_many_lines)]
+  #[allow(clippy::if_not_else)]
   fn snapshot_bundle_output(&self, bundle_output: BundleOutput, cwd: &Path) {
     let mut errors = bundle_output.errors;
     let errors_section = if !errors.is_empty() {
@@ -279,7 +280,7 @@ impl IntegrationTest {
       String::new()
     };
 
-    let mut visualize_sourcemap_section = if self.test_meta.visualize_sourcemap {
+    let visualize_sourcemap_section = if self.test_meta.visualize_sourcemap {
       let mut snapshot = String::new();
       snapshot.push_str("# Sourcemap Visualizer\n\n");
       snapshot.push_str("```\n");
@@ -299,7 +300,7 @@ impl IntegrationTest {
     } else {
       String::new()
     };
-    let mut snapshot = [
+    let snapshot = [
       errors_section,
       warnings_section,
       assets_section,

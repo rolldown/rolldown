@@ -77,7 +77,6 @@ export { exported };
 ## entry2.css
 
 ```css
-@import "extern.css";
 a { background: url(inline.svg) }
 b { background: url(file.file) }
 c { background: url(copy.copy) }

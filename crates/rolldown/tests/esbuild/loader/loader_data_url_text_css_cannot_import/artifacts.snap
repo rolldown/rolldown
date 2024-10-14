@@ -14,8 +14,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.css
 
 ```css
-@import './other.css';
-@import "data:text/css,@import './other.css';";
+
+
 
 ```
 ## entry.js

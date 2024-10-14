@@ -36,33 +36,79 @@ console.log(a_exports, b_exports, c_exports, d_exports);
 ### rolldown
 ```js
 
+
+//#region a.ts
+var a_exports = {};
+__export(a_exports, { foo: () => foo$3 });
+let foo$3 = 123;
+
+//#endregion
+//#region b.ts
+var b_exports = {};
+__export(b_exports, { foo: () => foo$2 });
+let foo$2 = 123;
+
+//#endregion
+//#region c.ts
+var c_exports = {};
+__export(c_exports, {
+	Test: () => Test$1,
+	foo: () => foo$1
+});
+let foo$1 = 123;
+
+//#endregion
+//#region d.ts
+var d_exports = {};
+__export(d_exports, {
+	Test: () => Test,
+	foo: () => foo
+});
+let foo = 123;
+
+//#endregion
+//#region entry.ts
+console.log(a_exports, b_exports, c_exports, d_exports);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,21 +0,0 @@
--var a_exports = {};
--__export(a_exports, {
++++ rolldown	entry.js
+@@ -1,21 +1,23 @@
+ var a_exports = {};
+ __export(a_exports, {
 -    foo: () => foo
--});
++    foo: () => foo$3
+ });
 -var foo = 123;
--var b_exports = {};
--__export(b_exports, {
++var foo$3 = 123;
+ var b_exports = {};
+ __export(b_exports, {
 -    foo: () => foo2
--});
++    foo: () => foo$2
+ });
 -var foo2 = 123;
--var c_exports = {};
--__export(c_exports, {
++var foo$2 = 123;
+ var c_exports = {};
+ __export(c_exports, {
 -    foo: () => foo3
--});
++    Test: () => Test$1,
++    foo: () => foo$1
+ });
 -var foo3 = 123;
--var d_exports = {};
--__export(d_exports, {
++var foo$1 = 123;
+ var d_exports = {};
+ __export(d_exports, {
 -    foo: () => foo4
--});
++    Test: () => Test,
++    foo: () => foo
+ });
 -var foo4 = 123;
--console.log(a_exports, b_exports, c_exports, d_exports);
++var foo = 123;
+ console.log(a_exports, b_exports, c_exports, d_exports);
 
 ```

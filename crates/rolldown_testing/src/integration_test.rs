@@ -146,10 +146,11 @@ impl IntegrationTest {
   }
 
   #[allow(clippy::too_many_lines)]
+  #[allow(clippy::if_not_else)]
   fn snapshot_bundle_output(&self, bundle_output: BundleOutput, cwd: &Path) {
-    let mut snapshot = String::new();
     let mut errors = bundle_output.errors;
-    if !errors.is_empty() {
+    let errors_section = if !errors.is_empty() {
+      let mut snapshot = String::new();
       snapshot.push_str("# Errors\n\n");
       errors.sort_by_key(|e| e.kind().to_string());
       let diagnostics = errors
@@ -168,10 +169,14 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join("\n");
       snapshot.push_str(&rendered);
-    }
+      snapshot
+    } else {
+      String::default()
+    };
 
     let warnings = bundle_output.warnings;
-    if !warnings.is_empty() {
+    let warnings_section = if !warnings.is_empty() {
+      let mut snapshot = String::new();
       snapshot.push_str("# warnings\n\n");
       let diagnostics = warnings
         .into_iter()
@@ -191,12 +196,15 @@ impl IntegrationTest {
       // Make the snapshot consistent
       rendered_diagnostics.sort();
       snapshot.push_str(&rendered_diagnostics.join("\n"));
-      snapshot.push('\n');
-    }
+      snapshot
+    } else {
+      String::new()
+    };
 
     let mut assets = bundle_output.assets;
 
-    if !assets.is_empty() {
+    let assets_section = if !assets.is_empty() {
+      let mut snapshot = String::new();
       snapshot.push_str("# Assets\n\n");
       assets.sort_by_key(|c| c.filename().to_string());
       let artifacts = assets
@@ -242,10 +250,14 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join("\n");
       snapshot.push_str(&artifacts);
-    }
+      snapshot
+    } else {
+      String::new()
+    };
 
-    if self.test_meta.snapshot_output_stats {
-      snapshot.push_str("\n\n## Output Stats\n\n");
+    let output_stats_section = if self.test_meta.snapshot_output_stats {
+      let mut snapshot = String::new();
+      snapshot.push_str("## Output Stats\n\n");
       let stats = assets
         .iter()
         .flat_map(|asset| match asset {
@@ -263,10 +275,14 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join("\n");
       snapshot.push_str(&stats);
-    }
+      snapshot
+    } else {
+      String::new()
+    };
 
-    if self.test_meta.visualize_sourcemap {
-      snapshot.push_str("\n\n# Sourcemap Visualizer\n\n");
+    let visualize_sourcemap_section = if self.test_meta.visualize_sourcemap {
+      let mut snapshot = String::new();
+      snapshot.push_str("# Sourcemap Visualizer\n\n");
       snapshot.push_str("```\n");
       let visualizer_result = assets
         .iter()
@@ -280,7 +296,20 @@ impl IntegrationTest {
         .join("\n");
       snapshot.push_str(&visualizer_result);
       snapshot.push_str("```");
-    }
+      snapshot
+    } else {
+      String::new()
+    };
+    let snapshot = [
+      errors_section,
+      warnings_section,
+      assets_section,
+      output_stats_section,
+      visualize_sourcemap_section,
+    ]
+    .join("\n")
+    .trim()
+    .to_owned();
 
     // Configure insta to use the fixture path as the snapshot path
     let mut settings = insta::Settings::clone_current();

@@ -32,7 +32,8 @@ source: crates/rolldown_testing/src/integration_test.rs
    │                ╰──── One matching export is here.
 ───╯
 
-```# Assets
+```
+# Assets
 
 ## main.js
 

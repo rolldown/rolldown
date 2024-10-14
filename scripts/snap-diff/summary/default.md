@@ -271,8 +271,6 @@
   diff
 ## [package_alias_match_longest](../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest/diff.md)
   diff
-## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property/diff.md)
-  diff
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
   diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
@@ -365,6 +363,7 @@
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [output_extension_remapping_file](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_file)
 ## [preserve_key_comment](../../../crates/rolldown/tests/esbuild/default/preserve_key_comment)
+## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property)
 ## [re_export_default_internal](../../../crates/rolldown/tests/esbuild/default/re_export_default_internal)
 ## [re_export_fs_node](../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
 ## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)

@@ -168,6 +168,7 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join("\n");
       snapshot.push_str(&rendered);
+      snapshot.push('\n');
     }
 
     let warnings = bundle_output.warnings;

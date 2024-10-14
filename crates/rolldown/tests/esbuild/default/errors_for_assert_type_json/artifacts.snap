@@ -86,7 +86,8 @@ source: crates/rolldown_testing/src/integration_test.rs
    │            ╰─── Missing export
 ───╯
 
-```# warnings
+```
+# warnings
 
 ## IMPORT_IS_UNDEFINED
 

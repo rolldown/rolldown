@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "C:\\Users\\user\\project\\node_modules\\pkg" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: "/Users/user/project/node_modules/pkg/index" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
 # Assets
@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as pkg } from "C:\Users\user\project\node_modules\pkg";
+import { default as pkg } from "/Users/user/project/node_modules/pkg/index";
 
 //#region entry.js
 console.log(pkg);

@@ -573,35 +573,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-E03Z7U7b.js
 
-# tests/esbuild/default/assign_to_import
-
-- entry-!~{000}~.js => entry-XGa15SxT.js
-
-# tests/esbuild/default/assign_to_import_no_bundle
-
-- bad0-!~{000}~.js => bad0-L5dYcbmD.js
-- bad1-!~{001}~.js => bad1-W1nrSvmJ.js
-- bad2-!~{002}~.js => bad2-TPaalaCr.js
-- bad3-!~{003}~.js => bad3-_J88yduO.js
-- bad4-!~{004}~.js => bad4-LMKThvhp.js
-- bad5-!~{005}~.js => bad5-lK7ydG8c.js
-- bad6-!~{006}~.js => bad6-67qMECGq.js
-- uncaught7-!~{007}~.js => uncaught7-fYvAasbj.js
-- uncaught8-!~{008}~.js => uncaught8-Z7PWG-bw.js
-- uncaught9-!~{009}~.js => uncaught9-my88rwfu.js
-- uncaught10-!~{00a}~.js => uncaught10-wqULpbHt.js
-- bad11-!~{00b}~.js => bad11-JYnGSrUv.js
-- bad12-!~{00c}~.js => bad12-Ya5wo2mi.js
-- uncaught13-!~{00d}~.js => uncaught13-WqfZTOQR.js
-- uncaught14-!~{00e}~.js => uncaught14-fefvJwuw.js
-- uncaught15-!~{00f}~.js => uncaught15-hXB0OMj4.js
-- good0-!~{00g}~.js => good0-u_5nb6zQ.js
-- good1-!~{00h}~.js => good1-O-otsEL0.js
-- good2-!~{00i}~.js => good2-TTAjNwSA.js
-- good3-!~{00j}~.js => good3-77-F1_FS.js
-- good4-!~{00k}~.js => good4-IWG_hBzS.js
-- good5-!~{00l}~.js => good5-cdqP43jO.js
-
 # tests/esbuild/default/auto_external
 
 - entry-!~{000}~.js => entry-ncX7qGV0.js
@@ -632,7 +603,7 @@ expression: output
 
 # tests/esbuild/default/bundling_files_outside_of_outbase
 
-- src_entry-!~{000}~.js => src_entry-PO0Zg3QI.js
+- src_entry-!~{000}~.js => src_entry-Vs4gdpMJ.js
 
 # tests/esbuild/default/char_freq_ignore_comments
 
@@ -686,26 +657,26 @@ expression: output
 
 # tests/esbuild/default/define_assign_warning
 
-- read-!~{000}~.js => read-L_H_yZur.js
+- read-!~{000}~.js => read-6OWKd8M6.js
 - write-!~{001}~.js => write-fgac2yFf.js
 
 # tests/esbuild/default/define_import_meta
 
-- entry-!~{000}~.js => entry-Kzru5ozM.js
+- entry-!~{000}~.js => entry-cN8C3AHh.js
 
 # tests/esbuild/default/define_import_meta_es5
 
-- replaced-!~{000}~.js => replaced-Fcsp7COa.js
+- replaced-!~{000}~.js => replaced-a8dnE1dp.js
 - kept-!~{001}~.js => kept-iI3989Fx.js
 - dead-code-!~{002}~.js => dead-code-uosdmmvD.js
 
 # tests/esbuild/default/define_infinite_loop_issue2407
 
-- entry-!~{000}~.js => entry-Da_0T75E.js
+- entry-!~{000}~.js => entry-fDA3agXR.js
 
 # tests/esbuild/default/define_optional_chain
 
-- entry-!~{000}~.js => entry-Qrl3KYLE.js
+- entry-!~{000}~.js => entry--r8tuR_g.js
 
 # tests/esbuild/default/define_optional_chain_lowered
 
@@ -713,8 +684,8 @@ expression: output
 
 # tests/esbuild/default/define_optional_chain_panic_issue3551
 
-- id-define-!~{000}~.js => id-define-FA7ktvVE.js
-- dot-define-!~{001}~.js => dot-define-4WLdj7bD.js
+- id-define-!~{000}~.js => id-define-hscMm3hU.js
+- dot-define-!~{001}~.js => dot-define-Bun0Q5yd.js
 
 # tests/esbuild/default/define_this
 
@@ -726,7 +697,7 @@ expression: output
 
 # tests/esbuild/default/dot_import
 
-- entry-!~{000}~.js => entry-nRX4Sctw.js
+- entry-!~{000}~.js => entry-Qf2w5Vza.js
 
 # tests/esbuild/default/duplicate_entry_point
 
@@ -744,8 +715,7 @@ expression: output
 
 # tests/esbuild/default/dynamic_import_with_template_iife
 
-- a-!~{000}~.js => a-weDVZdrJ.js
-- b-!~{001}~.js => b-9TOfyZT9.js
+- a-!~{000}~.js => a-xmmFR1JY.js
 
 # tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 
@@ -767,7 +737,7 @@ expression: output
 
 # tests/esbuild/default/es6_from_common_js
 
-- entry-!~{000}~.js => entry-p976w89I.js
+- entry-!~{000}~.js => entry-a2EI5CjU.js
 
 # tests/esbuild/default/export_chain
 
@@ -783,7 +753,7 @@ expression: output
 
 # tests/esbuild/default/export_forms_iife
 
-- entry-!~{000}~.js => entry-RaecnKcd.js
+- entry-!~{000}~.js => entry-5chQIRYZ.js
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
@@ -820,15 +790,15 @@ expression: output
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
-- entry-!~{000}~.js => entry-jT6V7H-q.js
+- entry-!~{000}~.js => entry-VHGBja1y.js
 
 # tests/esbuild/default/export_wildcard_fs_node_es6
 
-- entry-!~{000}~.js => entry-jT6V7H-q.js
+- entry-!~{000}~.js => entry-yO3YBfR9.js
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
-- entry-!~{000}~.js => entry-2krQ2BAd.js
+- entry-!~{000}~.js => entry-McZYv2mo.js
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
@@ -848,7 +818,7 @@ expression: output
 
 # tests/esbuild/default/external_packages
 
-- entry-!~{000}~.js => entry-5zAuJZV7.js
+- entry-!~{000}~.js => entry-GbK8KP5c.js
 
 # tests/esbuild/default/external_wildcard_does_not_match_entry_point
 
@@ -900,11 +870,11 @@ expression: output
 
 # tests/esbuild/default/iife_es5
 
-- entry-!~{000}~.js => entry-DMwH7VuE.js
+- entry-!~{000}~.js => entry-AkR1tUrB.js
 
 # tests/esbuild/default/import_abs_path_as_dir
 
-- entry-!~{000}~.js => entry-QkcY3Ofe.js
+- entry-!~{000}~.js => entry-qEx6wWS2.js
 
 # tests/esbuild/default/import_abs_path_as_file
 
@@ -928,11 +898,11 @@ expression: output
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry-!~{000}~.js => entry-UYD9SEYt.js
+- entry-!~{000}~.js => entry-aeX0cU5C.js
 
 # tests/esbuild/default/import_fs_node_es6
 
-- entry-!~{000}~.js => entry-4k8phFgL.js
+- entry-!~{000}~.js => entry-xqHMeMuW.js
 
 # tests/esbuild/default/import_inside_try
 
@@ -952,7 +922,7 @@ expression: output
 
 # tests/esbuild/default/import_missing_common_js
 
-- entry-!~{000}~.js => entry-WGqLzPZ3.js
+- entry-!~{000}~.js => entry-Crv6mjsi.js
 
 # tests/esbuild/default/import_missing_es6
 
@@ -975,9 +945,10 @@ expression: output
 
 # tests/esbuild/default/import_namespace_this_value
 
-- a-!~{000}~.js => a-VoECpA0Q.js
-- b-!~{001}~.js => b-kneVJcSI.js
-- c-!~{002}~.js => c-g52LVwh6.js
+- a-!~{000}~.js => a-8p-WBOsT.js
+- b-!~{001}~.js => b-4bAUjbnR.js
+- c-!~{002}~.js => c-N8NHgmd2.js
+- chunk-!~{003}~.js => chunk---KUPYPn.js
 
 # tests/esbuild/default/import_re_export_es6_issue149
 
@@ -989,7 +960,7 @@ expression: output
 
 # tests/esbuild/default/import_then_catch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-fwvVvi6y.js
 
 # tests/esbuild/default/import_with_hash_in_path
 
@@ -1385,7 +1356,7 @@ expression: output
 
 # tests/esbuild/default/minified_exports_and_module_format_common_js
 
-- entry-!~{000}~.js => entry-qIvm3uBv.js
+- entry-!~{000}~.js => entry-7XyokvPJ.js
 
 # tests/esbuild/default/minified_jsx_preserve_with_object_spread
 
@@ -1393,7 +1364,7 @@ expression: output
 
 # tests/esbuild/default/minify_arguments
 
-- entry-!~{000}~.js => entry-jczO8sAV.js
+- entry-!~{000}~.js => entry--iSg8GhY.js
 
 # tests/esbuild/default/minify_identifiers_import_path_frequency_analysis
 
@@ -1402,7 +1373,7 @@ expression: output
 
 # tests/esbuild/default/minify_private_identifiers_no_bundle
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-yaWV1aKI.js
 
 # tests/esbuild/default/minify_sibling_labels_no_bundle
 
@@ -1416,11 +1387,11 @@ expression: output
 
 # tests/esbuild/default/named_function_expression_argument_collision
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-rWd3LS8L.js
 
 # tests/esbuild/default/nested_common_js
 
-- entry-!~{000}~.js => entry-9W2CSZLw.js
+- entry-!~{000}~.js => entry-aq10JpOw.js
 
 # tests/esbuild/default/nested_es6_from_common_js
 
@@ -1451,7 +1422,7 @@ expression: output
 
 # tests/esbuild/default/node_annotation_false_positive_issue3544
 
-- entry-!~{000}~.js => entry-IF2tBrKH.js
+- entry-!~{000}~.js => entry-nH3QEoBQ.js
 
 # tests/esbuild/default/node_modules
 
@@ -1463,17 +1434,17 @@ expression: output
 
 # tests/esbuild/default/object_literal_proto_setter_edge_cases
 
-- import-!~{000}~.js => import-GLqhr6hA.js
-- import2-!~{001}~.js => import2-OCzVjods.js
-- local-!~{002}~.js => local-i_E6_o6W.js
-- local2-!~{003}~.js => local2-CBl2rmlx.js
+- import-shorthand-!~{000}~.js => import-shorthand-Vn6_D_CC.js
+- import-normal-!~{001}~.js => import-normal-69o9Y4XB.js
+- local-shorthand-!~{002}~.js => local-shorthand-PZLfB0pY.js
+- local-normal-!~{003}~.js => local-normal-0xwEVfH9.js
 
 # tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax
 
-- import-!~{000}~.js => import-GLqhr6hA.js
-- import2-!~{001}~.js => import2-OCzVjods.js
-- local-!~{002}~.js => local-i_E6_o6W.js
-- local2-!~{003}~.js => local2-CBl2rmlx.js
+- import-computed-!~{000}~.js => import-computed-O-lrO1gK.js
+- import-normal-!~{001}~.js => import-normal-69o9Y4XB.js
+- local-computed-!~{002}~.js => local-computed-mbD1P8db.js
+- local-normal-!~{003}~.js => local-normal-0xwEVfH9.js
 
 # tests/esbuild/default/outbase
 
@@ -1496,7 +1467,6 @@ expression: output
 
 # tests/esbuild/default/package_alias
 
-- entry-!~{000}~.js => entry-fSfDc06H.js
 
 # tests/esbuild/default/package_alias_match_longest
 
@@ -1508,7 +1478,7 @@ expression: output
 
 # tests/esbuild/default/quoted_property
 
-- entry-!~{000}~.js => entry-wnMANpZz.js
+- entry-!~{000}~.js => entry-CHnGDJFZ.js
 
 # tests/esbuild/default/quoted_property_mangle
 
@@ -1536,7 +1506,7 @@ expression: output
 
 # tests/esbuild/default/re_export_default_no_bundle_common_js
 
-- entry-!~{000}~.js => entry-IlHjRDll.js
+- entry-!~{000}~.js => entry-kkdPVCKb.js
 
 # tests/esbuild/default/re_export_default_no_bundle_es6
 
@@ -1556,7 +1526,7 @@ expression: output
 
 # tests/esbuild/default/rename_private_identifiers_no_bundle
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-yaWV1aKI.js
 
 # tests/esbuild/default/require_and_dynamic_import_invalid_template
 
@@ -1595,7 +1565,7 @@ expression: output
 
 # tests/esbuild/default/require_main_cache_common_js
 
-- entry-!~{000}~.js => entry-TRhIyrTF.js
+- entry-!~{000}~.js => entry-fbV-74br.js
 
 # tests/esbuild/default/require_parent_dir_common_js
 
@@ -1631,7 +1601,7 @@ expression: output
 
 # tests/esbuild/default/require_without_call
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-Rqu2Ajtt.js
 
 # tests/esbuild/default/require_without_call_inside_try
 
@@ -1655,7 +1625,7 @@ expression: output
 
 # tests/esbuild/default/simple_es6
 
-- entry-!~{000}~.js => entry-p3g2EqQx.js
+- entry-!~{000}~.js => entry-Ddz4Ngyp.js
 
 # tests/esbuild/default/source_map
 
@@ -1667,15 +1637,15 @@ expression: output
 
 # tests/esbuild/default/string_export_names_common_js
 
-- entry-!~{000}~.js => entry-Bc-nW_RA.js
+- entry-!~{000}~.js => entry--cPD6DGB.js
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-Bc-nW_RA.js
+- entry-!~{000}~.js => entry-hZbkTnYc.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 
-- entry-!~{000}~.js => entry-Z4qzCZ9O.js
+- entry-!~{000}~.js => entry-iT38u_pK.js
 
 # tests/esbuild/default/this_inside_function
 
@@ -1691,7 +1661,7 @@ expression: output
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
-- entry-!~{000}~.js => entry-Mg84kXaW.js
+- entry-!~{000}~.js => entry-3dGLquFW.js
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
@@ -1704,12 +1674,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-xpJOf2x9.js
-- a-!~{009}~.js => a-VwsHlI1V.js
-- b-!~{003}~.js => b-TTZxYkEF.js
-- b-!~{007}~.js => b-goQpRr-6.js
-- c-!~{001}~.js => c-83hDsd67.js
-- c-!~{005}~.js => c-SoY4f-lE.js
+- entry-!~{000}~.js => entry-eTOz7x4C.js
 
 # tests/esbuild/default/top_level_await_cjs
 
@@ -1717,7 +1682,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-oqFOgXef.js
 
 # tests/esbuild/default/top_level_await_esm
 
@@ -1725,7 +1690,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_esm_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-oqFOgXef.js
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
@@ -1733,7 +1698,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-rdGfQS32.js
+- entry-!~{000}~.js => entry-xpgdSank.js
 
 # tests/esbuild/default/top_level_await_iife
 
@@ -1741,7 +1706,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-2jMdEfYq.js
 
 # tests/esbuild/default/top_level_await_no_bundle
 
@@ -1753,11 +1718,11 @@ expression: output
 
 # tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-oqFOgXef.js
 
 # tests/esbuild/default/top_level_await_no_bundle_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-oqFOgXef.js
 
 # tests/esbuild/default/top_level_await_no_bundle_esm
 
@@ -1765,7 +1730,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_no_bundle_esm_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-oqFOgXef.js
 
 # tests/esbuild/default/top_level_await_no_bundle_iife
 
@@ -1773,7 +1738,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-oqFOgXef.js
 
 # tests/esbuild/default/top_level_return_forbidden_export
 
@@ -1789,7 +1754,7 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 
-- entry-!~{000}~.js => entry-JVoQy41q.js
+- entry-!~{000}~.js => entry-PjTm-m8B.js
 
 # tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
 
@@ -1797,11 +1762,11 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
 
-- entry-!~{000}~.js => entry-JVoQy41q.js
+- entry-!~{000}~.js => entry-YSeV6FYF.js
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
-- entry-!~{000}~.js => entry-gOENZ2Sc.js
+- entry-!~{000}~.js => entry-VPWlOSmX.js
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
@@ -1825,10 +1790,9 @@ expression: output
 
 # tests/esbuild/default/warn_common_js_exports_in_esm_bundle
 
-- cjs-in-esm-!~{000}~.js => cjs-in-esm-4iP8eELE.js
-- import-in-cjs-!~{001}~.js => import-in-cjs-r9YlKs8M.js
-- no-warnings-here-!~{002}~.js => no-warnings-here-0bhTQl2w.js
-- chunk-!~{003}~.js => chunk-w9qn_Qll.js
+- cjs-in-esm-!~{000}~.js => cjs-in-esm-IX_luP1_.js
+- import-in-cjs-!~{001}~.js => import-in-cjs-MXc4-F12.js
+- no-warnings-here-!~{002}~.js => no-warnings-here-Zyjl5lcN.js
 
 # tests/esbuild/default/warn_common_js_exports_in_esm_convert
 

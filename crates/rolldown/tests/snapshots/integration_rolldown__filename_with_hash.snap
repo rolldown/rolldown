@@ -755,7 +755,7 @@ expression: output
 
 - entries_entry1-!~{000}~.js => entries_entry1-9HAZStut.js
 - entries_entry1.css
-- entries_entry2-!~{001}~.js => entries_entry2-KbixB-TC.js
+- entries_entry2-!~{001}~.js => entries_entry2-h9ppWVqN.js
 - entries_entry2.css
 - shared-!~{002}~.js => shared-J0QD7eZ0.js
 
@@ -1357,7 +1357,7 @@ expression: output
 - entry-!~{000}~.js => entry-RNzVYqeW.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
-- dynamic-!~{002}~.js => dynamic-raN6J84m.js
+- dynamic-!~{002}~.js => dynamic-D_YVRUK9.js
 
 # tests/esbuild/default/metafile_very_long_external_paths
 
@@ -2326,19 +2326,9 @@ expression: output
 
 - entry-!~{000}~.js => entry-fyXBGzuR.js
 
-# tests/esbuild/loader/empty_loader_css
-
-- entry-!~{000}~.js => entry-jF2aLy7c.js
-- entry.css
-
 # tests/esbuild/loader/empty_loader_js
 
 - entry-!~{000}~.js => entry-vGVvJpGB.js
-
-# tests/esbuild/loader/extensionless_loader_css
-
-- entry-!~{000}~.js => entry-jF2aLy7c.js
-- entry.css
 
 # tests/esbuild/loader/extensionless_loader_js
 
@@ -2381,7 +2371,7 @@ expression: output
 - src_entry-!~{000}~.js => src_entry-ioDHherq.js
 - src_entry2-!~{001}~.js => src_entry2-04Duh52x.js
 - src_entry2.css
-- assets_some-!~{002}~.js => assets_some-77uxwXic.js
+- assets_some-!~{002}~.js => assets_some-QMqViNSg.js
 - some-!~{003}~.js => some-W0fyymA3.js
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
@@ -2475,10 +2465,12 @@ expression: output
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
-- entries_entry-!~{000}~.js => entries_entry-AH_ZcV_w.js
+- entries_entry-!~{000}~.js => entries_entry-2vyhQpop.js
 - entries_entry.css
-- entries_other_entry-!~{001}~.js => entries_other_entry-1QldFfTA.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-esYOV8Kb.js
 - entries_other_entry.css
+- common-!~{002}~.js => common-QV0jCcba.js
+- common-QV0jCcba.css
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
@@ -4645,6 +4637,11 @@ expression: output
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
 - main-!~{000}~.js => main-vy4T7o4z.js
+
+# tests/rolldown/topics/css/align_vite
+
+- main-!~{000}~.js => main-Bb-L2J7W.js
+- main.css
 
 # tests/rolldown/topics/css/basic
 

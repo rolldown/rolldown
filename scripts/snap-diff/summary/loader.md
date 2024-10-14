@@ -1,12 +1,12 @@
 # Failed Cases
 ## [auto_detect_mime_type_from_extension](../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension/diff.md)
   diff
-## [empty_loader_css](../../../crates/rolldown/tests/esbuild/loader/empty_loader_css/diff.md)
-  diff
+## empty_loader_css
+  missing
 ## [empty_loader_js](../../../crates/rolldown/tests/esbuild/loader/empty_loader_js/diff.md)
   diff
-## [extensionless_loader_css](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css/diff.md)
-  diff
+## extensionless_loader_css
+  missing
 ## [jsx_automatic_no_name_collision](../../../crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision/diff.md)
   diff
 ## [jsx_preserve_capital_letter](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter/diff.md)

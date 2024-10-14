@@ -41,6 +41,7 @@ console.log(import_some.default);
 body {
 	background: url(../assets/some.file);
 }
+
 ```
 ## src_entry2.js
 

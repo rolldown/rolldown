@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 div {
 	background: url(../images/image.png);
 }
+
 ```
 ## entries_entry.js
 

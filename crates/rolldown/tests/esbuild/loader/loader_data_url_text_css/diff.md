@@ -32,10 +32,7 @@ body{color:red}
 body{background:blue}
 body{color:red}
 body{background:blue}
-@import "data:text/css,body{color:%72%65%64}";
-@import "data:text/css;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
-@import "data:text/css;charset=UTF-8,body{color:%72%65%64}";
-@import "data:text/css;charset=UTF-8;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
+
 
 
 ```
@@ -44,7 +41,7 @@ body{background:blue}
 ===================================================================
 --- esbuild	/out/entry.css
 +++ rolldown	entry.css
-@@ -1,21 +1,9 @@
+@@ -1,21 +1,6 @@
 -/* <data:text/css,body{color:%72%65%64}> */
 -body {
 -  color: red;
@@ -53,16 +50,12 @@ body{background:blue}
 +body{background:blue}
 +body{color:red}
 +body{background:blue}
-+@import "data:text/css,body{color:%72%65%64}";
-+@import "data:text/css;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
-+@import "data:text/css;charset=UTF-8,body{color:%72%65%64}";
-+@import "data:text/css;charset=UTF-8;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9";
  
 -/* <data:text/css;base64,Ym9keXtiYWNrZ3JvdW5kOmJsdWV9> */
 -body {
 -  background: blue;
 -}
--
+ 
 -/* <data:text/css;charset=UTF-8,body{color:%72%65%64}> */
 -body {
 -  color: red;

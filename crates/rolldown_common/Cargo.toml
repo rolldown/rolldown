@@ -33,6 +33,7 @@ rustc-hash         = { workspace = true }
 schemars           = { workspace = true, optional = true }
 serde              = { workspace = true, features = ["derive"], optional = true }
 serde_json         = { workspace = true }
+string_wizard      = { workspace = true }
 sugar_path         = { workspace = true }
 
 [features]

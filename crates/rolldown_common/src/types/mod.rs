@@ -34,6 +34,7 @@ pub mod resolved_request_info;
 pub mod rollup_pre_rendered_chunk;
 pub mod rollup_rendered_chunk;
 pub mod side_effects;
+pub mod source_mutation;
 pub mod stmt_info;
 pub mod str_or_bytes;
 pub mod symbol_or_member_expr_ref;

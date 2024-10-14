@@ -19,7 +19,7 @@ div {
 ## entries_entry.css
 
 ```css
-@import "../shared/common.css";
+
 
 ```
 ## entries_entry.js
@@ -31,7 +31,7 @@ import "./common.js";
 ## entries_other_entry.css
 
 ```css
-@import "../../shared/common.css";
+
 
 ```
 ## entries_other_entry.js

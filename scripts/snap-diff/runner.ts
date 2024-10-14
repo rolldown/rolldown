@@ -26,8 +26,27 @@ export function getEsbuildSnapFile(
     })
   return ret
 }
+type AggregateStats = {
+  stats: Stats
+  details: Record<string, Stats>
+}
 
+type Stats = {
+  pass: number
+  bypass: number
+  failed: number
+  total: number
+}
 export function run(includeList: string[], debugConfig: DebugConfig) {
+  let aggregatedStats: AggregateStats = {
+    stats: {
+      pass: 0,
+      bypass: 0,
+      failed: 0,
+      total: 0,
+    },
+    details: {},
+  }
   let snapfileList = getEsbuildSnapFile(includeList)
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
@@ -81,12 +100,18 @@ export function run(includeList: string[], debugConfig: DebugConfig) {
     diffList.sort((a, b) => {
       return a.name.localeCompare(b.name)
     })
-    let summaryMarkdown = getSummaryMarkdown(diffList, snapCategory)
+    let summary = getSummaryMarkdownAndStats(diffList, snapCategory)
     fs.writeFileSync(
       path.join(import.meta.dirname, './summary/', `${snapCategory}.md`),
-      summaryMarkdown,
+      summary.markdown,
     )
+    aggregatedStats.details[snapCategory] = summary.stats
+    aggregatedStats.stats.total += summary.stats.total
+    aggregatedStats.stats.pass += summary.stats.pass
+    aggregatedStats.stats.bypass += summary.stats.bypass
+    aggregatedStats.stats.failed += summary.stats.failed
   }
+  generateStatsMarkdown(aggregatedStats)
 }
 
 function getRolldownSnap(caseDir: string) {
@@ -110,10 +135,37 @@ function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
   return markdown
 }
 
-function getSummaryMarkdown(
+function generateStatsMarkdown(aggregateStats: AggregateStats) {
+  const { stats, details } = aggregateStats
+  let markdown = ''
+
+  markdown += `# Compatibility metric\n`
+  markdown += `- total: ${stats.total}\n`
+  markdown += `- passed: ${stats.total - stats.failed}\n`
+  markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(2)}%\n`
+
+  markdown += `# Compatibility metric details\n`
+  Object.entries(details).forEach(([category, stats]) => {
+    markdown += `## ${category}\n`
+    markdown += `- total: ${stats.total}\n`
+    markdown += `- passed: ${stats.total - stats.failed}\n`
+    markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(2)}%\n`
+  })
+  fs.writeFileSync(
+    path.resolve(import.meta.dirname, './summary/stats.md'),
+    markdown,
+  )
+}
+
+type Summary = {
+  markdown: string
+  stats: Stats
+}
+
+function getSummaryMarkdownAndStats(
   diffList: Array<{ diffResult: ReturnType<typeof diffCase>; name: string }>,
   snapshotCategory: string,
-) {
+): Summary {
   let bypassList = []
   let failedList = []
   let passList = []
@@ -167,7 +219,15 @@ function getSummaryMarkdown(
     markdown += `## [${diff.name}](${posixPath}/bypass.md)\n`
   }
 
-  return markdown
+  return {
+    markdown,
+    stats: {
+      pass: passList.length,
+      bypass: bypassList.length,
+      failed: failedList.length,
+      total: diffList.length,
+    },
+  }
 }
 
 function updateBypassOrDiffMarkdown(

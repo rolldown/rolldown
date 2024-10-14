@@ -5,7 +5,9 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "treeshake": false,
+    "format": "cjs"
   },
   "expectExecuted": false
 }

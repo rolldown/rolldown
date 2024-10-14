@@ -2,22 +2,23 @@
   "config": {
     "input": [
       {
-        "name": "import",
+        "name": "import-shorthand",
         "import": "import-shorthand.js"
       },
       {
-        "name": "import",
+        "name": "import-normal",
         "import": "import-normal.js"
       },
       {
-        "name": "local",
+        "name": "local-shorthand",
         "import": "local-shorthand.js"
       },
       {
-        "name": "local",
+        "name": "local-normal",
         "import": "local-normal.js"
       }
-    ]
+    ],
+    "treeshake": false
   },
   "expectExecuted": false
 }

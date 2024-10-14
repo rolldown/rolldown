@@ -1,3 +1,5 @@
+# Reason
+1. rolldown split chunks
 # Diff
 ## /out/a.js
 ### esbuild
@@ -8,7 +10,9 @@ console.log(ns[foo](), new ns[foo]());
 ```
 ### rolldown
 ```js
-import * as ns from "external";
+"use strict";
+const require_chunk = require('./chunk.js');
+const ns = __toESM(require("external"));
 
 //#region a.js
 console.log(ns[foo](), new ns[foo]());
@@ -21,9 +25,9 @@ console.log(ns[foo](), new ns[foo]());
 ===================================================================
 --- esbuild	/out/a.js
 +++ rolldown	a.js
-@@ -1,2 +1,2 @@
--var ns = __toESM(require("external"));
-+import * as ns from "external";
+@@ -1,2 +1,3 @@
++var require_chunk = require('./chunk.js');
+ var ns = __toESM(require("external"));
  console.log(ns[foo](), new ns[foo]());
 
 ```
@@ -36,7 +40,9 @@ console.log(ns.foo(), new ns.foo());
 ```
 ### rolldown
 ```js
-import * as ns from "external";
+"use strict";
+const require_chunk = require('./chunk.js');
+const ns = __toESM(require("external"));
 
 //#region b.js
 console.log(ns.foo(), new ns.foo());
@@ -49,9 +55,9 @@ console.log(ns.foo(), new ns.foo());
 ===================================================================
 --- esbuild	/out/b.js
 +++ rolldown	b.js
-@@ -1,2 +1,2 @@
--var ns = __toESM(require("external"));
-+import * as ns from "external";
+@@ -1,2 +1,3 @@
++var require_chunk = require('./chunk.js');
+ var ns = __toESM(require("external"));
  console.log(ns.foo(), new ns.foo());
 
 ```
@@ -65,7 +71,9 @@ console.log(new import_external.default(), new import_external.foo());
 ```
 ### rolldown
 ```js
-import { default as def, foo } from "external";
+"use strict";
+const require_chunk = require('./chunk.js');
+const { default: def, foo } = __toESM(require("external"));
 
 //#region c.js
 console.log(def(), foo());
@@ -79,11 +87,12 @@ console.log(new def(), new foo());
 ===================================================================
 --- esbuild	/out/c.js
 +++ rolldown	c.js
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,4 @@
 -var import_external = __toESM(require("external"));
 -console.log((0, import_external.default)(), (0, import_external.foo)());
 -console.log(new import_external.default(), new import_external.foo());
-+import {default as def, foo} from "external";
++var require_chunk = require('./chunk.js');
++var {default: def, foo} = __toESM(require("external"));
 +console.log(def(), foo());
 +console.log(new def(), new foo());
 

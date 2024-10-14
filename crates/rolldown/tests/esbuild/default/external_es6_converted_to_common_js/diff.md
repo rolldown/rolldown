@@ -1,3 +1,6 @@
+# Reason
+1. redundant `import` statements
+2. should not generate `__toCommonJS`
 # Diff
 ## /out.js
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. string export name not correct
 # Diff
 ## /out.js
 ### esbuild
@@ -16,10 +18,21 @@ var global;
 ```
 ### rolldown
 ```js
-import * as all the stuff from "./foo";
-import { some import as someImport } from "./foo";
+(function(exports, __foo, __foo) {
 
-export { all the stuff, someImport as 'some export' };
+"use strict";
+const all the stuff = __foo;
+const { some import: someImport } = __foo;
+
+Object.defineProperty(exports, 'all the stuff', {
+  enumerable: true,
+  get: function () {
+    return all the stuff;
+  }
+});
+exports["some export"] = someImport
+return exports;
+})({}, __foo, __foo);
 
 ```
 ### diff
@@ -27,7 +40,7 @@ export { all the stuff, someImport as 'some export' };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,4 @@
+@@ -1,11 +1,15 @@
 -var global;
 -(global ||= {}).name = (() => {
 -    var entry_exports = {};
@@ -39,9 +52,20 @@ export { all the stuff, someImport as 'some export' };
 -    var all_the_stuff = __toESM(require("./foo"));
 -    return __toCommonJS(entry_exports);
 -})();
-+import * as all the stuff from "./foo";
-+import { some import as someImport } from "./foo";
++(function(exports, __foo, __foo) {
 +
-+export { all the stuff, someImport as 'some export' };
++"use strict";
++const all the stuff = __foo;
++const { some import: someImport } = __foo;
++
++Object.defineProperty(exports, 'all the stuff', {
++  enumerable: true,
++  get: function () {
++    return all the stuff;
++  }
++});
++exports["some export"] = someImport
++return exports;
++})({}, __foo, __foo);
 
 ```

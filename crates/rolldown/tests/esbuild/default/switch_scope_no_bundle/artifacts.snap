@@ -8,6 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
+switch (foo) {
+	default: var foo;
+}
 switch (bar) {
 	default: let bar$1;
 }

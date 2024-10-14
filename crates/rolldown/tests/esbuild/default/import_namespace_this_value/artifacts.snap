@@ -26,7 +26,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import * as ns from "external";
+"use strict";
+const require_chunk = require('./chunk.js');
+const ns = __toESM(require("external"));
 
 //#region a.js
 console.log(ns[foo](), new ns[foo]());
@@ -36,7 +38,9 @@ console.log(ns[foo](), new ns[foo]());
 ## b.js
 
 ```js
-import * as ns from "external";
+"use strict";
+const require_chunk = require('./chunk.js');
+const ns = __toESM(require("external"));
 
 //#region b.js
 console.log(ns.foo(), new ns.foo());
@@ -46,11 +50,26 @@ console.log(ns.foo(), new ns.foo());
 ## c.js
 
 ```js
-import { default as def, foo } from "external";
+"use strict";
+const require_chunk = require('./chunk.js');
+const { default: def, foo } = __toESM(require("external"));
 
 //#region c.js
 console.log(def(), foo());
 console.log(new def(), new foo());
 
 //#endregion
+```
+## chunk.js
+
+```js
+"use strict";
+
+
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
 ```

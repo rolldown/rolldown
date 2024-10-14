@@ -5,7 +5,8 @@
         "name": "a",
         "import": "a.js"
       }
-    ]
+    ],
+    "inlineDynamicImports": true
   },
   "expectExecuted": false
 }

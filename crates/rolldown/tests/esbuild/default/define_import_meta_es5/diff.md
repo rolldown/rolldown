@@ -1,29 +1,6 @@
+# Reason
+1. should warn when target do not support `imoprt.meta`
 # Diff
-## /out/replaced.js
-### esbuild
-```js
-// replaced.js
-console.log(1);
-```
-### rolldown
-```js
-
-//#region replaced.js
-console.log(import.meta.x);
-
-//#endregion
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/replaced.js
-+++ rolldown	replaced.js
-@@ -1,1 +1,1 @@
--console.log(1);
-+console.log(import.meta.x);
-
-```
 ## /out/kept.js
 ### esbuild
 ```js

@@ -1,3 +1,5 @@
+# Reason
+1. not support import attributes
 # Diff
 ## /out/foo-FYKHFNL2.copy
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. should rewrite `require`
 # Diff
 ## /out.js
 ### esbuild
@@ -9,6 +11,11 @@ req("./entry");
 ### rolldown
 ```js
 
+//#region entry.js
+const req = require;
+req("./entry");
+
+//#endregion
 
 ```
 ### diff
@@ -16,8 +23,9 @@ req("./entry");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,2 +0,0 @@
+@@ -1,2 +1,2 @@
 -var req = __require;
--req("./entry");
++var req = require;
+ req("./entry");
 
 ```

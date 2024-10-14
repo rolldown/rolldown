@@ -5,7 +5,13 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "define": {
+      "a.b": "b.c",
+      "b.c": "c.a",
+      "c.a": "a.b",
+      "x.y": "y"
+    }
   },
   "expectExecuted": false
 }

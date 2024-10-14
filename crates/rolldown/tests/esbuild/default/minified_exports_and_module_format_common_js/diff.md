@@ -24,33 +24,21 @@ console.log(exports, module.exports, o, r);
 
 
 //#region foo/test.js
-var test_exports, foo;
-var init_test$1 = __esm({ "foo/test.js"() {
-	test_exports = {};
-	__export(test_exports, { foo: () => foo });
-	foo = 123;
-} });
+var test_exports$1 = {};
+__export(test_exports$1, { foo: () => foo });
+let foo = 123;
 
 //#endregion
 //#region bar/test.js
-var test_exports$1, bar;
-var init_test = __esm({ "bar/test.js"() {
-	test_exports$1 = {};
-	__export(test_exports$1, { bar: () => bar });
-	bar = 123;
-} });
+var test_exports = {};
+__export(test_exports, { bar: () => bar });
+let bar = 123;
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports, module) {
-	init_test$1();
-	init_test();
-	console.log(exports, module.exports, test_exports, test_exports$1);
-} });
+console.log(exports, module.exports, test_exports$1, test_exports);
 
 //#endregion
-export default require_entry();
-
 
 ```
 ### diff
@@ -58,43 +46,26 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,28 @@
+@@ -1,11 +1,11 @@
 -var o = {};
 -p(o, {
 -    foo: () => l
-+var test_exports, foo;
-+var init_test$1 = __esm({
-+    "foo/test.js"() {
-+        test_exports = {};
-+        __export(test_exports, {
-+            foo: () => foo
-+        });
-+        foo = 123;
-+    }
++var test_exports$1 = {};
++__export(test_exports$1, {
++    foo: () => foo
  });
 -var l = 123;
 -var r = {};
 -p(r, {
 -    bar: () => m
-+var test_exports$1, bar;
-+var init_test = __esm({
-+    "bar/test.js"() {
-+        test_exports$1 = {};
-+        __export(test_exports$1, {
-+            bar: () => bar
-+        });
-+        bar = 123;
-+    }
++var foo = 123;
++var test_exports = {};
++__export(test_exports, {
++    bar: () => bar
  });
 -var m = 123;
 -console.log(exports, module.exports, o, r);
-+var require_entry = __commonJS({
-+    "entry.js"(exports, module) {
-+        init_test$1();
-+        init_test();
-+        console.log(exports, module.exports, test_exports, test_exports$1);
-+    }
-+});
-+export default require_entry();
++var bar = 123;
++console.log(exports, module.exports, test_exports$1, test_exports);
 
 ```

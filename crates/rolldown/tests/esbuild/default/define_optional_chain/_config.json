@@ -5,7 +5,10 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "define": {
+      "a.b.c": "1"
+    }
   },
   "expectExecuted": false
 }

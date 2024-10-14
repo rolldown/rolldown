@@ -1,3 +1,5 @@
+# Reason
+1. not align
 # Diff
 ## /out.js
 ### esbuild
@@ -42,14 +44,49 @@ await init_entry();
 ### rolldown
 ```js
 
+
 //#region entry.js
-import("./a.js");
-import("./b2.js");
-import("./c2.js");
-import("./entry.js");
-await 0;
+var require_entry = __commonJS({ "entry.js"() {
+	Promise.resolve().then(function() {
+		return init_a(), a_exports;
+	});
+	Promise.resolve().then(function() {
+		return init_b(), b_exports;
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_c());
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_entry());
+	});
+	await 0;
+} });
 
 //#endregion
+//#region a.js
+var a_exports;
+var init_a = __esm({ "a.js"() {
+	a_exports = {};
+	init_b();
+} });
+
+//#endregion
+//#region b.js
+var b_exports, import_c;
+var init_b = __esm({ "b.js"() {
+	b_exports = {};
+	import_c = __toESM(require_c());
+} });
+
+//#endregion
+//#region c.js
+var require_c = __commonJS({ "c.js"() {
+	await 0;
+} });
+
+//#endregion
+export default require_entry();
+
 
 ```
 ### diff
@@ -57,7 +94,7 @@ await 0;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,29 +1,5 @@
+@@ -1,29 +1,44 @@
 -var c_exports = {};
 -var init_c = __esm({
 -    async "c.js"() {
@@ -87,10 +124,49 @@ await 0;
 -    }
 -});
 -await init_entry();
-+import("./a.js");
-+import("./b2.js");
-+import("./c2.js");
-+import("./entry.js");
-+await 0;
++
++
++//#region entry.js
++var require_entry = __commonJS({ "entry.js"() {
++	Promise.resolve().then(function() {
++		return init_a(), a_exports;
++	});
++	Promise.resolve().then(function() {
++		return init_b(), b_exports;
++	});
++	Promise.resolve().then(function() {
++		return __toESM(require_c());
++	});
++	Promise.resolve().then(function() {
++		return __toESM(require_entry());
++	});
++	await 0;
++} });
++
++//#endregion
++//#region a.js
++var a_exports;
++var init_a = __esm({ "a.js"() {
++	a_exports = {};
++	init_b();
++} });
++
++//#endregion
++//#region b.js
++var b_exports, import_c;
++var init_b = __esm({ "b.js"() {
++	b_exports = {};
++	import_c = __toESM(require_c());
++} });
++
++//#endregion
++//#region c.js
++var require_c = __commonJS({ "c.js"() {
++	await 0;
++} });
++
++//#endregion
++export default require_entry();
++
 
 ```

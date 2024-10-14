@@ -7,11 +7,7 @@
       }
     ],
     "format": "cjs",
-    "external": [
-      "fs"
-    ]
+    "platform": "node"
   },
-  "hiddenRuntimeModule": false,
-  "_comment": "TODO(hyf0): need to be solved",
   "expectExecuted": false
 }

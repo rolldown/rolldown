@@ -1,3 +1,5 @@
+# Reason
+1. not support conditional `require.resolve`
 # Diff
 ## /out.js
 ### esbuild

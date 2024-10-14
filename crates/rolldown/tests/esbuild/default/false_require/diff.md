@@ -1,3 +1,5 @@
+# Reason
+1. should rename `require` when it is appear in param position
 # Diff
 ## /out.js
 ### esbuild

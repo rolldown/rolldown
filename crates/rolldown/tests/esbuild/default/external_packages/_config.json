@@ -7,10 +7,6 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ],
-    "external": [
-      "pkg1",
-      "pkg2"
     ]
   }
 }

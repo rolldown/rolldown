@@ -1,3 +1,5 @@
+# Reason
+1. limitation of test infra, the test may hard to pass in CI
 # Diff
 ## /out/entry.js
 ### esbuild

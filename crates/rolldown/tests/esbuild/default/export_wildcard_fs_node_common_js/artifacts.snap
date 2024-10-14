@@ -9,27 +9,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: "./external" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-import "fs";
-import "./external";
-
-export * from "fs"
-
-export * from "./external"
+"use strict";
+var __external = require("./external");
+Object.keys(__external).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return __external[k]; }
+  });
+});
+var node_fs = require("node:fs");
+Object.keys(node_fs).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return node_fs[k]; }
+  });
+});
+require("node:fs");
+require("./external");
 
 //#region internal.js
 let foo = 123;
 
 //#endregion
-export { foo };
+exports.foo = foo
 ```

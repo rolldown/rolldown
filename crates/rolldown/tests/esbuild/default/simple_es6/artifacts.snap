@@ -15,7 +15,7 @@ function fn() {
 
 //#endregion
 //#region entry.js
-assert(fn() === 123);
+assert.equal(fn(), 123);
 
 //#endregion
 ```

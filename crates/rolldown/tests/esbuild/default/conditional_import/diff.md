@@ -1,3 +1,5 @@
+# Reason
+1. not support conditional import
 # Diff
 ## /out/a.js
 ### esbuild

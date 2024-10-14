@@ -1,11 +1,23 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## MIXED_EXPORT
+
+```text
+[MIXED_EXPORT] Warning: Entry module "entry" is using named (including "C", "Class", "Fn", "abc", "b", "c", "default", "l", "v") and default exports together. Consumers of your bundle will have to use `entry.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
 # Assets
 
 ## entry.js
 
 ```js
+var globalName = (function(exports) {
+
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region a.js
@@ -27,5 +39,25 @@ function Fn() {}
 class Class {}
 
 //#endregion
-export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
+exports.C = Class
+exports.Class = Class
+exports.Fn = Fn
+exports.abc = abc
+Object.defineProperty(exports, 'b', {
+  enumerable: true,
+  get: function () {
+    return b_exports;
+  }
+});
+exports.c = c
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return entry_default;
+  }
+});
+exports.l = l
+exports.v = v
+return exports;
+})({});
 ```

@@ -1,83 +1,19 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "@abs-path/pkg6" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
+## PARSE_ERROR
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@abs-path/pkg7/foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[nested3/node_modules/alias3/index.js:1:5]
+   │
+ 1 │ test failure
+   │     │ 
+   │     ╰─ 
+   │ 
+   │ Help: Try insert a semicolon here
+───╯
 
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "@scope-only/pkg8" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "@scope/pkg4" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "@scope/pkg5/foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg1" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg2/foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg3" is imported by "nested3/index.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "slash/" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-# Assets
-
-## entry.js
-
-```js
-import "pkg1";
-import "pkg2/foo";
-import "pkg3";
-import "@scope/pkg4";
-import "@scope/pkg5/foo";
-import "@abs-path/pkg6";
-import "@abs-path/pkg7/foo";
-import "@scope-only/pkg8";
-import "slash/";
-
-//#region node_modules/prefix-foo/index.js
-console.log(10);
-
-//#endregion
-//#region node_modules/@scope/prefix-foo/index.js
-console.log(11);
-
-//#endregion
 ```

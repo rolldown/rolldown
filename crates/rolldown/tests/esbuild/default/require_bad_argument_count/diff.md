@@ -1,3 +1,5 @@
+# Reason
+1. should rewrite when bad arg count
 # Diff
 ## /out.js
 ### esbuild

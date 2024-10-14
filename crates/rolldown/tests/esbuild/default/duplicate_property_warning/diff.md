@@ -1,3 +1,6 @@
+# Reason
+1. lowering jsx
+2. not support duplicate property warning
 # Diff
 ## /out/entry.js
 ### esbuild

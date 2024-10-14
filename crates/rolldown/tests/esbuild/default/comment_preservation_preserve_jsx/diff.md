@@ -1,3 +1,5 @@
+# Reason
+1. not support `jsx.preserve`
 # Diff
 ## /out/entry.js
 ### esbuild

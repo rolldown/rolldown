@@ -1,3 +1,5 @@
+# Reason
+1. not support import attributes
 # Diff
 ## /out/entry.js
 ### esbuild

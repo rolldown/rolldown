@@ -10,6 +10,14 @@
         "name": "write",
         "import": "write.js"
       }
-    ]
+    ],
+    "define": {
+      "a": "null",
+      "b.c": "null",
+      "d": "ident",
+      "e.f": "ident",
+      "g": "dot.chain",
+      "h.i": "dot.chain"
+    }
   }
 }

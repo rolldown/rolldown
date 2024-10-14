@@ -1,3 +1,5 @@
+# Reason
+1. redundant `__toCommonJS`
 # Diff
 ## /out.js
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. `jsx.factory`
 # Diff
 ## /out/factory.js
 ### esbuild

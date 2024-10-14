@@ -8,6 +8,7 @@
         "import": "entry.js"
       }
     ],
+    "format": "cjs",
     "external": [
       "ext"
     ]

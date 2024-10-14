@@ -74,18 +74,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "a_nowrap";
-import { b } from "b_nowrap";
-import "c_nowrap";
-import * as d from "d_WRAP";
-import { default as e } from "e_WRAP";
-import { default as f } from "f_WRAP";
-import { __esModule as g } from "g_WRAP";
-import * as h from "h_WRAP";
-import * as i from "i_WRAP";
-import * as j from "j_WRAP";
+"use strict";
+var c_nowrap = require("c_nowrap");
+Object.keys(c_nowrap).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return c_nowrap[k]; }
+  });
+});
 
-export * from "c_nowrap"
+require("a_nowrap");
+const { b } = __toESM(require("b_nowrap"));
+require("c_nowrap");
+const d = __toESM(require("d_WRAP"));
+const { default: e } = __toESM(require("e_WRAP"));
+const { default: f } = __toESM(require("f_WRAP"));
+const { __esModule: g } = __toESM(require("g_WRAP"));
+const h = __toESM(require("h_WRAP"));
+const i = __toESM(require("i_WRAP"));
+const j = __toESM(require("j_WRAP"));
 
 //#region entry.js
 b();

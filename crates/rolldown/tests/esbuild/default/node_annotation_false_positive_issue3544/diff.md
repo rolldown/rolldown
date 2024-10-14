@@ -1,3 +1,5 @@
+# Reason
+1. not align
 # Diff
 ## /out.js
 ### esbuild
@@ -19,14 +21,15 @@ function confuseNode(exports2) {
 ```
 ### rolldown
 ```js
+"use strict";
 
 //#region entry.mjs
-function confuseNode(exports) {
-	exports.notAnExport = function() {};
+function confuseNode(exports$1) {
+	exports$1.notAnExport = function() {};
 }
 
 //#endregion
-export { confuseNode };
+exports.confuseNode = confuseNode
 
 ```
 ### diff
@@ -42,12 +45,12 @@ export { confuseNode };
 -module.exports = __toCommonJS(entry_exports);
 -function confuseNode(exports2) {
 -    exports2.notAnExport = function () {};
-+function confuseNode(exports) {
-+    exports.notAnExport = function () {};
++function confuseNode(exports$1) {
++    exports$1.notAnExport = function () {};
  }
 -0 && (module.exports = {
 -    confuseNode
 -});
-+export {confuseNode};
++exports.confuseNode = confuseNode;
 
 ```

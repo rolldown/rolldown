@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+(function() {
+
 
 
 //#region c.js
@@ -36,6 +38,5 @@ var require_entry = __commonJS({ "entry.js"() {
 } });
 
 //#endregion
-export default require_entry();
-
+})();
 ```

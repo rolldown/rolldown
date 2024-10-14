@@ -1,3 +1,5 @@
+# Reason
+1. rolldown split chunks
 # Diff
 ## /out/a/entry.js
 ### esbuild

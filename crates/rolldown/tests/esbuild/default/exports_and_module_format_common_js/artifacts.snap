@@ -22,9 +22,9 @@ let bar = 123;
 
 //#endregion
 //#region entry.js
+console.log(exports, module.exports);
 assert.deepEqual(test_exports$1, { foo: 123 });
 assert.deepEqual(test_exports, { bar: 123 });
-console.log(exports, module.exports);
 
 //#endregion
 ```

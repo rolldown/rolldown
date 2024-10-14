@@ -1,3 +1,5 @@
+# Reason
+1. should rewrite `require`
 # Diff
 ## /out.js
 ### esbuild

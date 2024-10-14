@@ -1,3 +1,5 @@
+# Reason
+1. needs css stable
 # Diff
 ## /out/test.js
 ### esbuild
@@ -75,18 +77,20 @@ button {
 ```js
 button { color: red }
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/test.css
 +++ rolldown	test.css
-@@ -1,4 +1,1 @@
+@@ -1,4 +1,2 @@
 -/* project/node_modules/pkg/button.css */
 -button {
 -  color: red;
 -}
 \ No newline at end of file
 +button { color: red }
++
 
 ```

@@ -1,3 +1,5 @@
+# Reason
+1. rolldown should not shake the namespace iife
 # Diff
 ## /out/entry.js
 ### esbuild

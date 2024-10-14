@@ -31,7 +31,6 @@ pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
   pub symbol_table: SymbolTable,
   pub scope_tree: ScopeTree,
-  pub source: ArcStr,
 }
 
 pub fn parse_to_ecma_ast(
@@ -114,6 +113,6 @@ pub fn parse_to_ecma_ast(
   PreProcessEcmaAst::default()
     .build(ecma_ast, &parsed_type, path, replace_global_define_config, options)
     .map(|(ast, symbol_table, scope_tree)| {
-      Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, source })
+      Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree })
     })
 }

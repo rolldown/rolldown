@@ -1,3 +1,5 @@
+# Reason
+1. double module initialization
 # Diff
 ## /out.js
 ### esbuild

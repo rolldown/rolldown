@@ -21,10 +21,12 @@ pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   default_resolver: ResolverGeneric<T>,
   import_resolver: ResolverGeneric<T>,
   require_resolver: ResolverGeneric<T>,
+  css_resolver: ResolverGeneric<T>,
   package_json_cache: DashMap<PathBuf, Arc<PackageJson>>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
+  #[allow(clippy::too_many_lines)]
   pub fn new(raw_resolve: ResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
     let mut default_conditions = vec!["default".to_string()];
     let mut import_conditions = vec!["import".to_string()];
@@ -116,18 +118,26 @@ impl<F: FileSystem + Default> Resolver<F> {
       condition_names: require_conditions,
       ..resolve_options_with_default_conditions.clone()
     };
+
+    let resolve_options_for_css = OxcResolverOptions {
+      prefer_relative: true,
+      ..resolve_options_with_default_conditions.clone()
+    };
+
     let default_resolver =
       ResolverGeneric::new_with_file_system(fs, resolve_options_with_default_conditions);
     let import_resolver =
       default_resolver.clone_with_options(resolve_options_with_import_conditions);
     let require_resolver =
       default_resolver.clone_with_options(resolve_options_with_require_conditions);
+    let css_resolver = default_resolver.clone_with_options(resolve_options_for_css);
 
     Self {
       cwd,
       default_resolver,
       import_resolver,
       require_resolver,
+      css_resolver,
       package_json_cache: DashMap::default(),
     }
   }
@@ -155,6 +165,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::Require => &self.require_resolver,
+      ImportKind::AtImport => &self.css_resolver,
     };
 
     let importer_dir = importer.and_then(|importer| importer.parent()).and_then(|inner| {

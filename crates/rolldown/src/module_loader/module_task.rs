@@ -1,21 +1,29 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use futures::future::join_all;
+use oxc::{index::IndexVec, span::Span};
+use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
+use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use anyhow::Result;
-use rolldown_common::{ModuleId, ModuleIdx, ModuleType, NormalModule, ResolvedId, StrOrBytes};
-use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
+use rolldown_common::{
+  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule,
+  RawImportRecord, ResolvedId, StrOrBytes,
+};
+use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
   css::create_css_view,
   ecmascript::ecma_module_view_factory::{create_ecma_view, CreateEcmaViewReturn},
   module_loader::NormalModuleTaskResult,
+  runtime::RUNTIME_MODULE_ID,
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
+  SharedOptions, SharedResolver,
 };
 
 pub struct ModuleTaskOwner {
@@ -124,17 +132,21 @@ impl ModuleTask {
       ));
     };
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
     let repr_name = legitimize_identifier_name(&repr_name);
 
     let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
+    let mut raw_import_records = IndexVec::default();
+
     let css_view = if matches!(module_type, ModuleType::Css) {
       let css_source: ArcStr = source.try_into_string()?.into();
       // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
       source = StrOrBytes::Str(String::new());
-      Some(create_css_view(stable_id.clone(), &css_source)?)
+      let create_ret = create_css_view(&stable_id, &css_source);
+      raw_import_records = create_ret.1;
+      Some(create_ret.0)
     } else {
       None
     };
@@ -147,22 +159,49 @@ impl ModuleTask {
         options: &self.ctx.options,
         warnings: &mut warnings,
         module_type: module_type.clone(),
-        resolver: &self.ctx.resolver,
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
       CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
     )
     .await?;
 
-    let CreateEcmaViewReturn { view: ecma_view, resolved_deps, ast, symbols, raw_import_records } =
-      match ret {
-        Ok(ret) => ret,
-        Err(errs) => {
-          self.errors.extend(errs);
-          return Ok(());
-        }
-      };
+    let CreateEcmaViewReturn {
+      view: mut ecma_view,
+      ast,
+      symbols,
+      raw_import_records: ecma_raw_import_records,
+    } = match ret {
+      Ok(ret) => ret,
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
 
+    if !matches!(module_type, ModuleType::Css) {
+      raw_import_records = ecma_raw_import_records;
+    }
+
+    let resolved_deps = match self
+      .resolve_dependencies(&raw_import_records, ecma_view.source.clone(), &mut warnings)
+      .await?
+    {
+      Ok(deps) => deps,
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
+
+    if !matches!(module_type, ModuleType::Css) {
+      for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
+        if record.kind.is_static() {
+          ecma_view.imported_ids.push(ArcStr::clone(&info.id).into());
+        } else {
+          ecma_view.dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
+        }
+      }
+    }
     let module = NormalModule {
       repr_name: repr_name.into_owned(),
       stable_id,
@@ -195,5 +234,112 @@ impl ModuleTask {
     }
 
     Ok(())
+  }
+
+  pub(crate) async fn resolve_id(
+    bundle_options: &SharedOptions,
+    resolver: &SharedResolver,
+    plugin_driver: &SharedPluginDriver,
+    importer: &str,
+    specifier: &str,
+    kind: ImportKind,
+  ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+    // Check runtime module
+    if specifier == RUNTIME_MODULE_ID {
+      return Ok(Ok(ResolvedId {
+        id: specifier.to_string().into(),
+        ignored: false,
+        module_def_format: ModuleDefFormat::EsmMjs,
+        is_external: false,
+        package_json: None,
+        side_effects: None,
+      }));
+    }
+
+    resolve_id_check_external(
+      resolver,
+      plugin_driver,
+      specifier,
+      Some(importer),
+      false,
+      kind,
+      None,
+      Arc::default(),
+      false,
+      bundle_options,
+    )
+    .await
+  }
+
+  pub async fn resolve_dependencies(
+    &mut self,
+    dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
+    source: ArcStr,
+    warnings: &mut Vec<BuildDiagnostic>,
+  ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
+    let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
+      let specifier = item.module_request.clone();
+      let bundle_options = Arc::clone(&self.ctx.options);
+      // FIXME(hyf0): should not use `Arc<Resolver>` here
+      let resolver = Arc::clone(&self.ctx.resolver);
+      let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
+      let importer = &self.resolved_id.id;
+      let kind = item.kind;
+      async move {
+        Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
+          .await
+          .map(|id| (specifier, idx, id))
+      }
+    });
+
+    let resolved_ids = join_all(jobs).await;
+
+    let mut ret = IndexVec::with_capacity(dependencies.len());
+    let mut build_errors = vec![];
+    for resolved_id in resolved_ids {
+      let (specifier, idx, resolved_id) = resolved_id?;
+
+      match resolved_id {
+        Ok(info) => {
+          ret.push(info);
+        }
+        Err(e) => match &e {
+          ResolveError::NotFound(..) => {
+            warnings.push(
+              BuildDiagnostic::unresolved_import_treated_as_external(
+                specifier.to_string(),
+                self.resolved_id.id.to_string(),
+                Some(e),
+              )
+              .with_severity_warning(),
+            );
+            ret.push(ResolvedId {
+              id: specifier.to_string().into(),
+              ignored: false,
+              module_def_format: ModuleDefFormat::Unknown,
+              is_external: true,
+              package_json: None,
+              side_effects: None,
+            });
+          }
+          e => {
+            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
+            let dep = &dependencies[idx];
+            build_errors.push(BuildDiagnostic::diagnosable_resolve_error(
+              source.clone(),
+              self.resolved_id.id.clone(),
+              Span::new(dep.module_request_start, dep.module_request_end()),
+              reason,
+            ));
+          }
+        },
+      }
+    }
+
+    if build_errors.is_empty() {
+      Ok(Ok(ret))
+    } else {
+      Ok(Err(build_errors))
+    }
   }
 }

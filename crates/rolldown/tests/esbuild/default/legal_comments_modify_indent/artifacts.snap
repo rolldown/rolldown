@@ -22,6 +22,7 @@ export { entry_default as default };
 	 */
 	z { zoom: 2 }
 }
+
 ```
 ## entry2.js
 

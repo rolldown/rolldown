@@ -1,3 +1,5 @@
+# Reason
+1. should inline variable
 # Diff
 ## /out.js
 ### esbuild

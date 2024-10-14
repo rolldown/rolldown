@@ -1,3 +1,5 @@
+# Reason
+1. Not support file loader
 # Diff
 ## /dist/test-J7OMUXO3.txt
 ### esbuild

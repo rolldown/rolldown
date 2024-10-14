@@ -23,9 +23,13 @@ console.log("in c");
 ## entry2.css
 
 ```css
+a { zoom: 2 } /*! Copyright notice 1 */
+b { zoom: 2 } /*! Copyright notice 1 */
+c { zoom: 2 } /*! Copyright notice 2 */
 @import "./a.css";
 @import "./b.css";
 @import "./c.css";
+
 ```
 ## entry2.js
 

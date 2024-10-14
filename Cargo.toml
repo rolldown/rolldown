@@ -76,6 +76,7 @@ single_match      = "allow"
 single_match_else = "allow"
 
 [workspace.dependencies]
+css-module-lexer                        = "0.0.14"
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
 rolldown_ecmascript                     = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
@@ -104,7 +105,6 @@ rolldown_testing                        = { version = "0.1.0", path = "./crates/
 rolldown_testing_config                 = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
 rolldown_tracing                        = { version = "0.1.0", path = "./crates/rolldown_tracing" }
 rolldown_utils                          = { version = "0.1.0", path = "./crates/rolldown_utils" }
-
 
 anyhow              = "1.0.86"
 append-only-vec     = { version = "0.1.5" }

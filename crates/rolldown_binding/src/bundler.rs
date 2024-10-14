@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
@@ -7,6 +7,7 @@ use crate::{
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::{
     binding_log::BindingLog, binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
+    watcher::BindingWatcher,
   },
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
 };
@@ -17,7 +18,7 @@ use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 
 #[napi]
 pub struct Bundler {
-  inner: Mutex<NativeBundler>,
+  inner: Arc<Mutex<NativeBundler>>,
   on_log: BindingOnLog,
   log_level: Option<BindingLogLevel>,
   cwd: PathBuf,
@@ -64,7 +65,7 @@ impl Bundler {
 
     Ok(Self {
       cwd: ret.bundler_options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap()),
-      inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)),
+      inner: Arc::new(Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins))),
       log_level,
       on_log,
     })
@@ -96,7 +97,7 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn watch(&self) -> napi::Result<()> {
+  pub async fn watch(&self) -> napi::Result<BindingWatcher> {
     self.watch_impl().await
   }
 }
@@ -168,14 +169,9 @@ impl Bundler {
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn watch_impl(&self) -> napi::Result<()> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
-
-    Self::handle_result(bundler_core.watch().await)?;
-
-    Ok(())
+  pub async fn watch_impl(&self) -> napi::Result<BindingWatcher> {
+    let watcher = Self::handle_result(NativeBundler::watch(Arc::clone(&self.inner)).await)?;
+    Ok(BindingWatcher::new(watcher))
   }
 
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {

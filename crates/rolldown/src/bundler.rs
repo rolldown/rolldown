@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::stages::{
   link_stage::{LinkStage, LinkStageOutput},
   scan_stage::ScanStageOutput,
@@ -8,16 +6,19 @@ use crate::{
   bundler_builder::BundlerBuilder,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
-  watcher::{emitter::WatcherEmitter, watcher::setup_watcher},
+  watcher::watcher::{wait_for_change, Watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
+
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -211,10 +212,14 @@ impl Bundler {
     &self.options
   }
 
-  pub async fn watch(&mut self) -> Result<Arc<WatcherEmitter>> {
-    let emitter = Arc::new(WatcherEmitter::new());
-    setup_watcher(Arc::clone(&emitter), self).await?;
-    Ok(emitter)
+  pub async fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
+    let watcher = Arc::new(Watcher::new()?);
+
+    watcher.run(Arc::clone(&bundler)).await?;
+
+    wait_for_change(Arc::clone(&watcher), Arc::clone(&bundler));
+
+    Ok(watcher)
   }
 }
 

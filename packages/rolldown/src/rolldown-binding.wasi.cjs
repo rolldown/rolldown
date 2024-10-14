@@ -162,6 +162,8 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_99']?.()
   __napiInstance.exports['__napi_register__BindingSourcemap_struct_100']?.()
   __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_101']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_struct_102']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_104']?.()
 }
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
@@ -170,6 +172,7 @@ module.exports.BindingOutputChunk = __napiModule.exports.BindingOutputChunk
 module.exports.BindingOutputs = __napiModule.exports.BindingOutputs
 module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
+module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
 module.exports.Bundler = __napiModule.exports.Bundler
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName

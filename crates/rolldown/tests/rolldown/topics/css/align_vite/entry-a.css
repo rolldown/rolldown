@@ -1,0 +1,5 @@
+@import url("common-imported-by-css.css");
+
+body {
+  background-color: "entry-a";
+}

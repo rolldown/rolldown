@@ -4640,8 +4640,13 @@ expression: output
 
 # tests/rolldown/topics/css/align_vite
 
-- main-!~{000}~.js => main-Bb-L2J7W.js
-- main.css
+- main-!~{000}~.js => main-6o6OfP3k.js
+- entry-a-!~{003}~.js => entry-a-28M3Od9p.js
+- entry-a-28M3Od9p.css
+- entry-b-!~{005}~.js => entry-b-gaydqbTS.js
+- entry-b-gaydqbTS.css
+- common-imported-by-js-!~{001}~.js => common-imported-by-js-3rOg4Zu0.js
+- common-imported-by-js-3rOg4Zu0.css
 
 # tests/rolldown/topics/css/basic
 

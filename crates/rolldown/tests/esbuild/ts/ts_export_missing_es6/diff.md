@@ -11,14 +11,28 @@ console.log(foo_exports);
 ### rolldown
 ```js
 
+
+//#region foo.ts
+var foo_exports = {};
+__export(foo_exports, { nope: () => nope });
+
+//#endregion
+//#region entry.js
+console.log(foo_exports);
+
+//#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--var foo_exports = {};
--console.log(foo_exports);
++++ rolldown	entry.js
+@@ -1,2 +1,5 @@
+ var foo_exports = {};
++__export(foo_exports, {
++    nope: () => nope
++});
+ console.log(foo_exports);
 
 ```

@@ -37,7 +37,6 @@ console.log("shared");
 
 //#endregion
 ```
-
 ## Output Stats
 
 - dynamic.js, is_entry false, is_dynamic_entry true, exports []

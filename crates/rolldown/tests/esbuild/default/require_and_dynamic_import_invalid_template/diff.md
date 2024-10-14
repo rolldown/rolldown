@@ -1,3 +1,5 @@
+# Reason
+1. not support invalid template
 # Diff
 ## /out.js
 ### esbuild

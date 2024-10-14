@@ -1,3 +1,5 @@
+# Reason
+1. should read `tsconfig.json`
 # Diff
 ## /out.js
 ### esbuild

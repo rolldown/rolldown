@@ -20,7 +20,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#region entry.js
 function nestedScope() {
 	const fn = require_foo();
-	assert(fn() === 123);
+	assert.equal(fn(), 123);
 }
 nestedScope();
 

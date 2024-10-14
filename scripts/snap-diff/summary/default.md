@@ -107,8 +107,6 @@
   diff
 ## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149/diff.md)
   diff
-## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch/diff.md)
-  diff
 ## import_with_hash_parameter
   missing
 ## import_with_query_parameter
@@ -139,8 +137,6 @@
   diff
 ## [jsx_automatic_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js/diff.md)
   diff
-## [jsx_automatic_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_es6/diff.md)
-  diff
 ## jsx_constant_fragments
   missing
 ## jsx_dev_self_edge_cases
@@ -160,12 +156,6 @@
 ## [jsx_this_value_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_common_js/diff.md)
   diff
 ## [jsx_this_value_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_esm/diff.md)
-  diff
-## [keep_names_all_forms](../../../crates/rolldown/tests/esbuild/default/keep_names_all_forms/diff.md)
-  diff
-## [keep_names_class_static_name](../../../crates/rolldown/tests/esbuild/default/keep_names_class_static_name/diff.md)
-  diff
-## [keep_names_tree_shaking](../../../crates/rolldown/tests/esbuild/default/keep_names_tree_shaking/diff.md)
   diff
 ## [legal_comments_avoid_slash_tag_end_of_file](../../../crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file/diff.md)
   diff
@@ -245,45 +235,21 @@
   diff
 ## [mangle_quoted_props_minify_syntax](../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props_minify_syntax/diff.md)
   diff
-## [many_entry_points](../../../crates/rolldown/tests/esbuild/default/many_entry_points/diff.md)
-  diff
 ## [metafile_import_with_type_json](../../../crates/rolldown/tests/esbuild/default/metafile_import_with_type_json/diff.md)
-  diff
-## [metafile_no_bundle](../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle/diff.md)
   diff
 ## [metafile_various_cases](../../../crates/rolldown/tests/esbuild/default/metafile_various_cases/diff.md)
   diff
 ## [metafile_very_long_external_paths](../../../crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths/diff.md)
   diff
-## [minified_bundle_common_js](../../../crates/rolldown/tests/esbuild/default/minified_bundle_common_js/diff.md)
-  diff
-## [minified_bundle_ending_with_important_semicolon](../../../crates/rolldown/tests/esbuild/default/minified_bundle_ending_with_important_semicolon/diff.md)
-  diff
-## [minified_bundle_es6](../../../crates/rolldown/tests/esbuild/default/minified_bundle_es6/diff.md)
-  diff
-## [minified_dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/minified_dynamic_import_with_expression_cjs/diff.md)
-  diff
 ## [minified_exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/minified_exports_and_module_format_common_js/diff.md)
   diff
 ## [minified_jsx_preserve_with_object_spread](../../../crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread/diff.md)
   diff
-## [minify_arguments](../../../crates/rolldown/tests/esbuild/default/minify_arguments/diff.md)
-  diff
-## [minify_identifiers_import_path_frequency_analysis](../../../crates/rolldown/tests/esbuild/default/minify_identifiers_import_path_frequency_analysis/diff.md)
-  diff
 ## minify_nested_labels_no_bundle
   missing
-## [minify_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_private_identifiers_no_bundle/diff.md)
-  diff
-## [minify_sibling_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_sibling_labels_no_bundle/diff.md)
-  diff
 ## [multiple_entry_points_same_name_collision](../../../crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision/diff.md)
   diff
 ## [named_function_expression_argument_collision](../../../crates/rolldown/tests/esbuild/default/named_function_expression_argument_collision/diff.md)
-  diff
-## [nested_common_js](../../../crates/rolldown/tests/esbuild/default/nested_common_js/diff.md)
-  diff
-## [nested_es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/nested_es6_from_common_js/diff.md)
   diff
 ## [nested_require_without_call](../../../crates/rolldown/tests/esbuild/default/nested_require_without_call/diff.md)
   diff
@@ -293,13 +259,7 @@
   diff
 ## [node_annotation_false_positive_issue3544](../../../crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544/diff.md)
   diff
-## [node_modules](../../../crates/rolldown/tests/esbuild/default/node_modules/diff.md)
-  diff
 ## [non_determinism_issue2537](../../../crates/rolldown/tests/esbuild/default/non_determinism_issue2537/diff.md)
-  diff
-## [object_literal_proto_setter_edge_cases](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases/diff.md)
-  diff
-## [object_literal_proto_setter_edge_cases_minify_syntax](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax/diff.md)
   diff
 ## [outbase](../../../crates/rolldown/tests/esbuild/default/outbase/diff.md)
   diff
@@ -315,37 +275,15 @@
   diff
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
   diff
-## [re_export_common_js_as_es6](../../../crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6/diff.md)
-  diff
-## [re_export_default_external_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_common_js/diff.md)
-  diff
-## [re_export_default_external_es6](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_es6/diff.md)
-  diff
-## [re_export_default_no_bundle](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle/diff.md)
-  diff
-## [re_export_default_no_bundle_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_common_js/diff.md)
-  diff
-## [re_export_default_no_bundle_es6](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_es6/diff.md)
-  diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
   diff
 ## [require_and_dynamic_import_invalid_template](../../../crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template/diff.md)
   diff
 ## [require_bad_argument_count](../../../crates/rolldown/tests/esbuild/default/require_bad_argument_count/diff.md)
   diff
-## [require_child_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_child_dir_common_js/diff.md)
-  diff
 ## [require_child_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_child_dir_es6/diff.md)
   diff
 ## [require_json](../../../crates/rolldown/tests/esbuild/default/require_json/diff.md)
-  diff
-## [require_main_cache_common_js](../../../crates/rolldown/tests/esbuild/default/require_main_cache_common_js/diff.md)
-  diff
-## [require_parent_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_common_js/diff.md)
-  diff
-## [require_parent_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_es6/diff.md)
-  diff
-## [require_resolve](../../../crates/rolldown/tests/esbuild/default/require_resolve/diff.md)
   diff
 ## [require_shim_substitution](../../../crates/rolldown/tests/esbuild/default/require_shim_substitution/diff.md)
   diff
@@ -359,21 +297,11 @@
   diff
 ## [require_without_call_inside_try](../../../crates/rolldown/tests/esbuild/default/require_without_call_inside_try/diff.md)
   diff
-## [reserve_props](../../../crates/rolldown/tests/esbuild/default/reserve_props/diff.md)
-  diff
 ## [scoped_external_module_exclusion](../../../crates/rolldown/tests/esbuild/default/scoped_external_module_exclusion/diff.md)
-  diff
-## [simple_es6](../../../crates/rolldown/tests/esbuild/default/simple_es6/diff.md)
-  diff
-## [source_map](../../../crates/rolldown/tests/esbuild/default/source_map/diff.md)
-  diff
-## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/diff.md)
   diff
 ## [string_export_names_common_js](../../../crates/rolldown/tests/esbuild/default/string_export_names_common_js/diff.md)
   diff
 ## [string_export_names_iife](../../../crates/rolldown/tests/esbuild/default/string_export_names_iife/diff.md)
-  diff
-## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/diff.md)
   diff
 ## [this_inside_function](../../../crates/rolldown/tests/esbuild/default/this_inside_function/diff.md)
   diff
@@ -391,21 +319,13 @@
   diff
 ## [top_level_await_cjs_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch/diff.md)
   diff
-## [top_level_await_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm_dead_branch/diff.md)
-  diff
 ## [top_level_await_forbidden_require_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch/diff.md)
   diff
 ## [top_level_await_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch/diff.md)
   diff
 ## [top_level_await_no_bundle_common_js_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch/diff.md)
   diff
-## [top_level_await_no_bundle_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_dead_branch/diff.md)
-  diff
-## [top_level_await_no_bundle_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_esm_dead_branch/diff.md)
-  diff
 ## [top_level_await_no_bundle_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch/diff.md)
-  diff
-## [use_strict_directive_bundle_cjs_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264/diff.md)
   diff
 ## [use_strict_directive_bundle_iife_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_iife_issue2264/diff.md)
   diff
@@ -440,6 +360,7 @@
 ## [import_meta_es6](../../../crates/rolldown/tests/esbuild/default/import_meta_es6)
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
+## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [output_extension_remapping_file](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_file)
@@ -452,9 +373,13 @@
 ## [require_property_access_common_js](../../../crates/rolldown/tests/esbuild/default/require_property_access_common_js)
 ## [runtime_name_collision_no_bundle](../../../crates/rolldown/tests/esbuild/default/runtime_name_collision_no_bundle)
 ## [simple_common_js](../../../crates/rolldown/tests/esbuild/default/simple_common_js)
+## [simple_es6](../../../crates/rolldown/tests/esbuild/default/simple_es6)
 ## [top_level_await_esm](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm)
+## [top_level_await_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm_dead_branch)
 ## [top_level_await_no_bundle](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle)
+## [top_level_await_no_bundle_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_dead_branch)
 ## [top_level_await_no_bundle_esm](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_esm)
+## [top_level_await_no_bundle_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_esm_dead_branch)
 ## [use_strict_directive_bundle_esm_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_esm_issue2264)
 # Bypassed Cases
 ## [char_freq_ignore_comments](../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments/bypass.md)
@@ -468,3 +393,38 @@
 ## [import_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle/bypass.md)
 ## [import_forms_with_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_no_bundle/bypass.md)
 ## [import_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/import_fs_node_es6/bypass.md)
+## [jsx_automatic_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_es6/bypass.md)
+## [keep_names_all_forms](../../../crates/rolldown/tests/esbuild/default/keep_names_all_forms/bypass.md)
+## [keep_names_class_static_name](../../../crates/rolldown/tests/esbuild/default/keep_names_class_static_name/bypass.md)
+## [keep_names_tree_shaking](../../../crates/rolldown/tests/esbuild/default/keep_names_tree_shaking/bypass.md)
+## [many_entry_points](../../../crates/rolldown/tests/esbuild/default/many_entry_points/bypass.md)
+## [metafile_no_bundle](../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle/bypass.md)
+## [minified_bundle_common_js](../../../crates/rolldown/tests/esbuild/default/minified_bundle_common_js/bypass.md)
+## [minified_bundle_ending_with_important_semicolon](../../../crates/rolldown/tests/esbuild/default/minified_bundle_ending_with_important_semicolon/bypass.md)
+## [minified_bundle_es6](../../../crates/rolldown/tests/esbuild/default/minified_bundle_es6/bypass.md)
+## [minified_dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/minified_dynamic_import_with_expression_cjs/bypass.md)
+## [minify_arguments](../../../crates/rolldown/tests/esbuild/default/minify_arguments/bypass.md)
+## [minify_identifiers_import_path_frequency_analysis](../../../crates/rolldown/tests/esbuild/default/minify_identifiers_import_path_frequency_analysis/bypass.md)
+## [minify_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_private_identifiers_no_bundle/bypass.md)
+## [minify_sibling_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_sibling_labels_no_bundle/bypass.md)
+## [nested_common_js](../../../crates/rolldown/tests/esbuild/default/nested_common_js/bypass.md)
+## [nested_es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/nested_es6_from_common_js/bypass.md)
+## [node_modules](../../../crates/rolldown/tests/esbuild/default/node_modules/bypass.md)
+## [object_literal_proto_setter_edge_cases](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases/bypass.md)
+## [object_literal_proto_setter_edge_cases_minify_syntax](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax/bypass.md)
+## [re_export_common_js_as_es6](../../../crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6/bypass.md)
+## [re_export_default_external_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_common_js/bypass.md)
+## [re_export_default_external_es6](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_es6/bypass.md)
+## [re_export_default_no_bundle](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle/bypass.md)
+## [re_export_default_no_bundle_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_common_js/bypass.md)
+## [re_export_default_no_bundle_es6](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_es6/bypass.md)
+## [require_child_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_child_dir_common_js/bypass.md)
+## [require_main_cache_common_js](../../../crates/rolldown/tests/esbuild/default/require_main_cache_common_js/bypass.md)
+## [require_parent_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_common_js/bypass.md)
+## [require_parent_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_es6/bypass.md)
+## [require_resolve](../../../crates/rolldown/tests/esbuild/default/require_resolve/bypass.md)
+## [reserve_props](../../../crates/rolldown/tests/esbuild/default/reserve_props/bypass.md)
+## [source_map](../../../crates/rolldown/tests/esbuild/default/source_map/bypass.md)
+## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)
+## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/bypass.md)
+## [use_strict_directive_bundle_cjs_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264/bypass.md)

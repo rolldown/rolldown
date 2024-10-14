@@ -5,7 +5,30 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "resolve": {
+      "alias": [
+        [
+          "pkg",
+          [
+            "alias/pkg"
+          ]
+        ],
+        [
+          "pkg/foo",
+          [
+            "alias/pkg_foo"
+          ]
+        ],
+        [
+          "pkg/foo/bar",
+          [
+            "alias/pkg_foo_bar"
+          ]
+        ],
+      ]
+    },
+    "external": ["pkg", "pkg/foo", "pkg/foo/bar"]
   },
   "expectExecuted": false
 }

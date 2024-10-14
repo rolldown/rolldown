@@ -1,3 +1,6 @@
+# Reason
+1. not support file loader
+2. not support copy loader
 # Diff
 ## /out/bytesInOutput should be at least 99 (1).js
 ### esbuild

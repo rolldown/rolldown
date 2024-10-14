@@ -1,3 +1,5 @@
+# Reason
+1. wrong tree shaking result
 # Diff
 ## /out/entry.js
 ### esbuild

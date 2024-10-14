@@ -13,7 +13,9 @@
         "name": "no-warnings-here",
         "import": "no-warnings-here.js"
       }
-    ]
+    ],
+    "format": "cjs",
+    "external": ["bar"]
   },
   "expectExecuted": false
 }

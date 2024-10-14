@@ -6,12 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
 [UNRESOLVED_IMPORT] Warning: "pkg/bar/baz" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
@@ -19,18 +13,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: "pkg/baz" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo/bar" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
 ## UNRESOLVED_IMPORT

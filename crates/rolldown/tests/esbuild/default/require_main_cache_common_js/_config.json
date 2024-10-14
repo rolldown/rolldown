@@ -7,6 +7,8 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "format": "cjs",
+    "platform": "node"
   }
 }

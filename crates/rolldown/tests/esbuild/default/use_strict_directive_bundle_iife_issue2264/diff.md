@@ -1,3 +1,5 @@
+# Reason
+1. different iife impl
 # Diff
 ## /out.js
 ### esbuild
@@ -10,12 +12,17 @@
 ```
 ### rolldown
 ```js
+(function(exports) {
+
+"use strict";
 
 //#region entry.js
 let a = 1;
 
 //#endregion
-export { a };
+exports.a = a
+return exports;
+})({});
 
 ```
 ### diff
@@ -23,12 +30,15 @@ export { a };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,2 @@
+@@ -1,4 +1,5 @@
 -"use strict";
 -(() => {
 -    var a = 1;
 -})();
-+var a = 1;
-+export {a};
++(function (exports) {
++    let a = 1;
++    exports.a = a;
++    return exports;
++})({});
 
 ```

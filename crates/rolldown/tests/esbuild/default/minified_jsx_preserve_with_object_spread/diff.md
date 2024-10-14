@@ -1,3 +1,5 @@
+# Reason
+1. not support preserve `jsx`
 # Diff
 ## /out.js
 ### esbuild

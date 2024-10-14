@@ -13,7 +13,8 @@
         "name": "c",
         "import": "c.js"
       }
-    ]
+    ],
+    "format": "cjs"
   },
   "expectExecuted": false
 }

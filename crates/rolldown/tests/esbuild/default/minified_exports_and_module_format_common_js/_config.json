@@ -5,7 +5,9 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "platform": "node",
+    "format": "cjs"
   },
   "expectExecuted": false
 }

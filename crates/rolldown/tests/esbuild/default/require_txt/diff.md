@@ -1,3 +1,5 @@
+# Reason
+1. `.txt` module should be treated as cjs
 # Diff
 ## /out.js
 ### esbuild

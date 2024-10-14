@@ -1,3 +1,5 @@
+# Reason
+1. should not drop `'use strict'`
 # Diff
 ## /out.js
 ### esbuild

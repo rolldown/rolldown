@@ -1,5 +1,5 @@
 # Reason
-1. dynamic module not align 
+1. dynamic module not align
 # Diff
 ## /out.js
 ### esbuild

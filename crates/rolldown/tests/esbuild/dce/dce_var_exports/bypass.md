@@ -1,5 +1,5 @@
 # Reason
-1. We try to extract common runtime into another chunks, everything else are just same 
+1. We try to extract common runtime into another chunks, everything else are just same
 # Diff
 ## /out/a.js
 ### esbuild

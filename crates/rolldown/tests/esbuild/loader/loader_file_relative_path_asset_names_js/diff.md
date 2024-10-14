@@ -1,3 +1,5 @@
+# Reason
+1. Not support file loader
 # Diff
 ## /out/images/image-LSAMBFUD.png
 ### esbuild

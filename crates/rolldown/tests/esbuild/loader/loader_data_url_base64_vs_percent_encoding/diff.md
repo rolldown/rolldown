@@ -1,3 +1,5 @@
+# Reason
+1. lack `charset=utf-8`
 # Diff
 ## /out.js
 ### esbuild

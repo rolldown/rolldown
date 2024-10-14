@@ -19,6 +19,8 @@
 ```
 ### rolldown
 ```js
+(function() {
+
 
 //#region entry.js
 "use 1";
@@ -27,6 +29,7 @@
 entry();
 
 //#endregion
+})();
 
 ```
 ### diff
@@ -34,13 +37,16 @@ entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,4 @@
- "use 1";
- "use 2";
- "use 3";
+@@ -1,6 +1,6 @@
+-"use 1";
+-"use 2";
+-"use 3";
 -(() => {
--    entry();
--})();
-+entry();
++(function () {
++    "use 1";
++    "use 2";
++    "use 3";
+     entry();
+ })();
 
 ```

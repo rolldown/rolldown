@@ -21,6 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```css
 button { color: red }
+
 ```
 ## test.js
 

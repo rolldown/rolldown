@@ -29,6 +29,8 @@
 ```
 ### rolldown
 ```js
+(function() {
+
 
 //#region nested.js
 "use A";
@@ -44,6 +46,7 @@ nested();
 entry();
 
 //#endregion
+})();
 
 ```
 ### diff
@@ -51,18 +54,20 @@ entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,8 @@
-+"use A";
-+"use B";
-+"use C";
-+nested();
- "use 1";
- "use 2";
- "use 3";
+@@ -1,7 +1,10 @@
+-"use 1";
+-"use 2";
+-"use 3";
 -(() => {
--    nested();
--    entry();
--})();
-+entry();
++(function () {
++    "use A";
++    "use B";
++    "use C";
+     nested();
++    "use 1";
++    "use 2";
++    "use 3";
+     entry();
+ })();
 
 ```

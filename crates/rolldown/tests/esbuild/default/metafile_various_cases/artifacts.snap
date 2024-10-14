@@ -15,6 +15,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: "extern-esm" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "extern.css" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## dynamic.js
@@ -76,6 +82,7 @@ a { background: url(inline.svg) }
 b { background: url(file.file) }
 c { background: url(copy.copy) }
 d { background: url(extern.png) }
+
 ```
 ## entry2.js
 

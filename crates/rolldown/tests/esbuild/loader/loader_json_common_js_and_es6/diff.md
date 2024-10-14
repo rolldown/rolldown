@@ -1,3 +1,5 @@
+# Reason
+1. Wrong wrapkind, when json is imported by `require`
 # Diff
 ## /out.js
 ### esbuild

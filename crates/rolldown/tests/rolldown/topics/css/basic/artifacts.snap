@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 body {
   background-color: #000;
 }
-@import "dep.css";
 
 body {
   background-color: #f0f0f0;

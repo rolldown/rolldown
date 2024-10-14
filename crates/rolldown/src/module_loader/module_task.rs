@@ -144,7 +144,7 @@ impl ModuleTask {
       let css_source: ArcStr = source.try_into_string()?.into();
       // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
       source = StrOrBytes::Str(String::new());
-      let create_ret = create_css_view(stable_id.clone(), &css_source)?;
+      let create_ret = create_css_view(&stable_id, &css_source);
       raw_import_records = create_ret.1;
       Some(create_ret.0)
     } else {

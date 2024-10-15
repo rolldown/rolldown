@@ -12,6 +12,7 @@ CHANGELOG.md
 packages/rolldown/src/binding.d.ts
 packages/rolldown/src/binding.js
 scripts/snap-diff/summary
+scripts/snap-diff/stats
 crates/rolldown/tests/esbuild/**/diff.md
 
 packages/rolldown/src/rolldown-binding.wasi-browser.js

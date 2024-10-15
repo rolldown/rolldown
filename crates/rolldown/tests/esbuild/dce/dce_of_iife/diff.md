@@ -20,7 +20,6 @@ var someVar;
 var removeThis2 = (() => 123)();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -97,7 +96,6 @@ use(isNotPure);
 })();
 
 //#endregion
-
 ```
 ### diff
 ```diff

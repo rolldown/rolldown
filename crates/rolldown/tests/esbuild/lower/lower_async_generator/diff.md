@@ -329,7 +329,6 @@ Foo = class {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -655,5 +654,6 @@ Foo = class {
 \ No newline at end of file
 +
 +//#endregion
+\ No newline at end of file
 
 ```

@@ -36,7 +36,6 @@ const { foo } = require_a();
 console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 
 //#endregion
-
 ```
 ### diff
 ```diff

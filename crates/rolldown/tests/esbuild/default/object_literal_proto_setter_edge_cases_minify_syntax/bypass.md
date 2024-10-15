@@ -28,7 +28,6 @@ function foo() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -74,7 +73,6 @@ function foo() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -123,7 +121,6 @@ function foo(__proto__, bar) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -171,7 +168,6 @@ function foo(__proto__, bar) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff

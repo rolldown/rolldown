@@ -43,7 +43,6 @@ assert.equal(foo, 123);
 assert.equal(ns2.foo, 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff

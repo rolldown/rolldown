@@ -20,7 +20,6 @@ if (test) for (var a = b in {});
 for (var x = y in {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -42,5 +41,6 @@ for (var x = y in {});
 +for (var x = y in {});
 +
 +//#endregion
+\ No newline at end of file
 
 ```

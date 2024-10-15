@@ -40,7 +40,6 @@ x([
 ]);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -71,7 +70,6 @@ async function* d() {
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -114,7 +112,6 @@ async function* d() {}
 
 //#endregion
 export { a, b, c, d };
-
 ```
 ### diff
 ```diff
@@ -158,7 +155,6 @@ const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -217,7 +213,6 @@ const c3 = () => {};
 
 //#endregion
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
-
 ```
 ### diff
 ```diff
@@ -368,7 +363,6 @@ function stmt_export_default_before_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_before_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -397,7 +391,6 @@ function f() {}
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -426,7 +419,6 @@ function* stmt_export_default_before_gen_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_before_gen_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -455,7 +447,6 @@ function* f() {}
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -484,7 +475,6 @@ async function stmt_export_default_before_async_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_before_async_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -513,7 +503,6 @@ async function f() {}
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -542,7 +531,6 @@ async function* stmt_export_default_before_async_gen_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -571,7 +559,6 @@ async function* f() {}
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -600,7 +587,6 @@ export default function() {
 
 //#endregion
 export { stmt_export_default_after_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -629,7 +615,6 @@ export default function f() {
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -658,7 +643,6 @@ export default function* () {
 
 //#endregion
 export { stmt_export_default_after_gen_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -687,7 +671,6 @@ export default function* f() {
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -716,7 +699,6 @@ export default async function() {
 
 //#endregion
 export { stmt_export_default_after_async_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -745,7 +727,6 @@ export default async function f() {
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff
@@ -774,7 +755,6 @@ export default async function* () {
 
 //#endregion
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
-
 ```
 ### diff
 ```diff
@@ -803,7 +783,6 @@ export default async function* f() {
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff

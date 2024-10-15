@@ -21,7 +21,6 @@ __export(foo_exports, { nope: () => nope });
 console.log(foo_exports);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -30,7 +30,6 @@ var require_require_parent_dir_common_js_index = __commonJS({ "index.js"(exports
 assert.deepEqual(require_require_parent_dir_common_js_index(), 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff

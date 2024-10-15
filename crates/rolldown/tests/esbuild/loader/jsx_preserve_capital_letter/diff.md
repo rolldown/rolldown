@@ -23,7 +23,6 @@ class mustStartWithUpperCaseLetter {}
 console.log(_jsx(mustStartWithUpperCaseLetter, {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -47,5 +46,6 @@ console.log(_jsx(mustStartWithUpperCaseLetter, {}));
 +console.log(_jsx(mustStartWithUpperCaseLetter, {}));
 +
 +//#endregion
+\ No newline at end of file
 
 ```

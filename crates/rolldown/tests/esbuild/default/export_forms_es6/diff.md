@@ -59,7 +59,6 @@ class Class {}
 
 //#endregion
 export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
-
 ```
 ### diff
 ```diff

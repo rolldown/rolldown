@@ -21,7 +21,6 @@ console.log(_jsx(Foo.Div, {}));
 
 //#endregion
 export { Foo };
-
 ```
 ### diff
 ```diff
@@ -65,7 +64,6 @@ console.log(_jsx(_Fragment, { children: "test" }));
 
 //#endregion
 export { React };
-
 ```
 ### diff
 ```diff
@@ -133,7 +131,6 @@ let x;
 })(x || (x = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -216,7 +213,6 @@ let x;
 })(x || (x = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -26,7 +26,6 @@ var require_a = __commonJS({ "a.js"(exports, module) {
 //#endregion
 export default require_a();
 
-
 ```
 ### diff
 ```diff
@@ -66,7 +65,6 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 //#endregion
 export default require_b();
 
-
 ```
 ### diff
 ```diff
@@ -105,7 +103,6 @@ var require_c = __commonJS({ "c.js"(exports) {
 
 //#endregion
 export default require_c();
-
 
 ```
 ### diff

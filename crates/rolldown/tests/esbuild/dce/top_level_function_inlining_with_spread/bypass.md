@@ -41,7 +41,6 @@ identity2(args);
 identity3(...args);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -117,7 +116,6 @@ identity2(args);
 identity3(...args);
 
 //#endregion
-
 ```
 ### diff
 ```diff

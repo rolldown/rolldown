@@ -84,7 +84,6 @@ function shouldNotMangle() {
 
 //#endregion
 export { shouldMangle, shouldNotMangle };
-
 ```
 ### diff
 ```diff
@@ -161,7 +160,6 @@ var entry2_default = {
 
 //#endregion
 export { entry2_default as default };
-
 ```
 ### diff
 ```diff

@@ -29,7 +29,6 @@ var entry_default = {
 
 //#endregion
 export { entry_default as default };
-
 ```
 ### diff
 ```diff

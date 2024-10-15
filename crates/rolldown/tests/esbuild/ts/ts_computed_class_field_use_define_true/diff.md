@@ -30,7 +30,6 @@ class Foo {
 new Foo();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -56,5 +55,6 @@ new Foo();
  new Foo();
 +
 +//#endregion
+\ No newline at end of file
 
 ```

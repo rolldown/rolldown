@@ -26,7 +26,6 @@ let Foo = _Foo;
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

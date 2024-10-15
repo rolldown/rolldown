@@ -17,7 +17,6 @@ console.log("bar");
 console.log("foo");
 
 //#endregion
-
 ```
 ### diff
 ```diff

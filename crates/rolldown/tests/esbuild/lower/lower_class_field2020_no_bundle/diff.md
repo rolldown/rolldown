@@ -23,7 +23,6 @@ __publicField(Foo, "s_bar");
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

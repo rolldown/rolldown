@@ -33,7 +33,6 @@ outer();
 
 //#endregion
 export { outer };
-
 ```
 ### diff
 ```diff

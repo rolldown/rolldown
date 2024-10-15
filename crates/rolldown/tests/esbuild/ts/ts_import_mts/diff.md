@@ -9,7 +9,6 @@ console.log("works");
 ```js
 import "./imported.mjs";
 
-
 ```
 ### diff
 ```diff

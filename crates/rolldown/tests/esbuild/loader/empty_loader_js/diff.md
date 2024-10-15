@@ -75,7 +75,6 @@ assert.equal(default$1, undefined);
 assert.equal(named, undefined);
 
 //#endregion
-
 ```
 ### diff
 ```diff

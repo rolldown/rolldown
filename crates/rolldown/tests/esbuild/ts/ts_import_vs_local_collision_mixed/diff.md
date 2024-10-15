@@ -31,7 +31,6 @@ class e {}
 console.log(a, b, c, d, e, real);
 
 //#endregion
-
 ```
 ### diff
 ```diff

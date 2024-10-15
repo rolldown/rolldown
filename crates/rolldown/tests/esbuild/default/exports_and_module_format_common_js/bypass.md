@@ -44,7 +44,6 @@ assert.deepEqual(test_exports$1, { foo: 123 });
 assert.deepEqual(test_exports, { bar: 123 });
 
 //#endregion
-
 ```
 ### diff
 ```diff

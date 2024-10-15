@@ -31,7 +31,6 @@ let foo = 123;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff

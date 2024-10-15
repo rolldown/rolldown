@@ -36,7 +36,6 @@ assert.equal(import_foo.foo, 123);
 assert.equal(foo, 234);
 
 //#endregion
-
 ```
 ### diff
 ```diff

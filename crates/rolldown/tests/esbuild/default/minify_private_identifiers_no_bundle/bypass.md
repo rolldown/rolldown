@@ -55,7 +55,6 @@ class Bar {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff

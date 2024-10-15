@@ -52,7 +52,6 @@ function bar() {
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff
@@ -186,7 +185,6 @@ if (nested) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -264,6 +262,7 @@ if (nested) {
 -}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/switch.js
@@ -352,7 +351,6 @@ async function foo() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -438,5 +436,6 @@ async function foo() {
  }
 +
 +//#endregion
+\ No newline at end of file
 
 ```

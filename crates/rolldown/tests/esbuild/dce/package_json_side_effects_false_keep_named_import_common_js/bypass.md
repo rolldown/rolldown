@@ -33,7 +33,6 @@ var import_demo_pkg_index = __toESM(require_demo_pkg_index());
 console.log(import_demo_pkg_index.foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

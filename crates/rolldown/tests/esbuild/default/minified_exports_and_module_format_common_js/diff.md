@@ -39,7 +39,6 @@ let bar = 123;
 console.log(exports, module.exports, test_exports$1, test_exports);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -43,7 +43,6 @@ class Bar {
 (() => new Bar())();
 
 //#endregion
-
 ```
 ### diff
 ```diff

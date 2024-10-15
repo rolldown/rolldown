@@ -20,7 +20,6 @@ function foo(RegExp) {
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff

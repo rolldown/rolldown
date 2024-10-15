@@ -14,7 +14,6 @@
 ((require) => require("/test.txt"))();
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -20,7 +20,6 @@ var dir_index_default = 123;
 assert.equal(dir_index_default, 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff

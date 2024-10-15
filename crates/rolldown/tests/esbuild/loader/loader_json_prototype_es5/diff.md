@@ -29,7 +29,6 @@ var data_default = {
 console.log(data_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

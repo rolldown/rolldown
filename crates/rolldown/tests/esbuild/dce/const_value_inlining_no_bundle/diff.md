@@ -41,7 +41,6 @@ console.log(
 );
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -105,7 +104,6 @@ console.log(
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -147,7 +145,6 @@ function nested() {
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff
@@ -184,7 +181,6 @@ let ns;
 })(ns || (ns = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -219,7 +215,6 @@ let ns;
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -244,7 +239,6 @@ function nested() {
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -274,7 +268,6 @@ x = [1, 1];
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -308,7 +301,6 @@ x = [1, 1];
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -339,7 +331,6 @@ x = [1, 1];
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -368,7 +359,6 @@ function nested() {
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -405,7 +395,6 @@ function foo() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -441,7 +430,6 @@ const y = 1;
 console.log(x, x, y, y);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -471,7 +459,6 @@ function foo() {
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff
@@ -495,7 +482,6 @@ function foo() {
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff

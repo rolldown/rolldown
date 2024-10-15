@@ -74,7 +74,6 @@ class Foo {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -149,6 +148,7 @@ class Foo {
 -__privateAdd(Foo, _b2, 6);
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/ts-define/ts-define.js

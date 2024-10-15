@@ -94,7 +94,6 @@ import { a } from "./shared.js";
 console.log(a);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -125,7 +124,6 @@ import { b } from "./shared.js";
 console.log(b);
 
 //#endregion
-
 ```
 ### diff
 ```diff

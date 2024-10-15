@@ -25,7 +25,6 @@ const code = 0;
 process.exit(code);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -45,5 +44,6 @@ process.exit(code);
  process.exit(code);
 +
 +//#endregion
+\ No newline at end of file
 
 ```

@@ -27,7 +27,6 @@ for (var i = 1 in {});
 for (var { j, x: [k] } in {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -56,6 +55,7 @@ for (var { j, x: [k] } in {});
 +for (var { j, x: [k] } in {});
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/nested.js
@@ -93,7 +93,6 @@ if (true) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -128,6 +127,7 @@ if (true) {
  }
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/let.js
@@ -158,7 +158,6 @@ if (true) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -210,7 +209,6 @@ function x() {
 x();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -244,6 +242,7 @@ x();
  x();
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/function-nested.js
@@ -287,7 +286,6 @@ function x() {
 x();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -326,5 +324,6 @@ x();
  x();
 +
 +//#endregion
+\ No newline at end of file
 
 ```

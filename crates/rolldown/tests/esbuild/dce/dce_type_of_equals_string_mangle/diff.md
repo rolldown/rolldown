@@ -17,7 +17,6 @@ var hasBar = typeof bar !== "undefined";
 
 //#endregion
 })();
-
 ```
 ### diff
 ```diff

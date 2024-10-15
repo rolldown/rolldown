@@ -35,7 +35,6 @@ class strict_index_default {
 console.log(loose_index_default, strict_index_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

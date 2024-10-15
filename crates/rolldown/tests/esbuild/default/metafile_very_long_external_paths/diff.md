@@ -19,7 +19,6 @@ import { default as a } from "./111111111111111111111111111111111111111111111111
 console.log(a);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -48,7 +47,6 @@ import { default as a } from "./222222222222222222222222222222222222222222222222
 console.log(a);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -74,7 +72,6 @@ import("./3333333333333333333333333333333333333333333333333333333333333333333333
 import("./3333333333333333333333333333333333333333333333333333333333333333333333.js").then(console.log);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -99,21 +96,19 @@ a {
 a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
 
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99.css
 +++ rolldown	bytesInOutput should be at least 99.css
-@@ -1,4 +1,3 @@
+@@ -1,4 +1,2 @@
 -/* project/bytesInOutput should be at least 99.css */
 -a {
 -  background: url("./444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-55DNWN2R.file");
 -}
 \ No newline at end of file
 +a { background: url(4444444444444444444444444444444444444444444444444444444444444444444444.file) }
-+
 +
 
 ```

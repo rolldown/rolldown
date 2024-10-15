@@ -27,7 +27,6 @@ var [KEEP3] = [...{}];
 var { KEEP4 } = {};
 
 //#endregion
-
 ```
 ### diff
 ```diff

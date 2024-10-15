@@ -13,7 +13,6 @@
 let x = [require];
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -37,7 +36,6 @@ __require = x;
 require = x;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -62,7 +60,6 @@ var x = __require.cache;
 let x = require.cache;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -86,7 +83,6 @@ let x = require.cache;
 let x = require;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -110,7 +106,6 @@ var x = __require[cache];
 let x = require[cache];
 
 //#endregion
-
 ```
 ### diff
 ```diff

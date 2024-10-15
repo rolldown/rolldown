@@ -35,7 +35,6 @@ var import_empty$1 = __toESM(require_empty());
 console.log(import_empty.nope, void 0, import_empty$1.nope);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -92,7 +91,6 @@ var import_empty$1 = __toESM(require_empty());
 console.log(import_empty.default, void 0, import_empty$1.default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

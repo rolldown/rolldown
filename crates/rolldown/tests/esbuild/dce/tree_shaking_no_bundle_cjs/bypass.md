@@ -18,7 +18,6 @@ function keep() {}
 keep();
 
 //#endregion
-
 ```
 ### diff
 ```diff

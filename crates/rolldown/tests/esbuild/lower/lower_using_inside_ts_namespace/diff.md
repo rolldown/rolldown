@@ -28,7 +28,6 @@ let ns;
 })(ns || (ns = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -58,5 +57,6 @@ let ns;
  })(ns || (ns = {}));
 +
 +//#endregion
+\ No newline at end of file
 
 ```

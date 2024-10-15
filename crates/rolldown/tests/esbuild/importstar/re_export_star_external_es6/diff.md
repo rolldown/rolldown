@@ -13,7 +13,6 @@ import "foo";
 
 export * from "foo"
 
-
 ```
 ### diff
 ```diff

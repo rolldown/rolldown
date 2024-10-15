@@ -17,7 +17,6 @@ import { default as foo } from "./foo";
 import { default as bar } from "./bar";
 
 export { bar, foo };
-
 ```
 ### diff
 ```diff

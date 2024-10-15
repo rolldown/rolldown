@@ -104,7 +104,6 @@ import { foo } from "./common.js";
 console.log(foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -135,7 +134,6 @@ import { bar } from "./common.js";
 console.log(bar());
 
 //#endregion
-
 ```
 ### diff
 ```diff

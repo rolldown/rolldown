@@ -47,7 +47,6 @@ var test2_default = { "invalid-identifier": key_0 };
 console.log(test_exports["invalid-identifier"], test2_exports);
 
 //#endregion
-
 ```
 ### diff
 ```diff

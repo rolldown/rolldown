@@ -40,7 +40,6 @@ assert.equal(
 );
 
 //#endregion
-
 ```
 ### diff
 ```diff

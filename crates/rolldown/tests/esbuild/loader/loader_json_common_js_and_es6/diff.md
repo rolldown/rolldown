@@ -58,7 +58,6 @@ const x_json = (init_x(), __toCommonJS(x_exports).default);
 console.log(x_json, y_default, small, key_2);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -42,7 +42,6 @@ assert.deepEqual(x_txt, { default: "x" });
 assert.equal(y_default, "y");
 
 //#endregion
-
 ```
 ### diff
 ```diff

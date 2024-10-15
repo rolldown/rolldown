@@ -25,7 +25,6 @@ let foo = 234;
 console.log(foo$1, foo$1, foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

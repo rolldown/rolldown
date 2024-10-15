@@ -34,7 +34,6 @@ let foo = 234;
 assert.equal(foo, 234);
 
 //#endregion
-
 ```
 ### diff
 ```diff

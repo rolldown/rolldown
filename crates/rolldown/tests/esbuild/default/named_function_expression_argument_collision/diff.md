@@ -19,7 +19,6 @@ let x = function foo(foo) {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff

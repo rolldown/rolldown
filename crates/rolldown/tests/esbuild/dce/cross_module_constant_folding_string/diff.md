@@ -56,7 +56,6 @@ console.log([typeof x.b], [x.a + x.b], [
 ]);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -128,7 +127,6 @@ console.log([typeof b], [a + b], [
 ]);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -177,7 +175,6 @@ console.log({
 });
 
 //#endregion
-
 ```
 ### diff
 ```diff

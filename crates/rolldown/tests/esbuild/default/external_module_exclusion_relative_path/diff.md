@@ -22,7 +22,6 @@ import { default as config } from "/api/config?a=1&b=2";
 console.log(foo, out, sha256, config);
 
 //#endregion
-
 ```
 ### diff
 ```diff

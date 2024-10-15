@@ -38,7 +38,6 @@ delete 1["c"];
 delete a?.b["c"];
 
 //#endregion
-
 ```
 ### diff
 ```diff

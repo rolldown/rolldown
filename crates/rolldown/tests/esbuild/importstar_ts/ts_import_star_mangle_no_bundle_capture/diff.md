@@ -15,7 +15,6 @@ let foo = 234;
 console.log(ns, ns.foo, foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

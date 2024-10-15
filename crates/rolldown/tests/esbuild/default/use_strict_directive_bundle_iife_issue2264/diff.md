@@ -23,7 +23,6 @@ let a = 1;
 exports.a = a
 return exports;
 })({});
-
 ```
 ### diff
 ```diff

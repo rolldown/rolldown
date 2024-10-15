@@ -20,7 +20,6 @@
 foo();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -41,5 +40,6 @@ foo();
 +foo();
 +
 +//#endregion
+\ No newline at end of file
 
 ```

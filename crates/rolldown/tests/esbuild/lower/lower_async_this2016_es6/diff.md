@@ -27,7 +27,6 @@ let foo = async () => this;
 
 //#endregion
 export { bar, foo };
-
 ```
 ### diff
 ```diff

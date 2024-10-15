@@ -21,7 +21,6 @@ var binary_default = "data:text/plain;base64,/w==";
 console.log(binary_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

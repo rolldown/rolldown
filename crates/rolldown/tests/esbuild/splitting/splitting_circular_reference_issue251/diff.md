@@ -97,7 +97,6 @@ export {
 import { p, q } from "./a2.js";
 
 export { p, q };
-
 ```
 ### diff
 ```diff
@@ -127,7 +126,6 @@ export {
 import { p, q } from "./a2.js";
 
 export { p, q };
-
 ```
 ### diff
 ```diff

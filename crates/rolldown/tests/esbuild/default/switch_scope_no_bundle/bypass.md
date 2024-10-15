@@ -25,7 +25,6 @@ switch (bar) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff

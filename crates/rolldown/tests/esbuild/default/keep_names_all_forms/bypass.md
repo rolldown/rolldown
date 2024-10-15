@@ -131,7 +131,6 @@ for (var { fn = function() {} } of obj);
 ({fn = function() {}} = {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -264,6 +263,7 @@ for (var { fn = function() {} } of obj);
 +({fn = function() {}} = {});
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/do-not-keep.js
@@ -422,7 +422,6 @@ const Baz4 = { async fn() {
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff

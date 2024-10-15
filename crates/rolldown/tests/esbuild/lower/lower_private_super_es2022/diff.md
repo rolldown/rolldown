@@ -136,7 +136,6 @@ class foo8_default extends x {
 
 //#endregion
 export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_default as foo4, foo5_default as foo5, foo6_default as foo6, foo7_default as foo7, foo8_default as foo8 };
-
 ```
 ### diff
 ```diff

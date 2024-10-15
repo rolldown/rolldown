@@ -1,5 +1,3 @@
-# Reason
-1. needs diff custom resolver
 # Diff
 ## /out.js
 ### esbuild

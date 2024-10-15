@@ -22,7 +22,6 @@ const Button = () => _jsx$1("button", {});
 render(_jsx(Button, {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff

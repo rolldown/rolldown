@@ -24,7 +24,6 @@ Object.defineProperty(exports, 'out', {
     return out;
   }
 });
-
 ```
 ### diff
 ```diff

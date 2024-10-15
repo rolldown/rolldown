@@ -25,14 +25,13 @@ import "foo" assert {
 ```js
 import "foo";
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,16 +1,2 @@
+@@ -1,16 +1,1 @@
 -// entry.jsx
 -import "foo" assert { type: "json" };
 -import "foo" assert { type: "json" };
@@ -51,6 +50,5 @@ import "foo";
 -};
 \ No newline at end of file
 +import "foo";
-+
 
 ```

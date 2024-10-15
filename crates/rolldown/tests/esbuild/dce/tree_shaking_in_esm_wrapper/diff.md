@@ -59,7 +59,6 @@ assert.equal(keep1(), "keep1");
 assert.deepEqual((init_cjs(), __toCommonJS(cjs_exports)).default, "keep2");
 
 //#endregion
-
 ```
 ### diff
 ```diff

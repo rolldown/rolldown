@@ -19,7 +19,6 @@ import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 console.log(_jsx(_Fragment, { children: _jsx("div", {}) }));
 
 //#endregion
-
 ```
 ### diff
 ```diff

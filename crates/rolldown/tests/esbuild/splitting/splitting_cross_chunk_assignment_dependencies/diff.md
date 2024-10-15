@@ -101,7 +101,6 @@ import { setValue } from "./shared.js";
 setValue(123);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -122,7 +121,6 @@ import "./chunk-3GNPIT25.js";
 ### rolldown
 ```js
 import "./shared.js";
-
 
 ```
 ### diff

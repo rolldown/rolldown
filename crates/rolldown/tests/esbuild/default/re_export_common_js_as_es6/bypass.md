@@ -34,7 +34,6 @@ var import_foo = __toESM(require_foo());
 //#endregion
 var bar = import_foo.bar;
 export { bar };
-
 ```
 ### diff
 ```diff

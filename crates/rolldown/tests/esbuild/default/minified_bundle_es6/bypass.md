@@ -20,7 +20,6 @@ foo();
 console.log(foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff

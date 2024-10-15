@@ -72,7 +72,6 @@ let Derived2 = _Derived2;
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

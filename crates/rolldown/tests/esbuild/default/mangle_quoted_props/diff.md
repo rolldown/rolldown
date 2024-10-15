@@ -56,7 +56,6 @@ var { [(z, "_mangleThis")]: x } = y;
 (y, "_mangleThis") in x;
 
 //#endregion
-
 ```
 ### diff
 ```diff

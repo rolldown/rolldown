@@ -74,7 +74,6 @@ import { foo, init_a } from "./a2.js";
 
 init_a();
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -112,7 +111,6 @@ let bar = (init_a(), __toCommonJS(a_exports));
 
 //#endregion
 export { bar };
-
 ```
 ### diff
 ```diff

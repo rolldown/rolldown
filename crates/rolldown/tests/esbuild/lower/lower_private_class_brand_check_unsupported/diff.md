@@ -22,7 +22,6 @@ _foo = new WeakMap();
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

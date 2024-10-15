@@ -21,7 +21,6 @@ Foo.s_foo = 123;
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

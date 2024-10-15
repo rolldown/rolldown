@@ -46,7 +46,6 @@ assert.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
 })(node_assert);
-
 ```
 ### diff
 ```diff

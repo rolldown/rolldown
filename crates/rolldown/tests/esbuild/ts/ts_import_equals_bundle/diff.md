@@ -19,7 +19,6 @@ var unused = foo.unused;
 
 //#endregion
 export { used };
-
 ```
 ### diff
 ```diff

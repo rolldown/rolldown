@@ -50,7 +50,6 @@ let foo = 123;
 
 //#endregion
 exports.foo = foo
-
 ```
 ### diff
 ```diff

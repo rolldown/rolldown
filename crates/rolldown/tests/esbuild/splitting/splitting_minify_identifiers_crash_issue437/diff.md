@@ -108,7 +108,6 @@ import { foo } from "./shared.js";
 console.log(foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -140,7 +139,6 @@ import { foo } from "./shared.js";
 console.log(foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -162,7 +160,6 @@ import "./chunk-7N7J6VKT.js";
 ### rolldown
 ```js
 import "./shared.js";
-
 
 ```
 ### diff

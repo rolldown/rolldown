@@ -21,7 +21,6 @@ import "pkg/foo/bar/baz";
 import "pkg/bar/baz";
 import "pkg/baz";
 
-
 ```
 ### diff
 ```diff

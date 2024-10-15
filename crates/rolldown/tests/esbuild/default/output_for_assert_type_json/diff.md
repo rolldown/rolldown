@@ -42,7 +42,6 @@ use(foo_default, import_foo.default, foo_default, void 0);
 
 //#endregion
 export { foo_default as default };
-
 ```
 ### diff
 ```diff
@@ -67,6 +66,7 @@ export { foo_default as default };
 +
 +//#endregion
 +export { foo_default as default };
+\ No newline at end of file
 
 ```
 ## /out/ts-entry.js
@@ -92,7 +92,6 @@ use(foo_default, import_foo.default, foo_default, void 0);
 
 //#endregion
 export { foo_default as default };
-
 ```
 ### diff
 ```diff
@@ -117,5 +116,6 @@ export { foo_default as default };
 +
 +//#endregion
 +export { foo_default as default };
+\ No newline at end of file
 
 ```

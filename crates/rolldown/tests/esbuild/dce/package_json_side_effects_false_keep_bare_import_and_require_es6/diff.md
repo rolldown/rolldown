@@ -42,7 +42,6 @@ init_demo_pkg_index(), __toCommonJS(demo_pkg_index_exports);
 console.log("unused import");
 
 //#endregion
-
 ```
 ### diff
 ```diff

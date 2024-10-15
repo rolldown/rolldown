@@ -29,7 +29,6 @@ for (const d in x) console.log(d);
 for (const e of x) console.log(e);
 
 //#endregion
-
 ```
 ### diff
 ```diff

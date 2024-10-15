@@ -122,7 +122,6 @@ const B = async () => (await import("./index.js")).A;
 
 //#endregion
 export { A, B };
-
 ```
 ### diff
 ```diff

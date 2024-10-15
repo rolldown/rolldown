@@ -25,7 +25,6 @@ var import_package_json_disabled_type_module_issue3367 = __toESM(require_package
 (0, import_package_json_disabled_type_module_issue3367.default)();
 
 //#endregion
-
 ```
 ### diff
 ```diff

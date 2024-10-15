@@ -82,7 +82,6 @@ function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
 
 //#endregion
 export { shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY };
-
 ```
 ### diff
 ```diff
@@ -172,7 +171,6 @@ var entry2_default = {
 
 //#endregion
 export { entry2_default as default };
-
 ```
 ### diff
 ```diff

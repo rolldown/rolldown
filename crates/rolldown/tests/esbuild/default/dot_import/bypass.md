@@ -31,7 +31,6 @@ var import_dot_import_index = __toESM(require_dot_import_index());
 assert.equal(import_dot_import_index.x, 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -30,7 +30,6 @@ try {
 using a = b;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -63,6 +62,7 @@ using a = b;
 +using a = b;
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/hoist-directive.js
@@ -97,7 +97,6 @@ try {
 using a = b;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -130,6 +129,7 @@ using a = b;
 +using a = b;
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/hoist-import.js
@@ -155,7 +155,6 @@ using a = b;
 using c = d;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -179,6 +178,7 @@ using c = d;
 +using c = d;
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-star.js
@@ -206,7 +206,6 @@ using a = b;
 using c = d;
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -233,6 +232,7 @@ using c = d;
 +using c = d;
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-from.js
@@ -259,7 +259,6 @@ using c = d;
 
 //#endregion
 export { x, y };
-
 ```
 ### diff
 ```diff
@@ -285,6 +284,7 @@ export { x, y };
 +
 +//#endregion
 +export { x, y };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-clause.js
@@ -313,7 +313,6 @@ using c = d;
 
 //#endregion
 export { a, c as 'c!' };
-
 ```
 ### diff
 ```diff
@@ -338,6 +337,7 @@ export { a, c as 'c!' };
 +
 +//#endregion
 +export { a, c as 'c!' };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-local-direct.js
@@ -385,7 +385,6 @@ using c = d;
 
 //#endregion
 export { a1, ac1, c1, x1, y1, z1 };
-
 ```
 ### diff
 ```diff
@@ -425,6 +424,7 @@ export { a1, ac1, c1, x1, y1, z1 };
 +
 +//#endregion
 +export { a1, ac1, c1, x1, y1, z1 };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-local-indirect.js
@@ -466,7 +466,6 @@ using c = d;
 
 //#endregion
 export { x1, y1, z1 };
-
 ```
 ### diff
 ```diff
@@ -503,6 +502,7 @@ export { x1, y1, z1 };
 +
 +//#endregion
 +export { x1, y1, z1 };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-class-direct.js
@@ -553,7 +553,6 @@ using c = d;
 
 //#endregion
 export { Bar1, Foo1 };
-
 ```
 ### diff
 ```diff
@@ -599,6 +598,7 @@ export { Bar1, Foo1 };
 +
 +//#endregion
 +export { Bar1, Foo1 };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-class-indirect.js
@@ -649,7 +649,6 @@ using c = d;
 
 //#endregion
 export { Bar1, Foo1 };
-
 ```
 ### diff
 ```diff
@@ -695,6 +694,7 @@ export { Bar1, Foo1 };
 +
 +//#endregion
 +export { Bar1, Foo1 };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-function-direct.js
@@ -741,7 +741,6 @@ using c = d;
 
 //#endregion
 export { bar1, foo1 };
-
 ```
 ### diff
 ```diff
@@ -785,6 +784,7 @@ export { bar1, foo1 };
 +
 +//#endregion
 +export { bar1, foo1 };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-function-indirect.js
@@ -835,7 +835,6 @@ using c = d;
 
 //#endregion
 export { bar1, foo1 };
-
 ```
 ### diff
 ```diff
@@ -878,6 +877,7 @@ export { bar1, foo1 };
 +
 +//#endregion
 +export { bar1, foo1 };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-class-name-unused.js
@@ -911,7 +911,6 @@ using c = d;
 
 //#endregion
 export { Foo as default };
-
 ```
 ### diff
 ```diff
@@ -941,6 +940,7 @@ export { Foo as default };
 +
 +//#endregion
 +export { Foo as default };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-class-name-used.js
@@ -978,7 +978,6 @@ using c = d;
 
 //#endregion
 export { Foo as default };
-
 ```
 ### diff
 ```diff
@@ -1012,6 +1011,7 @@ export { Foo as default };
 +
 +//#endregion
 +export { Foo as default };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-class-anonymous.js
@@ -1045,7 +1045,6 @@ using c = d;
 
 //#endregion
 export { hoist_export_default_class_anonymous_default as default };
-
 ```
 ### diff
 ```diff
@@ -1075,6 +1074,7 @@ export { hoist_export_default_class_anonymous_default as default };
 +
 +//#endregion
 +export { hoist_export_default_class_anonymous_default as default };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-function-name-unused.js
@@ -1105,7 +1105,6 @@ using c = d;
 
 //#endregion
 export { foo as default };
-
 ```
 ### diff
 ```diff
@@ -1134,6 +1133,7 @@ export { foo as default };
 +
 +//#endregion
 +export { foo as default };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-function-name-used.js
@@ -1168,7 +1168,6 @@ using c = d;
 
 //#endregion
 export { foo as default };
-
 ```
 ### diff
 ```diff
@@ -1201,6 +1200,7 @@ export { foo as default };
 +
 +//#endregion
 +export { foo as default };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-function-anonymous.js
@@ -1231,7 +1231,6 @@ using c = d;
 
 //#endregion
 export { hoist_export_default_function_anonymous_default as default };
-
 ```
 ### diff
 ```diff
@@ -1260,6 +1259,7 @@ export { hoist_export_default_function_anonymous_default as default };
 +
 +//#endregion
 +export { hoist_export_default_function_anonymous_default as default };
+\ No newline at end of file
 
 ```
 ## /out/hoist-export-default-expr.js
@@ -1289,7 +1289,6 @@ using c = d;
 
 //#endregion
 export { hoist_export_default_expr_default as default };
-
 ```
 ### diff
 ```diff
@@ -1316,5 +1315,6 @@ export { hoist_export_default_expr_default as default };
 +
 +//#endregion
 +export { hoist_export_default_expr_default as default };
+\ No newline at end of file
 
 ```

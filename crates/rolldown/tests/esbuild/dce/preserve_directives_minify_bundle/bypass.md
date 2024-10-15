@@ -47,7 +47,6 @@ entry();
 
 //#endregion
 })();
-
 ```
 ### diff
 ```diff

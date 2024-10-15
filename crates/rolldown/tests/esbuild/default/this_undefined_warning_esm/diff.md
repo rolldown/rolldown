@@ -28,7 +28,6 @@ var file2_default = [this, this];
 console.log(file1_default, file2_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

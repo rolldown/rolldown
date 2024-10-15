@@ -33,7 +33,6 @@ Object.defineProperty(exports, 'all the stuff', {
 exports["some export"] = someImport
 return exports;
 })({}, __foo, __foo);
-
 ```
 ### diff
 ```diff
@@ -67,5 +66,6 @@ return exports;
 +exports["some export"] = someImport
 +return exports;
 +})({}, __foo, __foo);
+\ No newline at end of file
 
 ```

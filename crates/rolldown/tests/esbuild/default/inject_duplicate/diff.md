@@ -8,7 +8,6 @@ console.log("injected");
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

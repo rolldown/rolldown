@@ -23,7 +23,6 @@ var require_parent_dir_es6_index_default = 123;
 assert.equal(require_parent_dir_es6_index_default, 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff

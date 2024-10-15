@@ -37,7 +37,6 @@ var import_no_side_effects$1 = __toESM(require_no_side_effects());
 console.log(import_no_side_effects.nope, void 0, import_no_side_effects$1.nope);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -100,7 +99,6 @@ var import_no_side_effects$1 = __toESM(require_no_side_effects());
 console.log(import_no_side_effects.default, void 0, import_no_side_effects$1.default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

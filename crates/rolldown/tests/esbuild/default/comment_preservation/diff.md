@@ -473,7 +473,6 @@ do {} while (a);
 switch (a) {}
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -940,5 +939,6 @@ switch (a) {}
 +switch (a) {}
 +
 +//#endregion
+\ No newline at end of file
 
 ```

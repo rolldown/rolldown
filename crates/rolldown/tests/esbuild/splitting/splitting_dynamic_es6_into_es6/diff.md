@@ -54,7 +54,6 @@ import("./foo-R2VCCZUR.js").then(({ bar }) => console.log(bar));
 import("./foo.js").then(({ bar }) => console.log(bar));
 
 //#endregion
-
 ```
 ### diff
 ```diff

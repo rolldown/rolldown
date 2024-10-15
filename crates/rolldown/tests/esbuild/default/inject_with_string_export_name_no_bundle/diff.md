@@ -13,7 +13,6 @@ fn(test);
 console.log(test);
 
 //#endregion
-
 ```
 ### diff
 ```diff

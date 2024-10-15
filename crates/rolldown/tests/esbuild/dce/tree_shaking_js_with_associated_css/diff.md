@@ -22,7 +22,6 @@ let Button;
 render(_jsx(Button, {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -53,24 +52,23 @@ menu {
 ```js
 button { color: red }
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/test.css
 +++ rolldown	test.css
-@@ -1,9 +1,2 @@
+@@ -1,9 +1,1 @@
 -/* project/node_modules/pkg/button.css */
 -button {
 -  color: red;
 -}
-+button { color: red }
- 
+-
 -/* project/node_modules/pkg/menu.css */
 -menu {
 -  color: red;
 -}
 \ No newline at end of file
++button { color: red }
 
 ```

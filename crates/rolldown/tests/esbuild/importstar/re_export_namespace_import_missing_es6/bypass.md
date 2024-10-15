@@ -30,7 +30,6 @@ assert.deepEqual(bar_exports, { x: 123 });
 assert.equal(void 0, undefined);
 
 //#endregion
-
 ```
 ### diff
 ```diff

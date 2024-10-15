@@ -34,7 +34,6 @@ Object.defineProperty(exports, 'ns', {
     return entry_exports;
   }
 });
-
 ```
 ### diff
 ```diff

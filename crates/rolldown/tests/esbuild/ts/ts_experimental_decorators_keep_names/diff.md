@@ -21,7 +21,6 @@ export {
 
 //#endregion
 export { Foo };
-
 ```
 ### diff
 ```diff
@@ -39,5 +38,6 @@ export { Foo };
 +
 +//#endregion
 +export { Foo };
+\ No newline at end of file
 
 ```

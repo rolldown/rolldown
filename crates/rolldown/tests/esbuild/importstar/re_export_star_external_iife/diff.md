@@ -18,7 +18,6 @@ var mod = (() => {
 "use strict";
 
 })();
-
 ```
 ### diff
 ```diff

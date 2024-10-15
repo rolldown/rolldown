@@ -32,7 +32,6 @@ console.log(require_is_main());
 console.log("cache:", require.cache);
 
 //#endregion
-
 ```
 ### diff
 ```diff

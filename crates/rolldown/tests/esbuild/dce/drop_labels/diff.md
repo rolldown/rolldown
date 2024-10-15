@@ -23,7 +23,6 @@ exports.bar = function() {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -368,6 +368,7 @@ module.exports.BindingOutputChunk = nativeBinding.BindingOutputChunk
 module.exports.BindingOutputs = nativeBinding.BindingOutputs
 module.exports.BindingPluginContext = nativeBinding.BindingPluginContext
 module.exports.BindingTransformPluginContext = nativeBinding.BindingTransformPluginContext
+module.exports.BindingWatcher = nativeBinding.BindingWatcher
 module.exports.Bundler = nativeBinding.Bundler
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName

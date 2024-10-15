@@ -80,6 +80,14 @@ export default defineConfig([
             fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
           })
 
+          // Move watcher-worker file to dist
+          const fileName = 'watcher-worker.js'
+          console.log('[build:done] Copying', fileName, 'to ./dist/shared')
+          fsExtra.copyFileSync(
+            nodePath.join('./src', fileName),
+            nodePath.join(copyTo, fileName),
+          )
+
           // Copy binding types and rollup types to dist
           const distTypesDir = nodePath.resolve(outputDir, 'types')
           fsExtra.ensureDirSync(distTypesDir)

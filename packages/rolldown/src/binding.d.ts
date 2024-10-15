@@ -57,13 +57,17 @@ export declare class BindingTransformPluginContext {
   inner(): BindingPluginContext
 }
 
+export declare class BindingWatcher {
+  close(): Promise<void>
+}
+
 export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<void>
   close(): Promise<void>
-  watch(): Promise<void>
+  watch(): Promise<BindingWatcher>
 }
 
 export declare class ParallelJsPluginRegistry {

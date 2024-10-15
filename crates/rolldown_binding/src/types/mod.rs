@@ -11,3 +11,4 @@ pub mod binding_resolve_alias_item;
 pub mod binding_resolve_extension_alias;
 pub mod binding_sourcemap;
 pub mod js_callback;
+pub mod watcher;

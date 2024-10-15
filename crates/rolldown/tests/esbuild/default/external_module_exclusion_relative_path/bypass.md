@@ -1,5 +1,5 @@
 # Reason
-1. should not rewrite default specifier to `{default as xxx}`
+1. different file system
 # Diff
 ## /Users/user/project/out/index.js
 ### esbuild

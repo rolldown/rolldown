@@ -83,8 +83,6 @@
   diff
 ## [external_module_exclusion_package](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_package/diff.md)
   diff
-## [external_module_exclusion_relative_path](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_relative_path/diff.md)
-  diff
 ## [false_require](../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
   diff
 ## [hashbang_banner_use_strict_order](../../../crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order/diff.md)
@@ -388,6 +386,7 @@
 ## [duplicate_entry_point](../../../crates/rolldown/tests/esbuild/default/duplicate_entry_point/bypass.md)
 ## [dynamic_import_with_template_iife](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_template_iife/bypass.md)
 ## [exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js/bypass.md)
+## [external_module_exclusion_relative_path](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_relative_path/bypass.md)
 ## [hashbang_no_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_no_bundle/bypass.md)
 ## [import_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle/bypass.md)
 ## [import_forms_with_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_no_bundle/bypass.md)

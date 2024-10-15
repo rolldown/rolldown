@@ -90,7 +90,7 @@ console.log(def, ns.default);
 ## external-default2.js
 
 ```js
-import default2 from "external";
+import {default as def, default as default2} from "external";
 
 //#region external-default2.js
 console.log(def, default2);

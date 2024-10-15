@@ -886,11 +886,11 @@ expression: output
 
 # tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle
 
-- entry-!~{000}~.js => entry-VBKSRbeY.js
+- entry-!~{000}~.js => entry-YB6G9o-p.js
 
 # tests/esbuild/default/import_forms_with_no_bundle
 
-- entry-!~{000}~.js => entry-bh9ohx9r.js
+- entry-!~{000}~.js => entry-VP-SfOLn.js
 
 # tests/esbuild/default/import_fs_browser
 
@@ -1900,7 +1900,7 @@ expression: output
 
 # tests/esbuild/importstar/import_default_namespace_combo_issue446
 
-- external-default2-!~{000}~.js => external-default2-VNHNpMex.js
+- external-default2-!~{000}~.js => external-default2-6W8lVOMR.js
 - external-ns-!~{001}~.js => external-ns-GpZdixYW.js
 - external-ns-default-!~{002}~.js => external-ns-default-m6n_HiLI.js
 - external-ns-def-!~{003}~.js => external-ns-def-j655hlZw.js
@@ -3017,11 +3017,11 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_browser
 
-- entry-!~{000}~.js => entry-Q0sSVQGd.js
+- entry-!~{000}~.js => entry-XJktIKPu.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_force_module_before_main
 
-- entry-!~{000}~.js => entry-MX38vX7C.js
+- entry-!~{000}~.js => entry-JhMMswTb.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main
 
@@ -3029,7 +3029,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
 
-- entry-!~{000}~.js => entry-nmsf_nPK.js
+- entry-!~{000}~.js => entry-Z4zdL87H.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_same_file
 
@@ -4666,8 +4666,8 @@ expression: output
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.js => main-348zgA39.js
-- main-348zgA39.js.map
+- main-!~{000}~.js => main-pdzKJwdI.js
+- main-pdzKJwdI.js.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_export_named_function
 

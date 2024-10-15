@@ -114,13 +114,13 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         if specifiers.is_empty() {
           s.push_str(&format!("import \"{path}\";\n",));
         } else {
-          let mut default_alias = None;
-          let specifiers = specifiers
+          let mut default_alias = vec![];
+          let mut specifiers = specifiers
             .iter()
             .filter_map(|specifier| {
               if let Some(alias) = &specifier.alias {
                 if specifier.imported == "default" {
-                  default_alias = Some(alias.to_string());
+                  default_alias.push(alias.to_string());
                   return None;
                 }
                 Some(format!("{} as {alias}", specifier.imported))
@@ -131,13 +131,33 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             .collect::<Vec<_>>();
           if !specifiers.is_empty() {
             s.push_str("import ");
-            if let Some(default_alias) = default_alias {
-              s.push_str(&default_alias);
-              s.push_str(", ");
+            match default_alias.as_slice() {
+              [one] => {
+                s.push_str(&one);
+                s.push_str(", ");
+              }
+              multi => {
+                specifiers.extend_from_slice(multi);
+              }
             }
             s.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));
-          } else if let Some(default_alias) = default_alias {
-            s.push_str(&format!("import {default_alias} from \"{path}\";\n"));
+          } else if !default_alias.is_empty() {
+            match default_alias.as_slice() {
+              [default_alias] => {
+                s.push_str(&format!("import {default_alias} from \"{path}\";\n"));
+              }
+              specifiers => {
+                dbg!(&specifiers);
+                s.push_str("import {");
+                for (i, specifier) in specifiers.iter().enumerate() {
+                  if i != 0 {
+                    s.push_str(", ");
+                  }
+                  s.push_str(&format!("default as {specifier}"));
+                }
+                s.push_str(&format!("}} from \"{path}\";\n"));
+              }
+            }
           }
         }
       }

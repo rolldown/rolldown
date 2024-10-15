@@ -10,7 +10,7 @@ console.log(def, default2);
 ```
 ### rolldown
 ```js
-import default2 from "external";
+import {default as def, default as default2} from "external";
 
 //#region external-default2.js
 console.log(def, default2);
@@ -24,7 +24,7 @@ console.log(def, default2);
 +++ rolldown	external-default2.js
 @@ -1,2 +1,2 @@
 -import def, {default as default2} from "external";
-+import default2 from "external";
++import {default as def, default as default2} from "external";
  console.log(def, default2);
 
 ```

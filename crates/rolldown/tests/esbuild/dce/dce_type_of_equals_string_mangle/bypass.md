@@ -1,25 +1,26 @@
 # Reason
-1. side effects detect
+1. different iife wrapper, trivial diff
 # Diff
 ## /out.js
 ### esbuild
 ```js
-
+(() => {
+})();
 ```
 ### rolldown
 ```js
+(function() {
 
-//#region entry.js
-typeof x_REMOVE;
 
-//#endregion
+})();
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -0,0 +1,1 @@
-+typeof x_REMOVE;
+@@ -1,1 +1,1 @@
+-(() => {})();
++(function () {})();
 
 ```

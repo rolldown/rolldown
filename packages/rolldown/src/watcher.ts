@@ -22,7 +22,7 @@ export class Watcher {
   // So here we need to spawn a process to avoid main process exit util the user call `watcher.close()`.
   watch() {
     const watcherWorkerPath = resolve(
-      import.meta.dirname,
+      'rolldown',
       './watcher-worker.js',
     )
     const child = spawn(process.argv[0], [watcherWorkerPath], {

@@ -54,22 +54,22 @@ export function aggregateReason(): AggregateReasonEntries {
     cwd: workspaceDir,
   })
   // a map for each directory to its diff reasons
-  let reverseMap: Record<string, string[]> = {}
+  let reasonToCaseDirMap: Record<string, string[]> = {}
   for (let entry of entries) {
     const entryAbPath = path.resolve(workspaceDir, entry)
     let content = fs.readFileSync(entryAbPath, 'utf-8')
     let reasons = extractReason(content)
     let dirname = path.relative(workspaceDir, path.dirname(entryAbPath))
-    // const posixPath = dirname.replaceAll('\\', '/')
+    const posixPath = dirname.replaceAll('\\', '/')
 
     for (let reason of reasons) {
-      if (!reverseMap[reason]) {
-        reverseMap[reason] = []
+      if (!reasonToCaseDirMap[reason]) {
+        reasonToCaseDirMap[reason] = []
       }
-      reverseMap[reason].push(dirname)
+      reasonToCaseDirMap[reason].push(posixPath)
     }
   }
-  let reverseMapEntries = Object.entries(reverseMap)
+  let reverseMapEntries = Object.entries(reasonToCaseDirMap)
   for (let [_, dirs] of reverseMapEntries) {
     dirs.sort()
   }

@@ -69,6 +69,16 @@ export function aggregateReason() {
       reverseMap[reason].push(dirname)
     }
   }
-  console.log(`reverseMap: `, reverseMap)
+  let reverseMapEntries = Object.entries(reverseMap)
+  reverseMapEntries.sort((a, b) => {
+    return b[1].length - a[1].length
+  })
+  for (let [reason, cases] of reverseMapEntries) {
+    console.log(reason, ':')
+    for (let caseName of cases) {
+      console.log(caseName)
+    }
+    console.log('-------------------')
+  }
 }
 aggregateReason()

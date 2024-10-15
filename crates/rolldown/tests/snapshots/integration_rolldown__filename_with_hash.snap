@@ -111,7 +111,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of
 
-- entry-!~{000}~.js => entry-riN-fjX1.js
+- entry-!~{000}~.js => entry-jF2aLy7c.js
 
 # tests/esbuild/dce/dce_type_of_compare_string_guard_condition
 
@@ -119,7 +119,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string
 
-- entry-!~{000}~.js => entry-854Tw2k4.js
+- entry-!~{000}~.js => entry-gy9jBlL5.js
 
 # tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 
@@ -127,7 +127,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string_mangle
 
-- entry-!~{000}~.js => entry-854Tw2k4.js
+- entry-!~{000}~.js => entry-gy9jBlL5.js
 
 # tests/esbuild/dce/dce_var_exports
 
@@ -1804,7 +1804,7 @@ expression: output
 
 # tests/esbuild/default/warnings_inside_node_modules
 
-- entry-!~{000}~.js => entry-Xu6Wte97.js
+- entry-!~{000}~.js => entry-7V-2RdXq.js
 
 # tests/esbuild/default/with_statement_tainting_no_bundle
 

@@ -44,32 +44,35 @@ export function extractReason(source: string) {
   return ret
 }
 
-const esbuildTestDir = path.join(
-  import.meta.dirname,
-  '../../crates/rolldown/tests/esbuild',
-)
-
 const workspaceDir = path.join(import.meta.dirname, '../..')
-export type AggregateReasonEntries = [string, string[]][]
-export function aggregateReason(): AggregateReasonEntries {
-  const entries = fg.globSync([`${esbuildTestDir}/**/diff.md`], { dot: false })
-  // a map for each directory to its diff reasons
-  let reasonMap: Record<string, string[]> = {}
-  let reverseMap: Record<string, string[]> = {}
-  for (let entry of entries) {
-    let content = fs.readFileSync(entry, 'utf-8')
-    let reasons = extractReason(content)
-    let dirname = path.relative(workspaceDir, path.dirname(entry))
 
-    reasonMap[dirname] = reasons
+export type AggregateReasonEntries = [string, string[]][]
+
+export function aggregateReason(): AggregateReasonEntries {
+  const entries = fg.globSync(['crates/rolldown/tests/esbuild/**/diff.md'], {
+    dot: false,
+    cwd: workspaceDir,
+  })
+  // a map for each directory to its diff reasons
+  let reasonToCaseDirMap: Record<string, string[]> = {}
+  for (let entry of entries) {
+    const entryAbPath = path.resolve(workspaceDir, entry)
+    let content = fs.readFileSync(entryAbPath, 'utf-8')
+    let reasons = extractReason(content)
+    let dirname = path.relative(workspaceDir, path.dirname(entryAbPath))
+    const posixPath = dirname.replaceAll('\\', '/')
+
     for (let reason of reasons) {
-      if (!reverseMap[reason]) {
-        reverseMap[reason] = []
+      if (!reasonToCaseDirMap[reason]) {
+        reasonToCaseDirMap[reason] = []
       }
-      reverseMap[reason].push(dirname)
+      reasonToCaseDirMap[reason].push(posixPath)
     }
   }
-  let reverseMapEntries = Object.entries(reverseMap)
+  let reverseMapEntries = Object.entries(reasonToCaseDirMap)
+  for (let [_, dirs] of reverseMapEntries) {
+    dirs.sort()
+  }
   reverseMapEntries.sort((a, b) => {
     return b[1].length - a[1].length
   })

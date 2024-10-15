@@ -21,7 +21,6 @@ use std::path::PathBuf;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
-#[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
@@ -35,7 +34,7 @@ fn normalize_addon_option(
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| {
     AddonOutputOption::Fn(Box::new(move |chunk| {
-      let fn_js = value.clone();
+      let fn_js = Arc::clone(&value);
       let chunk = chunk.clone();
       Box::pin(async move {
         fn_js.await_call(RenderedChunk::from(chunk)).await.map_err(anyhow::Error::from)
@@ -51,7 +50,7 @@ fn normalize_chunk_file_names_option(
     .map(move |value| match value {
       Either::A(str) => Ok(ChunkFilenamesOutputOption::String(str)),
       Either::B(func) => Ok(ChunkFilenamesOutputOption::Fn(Box::new(move |chunk| {
-        let func = func.clone();
+        let func = Arc::clone(&func);
         let chunk = chunk.clone();
         Box::pin(async move { func.invoke_async(chunk.into()).await.map_err(anyhow::Error::from) })
       }))),
@@ -75,7 +74,7 @@ pub fn normalize_binding_options(
     IsExternal::from_closure(move |source, importer, is_resolved| {
       let source = source.to_string();
       let importer = importer.map(ToString::to_string);
-      let ts_fn = ts_fn.clone();
+      let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
         ts_fn
           .invoke_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved))
@@ -87,7 +86,7 @@ pub fn normalize_binding_options(
 
   let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|ts_fn| {
     rolldown::SourceMapIgnoreList::new(Box::new(move |source, sourcemap_path| {
-      let ts_fn = ts_fn.clone();
+      let ts_fn = Arc::clone(&ts_fn);
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
@@ -98,7 +97,7 @@ pub fn normalize_binding_options(
 
   let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {
     rolldown::SourceMapPathTransform::new(Box::new(move |source, sourcemap_path| {
-      let ts_fn = ts_fn.clone();
+      let ts_fn = Arc::clone(&ts_fn);
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {

@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 #[napi]
 pub enum BindingPluginOrder {
   Pre,

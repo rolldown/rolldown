@@ -69,7 +69,7 @@ var Foo = function(Foo$1) {
 	Foo$1[Foo$1["X5"] = 3] = "X5";
 	Foo$1[Foo$1["X6"] = -1] = "X6";
 	Foo$1[Foo$1["X7"] = 6] = "X7";
-	Foo$1[Foo$1["X8"] = 0.5] = "X8";
+	Foo$1[Foo$1["X8"] = .5] = "X8";
 	Foo$1[Foo$1["X9"] = 1] = "X9";
 	Foo$1[Foo$1["X10"] = 8] = "X10";
 	Foo$1[Foo$1["X11"] = 4] = "X11";
@@ -176,7 +176,7 @@ console.log(
 +    Foo$1[Foo$1["X5"] = 3] = "X5";
 +    Foo$1[Foo$1["X6"] = -1] = "X6";
 +    Foo$1[Foo$1["X7"] = 6] = "X7";
-+    Foo$1[Foo$1["X8"] = 0.5] = "X8";
++    Foo$1[Foo$1["X8"] = .5] = "X8";
 +    Foo$1[Foo$1["X9"] = 1] = "X9";
 +    Foo$1[Foo$1["X10"] = 8] = "X10";
 +    Foo$1[Foo$1["X11"] = 4] = "X11";

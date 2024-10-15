@@ -9,9 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region input.js
 process.env.DEBUG = "test";
-if (replaced === "production") {
-	console.log("");
-}
+if (replaced === "production") console.log("");
 if (world == "world") {
 	let hello = "world";
 	console.log(world);

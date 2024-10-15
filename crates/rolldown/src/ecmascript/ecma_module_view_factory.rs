@@ -43,7 +43,7 @@ fn scan_ast(
     module_def_format,
     ast.source(),
     &module_id,
-    &ast.trivias,
+    ast.comments(),
   );
   let namespace_object_ref = scanner.namespace_object_ref;
   let scan_result = scanner.scan(ast.program())?;

@@ -9,9 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region entry.js
 const myFunc = () => {
-	DROP: {
-		console.log("drop");
-	}
+	DROP: console.log("drop");
 	console.log("keep");
 };
 var entry_default = myFunc;

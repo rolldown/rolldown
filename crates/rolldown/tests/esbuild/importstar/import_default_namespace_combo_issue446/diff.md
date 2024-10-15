@@ -1,33 +1,6 @@
 # Reason
 1. Wrong default import linking output
 # Diff
-## /out/external-default2.js
-### esbuild
-```js
-// external-default2.js
-import def, { default as default2 } from "external";
-console.log(def, default2);
-```
-### rolldown
-```js
-import {default as def, default as default2} from "external";
-
-//#region external-default2.js
-console.log(def, default2);
-
-//#endregion
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/external-default2.js
-+++ rolldown	external-default2.js
-@@ -1,2 +1,2 @@
--import def, {default as default2} from "external";
-+import {default as def, default as default2} from "external";
- console.log(def, default2);
-
-```
 ## /out/external-ns.js
 ### esbuild
 ```js

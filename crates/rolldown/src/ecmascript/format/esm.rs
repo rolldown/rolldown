@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_sourcemap::{ConcatSource, RawSource};
@@ -108,7 +109,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
   let mut s = String::new();
   render_import_stmts.iter().for_each(|stmt| {
-    let path = &stmt.path();
+    let path = stmt.path();
     match &stmt.specifiers() {
       RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
         if specifiers.is_empty() {
@@ -129,36 +130,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
               }
             })
             .collect::<Vec<_>>();
-          if !specifiers.is_empty() {
-            s.push_str("import ");
-            match default_alias.as_slice() {
-              [one] => {
-                s.push_str(&one);
-                s.push_str(", ");
-              }
-              multi => {
-                specifiers.extend_from_slice(multi);
-              }
-            }
-            s.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));
-          } else if !default_alias.is_empty() {
-            match default_alias.as_slice() {
-              [default_alias] => {
-                s.push_str(&format!("import {default_alias} from \"{path}\";\n"));
-              }
-              specifiers => {
-                dbg!(&specifiers);
-                s.push_str("import {");
-                for (i, specifier) in specifiers.iter().enumerate() {
-                  if i != 0 {
-                    s.push_str(", ");
-                  }
-                  s.push_str(&format!("default as {specifier}"));
-                }
-                s.push_str(&format!("}} from \"{path}\";\n"));
-              }
-            }
-          }
+          s.push_str(&create_import_declaration(specifiers, default_alias, path));
         }
       }
       RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
@@ -168,4 +140,31 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   });
   dbg!(&s);
   s
+}
+
+fn create_import_declaration(
+  mut specifiers: Vec<String>,
+  mut default_alias: Vec<String>,
+  path: &ArcStr,
+) -> String {
+  let mut ret = String::new();
+  let first_default_alias = match default_alias.as_slice() {
+    [] => None,
+    [first] => Some(first),
+    [first, rest @ ..] => {
+      specifiers.extend(rest.iter().map(|item| format!("default as {}", item)));
+      Some(first)
+    }
+  };
+  if !specifiers.is_empty() {
+    ret.push_str("import ");
+    if let Some(first_default_alias) = first_default_alias {
+      ret.push_str(&first_default_alias);
+      ret.push_str(", ");
+    }
+    ret.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));
+  } else if let Some(first_default_alias) = first_default_alias {
+    ret.push_str(&format!("import {first_default_alias} from \"{path}\";\n"));
+  }
+  ret
 }

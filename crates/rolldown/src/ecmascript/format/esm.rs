@@ -116,7 +116,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           s.push_str(&format!("import \"{path}\";\n",));
         } else {
           let mut default_alias = vec![];
-          let mut specifiers = specifiers
+          let specifiers = specifiers
             .iter()
             .filter_map(|specifier| {
               if let Some(alias) = &specifier.alias {
@@ -130,7 +130,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
               }
             })
             .collect::<Vec<_>>();
-          s.push_str(&create_import_declaration(specifiers, default_alias, path));
+          s.push_str(&create_import_declaration(specifiers, &default_alias, path));
         }
       }
       RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
@@ -138,28 +138,27 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       }
     }
   });
-  dbg!(&s);
   s
 }
 
 fn create_import_declaration(
   mut specifiers: Vec<String>,
-  mut default_alias: Vec<String>,
+  default_alias: &[String],
   path: &ArcStr,
 ) -> String {
   let mut ret = String::new();
-  let first_default_alias = match default_alias.as_slice() {
+  let first_default_alias = match &default_alias {
     [] => None,
     [first] => Some(first),
     [first, rest @ ..] => {
-      specifiers.extend(rest.iter().map(|item| format!("default as {}", item)));
+      specifiers.extend(rest.iter().map(|item| format!("default as {item}",)));
       Some(first)
     }
   };
   if !specifiers.is_empty() {
     ret.push_str("import ");
     if let Some(first_default_alias) = first_default_alias {
-      ret.push_str(&first_default_alias);
+      ret.push_str(first_default_alias);
       ret.push_str(", ");
     }
     ret.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));

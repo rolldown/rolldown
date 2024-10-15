@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dir_entry.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region index.js
 var require_parent_dir_es6_index_default = 123;

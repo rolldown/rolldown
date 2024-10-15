@@ -16,7 +16,7 @@ console.log(bar_exports.foo);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region entry.js
 assert.deepEqual(void 0, void 0);

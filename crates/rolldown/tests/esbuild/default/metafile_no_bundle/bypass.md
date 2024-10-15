@@ -17,8 +17,8 @@ let exported;
 ```
 ### rolldown
 ```js
-import { default as a } from "pkg";
-import { default as b } from "./file";
+import a from "pkg";
+import b from "./file";
 
 //#region entry.js
 console.log(a, b, require("pkg2"), require("./file2"), import("./dynamic"));
@@ -33,10 +33,8 @@ export { exported };
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
 @@ -1,4 +1,5 @@
--import a from "pkg";
--import b from "./file";
-+import {default as a} from "pkg";
-+import {default as b} from "./file";
+ import a from "pkg";
+ import b from "./file";
  console.log(a, b, require("pkg2"), require("./file2"), import("./dynamic"));
 -let exported;
 +var exported;

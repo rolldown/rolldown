@@ -38,7 +38,7 @@ var { bar: bar2 } = (init_bar(), __toCommonJS(bar_exports));
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region foo.js

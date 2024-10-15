@@ -64,7 +64,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as ns2 from "foo";
 import * as ns from "foo";
-import { a, a2, b as c, b as c3, default as def, default as def2, default as def3 } from "foo";
+import def3, { a, a2, b as c, b as c3 } from "foo";
 
 //#region entry.js
 const imp = [import("foo"), function nested() {

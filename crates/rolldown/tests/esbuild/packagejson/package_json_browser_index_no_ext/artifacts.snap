@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region src/demo-pkg/no-ext-browser/index.js
 let browser$1 = "browser";

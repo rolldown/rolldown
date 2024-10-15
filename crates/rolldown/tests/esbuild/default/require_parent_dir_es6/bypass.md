@@ -13,7 +13,7 @@ console.log(src_default);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region index.js
 var require_parent_dir_es6_index_default = 123;

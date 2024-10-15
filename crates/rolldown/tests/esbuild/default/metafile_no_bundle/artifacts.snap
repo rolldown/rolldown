@@ -50,8 +50,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as a } from "pkg";
-import { default as b } from "./file";
+import a from "pkg";
+import b from "./file";
 
 //#region entry.js
 console.log(a, b, require("pkg2"), require("./file2"), import("./dynamic"));

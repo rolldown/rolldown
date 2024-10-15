@@ -51,8 +51,6 @@
   diff
 ## [loader_data_url_text_css](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css/diff.md)
   diff
-## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime/diff.md)
-  diff
 ## loader_file
   missing
 ## [loader_file_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_file_common_js_and_es6/diff.md)
@@ -123,6 +121,7 @@
 ## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js)
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)
+## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime)
 # Bypassed Cases
 ## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/bypass.md)
 ## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/bypass.md)

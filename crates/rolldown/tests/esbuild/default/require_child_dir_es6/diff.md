@@ -10,7 +10,7 @@ console.log(dir_default);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region dir/index.js
 var dir_index_default = 123;

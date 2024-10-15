@@ -12,7 +12,7 @@ fs.readFile();
 ```
 ### rolldown
 ```js
-import { default as fs } from "node:fs/promises";
+import fs from "node:fs/promises";
 import "node:path";
 import "node:what-is-this";
 
@@ -27,8 +27,7 @@ fs.readFile();
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
 @@ -1,3 +1,4 @@
--import fs from "node:fs/promises";
-+import {default as fs} from "node:fs/promises";
+ import fs from "node:fs/promises";
 +import "node:path";
  import "node:what-is-this";
  fs.readFile();

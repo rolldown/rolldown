@@ -15,8 +15,8 @@ console.log(file_default, file_default2);
 ```
 ### rolldown
 ```js
-import { default as foo } from "/Users/user/project/file.txt?foo";
-import { default as bar } from "/Users/user/project/file.txt#bar";
+import foo from "/Users/user/project/file.txt?foo";
+import bar from "/Users/user/project/file.txt#bar";
 
 //#region entry.js
 console.log(foo, bar);
@@ -32,8 +32,8 @@ console.log(foo, bar);
 -var file_default = "This is some text";
 -var file_default2 = "This is some text";
 -console.log(file_default, file_default2);
-+import {default as foo} from "/Users/user/project/file.txt?foo";
-+import {default as bar} from "/Users/user/project/file.txt#bar";
++import foo from "/Users/user/project/file.txt?foo";
++import bar from "/Users/user/project/file.txt#bar";
 +console.log(foo, bar);
 
 ```

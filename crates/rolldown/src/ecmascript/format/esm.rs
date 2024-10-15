@@ -114,17 +114,31 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         if specifiers.is_empty() {
           s.push_str(&format!("import \"{path}\";\n",));
         } else {
+          let mut default_alias = None;
           let specifiers = specifiers
             .iter()
-            .map(|specifier| {
+            .filter_map(|specifier| {
               if let Some(alias) = &specifier.alias {
-                format!("{} as {alias}", specifier.imported)
+                if specifier.imported == "default" {
+                  default_alias = Some(alias.to_string());
+                  return None;
+                }
+                Some(format!("{} as {alias}", specifier.imported))
               } else {
-                specifier.imported.to_string()
+                Some(specifier.imported.to_string())
               }
             })
             .collect::<Vec<_>>();
-          s.push_str(&format!("import {{ {} }} from \"{path}\";\n", specifiers.join(", ")));
+          if !specifiers.is_empty() {
+            s.push_str("import ");
+            if let Some(default_alias) = default_alias {
+              s.push_str(&default_alias);
+              s.push_str(", ");
+            }
+            s.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));
+          } else if let Some(default_alias) = default_alias {
+            s.push_str(&format!("import {default_alias} from \"{path}\";\n"));
+          }
         }
       }
       RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
@@ -132,6 +146,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       }
     }
   });
-
+  dbg!(&s);
   s
 }

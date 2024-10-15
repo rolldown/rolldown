@@ -36,7 +36,7 @@ export { dynamic_default as default };
 ## entry.js
 
 ```js
-import { default as a } from "extern-esm";
+import a from "extern-esm";
 
 
 //#region esm.js

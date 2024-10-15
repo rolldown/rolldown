@@ -10,7 +10,7 @@ console.log(def, default2);
 ```
 ### rolldown
 ```js
-import { default as def, default as default2 } from "external";
+import default2 from "external";
 
 //#region external-default2.js
 console.log(def, default2);
@@ -24,7 +24,7 @@ console.log(def, default2);
 +++ rolldown	external-default2.js
 @@ -1,2 +1,2 @@
 -import def, {default as default2} from "external";
-+import {default as def, default as default2} from "external";
++import default2 from "external";
  console.log(def, default2);
 
 ```
@@ -38,7 +38,7 @@ console.log(def, ns);
 ### rolldown
 ```js
 import * as ns from "external";
-import { default as def } from "external";
+import def from "external";
 
 //#region external-ns.js
 console.log(def, ns);
@@ -53,7 +53,7 @@ console.log(def, ns);
 @@ -1,2 +1,3 @@
 -import def, * as ns from "external";
 +import * as ns from "external";
-+import {default as def} from "external";
++import def from "external";
  console.log(def, ns);
 
 ```
@@ -67,7 +67,7 @@ console.log(def, ns, ns.default);
 ### rolldown
 ```js
 import * as ns from "external";
-import { default as def } from "external";
+import def from "external";
 
 //#region external-ns-default.js
 console.log(def, ns, ns.default);
@@ -82,7 +82,7 @@ console.log(def, ns, ns.default);
 @@ -1,2 +1,3 @@
 -import def, * as ns from "external";
 +import * as ns from "external";
-+import {default as def} from "external";
++import def from "external";
  console.log(def, ns, ns.default);
 
 ```
@@ -96,7 +96,7 @@ console.log(def, ns, ns.def);
 ### rolldown
 ```js
 import * as ns from "external";
-import { default as def } from "external";
+import def from "external";
 
 //#region external-ns-def.js
 console.log(def, ns, ns.def);
@@ -111,7 +111,7 @@ console.log(def, ns, ns.def);
 @@ -1,2 +1,3 @@
 -import def, * as ns from "external";
 +import * as ns from "external";
-+import {default as def} from "external";
++import def from "external";
  console.log(def, ns, ns.def);
 
 ```
@@ -125,7 +125,7 @@ console.log(def, ns.default);
 ### rolldown
 ```js
 import * as ns from "external";
-import { default as def } from "external";
+import def from "external";
 
 //#region external-default.js
 console.log(def, ns.default);
@@ -140,7 +140,7 @@ console.log(def, ns.default);
 @@ -1,2 +1,3 @@
 -import def, * as ns from "external";
 +import * as ns from "external";
-+import {default as def} from "external";
++import def from "external";
  console.log(def, ns.default);
 
 ```
@@ -154,7 +154,7 @@ console.log(def, ns.def);
 ### rolldown
 ```js
 import * as ns from "external";
-import { default as def } from "external";
+import def from "external";
 
 //#region external-def.js
 console.log(def, ns.def);
@@ -169,7 +169,7 @@ console.log(def, ns.def);
 @@ -1,2 +1,3 @@
 -import def, * as ns from "external";
 +import * as ns from "external";
-+import {default as def} from "external";
++import def from "external";
  console.log(def, ns.def);
 
 ```

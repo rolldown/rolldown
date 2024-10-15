@@ -8,5 +8,3 @@ use testing_macros::fixture;
 fn test(path: PathBuf) {
   Fixture::new(path.parent().unwrap()).run_integration_test();
 }
-
-// trigger tests

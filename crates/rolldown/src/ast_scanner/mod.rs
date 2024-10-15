@@ -54,7 +54,6 @@ pub struct AstScanner<'me> {
   file_path: &'me ModuleId,
   scopes: &'me AstScopes,
   trivias: &'me Trivias,
-  symbol_table: SymbolTable,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -125,13 +124,12 @@ impl<'me> AstScanner<'me> {
       has_eval: false,
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty(),
-      symbol_ref_db: SymbolRefDbForModule::default(),
+      symbol_ref_db: SymbolRefDbForModule::new(symbol_table),
     };
 
     Self {
       idx,
       scopes: scope,
-      symbol_table,
       current_stmt_info: StmtInfo::default(),
       result,
       esm_export_keyword: None,
@@ -208,7 +206,7 @@ impl<'me> AstScanner<'me> {
         .collect::<FxHashSet<_>>();
       for (name, symbol_id) in self.scopes.get_bindings(self.scopes.root_scope_id()) {
         let symbol_ref: SymbolRef = (self.idx, *symbol_id).into();
-        let scope_id = self.symbol_table.get_scope_id(*symbol_id);
+        let scope_id = self.result.symbol_ref_db.get_scope_id(*symbol_id);
         if !scanned_top_level_symbols.remove(&symbol_ref) {
           return Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
@@ -222,7 +220,6 @@ impl<'me> AstScanner<'me> {
       // }
     }
     self.result.ast_usage = self.ast_usage;
-    self.result.symbol_ref_db.fill_classic_data(self.symbol_table);
     Ok(self.result)
   }
 
@@ -249,7 +246,7 @@ impl<'me> AstScanner<'me> {
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
     let namespace_ref: SymbolRef = (
       self.idx,
-      self.symbol_table.create_symbol(
+      self.result.symbol_ref_db.create_symbol(
         SPAN,
         format!(
           "#LOCAL_NAMESPACE_IN_{}#",
@@ -301,8 +298,8 @@ impl<'me> AstScanner<'me> {
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
+    let is_const = self.result.symbol_ref_db.get_flags(local).is_const_variable();
     let flags = self.result.symbol_ref_db.flags.entry(local).or_default();
-    let is_const = self.symbol_table.get_flags(local).is_const_variable();
     let mut is_reassigned = false;
 
     self.scopes.get_resolved_references(local).for_each(|refer| {
@@ -363,7 +360,7 @@ impl<'me> AstScanner<'me> {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = (
       self.idx,
-      self.symbol_table.create_symbol(
+      self.result.symbol_ref_db.create_symbol(
         SPAN,
         if export_name == "default" {
           let importee_repr = self.result.import_records[record_id]
@@ -407,7 +404,7 @@ impl<'me> AstScanner<'me> {
   ) {
     let generated_imported_as_ref = (
       self.idx,
-      self.symbol_table.create_symbol(
+      self.result.symbol_ref_db.create_symbol(
         SPAN,
         export_name.into(),
         SymbolFlags::empty(),
@@ -604,13 +601,13 @@ impl<'me> AstScanner<'me> {
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
-    self.scopes.root_scope_id() == self.symbol_table.get_scope_id(symbol_id)
+    self.scopes.root_scope_id() == self.result.symbol_ref_db.get_scope_id(symbol_id)
   }
 
   fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) {
     match (self.resolve_symbol_from_reference(id_ref), id_ref.reference_id.get()) {
       (Some(symbol_id), Some(ref_id))
-        if self.symbol_table.get_flags(symbol_id).is_const_variable() =>
+        if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() =>
       {
         let reference = &self.scopes.references[ref_id];
         if reference.is_write() {
@@ -618,8 +615,8 @@ impl<'me> AstScanner<'me> {
             BuildDiagnostic::forbid_const_assign(
               self.file_path.to_string(),
               self.source.clone(),
-              self.symbol_table.get_name(symbol_id).into(),
-              self.symbol_table.get_span(symbol_id),
+              self.result.symbol_ref_db.get_name(symbol_id).into(),
+              self.result.symbol_ref_db.get_span(symbol_id),
               id_ref.span(),
             )
             .with_severity_warning(),

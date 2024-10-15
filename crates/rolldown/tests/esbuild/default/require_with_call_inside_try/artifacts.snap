@@ -12,9 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_entry = __commonJS({ "entry.js"(exports) {
 	try {
 		const supportsColor = require("supports-color");
-		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
-			exports.colors = [];
-		}
+		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) exports.colors = [];
 	} catch (error) {}
 } });
 

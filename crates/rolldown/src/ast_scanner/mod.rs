@@ -12,7 +12,7 @@ use oxc::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration, Program,
     },
-    Trivias, Visit,
+    Comment, Visit,
   },
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
@@ -53,7 +53,7 @@ pub struct AstScanner<'me> {
   module_type: ModuleDefFormat,
   file_path: &'me ModuleId,
   scopes: &'me AstScopes,
-  trivias: &'me Trivias,
+  comments: &'me oxc::allocator::Vec<'me, Comment>,
   symbol_table: SymbolTable,
   current_stmt_info: StmtInfo,
   result: ScanResult,
@@ -82,7 +82,7 @@ impl<'me> AstScanner<'me> {
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
     file_path: &'me ModuleId,
-    trivias: &'me Trivias,
+    comments: &'me oxc::allocator::Vec<'me, Comment>,
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
@@ -142,7 +142,7 @@ impl<'me> AstScanner<'me> {
       cjs_exports_ident: None,
       source,
       file_path,
-      trivias,
+      comments,
       ast_usage: EcmaModuleAstUsage::empty(),
     }
   }

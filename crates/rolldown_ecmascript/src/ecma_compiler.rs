@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
@@ -23,7 +25,6 @@ impl EcmaCompiler {
   ) -> DiagnosableResult<EcmaAst> {
     let source: ArcStr = source.into();
     let allocator = oxc::allocator::Allocator::default();
-    let mut trivias = None;
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let parser = Parser::new(&owner.allocator, &owner.source, ty).with_options(ParseOptions {
@@ -49,27 +50,20 @@ impl EcmaCompiler {
               .collect::<Vec<_>>(),
           )
         } else {
-          trivias = Some(ret.trivias);
           Ok(ProgramCellDependent { program: ret.program })
         }
       })?;
-    Ok(EcmaAst {
-      program: inner,
-      source_type: ty,
-      trivias: trivias.expect("Should be initialized"),
-      contains_use_strict: false,
-    })
+    Ok(EcmaAst { program: inner, source_type: ty, contains_use_strict: false })
   }
-  pub fn print(ast: &EcmaAst, source_name: &str, enable_source_map: bool) -> CodegenReturn {
-    let mut codegen = CodeGenerator::new().with_capacity(ast.source().len()).enable_comment(
-      ast.source(),
-      ast.trivias.clone(),
-      oxc::codegen::CommentOptions { preserve_annotate_comments: true },
-    );
-    if enable_source_map {
-      codegen = codegen.enable_source_map(source_name, ast.source());
-    }
-    codegen.build(ast.program())
+
+  pub fn print(ast: &EcmaAst, filename: &str, enable_source_map: bool) -> CodegenReturn {
+    CodeGenerator::new()
+      .with_options(CodegenOptions {
+        comments: true,
+        source_map_path: enable_source_map.then(|| PathBuf::from(filename)),
+        ..CodegenOptions::default()
+      })
+      .build(ast.program())
   }
 
   pub fn minify(
@@ -82,13 +76,14 @@ impl EcmaCompiler {
     let program = allocator.alloc(program);
     let options = MinifierOptions { mangle: true, ..MinifierOptions::default() };
     let ret = Minifier::new(options).build(&allocator, program);
-    let codegen = Codegen::new()
-      .with_options(CodegenOptions { minify: true, ..CodegenOptions::default() })
-      .with_mangler(ret.mangler);
-    let codegen =
-      if enable_sourcemap { codegen.enable_source_map(filename, source_text) } else { codegen };
-
-    let ret = codegen.build(program);
+    let ret = Codegen::new()
+      .with_options(CodegenOptions {
+        source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
+        minify: true,
+        ..CodegenOptions::default()
+      })
+      .with_mangler(ret.mangler)
+      .build(program);
     Ok((ret.code, ret.map))
   }
 }

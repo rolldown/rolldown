@@ -107,9 +107,7 @@ if (foo) {
 //#region 3.js
 if (foo) {
 	function x() {}
-	if (bar) {
-		eval("");
-	}
+	if (bar) eval("");
 }
 
 //#endregion
@@ -156,9 +154,7 @@ if (foo) {
 //#region 7.js
 if (foo) {
 	function x() {}
-	if (bar) {
-		eval("");
-	}
+	if (bar) eval("");
 }
 
 //#endregion

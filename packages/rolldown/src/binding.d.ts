@@ -58,7 +58,7 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  close(): void
+  close(): Promise<void>
 }
 
 export declare class Bundler {

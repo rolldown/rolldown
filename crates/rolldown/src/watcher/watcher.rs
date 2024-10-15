@@ -1,15 +1,7 @@
-use std::{
-  path::Path,
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-  },
-};
-
 use arcstr::ArcStr;
 use dashmap::DashSet;
 use futures::{
-  channel::mpsc::{channel, Receiver},
+  channel::mpsc::{channel, Receiver, Sender},
   SinkExt, StreamExt,
 };
 use notify::{
@@ -19,6 +11,13 @@ use rolldown_common::{
   BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
 };
 use rolldown_plugin::SharedPluginDriver;
+use std::{
+  path::Path,
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+  },
+};
 use tokio::sync::Mutex;
 
 use crate::Bundler;
@@ -33,18 +32,27 @@ pub struct Watcher {
   running: AtomicBool,
   rerun: AtomicBool,
   watch_files: DashSet<ArcStr>,
+  tx: Arc<Mutex<Sender<notify::Result<notify::Event>>>>,
   rx: Arc<Mutex<Receiver<notify::Result<notify::Event>>>>,
 }
 
 impl Watcher {
   pub fn new() -> Result<Self> {
-    let (mut tx, rx) = channel(100);
+    let (tx, rx) = channel(100);
+    let tx = Arc::new(Mutex::new(tx));
+    let cloned_tx = Arc::clone(&tx);
     let inner = RecommendedWatcher::new(
       move |res| {
+        let mut tx = tx.try_lock().expect("Failed to lock the watcher sender");
         futures::executor::block_on(async {
+          if tx.is_closed() {
+            return;
+          }
           match tx.send(res).await {
-            Ok(_) => {}
-            Err(_) => { /* the channel maybe closed */ }
+            Ok(()) => {}
+            Err(e) => {
+              eprintln!("send watch event error {e:?}");
+            }
           };
         });
       },
@@ -58,11 +66,11 @@ impl Watcher {
       watch_files: DashSet::default(),
       rerun: AtomicBool::default(),
       rx: Arc::new(Mutex::new(rx)),
+      tx: cloned_tx,
     })
   }
 
-  #[allow(unused_must_use)]
-  pub async fn invalidate(&self, bundler: Arc<Mutex<Bundler>>) {
+  pub fn invalidate(&self, bundler: Arc<Mutex<Bundler>>) {
     if self.running.load(Ordering::Relaxed) {
       self.rerun.store(true, Ordering::Relaxed);
       return;
@@ -71,20 +79,19 @@ impl Watcher {
       return;
     }
 
+    let future = async move {
+      self.rerun.store(false, Ordering::Relaxed);
+      let _ = self.run(bundler).await;
+    };
+
     #[cfg(target_family = "wasm")]
     {
-      futures::executor::block_on(async {
-        self.rerun.store(false, Ordering::Relaxed);
-        self.run(bundler).await;
-      });
+      futures::executor::block_on(future);
     }
     #[cfg(not(target_family = "wasm"))]
     {
       tokio::task::block_in_place(move || {
-        tokio::runtime::Handle::current().block_on(async move {
-          self.rerun.store(false, Ordering::Relaxed);
-          self.run(bundler).await;
-        });
+        tokio::runtime::Handle::current().block_on(future);
       });
     }
   }
@@ -128,11 +135,12 @@ impl Watcher {
     Ok(())
   }
 
-  pub fn close(&self) {
-    let mut rx = self.rx.try_lock().expect("Failed to lock the watcher receiver. ");
+  pub async fn close(&self) {
     // close channel
-    rx.close();
+    let mut tx = self.tx.try_lock().expect("Failed to lock the watcher sender");
+    let _ = tx.close().await;
     // stop watching files
+    // TODO the notify watcher should be dropped, because the stop method is private
     let mut inner = self.inner.try_lock().expect("Failed to lock the notify watcher.");
     for path in self.watch_files.iter() {
       inner.unwatch(Path::new(path.as_str())).expect("should unwatch");
@@ -157,7 +165,7 @@ pub fn wait_for_change(watcher: Arc<Watcher>, bundler: Arc<Mutex<Bundler>>) {
   let bundler_guard = cloned_bundler.try_lock().expect("Failed to lock the bundler. ");
   let plugin_driver = Arc::clone(&bundler_guard.plugin_driver);
 
-  tokio::spawn(async move {
+  let future = async move {
     let mut rx = watcher.rx.try_lock().expect("Failed to lock the watcher receiver. ");
     while let Some(res) = rx.next().await {
       match res {
@@ -174,7 +182,7 @@ pub fn wait_for_change(watcher: Arc<Watcher>, bundler: Arc<Mutex<Bundler>>) {
               ) => {
                 on_change(&watcher.emitter, &plugin_driver, id.as_ref(), WatcherChangeKind::Update)
                   .await;
-                watcher.invalidate(Arc::clone(&bundler)).await;
+                watcher.invalidate(Arc::clone(&bundler));
               }
               notify::EventKind::Remove(_) => {
                 on_change(&watcher.emitter, &plugin_driver, id.as_ref(), WatcherChangeKind::Delete)
@@ -185,9 +193,22 @@ pub fn wait_for_change(watcher: Arc<Watcher>, bundler: Arc<Mutex<Bundler>>) {
           }
         }
         Err(e) => {
-          eprintln!("watcher error: {:?}", e);
+          eprintln!("watcher receiver error: {e:?}");
         }
       }
     }
-  });
+  };
+
+  // TODO the spawn task should be dropped
+
+  #[cfg(target_family = "wasm")]
+  {
+    let handle = tokio::runtime::Handle::current();
+    // could not block_on/spawn the main thread in WASI
+    std::thread::spawn(move || {
+      handle.spawn(future);
+    });
+  }
+  #[cfg(not(target_family = "wasm"))]
+  tokio::spawn(future);
 }

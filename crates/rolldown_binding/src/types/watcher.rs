@@ -14,7 +14,7 @@ impl BindingWatcher {
   }
 
   #[napi]
-  pub fn close(&self) {
-    self.inner.close();
+  pub async fn close(&self) {
+    self.inner.close().await;
   }
 }

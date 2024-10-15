@@ -8,7 +8,7 @@ test('watch', async () => {
   const inputSource = fs.readFileSync(input, 'utf-8')
   const output = path.join(import.meta.dirname, './dist/main.js')
   const watchChangeFn = vi.fn()
-  watch({
+  const watcher = await watch({
     input,
     cwd: import.meta.dirname,
     plugins: [
@@ -39,4 +39,6 @@ test('watch', async () => {
 
   // revert change
   fs.writeFileSync(input, inputSource)
+
+  await watcher.close()
 })

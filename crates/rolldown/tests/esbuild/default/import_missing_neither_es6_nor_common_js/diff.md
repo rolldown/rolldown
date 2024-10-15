@@ -24,7 +24,6 @@ var import_foo = __toESM(require_foo());
 console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -66,7 +65,6 @@ var import_foo = __toESM(require_foo());
 console.log(import_foo.default(import_foo.x, import_foo.y));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -109,7 +107,6 @@ var import_foo = __toESM(require_foo());
 console.log(import_foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -143,7 +140,6 @@ import { __toESM, require_foo } from "./foo2.js";
 var import_foo = __toESM(require_foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -177,7 +173,6 @@ import { require_foo } from "./foo2.js";
 console.log(require_foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -214,7 +209,6 @@ console.log(Promise.resolve().then(() => __toESM(require_foo())));
 console.log(import("./foo.js"));
 
 //#endregion
-
 ```
 ### diff
 ```diff

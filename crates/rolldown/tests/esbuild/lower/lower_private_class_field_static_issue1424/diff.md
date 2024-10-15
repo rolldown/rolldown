@@ -42,7 +42,6 @@ class T {
 new T().d();
 
 //#endregion
-
 ```
 ### diff
 ```diff

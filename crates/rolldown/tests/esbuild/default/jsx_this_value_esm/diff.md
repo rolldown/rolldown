@@ -27,7 +27,6 @@ f = function() {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -68,7 +67,6 @@ console.log([_jsx(_Fragment, { children: "x" }), /* @__PURE__ */ this(this, null
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -15,7 +15,6 @@ console.log(import_meta.url, import_meta.path);
 console.log(import.meta.url, import.meta.path);
 
 //#endregion
-
 ```
 ### diff
 ```diff

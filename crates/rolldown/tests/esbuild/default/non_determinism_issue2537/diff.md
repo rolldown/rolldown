@@ -42,7 +42,6 @@ function aap(noot, wim) {
 
 //#endregion
 export { aap };
-
 ```
 ### diff
 ```diff

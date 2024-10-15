@@ -17,7 +17,6 @@ if (foo) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -51,7 +50,6 @@ if (foo) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -84,7 +82,6 @@ if (foo) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -119,7 +116,6 @@ if (foo) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -158,7 +154,6 @@ if (foo) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -193,7 +188,6 @@ if (foo) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff

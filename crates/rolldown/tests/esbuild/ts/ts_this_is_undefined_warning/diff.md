@@ -16,7 +16,6 @@ var foo = this;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -46,7 +45,6 @@ var foo = this || this.foo;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -76,7 +74,6 @@ var foo = this ? this.foo : null;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -106,7 +103,6 @@ var foo = this && this.foo;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -136,7 +132,6 @@ var foo = this && (() => this.foo);
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff

@@ -22,7 +22,6 @@ var demo_pkg_index_default = exprWithSideEffects();
 console.log(demo_pkg_index_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

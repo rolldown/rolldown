@@ -159,7 +159,6 @@ console.log(
 );
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -271,7 +270,6 @@ var TemplateExpressions = function(TemplateExpressions$1) {
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);
 
 //#endregion
-
 ```
 ### diff
 ```diff

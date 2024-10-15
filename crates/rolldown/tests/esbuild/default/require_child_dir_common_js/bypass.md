@@ -28,7 +28,6 @@ var require_dir_index = __commonJS({ "dir/index.js"(exports, module) {
 console.log(require_dir_index());
 
 //#endregion
-
 ```
 ### diff
 ```diff

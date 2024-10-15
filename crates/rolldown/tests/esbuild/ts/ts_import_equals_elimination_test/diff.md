@@ -25,7 +25,6 @@ let bar = c;
 
 //#endregion
 export { bar };
-
 ```
 ### diff
 ```diff

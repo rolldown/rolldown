@@ -137,7 +137,6 @@ let f2 = class {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff

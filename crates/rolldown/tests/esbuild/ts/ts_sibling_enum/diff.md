@@ -36,7 +36,6 @@ console.log(x.y, x.z);
 
 //#endregion
 export { x };
-
 ```
 ### diff
 ```diff
@@ -107,7 +106,6 @@ console.log(x.y, x.z);
 
 //#endregion
 export { x };
-
 ```
 ### diff
 ```diff
@@ -184,7 +182,6 @@ console.log(a.b, a["b"], x.g, x["g"]);
 
 //#endregion
 export { a, x };
-
 ```
 ### diff
 ```diff
@@ -281,7 +278,6 @@ let foo;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -387,7 +383,6 @@ let foo;
 
 //#endregion
 export { foo };
-
 ```
 ### diff
 ```diff
@@ -498,7 +493,6 @@ let n;
 
 //#endregion
 export { n };
-
 ```
 ### diff
 ```diff

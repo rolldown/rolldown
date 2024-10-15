@@ -28,7 +28,6 @@ class Foo extends Object {
 
 //#endregion
 export { Foo };
-
 ```
 ### diff
 ```diff

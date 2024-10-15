@@ -29,7 +29,6 @@ let keepMe5 = pure();
 let keepMe6 = some.fn();
 
 //#endregion
-
 ```
 ### diff
 ```diff

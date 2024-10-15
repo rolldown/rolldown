@@ -32,7 +32,6 @@ let keep8 = { async [x]() {} };
 let keep9 = { [{ toString() {} }]: "x" };
 
 //#endregion
-
 ```
 ### diff
 ```diff

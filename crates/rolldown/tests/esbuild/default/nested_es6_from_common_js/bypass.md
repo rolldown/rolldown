@@ -39,7 +39,6 @@ var import_foo = __toESM(require_foo());
 })();
 
 //#endregion
-
 ```
 ### diff
 ```diff

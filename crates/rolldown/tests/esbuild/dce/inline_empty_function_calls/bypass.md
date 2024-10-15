@@ -31,7 +31,6 @@ DROP(1);
 DROP();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -86,7 +85,6 @@ DROP(), foo(), DROP();
 foo(), DROP(), DROP();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -132,7 +130,6 @@ if (foo) {
 } else DROP();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -170,7 +167,6 @@ console.log(DROP());
 DROP();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -191,6 +187,7 @@ DROP();
 +DROP();
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/empty-cross-module.js
@@ -211,7 +208,6 @@ console.log(DROP());
 DROP();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -251,7 +247,6 @@ keep(foo());
 keep(1);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -273,5 +268,6 @@ keep(1);
  keep(1);
 +
 +//#endregion
+\ No newline at end of file
 
 ```

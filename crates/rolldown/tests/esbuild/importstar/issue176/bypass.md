@@ -33,7 +33,6 @@ __export(folders_index_exports, { foo: () => foo });
 console.log(JSON.stringify(folders_index_exports));
 
 //#endregion
-
 ```
 ### diff
 ```diff

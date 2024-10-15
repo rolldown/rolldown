@@ -22,7 +22,6 @@ import { default as bar } from "/Users/user/project/file.txt#bar";
 console.log(foo, bar);
 
 //#endregion
-
 ```
 ### diff
 ```diff

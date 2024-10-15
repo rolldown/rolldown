@@ -15,7 +15,6 @@ const x = 1;
 console.log(x, evil("x"));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -43,7 +42,6 @@ const x = 1;
 console.log(x, eval("x"));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -72,7 +70,6 @@ console.log(1, evil("x"));
 })();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -105,7 +102,6 @@ console.log(1, evil("x"));
 })();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -137,7 +133,6 @@ let y;
 })(y || (y = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -170,7 +165,6 @@ let z;
 })(z || (z = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff

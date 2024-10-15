@@ -24,7 +24,6 @@ function x() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -48,6 +47,7 @@ function x() {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/function3.js
@@ -83,7 +83,6 @@ function x() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -112,5 +111,6 @@ function x() {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```

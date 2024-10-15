@@ -30,7 +30,6 @@ class Foo {
 assert(new Foo().bar === 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff

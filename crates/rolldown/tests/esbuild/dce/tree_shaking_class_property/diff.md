@@ -52,7 +52,6 @@ let keep6 = class {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff

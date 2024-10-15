@@ -70,7 +70,6 @@ assert.equal(bar(), "bar");
 const { bar } = (init_bar(), __toCommonJS(bar_exports));
 
 //#endregion
-
 ```
 ### diff
 ```diff

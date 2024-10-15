@@ -33,7 +33,6 @@ function entry_default(x) {
 
 //#endregion
 export { entry_default as default };
-
 ```
 ### diff
 ```diff

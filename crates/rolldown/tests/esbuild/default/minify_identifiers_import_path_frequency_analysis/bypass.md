@@ -17,7 +17,6 @@ var WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default = 123;
 console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in this file should be named W, X, Y, or Z");
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -51,7 +50,6 @@ const foo = require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD();
 console.log(foo, "no identifier in this file should be named A, B, C, or D");
 
 //#endregion
-
 ```
 ### diff
 ```diff

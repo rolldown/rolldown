@@ -21,7 +21,6 @@ if (false) for await (foo of bar);
 
 //#endregion
 })();
-
 ```
 ### diff
 ```diff
@@ -32,6 +31,7 @@ if (false) for await (foo of bar);
 -(() => {
 -    if (false) foo;
 -    if (false) for (foo of bar) ;
+-})();
 +(function() {
 +
 +
@@ -40,6 +40,7 @@ if (false) for await (foo of bar);
 +if (false) for await (foo of bar);
 +
 +//#endregion
- })();
++})();
+\ No newline at end of file
 
 ```

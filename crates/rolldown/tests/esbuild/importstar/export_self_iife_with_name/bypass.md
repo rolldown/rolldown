@@ -27,7 +27,6 @@ const foo = 123;
 exports.foo = foo
 return exports;
 })({});
-
 ```
 ### diff
 ```diff

@@ -25,7 +25,6 @@ function Fragment() {}
 console.log(_jsx("div", { jsx }), _jsx(_Fragment, { children: _jsx(Fragment, {}) }));
 
 //#endregion
-
 ```
 ### diff
 ```diff

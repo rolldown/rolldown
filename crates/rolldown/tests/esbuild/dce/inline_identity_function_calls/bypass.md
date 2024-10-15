@@ -20,7 +20,6 @@ DROP(foo());
 DROP(1);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -60,7 +59,6 @@ DROP(foo());
 DROP(1);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -83,6 +81,7 @@ DROP(1);
 +DROP(1);
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/identity-first.js
@@ -111,7 +110,6 @@ keep(foo());
 keep(1);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -133,6 +131,7 @@ keep(1);
  keep(1);
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/identity-cross-module.js
@@ -157,7 +156,6 @@ DROP(foo());
 DROP(1);
 
 //#endregion
-
 ```
 ### diff
 ```diff

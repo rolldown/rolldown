@@ -23,7 +23,6 @@ class mustStartWithUpperCaseLetter {}
 console.log(_jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -47,5 +46,6 @@ console.log(_jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-le
 +console.log(_jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 +
 +//#endregion
+\ No newline at end of file
 
 ```

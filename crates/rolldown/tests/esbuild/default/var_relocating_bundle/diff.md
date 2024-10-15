@@ -33,7 +33,6 @@ for (var h in {});
 for (var { j, x: [k] } in {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -111,7 +110,6 @@ var l2;
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -181,7 +179,6 @@ if (true) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -235,7 +232,6 @@ function x() {
 x();
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -298,7 +294,6 @@ function x() {
 x();
 
 //#endregion
-
 ```
 ### diff
 ```diff

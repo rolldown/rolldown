@@ -36,7 +36,6 @@ assert.deepEqual(import_foo, {
 assert.equal(import_foo.foo, undefined);
 
 //#endregion
-
 ```
 ### diff
 ```diff

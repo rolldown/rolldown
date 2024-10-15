@@ -49,7 +49,6 @@ _jsx(Bar, {
 });
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -99,5 +98,6 @@ _jsx(Bar, {
 +});
 +
 +//#endregion
+\ No newline at end of file
 
 ```

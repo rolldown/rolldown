@@ -102,7 +102,6 @@ let shouldNotBeDoubleWrapped = [delete (empty(), foo(), bar()), delete id((foo()
 
 //#endregion
 export { shouldBeWrapped, shouldNotBeDoubleWrapped, shouldNotBeWrapped };
-
 ```
 ### diff
 ```diff

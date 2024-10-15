@@ -32,7 +32,6 @@ var import_custom_react = __toESM(require_custom_react());
 console.log(_jsx("div", { jsx: import_custom_react.jsx }), _jsx(_Fragment, { children: _jsx(import_custom_react.Fragment, {}) }));
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -18,7 +18,6 @@ import { default as pkg } from "/Users/user/project/node_modules/pkg/index";
 console.log(pkg);
 
 //#endregion
-
 ```
 ### diff
 ```diff

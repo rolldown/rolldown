@@ -86,7 +86,6 @@ export {
 import { a } from "./a2.js";
 
 export { a };
-
 ```
 ### diff
 ```diff
@@ -114,7 +113,6 @@ export {
 import { a } from "./a2.js";
 
 export { a };
-
 ```
 ### diff
 ```diff

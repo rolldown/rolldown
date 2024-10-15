@@ -22,7 +22,6 @@ import { default as assert } from "node:assert";
 assert.deepEqual(void 0, void 0);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -14,7 +14,6 @@ class Foo extends Bar {
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

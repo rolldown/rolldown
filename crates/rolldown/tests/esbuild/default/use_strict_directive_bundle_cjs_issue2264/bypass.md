@@ -23,7 +23,6 @@ let a = 1;
 
 //#endregion
 exports.a = a
-
 ```
 ### diff
 ```diff

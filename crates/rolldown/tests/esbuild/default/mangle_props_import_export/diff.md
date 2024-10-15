@@ -16,7 +16,6 @@ let foo_ = 123;
 
 //#endregion
 export { foo_ };
-
 ```
 ### diff
 ```diff
@@ -49,7 +48,6 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 
 //#endregion
 export default require_cjs();
-
 
 ```
 ### diff

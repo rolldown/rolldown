@@ -41,7 +41,6 @@ console.log(foo_exports);
 assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
 
 //#endregion
-
 ```
 ### diff
 ```diff

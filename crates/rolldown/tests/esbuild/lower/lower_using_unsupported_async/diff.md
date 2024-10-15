@@ -38,14 +38,13 @@ function bar() {
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,32 +1,1 @@
+@@ -1,32 +0,0 @@
 -function foo() {
 -  using a = b;
 -  if (nested) {
@@ -79,7 +78,6 @@ function bar() {
 -  });
 -}
 \ No newline at end of file
-+
 
 ```
 ## /out/loops.js
@@ -120,7 +118,6 @@ if (nested) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -158,6 +155,7 @@ if (nested) {
 \ No newline at end of file
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/switch.js
@@ -218,7 +216,6 @@ async function foo() {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -276,5 +273,6 @@ async function foo() {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```

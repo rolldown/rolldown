@@ -30,7 +30,6 @@ let ns$1 = 123;
 
 //#endregion
 export { ns, ns$1 as sn };
-
 ```
 ### diff
 ```diff

@@ -103,7 +103,6 @@ const { foo } = require_shared();
 console.log(foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -137,7 +136,6 @@ const { foo } = require_shared();
 console.log(foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

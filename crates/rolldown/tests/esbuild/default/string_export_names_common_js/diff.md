@@ -27,7 +27,6 @@ Object.defineProperty(exports, 'all the stuff', {
   }
 });
 exports["some export"] = someImport
-
 ```
 ### diff
 ```diff
@@ -54,5 +53,6 @@ exports["some export"] = someImport
 -var import_foo = require("./foo");
 -var all_the_stuff = __toESM(require("./foo"));
 +exports["some export"] = someImport
+\ No newline at end of file
 
 ```

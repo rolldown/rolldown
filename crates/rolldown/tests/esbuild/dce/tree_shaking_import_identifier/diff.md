@@ -30,7 +30,6 @@ class Keep extends Base {}
 new Keep();
 
 //#endregion
-
 ```
 ### diff
 ```diff

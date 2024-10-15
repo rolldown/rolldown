@@ -32,7 +32,6 @@ console.log("hello");
 assert.deepEqual(demo_pkg_index_exports, { foo: 123 });
 
 //#endregion
-
 ```
 ### diff
 ```diff

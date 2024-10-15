@@ -25,7 +25,6 @@ module.exports = 3;
 
 //#endregion
 exports.foo = foo
-
 ```
 ### diff
 ```diff
@@ -62,7 +61,6 @@ exports.foo = foo;
 module.exports = foo;
 
 //#endregion
-
 ```
 ### diff
 ```diff

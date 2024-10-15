@@ -21,7 +21,6 @@ const { default: defaultValue, readFileSync } = __toESM(require("node:fs"));
 console.log(fs, readFileSync, defaultValue);
 
 //#endregion
-
 ```
 ### diff
 ```diff

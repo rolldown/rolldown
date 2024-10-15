@@ -18,7 +18,6 @@ const ns = __toESM(require("external"));
 console.log(ns[foo](), new ns[foo]());
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -48,7 +47,6 @@ const ns = __toESM(require("external"));
 console.log(ns.foo(), new ns.foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -80,7 +78,6 @@ console.log(def(), foo());
 console.log(new def(), new foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -62,7 +62,6 @@ class Foo {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -125,6 +124,7 @@ class Foo {
  }
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/ts-define/ts-define.js

@@ -16,7 +16,6 @@ var x = function(x$1) {
 console.log(x.y);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -53,7 +52,6 @@ var x = function(x$1) {
 console.log(x);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -92,7 +90,6 @@ x = function(x$1) {
 console.log(x.y, x.z);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -141,7 +138,6 @@ x = function(x$1) {
 }(x || {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -195,7 +191,6 @@ x = function(x$1) {
 }(x || {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -249,7 +244,6 @@ x = function(x$1) {
 console.log(x);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -300,7 +294,6 @@ var x = function(x$1) {
 }(x || {});
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -326,6 +319,7 @@ var x = function(x$1) {
 +}(x || {});
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/namespace-after.js
@@ -353,7 +347,6 @@ var x = function(x$1) {
 })(x || (x = {}));
 
 //#endregion
-
 ```
 ### diff
 ```diff

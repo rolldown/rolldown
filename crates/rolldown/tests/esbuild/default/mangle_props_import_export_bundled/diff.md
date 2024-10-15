@@ -49,7 +49,6 @@ let bar_ = [
 
 //#endregion
 export { bar_ };
-
 ```
 ### diff
 ```diff
@@ -126,7 +125,6 @@ var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
 
 //#endregion
 export default require_entry_cjs();
-
 
 ```
 ### diff

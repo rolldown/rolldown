@@ -34,14 +34,13 @@ body{color:red}
 body{background:blue}
 
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.css
 +++ rolldown	entry.css
-@@ -1,21 +1,6 @@
+@@ -1,21 +1,5 @@
 -/* <data:text/css,body{color:%72%65%64}> */
 -body {
 -  color: red;
@@ -55,7 +54,7 @@ body{background:blue}
 -body {
 -  background: blue;
 -}
- 
+-
 -/* <data:text/css;charset=UTF-8,body{color:%72%65%64}> */
 -body {
 -  color: red;

@@ -178,7 +178,6 @@ var example_default$20 = "data:text/xml;charset=utf-8,xml";
 
 //#endregion
 export { example_default as css, example_default$1 as eot, example_default$2 as gif, example_default$3 as htm, example_default$4 as html, example_default$5 as jpeg, example_default$6 as jpg, example_default$7 as js, example_default$8 as json, example_default$9 as mjs, example_default$10 as otf, example_default$11 as pdf, example_default$12 as png, example_default$13 as sfnt, example_default$14 as svg, example_default$15 as ttf, example_default$16 as wasm, example_default$17 as webp, example_default$18 as woff, example_default$19 as woff2, example_default$20 as xml };
-
 ```
 ### diff
 ```diff

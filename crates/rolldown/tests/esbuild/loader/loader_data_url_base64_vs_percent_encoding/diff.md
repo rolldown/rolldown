@@ -47,7 +47,6 @@ var shouldUseBase64_2_default = "data:text/plain;base64,CgoKCgoK";
 console.log(shouldUsePercent_1_default, shouldUsePercent_2_default, shouldUseBase64_1_default, shouldUseBase64_2_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

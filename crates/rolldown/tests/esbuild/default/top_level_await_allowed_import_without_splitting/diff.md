@@ -87,14 +87,13 @@ var require_c = __commonJS({ "c.js"() {
 //#endregion
 export default require_entry();
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,29 +1,44 @@
+@@ -1,29 +1,43 @@
 -var c_exports = {};
 -var init_c = __esm({
 -    async "c.js"() {
@@ -167,6 +166,5 @@ export default require_entry();
 +
 +//#endregion
 +export default require_entry();
-+
 
 ```

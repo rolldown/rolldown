@@ -21,7 +21,6 @@ keep();
 
 //#endregion
 })();
-
 ```
 ### diff
 ```diff

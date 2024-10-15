@@ -87,7 +87,6 @@ console.log({x,...xx} = { x });
 console.log({x: {...xx}} = { x });
 
 //#endregion
-
 ```
 ### diff
 ```diff

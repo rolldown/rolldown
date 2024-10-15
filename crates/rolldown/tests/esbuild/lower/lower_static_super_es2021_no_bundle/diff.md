@@ -39,14 +39,13 @@ let Derived = _Derived;
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,33 +1,1 @@
+@@ -1,33 +0,0 @@
 -const _Derived = class _Derived extends Base {
 -};
 -__publicField(_Derived, "test", (key) => {
@@ -81,6 +80,5 @@ let Derived = _Derived;
 -});
 -let Derived = _Derived;
 \ No newline at end of file
-+
 
 ```

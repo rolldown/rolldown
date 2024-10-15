@@ -16,7 +16,6 @@ class Foo {
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

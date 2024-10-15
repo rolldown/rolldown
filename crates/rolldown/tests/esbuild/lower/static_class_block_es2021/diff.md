@@ -37,7 +37,6 @@ let B = class {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff

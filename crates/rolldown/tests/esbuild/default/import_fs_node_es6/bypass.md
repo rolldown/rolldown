@@ -19,7 +19,6 @@ import { default as defaultValue, readFileSync } from "node:fs";
 console.log(fs, readFileSync, defaultValue);
 
 //#endregion
-
 ```
 ### diff
 ```diff

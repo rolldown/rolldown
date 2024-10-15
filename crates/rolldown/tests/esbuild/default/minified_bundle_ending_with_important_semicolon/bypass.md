@@ -13,7 +13,6 @@
 while (foo());
 
 //#endregion
-
 ```
 ### diff
 ```diff

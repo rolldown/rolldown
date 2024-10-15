@@ -24,7 +24,6 @@ console.log(x_REMOVE, y_keep);
 
 //#endregion
 export { y_keep };
-
 ```
 ### diff
 ```diff
@@ -64,7 +63,6 @@ console.log(x_REMOVE, y_keep);
 
 //#endregion
 export { y_keep };
-
 ```
 ### diff
 ```diff
@@ -98,7 +96,6 @@ const y_keep = 2;
 
 //#endregion
 export { x_keep, y_keep };
-
 ```
 ### diff
 ```diff
@@ -141,7 +138,6 @@ function foo() {
 console.log(x_REMOVE, y_keep);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -181,7 +177,6 @@ console.log({
 });
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -224,7 +219,6 @@ function bar() {
 console.log(foo, bar());
 
 //#endregion
-
 ```
 ### diff
 ```diff

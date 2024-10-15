@@ -25,7 +25,6 @@ var data_default = { works };
 console.log(data_default === data_default, data_default !== data_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff

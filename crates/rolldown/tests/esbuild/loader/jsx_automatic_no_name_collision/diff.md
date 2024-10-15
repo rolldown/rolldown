@@ -22,7 +22,6 @@ const x = _createElement(Link, {
 });
 
 //#endregion
-
 ```
 ### diff
 ```diff

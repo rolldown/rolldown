@@ -69,7 +69,6 @@ var import_foo = __toESM(require_foo());
 import("./foo.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
 
 //#endregion
-
 ```
 ### diff
 ```diff

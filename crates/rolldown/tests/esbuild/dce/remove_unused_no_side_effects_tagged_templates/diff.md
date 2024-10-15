@@ -26,7 +26,6 @@ foo`remove this part ${keep} and this ${alsoKeep}`;
 `remove this part ${keep} and this ${alsoKeep}`;
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -41,7 +41,6 @@ function nestedScope() {
 nestedScope();
 
 //#endregion
-
 ```
 ### diff
 ```diff

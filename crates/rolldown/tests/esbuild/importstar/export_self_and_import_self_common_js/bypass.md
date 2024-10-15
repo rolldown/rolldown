@@ -26,7 +26,6 @@ console.log(entry_exports);
 
 //#endregion
 exports.foo = foo
-
 ```
 ### diff
 ```diff

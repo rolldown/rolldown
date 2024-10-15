@@ -25,7 +25,6 @@ assert.equal(foo$1, 123);
 assert.equal(foo, 234);
 
 //#endregion
-
 ```
 ### diff
 ```diff

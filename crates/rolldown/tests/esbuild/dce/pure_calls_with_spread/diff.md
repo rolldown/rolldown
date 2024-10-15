@@ -16,7 +16,6 @@
 /* @__PURE__ */ new foo(...args);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -27,7 +27,6 @@ let foo = value_copy;
 console.log(foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

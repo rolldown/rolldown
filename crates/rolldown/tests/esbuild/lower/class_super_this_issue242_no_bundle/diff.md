@@ -36,7 +36,6 @@ class B extends A {
 
 //#endregion
 export { A, B };
-
 ```
 ### diff
 ```diff

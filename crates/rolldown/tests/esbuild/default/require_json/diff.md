@@ -47,7 +47,6 @@ var init_test = __esm({ "test.json"() {
 console.log((init_test(), __toCommonJS(test_exports).default));
 
 //#endregion
-
 ```
 ### diff
 ```diff

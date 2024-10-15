@@ -41,7 +41,6 @@ Object.defineProperty(exports, 'y', {
     return import_foo.x;
   }
 });
-
 ```
 ### diff
 ```diff

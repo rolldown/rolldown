@@ -31,7 +31,6 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 new (require_foo()).Foo();
 
 //#endregion
-
 ```
 ### diff
 ```diff

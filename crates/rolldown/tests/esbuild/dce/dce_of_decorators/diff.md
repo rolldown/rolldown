@@ -58,7 +58,6 @@ class StaticMethod {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -116,5 +115,6 @@ class StaticMethod {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```

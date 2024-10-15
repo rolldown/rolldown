@@ -30,7 +30,6 @@ class KeepMe2 {
 new KeepMe2();
 
 //#endregion
-
 ```
 ### diff
 ```diff

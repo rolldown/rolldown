@@ -35,7 +35,6 @@ x(f("keepThisCall"));
 x(g("keepThisCall"));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -88,7 +87,6 @@ x(f("keepThisCall"));
 x(g("keepThisCall"));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -145,7 +143,6 @@ x(f("keepThisCall"));
 x(g("keepThisCall"));
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -194,7 +191,6 @@ x(f("keepThisCall"));
 
 //#endregion
 export { f as default };
-
 ```
 ### diff
 ```diff

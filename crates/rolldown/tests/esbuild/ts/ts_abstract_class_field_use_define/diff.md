@@ -21,7 +21,6 @@ class Foo {
 (() => new Foo())();
 
 //#endregion
-
 ```
 ### diff
 ```diff

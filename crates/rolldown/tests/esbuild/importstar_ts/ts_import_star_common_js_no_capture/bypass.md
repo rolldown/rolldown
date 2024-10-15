@@ -33,7 +33,6 @@ let foo = 234;
 console.log(import_foo.foo, import_foo.foo, foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

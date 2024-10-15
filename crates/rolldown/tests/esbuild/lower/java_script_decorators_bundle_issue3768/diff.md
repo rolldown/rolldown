@@ -19,7 +19,6 @@ var Foo = _Foo;
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff
@@ -66,7 +65,6 @@ class Foo {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -92,6 +90,7 @@ class Foo {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/base-instance-method.js
@@ -124,7 +123,6 @@ class Foo {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -155,6 +153,7 @@ class Foo {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/base-static-accessor.js
@@ -174,7 +173,6 @@ var Foo = _Foo;
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -217,7 +215,6 @@ class Foo {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -240,6 +237,7 @@ class Foo {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/base-static-method.js
@@ -270,7 +268,6 @@ class Foo {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -299,6 +296,7 @@ class Foo {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/derived-instance-accessor.js
@@ -320,7 +318,6 @@ var Foo = _Foo;
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -368,7 +365,6 @@ class Foo extends Bar {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -394,6 +390,7 @@ class Foo extends Bar {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/derived-instance-method.js
@@ -426,7 +423,6 @@ class Foo extends Bar {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -457,6 +453,7 @@ class Foo extends Bar {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/derived-static-accessor.js
@@ -475,7 +472,6 @@ var Foo = _Foo;
 ```
 ### rolldown
 ```js
-
 
 ```
 ### diff
@@ -516,7 +512,6 @@ class Foo extends Bar {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -538,6 +533,7 @@ class Foo extends Bar {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```
 ## /out/derived-static-method.js
@@ -567,7 +563,6 @@ class Foo extends Bar {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -595,5 +590,6 @@ class Foo extends Bar {
 +}
 +
 +//#endregion
+\ No newline at end of file
 
 ```

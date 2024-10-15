@@ -32,7 +32,6 @@ const imp = [import("foo"), function() {
 console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 
 //#endregion
-
 ```
 ### diff
 ```diff

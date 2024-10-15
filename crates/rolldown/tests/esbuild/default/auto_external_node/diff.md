@@ -20,7 +20,6 @@ import "node:what-is-this";
 fs.readFile();
 
 //#endregion
-
 ```
 ### diff
 ```diff

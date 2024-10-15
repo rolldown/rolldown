@@ -18,7 +18,6 @@ import { default as b } from "data:other/thing;stuff;base64,c29tZURhdGEyMzQ=";
 console.log(a, b);
 
 //#endregion
-
 ```
 ### diff
 ```diff

@@ -39,7 +39,6 @@ class KeepMe3 {
 new KeepMe3();
 
 //#endregion
-
 ```
 ### diff
 ```diff

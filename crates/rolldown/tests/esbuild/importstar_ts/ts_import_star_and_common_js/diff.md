@@ -40,7 +40,6 @@ const ns2 = (init_foo(), __toCommonJS(foo_exports));
 console.log(foo, ns2.foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff

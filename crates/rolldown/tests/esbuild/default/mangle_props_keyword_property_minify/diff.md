@@ -9,7 +9,6 @@ class Foo{static t={get s(){return 123}}}
 ### rolldown
 ```js
 
-
 ```
 ### diff
 ```diff

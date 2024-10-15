@@ -14,7 +14,6 @@ let yyyyy = ({ xxxxx }) => ({ xxxxx });
 
 //#endregion
 export { yyyyy };
-
 ```
 ### diff
 ```diff

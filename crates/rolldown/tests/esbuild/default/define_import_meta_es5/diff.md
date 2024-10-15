@@ -15,7 +15,6 @@ console.log(import_meta.y);
 console.log(import.meta.y);
 
 //#endregion
-
 ```
 ### diff
 ```diff

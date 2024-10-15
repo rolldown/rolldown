@@ -32,7 +32,6 @@ var import_foo = __toESM(require_foo());
 assert.equal(import_foo.foo, undefined);
 
 //#endregion
-
 ```
 ### diff
 ```diff

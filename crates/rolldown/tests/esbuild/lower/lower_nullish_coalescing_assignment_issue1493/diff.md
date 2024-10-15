@@ -26,7 +26,6 @@ class A {
 
 //#endregion
 export { A };
-
 ```
 ### diff
 ```diff

@@ -21,7 +21,6 @@ x ? import("a") : y ? Promise.resolve().then(() => __toESM(require_import())) : 
 import(x ? "a" : y ? "./import" : "c");
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -58,7 +57,6 @@ x ? y ? import("a") : Promise.resolve().then(() => __toESM(require_import())) : 
 import(x ? y ? "a" : "./import" : c);
 
 //#endregion
-
 ```
 ### diff
 ```diff

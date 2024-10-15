@@ -31,7 +31,6 @@ var init_test = __esm({ "test.txt"() {
 console.log((init_test(), __toCommonJS(test_exports)));
 
 //#endregion
-
 ```
 ### diff
 ```diff

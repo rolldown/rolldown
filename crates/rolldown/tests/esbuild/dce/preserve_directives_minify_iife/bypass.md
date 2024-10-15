@@ -30,7 +30,6 @@ entry();
 
 //#endregion
 })();
-
 ```
 ### diff
 ```diff

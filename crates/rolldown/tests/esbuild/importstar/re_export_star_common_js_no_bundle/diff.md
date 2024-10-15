@@ -20,7 +20,6 @@ Object.keys(foo).forEach(function (k) {
 });
 require("foo");
 
-
 ```
 ### diff
 ```diff

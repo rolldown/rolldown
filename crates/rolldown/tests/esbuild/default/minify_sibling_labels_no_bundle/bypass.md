@@ -47,7 +47,6 @@ foo: {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff

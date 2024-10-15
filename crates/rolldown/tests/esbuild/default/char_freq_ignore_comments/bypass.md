@@ -22,7 +22,6 @@ function a_default(one, two, three, four) {
 
 //#endregion
 export { a_default as default };
-
 ```
 ### diff
 ```diff
@@ -59,7 +58,6 @@ function b_default(one, two, three, four) {
 
 //#endregion
 export { b_default as default };
-
 ```
 ### diff
 ```diff

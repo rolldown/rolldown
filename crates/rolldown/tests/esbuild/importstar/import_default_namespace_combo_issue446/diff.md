@@ -16,7 +16,6 @@ import { default as def, default as default2 } from "external";
 console.log(def, default2);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -45,7 +44,6 @@ import { default as def } from "external";
 console.log(def, ns);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -75,7 +73,6 @@ import { default as def } from "external";
 console.log(def, ns, ns.default);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -105,7 +102,6 @@ import { default as def } from "external";
 console.log(def, ns, ns.def);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -135,7 +131,6 @@ import { default as def } from "external";
 console.log(def, ns.default);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -165,7 +160,6 @@ import { default as def } from "external";
 console.log(def, ns.def);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -196,7 +190,6 @@ import { internal_default } from "./internal.js";
 console.log(internal_default, internal_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -230,7 +223,6 @@ import { internal_default, internal_exports } from "./internal.js";
 console.log(internal_default, internal_exports);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -268,7 +260,6 @@ import { internal_default, internal_exports } from "./internal.js";
 console.log(internal_default, internal_exports, internal_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -306,7 +297,6 @@ import { internal_default, internal_exports } from "./internal.js";
 console.log(internal_default, internal_exports, void 0);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -340,7 +330,6 @@ import { internal_default } from "./internal.js";
 console.log(internal_default, internal_default);
 
 //#endregion
-
 ```
 ### diff
 ```diff
@@ -370,7 +359,6 @@ import { internal_default } from "./internal.js";
 console.log(internal_default, void 0);
 
 //#endregion
-
 ```
 ### diff
 ```diff

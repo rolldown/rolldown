@@ -1,3 +1,5 @@
+# Reason
+1. rolldown support advanced barrel exports opt
 # Diff
 ## /out.js
 ### esbuild

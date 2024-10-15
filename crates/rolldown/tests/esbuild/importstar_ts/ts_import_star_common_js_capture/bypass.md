@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal
+2. could reuse `ns` binding
 # Diff
 ## /out.js
 ### esbuild

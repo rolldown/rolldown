@@ -1,3 +1,5 @@
+# Reason
+1. different deconflict naming style and order
 # Diff
 ## /out.js
 ### esbuild
@@ -11,7 +13,7 @@ var foo = 123;
 
 // entry.ts
 var foo2 = 234;
-console.log(foo_exports, foo_exports.foo, foo2);
+console.log(foo_exports, foo, foo2);
 ```
 ### rolldown
 ```js
@@ -43,7 +45,7 @@ console.log(foo_exports, foo$1, foo);
  });
 -var foo = 123;
 -var foo2 = 234;
--console.log(foo_exports, foo_exports.foo, foo2);
+-console.log(foo_exports, foo, foo2);
 +var foo$1 = 123;
 +var foo = 234;
 +console.log(foo_exports, foo$1, foo);

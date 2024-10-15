@@ -1,7 +1,7 @@
 # Compatibility metric
 - total: 784
-- passed: 220
-- passed ratio: 28.06%
+- passed: 231
+- passed ratio: 29.46%
 # Compatibility metric details
 ## dce
 - total: 113
@@ -21,8 +21,8 @@
 - passed ratio: 68.42%
 ## importstar_ts
 - total: 23
-- passed: 6
-- passed ratio: 26.09%
+- passed: 17
+- passed ratio: 73.91%
 ## loader
 - total: 67
 - passed: 7

@@ -18,7 +18,7 @@ console.log(foo_exports, void 0);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region bar.js

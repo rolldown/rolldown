@@ -20,7 +20,7 @@ console.log(x_txt, y_default);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region y.txt

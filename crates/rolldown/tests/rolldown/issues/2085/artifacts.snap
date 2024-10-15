@@ -46,7 +46,7 @@ export { c_default as default };
 ## main.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region main.js
 import("./c.js").then((mod) => {

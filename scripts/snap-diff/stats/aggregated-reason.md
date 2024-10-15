@@ -96,17 +96,6 @@
 - crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
 - crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 
-## side effects detect
-
-- crates/rolldown/tests/esbuild/dce/dce_of_destructuring
-- crates/rolldown/tests/esbuild/dce/dce_type_of
-- crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition
-- crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string
-- crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition
-- crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
-
 ## not support copy loader
 
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
@@ -146,6 +135,14 @@
 - crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_capture
 - crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_no_capture
 - crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_unused
+
+## side effects detect
+
+- crates/rolldown/tests/esbuild/dce/dce_of_destructuring
+- crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition
+- crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition
+- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
+- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
 
 ## custom diff resolver
 
@@ -350,10 +347,6 @@
 
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 
-## should use `import x from 'mod'` rather than `import {default as x } from 'mod'`
-
-- crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval
-
 ## `cjs_exports` initialized should not wrapped in `init_cjs`
 
 - crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper
@@ -483,10 +476,6 @@ initialization
 ## should not generate `__toCommonJS`
 
 - crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js
-
-## should not rewrite default specifier to `{default as xxx}`
-
-- crates/rolldown/tests/esbuild/default/external_module_exclusion_relative_path
 
 ## should rename `require` when it is appear in param position
 
@@ -635,10 +624,6 @@ initialization
 ## Not align with esbuild
 
 - crates/rolldown/tests/esbuild/loader/loader_data_url_extension_based_mime
-
-## should not transform `ImoprtDefaultSpecifier` as `import {default as x}`
-
-- crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime
 
 ## Wrong wrapkind, when json is imported by `require`
 

@@ -1,5 +1,5 @@
 # Reason
-1. side effects detect
+1. the `console` was revemod due to oxc transformer which is expected
 # Diff
 ## /out.js
 ### esbuild
@@ -14,10 +14,6 @@
 (function() {
 
 
-//#region entry.js
-var hasBar = typeof bar !== "undefined";
-
-//#endregion
 })();
 ```
 ### diff
@@ -25,11 +21,10 @@ var hasBar = typeof bar !== "undefined";
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,1 @@
 -(() => {
 -    if (false) console.log(hasBar);
-+(function () {
-+    var hasBar = typeof bar !== "undefined";
- })();
+-})();
++(function () {})();
 
 ```

@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as assert_star from "node:assert";
-import { default as assert, equal } from "node:assert";
+import assert, { equal } from "node:assert";
 
 //#region main.js
 assert.equal(1, 1);

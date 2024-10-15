@@ -83,7 +83,7 @@ export {
 ```
 ### rolldown
 ```js
-import { default as a } from "extern-esm";
+import a from "extern-esm";
 
 
 //#region esm.js
@@ -128,7 +128,7 @@ export { exported };
 +++ rolldown	entry.js
 @@ -1,14 +1,23 @@
 -import {__commonJS, __require} from "./chunk-MQN2VSL5.js";
-+import {default as a} from "extern-esm";
++import a from "extern-esm";
 +var esm_default = 1;
 +var json_2_default = 2;
 +var require_file = __commonJS({

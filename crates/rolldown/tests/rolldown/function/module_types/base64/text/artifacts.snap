@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region text.data
 var text_default = "IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0LjQstC10YIg0LzQuNGACuOBk+OCk+OBq+OBoeOBr+S4lueVjAo=";

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region shared.js
 const a$2 = "shared.js";

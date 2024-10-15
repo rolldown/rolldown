@@ -17,15 +17,9 @@
   diff
 ## [dce_of_iife](../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   diff
-## [dce_type_of](../../../crates/rolldown/tests/esbuild/dce/dce_type_of/diff.md)
-  diff
 ## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/diff.md)
   diff
-## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/diff.md)
-  diff
 ## [dce_type_of_equals_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition/diff.md)
-  diff
-## [dce_type_of_equals_string_mangle](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle/diff.md)
   diff
 ## [dead_code_following_jump](../../../crates/rolldown/tests/esbuild/dce/dead_code_following_jump/diff.md)
   diff
@@ -77,8 +71,6 @@
   diff
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread/diff.md)
   diff
-## [remove_unused_imports_eval](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval/diff.md)
-  diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
   diff
 ## [tree_shaking_binary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators/diff.md)
@@ -121,6 +113,7 @@
 ## [base64_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [data_url_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
 ## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal)
+## [dce_type_of](../../../crates/rolldown/tests/esbuild/dce/dce_type_of)
 ## [file_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/file_loader_remove_unused)
 ## [json_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/json_loader_remove_unused)
 ## [package_json_side_effects_array_glob](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_glob)
@@ -144,6 +137,7 @@
 ## [preserve_directives_minify_pass_through](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_pass_through)
 ## [remove_unused_import_meta](../../../crates/rolldown/tests/esbuild/dce/remove_unused_import_meta)
 ## [remove_unused_imports](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports)
+## [remove_unused_imports_eval](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval)
 ## [remove_unused_imports_eval_ts](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval_ts)
 ## [remove_unused_pure_comment_calls](../../../crates/rolldown/tests/esbuild/dce/remove_unused_pure_comment_calls)
 ## [text_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/text_loader_remove_unused)
@@ -153,6 +147,8 @@
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_symbol_instances](../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)
+## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/bypass.md)
+## [dce_type_of_equals_string_mangle](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle/bypass.md)
 ## [dce_var_exports](../../../crates/rolldown/tests/esbuild/dce/dce_var_exports/bypass.md)
 ## [import_re_export_of_namespace_import](../../../crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import/bypass.md)
 ## [inline_empty_function_calls](../../../crates/rolldown/tests/esbuild/dce/inline_empty_function_calls/bypass.md)

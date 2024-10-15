@@ -26,7 +26,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bytesInOutput should be at least 99 (1).js
 
 ```js
-import { default as a } from "./1111111111111111111111111111111111111111111111111111111111111111111111.file";
+import a from "./1111111111111111111111111111111111111111111111111111111111111111111111.file";
 
 //#region bytesInOutput should be at least 99 (1).js
 console.log(a);
@@ -36,7 +36,7 @@ console.log(a);
 ## bytesInOutput should be at least 99 (2).js
 
 ```js
-import { default as a } from "./2222222222222222222222222222222222222222222222222222222222222222222222.copy";
+import a from "./2222222222222222222222222222222222222222222222222222222222222222222222.copy";
 
 //#region bytesInOutput should be at least 99 (2).js
 console.log(a);

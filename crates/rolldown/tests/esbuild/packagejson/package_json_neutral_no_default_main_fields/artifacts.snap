@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as fn } from "demo-pkg";
+import fn from "demo-pkg";
 
 //#region src/entry.js
 console.log(fn());

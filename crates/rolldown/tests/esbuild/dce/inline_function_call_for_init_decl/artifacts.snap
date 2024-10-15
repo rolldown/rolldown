@@ -7,13 +7,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region entry.js
-function empty() {}
-function id(x) {
-	return x;
-}
-for (var y = empty(); false;);
-for (var z = id(123); false;);
-
-//#endregion
 ```

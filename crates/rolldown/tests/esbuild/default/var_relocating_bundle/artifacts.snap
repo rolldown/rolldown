@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 function x() {
 	{
 		var a;
-		for (var b; 0;);
 		for (var e of []);
 		for (var { f, x: [g] } of []);
 		for (var h in {});
@@ -30,7 +29,6 @@ x();
 //#region function.js
 function x() {
 	var a;
-	for (var b; 0;);
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
@@ -48,7 +46,6 @@ x();
 //#region let.js
 {
 	let a;
-	for (let b; 0;);
 	for (let e of []);
 	for (let { f, x: [g] } of []);
 	for (let h in {});
@@ -64,7 +61,6 @@ x();
 //#region nested.js
 {
 	var a;
-	for (var b; 0;);
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
@@ -79,7 +75,6 @@ x();
 ```js
 
 //#region top-level.js
-for (var b; 0;);
 for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});

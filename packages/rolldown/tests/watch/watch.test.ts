@@ -37,8 +37,17 @@ test('watch', async () => {
   // The different platform maybe emit multiple events
   expect(watchChangeFn).toBeCalled()
 
+  await watcher.close()
+
+  // edit file
+  fs.writeFileSync(input, 'console.log(3)')
+  // sleep 50ms
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50)
+  })
+  // The watcher is closed, so the output file should not be updated
+  expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
+
   // revert change
   fs.writeFileSync(input, inputSource)
-
-  await watcher.close()
 })

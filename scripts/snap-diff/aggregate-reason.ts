@@ -60,16 +60,19 @@ export function aggregateReason(): AggregateReasonEntries {
     let content = fs.readFileSync(entryAbPath, 'utf-8')
     let reasons = extractReason(content)
     let dirname = path.relative(workspaceDir, path.dirname(entryAbPath))
-    const posixPath = dirname.replaceAll('\\', '/')
+    // const posixPath = dirname.replaceAll('\\', '/')
 
     for (let reason of reasons) {
       if (!reverseMap[reason]) {
         reverseMap[reason] = []
       }
-      reverseMap[reason].push(posixPath)
+      reverseMap[reason].push(dirname)
     }
   }
   let reverseMapEntries = Object.entries(reverseMap)
+  for (let [_, dirs] of reverseMapEntries) {
+    dirs.sort()
+  }
   reverseMapEntries.sort((a, b) => {
     return b[1].length - a[1].length
   })

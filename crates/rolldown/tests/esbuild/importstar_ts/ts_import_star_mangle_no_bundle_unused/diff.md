@@ -1,3 +1,5 @@
+# Reason
+1. top level var rewrite
 # Diff
 ## /out.js
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. should not wrap the `foo_exports` initialization in `init_foo`
 # Diff
 ## /out.js
 ### esbuild

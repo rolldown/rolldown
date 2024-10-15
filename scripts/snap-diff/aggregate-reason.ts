@@ -50,8 +50,8 @@ const esbuildTestDir = path.join(
 )
 
 const workspaceDir = path.join(import.meta.dirname, '../..')
-
-export function aggregateReason() {
+export type AggregateReasonEntries = [string, string[]][]
+export function aggregateReason(): AggregateReasonEntries {
   const entries = fg.globSync([`${esbuildTestDir}/**/diff.md`], { dot: false })
   // a map for each directory to its diff reasons
   let reasonMap: Record<string, string[]> = {}
@@ -73,12 +73,5 @@ export function aggregateReason() {
   reverseMapEntries.sort((a, b) => {
     return b[1].length - a[1].length
   })
-  for (let [reason, cases] of reverseMapEntries) {
-    console.log(reason, ':')
-    for (let caseName of cases) {
-      console.log(caseName)
-    }
-    console.log('-------------------')
-  }
+  return reverseMapEntries
 }
-aggregateReason()

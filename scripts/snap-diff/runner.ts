@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js'
 import { diffCase } from './diff'
 import { DebugConfig } from './types'
+import { aggregateReason } from './aggregate-reason.js'
 const esbuildTestDir = path.join(
   import.meta.dirname,
   '../../crates/rolldown/tests/esbuild',
@@ -112,6 +113,23 @@ export function run(includeList: string[], debugConfig: DebugConfig) {
     aggregatedStats.stats.failed += summary.stats.failed
   }
   generateStatsMarkdown(aggregatedStats)
+  generateAggregateMarkdown()
+}
+
+function generateAggregateMarkdown() {
+  let entries = aggregateReason()
+  let markdown = '# Aggregate Reason\n'
+  for (let [reason, caseDirs] of entries) {
+    markdown += `## ${reason}\n`
+    for (let dir of caseDirs) {
+      markdown += `- ${dir}\n`
+    }
+  }
+
+  fs.writeFileSync(
+    path.resolve(import.meta.dirname, './stats/aggregated-reason.md'),
+    markdown,
+  )
 }
 
 function getRolldownSnap(caseDir: string) {
@@ -152,7 +170,7 @@ function generateStatsMarkdown(aggregateStats: AggregateStats) {
     markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(2)}%\n`
   })
   fs.writeFileSync(
-    path.resolve(import.meta.dirname, './summary/stats.md'),
+    path.resolve(import.meta.dirname, './stats/stats.md'),
     markdown,
   )
 }

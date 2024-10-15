@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc -b",
-    "esbuild-snap-diff": "node --import @oxc-node/core/register ./snap-diff/index.ts",
-    "aggregate-esbuild-diff-reason": "node --import @oxc-node/core/register ./snap-diff/aggregate-reason.ts"
+    "esbuild-snap-diff": "node --import @oxc-node/core/register ./snap-diff/index.ts"
   },
   "dependencies": {
     "@parcel/watcher": "^2.4.1",

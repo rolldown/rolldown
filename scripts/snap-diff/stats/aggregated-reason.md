@@ -1,24 +1,4 @@
 # Aggregate Reason
-## could be done in minifier
-- crates/rolldown/tests/esbuild/default/mangle_no_quoted_props_minify_syntax
-- crates/rolldown/tests/esbuild/default/mangle_props
-- crates/rolldown/tests/esbuild/default/mangle_props_avoid_collisions
-- crates/rolldown/tests/esbuild/default/mangle_props_import_export
-- crates/rolldown/tests/esbuild/default/mangle_props_import_export_bundled
-- crates/rolldown/tests/esbuild/default/mangle_props_jsx_preserve
-- crates/rolldown/tests/esbuild/default/mangle_props_jsx_transform
-- crates/rolldown/tests/esbuild/default/mangle_props_key_comment
-- crates/rolldown/tests/esbuild/default/mangle_props_key_comment_minify
-- crates/rolldown/tests/esbuild/default/mangle_props_keyword_property_minify
-- crates/rolldown/tests/esbuild/default/mangle_props_lowered_class_fields
-- crates/rolldown/tests/esbuild/default/mangle_props_lowered_optional_chain
-- crates/rolldown/tests/esbuild/default/mangle_props_minify
-- crates/rolldown/tests/esbuild/default/mangle_props_no_shorthand
-- crates/rolldown/tests/esbuild/default/mangle_props_optional_chain
-- crates/rolldown/tests/esbuild/default/mangle_props_shorthand
-- crates/rolldown/tests/esbuild/default/mangle_props_super_call
-- crates/rolldown/tests/esbuild/default/mangle_quoted_props
-- crates/rolldown/tests/esbuild/default/mangle_quoted_props_minify_syntax
 ## not support legal comments
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
@@ -185,9 +165,6 @@
 ## drop label feature
 - crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 - crates/rolldown/tests/esbuild/dce/drop_labels
-## Could be done in minifier
-- crates/rolldown/tests/esbuild/dce/inline_function_call_for_init_decl
-- crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 - crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators

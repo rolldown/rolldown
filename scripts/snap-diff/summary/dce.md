@@ -31,10 +31,6 @@
   diff
 ## [inline_function_call_behavior_changes](../../../crates/rolldown/tests/esbuild/dce/inline_function_call_behavior_changes/diff.md)
   diff
-## [inline_function_call_for_init_decl](../../../crates/rolldown/tests/esbuild/dce/inline_function_call_for_init_decl/diff.md)
-  diff
-## [multiple_declaration_tree_shaking_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax/diff.md)
-  diff
 ## [no_side_effects_comment](../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment/diff.md)
   diff
 ## no_side_effects_comment_ignore_annotations
@@ -152,8 +148,10 @@
 ## [dce_var_exports](../../../crates/rolldown/tests/esbuild/dce/dce_var_exports/bypass.md)
 ## [import_re_export_of_namespace_import](../../../crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import/bypass.md)
 ## [inline_empty_function_calls](../../../crates/rolldown/tests/esbuild/dce/inline_empty_function_calls/bypass.md)
+## [inline_function_call_for_init_decl](../../../crates/rolldown/tests/esbuild/dce/inline_function_call_for_init_decl/bypass.md)
 ## [inline_identity_function_calls](../../../crates/rolldown/tests/esbuild/dce/inline_identity_function_calls/bypass.md)
 ## [multiple_declaration_tree_shaking](../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking/bypass.md)
+## [multiple_declaration_tree_shaking_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax/bypass.md)
 ## [nested_function_inlining_with_spread](../../../crates/rolldown/tests/esbuild/dce/nested_function_inlining_with_spread/bypass.md)
 ## [package_json_side_effects_false_keep_bare_import_and_require_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js/bypass.md)
 ## [package_json_side_effects_false_keep_named_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js/bypass.md)

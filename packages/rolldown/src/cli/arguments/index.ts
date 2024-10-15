@@ -95,9 +95,7 @@ export function parseCliArguments() {
           writable: true,
         })
       } else if (type === 'object' && typeof option.value === 'string') {
-        const [key, value] = option.value
-          .split(',')
-          .map((x) => x.split('='))[0]
+        const [key, value] = option.value.split(',').map((x) => x.split('='))[0]
         if (!values[option.name]) {
           Object.defineProperty(values, option.name, {
             value: {},

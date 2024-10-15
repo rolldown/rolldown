@@ -2,20 +2,12 @@
 //#region 	vite/modulepreload-polyfill.js
 __VITE_IS_MODERN__ && function polyfill() {
 	const relList = document.createElement("link").relList;
-	if (relList && relList.supports && relList.supports("modulepreload")) {
-		return;
-	}
-	for (const link of document.querySelectorAll("link[rel=\"modulepreload\"]")) {
-		processPreload(link);
-	}
+	if (relList && relList.supports && relList.supports("modulepreload")) return;
+	for (const link of document.querySelectorAll("link[rel=\"modulepreload\"]")) processPreload(link);
 	new MutationObserver((mutations) => {
 		for (const mutation of mutations) {
-			if (mutation.type !== "childList") {
-				continue;
-			}
-			for (const node of mutation.addedNodes) {
-				if (node.tagName === "LINK" && node.rel === "modulepreload") processPreload(node);
-			}
+			if (mutation.type !== "childList") continue;
+			for (const node of mutation.addedNodes) if (node.tagName === "LINK" && node.rel === "modulepreload") processPreload(node);
 		}
 	}).observe(document, {
 		childList: true,

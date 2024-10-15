@@ -16,9 +16,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 	(function(x = arguments) {
 		return arguments;
 	});
-	({ foo(x = arguments) {
-		return arguments;
-	} });
 	class Foo {
 		foo(x = arguments) {
 			return arguments;
@@ -37,10 +34,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 		var arguments$1;
 		return arguments$1;
 	});
-	({ foo(x = arguments) {
-		var arguments$1;
-		return arguments$1;
-	} });
 	(x) => arguments;
 	() => arguments;
 	async () => arguments;

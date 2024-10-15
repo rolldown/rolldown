@@ -141,6 +141,8 @@ impl<'ast> TakeIn<'ast> for ast::Program<'ast> {
     Self {
       span: TakeIn::dummy(alloc),
       source_type: SourceType::default(),
+      source_text: "",
+      comments: TakeIn::dummy(alloc),
       directives: TakeIn::dummy(alloc),
       hashbang: TakeIn::dummy(alloc),
       body: TakeIn::dummy(alloc),

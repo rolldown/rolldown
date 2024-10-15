@@ -42,8 +42,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region main.js
-exports.test.res = 1000;
-exports.a = 1000;
+exports.test.res = 1e3;
+exports.a = 1e3;
 module.test = {};
 module.exports = {};
 let res = typeof module === "object" ? module.exports : exports;

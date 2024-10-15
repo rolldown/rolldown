@@ -39,9 +39,8 @@ impl PreProcessEcmaAst {
     bundle_options: &NormalizedBundlerOptions,
   ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
     // Build initial semantic data and check for semantic errors.
-    let semantic_ret = ast.program.with_mut(|WithMutFields { program, source, .. }| {
-      SemanticBuilder::new(source).build(program)
-    });
+    let semantic_ret =
+      ast.program.with_mut(|WithMutFields { program, .. }| SemanticBuilder::new().build(program));
 
     // TODO:
     // if !semantic_ret.errors.is_empty() {
@@ -53,23 +52,23 @@ impl PreProcessEcmaAst {
 
     // Transform TypeScript and jsx.
     if !matches!(parse_type, OxcParseType::Js) {
-      let trivias = ast.trivias.clone();
-      let ret = ast.program.with_mut(move |fields| {
-        let mut transformer_options = TransformOptions::default();
-        match parse_type {
-          OxcParseType::Js => unreachable!("Should not reach here"),
-          OxcParseType::Jsx | OxcParseType::Tsx => {
-            transformer_options.react.jsx_plugin = true;
+      let ret =
+        ast.program.with_mut(move |fields| {
+          let mut transformer_options = TransformOptions::default();
+          match parse_type {
+            OxcParseType::Js => unreachable!("Should not reach here"),
+            OxcParseType::Jsx | OxcParseType::Tsx => {
+              transformer_options.react.jsx_plugin = true;
+            }
+            OxcParseType::Ts => {}
           }
-          OxcParseType::Ts => {}
-        }
-        if let Some(jsx) = &bundle_options.jsx {
-          transformer_options.react = jsx.clone();
-        }
+          if let Some(jsx) = &bundle_options.jsx {
+            transformer_options.react = jsx.clone();
+          }
 
-        Transformer::new(fields.allocator, path, fields.source, trivias, transformer_options)
-          .build_with_symbols_and_scopes(symbols, scopes, fields.program)
-      });
+          Transformer::new(fields.allocator, path, transformer_options)
+            .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+        });
 
       // TODO: emit diagnostic, aiming to pass more tests,
       // we ignore warning for now
@@ -87,7 +86,7 @@ impl PreProcessEcmaAst {
       self.ast_changed = true;
     }
 
-    ast.program.with_mut(|WithMutFields { allocator, program, source }| -> anyhow::Result<()> {
+    ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
       // Use built-in define plugin.
       if let Some(replace_global_define_config) = replace_global_define_config {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
@@ -113,7 +112,7 @@ impl PreProcessEcmaAst {
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
         let compressor = Compressor::new(allocator, CompressOptions::dead_code_elimination());
         if self.ast_changed {
-          let semantic_ret = SemanticBuilder::new(source).with_stats(self.stats).build(program);
+          let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
           (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
         }
         compressor.build_with_symbols_and_scopes(symbols, scopes, program);
@@ -129,8 +128,8 @@ impl PreProcessEcmaAst {
     });
 
     // NOTE: Recreate semantic data because AST is changed in the transformations above.
-    (symbols, scopes) = ast.program.with_dependent(|owner, dep| {
-      SemanticBuilder::new(&owner.source)
+    (symbols, scopes) = ast.program.with_dependent(|_owner, dep| {
+      SemanticBuilder::new()
         // Required by `module.scope.get_child_ids` in `crates/rolldown/src/utils/renamer.rs`.
         .with_scope_tree_child_ids(true)
         // Preallocate memory for the underlying data structures.

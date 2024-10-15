@@ -20,8 +20,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as foo } from "./foo";
-import { default as bar } from "./bar";
+import foo from "./foo";
+import bar from "./bar";
 
 export { bar, foo };
 ```

@@ -54,7 +54,7 @@ console.log(ns, import_c.default, void 0);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region b.empty
 var b_exports = {};

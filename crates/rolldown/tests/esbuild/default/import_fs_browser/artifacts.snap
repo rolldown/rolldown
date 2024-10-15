@@ -33,7 +33,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as fs from "fs";
-import { default as defaultValue, readFileSync } from "fs";
+import defaultValue, { readFileSync } from "fs";
 
 //#region entry.js
 console.log(fs, readFileSync, defaultValue);

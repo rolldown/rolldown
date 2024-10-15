@@ -32,7 +32,7 @@ console.log(keep1(), (init_cjs(), __toCommonJS(cjs_exports)));
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region lib.js

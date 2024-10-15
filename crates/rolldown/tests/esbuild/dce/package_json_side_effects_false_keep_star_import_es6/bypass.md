@@ -18,7 +18,7 @@ console.log(demo_pkg_exports);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region node_modules/demo-pkg/index.js

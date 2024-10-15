@@ -1,5 +1,5 @@
 # Reason
-1. should not rewrite default specifier to `{default as xxx}`
+1. different file system
 # Diff
 ## /Users/user/project/out/index.js
 ### esbuild
@@ -13,10 +13,10 @@ console.log(foo, out, sha256, config);
 ```
 ### rolldown
 ```js
-import { default as foo } from "./foo.js";
-import { default as out } from "../../../out/in-out-dir.js";
-import { default as sha256 } from "../../sha256.min.js";
-import { default as config } from "/api/config?a=1&b=2";
+import foo from "./foo.js";
+import out from "../../../out/in-out-dir.js";
+import sha256 from "../../sha256.min.js";
+import config from "/api/config?a=1&b=2";
 
 //#region nested/folder/test.js
 console.log(foo, out, sha256, config);
@@ -32,11 +32,10 @@ console.log(foo, out, sha256, config);
 -import foo from "../src/nested/folder/foo.js";
 -import out from "./in-out-dir.js";
 -import sha256 from "../src/sha256.min.js";
--import config from "/api/config?a=1&b=2";
-+import {default as foo} from "./foo.js";
-+import {default as out} from "../../../out/in-out-dir.js";
-+import {default as sha256} from "../../sha256.min.js";
-+import {default as config} from "/api/config?a=1&b=2";
++import foo from "./foo.js";
++import out from "../../../out/in-out-dir.js";
++import sha256 from "../../sha256.min.js";
+ import config from "/api/config?a=1&b=2";
  console.log(foo, out, sha256, config);
 
 ```

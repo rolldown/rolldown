@@ -13,8 +13,8 @@ export {
 ```
 ### rolldown
 ```js
-import { default as foo } from "./foo";
-import { default as bar } from "./bar";
+import foo from "./foo";
+import bar from "./bar";
 
 export { bar, foo };
 ```
@@ -27,8 +27,8 @@ export { bar, foo };
 -import {default as default2} from "./foo";
 -import {default as default3} from "./bar";
 -export {default3 as bar, default2 as foo};
-+import {default as foo} from "./foo";
-+import {default as bar} from "./bar";
++import foo from "./foo";
++import bar from "./bar";
 +export {bar, foo};
 
 ```

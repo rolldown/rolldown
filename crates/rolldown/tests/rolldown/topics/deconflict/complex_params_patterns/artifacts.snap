@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { default as assert } from "assert";
+import assert from "assert";
 
 //#region names.js
 const [a$1, b$1, c$1, d$1, e$1] = [

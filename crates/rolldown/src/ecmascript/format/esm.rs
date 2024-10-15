@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_sourcemap::{ConcatSource, RawSource};
@@ -108,23 +109,28 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
   let mut s = String::new();
   render_import_stmts.iter().for_each(|stmt| {
-    let path = &stmt.path();
+    let path = stmt.path();
     match &stmt.specifiers() {
       RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
         if specifiers.is_empty() {
           s.push_str(&format!("import \"{path}\";\n",));
         } else {
+          let mut default_alias = vec![];
           let specifiers = specifiers
             .iter()
-            .map(|specifier| {
+            .filter_map(|specifier| {
               if let Some(alias) = &specifier.alias {
-                format!("{} as {alias}", specifier.imported)
+                if specifier.imported == "default" {
+                  default_alias.push(alias.to_string());
+                  return None;
+                }
+                Some(format!("{} as {alias}", specifier.imported))
               } else {
-                specifier.imported.to_string()
+                Some(specifier.imported.to_string())
               }
             })
             .collect::<Vec<_>>();
-          s.push_str(&format!("import {{ {} }} from \"{path}\";\n", specifiers.join(", ")));
+          s.push_str(&create_import_declaration(specifiers, &default_alias, path));
         }
       }
       RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
@@ -132,6 +138,32 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       }
     }
   });
-
   s
+}
+
+fn create_import_declaration(
+  mut specifiers: Vec<String>,
+  default_alias: &[String],
+  path: &ArcStr,
+) -> String {
+  let mut ret = String::new();
+  let first_default_alias = match &default_alias {
+    [] => None,
+    [first] => Some(first),
+    [first, rest @ ..] => {
+      specifiers.extend(rest.iter().map(|item| format!("default as {item}",)));
+      Some(first)
+    }
+  };
+  if !specifiers.is_empty() {
+    ret.push_str("import ");
+    if let Some(first_default_alias) = first_default_alias {
+      ret.push_str(first_default_alias);
+      ret.push_str(", ");
+    }
+    ret.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));
+  } else if let Some(first_default_alias) = first_default_alias {
+    ret.push_str(&format!("import {first_default_alias} from \"{path}\";\n"));
+  }
+  ret
 }

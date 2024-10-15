@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as pkg } from "/Users/user/project/node_modules/pkg/index";
+import pkg from "/Users/user/project/node_modules/pkg/index";
 
 //#region entry.js
 console.log(pkg);

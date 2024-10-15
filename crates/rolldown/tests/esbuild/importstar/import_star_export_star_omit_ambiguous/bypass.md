@@ -22,7 +22,7 @@ console.log(common_exports);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region foo.js

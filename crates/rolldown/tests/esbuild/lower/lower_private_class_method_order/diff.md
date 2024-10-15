@@ -18,7 +18,7 @@ console.log(new Foo().bar === 123);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region entry.js
 class Foo {

@@ -19,7 +19,7 @@ console.log(import_foo.default);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region node_modules/pkg/foo.js

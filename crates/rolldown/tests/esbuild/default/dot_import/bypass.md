@@ -17,7 +17,7 @@ console.log(import__.x);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region index.js

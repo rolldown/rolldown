@@ -17,7 +17,7 @@ console.log((init_types(), __toCommonJS(types_exports)));
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region types.mjs

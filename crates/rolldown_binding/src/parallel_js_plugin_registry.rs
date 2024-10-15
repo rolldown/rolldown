@@ -1,7 +1,7 @@
 use crate::options::plugin::{BindingPluginOptions, BindingPluginWithIndex};
 use dashmap::DashMap;
 use napi::{
-  bindgen_prelude::{FromNapiValue, Object, ObjectFinalize},
+  bindgen_prelude::{FromNapiValue, JavaScriptClassExt, Object, ObjectFinalize},
   Env, JsUnknown,
 };
 use napi_derive::napi;

@@ -181,9 +181,13 @@ impl<'a> SideEffectDetector<'a> {
           }
         })
       }
-      Expression::UnaryExpression(unary_expr) => {
-        self.detect_side_effect_of_expr(&unary_expr.argument)
-      }
+      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2533-L2539
+      Expression::UnaryExpression(unary_expr) => match unary_expr.operator {
+        ast::UnaryOperator::Typeof if matches!(unary_expr.argument, Expression::Identifier(_)) => {
+          false
+        }
+        _ => self.detect_side_effect_of_expr(&unary_expr.argument),
+      },
       oxc::ast::match_member_expression!(Expression) => {
         self.detect_side_effect_of_member_expr(expr.to_member_expression())
       }

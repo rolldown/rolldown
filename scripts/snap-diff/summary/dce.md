@@ -17,15 +17,9 @@
   diff
 ## [dce_of_iife](../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   diff
-## [dce_type_of](../../../crates/rolldown/tests/esbuild/dce/dce_type_of/diff.md)
-  diff
 ## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/diff.md)
   diff
-## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/diff.md)
-  diff
 ## [dce_type_of_equals_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition/diff.md)
-  diff
-## [dce_type_of_equals_string_mangle](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle/diff.md)
   diff
 ## [dead_code_following_jump](../../../crates/rolldown/tests/esbuild/dce/dead_code_following_jump/diff.md)
   diff
@@ -121,6 +115,7 @@
 ## [base64_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [data_url_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
 ## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal)
+## [dce_type_of](../../../crates/rolldown/tests/esbuild/dce/dce_type_of)
 ## [file_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/file_loader_remove_unused)
 ## [json_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/json_loader_remove_unused)
 ## [package_json_side_effects_array_glob](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_glob)
@@ -153,6 +148,8 @@
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_symbol_instances](../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)
+## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/bypass.md)
+## [dce_type_of_equals_string_mangle](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle/bypass.md)
 ## [dce_var_exports](../../../crates/rolldown/tests/esbuild/dce/dce_var_exports/bypass.md)
 ## [import_re_export_of_namespace_import](../../../crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import/bypass.md)
 ## [inline_empty_function_calls](../../../crates/rolldown/tests/esbuild/dce/inline_empty_function_calls/bypass.md)

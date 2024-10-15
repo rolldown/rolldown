@@ -1,5 +1,8 @@
+use std::ops::{Deref, DerefMut};
+
 use oxc::index::IndexVec;
-use oxc::semantic::SymbolTable;
+use oxc::semantic::{NodeId, ScopeId, SymbolFlags, SymbolTable};
+use oxc::span::Span;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -32,18 +35,59 @@ bitflags::bitflags! {
 
 #[derive(Debug, Default)]
 pub struct SymbolRefDbForModule {
+  pub symbol_table: SymbolTable,
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
 }
 
 impl SymbolRefDbForModule {
-  pub fn fill_classic_data(&mut self, ast_symbols: SymbolTable) {
-    self.classic_data = ast_symbols
-      .names
-      .into_iter()
-      .map(|name| SymbolRefDataClassic { name, link: None, chunk_id: None, namespace_alias: None })
-      .collect();
+  pub fn new(symbol_table: SymbolTable) -> Self {
+    Self {
+      classic_data: symbol_table
+        .names
+        .iter()
+        .map(|name| SymbolRefDataClassic {
+          name: name.clone(),
+          link: None,
+          chunk_id: None,
+          namespace_alias: None,
+        })
+        .collect(),
+      symbol_table,
+      ..Default::default()
+    }
+  }
+
+  pub fn create_symbol(
+    &mut self,
+    span: Span,
+    name: CompactString,
+    flags: SymbolFlags,
+    scope_id: ScopeId,
+    node_id: NodeId,
+  ) -> SymbolId {
+    self.classic_data.push(SymbolRefDataClassic {
+      name: name.clone(),
+      link: None,
+      chunk_id: None,
+      namespace_alias: None,
+    });
+    self.symbol_table.create_symbol(span, name, flags, scope_id, node_id)
+  }
+}
+
+impl Deref for SymbolRefDbForModule {
+  type Target = SymbolTable;
+
+  fn deref(&self) -> &Self::Target {
+    &self.symbol_table
+  }
+}
+
+impl DerefMut for SymbolRefDbForModule {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.symbol_table
   }
 }
 

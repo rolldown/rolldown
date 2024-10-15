@@ -60,6 +60,9 @@ check-node:
 
 update-esbuild-diff *args="":
     pnpm --filter=scripts esbuild-snap-diff {{ args }}
+# display aggregated reason of esbuild snapshot diff
+aggregated-esbuild-diff-reason *args="":
+    pnpm --filter=scripts aggregate-esbuild-diff-reason {{ args }}
 
 # run tests for both Rust and Node.js
 test: test-rust test-node

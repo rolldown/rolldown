@@ -7,6 +7,7 @@ _default:
     just --list -u
 
 setup:
+    just check-setup-prerequisites
     # Rust related setup
     cargo install cargo-binstall
     cargo binstall taplo-cli cargo-insta cargo-deny cargo-shear -y
@@ -148,3 +149,5 @@ bump packages *args:
 changelog:
     pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json
 
+check-setup-prerequisites:
+    node ./scripts/misc/setup-prerequisites/node.js

@@ -185,4 +185,9 @@ impl SymbolRefDb {
   pub(crate) fn get_flags(&self, refer: SymbolRef) -> Option<&SymbolRefFlags> {
     self.inner[refer.owner].unpack_ref().flags.get(&refer.symbol)
   }
+
+  pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
+    let local_db = self.inner[refer.owner].unpack_ref();
+    local_db.get_scope_id(refer.symbol) == local_db.root_scope_id
+  }
 }

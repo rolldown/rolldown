@@ -86,6 +86,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     symbol_ref: SymbolRef,
     preserve_this_semantic_if_needed: bool,
   ) -> ast::Expression<'ast> {
+    if !symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db) {
+      // No fancy things on none root scope symbols
+      return self.snippet.id_ref_expr(self.canonical_name_for(symbol_ref), SPAN);
+    }
+
     let mut canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let mut canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
@@ -96,36 +101,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut expr = match self.ctx.options.format {
       rolldown_common::OutputFormat::Cjs => {
-        if canonical_symbol.chunk_id.is_none() {
-          // Scoped scopes must belong to its own chunk, so they don't get assigned to a chunk.
-          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_id.unwrap_or_else(|| {
+          // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
+          // belong to the chunk they are declared in and won't link to other chunks.
+          let symbol_name = canonical_ref.name(self.ctx.symbol_db);
+          eprintln!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",);
+          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+        });
+        let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+          .expect("This module should be in a chunk");
+        let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
+        if is_symbol_in_other_chunk {
+          // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
+          // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
+          // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
+
+          let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
+            .exports_to_other_chunks[&canonical_ref];
+
+          let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+            .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
+
+          self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
         } else {
-          let chunk_idx_of_canonical_symbol =
-            canonical_symbol.chunk_id.unwrap_or_else(|| {
-              let symbol_name = canonical_ref.name(self.ctx.symbol_db);
-              eprintln!(
-                "{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",
-              );
-              panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
-            });
-          let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
-            .expect("This module should be in a chunk");
-          let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
-          if is_symbol_in_other_chunk {
-            // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
-            // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
-            // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
-
-            let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-              .exports_to_other_chunks[&canonical_ref];
-
-            let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
-              .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
-
-            self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
-          } else {
-            self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
-          }
+          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
         }
       }
       _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),

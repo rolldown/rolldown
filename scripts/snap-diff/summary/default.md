@@ -191,48 +191,10 @@
   missing
 ## [mangle_no_quoted_props](../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props/diff.md)
   diff
-## [mangle_no_quoted_props_minify_syntax](../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props_minify_syntax/diff.md)
-  diff
-## [mangle_props](../../../crates/rolldown/tests/esbuild/default/mangle_props/diff.md)
-  diff
-## [mangle_props_avoid_collisions](../../../crates/rolldown/tests/esbuild/default/mangle_props_avoid_collisions/diff.md)
-  diff
-## [mangle_props_import_export](../../../crates/rolldown/tests/esbuild/default/mangle_props_import_export/diff.md)
-  diff
-## [mangle_props_import_export_bundled](../../../crates/rolldown/tests/esbuild/default/mangle_props_import_export_bundled/diff.md)
-  diff
-## [mangle_props_jsx_preserve](../../../crates/rolldown/tests/esbuild/default/mangle_props_jsx_preserve/diff.md)
-  diff
-## [mangle_props_jsx_transform](../../../crates/rolldown/tests/esbuild/default/mangle_props_jsx_transform/diff.md)
-  diff
 ## mangle_props_jsx_transform_namespace
   missing
-## [mangle_props_key_comment](../../../crates/rolldown/tests/esbuild/default/mangle_props_key_comment/diff.md)
-  diff
-## [mangle_props_key_comment_minify](../../../crates/rolldown/tests/esbuild/default/mangle_props_key_comment_minify/diff.md)
-  diff
-## [mangle_props_keyword_property_minify](../../../crates/rolldown/tests/esbuild/default/mangle_props_keyword_property_minify/diff.md)
-  diff
-## [mangle_props_lowered_class_fields](../../../crates/rolldown/tests/esbuild/default/mangle_props_lowered_class_fields/diff.md)
-  diff
-## [mangle_props_lowered_optional_chain](../../../crates/rolldown/tests/esbuild/default/mangle_props_lowered_optional_chain/diff.md)
-  diff
-## [mangle_props_minify](../../../crates/rolldown/tests/esbuild/default/mangle_props_minify/diff.md)
-  diff
-## [mangle_props_no_shorthand](../../../crates/rolldown/tests/esbuild/default/mangle_props_no_shorthand/diff.md)
-  diff
-## [mangle_props_optional_chain](../../../crates/rolldown/tests/esbuild/default/mangle_props_optional_chain/diff.md)
-  diff
-## [mangle_props_shorthand](../../../crates/rolldown/tests/esbuild/default/mangle_props_shorthand/diff.md)
-  diff
-## [mangle_props_super_call](../../../crates/rolldown/tests/esbuild/default/mangle_props_super_call/diff.md)
-  diff
 ## mangle_props_type_script_features
   missing
-## [mangle_quoted_props](../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props/diff.md)
-  diff
-## [mangle_quoted_props_minify_syntax](../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props_minify_syntax/diff.md)
-  diff
 ## [metafile_import_with_type_json](../../../crates/rolldown/tests/esbuild/default/metafile_import_with_type_json/diff.md)
   diff
 ## [metafile_various_cases](../../../crates/rolldown/tests/esbuild/default/metafile_various_cases/diff.md)
@@ -395,6 +357,25 @@
 ## [keep_names_all_forms](../../../crates/rolldown/tests/esbuild/default/keep_names_all_forms/bypass.md)
 ## [keep_names_class_static_name](../../../crates/rolldown/tests/esbuild/default/keep_names_class_static_name/bypass.md)
 ## [keep_names_tree_shaking](../../../crates/rolldown/tests/esbuild/default/keep_names_tree_shaking/bypass.md)
+## [mangle_no_quoted_props_minify_syntax](../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props_minify_syntax/bypass.md)
+## [mangle_props](../../../crates/rolldown/tests/esbuild/default/mangle_props/bypass.md)
+## [mangle_props_avoid_collisions](../../../crates/rolldown/tests/esbuild/default/mangle_props_avoid_collisions/bypass.md)
+## [mangle_props_import_export](../../../crates/rolldown/tests/esbuild/default/mangle_props_import_export/bypass.md)
+## [mangle_props_import_export_bundled](../../../crates/rolldown/tests/esbuild/default/mangle_props_import_export_bundled/bypass.md)
+## [mangle_props_jsx_preserve](../../../crates/rolldown/tests/esbuild/default/mangle_props_jsx_preserve/bypass.md)
+## [mangle_props_jsx_transform](../../../crates/rolldown/tests/esbuild/default/mangle_props_jsx_transform/bypass.md)
+## [mangle_props_key_comment](../../../crates/rolldown/tests/esbuild/default/mangle_props_key_comment/bypass.md)
+## [mangle_props_key_comment_minify](../../../crates/rolldown/tests/esbuild/default/mangle_props_key_comment_minify/bypass.md)
+## [mangle_props_keyword_property_minify](../../../crates/rolldown/tests/esbuild/default/mangle_props_keyword_property_minify/bypass.md)
+## [mangle_props_lowered_class_fields](../../../crates/rolldown/tests/esbuild/default/mangle_props_lowered_class_fields/bypass.md)
+## [mangle_props_lowered_optional_chain](../../../crates/rolldown/tests/esbuild/default/mangle_props_lowered_optional_chain/bypass.md)
+## [mangle_props_minify](../../../crates/rolldown/tests/esbuild/default/mangle_props_minify/bypass.md)
+## [mangle_props_no_shorthand](../../../crates/rolldown/tests/esbuild/default/mangle_props_no_shorthand/bypass.md)
+## [mangle_props_optional_chain](../../../crates/rolldown/tests/esbuild/default/mangle_props_optional_chain/bypass.md)
+## [mangle_props_shorthand](../../../crates/rolldown/tests/esbuild/default/mangle_props_shorthand/bypass.md)
+## [mangle_props_super_call](../../../crates/rolldown/tests/esbuild/default/mangle_props_super_call/bypass.md)
+## [mangle_quoted_props](../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props/bypass.md)
+## [mangle_quoted_props_minify_syntax](../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props_minify_syntax/bypass.md)
 ## [many_entry_points](../../../crates/rolldown/tests/esbuild/default/many_entry_points/bypass.md)
 ## [metafile_no_bundle](../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle/bypass.md)
 ## [minified_bundle_common_js](../../../crates/rolldown/tests/esbuild/default/minified_bundle_common_js/bypass.md)

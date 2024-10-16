@@ -643,7 +643,10 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .shimmed_missing_exports
               .entry(imported.clone())
               .or_insert_with(|| {
-                self.symbol_db.create_symbol(tracker.importee, imported.clone().to_string().into())
+                self.symbol_db.create_facade_root_symbol_ref(
+                  tracker.importee,
+                  imported.clone().to_string().into(),
+                )
               });
             return MatchImportKind::Normal { symbol: *shimmed_symbol_ref };
           }

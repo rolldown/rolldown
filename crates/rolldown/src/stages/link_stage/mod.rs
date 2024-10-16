@@ -243,7 +243,7 @@ impl<'a> LinkStage<'a> {
                 .entry(rec.resolved_module)
                 .or_insert_with(|| {
                   // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
-                  self.symbols.create_symbol(
+                  self.symbols.create_facade_root_symbol_ref(
                     importer.idx,
                     legitimize_identifier_name(&ext.name).into_owned().into(),
                   )

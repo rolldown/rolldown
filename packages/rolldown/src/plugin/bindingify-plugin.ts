@@ -27,7 +27,10 @@ import type { Plugin } from './index'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import { PluginContextData } from './plugin-context-data'
-import { bindingifyWatchChange } from './bindingify-watch-hooks'
+import {
+  bindingifyCloseWatcher,
+  bindingifyWatchChange,
+} from './bindingify-watch-hooks'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
@@ -138,6 +141,9 @@ export function bindingifyPlugin(
     pluginContextData,
   )
 
+  const { plugin: closeWatcher, meta: closeWatcherMeta } =
+    bindingifyCloseWatcher(plugin, options, pluginContextData)
+
   return {
     name: plugin.name ?? 'unknown',
     buildStart,
@@ -183,5 +189,7 @@ export function bindingifyPlugin(
     outroMeta,
     watchChange,
     watchChangeMeta,
+    closeWatcher,
+    closeWatcherMeta,
   }
 }

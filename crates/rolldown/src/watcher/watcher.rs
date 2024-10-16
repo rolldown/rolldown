@@ -10,7 +10,6 @@ use notify::{
 use rolldown_common::{
   BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
 };
-use rolldown_plugin::SharedPluginDriver;
 use std::{
   path::Path,
   sync::{
@@ -28,6 +27,7 @@ use super::emitter::{SharedWatcherEmitter, WatcherEmitter};
 
 pub struct Watcher {
   pub(crate) emitter: SharedWatcherEmitter,
+  bundler: Arc<Mutex<Bundler>>,
   inner: Arc<Mutex<RecommendedWatcher>>,
   running: AtomicBool,
   rerun: AtomicBool,
@@ -37,7 +37,7 @@ pub struct Watcher {
 }
 
 impl Watcher {
-  pub fn new() -> Result<Self> {
+  pub fn new(bundler: Arc<Mutex<Bundler>>) -> Result<Self> {
     let (tx, rx) = channel(100);
     let tx = Arc::new(Mutex::new(tx));
     let cloned_tx = Arc::clone(&tx);
@@ -61,6 +61,7 @@ impl Watcher {
 
     Ok(Self {
       emitter: Arc::new(WatcherEmitter::new()),
+      bundler,
       inner: Arc::new(Mutex::new(inner)),
       running: AtomicBool::default(),
       watch_files: DashSet::default(),
@@ -70,7 +71,7 @@ impl Watcher {
     })
   }
 
-  pub fn invalidate(&self, bundler: Arc<Mutex<Bundler>>) {
+  pub fn invalidate(&self) {
     if self.running.load(Ordering::Relaxed) {
       self.rerun.store(true, Ordering::Relaxed);
       return;
@@ -81,7 +82,7 @@ impl Watcher {
 
     let future = async move {
       self.rerun.store(false, Ordering::Relaxed);
-      let _ = self.run(bundler).await;
+      let _ = self.run().await;
     };
 
     #[cfg(target_family = "wasm")]
@@ -96,9 +97,11 @@ impl Watcher {
     }
   }
 
-  pub async fn run(&self, bundler: Arc<Mutex<Bundler>>) -> Result<()> {
-    let mut bundler =
-      bundler.try_lock().expect("Failed to lock the bundler. Is another operation in progress?");
+  pub async fn run(&self) -> Result<()> {
+    let mut bundler = self
+      .bundler
+      .try_lock()
+      .expect("Failed to lock the bundler. Is another operation in progress?");
 
     self.running.store(true, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::Start.into());
@@ -135,36 +138,37 @@ impl Watcher {
     Ok(())
   }
 
-  pub async fn close(&self) {
+  pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
-    let mut tx = self.tx.try_lock().expect("Failed to lock the watcher sender");
+    let mut tx = self.tx.try_lock()?;
     let _ = tx.close().await;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
-    let mut inner = self.inner.try_lock().expect("Failed to lock the notify watcher.");
+    let mut inner = self.inner.try_lock()?;
     for path in self.watch_files.iter() {
-      inner.unwatch(Path::new(path.as_str())).expect("should unwatch");
+      inner.unwatch(Path::new(path.as_str()))?;
     }
     // emit close event
     self.emitter.emit(WatcherEvent::Close, WatcherEventData::default());
+    // call close watcher hook
+    let bundler = self.bundler.try_lock()?;
+    bundler.plugin_driver.close_watcher().await?;
+
+    Ok(())
   }
 }
 
-pub async fn on_change(
-  emitter: &SharedWatcherEmitter,
-  plugin_driver: &SharedPluginDriver,
-  path: &str,
-  kind: WatcherChangeKind,
-) {
-  emitter.emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into());
-  plugin_driver.watch_change(path, kind).await.expect("call watch change failed");
+pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {
+  watcher.emitter.emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into());
+  let bundler = watcher.bundler.try_lock().expect("Failed to lock the bundler. ");
+  let _ = bundler
+    .plugin_driver
+    .watch_change(path, kind)
+    .await
+    .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
 }
 
-pub fn wait_for_change(watcher: Arc<Watcher>, bundler: Arc<Mutex<Bundler>>) {
-  let cloned_bundler = Arc::clone(&bundler);
-  let bundler_guard = cloned_bundler.try_lock().expect("Failed to lock the bundler. ");
-  let plugin_driver = Arc::clone(&bundler_guard.plugin_driver);
-
+pub fn wait_for_change(watcher: Arc<Watcher>) {
   let future = async move {
     let mut rx = watcher.rx.try_lock().expect("Failed to lock the watcher receiver. ");
     while let Some(res) = rx.next().await {
@@ -174,19 +178,16 @@ pub fn wait_for_change(watcher: Arc<Watcher>, bundler: Arc<Mutex<Bundler>>) {
             let id = path.to_string_lossy();
             match event.kind {
               notify::EventKind::Create(_) => {
-                on_change(&watcher.emitter, &plugin_driver, id.as_ref(), WatcherChangeKind::Create)
-                  .await;
+                on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
               }
               notify::EventKind::Modify(
                 ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
               ) => {
-                on_change(&watcher.emitter, &plugin_driver, id.as_ref(), WatcherChangeKind::Update)
-                  .await;
-                watcher.invalidate(Arc::clone(&bundler));
+                on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
+                watcher.invalidate();
               }
               notify::EventKind::Remove(_) => {
-                on_change(&watcher.emitter, &plugin_driver, id.as_ref(), WatcherChangeKind::Delete)
-                  .await;
+                on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
               }
               _ => {}
             }

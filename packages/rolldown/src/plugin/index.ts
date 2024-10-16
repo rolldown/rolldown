@@ -195,6 +195,8 @@ export interface FunctionPluginHooks {
     id: string,
     event: { event: ChangeEvent },
   ) => void
+
+  [DEFINED_HOOK_NAMES.closeWatcher]: (this: PluginContext) => void
 }
 
 export type ChangeEvent = 'create' | 'update' | 'delete'

@@ -349,6 +349,8 @@ export interface BindingPluginOptions {
   closeBundleMeta?: BindingPluginHookMeta
   watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
   watchChangeMeta?: BindingPluginHookMeta
+  closeWatcher?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  closeWatcherMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   bannerMeta?: BindingPluginHookMeta
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void

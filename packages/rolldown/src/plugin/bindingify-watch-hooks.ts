@@ -31,3 +31,24 @@ export function bindingifyWatchChange(
     meta: bindingifyPluginHookMeta(meta),
   }
 }
+
+export function bindingifyCloseWatcher(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): PluginHookWithBindingExt<BindingPluginOptions['closeWatcher']> {
+  const hook = plugin.closeWatcher
+  if (!hook) {
+    return {}
+  }
+  const { handler, meta } = normalizeHook(hook)
+
+  return {
+    plugin: async (ctx) => {
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+      )
+    },
+    meta: bindingifyPluginHookMeta(meta),
+  }
+}

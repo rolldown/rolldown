@@ -140,6 +140,16 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
+
+        case 'closeWatcher': {
+          const handlers = batchedHooks.closeWatcher ?? []
+          batchedHooks.closeWatcher = handlers
+          if (plugin.closeWatcher) {
+            handlers.push([plugin.closeWatcher, plugin])
+          }
+          break
+        }
+
         default: {
           // All known hooks should be handled above.
           // User-defined custom properties will hit this branch and it's ok. Just ignore them.
@@ -409,6 +419,20 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
                   id,
                   event,
                 )
+              }),
+            )
+          }
+        }
+        break
+      }
+      case 'closeWatcher': {
+        if (batchedHooks.closeWatcher) {
+          const batchedHandlers = batchedHooks.closeWatcher
+          composed.closeWatcher = async function () {
+            await Promise.all(
+              batchedHandlers.map(([handler, plugin]) => {
+                const { handler: handlerFn } = normalizeHook(handler)
+                return handlerFn.call(applyFixedPluginResolveFn(this, plugin))
               }),
             )
           }

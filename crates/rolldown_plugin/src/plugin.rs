@@ -252,6 +252,8 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
+  // watch hooks
+
   fn watch_change(
     &self,
     _ctx: &PluginContext,
@@ -262,6 +264,17 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn watch_change_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  fn close_watcher(
+    &self,
+    _ctx: &PluginContext,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn close_watcher_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 

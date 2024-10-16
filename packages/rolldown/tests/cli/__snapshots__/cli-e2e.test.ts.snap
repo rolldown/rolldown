@@ -34,6 +34,13 @@ OPTIONS
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
+  --jsx.development           Development specific information.
+  --jsx.factory <jsx.factory> Jsx element transformation.
+  --jsx.fragment <jsx.fragment>Jsx fragment transformation.
+  --jsx.import-source <jsx.import-source>Import the factory of element and fragment if mode is classic.
+  --jsx.jsx-import-source <jsx.jsx-import-source>Import the factory of element and fragment if mode is automatic.
+  --jsx.mode <jsx.mode>       Jsx transformation mode.
+  --jsx.refresh               React refresh transformation.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.
   --no-external-live-bindings Use external live bindings.

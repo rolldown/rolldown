@@ -129,6 +129,7 @@ export function bindingifyInputOptions(
       disableLiveBindings: options.experimental?.disableLiveBindings,
     },
     profilerNames: options?.profilerNames,
+    jsx: bindingifyJsx(options.jsx),
   }
 }
 
@@ -163,5 +164,26 @@ function bindingifyInput(
     return Object.entries(input).map((value) => {
       return { name: value[0], import: value[1] }
     })
+  }
+}
+
+function bindingifyJsx(
+  input: NormalizedInputOptions['jsx'],
+): BindingInputOptions['jsx'] {
+  if (input) {
+    const mode = input.mode ?? 'classic'
+    return {
+      runtime: mode,
+      importSource:
+        mode === 'classic'
+          ? input.importSource
+          : mode === 'automatic'
+            ? input.jsxImportSource
+            : undefined,
+      pragma: input.factory,
+      pragmaFrag: input.fragment,
+      development: input.development,
+      refresh: input.refresh,
+    }
   }
 }

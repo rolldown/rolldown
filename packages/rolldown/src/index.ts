@@ -8,6 +8,7 @@ import type {
   ExternalOption,
   InputOption,
   InputOptions,
+  JsxOptions,
 } from './options/input-options'
 import type { ModuleFormat, OutputOptions } from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
@@ -101,6 +102,7 @@ export type {
   ExistingRawSourceMap,
   SourceMapInput,
   OutputBundle,
+  JsxOptions,
 }
 
 // Exports for compatibility

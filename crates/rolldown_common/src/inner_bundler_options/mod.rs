@@ -1,3 +1,4 @@
+use oxc::transformer::JsxOptions;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
@@ -134,6 +135,8 @@ pub struct BundlerOptions {
   pub inline_dynamic_imports: Option<bool>,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: Option<ChecksOptions>,
+  #[cfg_attr(feature = "deserialize_bundler_options", serde(default), schemars(skip))]
+  pub jsx: Option<JsxOptions>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

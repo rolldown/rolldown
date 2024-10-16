@@ -21,7 +21,7 @@ pub fn deconflict_chunk_symbols(
       .iter()
       .filter_map(|(idx, _)| link_output.module_table.modules[*idx].as_external())
       .for_each(|external_module| {
-        renamer.add_top_level_symbol(external_module.symbol_ref);
+        renamer.add_root_symbol_name_ref_token(&external_module.name_token_for_external_binding);
       });
   }
 
@@ -83,5 +83,5 @@ pub fn deconflict_chunk_symbols(
   // rename non-top-level names
   renamer.rename_non_top_level_symbol(&chunk.modules, &link_output.module_table.modules);
 
-  chunk.canonical_names = renamer.into_canonical_names();
+  (chunk.canonical_names, chunk.canonical_name_by_token) = renamer.into_canonical_names();
 }

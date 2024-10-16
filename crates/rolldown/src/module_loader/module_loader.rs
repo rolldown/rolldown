@@ -14,7 +14,7 @@ use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, ResolvedId, SymbolRefDb,
+  ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
@@ -171,16 +171,11 @@ impl ModuleLoader {
               },
             }
           };
-          // FIXME: ---- This is hack and should be removed
-          let symbol_ref = self
-            .symbol_ref_db
-            .create_symbol(idx, legitimize_identifier_name(&resolved_id.id).into());
-          // --- End of hack
           let ext = ExternalModule::new(
             idx,
             ArcStr::clone(&resolved_id.id),
             external_module_side_effects,
-            symbol_ref,
+            SymbolNameRefToken::new(idx, legitimize_identifier_name(&resolved_id.id).into()),
           );
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx

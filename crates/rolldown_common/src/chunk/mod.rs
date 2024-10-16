@@ -1,7 +1,7 @@
 // cSpell:disable
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
-  RollupPreRenderedChunk, SymbolRef,
+  RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
 };
 pub mod chunk_table;
 pub mod types;
@@ -28,6 +28,7 @@ pub struct Chunk {
   pub css_preliminary_filename: Option<PreliminaryFilename>,
   pub css_absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
+  pub canonical_name_by_token: FxHashMap<SymbolNameRefToken, Rstr>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,

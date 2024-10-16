@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, Specifier, SymbolRef};
+use rolldown_common::{Chunk, Specifier, SymbolNameRefToken};
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
@@ -16,7 +16,7 @@ pub enum RenderImportDeclarationSpecifier {
 
 pub struct ExternalRenderImportStmt {
   pub path: ArcStr,
-  pub symbol_ref: SymbolRef, // for cjs __toESM(require('foo')) and iife get deconflict name
+  pub binding_name_token: SymbolNameRefToken, // for cjs __toESM(require('foo')) and iife get deconflict name
   pub specifiers: RenderImportDeclarationSpecifier,
 }
 
@@ -109,7 +109,7 @@ pub fn collect_render_chunk_imports(
             render_import_stmts.push(RenderImportStmt::ExternalRenderImportStmt(
               ExternalRenderImportStmt {
                 path: importee.name.clone(),
-                symbol_ref: importee.symbol_ref,
+                binding_name_token: importee.name_token_for_external_binding.clone(),
                 specifiers: RenderImportDeclarationSpecifier::ImportStarSpecifier(
                   alias.as_str().into(),
                 ),
@@ -132,7 +132,7 @@ pub fn collect_render_chunk_imports(
       render_import_stmts.push(RenderImportStmt::ExternalRenderImportStmt(
         ExternalRenderImportStmt {
           path: importee.name.clone(),
-          symbol_ref: importee.symbol_ref,
+          binding_name_token: importee.name_token_for_external_binding.clone(),
           specifiers: RenderImportDeclarationSpecifier::ImportSpecifier(specifiers),
         },
       ));

@@ -12,6 +12,12 @@ impl ToRstr for Atom<'_> {
   }
 }
 
+impl ToRstr for &str {
+  fn to_rstr(&self) -> Rstr {
+    Rstr(CompactStr::new(self))
+  }
+}
+
 impl ToRstr for CompactStr {
   fn to_rstr(&self) -> Rstr {
     Rstr(self.clone())

@@ -18,7 +18,6 @@ pub struct SymbolRefDataClassic {
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
   /// We use `namespace_alias` to represent this situation. If `namespace_alias` is not `None`, then this symbol must be rewritten to a property access.
   pub namespace_alias: Option<NamespaceAlias>,
-  pub name: CompactString,
   /// The symbol that this symbol is linked to.
   pub link: Option<SymbolRef>,
   /// The chunk that this symbol is defined in.
@@ -52,12 +51,7 @@ impl SymbolRefDbForModule {
       classic_data: symbol_table
         .names
         .iter()
-        .map(|name| SymbolRefDataClassic {
-          name: name.clone(),
-          link: None,
-          chunk_id: None,
-          namespace_alias: None,
-        })
+        .map(|_name| SymbolRefDataClassic { link: None, chunk_id: None, namespace_alias: None })
         .collect(),
       symbol_table,
       flags: FxHashMap::default(),
@@ -67,7 +61,6 @@ impl SymbolRefDbForModule {
   // The `facade` means the symbol is actually not exist in the AST.
   pub fn create_facade_root_symbol_ref(&mut self, name: CompactString) -> SymbolRef {
     self.classic_data.push(SymbolRefDataClassic {
-      name: name.clone(),
       link: None,
       chunk_id: None,
       namespace_alias: None,
@@ -108,7 +101,7 @@ impl DerefMut for SymbolRefDbForModule {
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct SymbolRefDb {
-  inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
+  pub(crate) inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
 impl SymbolRefDb {

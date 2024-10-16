@@ -8,6 +8,7 @@ test('watch', async () => {
   const inputSource = fs.readFileSync(input, 'utf-8')
   const output = path.join(import.meta.dirname, './dist/main.js')
   const watchChangeFn = vi.fn()
+  const closeWatcherFn = vi.fn()
   const watcher = await watch({
     input,
     cwd: import.meta.dirname,
@@ -17,6 +18,11 @@ test('watch', async () => {
           watchChangeFn()
           expect(id).toBe(input)
           expect(event).toMatchObject({ event: 'update' })
+        },
+      },
+      {
+        closeWatcher() {
+          closeWatcherFn()
         },
       },
     ],
@@ -38,6 +44,7 @@ test('watch', async () => {
   expect(watchChangeFn).toBeCalled()
 
   await watcher.close()
+  expect(closeWatcherFn).toBeCalledTimes(1)
 
   // edit file
   fs.writeFileSync(input, 'console.log(3)')

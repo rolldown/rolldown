@@ -9,7 +9,10 @@ use crate::{
     binding_log::BindingLog, binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
     watcher::BindingWatcher,
   },
-  utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
+  utils::{
+    handle_result, normalize_binding_options::normalize_binding_options,
+    try_init_custom_trace_subscriber,
+  },
 };
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
@@ -109,7 +112,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let output = Self::handle_result(bundler_core.scan().await)?;
+    let output = handle_result(bundler_core.scan().await)?;
 
     match output {
       Ok(output) => {
@@ -129,7 +132,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let outputs = Self::handle_result(bundler_core.write().await)?;
+    let outputs = handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
       return Err(self.handle_errors(outputs.errors));
@@ -146,7 +149,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let outputs = Self::handle_result(bundler_core.generate().await)?;
+    let outputs = handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
       return Err(self.handle_errors(outputs.errors));
@@ -163,19 +166,15 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    Self::handle_result(bundler_core.close().await)?;
+    handle_result(bundler_core.close().await)?;
 
     Ok(())
   }
 
   #[allow(clippy::significant_drop_tightening)]
   pub async fn watch_impl(&self) -> napi::Result<BindingWatcher> {
-    let watcher = Self::handle_result(NativeBundler::watch(Arc::clone(&self.inner)).await)?;
+    let watcher = handle_result(NativeBundler::watch(Arc::clone(&self.inner)).await)?;
     Ok(BindingWatcher::new(watcher))
-  }
-
-  fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
-    result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }
 
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {

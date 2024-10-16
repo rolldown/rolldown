@@ -14,3 +14,7 @@ pub fn try_init_custom_trace_subscriber(napi_env: Env) {
       .expect("Should able to initialize cleanup for custom trace subscriber");
   }
 }
+
+pub fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
+  result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
+}

@@ -179,6 +179,8 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   async fn call_close_bundle(&self, _ctx: &PluginContext) -> HookNoopReturn;
 
+  fn call_close_bundle_meta(&self) -> Option<PluginHookMeta>;
+
   async fn call_watch_change(
     &self,
     _ctx: &PluginContext,
@@ -192,7 +194,13 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  fn call_close_bundle_meta(&self) -> Option<PluginHookMeta>;
+  async fn call_close_watcher(&self, _ctx: &PluginContext) -> HookNoopReturn {
+    Ok(())
+  }
+
+  fn call_close_watcher_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
 
   fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
     Ok(None)
@@ -426,6 +434,14 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_watch_change_meta(&self) -> Option<PluginHookMeta> {
     Plugin::watch_change_meta(self)
+  }
+
+  async fn call_close_watcher(&self, ctx: &PluginContext) -> HookNoopReturn {
+    Plugin::close_watcher(self, ctx).await
+  }
+
+  fn call_close_watcher_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::close_watcher_meta(self)
   }
 
   fn call_transform_ast(

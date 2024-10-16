@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use napi_derive::napi;
 
+use crate::utils::handle_result;
+
 #[napi]
 pub struct BindingWatcher {
   inner: Arc<rolldown::Watcher>,
@@ -14,7 +16,7 @@ impl BindingWatcher {
   }
 
   #[napi]
-  pub async fn close(&self) {
-    self.inner.close().await;
+  pub async fn close(&self) -> napi::Result<()> {
+    handle_result(self.inner.close().await)
   }
 }

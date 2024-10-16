@@ -213,11 +213,11 @@ impl Bundler {
   }
 
   pub async fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
-    let watcher = Arc::new(Watcher::new()?);
+    let watcher = Arc::new(Watcher::new(bundler)?);
 
-    watcher.run(Arc::clone(&bundler)).await?;
+    watcher.run().await?;
 
-    wait_for_change(Arc::clone(&watcher), Arc::clone(&bundler));
+    wait_for_change(Arc::clone(&watcher));
 
     Ok(watcher)
   }

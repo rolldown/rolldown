@@ -201,6 +201,7 @@ pub fn normalize_binding_options(
     }),
     checks: None,
     profiler_names: input_options.profiler_names,
+    jsx: input_options.jsx.map(|inner| inner.into()),
   };
 
   #[cfg(not(target_family = "wasm"))]

@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use oxc::transformer::InjectGlobalVariablesConfig;
+use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions};
 use rustc_hash::FxHashMap;
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
@@ -63,6 +63,7 @@ pub struct NormalizedBundlerOptions {
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: ChecksOptions,
   pub profiler_names: bool,
+  pub jsx: Option<JsxOptions>,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

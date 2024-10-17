@@ -59,6 +59,7 @@ export declare class BindingTransformPluginContext {
 
 export declare class BindingWatcher {
   close(): Promise<void>
+  on(event: BindingWatcherEvent, listener: (data?: Record<string, string>) => void): void
 }
 
 export declare class Bundler {
@@ -433,6 +434,13 @@ export interface BindingTransformPluginConfig {
 
 export interface BindingTreeshake {
   moduleSideEffects: string
+}
+
+export declare enum BindingWatcherEvent {
+  Close = 0,
+  Event = 1,
+  ReStart = 2,
+  Change = 3
 }
 
 export interface Es2015Options {

@@ -163,7 +163,8 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingSourcemap_struct_100']?.()
   __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_101']?.()
   __napiInstance.exports['__napi_register__BindingWatcher_struct_102']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_104']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_105']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_106']?.()
 }
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
@@ -179,6 +180,7 @@ module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPlu
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
+module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.transform = __napiModule.exports.transform

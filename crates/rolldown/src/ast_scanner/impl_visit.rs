@@ -34,7 +34,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unpack();
-    if self.is_top_level(symbol_id) {
+    if self.is_root_symbol(symbol_id) {
       self.add_declared_id(symbol_id);
     }
   }
@@ -46,19 +46,19 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         // So we add these properties with order `d`, `c`, `b`.
         let mut props_in_reverse_order = vec![];
         let mut cur_member_expr = member_expr;
-        let object_symbol_in_top_level = loop {
+        let object_symbol_in_root_scope = loop {
           props_in_reverse_order.push(&cur_member_expr.property);
           match &cur_member_expr.object {
             Expression::StaticMemberExpression(expr) => {
               cur_member_expr = expr;
             }
             Expression::Identifier(id) => {
-              break self.resolve_identifier_to_top_level_symbol(id);
+              break self.resolve_identifier_to_root_symbol(id);
             }
             _ => break None,
           }
         };
-        match object_symbol_in_top_level {
+        match object_symbol_in_root_scope {
           // - Import statements are hoisted to the top of the module, so in this time being, all imports are scanned.
           // - Having empty span will also results to bailout since we rely on span to identify ast nodes.
           Some(sym_ref)
@@ -70,7 +70,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
               .map(|ident| ident.name.as_str().into())
               .collect::<Vec<_>>();
             self.add_member_expr_reference(sym_ref, props, expr.span());
-            // Don't walk again, otherwise we will add the `object_symbol_in_top_level` again in `visit_identifier_reference`
+            // Don't walk again, otherwise we will add the `object_symbol_in_root_scope` again in `visit_identifier_reference`
             return;
           }
           _ => {}
@@ -82,8 +82,8 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
-    if let Some(top_level_symbol_id) = self.resolve_identifier_to_top_level_symbol(ident) {
-      self.add_referenced_symbol(top_level_symbol_id);
+    if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
+      self.add_referenced_symbol(root_symbol_id);
     }
   }
 
@@ -115,12 +115,12 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       ast::AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
         Expression::Identifier(ref id) => {
           if id.name == "module"
-            && self.resolve_identifier_to_top_level_symbol(id).is_none()
+            && self.resolve_identifier_to_root_symbol(id).is_none()
             && member_expr.property.name == "exports"
           {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
           }
-          if id.name == "exports" && self.resolve_identifier_to_top_level_symbol(id).is_none() {
+          if id.name == "exports" && self.resolve_identifier_to_root_symbol(id).is_none() {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
           }
         }
@@ -128,7 +128,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         Expression::StaticMemberExpression(ref member_expr) => {
           if let Expression::Identifier(ref id) = member_expr.object {
             if id.name == "module"
-              && self.resolve_identifier_to_top_level_symbol(id).is_none()
+              && self.resolve_identifier_to_root_symbol(id).is_none()
               && member_expr.property.name == "exports"
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
@@ -147,7 +147,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       Expression::Identifier(id_ref) if id_ref.name == "eval" => {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-        if self.resolve_identifier_to_top_level_symbol(id_ref).is_none() {
+        if self.resolve_identifier_to_root_symbol(id_ref).is_none() {
           self.result.has_eval = true;
           self.result.warnings.push(
             BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), id_ref.span)

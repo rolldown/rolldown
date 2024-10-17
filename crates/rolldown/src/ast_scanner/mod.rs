@@ -4,8 +4,7 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
-use oxc::semantic::{NodeId, SymbolFlags, SymbolTable};
-use oxc::span::SPAN;
+use oxc::semantic::SymbolTable;
 use oxc::{
   ast::{
     ast::{
@@ -76,35 +75,21 @@ impl<'me> AstScanner<'me> {
   pub fn new(
     idx: ModuleIdx,
     scope: &'me AstScopes,
-    mut symbol_table: SymbolTable,
+    symbol_table: SymbolTable,
     repr_name: &'me str,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
     file_path: &'me ModuleId,
     trivias: &'me Trivias,
   ) -> Self {
+    let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, idx, scope.root_scope_id());
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
-    let symbol_id_for_default_export_ref = symbol_table.create_symbol(
-      SPAN,
-      format!("{legitimized_repr_name}_default").into(),
-      SymbolFlags::empty(),
-      scope.root_scope_id(),
-      NodeId::DUMMY,
-    );
+    let default_export_ref = symbol_ref_db
+      .create_facade_root_symbol_ref(format!("{legitimized_repr_name}_default").into());
 
     let name = format!("{legitimized_repr_name}_exports");
-    let namespace_object_ref: SymbolRef = (
-      idx,
-      symbol_table.create_symbol(
-        SPAN,
-        name.into(),
-        SymbolFlags::empty(),
-        scope.root_scope_id(),
-        NodeId::DUMMY,
-      ),
-    )
-      .into();
+    let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(name.into());
 
     let result = ScanResult {
       named_imports: FxHashMap::default(),
@@ -117,14 +102,14 @@ impl<'me> AstScanner<'me> {
       },
       import_records: IndexVec::new(),
       star_exports: Vec::new(),
-      default_export_ref: (idx, symbol_id_for_default_export_ref).into(),
+      default_export_ref,
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
       has_eval: false,
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty(),
-      symbol_ref_db: SymbolRefDbForModule::new(symbol_table),
+      symbol_ref_db,
     };
 
     Self {
@@ -198,7 +183,7 @@ impl<'me> AstScanner<'me> {
 
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;
-      let mut scanned_top_level_symbols = self
+      let mut scanned_symbols_in_root_scope = self
         .result
         .stmt_infos
         .iter()
@@ -207,7 +192,7 @@ impl<'me> AstScanner<'me> {
       for (name, symbol_id) in self.scopes.get_bindings(self.scopes.root_scope_id()) {
         let symbol_ref: SymbolRef = (self.idx, *symbol_id).into();
         let scope_id = self.result.symbol_ref_db.get_scope_id(*symbol_id);
-        if !scanned_top_level_symbols.remove(&symbol_ref) {
+        if !scanned_symbols_in_root_scope.remove(&symbol_ref) {
           return Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
           ));
@@ -244,21 +229,13 @@ impl<'me> AstScanner<'me> {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
-    let namespace_ref: SymbolRef = (
-      self.idx,
-      self.result.symbol_ref_db.create_symbol(
-        SPAN,
-        format!(
-          "#LOCAL_NAMESPACE_IN_{}#",
-          itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default())
-        )
-        .into(),
-        SymbolFlags::empty(),
-        self.scopes.root_scope_id(),
-        NodeId::DUMMY,
-      ),
-    )
-      .into();
+    let namespace_ref: SymbolRef = self.result.symbol_ref_db.create_facade_root_symbol_ref(
+      format!(
+        "#LOCAL_NAMESPACE_IN_{}#",
+        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default())
+      )
+      .into(),
+    );
     let rec =
       RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, module_request_start);
 
@@ -358,26 +335,15 @@ impl<'me> AstScanner<'me> {
     span_imported: Span,
   ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
-    let generated_imported_as_ref = (
-      self.idx,
-      self.result.symbol_ref_db.create_symbol(
-        SPAN,
-        if export_name == "default" {
-          let importee_repr = self.result.import_records[record_id]
-            .module_request
-            .as_path()
-            .representative_file_name();
-          let importee_repr = legitimize_identifier_name(&importee_repr);
-          format!("{importee_repr}_default").into()
-        } else {
-          export_name.into()
-        },
-        SymbolFlags::empty(),
-        self.scopes.root_scope_id(),
-        NodeId::DUMMY,
-      ),
-    )
-      .into();
+    let generated_imported_as_ref =
+      self.result.symbol_ref_db.create_facade_root_symbol_ref(if export_name == "default" {
+        let importee_repr =
+          self.result.import_records[record_id].module_request.as_path().representative_file_name();
+        let importee_repr = legitimize_identifier_name(&importee_repr);
+        format!("{importee_repr}_default").into()
+      } else {
+        export_name.into()
+      });
 
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
@@ -402,17 +368,8 @@ impl<'me> AstScanner<'me> {
     record_id: ImportRecordIdx,
     span_for_export_name: Span,
   ) {
-    let generated_imported_as_ref = (
-      self.idx,
-      self.result.symbol_ref_db.create_symbol(
-        SPAN,
-        export_name.into(),
-        SymbolFlags::empty(),
-        self.scopes.root_scope_id(),
-        NodeId::DUMMY,
-      ),
-    )
-      .into();
+    let generated_imported_as_ref =
+      self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name.into());
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
       imported: Specifier::Star,
@@ -600,7 +557,7 @@ impl<'me> AstScanner<'me> {
       .push(MemberExprRef::new(object_ref, props, span).into());
   }
 
-  fn is_top_level(&self, symbol_id: SymbolId) -> bool {
+  fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {
     self.scopes.root_scope_id() == self.result.symbol_ref_db.get_scope_id(symbol_id)
   }
 
@@ -627,15 +584,15 @@ impl<'me> AstScanner<'me> {
     }
   }
 
-  /// resolve the symbol from the identifier reference, and return if it is a top level symbol
-  fn resolve_identifier_to_top_level_symbol(
+  /// resolve the symbol from the identifier reference, and return if it is a root symbol
+  fn resolve_identifier_to_root_symbol(
     &mut self,
     ident: &IdentifierReference,
   ) -> Option<SymbolRef> {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
       Some(symbol_id) => {
-        if self.is_top_level(symbol_id) {
+        if self.is_root_symbol(symbol_id) {
           Some((self.idx, symbol_id).into())
         } else {
           None

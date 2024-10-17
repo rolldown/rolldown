@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use oxc::index::IndexVec;
 use oxc::semantic::{NodeId, ScopeId, SymbolFlags, SymbolTable};
-use oxc::span::Span;
+use oxc::span::SPAN;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
@@ -36,6 +36,8 @@ bitflags::bitflags! {
 
 #[derive(Debug)]
 pub struct SymbolRefDbForModule {
+  owner_idx: ModuleIdx,
+  root_scope_id: ScopeId,
   pub symbol_table: SymbolTable,
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
@@ -43,8 +45,10 @@ pub struct SymbolRefDbForModule {
 }
 
 impl SymbolRefDbForModule {
-  pub fn new(symbol_table: SymbolTable) -> Self {
+  pub fn new(symbol_table: SymbolTable, owner_idx: ModuleIdx, top_level_scope_id: ScopeId) -> Self {
     Self {
+      owner_idx,
+      root_scope_id: top_level_scope_id,
       classic_data: symbol_table
         .names
         .iter()
@@ -60,21 +64,30 @@ impl SymbolRefDbForModule {
     }
   }
 
-  pub fn create_symbol(
-    &mut self,
-    span: Span,
-    name: CompactString,
-    flags: SymbolFlags,
-    scope_id: ScopeId,
-    node_id: NodeId,
-  ) -> SymbolId {
+  // The `facade` means the symbol is actually not exist in the AST.
+  pub fn create_facade_root_symbol_ref(&mut self, name: CompactString) -> SymbolRef {
     self.classic_data.push(SymbolRefDataClassic {
       name: name.clone(),
       link: None,
       chunk_id: None,
       namespace_alias: None,
     });
-    self.symbol_table.create_symbol(span, name, flags, scope_id, node_id)
+    let symbol_id = self.symbol_table.create_symbol(
+      SPAN,
+      name,
+      SymbolFlags::empty(),
+      self.root_scope_id,
+      NodeId::DUMMY,
+    );
+
+    SymbolRef::from((self.owner_idx, symbol_id))
+  }
+
+  /// This method is used to hide the `SymbolTable::create_symbol` method since
+  /// `SymbolRefDbForModule` impl `Deref` for `SymbolTable`.
+  #[deprecated = "Use `create_facade_root_symbol_ref` instead"]
+  pub fn create_symbol(&mut self) {
+    panic!("Use `create_facade_root_symbol_ref` instead");
   }
 }
 
@@ -112,15 +125,13 @@ impl SymbolRefDb {
     self.inner[module_id] = Some(local_db);
   }
 
-  pub fn create_symbol(&mut self, owner: ModuleIdx, name: CompactString) -> SymbolRef {
+  pub fn create_facade_root_symbol_ref(
+    &mut self,
+    owner: ModuleIdx,
+    name: CompactString,
+  ) -> SymbolRef {
     self.ensure_exact_capacity(owner);
-    let symbol_id = self.inner[owner].unpack_ref_mut().classic_data.push(SymbolRefDataClassic {
-      name,
-      link: None,
-      chunk_id: None,
-      namespace_alias: None,
-    });
-    SymbolRef { owner, symbol: symbol_id }
+    self.inner[owner].unpack_ref_mut().create_facade_root_symbol_ref(name)
   }
 
   /// Make `base` point to `target`

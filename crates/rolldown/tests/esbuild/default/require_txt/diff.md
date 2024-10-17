@@ -19,10 +19,10 @@ console.log(require_test());
 
 
 //#region test.txt
-var test_exports, test_default;
+var test_exports = {};
+__export(test_exports, { default: () => test_default });
+var test_default;
 var init_test = __esm({ "test.txt"() {
-	test_exports = {};
-	__export(test_exports, { default: () => test_default });
 	test_default = "This is a test.";
 } });
 
@@ -41,13 +41,13 @@ console.log((init_test(), __toCommonJS(test_exports)));
 -var require_test = __commonJS({
 -    "test.txt"(exports, module) {
 -        module.exports = "This is a test.";
-+var test_exports, test_default;
++var test_exports = {};
++__export(test_exports, {
++    default: () => test_default
++});
++var test_default;
 +var init_test = __esm({
 +    "test.txt"() {
-+        test_exports = {};
-+        __export(test_exports, {
-+            default: () => test_default
-+        });
 +        test_default = "This is a test.";
      }
  });

@@ -14,10 +14,10 @@ function foo$1(a$1$1) {
 	assert$1.equal(a$1$1, a$1$1);
 	assert$1.equal(a$1, 1);
 }
-var foo_exports, a$1;
+var foo_exports = {};
+__export(foo_exports, { default: () => foo$1 });
+var a$1;
 var init_foo = __esm({ "foo.js"() {
-	foo_exports = {};
-	__export(foo_exports, { default: () => foo$1 });
 	a$1 = 1;
 } });
 
@@ -56,7 +56,7 @@ init_foo(), __toCommonJS(foo_exports);
 (6:18-6:20) " 1" --> (32:21-32:23) " 1"
 (6:20-7:1) ")\n" --> (32:23-33:0) ");"
 (7:1-0:0) "" --> (33:0-34:0) "\n}"
-(0:0-2:6) "import assert from \"node:assert\";\n\nconst" --> (34:0-38:1) "\nvar foo_exports, a$1;\nvar init_foo = __esm({ \"foo.js\"() {\n\tfoo_exports = {};\n\t__export(foo_exports, { default: () => foo$1 });\n"
+(0:0-2:6) "import assert from \"node:assert\";\n\nconst" --> (34:0-38:1) "\nvar foo_exports = {};\n__export(foo_exports, { default: () => foo$1 });\nvar a$1;\nvar init_foo = __esm({ \"foo.js\"() {\n"
 (2:6-2:10) " a =" --> (38:1-38:7) "\ta$1 ="
 (2:10-0:0) "" --> (38:7-39:0) " 1;"
 (0:0-8:1) "import assert from \"node:assert\";\n\nconst a = 1;\n\nexport default function foo(a$1) {\n  assert.equal(a$1, a$1)\n  assert.equal(a, 1)\n}\n" --> (39:0-43:0) "\n} });\n\n//#endregion\n//#region bar.js"

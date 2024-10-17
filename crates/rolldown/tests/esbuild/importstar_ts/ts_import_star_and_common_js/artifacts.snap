@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo.ts
-var foo_exports, foo;
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo });
+var foo;
 var init_foo = __esm({ "foo.ts"() {
-	foo_exports = {};
-	__export(foo_exports, { foo: () => foo });
 	foo = 123;
 } });
 

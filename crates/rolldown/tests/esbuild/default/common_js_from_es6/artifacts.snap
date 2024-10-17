@@ -13,22 +13,18 @@ import assert from "node:assert";
 function foo$1() {
 	return "foo";
 }
-var foo_exports;
-var init_foo = __esm({ "foo.js"() {
-	foo_exports = {};
-	__export(foo_exports, { foo: () => foo$1 });
-} });
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region bar.js
 function bar$1() {
 	return "bar";
 }
-var bar_exports;
-var init_bar = __esm({ "bar.js"() {
-	bar_exports = {};
-	__export(bar_exports, { bar: () => bar$1 });
-} });
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar$1 });
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region entry.js

@@ -4,7 +4,7 @@ use oxc::{
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
-use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
+use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn, ToSourceString};
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -325,7 +325,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
     let mut ret = vec![decl_stmt, export_call_stmt];
     ret.extend(re_export_external_stmts.unwrap_or_default());
-
+    for ele in &ret {
+      println!("{}", ele.to_source_string());
+    }
     ret
   }
 }

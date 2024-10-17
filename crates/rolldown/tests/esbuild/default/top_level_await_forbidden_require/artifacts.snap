@@ -19,17 +19,16 @@ var require_c = __commonJS({ "c.js"() {
 
 //#endregion
 //#region b.js
-var b_exports, import_c;
+var b_exports = {};
+var import_c;
 var init_b = __esm({ "b.js"() {
-	b_exports = {};
 	import_c = __toESM(require_c());
 } });
 
 //#endregion
 //#region a.js
-var a_exports;
+var a_exports = {};
 var init_a = __esm({ "a.js"() {
-	a_exports = {};
 	init_something();
 	init_b();
 } });

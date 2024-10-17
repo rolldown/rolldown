@@ -131,10 +131,6 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
-## sub optimal
-- crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
-- crates/rolldown/tests/esbuild/importstar/import_star_and_common_js
-- crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
@@ -272,8 +268,6 @@ initialization
 - crates/rolldown/tests/esbuild/default/define_this
 ## not support duplicate property warning
 - crates/rolldown/tests/esbuild/default/duplicate_property_warning
-## should init `type_exports` when decl
-- crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## Not sure if we needs to use `Object.define` pattern in iife
@@ -336,12 +330,10 @@ initialization
 - crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446
 ## Format cjs should not appear `export`
 - crates/rolldown/tests/esbuild/importstar/import_self_common_js
-## different initialization strategy
-- crates/rolldown/tests/esbuild/importstar/import_star_and_common_js
+## sub optimal
+- crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## esbuild will reuse `ns` variable
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
-## should not wrap the `foo_exports` initialization in `init_foo`
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_and_common_js
 ## esbuild treated svg as commonjs module, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
 ## esbuild will wrap `empty` module as a cjs module, rolldown did not

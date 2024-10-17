@@ -28,10 +28,10 @@ var y_default = "y";
 
 //#endregion
 //#region x.txt
-var x_exports, x_default;
+var x_exports = {};
+__export(x_exports, { default: () => x_default });
+var x_default;
 var init_x = __esm({ "x.txt"() {
-	x_exports = {};
-	__export(x_exports, { default: () => x_default });
 	x_default = "x";
 } });
 
@@ -53,13 +53,13 @@ assert.equal(y_default, "y");
 -    "x.txt"(exports, module) {
 -        module.exports = "x";
 +var y_default = "y";
-+var x_exports, x_default;
++var x_exports = {};
++__export(x_exports, {
++    default: () => x_default
++});
++var x_default;
 +var init_x = __esm({
 +    "x.txt"() {
-+        x_exports = {};
-+        __export(x_exports, {
-+            default: () => x_default
-+        });
 +        x_default = "x";
      }
  });

@@ -45,22 +45,18 @@ import assert from "node:assert";
 function foo$1() {
 	return "foo";
 }
-var foo_exports;
-var init_foo = __esm({ "foo.js"() {
-	foo_exports = {};
-	__export(foo_exports, { foo: () => foo$1 });
-} });
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region bar.js
 function bar$1() {
 	return "bar";
 }
-var bar_exports;
-var init_bar = __esm({ "bar.js"() {
-	bar_exports = {};
-	__export(bar_exports, { bar: () => bar$1 });
-} });
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar$1 });
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region entry.js
@@ -76,42 +72,34 @@ const { bar } = (init_bar(), __toCommonJS(bar_exports));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,23 +1,27 @@
--var foo_exports = {};
--__export(foo_exports, {
--    foo: () => foo
--});
--function foo() {
+@@ -1,23 +1,23 @@
 +function foo$1() {
-     return "foo";
- }
-+var foo_exports;
- var init_foo = __esm({
--    "foo.js"() {}
-+    "foo.js"() {
-+        foo_exports = {};
-+        __export(foo_exports, {
-+            foo: () => foo$1
-+        });
-+    }
++    return "foo";
++}
+ var foo_exports = {};
+ __export(foo_exports, {
+-    foo: () => foo
++    foo: () => foo$1
  });
--var bar_exports = {};
--__export(bar_exports, {
--    bar: () => bar
--});
--function bar() {
+-function foo() {
+-    return "foo";
+-}
+ var init_foo = __esm({
+     "foo.js"() {}
+ });
 +function bar$1() {
-     return "bar";
- }
-+var bar_exports;
++    return "bar";
++}
+ var bar_exports = {};
+ __export(bar_exports, {
+-    bar: () => bar
++    bar: () => bar$1
+ });
+-function bar() {
+-    return "bar";
+-}
  var init_bar = __esm({
--    "bar.js"() {}
-+    "bar.js"() {
-+        bar_exports = {};
-+        __export(bar_exports, {
-+            bar: () => bar$1
-+        });
-+    }
+     "bar.js"() {}
  });
 -var {foo: foo2} = (init_foo(), __toCommonJS(foo_exports));
 -console.log(foo2(), bar2());

@@ -10,13 +10,13 @@ import assert from "node:assert";
 
 
 //#region codes.json
-var codes_exports, foo, codes_default;
+var codes_exports = {};
+__export(codes_exports, {
+	default: () => codes_default,
+	foo: () => foo
+});
+var foo, codes_default;
 var init_codes = __esm({ "codes.json"() {
-	codes_exports = {};
-	__export(codes_exports, {
-		default: () => codes_default,
-		foo: () => foo
-	});
 	foo = "bar";
 	codes_default = { foo };
 } });

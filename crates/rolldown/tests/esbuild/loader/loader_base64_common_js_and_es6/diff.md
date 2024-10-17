@@ -28,10 +28,10 @@ var y_default = "eQ==";
 
 //#endregion
 //#region x.b64
-var x_exports, x_default;
+var x_exports = {};
+__export(x_exports, { default: () => x_default });
+var x_default;
 var init_x = __esm({ "x.b64"() {
-	x_exports = {};
-	__export(x_exports, { default: () => x_default });
 	x_default = "eA==";
 } });
 
@@ -53,13 +53,13 @@ assert.equal(y_default, "eQ==");
 -    "x.b64"(exports, module) {
 -        module.exports = "eA==";
 +var y_default = "eQ==";
-+var x_exports, x_default;
++var x_exports = {};
++__export(x_exports, {
++    default: () => x_default
++});
++var x_default;
 +var init_x = __esm({
 +    "x.b64"() {
-+        x_exports = {};
-+        __export(x_exports, {
-+            default: () => x_default
-+        });
 +        x_default = "eA==";
      }
  });

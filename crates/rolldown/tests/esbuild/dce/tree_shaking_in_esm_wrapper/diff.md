@@ -44,10 +44,10 @@ var init_lib = __esm({ "lib.js"() {
 
 //#endregion
 //#region cjs.js
-var cjs_exports, cjs_default;
+var cjs_exports = {};
+__export(cjs_exports, { default: () => cjs_default });
+var cjs_default;
 var init_cjs = __esm({ "cjs.js"() {
-	cjs_exports = {};
-	__export(cjs_exports, { default: () => cjs_default });
 	init_lib();
 	cjs_default = keep2();
 } });
@@ -65,24 +65,7 @@ assert.deepEqual((init_cjs(), __toCommonJS(cjs_exports)).default, "keep2");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -4,17 +4,17 @@
-         keep1 = () => "keep1";
-         keep2 = () => "keep2";
-     }
- });
--var cjs_exports = {};
--__export(cjs_exports, {
--    default: () => cjs_default
--});
--var cjs_default;
-+var cjs_exports, cjs_default;
- var init_cjs = __esm({
-     "cjs.js"() {
-+        cjs_exports = {};
-+        __export(cjs_exports, {
-+            default: () => cjs_default
-+        });
-         init_lib();
+@@ -16,5 +16,5 @@
          cjs_default = keep2();
      }
  });

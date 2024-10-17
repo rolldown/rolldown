@@ -25,10 +25,10 @@ init_entry();
 
 
 //#region entry.js
-var entry_exports, foo;
+var entry_exports = {};
+__export(entry_exports, { foo: () => foo });
+var foo;
 var init_entry = __esm({ "entry.js"() {
-	entry_exports = {};
-	__export(entry_exports, { foo: () => foo });
 	foo = 123;
 	console.log((init_entry(), __toCommonJS(entry_exports)));
 } });
@@ -43,19 +43,14 @@ exports.foo = foo
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,13 +1,13 @@
--var entry_exports = {};
--__export(entry_exports, {
--    foo: () => foo
--});
+ var entry_exports = {};
+ __export(entry_exports, {
+     foo: () => foo
+ });
 -module.exports = __toCommonJS(entry_exports);
--var foo;
-+var entry_exports, foo;
+ var foo;
  var init_entry = __esm({
      "entry.js"() {
-+        entry_exports = {};
-+        __export(entry_exports, {
-+            foo: () => foo
-+        });
          foo = 123;
          console.log((init_entry(), __toCommonJS(entry_exports)));
      }

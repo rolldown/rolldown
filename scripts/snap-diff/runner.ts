@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js'
 import { diffCase } from './diff'
-import { DebugConfig } from './types'
+import { DebugConfig, UnwrapPromise } from './types'
 import { aggregateReason } from './aggregate-reason.js'
 const esbuildTestDir = path.join(
   import.meta.dirname,
@@ -144,7 +144,9 @@ function getRolldownSnap(caseDir: string) {
   }
 }
 
-function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
+function getDiffMarkdown(
+  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
+) {
   if (typeof diffResult === 'string') {
     throw new Error('diffResult should not be string')
   }
@@ -186,7 +188,10 @@ type Summary = {
 }
 
 function getSummaryMarkdownAndStats(
-  diffList: Array<{ diffResult: ReturnType<typeof diffCase>; name: string }>,
+  diffList: Array<{
+    diffResult: UnwrapPromise<ReturnType<typeof diffCase>>
+    name: string
+  }>,
   snapshotCategory: string,
 ): Summary {
   let bypassList = []
@@ -255,7 +260,7 @@ function getSummaryMarkdownAndStats(
 
 function updateBypassOrDiffMarkdown(
   markdownPath: string,
-  diffResult: ReturnType<typeof diffCase>,
+  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
 ) {
   let bypassContent = ''
   if (fs.existsSync(markdownPath)) {

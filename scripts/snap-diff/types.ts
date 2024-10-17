@@ -3,3 +3,6 @@ export type DebugConfig = {
   verbose?: boolean
   caseNames: string[]
 }
+
+export type UnwrapPromise<T extends Promise<any>> =
+  T extends Promise<infer U> ? U : T

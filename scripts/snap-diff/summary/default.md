@@ -139,10 +139,6 @@
   diff
 ## [jsx_import_meta_value](../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value/diff.md)
   diff
-## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js/diff.md)
-  diff
-## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6/diff.md)
-  diff
 ## [jsx_this_property_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_common_js/diff.md)
   diff
 ## [jsx_this_property_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_esm/diff.md)
@@ -317,6 +313,8 @@
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
+## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
+## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [output_extension_remapping_file](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_file)
 ## [preserve_key_comment](../../../crates/rolldown/tests/esbuild/default/preserve_key_comment)

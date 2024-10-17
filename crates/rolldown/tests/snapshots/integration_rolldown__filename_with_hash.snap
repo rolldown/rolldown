@@ -1039,8 +1039,8 @@ expression: output
 
 # tests/esbuild/default/jsx_import_meta_property
 
-- factory-!~{000}~.js => factory-g4crioxQ.js
-- fragment-!~{001}~.js => fragment-wO98YBc_.js
+- factory-!~{000}~.js => factory-LoSvHEiF.js
+- fragment-!~{001}~.js => fragment-RPyZYCzc.js
 
 # tests/esbuild/default/jsx_import_meta_value
 
@@ -1049,11 +1049,11 @@ expression: output
 
 # tests/esbuild/default/jsx_imports_common_js
 
-- entry-!~{000}~.js => entry-iXb5Il0G.js
+- entry-!~{000}~.js => entry-U2z4ArwE.js
 
 # tests/esbuild/default/jsx_imports_es6
 
-- entry-!~{000}~.js => entry-iXb5Il0G.js
+- entry-!~{000}~.js => entry-Bsq71e72.js
 
 # tests/esbuild/default/jsx_syntax_in_js
 
@@ -1061,23 +1061,23 @@ expression: output
 
 # tests/esbuild/default/jsx_this_property_common_js
 
-- factory-!~{000}~.js => factory-ydedGjBw.js
-- fragment-!~{001}~.js => fragment-h5jh_Mrm.js
+- factory-!~{000}~.js => factory-VArr0XhU.js
+- fragment-!~{001}~.js => fragment--LuLZEVW.js
 
 # tests/esbuild/default/jsx_this_property_esm
 
-- factory-!~{000}~.js => factory-ydedGjBw.js
-- fragment-!~{001}~.js => fragment-h5jh_Mrm.js
+- factory-!~{000}~.js => factory-VArr0XhU.js
+- fragment-!~{001}~.js => fragment--LuLZEVW.js
 
 # tests/esbuild/default/jsx_this_value_common_js
 
-- factory-!~{000}~.js => factory-F5Rhr67G.js
-- fragment-!~{001}~.js => fragment-hXsJrO-d.js
+- factory-!~{000}~.js => factory-ZkW4QTeo.js
+- fragment-!~{001}~.js => fragment-OztnXIh7.js
 
 # tests/esbuild/default/jsx_this_value_esm
 
-- factory-!~{000}~.js => factory-F5Rhr67G.js
-- fragment-!~{001}~.js => fragment-hXsJrO-d.js
+- factory-!~{000}~.js => factory-ZkW4QTeo.js
+- fragment-!~{001}~.js => fragment-OztnXIh7.js
 
 # tests/esbuild/default/keep_names_all_forms
 

@@ -51,16 +51,6 @@
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
-## `jsx.factory`
-- crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
-- crates/rolldown/tests/esbuild/default/jsx_imports_common_js
-- crates/rolldown/tests/esbuild/default/jsx_imports_es6
-- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
-- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
-- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
-- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -78,6 +68,14 @@
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
+## `jsx.factory`
+- crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
+- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
+- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
+- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
+- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
+- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
+- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## side effects detect
 - crates/rolldown/tests/esbuild/dce/dce_of_destructuring
 - crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition

@@ -59,7 +59,7 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
-  pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
+  pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let original_name = canonical_ref.name(self.symbol_db).to_rstr();
     match self.canonical_names.entry(canonical_ref) {
@@ -88,7 +88,7 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  pub fn create_conflictless_top_level_name(&mut self, hint: &str) -> String {
+  pub fn create_conflictless_name(&mut self, hint: &str) -> String {
     let hint = Rstr::new(hint);
     let mut conflictless_name = hint.clone();
     loop {
@@ -108,7 +108,7 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
-  pub fn add_root_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
+  pub fn add_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
     let hint = Rstr::new(token.value());
     let mut conflictless_name = hint.clone();
     loop {
@@ -130,11 +130,7 @@ impl<'name> Renamer<'name> {
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
   #[tracing::instrument(level = "trace", skip_all)]
-  pub fn rename_non_top_level_symbol(
-    &mut self,
-    modules_in_chunk: &[ModuleIdx],
-    modules: &IndexModules,
-  ) {
+  pub fn rename_non_root_symbol(&mut self, modules_in_chunk: &[ModuleIdx], modules: &IndexModules) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name NormalModule,

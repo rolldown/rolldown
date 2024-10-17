@@ -142,8 +142,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
         self.snippet.var_decl_stmt(default_export_ref, decl.to_expression_mut().take_in(self.alloc))
       }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-        let from =
-          func.id.as_ref().map_or(default_export_ref.as_str(), |ident| ident.name.as_str());
+        let from = func.id.as_ref().map_or(default_export_ref, |ident| ident.name.as_str());
         self.generated_exports.push(self.snippet.object_property_kind_object_property(
           "default",
           self.snippet.id_ref_expr(from, SPAN),
@@ -155,8 +154,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
           .statement_expression(SPAN, Expression::FunctionExpression(func.take_in(self.alloc)))
       }
       ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-        let from =
-          class.id.as_ref().map_or(default_export_ref.as_str(), |ident| ident.name.as_str());
+        let from = class.id.as_ref().map_or(default_export_ref, |ident| ident.name.as_str());
         self.generated_exports.push(self.snippet.object_property_kind_object_property(
           "default",
           self.snippet.id_ref_expr(from, SPAN),
@@ -359,7 +357,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
     match module {
       Module::Normal(importee) => {
         // TODO deconflict namespace_ref
-        importee.namespace_object_ref.name(self.ctx.symbol_db).clone()
+        importee.namespace_object_ref.name(self.ctx.symbol_db).into()
       }
       Module::External(external_module) => {
         // TODO need to generate one symbol and deconflict it

@@ -316,7 +316,7 @@
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## esbuild will reuse `ns` variable
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
-## needs rewrite tool ignore top level `let` binding -> var
+## we don't support no bundle mode, rest part should be same
 - crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_unused
 ## esbuild treated svg as commonjs module, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension

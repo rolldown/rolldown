@@ -18,4 +18,5 @@ pub struct RollupRenderedChunk {
   pub modules: FxHashMap<ModuleId, RenderedModule>,
   pub imports: Vec<ModuleId>,
   pub dynamic_imports: Vec<ModuleId>,
+  pub debug_id: u128,
 }

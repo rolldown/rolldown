@@ -60,7 +60,7 @@ pub fn finalize_assets(
   let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
-  let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
+  let index_final_hashes: IndexVec<AssetIdx, (String, u128)> = index_asset_hashers
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut hasher)| {
@@ -82,7 +82,7 @@ pub fn finalize_assets(
       }
 
       let digested = hasher.digest128();
-      to_url_safe_base64(digested.to_le_bytes())
+      (to_url_safe_base64(digested.to_le_bytes()), digested)
     })
     .collect::<Vec<_>>()
     .into();
@@ -91,7 +91,7 @@ pub fn finalize_assets(
     .chunk_table
     .iter()
     .zip(&index_final_hashes)
-    .filter_map(|(chunk, hash)| {
+    .filter_map(|(chunk, (hash, _))| {
       chunk
         .preliminary_filename
         .as_ref()
@@ -103,7 +103,10 @@ pub fn finalize_assets(
 
   let mut assets: IndexAssets = preliminary_assets
     .into_par_iter()
-    .map(|mut asset| {
+    .enumerate()
+    .map(|(asset_idx, mut asset)| {
+      let asset_idx = AssetIdx::from(asset_idx);
+
       let preliminary_filename_raw = asset.preliminary_filename.to_string();
       let filename: ModuleId =
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
@@ -111,6 +114,8 @@ pub fn finalize_assets(
 
       if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
         ecma_meta.rendered_chunk.filename = filename.clone();
+        let (_, debug_id) = index_final_hashes[asset_idx];
+        ecma_meta.rendered_chunk.debug_id = debug_id;
       }
 
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced

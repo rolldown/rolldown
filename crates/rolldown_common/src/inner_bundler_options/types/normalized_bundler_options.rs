@@ -52,6 +52,7 @@ pub struct NormalizedBundlerOptions {
   pub outro: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+  pub sourcemap_debug_ids: bool,
   pub experimental: ExperimentalOptions,
   pub minify: bool,
   pub extend: bool,

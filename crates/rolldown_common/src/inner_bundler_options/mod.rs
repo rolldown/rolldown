@@ -110,6 +110,7 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+  pub sourcemap_debug_ids: Option<bool>,
 
   /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
   pub module_types: Option<HashMap<String, ModuleType>>,

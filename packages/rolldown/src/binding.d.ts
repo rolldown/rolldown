@@ -265,7 +265,7 @@ export interface BindingManifestPluginConfig {
 
 export interface BindingMatchGroup {
   name: string
-  test?: string
+  test?: RegExp | String
   priority?: number
   minSize?: number
   minShareCount?: number

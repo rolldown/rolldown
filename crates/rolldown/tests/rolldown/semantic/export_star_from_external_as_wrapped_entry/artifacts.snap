@@ -12,12 +12,12 @@ export * from "node:fs"
 
 
 //#region main.js
+var main_exports = {};
+__export(main_exports, { main: () => main });
 import * as import_node_fs from "node:fs";
-var main_exports, main;
+__reExport(main_exports, import_node_fs);
+var main;
 var init_main = __esm({ "main.js"() {
-	main_exports = {};
-	__export(main_exports, { main: () => main });
-	__reExport(main_exports, import_node_fs);
 	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 } });

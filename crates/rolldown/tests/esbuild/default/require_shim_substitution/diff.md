@@ -1,3 +1,5 @@
+# Reason
+1. require `.json`, the json file should not wrapped in `__esm`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -30,13 +32,13 @@ console.log([
 
 
 //#region example.json
-var example_exports, works, example_default;
+var example_exports = {};
+__export(example_exports, {
+	default: () => example_default,
+	works: () => works
+});
+var works, example_default;
 var init_example = __esm({ "example.json"() {
-	example_exports = {};
-	__export(example_exports, {
-		default: () => example_default,
-		works: () => works
-	});
 	works = true;
 	example_default = { works };
 } });
@@ -74,14 +76,14 @@ export default require_entry();
 -    "example.json"(exports, module) {
 -        module.exports = {
 -            works: true
-+var example_exports, works, example_default;
++var example_exports = {};
++__export(example_exports, {
++    default: () => example_default,
++    works: () => works
++});
++var works, example_default;
 +var init_example = __esm({
 +    "example.json"() {
-+        example_exports = {};
-+        __export(example_exports, {
-+            default: () => example_default,
-+            works: () => works
-+        });
 +        works = true;
 +        example_default = {
 +            works

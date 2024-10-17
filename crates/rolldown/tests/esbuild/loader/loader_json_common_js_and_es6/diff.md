@@ -41,13 +41,13 @@ const key_2 = "test keyword imports";
 
 //#endregion
 //#region x.json
-var x_exports, x, x_default;
+var x_exports = {};
+__export(x_exports, {
+	default: () => x_default,
+	x: () => x
+});
+var x, x_default;
 var init_x = __esm({ "x.json"() {
-	x_exports = {};
-	__export(x_exports, {
-		default: () => x_default,
-		x: () => x
-	});
 	x = true;
 	x_default = { x };
 } });
@@ -85,14 +85,14 @@ console.log(x_json, y_default, small, key_2);
 -var x_json = require_x();
 -console.log(x_json, y_default, small, if2);
 +var key_2 = "test keyword imports";
-+var x_exports, x, x_default;
++var x_exports = {};
++__export(x_exports, {
++    default: () => x_default,
++    x: () => x
++});
++var x, x_default;
 +var init_x = __esm({
 +    "x.json"() {
-+        x_exports = {};
-+        __export(x_exports, {
-+            default: () => x_default,
-+            x: () => x
-+        });
 +        x = true;
 +        x_default = {
 +            x

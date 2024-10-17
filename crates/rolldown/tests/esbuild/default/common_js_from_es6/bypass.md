@@ -1,6 +1,5 @@
 # Reason
-1. sub optimal wrap impl, `__export`  should not be wrapped in module 
-initialization
+1. different deconflict naming convention
 # Diff
 ## /out.js
 ### esbuild
@@ -42,25 +41,21 @@ import assert from "node:assert";
 
 
 //#region foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
-var foo_exports;
-var init_foo = __esm({ "foo.js"() {
-	foo_exports = {};
-	__export(foo_exports, { foo: () => foo$1 });
-} });
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region bar.js
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
-var bar_exports;
-var init_bar = __esm({ "bar.js"() {
-	bar_exports = {};
-	__export(bar_exports, { bar: () => bar$1 });
-} });
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region entry.js
@@ -76,42 +71,30 @@ const { bar } = (init_bar(), __toCommonJS(bar_exports));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,23 +1,27 @@
--var foo_exports = {};
--__export(foo_exports, {
+@@ -1,23 +1,23 @@
+ var foo_exports = {};
+ __export(foo_exports, {
 -    foo: () => foo
--});
++    foo: () => foo$1
+ });
 -function foo() {
 +function foo$1() {
      return "foo";
  }
-+var foo_exports;
  var init_foo = __esm({
--    "foo.js"() {}
-+    "foo.js"() {
-+        foo_exports = {};
-+        __export(foo_exports, {
-+            foo: () => foo$1
-+        });
-+    }
+     "foo.js"() {}
  });
--var bar_exports = {};
--__export(bar_exports, {
+ var bar_exports = {};
+ __export(bar_exports, {
 -    bar: () => bar
--});
++    bar: () => bar$1
+ });
 -function bar() {
 +function bar$1() {
      return "bar";
  }
-+var bar_exports;
  var init_bar = __esm({
--    "bar.js"() {}
-+    "bar.js"() {
-+        bar_exports = {};
-+        __export(bar_exports, {
-+            bar: () => bar$1
-+        });
-+    }
+     "bar.js"() {}
  });
 -var {foo: foo2} = (init_foo(), __toCommonJS(foo_exports));
 -console.log(foo2(), bar2());

@@ -14,10 +14,10 @@ var y_default = "y";
 
 //#endregion
 //#region x.txt
-var x_exports, x_default;
+var x_exports = {};
+__export(x_exports, { default: () => x_default });
+var x_default;
 var init_x = __esm({ "x.txt"() {
-	x_exports = {};
-	__export(x_exports, { default: () => x_default });
 	x_default = "x";
 } });
 

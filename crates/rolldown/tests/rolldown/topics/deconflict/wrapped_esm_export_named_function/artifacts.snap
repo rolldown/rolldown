@@ -10,13 +10,13 @@ import assert from "assert";
 
 
 //#region foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
 function foo$1(a$1$1) {
 	console.log(a$1$1, a$1);
 }
-var foo_exports, a$1;
+var a$1;
 var init_foo = __esm({ "foo.js"() {
-	foo_exports = {};
-	__export(foo_exports, { foo: () => foo$1 });
 	a$1 = 1;
 } });
 
@@ -40,17 +40,18 @@ init_foo(), __toCommonJS(foo_exports);
 
 ```
 - ../foo.js
-(2:7-2:16) " function" --> (30:0-30:9) "\nfunction"
-(2:16-2:20) " foo" --> (30:9-30:15) " foo$1"
-(2:20-2:25) "(a$1)" --> (30:15-30:22) "(a$1$1)"
-(2:25-3:4) " {\n   " --> (30:22-31:0) " {"
-(3:4-3:12) " console" --> (31:0-31:9) "\n\tconsole"
-(3:12-3:16) ".log" --> (31:9-31:13) ".log"
-(3:16-3:21) "(a$1," --> (31:13-31:20) "(a$1$1,"
-(3:21-3:23) " a" --> (31:20-31:24) " a$1"
-(3:23-4:1) ")\n" --> (31:24-32:0) ");"
-(4:1-0:0) "" --> (32:0-33:0) "\n}"
-(0:0-0:6) "const " --> (33:0-37:1) "\nvar foo_exports, a$1;\nvar init_foo = __esm({ \"foo.js\"() {\n\tfoo_exports = {};\n\t__export(foo_exports, { foo: () => foo$1 });\n"
+(0:0-2:7) "const a = 1;\n\nexport" --> (30:0-32:0) "\nvar foo_exports = {};\n__export(foo_exports, { foo: () => foo$1 });"
+(2:7-2:16) " function" --> (32:0-32:9) "\nfunction"
+(2:16-2:20) " foo" --> (32:9-32:15) " foo$1"
+(2:20-2:25) "(a$1)" --> (32:15-32:22) "(a$1$1)"
+(2:25-3:4) " {\n   " --> (32:22-33:0) " {"
+(3:4-3:12) " console" --> (33:0-33:9) "\n\tconsole"
+(3:12-3:16) ".log" --> (33:9-33:13) ".log"
+(3:16-3:21) "(a$1," --> (33:13-33:20) "(a$1$1,"
+(3:21-3:23) " a" --> (33:20-33:24) " a$1"
+(3:23-4:1) ")\n" --> (33:24-34:0) ");"
+(4:1-0:0) "" --> (34:0-35:0) "\n}"
+(0:0-0:6) "const " --> (35:0-37:1) "\nvar a$1;\nvar init_foo = __esm({ \"foo.js\"() {\n"
 (0:6-0:10) "a = " --> (37:1-37:7) "\ta$1 ="
 (0:10-0:0) "const a = " --> (37:7-38:0) " 1;"
 (0:0-4:2) "const a = 1;\n\nexport function foo(a$1) {\n    console.log(a$1, a)\n}" --> (38:0-42:0) "\n} });\n\n//#endregion\n//#region bar.js"

@@ -16,30 +16,30 @@ var init_a = __esm({ "a.js"() {
 
 //#endregion
 //#region b.js
-var b_exports, xyz;
+var b_exports = {};
+__export(b_exports, { xyz: () => xyz });
+var xyz;
 var init_b = __esm({ "b.js"() {
-	b_exports = {};
-	__export(b_exports, { xyz: () => xyz });
 	xyz = null;
 } });
 
 //#endregion
 //#region commonjs.js
+var commonjs_exports = {};
+__export(commonjs_exports, {
+	C: () => Class,
+	Class: () => Class,
+	Fn: () => Fn,
+	abc: () => abc,
+	b: () => b_exports,
+	c: () => c,
+	default: () => commonjs_default,
+	l: () => l,
+	v: () => v
+});
 function Fn() {}
-var commonjs_exports, commonjs_default, v, l, c, Class;
+var commonjs_default, v, l, c, Class;
 var init_commonjs = __esm({ "commonjs.js"() {
-	commonjs_exports = {};
-	__export(commonjs_exports, {
-		C: () => Class,
-		Class: () => Class,
-		Fn: () => Fn,
-		abc: () => abc,
-		b: () => b_exports,
-		c: () => c,
-		default: () => commonjs_default,
-		l: () => l,
-		v: () => v
-	});
 	init_a();
 	init_b();
 	commonjs_default = 123;
@@ -51,58 +51,52 @@ var init_commonjs = __esm({ "commonjs.js"() {
 
 //#endregion
 //#region c.js
-var c_exports, c_default;
+var c_exports = {};
+__export(c_exports, { default: () => c_default });
+var c_default;
 var init_c = __esm({ "c.js"() {
-	c_exports = {};
-	__export(c_exports, { default: () => c_default });
 	c_default = class {};
 } });
 
 //#endregion
 //#region d.js
-var d_exports, Foo;
+var d_exports = {};
+__export(d_exports, { default: () => Foo });
+var Foo;
 var init_d = __esm({ "d.js"() {
-	d_exports = {};
-	__export(d_exports, { default: () => Foo });
 	Foo = class {};
 	Foo.prop = 123;
 } });
 
 //#endregion
 //#region e.js
+var e_exports = {};
+__export(e_exports, { default: () => e_default });
 function e_default() {}
-var e_exports;
-var init_e = __esm({ "e.js"() {
-	e_exports = {};
-	__export(e_exports, { default: () => e_default });
-} });
+var init_e = __esm({ "e.js"() {} });
 
 //#endregion
 //#region f.js
+var f_exports = {};
+__export(f_exports, { default: () => foo$1 });
 function foo$1() {}
-var f_exports;
 var init_f = __esm({ "f.js"() {
-	f_exports = {};
-	__export(f_exports, { default: () => foo$1 });
 	foo$1.prop = 123;
 } });
 
 //#endregion
 //#region g.js
+var g_exports = {};
+__export(g_exports, { default: () => g_default });
 async function g_default() {}
-var g_exports;
-var init_g = __esm({ "g.js"() {
-	g_exports = {};
-	__export(g_exports, { default: () => g_default });
-} });
+var init_g = __esm({ "g.js"() {} });
 
 //#endregion
 //#region h.js
+var h_exports = {};
+__export(h_exports, { default: () => foo });
 async function foo() {}
-var h_exports;
 var init_h = __esm({ "h.js"() {
-	h_exports = {};
-	__export(h_exports, { default: () => foo });
 	foo.prop = 123;
 } });
 

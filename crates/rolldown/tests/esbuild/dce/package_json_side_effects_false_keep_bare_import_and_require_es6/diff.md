@@ -1,6 +1,5 @@
 # Reason
 1. double module initialization
-2. not align
 # Diff
 ## /out.js
 ### esbuild
@@ -27,10 +26,10 @@ console.log("unused import");
 
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_index_exports, foo;
+var demo_pkg_index_exports = {};
+__export(demo_pkg_index_exports, { foo: () => foo });
+var foo;
 var init_demo_pkg_index = __esm({ "node_modules/demo-pkg/index.js"() {
-	demo_pkg_index_exports = {};
-	__export(demo_pkg_index_exports, { foo: () => foo });
 	foo = 123;
 	console.log("hello");
 } });
@@ -51,18 +50,15 @@ console.log("unused import");
 @@ -1,13 +1,14 @@
 -var demo_pkg_exports = {};
 -__export(demo_pkg_exports, {
--    foo: () => foo
--});
--var foo;
++var demo_pkg_index_exports = {};
++__export(demo_pkg_index_exports, {
+     foo: () => foo
+ });
+ var foo;
 -var init_demo_pkg = __esm({
 -    "Users/user/project/node_modules/demo-pkg/index.js"() {
-+var demo_pkg_index_exports, foo;
 +var init_demo_pkg_index = __esm({
 +    "node_modules/demo-pkg/index.js"() {
-+        demo_pkg_index_exports = {};
-+        __export(demo_pkg_index_exports, {
-+            foo: () => foo
-+        });
          foo = 123;
          console.log("hello");
      }

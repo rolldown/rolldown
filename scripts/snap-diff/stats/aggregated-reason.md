@@ -28,19 +28,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_js
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
-## not align
-- crates/rolldown/tests/esbuild/dce/dead_code_following_jump
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
-- crates/rolldown/tests/esbuild/default/indirect_require_message
-- crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through
-- crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544
-- crates/rolldown/tests/esbuild/default/package_alias
-- crates/rolldown/tests/esbuild/default/quoted_property_mangle
-- crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
-- crates/rolldown/tests/esbuild/default/require_json
-- crates/rolldown/tests/esbuild/default/this_outside_function
-- crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
-- crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
 ## lowering class
 - crates/rolldown/tests/esbuild/dce/dce_class_static_blocks
 - crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
@@ -53,6 +40,17 @@
 - crates/rolldown/tests/esbuild/default/export_forms_es6
 - crates/rolldown/tests/esbuild/default/new_expression_common_js
 - crates/rolldown/tests/esbuild/default/this_inside_function
+## not align
+- crates/rolldown/tests/esbuild/dce/dead_code_following_jump
+- crates/rolldown/tests/esbuild/default/indirect_require_message
+- crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through
+- crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544
+- crates/rolldown/tests/esbuild/default/package_alias
+- crates/rolldown/tests/esbuild/default/quoted_property_mangle
+- crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
+- crates/rolldown/tests/esbuild/default/this_outside_function
+- crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
+- crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
 ## `jsx.factory`
 - crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
 - crates/rolldown/tests/esbuild/default/jsx_import_meta_property
@@ -131,10 +129,6 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
-## sub optimal
-- crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
-- crates/rolldown/tests/esbuild/importstar/import_star_and_common_js
-- crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
@@ -223,8 +217,6 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork
 ## sub optimal for pure call with spread
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
-## `cjs_exports` initialized should not wrapped in `init_cjs`
-- crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 ## related to minifier
@@ -241,9 +233,6 @@
 - crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase
 ## not support `jsx.preserve`
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
-## sub optimal wrap impl, `__export`  should not be wrapped in module 
-initialization
-- crates/rolldown/tests/esbuild/default/common_js_from_es6
 ## not support conditional import
 - crates/rolldown/tests/esbuild/default/conditional_import
 ## not support conditional require
@@ -272,8 +261,6 @@ initialization
 - crates/rolldown/tests/esbuild/default/define_this
 ## not support duplicate property warning
 - crates/rolldown/tests/esbuild/default/duplicate_property_warning
-## should init `type_exports` when decl
-- crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## Not sure if we needs to use `Object.define` pattern in iife
@@ -312,6 +299,10 @@ initialization
 - crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template
 ## should rewrite when bad arg count
 - crates/rolldown/tests/esbuild/default/require_bad_argument_count
+## require json should not wrapped in `__esm`
+- crates/rolldown/tests/esbuild/default/require_json
+## require `.json`, the json file should not wrapped in `__esm`
+- crates/rolldown/tests/esbuild/default/require_shim_substitution
 ## `.txt` module should be treated as cjs
 - crates/rolldown/tests/esbuild/default/require_txt
 ## obviously, the output is incorrect
@@ -336,12 +327,10 @@ initialization
 - crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446
 ## Format cjs should not appear `export`
 - crates/rolldown/tests/esbuild/importstar/import_self_common_js
-## different initialization strategy
-- crates/rolldown/tests/esbuild/importstar/import_star_and_common_js
+## sub optimal
+- crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## esbuild will reuse `ns` variable
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
-## should not wrap the `foo_exports` initialization in `init_foo`
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_and_common_js
 ## esbuild treated svg as commonjs module, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
 ## esbuild will wrap `empty` module as a cjs module, rolldown did not

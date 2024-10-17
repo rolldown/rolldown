@@ -10,10 +10,8 @@ import assert from "node:assert";
 
 
 //#region types.mjs
-var types_exports;
-var init_types = __esm({ "types.mjs"() {
-	types_exports = {};
-} });
+var types_exports = {};
+var init_types = __esm({ "types.mjs"() {} });
 
 //#endregion
 //#region entry.js

@@ -19,10 +19,10 @@ console.log(require_test());
 
 
 //#region test.svg
-var test_exports, test_default;
+var test_exports = {};
+__export(test_exports, { default: () => test_default });
+var test_default;
 var init_test = __esm({ "test.svg"() {
-	test_exports = {};
-	__export(test_exports, { default: () => test_default });
 	test_default = "data:image/svg+xml;base64,YQBigGP/ZA==";
 } });
 
@@ -41,13 +41,13 @@ console.log((init_test(), __toCommonJS(test_exports)));
 -var require_test = __commonJS({
 -    "test.svg"(exports, module) {
 -        module.exports = "data:image/svg+xml;base64,YQBigGP/ZA==";
-+var test_exports, test_default;
++var test_exports = {};
++__export(test_exports, {
++    default: () => test_default
++});
++var test_default;
 +var init_test = __esm({
 +    "test.svg"() {
-+        test_exports = {};
-+        __export(test_exports, {
-+            default: () => test_default
-+        });
 +        test_default = "data:image/svg+xml;base64,YQBigGP/ZA==";
      }
  });

@@ -13,8 +13,6 @@
   diff
 ## [import_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_self_common_js/diff.md)
   diff
-## [import_star_and_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_star_and_common_js/diff.md)
-  diff
 ## [import_star_common_js_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused/diff.md)
   diff
 ## [import_star_mangle_no_bundle_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_mangle_no_bundle_capture/diff.md)
@@ -54,6 +52,7 @@
 ## [import_export_star_ambiguous_warning](../../../crates/rolldown/tests/esbuild/importstar/import_export_star_ambiguous_warning)
 ## [import_of_export_star](../../../crates/rolldown/tests/esbuild/importstar/import_of_export_star)
 ## [import_of_export_star_of_import](../../../crates/rolldown/tests/esbuild/importstar/import_of_export_star_of_import)
+## [import_star_and_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_star_and_common_js)
 ## [import_star_export_import_star_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_import_star_unused)
 ## [import_star_export_star_as_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_as_unused)
 ## [import_star_export_star_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_unused)

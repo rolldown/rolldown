@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. require json should not wrapped in `__esm`
 # Diff
 ## /out.js
 ### esbuild
@@ -23,15 +23,15 @@ console.log(require_test());
 
 
 //#region test.json
-var test_exports, a, b, c, test_default;
+var test_exports = {};
+__export(test_exports, {
+	a: () => a,
+	b: () => b,
+	c: () => c,
+	default: () => test_default
+});
+var a, b, c, test_default;
 var init_test = __esm({ "test.json"() {
-	test_exports = {};
-	__export(test_exports, {
-		a: () => a,
-		b: () => b,
-		c: () => c,
-		default: () => test_default
-	});
 	a = true;
 	b = 123;
 	c = [null];
@@ -60,16 +60,16 @@ console.log((init_test(), __toCommonJS(test_exports).default));
 -            a: true,
 -            b: 123,
 -            c: [null]
-+var test_exports, a, b, c, test_default;
++var test_exports = {};
++__export(test_exports, {
++    a: () => a,
++    b: () => b,
++    c: () => c,
++    default: () => test_default
++});
++var a, b, c, test_default;
 +var init_test = __esm({
 +    "test.json"() {
-+        test_exports = {};
-+        __export(test_exports, {
-+            a: () => a,
-+            b: () => b,
-+            c: () => c,
-+            default: () => test_default
-+        });
 +        a = true;
 +        b = 123;
 +        c = [null];

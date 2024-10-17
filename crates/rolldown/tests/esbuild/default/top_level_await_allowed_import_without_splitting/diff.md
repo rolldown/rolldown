@@ -64,17 +64,16 @@ var require_entry = __commonJS({ "entry.js"() {
 
 //#endregion
 //#region a.js
-var a_exports;
+var a_exports = {};
 var init_a = __esm({ "a.js"() {
-	a_exports = {};
 	init_b();
 } });
 
 //#endregion
 //#region b.js
-var b_exports, import_c;
+var b_exports = {};
+var import_c;
 var init_b = __esm({ "b.js"() {
-	b_exports = {};
 	import_c = __toESM(require_c());
 } });
 
@@ -93,7 +92,7 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,29 +1,43 @@
+@@ -1,29 +1,42 @@
 -var c_exports = {};
 -var init_c = __esm({
 -    async "c.js"() {
@@ -106,23 +105,6 @@ export default require_entry();
 -        await init_c();
 -    }
 -});
--var a_exports = {};
--var init_a = __esm({
--    async "a.js"() {
--        await init_b();
--    }
--});
--var entry_exports = {};
--var init_entry = __esm({
--    async "entry.js"() {
--        init_a();
--        init_b();
--        init_c();
--        init_entry();
--        await 0;
--    }
--});
--await init_entry();
 +
 +
 +//#region entry.js
@@ -144,17 +126,32 @@ export default require_entry();
 +
 +//#endregion
 +//#region a.js
-+var a_exports;
+ var a_exports = {};
+-var init_a = __esm({
+-    async "a.js"() {
+-        await init_b();
+-    }
+-});
+-var entry_exports = {};
+-var init_entry = __esm({
+-    async "entry.js"() {
+-        init_a();
+-        init_b();
+-        init_c();
+-        init_entry();
+-        await 0;
+-    }
+-});
+-await init_entry();
 +var init_a = __esm({ "a.js"() {
-+	a_exports = {};
 +	init_b();
 +} });
 +
 +//#endregion
 +//#region b.js
-+var b_exports, import_c;
++var b_exports = {};
++var import_c;
 +var init_b = __esm({ "b.js"() {
-+	b_exports = {};
 +	import_c = __toESM(require_c());
 +} });
 +

@@ -25,8 +25,6 @@
   diff
 ## [comment_preservation_transform_jsx](../../../crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx/diff.md)
   diff
-## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/diff.md)
-  diff
 ## [conditional_import](../../../crates/rolldown/tests/esbuild/default/conditional_import/diff.md)
   diff
 ## [conditional_require](../../../crates/rolldown/tests/esbuild/default/conditional_require/diff.md)
@@ -58,8 +56,6 @@
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning/diff.md)
   diff
 ## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs/diff.md)
-  diff
-## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910/diff.md)
   diff
 ## [entry_names_chunk_names_ext_placeholder](../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder/diff.md)
   diff
@@ -308,6 +304,7 @@
 ## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external)
 ## [await_import_inside_try](../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
+## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
 ## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_fs_node](../../../crates/rolldown/tests/esbuild/default/export_fs_node)
@@ -342,6 +339,7 @@
 ## [use_strict_directive_bundle_esm_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_esm_issue2264)
 # Bypassed Cases
 ## [char_freq_ignore_comments](../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments/bypass.md)
+## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/bypass.md)
 ## [const_with_let](../../../crates/rolldown/tests/esbuild/default/const_with_let/bypass.md)
 ## [direct_eval_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/direct_eval_tainting_no_bundle/bypass.md)
 ## [dot_import](../../../crates/rolldown/tests/esbuild/default/dot_import/bypass.md)

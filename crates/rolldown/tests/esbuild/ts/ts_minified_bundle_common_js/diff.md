@@ -17,13 +17,13 @@ var require_a = __commonJS({ "a.ts"(exports) {
 
 //#endregion
 //#region j.json
-var j_exports, test, j_default;
+var j_exports = {};
+__export(j_exports, {
+	default: () => j_default,
+	test: () => test
+});
+var test, j_default;
 var init_j = __esm({ "j.json"() {
-	j_exports = {};
-	__export(j_exports, {
-		default: () => j_default,
-		test: () => test
-	});
 	test = true;
 	j_default = { test };
 } });
@@ -56,22 +56,22 @@ console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 -    c.exports = {
 -        test: !0
 -    };
-+var j_exports, test, j_default;
++var j_exports = {};
++__export(j_exports, {
++    default: () => j_default,
++    test: () => test
+ });
+-var {foo: f} = t();
+-console.log(f(), n());
++var test, j_default;
 +var init_j = __esm({
 +    "j.json"() {
-+        j_exports = {};
-+        __export(j_exports, {
-+            default: () => j_default,
-+            test: () => test
-+        });
 +        test = true;
 +        j_default = {
 +            test
 +        };
 +    }
- });
--var {foo: f} = t();
--console.log(f(), n());
++});
 +var {foo} = require_a();
 +console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 

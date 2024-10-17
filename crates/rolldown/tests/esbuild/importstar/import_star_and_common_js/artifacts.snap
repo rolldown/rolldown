@@ -10,10 +10,10 @@ import assert from "node:assert";
 
 
 //#region foo.js
-var foo_exports, foo;
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo });
+var foo;
 var init_foo = __esm({ "foo.js"() {
-	foo_exports = {};
-	__export(foo_exports, { foo: () => foo });
 	foo = 123;
 } });
 

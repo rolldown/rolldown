@@ -24,10 +24,8 @@ import { jsx as _jsx, jsx as _jsx$1 } from "react/jsx-runtime";
 
 
 //#region node_modules/pkg/button.css
-var button_exports;
-var init_button = __esm({ "node_modules/pkg/button.css"() {
-	button_exports = {};
-} });
+var button_exports = {};
+var init_button = __esm({ "node_modules/pkg/button.css"() {} });
 
 //#endregion
 //#region node_modules/pkg/components.jsx
@@ -45,16 +43,15 @@ render(_jsx(Button, {}));
 ===================================================================
 --- esbuild	/out/test.js
 +++ rolldown	test.js
-@@ -1,8 +1,10 @@
+@@ -1,8 +1,8 @@
 -var require_button = __commonJS({
 -    "project/node_modules/pkg/button.css"(exports, module) {
 -        module.exports = {};
+-    }
 +import {jsx as _jsx, jsx as _jsx$1} from "react/jsx-runtime";
-+var button_exports;
++var button_exports = {};
 +var init_button = __esm({
-+    "node_modules/pkg/button.css"() {
-+        button_exports = {};
-     }
++    "node_modules/pkg/button.css"() {}
  });
 -require_button();
 -var Button = () => React.createElement("button", null);

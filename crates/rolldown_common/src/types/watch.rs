@@ -1,10 +1,16 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc};
+use std::{collections::HashMap, fmt::Display};
 
 use arcstr::ArcStr;
 
 #[allow(dead_code)]
-#[derive(Default, Clone)]
-pub struct WatcherEventData(Option<Arc<HashMap<String, String>>>);
+#[derive(Default)]
+pub struct WatcherEventData(Option<HashMap<String, String>>);
+
+impl WatcherEventData {
+  pub fn inner(&self) -> &Option<HashMap<String, String>> {
+    &self.0
+  }
+}
 
 #[derive(PartialEq, Eq, Hash)]
 pub enum WatcherEvent {
@@ -24,7 +30,7 @@ impl From<WatcherChange> for WatcherEventData {
     let mut map = HashMap::default();
     map.insert("id".to_string(), event.path.to_string());
     map.insert("kind".to_string(), event.kind.to_string());
-    Self(Some(Arc::new(map)))
+    Self(Some(map))
   }
 }
 
@@ -50,7 +56,7 @@ impl From<BundleEventKind> for WatcherEventData {
   fn from(kind: BundleEventKind) -> Self {
     let mut map = HashMap::default();
     map.insert("code".to_string(), kind.to_string());
-    Self(Some(Arc::new(map)))
+    Self(Some(map))
   }
 }
 

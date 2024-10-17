@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { BindingWatcher, BindingWatcherEvent } from './binding'
+import { MaybePromise } from './types/utils'
 
 export class Watcher {
   closed: boolean
@@ -17,45 +18,49 @@ export class Watcher {
     this.controller.abort()
   }
 
-  async on(
+  on(
     event: 'change',
     listener: (
       id: string,
       change: { event: ChangeEvent },
-    ) => void | Promise<void>,
-  ): Promise<void>
-  async on(
+    ) => MaybePromise<void>,
+  ): this
+  on(
     event: 'event',
-    listener: (data: RollupWatcherEvent) => void | Promise<void>,
-  ): Promise<void>
-  async on(
-    event: 'restart' | 'close',
-    listener: () => void | Promise<void>,
-  ): Promise<void>
-  async on(
+    listener: (data: RollupWatcherEvent) => MaybePromise<void>,
+  ): this
+  on(event: 'restart' | 'close', listener: () => MaybePromise<void>): this
+  on(
     event: WatcherEvent,
-    listener: (...parameters: any[]) => void | Promise<void>,
-  ): Promise<void> {
+    listener: (...parameters: any[]) => MaybePromise<void>,
+  ): this {
     switch (event) {
       case 'close':
-        return await this.inner.on(BindingWatcherEvent.Close, async () => {
+        this.inner.on(BindingWatcherEvent.Close, async () => {
           await listener()
         })
+        break
       case 'event':
-        return await this.inner.on(BindingWatcherEvent.Event, async (data) => {
+        this.inner.on(BindingWatcherEvent.Event, async (data) => {
           await listener(data)
         })
+        break
+
       case 'restart':
-        return await this.inner.on(BindingWatcherEvent.ReStart, async () => {
+        this.inner.on(BindingWatcherEvent.ReStart, async () => {
           await listener()
         })
+        break
+
       case 'change':
-        return await this.inner.on(BindingWatcherEvent.Change, async (data) => {
+        this.inner.on(BindingWatcherEvent.Change, async (data) => {
           await listener(data!.id, { event: data!.kind as ChangeEvent })
         })
+        break
       default:
         throw new Error(`Unknown event: ${event}`)
     }
+    return this
   }
 
   // The rust side already create a thread for watcher, but it isn't at main thread.

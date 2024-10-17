@@ -1,5 +1,5 @@
 // cSpell:disable
-
+use oxc_transform_napi::transform::JsxOptions;
 use std::collections::HashMap;
 
 use crate::types::{
@@ -13,10 +13,10 @@ use serde::Deserialize;
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
-
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
+// mod binding_jsx_options;
 mod binding_resolve_options;
 mod treeshake;
 
@@ -82,6 +82,9 @@ pub struct BindingInputOptions {
   pub inject: Option<Vec<BindingInjectImport>>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
+  #[serde(skip_deserializing)]
+  #[derivative(Debug = "ignore")]
+  pub jsx: Option<JsxOptions>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

@@ -3,16 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
 
 
 //#region test.txt
-var test_exports, test_default;
+var test_exports = {};
+__export(test_exports, { default: () => test_default });
+var test_default;
 var init_test = __esm({ "test.txt"() {
-	test_exports = {};
-	__export(test_exports, { default: () => test_default });
 	test_default = "This is a test.";
 } });
 

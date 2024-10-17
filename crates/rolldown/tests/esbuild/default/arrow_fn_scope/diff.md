@@ -1,3 +1,5 @@
+# Reason
+1. the deconflict of no top level is sub optimal
 # Diff
 ## /out.js
 ### esbuild
@@ -30,13 +32,12 @@ tests = {
 };
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,10 +1,10 @@
  tests = {
 -    0: (s = e => s + e, t) => s + t,

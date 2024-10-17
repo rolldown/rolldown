@@ -1,3 +1,5 @@
+# Reason
+1. don't rewrite top level binding
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -10,16 +12,24 @@ let x = function(foo) {
 ### rolldown
 ```js
 
+//#region entry.js
+let x = function foo(foo) {
+	var foo;
+	return foo;
+};
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entry.js
+@@ -1,4 +1,4 @@
 -let x = function (foo) {
--    var foo;
--    return foo;
--};
++var x = function foo(foo) {
+     var foo;
+     return foo;
+ };
 
 ```

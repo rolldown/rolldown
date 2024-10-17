@@ -2,16 +2,12 @@
   "config": {
     "input": [
       {
-        "name": "entry_js",
+        "name": "entry",
         "import": "entry.js"
       }
     ],
     "format": "cjs",
-    "external": [
-      "fs"
-    ]
+    "platform": "node"
   },
-  "hiddenRuntimeModule": false,
-  "_comment": "TODO(hyf0): need to be solved",
   "expectExecuted": false
 }

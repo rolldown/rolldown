@@ -20,8 +20,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { default as redApple } from "pkg/apples/red.js";
-import { default as redBook } from "pkg/books/red";
+import redApple from "pkg/apples/red.js";
+import redBook from "pkg/books/red";
 
 //#region node_modules/pkg/good-apples/green.js
 var green_default = "🍏";

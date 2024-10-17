@@ -9,21 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: "./external" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import "fs";
+import "node:fs";
 import "./external";
 
-export * from "fs"
+export * from "node:fs"
 
 export * from "./external"
 

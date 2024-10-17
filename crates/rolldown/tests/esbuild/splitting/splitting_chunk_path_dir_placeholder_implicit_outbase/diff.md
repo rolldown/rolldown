@@ -46,14 +46,19 @@ console.log(import("./output-path/should-contain/this-text/file-G2XPANW2.js"));
 ### rolldown
 ```js
 
+//#region entry.js
+console.log(import("./file.js"));
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	entry.js
+@@ -1,1 +1,1 @@
 -console.log(import("./output-path/should-contain/this-text/file-G2XPANW2.js"));
++console.log(import("./file.js"));
 
 ```
 ## /out/output-path/should-contain/this-text/file-G2XPANW2.js

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "const-assign_js",
+        "name": "const-assign",
         "import": "const-assign.js"
       },
       {
-        "name": "const-update_js",
+        "name": "const-update",
         "import": "const-update.js"
       }
     ]

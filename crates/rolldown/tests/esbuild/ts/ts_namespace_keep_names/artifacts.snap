@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+let ns;
+(function(_ns) {
+	let foo = _ns.foo = () => {};
+	function bar() {}
+	_ns.bar = bar;
+	class Baz {}
+	_ns.Baz = Baz;
+})(ns || (ns = {}));
+
+//#endregion
+```

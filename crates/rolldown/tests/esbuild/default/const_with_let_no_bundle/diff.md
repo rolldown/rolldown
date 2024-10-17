@@ -1,3 +1,5 @@
+# Reason
+1. inline could be done in minifier
 # Diff
 ## /out.js
 ### esbuild
@@ -27,13 +29,12 @@ for (const d in x) console.log(d);
 for (const e of x) console.log(e);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,13 @@
 -const a = 1;
 -(console.log(1), console.log(2), unknownFn(3));

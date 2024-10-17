@@ -83,16 +83,22 @@ console.log(foo);
 ```
 ### rolldown
 ```js
+import { foo } from "./shared.js";
 
+//#region a.js
+console.log(foo);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	a.js
+@@ -1,2 +1,2 @@
 -import {foo} from "./chunk-25TWIR6T.js";
--console.log(foo);
++import {foo} from "./shared.js";
+ console.log(foo);
 
 ```
 ## /out/b.js
@@ -107,16 +113,22 @@ console.log(foo);
 ```
 ### rolldown
 ```js
+import { foo } from "./shared.js";
 
+//#region b.js
+console.log(foo);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	b.js
+@@ -1,2 +1,2 @@
 -import {foo} from "./chunk-25TWIR6T.js";
--console.log(foo);
++import {foo} from "./shared.js";
+ console.log(foo);
 
 ```
 ## /out/chunk-25TWIR6T.js

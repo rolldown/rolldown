@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
 
@@ -18,5 +18,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 var import_foo = __toESM(require_foo());
 
 //#endregion
-export { import_foo as ns };
+Object.defineProperty(exports, 'ns', {
+  enumerable: true,
+  get: function () {
+    return import_foo;
+  }
+});
 ```

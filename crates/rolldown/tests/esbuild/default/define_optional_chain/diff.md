@@ -1,3 +1,5 @@
+# Reason
+1. oxc define do not support optional chain
 # Diff
 ## /out.js
 ### esbuild
@@ -22,7 +24,7 @@ console.log([
 
 //#region entry.js
 console.log([
-	a.b.c,
+	1,
 	a?.b.c,
 	a.b?.c
 ], [
@@ -36,15 +38,14 @@ console.log([
 ]);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,1 +1,1 @@
 -console.log([1, 1, 1], [1, 1, 1], [a[b][c], a?.[b][c], a[b]?.[c]]);
-+console.log([a.b.c, a?.b.c, a.b?.c], [a["b"]["c"], a?.["b"]["c"], a["b"]?.["c"]], [a[b][c], a?.[b][c], a[b]?.[c]]);
++console.log([1, a?.b.c, a.b?.c], [a["b"]["c"], a?.["b"]["c"], a["b"]?.["c"]], [a[b][c], a?.[b][c], a[b]?.[c]]);
 
 ```

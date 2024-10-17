@@ -1,7 +1,7 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
+  IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
@@ -30,6 +30,7 @@ pub struct Renamer<'name> {
   ///
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
+  canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
 }
 
@@ -43,6 +44,7 @@ impl<'name> Renamer<'name> {
     };
     Self {
       canonical_names: FxHashMap::default(),
+      canonical_token_to_name: FxHashMap::default(),
       symbol_db: symbols,
       used_canonical_names: manual_reserved
         .iter()
@@ -57,7 +59,7 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
-  pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
+  pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let original_name = canonical_ref.name(self.symbol_db).to_rstr();
     match self.canonical_names.entry(canonical_ref) {
@@ -86,7 +88,7 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  pub fn create_conflictless_top_level_name(&mut self, hint: &str) -> String {
+  pub fn create_conflictless_name(&mut self, hint: &str) -> String {
     let hint = Rstr::new(hint);
     let mut conflictless_name = hint.clone();
     loop {
@@ -106,13 +108,29 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
+  pub fn add_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
+    let hint = Rstr::new(token.value());
+    let mut conflictless_name = hint.clone();
+    loop {
+      match self.used_canonical_names.entry(conflictless_name.clone()) {
+        Entry::Occupied(mut occ) => {
+          let next_conflict_index = *occ.get() + 1;
+          *occ.get_mut() = next_conflict_index;
+          conflictless_name =
+            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into();
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(0);
+          break;
+        }
+      }
+    }
+    self.canonical_token_to_name.insert(token.clone(), conflictless_name.clone());
+  }
+
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
   #[tracing::instrument(level = "trace", skip_all)]
-  pub fn rename_non_top_level_symbol(
-    &mut self,
-    modules_in_chunk: &[ModuleIdx],
-    modules: &IndexModules,
-  ) {
+  pub fn rename_non_root_symbol(&mut self, modules_in_chunk: &[ModuleIdx], modules: &IndexModules) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name NormalModule,
@@ -195,7 +213,9 @@ impl<'name> Renamer<'name> {
     self.canonical_names.extend(canonical_names_of_nested_scopes);
   }
 
-  pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, Rstr> {
-    self.canonical_names
+  pub fn into_canonical_names(
+    self,
+  ) -> (FxHashMap<SymbolRef, Rstr>, FxHashMap<SymbolNameRefToken, Rstr>) {
+    (self.canonical_names, self.canonical_token_to_name)
   }
 }

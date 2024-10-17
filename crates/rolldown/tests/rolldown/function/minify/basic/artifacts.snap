@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import {default as assert} from "node:assert";const a$1="shared.js";const a="index.js";assert.equal(a,"index.js");assert.equal(a$1,"shared.js");
+import assert from "node:assert";const a$1="shared.js";const a="index.js";assert.equal(a,"index.js");assert.equal(a$1,"shared.js");
 //# sourceMappingURL=main.js.map
 ```
 
@@ -14,21 +14,21 @@ import {default as assert} from "node:assert";const a$1="shared.js";const a="ind
 
 ```
 - ../shared.js
-(0:0-0:6) "const " --> (0:46-0:52) "const "
-(0:6-0:10) "a = " --> (0:52-0:56) "a$1="
-(0:10-2:13) "'shared.js'\n\nexport { a }" --> (0:56-0:68) "\"shared.js\";"
+(0:0-0:6) "const " --> (0:33-0:39) "const "
+(0:6-0:10) "a = " --> (0:39-0:43) "a$1="
+(0:10-2:13) "'shared.js'\n\nexport { a }" --> (0:43-0:55) "\"shared.js\";"
 - ../main.js
-(2:0-2:6) "\nconst" --> (0:68-0:74) "const "
-(2:6-2:10) " a =" --> (0:74-0:76) "a="
-(2:10-3:0) " 'index.js'" --> (0:76-0:87) "\"index.js\";"
-(3:0-3:7) "\nassert" --> (0:87-0:94) "assert."
-(3:7-3:13) ".equal" --> (0:94-0:100) "equal("
-(3:13-3:16) "(a," --> (0:100-0:102) "a,"
-(3:16-3:27) " 'index.js'" --> (0:102-0:113) "\"index.js\")"
-(3:27-4:0) ")" --> (0:113-0:114) ";"
-(4:0-4:7) "\nassert" --> (0:114-0:121) "assert."
-(4:7-4:13) ".equal" --> (0:121-0:127) "equal("
-(4:13-4:17) "(a2," --> (0:127-0:131) "a$1,"
-(4:17-4:29) " 'shared.js'" --> (0:131-0:143) "\"shared.js\")"
-(4:29-6:1) ")\n\n" --> (0:143-1:33) ";\n//# sourceMappingURL=main.js.map"
+(2:0-2:6) "\nconst" --> (0:55-0:61) "const "
+(2:6-2:10) " a =" --> (0:61-0:63) "a="
+(2:10-3:0) " 'index.js'" --> (0:63-0:74) "\"index.js\";"
+(3:0-3:7) "\nassert" --> (0:74-0:81) "assert."
+(3:7-3:13) ".equal" --> (0:81-0:87) "equal("
+(3:13-3:16) "(a," --> (0:87-0:89) "a,"
+(3:16-3:27) " 'index.js'" --> (0:89-0:100) "\"index.js\")"
+(3:27-4:0) ")" --> (0:100-0:101) ";"
+(4:0-4:7) "\nassert" --> (0:101-0:108) "assert."
+(4:7-4:13) ".equal" --> (0:108-0:114) "equal("
+(4:13-4:17) "(a2," --> (0:114-0:118) "a$1,"
+(4:17-4:29) " 'shared.js'" --> (0:118-0:130) "\"shared.js\")"
+(4:29-6:1) ")\n\n" --> (0:130-1:33) ";\n//# sourceMappingURL=main.js.map"
 ```

@@ -53,13 +53,12 @@ console.log(re_export);
 console.log(re.export);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,22 +1,11 @@
 -var obj = {};
 -var sideEffects = console.log("side effects");

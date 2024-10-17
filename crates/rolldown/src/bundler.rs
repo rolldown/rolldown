@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::stages::{
   link_stage::{LinkStage, LinkStageOutput},
   scan_stage::ScanStageOutput,
@@ -8,15 +6,19 @@ use crate::{
   bundler_builder::BundlerBuilder,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
+  watcher::watcher::{wait_for_change, Watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
+
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -153,7 +155,9 @@ impl Bundler {
 
     let mut link_stage_output = match self.try_build().await? {
       Ok(v) => v,
-      Err(errors) => return Ok(BundleOutput { assets: vec![], warnings: vec![], errors }),
+      Err(errors) => {
+        return Ok(BundleOutput { assets: vec![], warnings: vec![], errors, watch_files: vec![] })
+      }
     };
 
     self.plugin_driver.set_module_table(unsafe {
@@ -184,6 +188,13 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
+    output.watch_files = link_stage_output
+      .module_table
+      .modules
+      .iter()
+      .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
+      .collect();
+
     Ok(output)
   }
 
@@ -199,6 +210,16 @@ impl Bundler {
 
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
+  }
+
+  pub async fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
+    let watcher = Arc::new(Watcher::new(bundler)?);
+
+    watcher.run().await?;
+
+    wait_for_change(Arc::clone(&watcher));
+
+    Ok(watcher)
   }
 }
 

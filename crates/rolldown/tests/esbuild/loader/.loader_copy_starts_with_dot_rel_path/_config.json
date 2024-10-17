@@ -2,17 +2,18 @@
   "config": {
     "input": [
       {
-        "name": "",
-        "import": ""
+        "name": "htaccess",
+        "import": "./.htaccess"
       },
       {
-        "name": "",
-        "import": ""
+        "name": "entry",
+        "import": "./entry.js"
       },
       {
-        "name": "",
-        "import": ""
+        "name": "ts",
+        "import": "./.ts"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region define-false/index.ts
+class Foo {
+	a;
+	[(() => null, c)];
+	static A;
+	static [(() => null, C)];
+}
+(() => new Foo())();
+
+//#endregion
+//#region define-true/index.ts
+class Bar {
+	a;
+	[(() => null, c)];
+	static A;
+	static [(() => null, C)];
+}
+(() => new Bar())();
+
+//#endregion
+```

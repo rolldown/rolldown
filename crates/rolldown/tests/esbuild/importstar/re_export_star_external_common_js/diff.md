@@ -1,3 +1,5 @@
+# Reason
+1. rolldown has redundant `require('external')`
 # Diff
 ## /out.js
 ### esbuild
@@ -19,13 +21,12 @@ Object.keys(foo).forEach(function (k) {
 });
 require("foo");
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,10 @@
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);

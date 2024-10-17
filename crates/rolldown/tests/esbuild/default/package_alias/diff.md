@@ -1,3 +1,5 @@
+# Reason
+1. not align
 # Diff
 ## /out.js
 ### esbuild
@@ -37,32 +39,14 @@ console.log(11);
 ```
 ### rolldown
 ```js
-import "pkg1";
-import "pkg2/foo";
-import "pkg3";
-import "@scope/pkg4";
-import "@scope/pkg5/foo";
-import "@abs-path/pkg6";
-import "@abs-path/pkg7/foo";
-import "@scope-only/pkg8";
-import "slash/";
-
-//#region node_modules/prefix-foo/index.js
-console.log(10);
-
-//#endregion
-//#region node_modules/@scope/prefix-foo/index.js
-console.log(11);
-
-//#endregion
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
-@@ -1,11 +1,11 @@
++++ rolldown	
+@@ -1,11 +0,0 @@
 -console.log(1);
 -console.log(2);
 -console.log(3);
@@ -72,16 +56,7 @@ console.log(11);
 -console.log(7);
 -console.log(8);
 -console.log(9);
-+import "pkg1";
-+import "pkg2/foo";
-+import "pkg3";
-+import "@scope/pkg4";
-+import "@scope/pkg5/foo";
-+import "@abs-path/pkg6";
-+import "@abs-path/pkg7/foo";
-+import "@scope-only/pkg8";
-+import "slash/";
- console.log(10);
- console.log(11);
+-console.log(10);
+-console.log(11);
 
 ```

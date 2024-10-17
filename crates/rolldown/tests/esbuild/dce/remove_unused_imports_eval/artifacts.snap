@@ -17,10 +17,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import { default as a } from "a";
+import a from "a";
 import * as b from "b";
 import { c } from "c";
 

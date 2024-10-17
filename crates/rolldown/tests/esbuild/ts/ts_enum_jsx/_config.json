@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "element",
+        "import": "element.tsx"
+      },
+      {
+        "name": "fragment",
+        "import": "fragment.tsx"
+      },
+      {
+        "name": "nested-element",
+        "import": "nested-element.tsx"
+      },
+      {
+        "name": "nested-fragment",
+        "import": "nested-fragment.tsx"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

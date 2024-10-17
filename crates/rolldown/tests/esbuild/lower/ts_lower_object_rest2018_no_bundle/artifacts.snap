@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+const { ...local_const } = {};
+let { ...local_let } = {};
+var { ...local_var } = {};
+let ns;
+(function(_ns) {
+	let { ...x$1 } = {};
+	_ns.x = x$1;
+})(ns || (ns = {}));
+for (const { ...for_in_const } in { abc }) {}
+for (let { ...for_in_let } in { abc }) {}
+for (var { ...for_in_var } in { abc });
+for (const { ...for_of_const } of [{}]);
+for (let { ...for_of_let } of [{}]) x();
+for (var { ...for_of_var } of [{}]) x();
+for (const { ...for_const } = {}; x; x = null) {}
+for (let { ...for_let } = {}; x; x = null) {}
+for (var { ...for_var } = {}; x; x = null) {}
+for ({...x} in { abc }) {}
+for ({...x} of [{}]) {}
+for ({...x} = {}; x; x = null) {}
+({...assign} = {});
+({...x} = x);
+for ({...x} = x; 0;);
+console.log({...x} = x);
+console.log({x,...xx} = { x });
+console.log({x: {...xx}} = { x });
+
+//#endregion
+```

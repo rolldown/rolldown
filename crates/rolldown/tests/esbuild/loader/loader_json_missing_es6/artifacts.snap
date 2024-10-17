@@ -14,9 +14,11 @@ source: crates/rolldown_testing/src/integration_test.rs
    │            ╰───── Missing export
 ───╯
 
-```# Assets
+```
 
-## entry_js.js
+# Assets
+
+## entry.js
 
 ```js
 

@@ -1,3 +1,5 @@
+# Reason
+1. inject path
 # Diff
 ## /out.js
 ### esbuild
@@ -27,7 +29,10 @@
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+(function(node_assert) {
+
+"use strict";
+const { default: assert } = node_assert;
 
 
 //#region cjs.js
@@ -40,14 +45,14 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 assert.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
-
+})(node_assert);
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
-@@ -1,17 +1,6 @@
++++ rolldown	entry.js
+@@ -1,17 +1,11 @@
 -(() => {
 -    var import_process;
 -    var init_shims = __esm({
@@ -55,21 +60,22 @@ assert.deepEqual(require_cjs(), { foo: process });
 -            import_process = __toESM(__require("process"));
 -        }
 -    });
--    var require_cjs = __commonJS({
--        "cjs.js"(exports) {
++(function (node_assert) {
++    const {default: assert} = node_assert;
+     var require_cjs = __commonJS({
+         "cjs.js"(exports) {
 -            "use strict";
 -            init_shims();
 -            exports.foo = import_process.default;
--        }
--    });
++            exports.foo = process;
+         }
+     });
 -    init_shims();
 -    console.log(require_cjs());
 -})();
-+var require_cjs = __commonJS({
-+    "cjs.js"(exports) {
-+        exports.foo = process;
-+    }
-+});
-+console.log(require_cjs());
++    assert.deepEqual(require_cjs(), {
++        foo: process
++    });
++})(node_assert);
 
 ```

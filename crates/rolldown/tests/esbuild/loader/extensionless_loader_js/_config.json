@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "moduleTypes": {
+      "": "js"
+    }
+  },
+  "expectExecuted": false
+}

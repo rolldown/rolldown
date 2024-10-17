@@ -44,7 +44,7 @@ var require_foo = __commonJS({ "foo.copy"() {} });
 //#endregion
 export { __toESM, foo_default, require_foo };
 ```
-## js-entry_js.js
+## js-entry.js
 
 ```js
 import { __toESM, foo_default, require_foo } from "./foo.js";
@@ -56,7 +56,7 @@ use(foo_default, import_foo.default, foo_default, void 0);
 //#endregion
 export { foo_default as default };
 ```
-## ts-entry_ts.js
+## ts-entry.js
 
 ```js
 import { __toESM, foo_default, require_foo } from "./foo.js";

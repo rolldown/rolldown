@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. side effects detect not align
 # Diff
 ## /out.js
 ### esbuild
@@ -17,13 +18,12 @@ console.log("TEST FAILED");
 console.log("unused import");
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,1 +1,2 @@
 +console.log("TEST FAILED");
  console.log("unused import");

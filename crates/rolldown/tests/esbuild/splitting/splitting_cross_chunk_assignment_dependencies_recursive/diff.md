@@ -194,16 +194,22 @@ setX();
 ```
 ### rolldown
 ```js
+import { setX } from "./x.js";
 
+//#region a.js
+setX();
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	a.js
+@@ -1,2 +1,2 @@
 -import {setX} from "./chunk-NAKBUG5G.js";
--setX();
++import {setX} from "./x.js";
+ setX();
 
 ```
 ## /out/b.js
@@ -219,17 +225,25 @@ setZ();
 ```
 ### rolldown
 ```js
+import "./x.js";
+import { setZ } from "./z.js";
 
+//#region b.js
+setZ();
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	b.js
+@@ -1,3 +1,3 @@
 -import {setZ} from "./chunk-BSMDVSN6.js";
 -import "./chunk-NAKBUG5G.js";
--setZ();
++import "./x.js";
++import {setZ} from "./z.js";
+ setZ();
 
 ```
 ## /out/c.js
@@ -250,19 +264,29 @@ setZ2();
 ```
 ### rolldown
 ```js
+import { setX2 } from "./x.js";
+import { setY2, setZ2 } from "./z.js";
 
+//#region c.js
+setX2();
+setY2();
+setZ2();
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/c.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	c.js
+@@ -1,5 +1,5 @@
 -import {setY2, setZ2} from "./chunk-BSMDVSN6.js";
 -import {setX2} from "./chunk-NAKBUG5G.js";
--setX2();
--setY2();
--setZ2();
++import {setX2} from "./x.js";
++import {setY2, setZ2} from "./z.js";
+ setX2();
+ setY2();
+ setZ2();
 
 ```
 ## /out/chunk-BSMDVSN6.js

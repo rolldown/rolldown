@@ -21,7 +21,7 @@ pub fn deconflict_chunk_symbols(
       .iter()
       .filter_map(|(idx, _)| link_output.module_table.modules[*idx].as_external())
       .for_each(|external_module| {
-        renamer.add_top_level_symbol(external_module.symbol_ref);
+        renamer.add_symbol_name_ref_token(&external_module.name_token_for_external_binding);
       });
   }
 
@@ -42,22 +42,22 @@ pub fn deconflict_chunk_symbols(
   // point to them can be resolved in runtime.
   // So we add them in the deconflict process to generate conflict-less names in this chunk.
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
-    renamer.add_top_level_symbol(item.import_ref);
+    renamer.add_symbol_in_root_scope(item.import_ref);
   });
 
   chunk.require_binding_names_for_other_chunks.values_mut().for_each(|name_hint| {
-    *name_hint = renamer.create_conflictless_top_level_name(&format!("require_{name_hint}"));
+    *name_hint = renamer.create_conflictless_name(&format!("require_{name_hint}"));
   });
   match chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &link_output.metas[module];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        renamer.add_top_level_symbol(*symbol_ref);
+        renamer.add_symbol_in_root_scope(*symbol_ref);
       });
       meta
         .require_bindings_for_star_exports
         .iter()
-        .for_each(|(_module, binding_ref)| renamer.add_top_level_symbol(*binding_ref));
+        .for_each(|(_module, binding_ref)| renamer.add_symbol_in_root_scope(*binding_ref));
     }
     ChunkKind::Common => {}
   }
@@ -76,12 +76,12 @@ pub fn deconflict_chunk_symbols(
         .filter(|stmt_info| stmt_info.is_included)
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
-          renamer.add_top_level_symbol(symbol_ref);
+          renamer.add_symbol_in_root_scope(symbol_ref);
         });
     });
 
   // rename non-top-level names
-  renamer.rename_non_top_level_symbol(&chunk.modules, &link_output.module_table.modules);
+  renamer.rename_non_root_symbol(&chunk.modules, &link_output.module_table.modules);
 
-  chunk.canonical_names = renamer.into_canonical_names();
+  (chunk.canonical_names, chunk.canonical_name_by_token) = renamer.into_canonical_names();
 }

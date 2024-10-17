@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "entry-esm_js",
+        "name": "entry-esm",
         "import": "entry-esm.js"
       },
       {
-        "name": "entry-cjs_js",
+        "name": "entry-cjs",
         "import": "entry-cjs.js"
       }
     ]

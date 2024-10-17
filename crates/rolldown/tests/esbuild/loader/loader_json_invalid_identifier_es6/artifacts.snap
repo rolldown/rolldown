@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region test.json
+var test_exports = {};
+__export(test_exports, {
+	default: () => test_default,
+	"invalid-identifier": () => key_0$1
+});
+const key_0$1 = true;
+var test_default = { "invalid-identifier": key_0$1 };
+
+//#endregion
+//#region test2.json
+var test2_exports = {};
+__export(test2_exports, {
+	default: () => test2_default,
+	"invalid-identifier": () => key_0
+});
+const key_0 = true;
+var test2_default = { "invalid-identifier": key_0 };
+
+//#endregion
+//#region entry.js
+console.log(test_exports["invalid-identifier"], test2_exports);
+
+//#endregion
+```

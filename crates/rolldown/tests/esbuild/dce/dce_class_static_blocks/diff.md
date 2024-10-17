@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -61,13 +62,12 @@ class D_keep {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,24 +1,24 @@
 -var A_keep = class {
 +class A_keep {

@@ -76,17 +76,15 @@ impl<'a> LinkStage<'a> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
-            if let Module::Normal(module) = &self.module_table.modules[id] {
-              execution_stack.extend(
-                module
-                  .import_records
-                  .iter()
-                  .filter(|rec| rec.kind.is_static())
-                  .map(|rec| rec.resolved_module)
-                  .rev()
-                  .map(Status::ToBeExecuted),
-              );
-            }
+            execution_stack.extend(
+              self.module_table.modules[id]
+                .import_records()
+                .iter()
+                .filter(|rec| rec.kind.is_static())
+                .map(|rec| rec.resolved_module)
+                .rev()
+                .map(Status::ToBeExecuted),
+            );
           }
         }
         Status::WaitForExit(id) => {

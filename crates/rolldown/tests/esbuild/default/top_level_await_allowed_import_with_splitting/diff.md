@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -13,18 +12,30 @@ await 0;
 ### rolldown
 ```js
 
+//#region entry.js
+import("./a.js");
+import("./b2.js");
+import("./c2.js");
+import("./entry.js");
+await 0;
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	entry.js
+@@ -1,5 +1,5 @@
 -import("./a-3BAWOBN3.js");
 -import("./b-2IGVSUS7.js");
 -import("./c-DMBKURS2.js");
 -require_entry();
--await 0;
++import("./a.js");
++import("./b2.js");
++import("./c2.js");
++import("./entry.js");
+ await 0;
 
 ```
 ## /out/c-DMBKURS2.js

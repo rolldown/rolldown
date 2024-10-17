@@ -1,3 +1,5 @@
+# Reason
+1. Wrong impl
 # Diff
 ## /out.js
 ### esbuild
@@ -16,13 +18,12 @@ var mod = (() => {
 "use strict";
 
 })();
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,1 @@
 -var mod = (() => {
 -    var entry_exports = {};

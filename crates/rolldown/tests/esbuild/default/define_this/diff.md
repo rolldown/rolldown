@@ -1,3 +1,5 @@
+# Reason
+1. oxc define dont support this expr
 # Diff
 ## /out.js
 ### esbuild
@@ -54,13 +56,12 @@ ok(
 })();
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,7 @@
 -ok(1, 2, 3, (2).baz, (1).bar);
 +ok(this, this.foo, this.foo.bar, this.foo.baz, this.bar);

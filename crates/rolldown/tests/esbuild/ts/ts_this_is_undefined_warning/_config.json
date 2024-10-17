@@ -1,0 +1,27 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "warning1",
+        "import": "warning1.ts"
+      },
+      {
+        "name": "warning2",
+        "import": "warning2.ts"
+      },
+      {
+        "name": "warning3",
+        "import": "warning3.ts"
+      },
+      {
+        "name": "silent1",
+        "import": "silent1.ts"
+      },
+      {
+        "name": "silent2",
+        "import": "silent2.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

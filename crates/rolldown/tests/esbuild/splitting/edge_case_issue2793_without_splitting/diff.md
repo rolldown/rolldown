@@ -113,13 +113,22 @@ export {
 ### rolldown
 ```js
 
+//#region a.js
+const A = 42;
+
+//#endregion
+//#region b.js
+const B = async () => (await import("./index.js")).A;
+
+//#endregion
+export { A, B };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/index.js
-+++ rolldown	
-@@ -1,25 +0,0 @@
++++ rolldown	index.js
+@@ -1,25 +1,3 @@
 -var A;
 -var init_a = __esm({
 -    "src/a.js"() {
@@ -144,6 +153,8 @@ export {
 -    }
 -});
 -init_src();
--export {A, B};
++var A = 42;
++var B = async () => (await import("./index.js")).A;
+ export {A, B};
 
 ```

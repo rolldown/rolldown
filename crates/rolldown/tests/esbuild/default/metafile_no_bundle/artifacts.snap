@@ -12,6 +12,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
+[UNRESOLVED_IMPORT] Warning: "./file" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
 [UNRESOLVED_IMPORT] Warning: "./file" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
 
 ```
@@ -19,6 +25,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: "./file2" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
 
 ```
 ## UNRESOLVED_IMPORT
@@ -35,24 +47,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_css.css
-
-```css
-@import "pkg";
-@import "./file";
-a { background: url(pkg2) }
-a { background: url(./file2) }
-```
-## entry_css.js
+## entry.js
 
 ```js
-
-```
-## entry_js.js
-
-```js
-import { default as a } from "pkg";
-import { default as b } from "./file";
+import a from "pkg";
+import b from "./file";
 
 //#region entry.js
 console.log(a, b, require("pkg2"), require("./file2"), import("./dynamic"));
@@ -60,4 +59,16 @@ let exported;
 
 //#endregion
 export { exported };
+```
+## entry2.css
+
+```css
+a { background: url(pkg2) }
+a { background: url(./file2) }
+
+```
+## entry2.js
+
+```js
+
 ```

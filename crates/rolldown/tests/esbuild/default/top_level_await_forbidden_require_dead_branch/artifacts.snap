@@ -3,9 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
+(function() {
+
 
 
 //#region c.js
@@ -13,16 +15,13 @@ var require_c = __commonJS({ "c.js"() {} });
 
 //#endregion
 //#region b.js
-var b_exports;
-var init_b = __esm({ "b.js"() {
-	b_exports = {};
-} });
+var b_exports = {};
+var init_b = __esm({ "b.js"() {} });
 
 //#endregion
 //#region a.js
-var a_exports;
+var a_exports = {};
 var init_a = __esm({ "a.js"() {
-	a_exports = {};
 	init_b();
 } });
 
@@ -36,6 +35,5 @@ var require_entry = __commonJS({ "entry.js"() {
 } });
 
 //#endregion
-export default require_entry();
-
+})();
 ```

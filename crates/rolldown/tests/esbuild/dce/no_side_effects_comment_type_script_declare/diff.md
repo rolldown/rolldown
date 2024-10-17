@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. rolldown should not shake the namespace iife
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -15,7 +16,7 @@ var ns;
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
++++ rolldown	entry.js
 @@ -1,2 +0,0 @@
 -var ns;
 -(ns2 => {})(ns || (ns = {}));

@@ -30,13 +30,12 @@ console.log(
 );
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,1 @@
 -var second = "success (identifier)";
 -var second2 = "success (dot name)";

@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.js
+let Foo = class {
+	#field;
+	#method() {}
+	static #staticField;
+	static #staticMethod() {}
+	foo() {
+		this.#field = this.#method();
+		Foo.#staticField = Foo.#staticMethod();
+	}
+};
+
+//#endregion
+export { Foo };
+```

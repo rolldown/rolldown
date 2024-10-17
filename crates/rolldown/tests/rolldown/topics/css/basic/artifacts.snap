@@ -7,8 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```css
 body {
+  background-color: #000;
+}
+
+body {
   background-color: #f0f0f0;
 }
+
 ```
 ## main.js
 

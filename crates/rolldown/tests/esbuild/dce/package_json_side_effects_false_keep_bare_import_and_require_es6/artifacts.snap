@@ -3,16 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## src_entry_js.js
+## src_entry.js
 
 ```js
 
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_index_exports, foo;
+var demo_pkg_index_exports = {};
+__export(demo_pkg_index_exports, { foo: () => foo });
+var foo;
 var init_demo_pkg_index = __esm({ "node_modules/demo-pkg/index.js"() {
-	demo_pkg_index_exports = {};
-	__export(demo_pkg_index_exports, { foo: () => foo });
 	foo = 123;
 	console.log("hello");
 } });

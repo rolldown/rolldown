@@ -1,0 +1,39 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "1",
+        "import": "1.js"
+      },
+      {
+        "name": "2",
+        "import": "2.js"
+      },
+      {
+        "name": "3",
+        "import": "3.js"
+      },
+      {
+        "name": "4",
+        "import": "4.js"
+      },
+      {
+        "name": "5",
+        "import": "5.js"
+      },
+      {
+        "name": "6",
+        "import": "6.js"
+      },
+      {
+        "name": "7",
+        "import": "7.js"
+      },
+      {
+        "name": "8",
+        "import": "8.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

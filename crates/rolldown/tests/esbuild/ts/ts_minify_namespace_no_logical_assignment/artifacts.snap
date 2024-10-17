@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+
+//#region a.ts
+let Foo;
+(function(_Foo) {
+	let Bar;
+	(function(_Bar) {
+		foo(Foo, Bar);
+	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
+})(Foo || (Foo = {}));
+
+//#endregion
+```
+## b.js
+
+```js
+
+//#region b.ts
+let Foo;
+(function(_Foo) {
+	let Bar;
+	(function(_Bar) {
+		foo(Foo, Bar);
+	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
+})(Foo || (Foo = {}));
+
+//#endregion
+export { Foo };
+```

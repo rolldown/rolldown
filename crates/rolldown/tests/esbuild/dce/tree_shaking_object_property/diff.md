@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -33,13 +32,12 @@ let keep8 = { async [x]() {} };
 let keep9 = { [{ toString() {} }]: "x" };
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,29 +1,29 @@
 -let keep1 = {
 +var keep1 = {

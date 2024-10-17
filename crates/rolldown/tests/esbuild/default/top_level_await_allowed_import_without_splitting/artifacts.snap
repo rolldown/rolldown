@@ -3,50 +3,50 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## a.js
-
-```js
-import "./c.js";
-import "./b.js";
-
-```
-## b.js
+## entry.js
 
 ```js
 
-```
-## b2.js
-
-```js
-import "./c.js";
-import "./b.js";
-
-```
-## c.js
-
-```js
-
-//#region c.js
-await 0;
-
-//#endregion
-```
-## c2.js
-
-```js
-import "./c.js";
-
-```
-## entry_js.js
-
-```js
 
 //#region entry.js
-import("./a.js");
-import("./b2.js");
-import("./c2.js");
-import("./entry_js.js");
-await 0;
+var require_entry = __commonJS({ "entry.js"() {
+	Promise.resolve().then(function() {
+		return init_a(), a_exports;
+	});
+	Promise.resolve().then(function() {
+		return init_b(), b_exports;
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_c());
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_entry());
+	});
+	await 0;
+} });
 
 //#endregion
+//#region a.js
+var a_exports = {};
+var init_a = __esm({ "a.js"() {
+	init_b();
+} });
+
+//#endregion
+//#region b.js
+var b_exports = {};
+var import_c;
+var init_b = __esm({ "b.js"() {
+	import_c = __toESM(require_c());
+} });
+
+//#endregion
+//#region c.js
+var require_c = __commonJS({ "c.js"() {
+	await 0;
+} });
+
+//#endregion
+export default require_entry();
+
 ```

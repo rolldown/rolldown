@@ -1,3 +1,5 @@
+# Reason
+1. should rewrite `require`
 # Diff
 ## /out.js
 ### esbuild
@@ -33,13 +35,12 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 //#endregion
 export default require_entry();
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,8 +1,8 @@
  var require_entry = __commonJS({
      "entry.js"(exports) {

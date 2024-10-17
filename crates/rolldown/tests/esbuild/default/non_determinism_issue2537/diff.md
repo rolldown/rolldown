@@ -1,3 +1,5 @@
+# Reason
+1. should read `tsconfig.json`
 # Diff
 ## /out.js
 ### esbuild
@@ -23,13 +25,30 @@ export {
 ### rolldown
 ```js
 
+//#region entry.ts
+function aap(noot, wim) {
+	let mies = "teun";
+	if (noot) {
+		function vuur(v) {
+			return v * 2;
+		}
+		function schaap(s) {
+			return s / 2;
+		}
+		mies = vuur(wim) + schaap(wim);
+	}
+	return mies;
+}
+
+//#endregion
+export { aap };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,14 +0,0 @@
++++ rolldown	entry.js
+@@ -1,14 +1,14 @@
 -function i(o, e) {
 -    let r = "teun";
 -    if (o) {
@@ -40,9 +59,21 @@ export {
 -        };
 -        var b = u, f = t;
 -        r = u(e) + t(e);
--    }
++function aap(noot, wim) {
++    let mies = "teun";
++    if (noot) {
++        function vuur(v) {
++            return v * 2;
++        }
++        function schaap(s) {
++            return s / 2;
++        }
++        mies = vuur(wim) + schaap(wim);
+     }
 -    return r;
--}
++    return mies;
+ }
 -export {i as aap};
++export {aap};
 
 ```

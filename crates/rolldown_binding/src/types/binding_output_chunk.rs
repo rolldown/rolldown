@@ -3,16 +3,18 @@ use std::collections::HashMap;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 
-use crate::types::binding_rendered_module::BindingRenderedModule;
+use super::{binding_rendered_module::BindingRenderedModule, binding_sourcemap::BindingSourcemap};
+
+// Here using `napi` `getter` fields to avoid the cost of serialize larger data to js side.
 
 #[napi]
 pub struct BindingOutputChunk {
-  inner: &'static mut rolldown_common::OutputChunk,
+  inner: rolldown_common::OutputChunk,
 }
 
 #[napi]
 impl BindingOutputChunk {
-  pub fn new(inner: &'static mut rolldown_common::OutputChunk) -> Self {
+  pub fn new(inner: rolldown_common::OutputChunk) -> Self {
     Self { inner }
   }
 
@@ -63,11 +65,6 @@ impl BindingOutputChunk {
     self.inner.imports.iter().map(|x| x.to_string()).collect()
   }
 
-  #[napi(setter, js_name = "imports")]
-  pub fn set_imports(&mut self, imports: Vec<String>) {
-    self.inner.imports = imports.into_iter().map(Into::into).collect();
-  }
-
   #[napi(getter)]
   pub fn dynamic_imports(&self) -> Vec<String> {
     self.inner.dynamic_imports.iter().map(|x| x.to_string()).collect()
@@ -79,23 +76,9 @@ impl BindingOutputChunk {
     self.inner.code.clone()
   }
 
-  #[napi(setter, js_name = "code")]
-  pub fn set_code(&mut self, code: String) {
-    self.inner.code = code;
-  }
-
   #[napi(getter)]
   pub fn map(&self) -> napi::Result<Option<String>> {
     Ok(self.inner.map.as_ref().map(SourceMap::to_json_string))
-  }
-
-  #[napi(setter, js_name = "map")]
-  pub fn set_map(&mut self, map: String) -> napi::Result<()> {
-    self.inner.map = Some(
-      SourceMap::from_json_string(map.as_str())
-        .map_err(|e| napi::Error::from_reason(format!("{e:?}")))?,
-    );
-    Ok(())
   }
 
   #[napi(getter)]
@@ -111,5 +94,49 @@ impl BindingOutputChunk {
   #[napi(getter)]
   pub fn name(&self) -> String {
     self.inner.name.to_string()
+  }
+}
+
+#[napi(object)]
+pub struct JsOutputChunk {
+  // PreRenderedChunk
+  pub name: String,
+  pub is_entry: bool,
+  pub is_dynamic_entry: bool,
+  pub facade_module_id: Option<String>,
+  pub module_ids: Vec<String>,
+  pub exports: Vec<String>,
+  // RenderedChunk
+  pub filename: String,
+  pub modules: HashMap<String, BindingRenderedModule>,
+  pub imports: Vec<String>,
+  pub dynamic_imports: Vec<String>,
+  // OutputChunk
+  pub code: String,
+  pub map: Option<BindingSourcemap>,
+  pub sourcemap_filename: Option<String>,
+  pub preliminary_filename: String,
+}
+
+impl TryFrom<JsOutputChunk> for rolldown_common::OutputChunk {
+  type Error = anyhow::Error;
+
+  fn try_from(chunk: JsOutputChunk) -> Result<Self, Self::Error> {
+    Ok(Self {
+      name: chunk.name.into(),
+      is_entry: chunk.is_entry,
+      is_dynamic_entry: chunk.is_dynamic_entry,
+      facade_module_id: chunk.facade_module_id.map(Into::into),
+      module_ids: chunk.module_ids.into_iter().map(Into::into).collect(),
+      exports: chunk.exports,
+      filename: chunk.filename.into(),
+      modules: chunk.modules.into_iter().map(|(key, value)| (key.into(), value.into())).collect(),
+      imports: chunk.imports.into_iter().map(Into::into).collect(),
+      dynamic_imports: chunk.dynamic_imports.into_iter().map(Into::into).collect(),
+      code: chunk.code,
+      map: chunk.map.map(TryInto::try_into).transpose()?,
+      sourcemap_filename: chunk.sourcemap_filename,
+      preliminary_filename: chunk.preliminary_filename,
+    })
   }
 }

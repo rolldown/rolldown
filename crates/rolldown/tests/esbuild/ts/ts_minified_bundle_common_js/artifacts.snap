@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region a.ts
+var require_a = __commonJS({ "a.ts"(exports) {
+	exports.foo = function() {
+		return 123;
+	};
+} });
+
+//#endregion
+//#region j.json
+var j_exports = {};
+__export(j_exports, {
+	default: () => j_default,
+	test: () => test
+});
+var test, j_default;
+var init_j = __esm({ "j.json"() {
+	test = true;
+	j_default = { test };
+} });
+
+//#endregion
+//#region entry.ts
+const { foo } = require_a();
+console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
+
+//#endregion
+```

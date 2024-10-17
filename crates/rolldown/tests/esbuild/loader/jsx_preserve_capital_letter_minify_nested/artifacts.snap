@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "entry.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.js
+
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region entry.jsx
+x = () => {
+	class XYYYYY {}
+	return _jsx(
+		XYYYYY,
+		// This should be named "Y" due to frequency analysis
+		{ "tag-must-start-with-capital-letter": true }
+);
+};
+
+//#endregion
+```

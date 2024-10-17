@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. side effects detect
 # Diff
 ## /out.js
 ### esbuild
@@ -141,13 +142,12 @@ var keep_3 = "undefined" === typeof x && x;
 var keep_3 = "undefined" == typeof x && x;
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,50 +1,80 @@
 -(() => {
 -    var keep_1 = typeof x !== "object" ? x : null;

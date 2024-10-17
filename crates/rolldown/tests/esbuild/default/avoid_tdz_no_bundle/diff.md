@@ -1,3 +1,5 @@
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -25,13 +27,12 @@ let bar = 123;
 
 //#endregion
 export { Bar, bar };
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,8 @@
  class Foo {
      static foo = new Foo();

@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common-imported-by-js-[hash].css
+
+```css
+body {
+  background-color: "common-imported-by-css";
+}
+body {
+  background-color: "common-imported-by-js";
+}
+
+```
+## common-imported-by-js.js
+
+```js
+
+```
+## entry-a-[hash].css
+
+```css
+
+body {
+  background-color: "entry-a";
+}
+
+body {
+  background-color: "a-only";
+}
+
+```
+## entry-a.js
+
+```js
+import "./common-imported-by-js.js";
+
+//#region entry-a.ts
+console.log("entry-a");
+
+//#endregion
+```
+## entry-b-[hash].css
+
+```css
+
+body {
+  background-color: "entry-b";
+}
+
+body {
+  background-color: "b-only";
+}
+
+```
+## entry-b.js
+
+```js
+import "./common-imported-by-js.js";
+
+//#region entry-b.ts
+console.log("entry-b");
+
+//#endregion
+```
+## main.js
+
+```js
+
+//#region main.ts
+import("./entry-a.js");
+import("./entry-b.js");
+
+//#endregion
+```

@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+function before() {
+	console.log(Foo.FOO);
+}
+var Foo = function(Foo$1) {
+	Foo$1[Foo$1["FOO"] = 0] = "FOO";
+	return Foo$1;
+}(Foo || {});
+function after() {
+	console.log(Foo.FOO);
+}
+
+//#endregion
+export { after, before };
+```

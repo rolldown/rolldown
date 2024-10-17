@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region lib.ts
+let Bar = function(Bar$1) {
+	Bar$1["bar1"] = "xyz";
+	Bar$1["bar2"] = "x y z";
+	return Bar$1;
+}({});
+
+//#endregion
+//#region entry.ts
+var Foo = function(Foo$1) {
+	Foo$1["foo1"] = "abc";
+	Foo$1["foo2"] = "a b c";
+	return Foo$1;
+}(Foo || {});
+inlined = [
+	obj[Foo.foo1],
+	obj[Bar.bar1],
+	obj?.[Foo.foo1],
+	obj?.[Bar.bar1],
+	obj?.prop[Foo.foo1],
+	obj?.prop[Bar.bar1]
+];
+notInlined = [
+	obj[Foo.foo2],
+	obj[Bar.bar2],
+	obj?.[Foo.foo2],
+	obj?.[Bar.bar2],
+	obj?.prop[Foo.foo2],
+	obj?.prop[Bar.bar2]
+];
+
+//#endregion
+```

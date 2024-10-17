@@ -1,11 +1,27 @@
 {
-  "config": {
-    "input": [
-      {
-        "name": "entry_js",
-        "import": "entry.js"
-      }
-    ]
-  },
-  "expectExecuted": false
+	"config": {
+		"input": [
+			{
+				"name": "entry",
+				"import": "entry.js"
+			}
+		],
+		"resolve": {
+			"alias": [
+				["pkg1", ["alias1"]],
+				["pkg2", ["alias2"]],
+				["pkg3", ["alias3"]],
+				["@scope/pkg4", ["alias4"]],
+				["@scope/pkg5", ["alias5"]],
+				["@abs-path/pkg6", ["alias6/dir"]],
+				["@abs-path/pkg7", ["alias7/dir"]],
+				["@scope-only", ["alias8/dir"]],
+				["slash", ["alias9/some/file.js"]],
+				["prefix", ["alias10"]],
+				["@scope/prefix", ["alias11"]]
+			]
+		}
+	},
+	"expectExecuted": false,
+  "expectError": true
 }

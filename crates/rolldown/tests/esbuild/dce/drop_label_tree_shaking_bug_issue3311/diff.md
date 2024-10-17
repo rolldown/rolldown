@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. drop label feature
 # Diff
 ## /out.js
 ### esbuild
@@ -26,13 +27,12 @@ var entry_default = myFunc;
 
 //#endregion
 export { entry_default as default };
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,8 @@
  var myFunc = () => {
 +    DROP: {

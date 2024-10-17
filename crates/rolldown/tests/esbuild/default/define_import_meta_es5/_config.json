@@ -2,18 +2,21 @@
   "config": {
     "input": [
       {
-        "name": "replaced_js",
+        "name": "replaced",
         "import": "replaced.js"
       },
       {
-        "name": "kept_js",
+        "name": "kept",
         "import": "kept.js"
       },
       {
-        "name": "dead-code_js",
+        "name": "dead-code",
         "import": "dead-code.js"
       }
-    ]
+    ],
+    "define": {
+      "import.meta.x": "1"
+    }
   },
   "expectExecuted": false
 }

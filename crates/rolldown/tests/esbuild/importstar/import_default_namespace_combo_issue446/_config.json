@@ -3,51 +3,51 @@
   "config": {
     "input": [
       {
-        "name": "external-default2_js",
+        "name": "external-default2",
         "import": "external-default2.js"
       },
       {
-        "name": "external-ns_js",
+        "name": "external-ns",
         "import": "external-ns.js"
       },
       {
-        "name": "external-ns-default_js",
+        "name": "external-ns-default",
         "import": "external-ns-default.js"
       },
       {
-        "name": "external-ns-def_js",
+        "name": "external-ns-def",
         "import": "external-ns-def.js"
       },
       {
-        "name": "external-default_js",
+        "name": "external-default",
         "import": "external-default.js"
       },
       {
-        "name": "external-def_js",
+        "name": "external-def",
         "import": "external-def.js"
       },
       {
-        "name": "internal-default2_js",
+        "name": "internal-default2",
         "import": "internal-default2.js"
       },
       {
-        "name": "internal-ns_js",
+        "name": "internal-ns",
         "import": "internal-ns.js"
       },
       {
-        "name": "internal-ns-default_js",
+        "name": "internal-ns-default",
         "import": "internal-ns-default.js"
       },
       {
-        "name": "internal-ns-def_js",
+        "name": "internal-ns-def",
         "import": "internal-ns-def.js"
       },
       {
-        "name": "internal-default_js",
+        "name": "internal-default",
         "import": "internal-default.js"
       },
       {
-        "name": "internal-def_js",
+        "name": "internal-def",
         "import": "internal-def.js"
       }
     ]

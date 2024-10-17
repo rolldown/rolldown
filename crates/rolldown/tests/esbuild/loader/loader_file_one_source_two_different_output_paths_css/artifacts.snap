@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common-[hash].css
+
+```css
+div {
+	background: url(common.png);
+}
+
+```
+## common.js
+
+```js
+
+```
+## entries_entry.css
+
+```css
+
+
+```
+## entries_entry.js
+
+```js
+import "./common.js";
+
+```
+## entries_other_entry.css
+
+```css
+
+
+```
+## entries_other_entry.js
+
+```js
+import "./common.js";
+
+```

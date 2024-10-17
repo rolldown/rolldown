@@ -1,3 +1,5 @@
+# Reason 
+1. Wrong impl when module.exports self
 # Diff
 ## /out.js
 ### esbuild
@@ -22,13 +24,12 @@ var require_entry = __commonJS({ "entry.js"(exports, module) {
 //#endregion
 export default require_entry();
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,9 @@
 -var r = s((f, e) => {
 -    e.exports = {

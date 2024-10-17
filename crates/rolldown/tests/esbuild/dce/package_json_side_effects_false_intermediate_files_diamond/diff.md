@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. throw should be kept
 # Diff
 ## /out.js
 ### esbuild
@@ -26,13 +27,12 @@ const foo = 123;
 console.log(foo);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,4 +1,2 @@
  var foo = 123;
 -throw "keep this 1";

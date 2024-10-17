@@ -1,3 +1,5 @@
+# Reason
+1. rolldown has redundant `import "external"`
 # Diff
 ## /out.js
 ### esbuild
@@ -10,13 +12,12 @@ import "foo";
 
 export * from "foo"
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,1 +1,2 @@
 +import "foo";
  export * from "foo";

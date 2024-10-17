@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common.js
+
+```js
+
+
+//#region shared/common.png
+var require_common = __commonJS({ "shared/common.png"() {
+	x;
+} });
+
+//#endregion
+//#region shared/common.js
+var import_common = __toESM(require_common());
+console.log(import_common.default);
+
+//#endregion
+```
+## entries_entry.js
+
+```js
+import "./common.js";
+
+```
+## entries_other_entry.js
+
+```js
+import "./common.js";
+
+```

@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region y.txt
+var y_default = "y";
+
+//#endregion
+//#region x.txt
+var x_exports = {};
+__export(x_exports, { default: () => x_default });
+var x_default;
+var init_x = __esm({ "x.txt"() {
+	x_default = "x";
+} });
+
+//#endregion
+//#region entry.js
+const x_url = (init_x(), __toCommonJS(x_exports));
+console.log(x_url, y_default);
+
+//#endregion
+```

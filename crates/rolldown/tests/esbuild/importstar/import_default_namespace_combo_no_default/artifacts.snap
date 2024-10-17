@@ -50,7 +50,8 @@ source: crates/rolldown_testing/src/integration_test.rs
    │         ╰─── Missing export
 ───╯
 
-```# warnings
+```
+# warnings
 
 ## IMPORT_IS_UNDEFINED
 
@@ -114,13 +115,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry-dead_js.js
+## entry-dead.js
 
 ```js
 import "./foo.js";
 
 ```
-## entry-default-ns-prop_js.js
+## entry-default-ns-prop.js
 
 ```js
 import { foo_exports } from "./foo.js";
@@ -130,7 +131,7 @@ console.log(def, foo_exports, void 0);
 
 //#endregion
 ```
-## entry-default-ns_js.js
+## entry-default-ns.js
 
 ```js
 import { foo_exports } from "./foo.js";
@@ -140,7 +141,7 @@ console.log(def, foo_exports);
 
 //#endregion
 ```
-## entry-default-prop_js.js
+## entry-default-prop.js
 
 ```js
 import "./foo.js";
@@ -150,7 +151,7 @@ console.log(def, void 0);
 
 //#endregion
 ```
-## entry-default_js.js
+## entry-default.js
 
 ```js
 import "./foo.js";
@@ -160,7 +161,7 @@ console.log(def);
 
 //#endregion
 ```
-## entry-prop_js.js
+## entry-prop.js
 
 ```js
 import "./foo.js";
@@ -170,7 +171,7 @@ console.log(void 0);
 
 //#endregion
 ```
-## entry-typo-indirect_js.js
+## entry-typo-indirect.js
 
 ```js
 import "./foo.js";
@@ -180,7 +181,7 @@ console.log(void 0);
 
 //#endregion
 ```
-## entry-typo_js.js
+## entry-typo.js
 
 ```js
 import "./foo.js";

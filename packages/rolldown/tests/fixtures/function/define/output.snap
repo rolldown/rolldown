@@ -1,4 +1,4 @@
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region main.js
 console.log("production");

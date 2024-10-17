@@ -17,11 +17,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import { default as foo } from "./foo";
-import { default as bar } from "./bar";
+"use strict";
 
-export { bar, foo };
+const { default: foo } = __toESM(require("./foo"));
+const { default: bar } = __toESM(require("./bar"));
+
+Object.defineProperty(exports, 'bar', {
+  enumerable: true,
+  get: function () {
+    return bar;
+  }
+});
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
 ```

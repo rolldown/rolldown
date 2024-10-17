@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { data_default } from "./data.js";
+
+//#region a.js
+console.log("a:", data_default);
+
+//#endregion
+```
+## b.js
+
+```js
+import { data_default } from "./data.js";
+
+//#region b.js
+console.log("b:", data_default);
+
+//#endregion
+```
+## data.js
+
+```js
+
+//#region data.json
+const test = 123;
+var data_default = { test };
+
+//#endregion
+export { data_default };
+```

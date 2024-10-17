@@ -42,6 +42,7 @@ use itertools::Itertools;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 // TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
@@ -187,10 +188,8 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<External
     .into_iter()
     .filter_map(|stmt| {
       if let RenderImportStmt::ExternalRenderImportStmt(external_stmt) = stmt {
-        let symbol_name = ctx
-          .link_output
-          .symbol_db
-          .canonical_name_for(external_stmt.symbol_ref, &ctx.chunk.canonical_names);
+        let symbol_name =
+          ctx.chunk.canonical_name_by_token.get(&external_stmt.binding_name_token).unpack();
         match &external_stmt.specifiers {
           RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
             // Empty specifiers can be ignored in IIFE.
@@ -250,8 +249,7 @@ fn render_iife_arguments(
   };
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
-    let symbol_name =
-      ctx.link_output.symbol_db.canonical_name_for(external.symbol_ref, &ctx.chunk.canonical_names);
+    let symbol_name = ctx.chunk.canonical_name_by_token.get(&external.binding_name_token).unpack();
     input_args.push(symbol_name.as_str());
 
     if let Some(global) = globals.get(external.path.as_str()) {

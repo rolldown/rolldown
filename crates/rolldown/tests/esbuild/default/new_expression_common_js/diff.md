@@ -1,3 +1,5 @@
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -29,13 +31,12 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 new (require_foo()).Foo();
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,7 +1,7 @@
  var require_foo = __commonJS({
      "foo.js"(exports, module) {

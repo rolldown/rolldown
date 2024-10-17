@@ -1,49 +1,4 @@
 # Diff
-## /out/id-define.js
-### esbuild
-```js
-// id-define.js
-1?.y.z;
-(1?.y).z;
-1?.y["z"];
-(1?.y)["z"];
-1?.y();
-(1?.y)();
-1?.y.z();
-(1?.y).z();
-1?.y["z"]();
-(1?.y)["z"]();
-delete 1?.y.z;
-delete (1?.y).z;
-delete 1?.y["z"];
-delete (1?.y)["z"];
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/id-define.js
-+++ rolldown	
-@@ -1,14 +0,0 @@
--(1)?.y.z;
--(1)?.y.z;
--(1)?.y["z"];
--(1)?.y["z"];
--(1)?.y();
--(1)?.y();
--(1)?.y.z();
--(1)?.y.z();
--(1)?.y["z"]();
--(1)?.y["z"]();
--delete (1)?.y.z;
--delete (1)?.y.z;
--delete (1)?.y["z"];
--delete (1)?.y["z"];
-
-```
 ## /out/dot-define.js
 ### esbuild
 ```js
@@ -66,26 +21,50 @@ delete 1["c"];
 ### rolldown
 ```js
 
+//#region dot-define.js
+1 .c;
+a?.b.c;
+1["c"];
+a?.b["c"];
+1();
+a?.b();
+1 .c();
+a?.b.c();
+1["c"]();
+a?.b["c"]();
+delete 1 .c;
+delete a?.b.c;
+delete 1["c"];
+delete a?.b["c"];
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/dot-define.js
-+++ rolldown	
-@@ -1,14 +0,0 @@
++++ rolldown	dot-define.js
+@@ -1,14 +1,14 @@
+ (1).c;
 -(1).c;
--(1).c;
++a?.b.c;
+ (1)["c"];
 -(1)["c"];
--(1)["c"];
++a?.b["c"];
+ (1)();
 -(1)();
--(1)();
++a?.b();
+ (1).c();
 -(1).c();
--(1).c();
++a?.b.c();
+ (1)["c"]();
 -(1)["c"]();
--(1)["c"]();
++a?.b["c"]();
+ delete (1).c;
 -delete (1).c;
--delete (1).c;
++delete a?.b.c;
+ delete (1)["c"];
 -delete (1)["c"];
--delete (1)["c"];
++delete a?.b["c"];
 
 ```

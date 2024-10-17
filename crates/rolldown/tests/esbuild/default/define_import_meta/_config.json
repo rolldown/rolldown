@@ -2,11 +2,12 @@
   "config": {
     "input": [
       {
-        "name": "entry_js",
+        "name": "entry",
         "import": "entry.js"
       }
     ],
     "define": {
+      "import.meta": "1",
       "import.meta.foo": "2",
       "import.meta.foo.bar": "3"
     }

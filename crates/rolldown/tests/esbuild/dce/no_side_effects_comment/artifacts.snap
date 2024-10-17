@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## expr-arrow_js.js
+## expr-arrow.js
 
 ```js
 
@@ -19,7 +19,7 @@ x([
 
 //#endregion
 ```
-## expr-fn_js.js
+## expr-fn.js
 
 ```js
 
@@ -37,7 +37,7 @@ x([
 
 //#endregion
 ```
-## stmt-export-default-after-async-fn-anon_js.js
+## stmt-export-default-after-async-fn-anon.js
 
 ```js
 
@@ -47,7 +47,7 @@ x([
 //#endregion
 export { stmt_export_default_after_async_fn_anon_default as default };
 ```
-## stmt-export-default-after-async-fn-name_js.js
+## stmt-export-default-after-async-fn-name.js
 
 ```js
 
@@ -57,7 +57,7 @@ export { stmt_export_default_after_async_fn_anon_default as default };
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-after-async-gen-fn-anon_js.js
+## stmt-export-default-after-async-gen-fn-anon.js
 
 ```js
 
@@ -67,7 +67,7 @@ export { f as default };
 //#endregion
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
 ```
-## stmt-export-default-after-async-gen-fn-name_js.js
+## stmt-export-default-after-async-gen-fn-name.js
 
 ```js
 
@@ -77,7 +77,7 @@ export { stmt_export_default_after_async_gen_fn_anon_default as default };
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-after-fn-anon_js.js
+## stmt-export-default-after-fn-anon.js
 
 ```js
 
@@ -87,7 +87,7 @@ export { f as default };
 //#endregion
 export { stmt_export_default_after_fn_anon_default as default };
 ```
-## stmt-export-default-after-fn-name_js.js
+## stmt-export-default-after-fn-name.js
 
 ```js
 
@@ -97,7 +97,7 @@ export { stmt_export_default_after_fn_anon_default as default };
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-after-gen-fn-anon_js.js
+## stmt-export-default-after-gen-fn-anon.js
 
 ```js
 
@@ -107,7 +107,7 @@ export { f as default };
 //#endregion
 export { stmt_export_default_after_gen_fn_anon_default as default };
 ```
-## stmt-export-default-after-gen-fn-name_js.js
+## stmt-export-default-after-gen-fn-name.js
 
 ```js
 
@@ -117,7 +117,7 @@ export { stmt_export_default_after_gen_fn_anon_default as default };
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-before-async-fn-anon_js.js
+## stmt-export-default-before-async-fn-anon.js
 
 ```js
 
@@ -127,7 +127,7 @@ async function stmt_export_default_before_async_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_async_fn_anon_default as default };
 ```
-## stmt-export-default-before-async-fn-name_js.js
+## stmt-export-default-before-async-fn-name.js
 
 ```js
 
@@ -137,7 +137,7 @@ async function f() {}
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-before-async-gen-fn-anon_js.js
+## stmt-export-default-before-async-gen-fn-anon.js
 
 ```js
 
@@ -147,7 +147,7 @@ async function* stmt_export_default_before_async_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
 ```
-## stmt-export-default-before-async-gen-fn-name_js.js
+## stmt-export-default-before-async-gen-fn-name.js
 
 ```js
 
@@ -157,7 +157,7 @@ async function* f() {}
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-before-fn-anon_js.js
+## stmt-export-default-before-fn-anon.js
 
 ```js
 
@@ -167,7 +167,7 @@ function stmt_export_default_before_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_fn_anon_default as default };
 ```
-## stmt-export-default-before-fn-name_js.js
+## stmt-export-default-before-fn-name.js
 
 ```js
 
@@ -177,7 +177,7 @@ function f() {}
 //#endregion
 export { f as default };
 ```
-## stmt-export-default-before-gen-fn-anon_js.js
+## stmt-export-default-before-gen-fn-anon.js
 
 ```js
 
@@ -187,7 +187,7 @@ function* stmt_export_default_before_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_gen_fn_anon_default as default };
 ```
-## stmt-export-default-before-gen-fn-name_js.js
+## stmt-export-default-before-gen-fn-name.js
 
 ```js
 
@@ -197,7 +197,7 @@ function* f() {}
 //#endregion
 export { f as default };
 ```
-## stmt-export-fn_js.js
+## stmt-export-fn.js
 
 ```js
 
@@ -210,7 +210,7 @@ async function* d() {}
 //#endregion
 export { a, b, c, d };
 ```
-## stmt-export-local_js.js
+## stmt-export-local.js
 
 ```js
 
@@ -231,12 +231,12 @@ const c3 = () => {};
 //#endregion
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ```
-## stmt-fn_js.js
+## stmt-fn.js
 
 ```js
 
 ```
-## stmt-local_js.js
+## stmt-local.js
 
 ```js
 

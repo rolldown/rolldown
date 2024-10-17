@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region with.js
+with(x) y;
+
+//#endregion
+//#region delete-1.js
+delete x;
+
+//#endregion
+//#region delete-2.js
+delete y;
+
+//#endregion
+//#region delete-3.js
+delete z;
+
+//#endregion
+```

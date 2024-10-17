@@ -10,7 +10,7 @@ console.log(dir_default);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region dir/index.js
 var dir_index_default = 123;
@@ -20,13 +20,12 @@ var dir_index_default = 123;
 assert.equal(dir_index_default, 123);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,2 +1,2 @@
 -var dir_default = 123;
 -console.log(dir_default);

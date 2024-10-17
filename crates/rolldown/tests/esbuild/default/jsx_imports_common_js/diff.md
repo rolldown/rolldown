@@ -1,3 +1,5 @@
+# Reason
+1. `jsx.factory`
 # Diff
 ## /out.js
 ### esbuild
@@ -21,13 +23,12 @@ import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 console.log(_jsx("div", {}), _jsx(_Fragment, { children: "fragment" }));
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,7 +1,4 @@
 -var require_custom_react = __commonJS({
 -    "custom-react.js"(exports, module) {

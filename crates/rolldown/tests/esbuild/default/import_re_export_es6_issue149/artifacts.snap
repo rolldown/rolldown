@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## app_jsx.js
+## app.js
 
 ```js
 import { render } from "preact";

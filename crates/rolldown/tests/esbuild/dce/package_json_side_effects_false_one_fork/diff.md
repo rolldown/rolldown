@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. different async module impl
 # Diff
 ## /out.js
 ### esbuild
@@ -46,13 +47,12 @@ Promise.resolve().then(() => (init_a(), a_exports)).then((x) => assert(x.foo ===
 import("./a_index.js").then((x) => assert(x.foo === "foo"));
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,25 +1,1 @@
 -var foo;
 -var init_c = __esm({

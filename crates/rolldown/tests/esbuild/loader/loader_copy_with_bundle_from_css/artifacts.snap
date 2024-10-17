@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry.css
+
+```css
+body {
+	background: url(../assets/some.file);
+}
+
+```
+## src_entry.js
+
+```js
+
+```

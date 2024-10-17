@@ -1,0 +1,88 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "entry.jsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.js
+
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region entry.jsx
+let tests = [
+	{
+		...a,
+		...b
+	},
+	{
+		a,
+		b,
+		...c
+	},
+	{
+		...a,
+		b,
+		c
+	},
+	{
+		a,
+		...b,
+		c
+	},
+	{
+		a,
+		b,
+		...c,
+		...d,
+		e,
+		f,
+		...g,
+		...h,
+		i,
+		j
+	}
+];
+let jsx = [
+	_jsx("div", {
+		...a,
+		...b
+	}),
+	_jsx("div", {
+		a: true,
+		b: true,
+		...c
+	}),
+	_jsx("div", {
+		...a,
+		b: true,
+		c: true
+	}),
+	_jsx("div", {
+		a: true,
+		...b,
+		c: true
+	}),
+	_jsx("div", {
+		a: true,
+		b: true,
+		...c,
+		...d,
+		e: true,
+		f: true,
+		...g,
+		...h,
+		i: true,
+		j: true
+	})
+];
+
+//#endregion
+```

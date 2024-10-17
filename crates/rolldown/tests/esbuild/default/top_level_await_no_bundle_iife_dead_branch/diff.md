@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Diff
 ## /out.js
 ### esbuild
@@ -11,17 +10,23 @@
 ### rolldown
 ```js
 
+//#region entry.js
+if (false) await foo;
+if (false) for await (foo of bar);
 
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
-@@ -1,4 +0,0 @@
++++ rolldown	entry.js
+@@ -1,4 +1,2 @@
 -(() => {
 -    if (false) foo;
 -    if (false) for (foo of bar) ;
 -})();
++if (false) await foo;
++if (false) for await (foo of bar) ;
 
 ```

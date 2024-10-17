@@ -44,13 +44,12 @@ console.log(re_export);
 console.log(reexpo.rt);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,22 +1,11 @@
 -var obj2 = {};
 -var sideEffects2 = console.log("this should be renamed");

@@ -2,6 +2,8 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js'
 import { diffCase } from './diff'
+import { DebugConfig, UnwrapPromise } from './types'
+import { aggregateReason } from './aggregate-reason.js'
 const esbuildTestDir = path.join(
   import.meta.dirname,
   '../../crates/rolldown/tests/esbuild',
@@ -25,12 +27,31 @@ export function getEsbuildSnapFile(
     })
   return ret
 }
+type AggregateStats = {
+  stats: Stats
+  details: Record<string, Stats>
+}
 
-export function run(includeList: string[], debug: boolean) {
+type Stats = {
+  pass: number
+  bypass: number
+  failed: number
+  total: number
+}
+export async function run(includeList: string[], debugConfig: DebugConfig) {
+  let aggregatedStats: AggregateStats = {
+    stats: {
+      pass: 0,
+      bypass: 0,
+      failed: 0,
+      total: 0,
+    },
+    details: {},
+  }
   let snapfileList = getEsbuildSnapFile(includeList)
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
-    if (debug) {
+    if (debugConfig?.debug) {
       console.log('category:', snapFile.normalizedName)
     }
     let { normalizedName: snapCategory, content } = snapFile
@@ -38,13 +59,24 @@ export function run(includeList: string[], debug: boolean) {
     // singleEsbuildSnapshot
     let diffList = []
     for (let snap of parsedEsbuildSnap) {
-      if (debug) {
+      if (
+        debugConfig.caseNames?.length > 0 &&
+        !debugConfig.caseNames.includes(snap.name)
+      ) {
+        continue
+      }
+      if (debugConfig.debug) {
         console.log('processing', snap.name)
       }
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name)
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
-      let diffResult = diffCase(snap, parsedRolldownSnap, debug)
+      let diffResult = await diffCase(
+        snap,
+        parsedRolldownSnap,
+        rolldownTestPath,
+        debugConfig,
+      )
       // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')
@@ -74,12 +106,35 @@ export function run(includeList: string[], debug: boolean) {
     diffList.sort((a, b) => {
       return a.name.localeCompare(b.name)
     })
-    let summaryMarkdown = getSummaryMarkdown(diffList, snapCategory)
+    let summary = getSummaryMarkdownAndStats(diffList, snapCategory)
     fs.writeFileSync(
       path.join(import.meta.dirname, './summary/', `${snapCategory}.md`),
-      summaryMarkdown,
+      summary.markdown,
     )
+    aggregatedStats.details[snapCategory] = summary.stats
+    aggregatedStats.stats.total += summary.stats.total
+    aggregatedStats.stats.pass += summary.stats.pass
+    aggregatedStats.stats.bypass += summary.stats.bypass
+    aggregatedStats.stats.failed += summary.stats.failed
   }
+  generateStatsMarkdown(aggregatedStats)
+  generateAggregateMarkdown()
+}
+
+function generateAggregateMarkdown() {
+  let entries = aggregateReason()
+  let markdown = '# Aggregate Reason\n'
+  for (let [reason, caseDirs] of entries) {
+    markdown += `## ${reason}\n`
+    for (let dir of caseDirs) {
+      markdown += `- ${dir}\n`
+    }
+  }
+
+  fs.writeFileSync(
+    path.resolve(import.meta.dirname, './stats/aggregated-reason.md'),
+    markdown,
+  )
 }
 
 function getRolldownSnap(caseDir: string) {
@@ -89,7 +144,9 @@ function getRolldownSnap(caseDir: string) {
   }
 }
 
-function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
+function getDiffMarkdown(
+  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
+) {
   if (typeof diffResult === 'string') {
     throw new Error('diffResult should not be string')
   }
@@ -103,10 +160,40 @@ function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
   return markdown
 }
 
-function getSummaryMarkdown(
-  diffList: Array<{ diffResult: ReturnType<typeof diffCase>; name: string }>,
+function generateStatsMarkdown(aggregateStats: AggregateStats) {
+  const { stats, details } = aggregateStats
+  let markdown = ''
+
+  markdown += `# Compatibility metric\n`
+  markdown += `- total: ${stats.total}\n`
+  markdown += `- passed: ${stats.total - stats.failed}\n`
+  markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(2)}%\n`
+
+  markdown += `# Compatibility metric details\n`
+  Object.entries(details).forEach(([category, stats]) => {
+    markdown += `## ${category}\n`
+    markdown += `- total: ${stats.total}\n`
+    markdown += `- passed: ${stats.total - stats.failed}\n`
+    markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(2)}%\n`
+  })
+  fs.writeFileSync(
+    path.resolve(import.meta.dirname, './stats/stats.md'),
+    markdown,
+  )
+}
+
+type Summary = {
+  markdown: string
+  stats: Stats
+}
+
+function getSummaryMarkdownAndStats(
+  diffList: Array<{
+    diffResult: UnwrapPromise<ReturnType<typeof diffCase>>
+    name: string
+  }>,
   snapshotCategory: string,
-) {
+): Summary {
   let bypassList = []
   let failedList = []
   let passList = []
@@ -160,12 +247,20 @@ function getSummaryMarkdown(
     markdown += `## [${diff.name}](${posixPath}/bypass.md)\n`
   }
 
-  return markdown
+  return {
+    markdown,
+    stats: {
+      pass: passList.length,
+      bypass: bypassList.length,
+      failed: failedList.length,
+      total: diffList.length,
+    },
+  }
 }
 
 function updateBypassOrDiffMarkdown(
   markdownPath: string,
-  diffResult: ReturnType<typeof diffCase>,
+  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
 ) {
   let bypassContent = ''
   if (fs.existsSync(markdownPath)) {

@@ -130,6 +130,7 @@ impl<'a> LinkStage<'a> {
     let compat_mode = true;
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
+      // TODO(hyf0): should check if importer is a js module
       importer.import_records.iter().for_each(|rec| {
         let importee_id = rec.resolved_module;
         let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
@@ -217,6 +218,9 @@ impl<'a> LinkStage<'a> {
               }
             }
           }
+          ImportKind::AtImport => {
+            unreachable!("A Js module would never import a CSS module via `@import`");
+          }
         }
       });
 
@@ -239,7 +243,7 @@ impl<'a> LinkStage<'a> {
                 .entry(rec.resolved_module)
                 .or_insert_with(|| {
                   // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
-                  self.symbols.create_symbol(
+                  self.symbols.create_facade_root_symbol_ref(
                     importer.idx,
                     legitimize_identifier_name(&ext.name).into_owned().into(),
                   )
@@ -273,8 +277,10 @@ impl<'a> LinkStage<'a> {
                   let is_reexport_all = importer.star_exports.contains(rec_id);
                   if is_reexport_all {
                     // export * from 'external' would be just removed. So it references nothing.
-                    symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
-                      format!("import_{}", legitimize_identifier_name(&importee.name)).into();
+                    rec.namespace_ref.set_name(
+                      &mut symbols.lock().unwrap(),
+                      &format!("import_{}", legitimize_identifier_name(&importee.name)),
+                    );
                   } else {
                     // import ... from 'external' or export ... from 'external'
                     let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
@@ -346,8 +352,10 @@ impl<'a> LinkStage<'a> {
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__toESM").into());
                         declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
-                        symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
-                          format!("import_{}", &importee.repr_name).into();
+                        rec.namespace_ref.set_name(
+                          &mut symbols.lock().unwrap(),
+                          &format!("import_{}", &importee.repr_name),
+                        );
                       }
                     }
                     WrapKind::Esm => {
@@ -412,6 +420,9 @@ impl<'a> LinkStage<'a> {
                       }
                     }
                   }
+                }
+                ImportKind::AtImport => {
+                  unreachable!("A Js module would never import a CSS module via `@import`");
                 }
               }
             }

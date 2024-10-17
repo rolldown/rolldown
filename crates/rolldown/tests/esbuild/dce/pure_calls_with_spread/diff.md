@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. sub optimal for pure call with spread
 # Diff
 ## /out.js
 ### esbuild
@@ -15,13 +16,12 @@
 /* @__PURE__ */ new foo(...args);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,2 +1,2 @@
 -[...args];
 -[...args];

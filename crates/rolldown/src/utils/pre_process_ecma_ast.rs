@@ -63,6 +63,9 @@ impl PreProcessEcmaAst {
           }
           OxcParseType::Ts => {}
         }
+        if let Some(jsx) = &bundle_options.jsx {
+          transformer_options.react = jsx.clone();
+        }
 
         Transformer::new(fields.allocator, path, fields.source, trivias, transformer_options)
           .build_with_symbols_and_scopes(symbols, scopes, fields.program)

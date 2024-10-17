@@ -182,11 +182,30 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       },
     );
 
-    if is_namespace_referenced {
+    // check if we need to add wrapper
+    let needs_wrapper = self
+      .ctx
+      .linking_info
+      .wrapper_stmt_info
+      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included);
+
+    // the order should be
+    // 1. module namespace object declaration
+    // 2. shimmed_exports
+    // 3. hoisted_names
+    // 4. wrapped module declaration
+    let declaration_of_module_namespace_object = if is_namespace_referenced {
       let mut stmts = self.generate_declaration_of_module_namespace_object();
-      stmts.extend(program.body.take_in(self.alloc));
-      program.body.extend(stmts);
-    }
+      if needs_wrapper {
+        stmts
+      } else {
+        stmts.extend(program.body.take_in(self.alloc));
+        program.body.extend(stmts);
+        vec![]
+      }
+    } else {
+      vec![]
+    };
 
     let mut shimmed_exports =
       self.ctx.linking_info.shimmed_missing_exports.iter().collect::<Vec<_>>();
@@ -207,13 +226,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     });
 
     walk_mut::walk_program(self, program);
-
-    // check if we need to add wrapper
-    let needs_wrapper = self
-      .ctx
-      .linking_info
-      .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included);
 
     if needs_wrapper {
       match self.ctx.linking_info.wrap_kind {
@@ -274,6 +286,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               stmts_inside_closure.push(stmt);
             }
           });
+          program.body.extend(declaration_of_module_namespace_object);
           program.body.extend(fn_stmts);
           if !hoisted_names.is_empty() {
             let mut declarators = allocator::Vec::new_in(self.alloc);
@@ -309,6 +322,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         }
         WrapKind::None => {}
       }
+    } else {
+      program.body.extend(declaration_of_module_namespace_object);
     }
   }
 

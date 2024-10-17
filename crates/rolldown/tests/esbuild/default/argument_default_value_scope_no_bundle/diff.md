@@ -70,13 +70,12 @@ let c = [
 
 //#endregion
 export { a, b, c };
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,27 +1,28 @@
 -export function a(o = foo) {
 -    var r;

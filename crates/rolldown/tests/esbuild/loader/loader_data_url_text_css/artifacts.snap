@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.css
+
+```css
+body{color:red}
+body{background:blue}
+body{color:red}
+body{background:blue}
+
+
+```
+## entry.js
+
+```js
+
+```

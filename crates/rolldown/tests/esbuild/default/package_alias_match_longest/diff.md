@@ -1,3 +1,5 @@
+# Reason
+1. alias not align
 # Diff
 ## /out.js
 ### esbuild
@@ -19,13 +21,12 @@ import "pkg/foo/bar/baz";
 import "pkg/bar/baz";
 import "pkg/baz";
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -import "alias/pkg";
 -import "alias/pkg_foo";

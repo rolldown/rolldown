@@ -3,9 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
+(function() {
+
 
 //#region nested.js
 "use A";
@@ -21,4 +23,5 @@ nested();
 entry();
 
 //#endregion
+})();
 ```

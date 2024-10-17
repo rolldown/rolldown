@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "Test" is not exported by "test.ts".
+   ╭─[c.ts:1:10]
+   │
+ 1 │ import { Test } from './test'
+   │          ──┬─  
+   │            ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "Test" is not exported by "test.ts".
+   ╭─[d.ts:3:10]
+   │
+ 3 │ import { Test } from './test'
+   │          ──┬─  
+   │            ╰─── Missing export
+───╯
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region a.ts
+var a_exports = {};
+__export(a_exports, { foo: () => foo$3 });
+let foo$3 = 123;
+
+//#endregion
+//#region b.ts
+var b_exports = {};
+__export(b_exports, { foo: () => foo$2 });
+let foo$2 = 123;
+
+//#endregion
+//#region c.ts
+var c_exports = {};
+__export(c_exports, {
+	Test: () => Test$1,
+	foo: () => foo$1
+});
+let foo$1 = 123;
+
+//#endregion
+//#region d.ts
+var d_exports = {};
+__export(d_exports, {
+	Test: () => Test,
+	foo: () => foo
+});
+let foo = 123;
+
+//#endregion
+//#region entry.ts
+console.log(a_exports, b_exports, c_exports, d_exports);
+
+//#endregion
+```

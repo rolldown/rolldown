@@ -1,0 +1,130 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## namespace-after.js
+
+```js
+
+//#region namespace-after.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+(function(_x) {
+	console.log(x, y);
+})(x || (x = {}));
+
+//#endregion
+```
+## namespace-before.js
+
+```js
+
+//#region namespace-before.ts
+let x;
+(function(_x) {
+	console.log(x, y);
+})(x || (x = {}));
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+
+//#endregion
+```
+## sibling-enum-after.js
+
+```js
+
+//#region sibling-enum-after.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+console.log(x);
+
+//#endregion
+```
+## sibling-enum-before.js
+
+```js
+
+//#region sibling-enum-before.ts
+console.log(x);
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+
+//#endregion
+```
+## sibling-enum-middle.js
+
+```js
+
+//#region sibling-enum-middle.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+console.log(x);
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+
+//#endregion
+```
+## sibling-member.js
+
+```js
+
+//#region sibling-member.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+x = function(x$1) {
+	x$1[x$1["z"] = 246] = "z";
+	return x$1;
+}(x || {});
+console.log(x.y, x.z);
+
+//#endregion
+```
+## simple-enum.js
+
+```js
+
+//#region simple-enum.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+console.log(x);
+
+//#endregion
+```
+## simple-member.js
+
+```js
+
+//#region simple-member.ts
+var x = function(x$1) {
+	x$1[x$1["y"] = 123] = "y";
+	return x$1;
+}(x || {});
+console.log(x.y);
+
+//#endregion
+```

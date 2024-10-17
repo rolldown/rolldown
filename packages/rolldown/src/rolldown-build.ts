@@ -6,6 +6,7 @@ import { createBundler } from './utils/create-bundler'
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
 import type { InputOptions } from './options/input-options'
+import { Watcher } from './watcher'
 
 export class RolldownBuild {
   #inputOptions: InputOptions
@@ -45,6 +46,14 @@ export class RolldownBuild {
     const bundler = await this.#getBundler({})
     await this.#stopWorkers?.()
     await bundler.close()
+  }
+
+  async watch(): Promise<Watcher> {
+    const bundler = await this.#getBundler({})
+    const bindingWatcher = await bundler.watch()
+    const watcher = new Watcher(bindingWatcher)
+    watcher.watch()
+    return watcher
   }
 }
 

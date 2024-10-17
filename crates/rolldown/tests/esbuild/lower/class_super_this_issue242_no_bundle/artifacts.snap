@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+class A {}
+class B extends A {
+	#e;
+	constructor(c) {
+		super();
+		this.#e = c.d ?? "test";
+	}
+	f() {
+		return this.#e;
+	}
+}
+
+//#endregion
+export { A, B };
+```

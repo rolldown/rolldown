@@ -1,13 +1,15 @@
+# Reason
+1. not support legal comments
 # Diff
-## /out/entry.js
+## /out/entry.css
 ### esbuild
 ```js
-x;a;
-/*! <\/script> */
+x{y:z}a{b:c}
+/*! </style> */
 /*! Bundled license information:
 
-js-pkg/index.js:
-  (*! <\/script> *)
+css-pkg/index.css:
+  (*! </style> *)
 */
 ```
 ### rolldown
@@ -17,10 +19,16 @@ js-pkg/index.js:
 ### diff
 ```diff
 ===================================================================
---- esbuild	/out/entry.js
+--- esbuild	/out/entry.css
 +++ rolldown	
-@@ -1,2 +0,0 @@
--x;
--a;
+@@ -1,7 +0,0 @@
+-x{y:z}a{b:c}
+-/*! </style> */
+-/*! Bundled license information:
+-
+-css-pkg/index.css:
+-  (*! </style> *)
+-*/
+\ No newline at end of file
 
 ```

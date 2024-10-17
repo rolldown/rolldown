@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      },
+      {
+        "name": "loops",
+        "import": "loops.js"
+      },
+      {
+        "name": "switch",
+        "import": "switch.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entries_entry.js
+
+```js
+
+
+//#region images/image.png
+var require_image = __commonJS({ "images/image.png"() {
+	x;
+} });
+
+//#endregion
+//#region uploads/file.txt
+var file_default = "y";
+
+//#endregion
+//#region entries/entry.js
+var import_image = __toESM(require_image());
+console.log(import_image.default, file_default);
+
+//#endregion
+```

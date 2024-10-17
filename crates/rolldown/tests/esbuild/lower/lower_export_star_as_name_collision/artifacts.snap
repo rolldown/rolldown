@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "path1" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "path2" is imported by "nested.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.js
+
+```js
+import * as foo from "path2";
+import * as ns from "path1";
+
+//#region nested.js
+let foo$1 = 123;
+
+//#endregion
+//#region entry.js
+console.log(foo, foo$1);
+let ns$1 = 123;
+
+//#endregion
+export { ns, ns$1 as sn };
+```

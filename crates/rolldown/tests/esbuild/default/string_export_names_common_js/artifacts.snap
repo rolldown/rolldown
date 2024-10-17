@@ -17,11 +17,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import * as all the stuff from "./foo";
-import { some import as someImport } from "./foo";
+"use strict";
 
-export { all the stuff, someImport as 'some export' };
+const all the stuff = __toESM(require("./foo"));
+const { some import: someImport } = __toESM(require("./foo"));
+
+Object.defineProperty(exports, 'all the stuff', {
+  enumerable: true,
+  get: function () {
+    return all the stuff;
+  }
+});
+exports["some export"] = someImport
 ```

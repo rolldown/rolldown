@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.js
+async function foo(bar) {
+	await bar;
+	return [this, arguments];
+}
+class Foo {
+	async foo() {}
+}
+var entry_default = [
+	foo,
+	Foo,
+	async function() {},
+	async () => {},
+	{ async foo() {} },
+	class {
+		async foo() {}
+	},
+	function() {
+		return async (bar) => {
+			await bar;
+			return [this, arguments];
+		};
+	}
+];
+
+//#endregion
+export { entry_default as default };
+```

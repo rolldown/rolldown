@@ -3,7 +3,7 @@
   "config": {
     "input": [
       {
-        "name": "entry_jsx",
+        "name": "entry",
         "import": "entry.jsx"
       }
     ]

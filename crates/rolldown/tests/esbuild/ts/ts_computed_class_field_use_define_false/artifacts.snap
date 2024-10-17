@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+class Foo {
+	[q];
+	[r] = s;
+	@dec [x];
+	@dec [y] = z;
+}
+new Foo();
+
+//#endregion
+```

@@ -1,3 +1,5 @@
+# Reason
+1. It seems rolldown rewrite `fs` to `node:fs`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -30,23 +32,47 @@ console.log([
 ### rolldown
 ```js
 
+
+//#region node_modules/fs/abc.js
+var require_abc = __commonJS({ "node_modules/fs/abc.js"() {
+	console.log("include this");
+} });
+
+//#endregion
+//#region node_modules/fs/index.js
+var require_fs_index = __commonJS({ "node_modules/fs/index.js"() {
+	console.log("include this too");
+} });
+
+//#endregion
+//#region entry.js
+console.log([
+	require("node:fs"),
+	require("node:fs/promises"),
+	require("node:foo"),
+	require_abc(),
+	require_fs_index()
+]);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
-@@ -1,11 +0,0 @@
--var require_abc = __commonJS({
--    "node_modules/fs/abc.js"() {
--        console.log("include this");
--    }
--});
++++ rolldown	entry.js
+@@ -2,10 +2,10 @@
+     "node_modules/fs/abc.js"() {
+         console.log("include this");
+     }
+ });
 -var require_fs = __commonJS({
--    "node_modules/fs/index.js"() {
--        console.log("include this too");
--    }
--});
++var require_fs_index = __commonJS({
+     "node_modules/fs/index.js"() {
+         console.log("include this too");
+     }
+ });
 -console.log([require("fs"), require("fs/promises"), require("node:foo"), require_abc(), require_fs()]);
++console.log([require("node:fs"), require("node:fs/promises"), require("node:foo"), require_abc(), require_fs_index()]);
 
 ```

@@ -17,22 +17,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## test_jsx.css
+## test.css
 
 ```css
 button { color: red }
+
 ```
-## test_jsx.js
+## test.js
 
 ```js
 import { jsx as _jsx, jsx as _jsx$1 } from "react/jsx-runtime";
 
 
 //#region node_modules/pkg/button.css
-var button_exports;
-var init_button = __esm({ "node_modules/pkg/button.css"() {
-	button_exports = {};
-} });
+var button_exports = {};
+var init_button = __esm({ "node_modules/pkg/button.css"() {} });
 
 //#endregion
 //#region node_modules/pkg/components.jsx

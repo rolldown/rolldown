@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+async function* foo() {
+	yield;
+	yield x;
+	yield* x;
+	await using x = await y;
+	for await (let x$1 of y) {}
+	for await (await using x of y) {}
+}
+foo = async function* () {
+	yield;
+	yield x;
+	yield* x;
+	await using x = await y;
+	for await (let x$1 of y) {}
+	for await (await using x of y) {}
+};
+foo = { async *bar() {
+	yield;
+	yield x;
+	yield* x;
+	await using x = await y;
+	for await (let x$1 of y) {}
+	for await (await using x of y) {}
+} };
+class Foo {
+	async *bar() {
+		yield;
+		yield x;
+		yield* x;
+		await using x = await y;
+		for await (let x$1 of y) {}
+		for await (await using x of y) {}
+	}
+}
+Foo = class {
+	async *bar() {
+		yield;
+		yield x;
+		yield* x;
+		await using x = await y;
+		for await (let x$1 of y) {}
+		for await (await using x of y) {}
+	}
+};
+
+//#endregion
+```

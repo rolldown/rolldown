@@ -1,0 +1,39 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "simple-member",
+        "import": "simple-member.ts"
+      },
+      {
+        "name": "simple-enum",
+        "import": "simple-enum.ts"
+      },
+      {
+        "name": "sibling-member",
+        "import": "sibling-member.ts"
+      },
+      {
+        "name": "sibling-enum-before",
+        "import": "sibling-enum-before.ts"
+      },
+      {
+        "name": "sibling-enum-middle",
+        "import": "sibling-enum-middle.ts"
+      },
+      {
+        "name": "sibling-enum-after",
+        "import": "sibling-enum-after.ts"
+      },
+      {
+        "name": "namespace-before",
+        "import": "namespace-before.ts"
+      },
+      {
+        "name": "namespace-after",
+        "import": "namespace-after.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

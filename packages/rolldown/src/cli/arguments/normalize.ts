@@ -20,6 +20,7 @@ export interface NormalizedCliOptions {
   help: boolean
   config: string
   version: boolean
+  watch: boolean
 }
 
 export function normalizeCliOptions(
@@ -41,11 +42,12 @@ export function normalizeCliOptions(
     output: {} as OutputOptions,
     help: options.help ?? false,
     version: options.version ?? false,
+    watch: options.watch ?? false,
   } as NormalizedCliOptions
   if (typeof options.config === 'string') {
     result.config = options.config ? options.config : 'rolldown.config.js'
   }
-  const reservedKeys = ['help', 'version', 'config']
+  const reservedKeys = ['help', 'version', 'config', 'watch']
   const keysOfInput = inputCliOptionsSchema.keyof()._def.values as string[]
   // Because input is the positional args, we shouldn't include it in the input schema.
   const keysOfOutput = outputCliOptionsSchema.keyof()._def.values as string[]

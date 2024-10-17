@@ -3,11 +3,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
 
 //#region entry.js
+switch (foo) {
+	default: var foo;
+}
 switch (bar) {
 	default: let bar$1;
 }

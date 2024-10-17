@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.js
+for (let i = 0; i < 3; i++) {
+	objs.push({
+		__proto__: { foo() {
+			return i;
+		} },
+		async bar() {
+			return super.foo();
+		}
+	});
+}
+
+//#endregion
+```

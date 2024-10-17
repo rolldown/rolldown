@@ -1,0 +1,31 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "number",
+        "import": "number.ts"
+      },
+      {
+        "name": "string",
+        "import": "string.ts"
+      },
+      {
+        "name": "propagation",
+        "import": "propagation.ts"
+      },
+      {
+        "name": "nested-number",
+        "import": "nested-number.ts"
+      },
+      {
+        "name": "nested-string",
+        "import": "nested-string.ts"
+      },
+      {
+        "name": "nested-propagation",
+        "import": "nested-propagation.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

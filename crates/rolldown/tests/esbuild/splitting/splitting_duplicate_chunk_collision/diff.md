@@ -114,15 +114,17 @@ import"./chunk-QPOQRTMB.js";
 ```
 ### rolldown
 ```js
+import "./ab.js";
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	a.js
+@@ -1,1 +1,1 @@
 -import "./chunk-QPOQRTMB.js";
++import "./ab.js";
 
 ```
 ## /out/b.js
@@ -132,15 +134,17 @@ import"./chunk-QPOQRTMB.js";
 ```
 ### rolldown
 ```js
+import "./ab.js";
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	b.js
+@@ -1,1 +1,1 @@
 -import "./chunk-QPOQRTMB.js";
++import "./ab.js";
 
 ```
 ## /out/chunk-QPOQRTMB.js
@@ -168,15 +172,17 @@ import"./chunk-TOGNOMR3.js";
 ```
 ### rolldown
 ```js
+import "./cd.js";
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/c.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	c.js
+@@ -1,1 +1,1 @@
 -import "./chunk-TOGNOMR3.js";
++import "./cd.js";
 
 ```
 ## /out/d.js
@@ -186,15 +192,17 @@ import"./chunk-TOGNOMR3.js";
 ```
 ### rolldown
 ```js
+import "./cd.js";
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/d.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	d.js
+@@ -1,1 +1,1 @@
 -import "./chunk-TOGNOMR3.js";
++import "./cd.js";
 
 ```
 ## /out/chunk-TOGNOMR3.js

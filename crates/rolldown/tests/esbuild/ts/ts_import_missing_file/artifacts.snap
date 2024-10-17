@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "./doesNotExist.ts" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.js
+
+```js
+import { Something } from "./doesNotExist.ts";
+
+//#region entry.ts
+let foo = new Something();
+
+//#endregion
+```

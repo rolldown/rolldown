@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{
+      "name": "main",
+      "import": "./main.ts"
+    }]
+  }
+}

@@ -13,13 +13,12 @@ fn(test);
 console.log(test);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,1 @@
 -var old = console.log;
 -var fn = (...args) => old.apply(console, ["log:"].concat(args));

@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region foo.js
 function fn() {
@@ -15,7 +15,7 @@ function fn() {
 
 //#endregion
 //#region entry.js
-assert(fn() === 123);
+assert.equal(fn(), 123);
 
 //#endregion
 ```

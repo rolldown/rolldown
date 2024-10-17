@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "Users_user_project_**_*",
+        "import": "Users/user/project/**/*.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

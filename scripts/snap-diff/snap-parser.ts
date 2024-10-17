@@ -1,6 +1,6 @@
 import { snakeCase } from 'change-case'
-import markdown from 'markdown-it'
-import assert from 'node:assert'
+import remarkParse from 'remark-parse'
+import { unified } from 'unified'
 export function parseEsbuildSnap(source: string) {
   let cases = source.split(
     '================================================================================',
@@ -52,22 +52,43 @@ export function parseRolldownSnap(source: string | undefined) {
     source = source.slice(match.index + match[0].length)
   }
   // default mode
-  const md = markdown()
-  let tokens = md.parse(source, {})
-  let i = 0
-  let ret = []
-  while (i < tokens.length) {
-    let token = tokens[i]
 
-    if (token.type === 'heading_open' && token.tag === 'h2') {
-      let headingToken = tokens[i + 1]
-      assert(headingToken.type === 'inline')
-      let filename = headingToken.content
-      let codeToken = tokens[i + 3]
-      assert(codeToken.tag === 'code')
-      let content = codeToken.content
-      ret.push({ filename, content })
-      i += 3
+  const processor = unified().use(remarkParse)
+
+  const parseTree = processor.parse(source)
+  const tree: any = processor.runSync(parseTree)
+
+  let i = 0
+  let inAsset = false
+  let ret = []
+  while (i < tree.children.length) {
+    let child = tree.children[i]
+    if (child.type === 'heading' && child.depth === 1) {
+      let content = source.slice(
+        child.position.start.offset,
+        child.position.end.offset,
+      )
+      if (content.trim().slice(1).trim() === 'Assets') {
+        inAsset = true
+      } else {
+        inAsset = false
+      }
+    }
+    if (inAsset && child.type === 'heading' && child.depth === 2) {
+      let content = source.slice(
+        child.position.start.offset,
+        child.position.end.offset,
+      )
+      let filename = content.trim().slice(2).trim()
+      let codeBlock = tree.children[i + 1]
+      if (codeBlock.type === 'code') {
+        ret.push({
+          filename,
+          content: codeBlock.value,
+        })
+        i += 2
+        continue
+      }
     }
     i++
   }

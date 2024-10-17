@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. side effects detector not align
 # Diff
 ## /out.js
 ### esbuild
@@ -66,13 +67,12 @@ keep ||= keep2;
 keep &&= keep2;
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,26 +1,5 @@
 -var keep;
 -var keep2;

@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. side effects detect
 # Diff
 ## /out.js
 ### esbuild
@@ -16,13 +17,12 @@ console.log("bar");
 console.log("foo");
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	src_entry_js.js
++++ rolldown	src_entry.js
 @@ -1,2 +1,1 @@
  console.log("foo");
 -console.log("bar");

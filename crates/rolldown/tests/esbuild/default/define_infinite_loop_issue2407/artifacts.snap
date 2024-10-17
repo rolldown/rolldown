@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
 
 //#region entry.js
-a.b();
-x.y();
+b.c();
+y();
 
 //#endregion
 ```

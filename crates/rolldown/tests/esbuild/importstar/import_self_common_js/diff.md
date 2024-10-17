@@ -1,3 +1,5 @@
+# Reason 
+1. Format cjs should not appear `export`
 # Diff
 ## /out.js
 ### esbuild
@@ -14,8 +16,8 @@ module.exports = require_entry();
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
 
+const { default: assert } = __toESM(require("node:assert"));
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
@@ -27,14 +29,14 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 //#endregion
 export default require_entry();
 
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
-@@ -1,8 +1,8 @@
++++ rolldown	entry.js
+@@ -1,8 +1,9 @@
++var {default: assert} = __toESM(require("node:assert"));
  var require_entry = __commonJS({
      "entry.js"(exports) {
          var import_entry = __toESM(require_entry());

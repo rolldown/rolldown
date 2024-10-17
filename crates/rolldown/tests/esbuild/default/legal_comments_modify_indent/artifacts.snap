@@ -3,22 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_css.css
-
-```css
-@media (x: y) {
-	/**
-	 * @preserve
-	 */
-	z { zoom: 2 }
-}
-```
-## entry_css.js
-
-```js
-
-```
-## entry_js.js
+## entry.js
 
 ```js
 
@@ -27,4 +12,20 @@ var entry_default = () => {};
 
 //#endregion
 export { entry_default as default };
+```
+## entry2.css
+
+```css
+@media (x: y) {
+	/**
+	 * @preserve
+	 */
+	z { zoom: 2 }
+}
+
+```
+## entry2.js
+
+```js
+
 ```

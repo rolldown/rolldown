@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 //#region text.data
 var text_default = "data:text/plain;charset=utf-8,\"'`+=/@%23$$%^&*(%0A你好，世界%0AПривет мир%0Aこんにちは世界%0A<script>";

@@ -1,3 +1,5 @@
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -57,13 +59,12 @@ class Class {}
 
 //#endregion
 export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,5 +1,5 @@
 -var abc = void 0;
 +var abc = undefined;

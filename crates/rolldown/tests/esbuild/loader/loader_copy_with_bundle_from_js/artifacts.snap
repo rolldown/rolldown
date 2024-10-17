@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry.js
+
+```js
+
+
+//#region assets/some.file
+var require_some = __commonJS({ "assets/some.file"() {
+	stuff;
+} });
+
+//#endregion
+//#region src/entry.js
+var import_some = __toESM(require_some());
+console.log(import_some.default);
+
+//#endregion
+```

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region loose/index.js
+class loose_index_default {
+	foo;
+}
+
+//#endregion
+//#region strict/index.js
+class strict_index_default {
+	foo;
+}
+
+//#endregion
+//#region entry.js
+console.log(loose_index_default, strict_index_default);
+
+//#endregion
+```

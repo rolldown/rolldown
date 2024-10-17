@@ -1,0 +1,27 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "let",
+        "import": "let.ts"
+      },
+      {
+        "name": "function",
+        "import": "function.ts"
+      },
+      {
+        "name": "class",
+        "import": "class.ts"
+      },
+      {
+        "name": "namespace",
+        "import": "namespace.ts"
+      },
+      {
+        "name": "enum",
+        "import": "enum.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

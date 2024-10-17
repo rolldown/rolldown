@@ -3,35 +3,35 @@
   "config": {
     "input": [
       {
-        "name": "entry-default-ns-prop_js",
+        "name": "entry-default-ns-prop",
         "import": "entry-default-ns-prop.js"
       },
       {
-        "name": "entry-default-ns_js",
+        "name": "entry-default-ns",
         "import": "entry-default-ns.js"
       },
       {
-        "name": "entry-default-prop_js",
+        "name": "entry-default-prop",
         "import": "entry-default-prop.js"
       },
       {
-        "name": "entry-default_js",
+        "name": "entry-default",
         "import": "entry-default.js"
       },
       {
-        "name": "entry-prop_js",
+        "name": "entry-prop",
         "import": "entry-prop.js"
       },
       {
-        "name": "entry-dead_js",
+        "name": "entry-dead",
         "import": "entry-dead.js"
       },
       {
-        "name": "entry-typo_js",
+        "name": "entry-typo",
         "import": "entry-typo.js"
       },
       {
-        "name": "entry-typo-indirect_js",
+        "name": "entry-typo-indirect",
         "import": "entry-typo-indirect.js"
       }
     ]

@@ -1,0 +1,177 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[2.js:1:28]
+   │
+ 1 │ if (foo) { function x() {} eval('') }
+   │                            ──┬─  
+   │                              ╰─── Use `eval` function here.
+───╯
+
+```
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[3.js:1:39]
+   │
+ 1 │ if (foo) { function x() {} if (bar) { eval('') } }
+   │                                       ──┬─  
+   │                                         ╰─── Use `eval` function here.
+───╯
+
+```
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[4.js:1:12]
+   │
+ 1 │ if (foo) { eval(''); function x() {} }
+   │            ──┬─  
+   │              ╰─── Use `eval` function here.
+───╯
+
+```
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[6.js:1:42]
+   │
+ 1 │ 'use strict'; if (foo) { function x() {} eval('') }
+   │                                          ──┬─  
+   │                                            ╰─── Use `eval` function here.
+───╯
+
+```
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[7.js:1:53]
+   │
+ 1 │ 'use strict'; if (foo) { function x() {} if (bar) { eval('') } }
+   │                                                     ──┬─  
+   │                                                       ╰─── Use `eval` function here.
+───╯
+
+```
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[8.js:1:26]
+   │
+ 1 │ 'use strict'; if (foo) { eval(''); function x() {} }
+   │                          ──┬─  
+   │                            ╰─── Use `eval` function here.
+───╯
+
+```
+# Assets
+
+## 1.js
+
+```js
+
+//#region 1.js
+if (foo) {
+	function x() {}
+}
+
+//#endregion
+```
+## 2.js
+
+```js
+
+//#region 2.js
+if (foo) {
+	function x() {}
+	eval("");
+}
+
+//#endregion
+```
+## 3.js
+
+```js
+
+//#region 3.js
+if (foo) {
+	function x() {}
+	if (bar) {
+		eval("");
+	}
+}
+
+//#endregion
+```
+## 4.js
+
+```js
+
+//#region 4.js
+if (foo) {
+	eval("");
+	function x() {}
+}
+
+//#endregion
+```
+## 5.js
+
+```js
+
+//#region 5.js
+if (foo) {
+	function x() {}
+}
+
+//#endregion
+```
+## 6.js
+
+```js
+
+//#region 6.js
+if (foo) {
+	function x() {}
+	eval("");
+}
+
+//#endregion
+```
+## 7.js
+
+```js
+
+//#region 7.js
+if (foo) {
+	function x() {}
+	if (bar) {
+		eval("");
+	}
+}
+
+//#endregion
+```
+## 8.js
+
+```js
+
+//#region 8.js
+if (foo) {
+	eval("");
+	function x() {}
+}
+
+//#endregion
+```

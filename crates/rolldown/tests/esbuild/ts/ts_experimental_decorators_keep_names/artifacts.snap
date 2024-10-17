@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+@decoratorMustComeAfterName class Foo {}
+
+//#endregion
+export { Foo };
+```

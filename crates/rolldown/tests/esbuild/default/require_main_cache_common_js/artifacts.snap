@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
 
@@ -15,13 +15,9 @@ var require_is_main = __commonJS({ "is-main.js"(exports, module) {
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports, module) {
-	console.log("is main:", require.main === module);
-	console.log(require_is_main());
-	console.log("cache:", require.cache);
-} });
+console.log("is main:", require.main === module);
+console.log(require_is_main());
+console.log("cache:", require.cache);
 
 //#endregion
-export default require_entry();
-
 ```

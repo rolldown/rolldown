@@ -2,23 +2,23 @@
   "config": {
     "input": [
       {
-        "name": "array_js",
+        "name": "array",
         "import": "array.js"
       },
       {
-        "name": "assign_js",
+        "name": "assign",
         "import": "assign.js"
       },
       {
-        "name": "dot_js",
+        "name": "dot",
         "import": "dot.js"
       },
       {
-        "name": "ident_js",
+        "name": "ident",
         "import": "ident.js"
       },
       {
-        "name": "index_js",
+        "name": "index",
         "import": "index.js"
       }
     ]

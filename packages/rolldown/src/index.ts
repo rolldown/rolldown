@@ -8,6 +8,7 @@ import type {
   ExternalOption,
   InputOption,
   InputOptions,
+  JsxOptions,
 } from './options/input-options'
 import type { ModuleFormat, OutputOptions } from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
@@ -31,7 +32,7 @@ import type {
 } from './plugin'
 import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
-import { rolldown } from './rolldown'
+import { rolldown, watch } from './rolldown'
 import { ConfigExport } from './types/config-export'
 import { RolldownBuild } from './rolldown-build'
 import {
@@ -53,7 +54,7 @@ import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
 
-export { defineConfig, rolldown }
+export { defineConfig, rolldown, watch }
 export const VERSION: string = version
 
 export type {
@@ -101,6 +102,7 @@ export type {
   ExistingRawSourceMap,
   SourceMapInput,
   OutputBundle,
+  JsxOptions,
 }
 
 // Exports for compatibility

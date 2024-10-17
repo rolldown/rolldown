@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -29,13 +30,12 @@ class Keep extends Base {}
 new Keep();
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,3 +1,3 @@
 -var Base = class {};
 -var Keep = class extends Base {};

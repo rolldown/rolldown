@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. side effects detector not align
 # Diff
 ## /out.js
 ### esbuild
@@ -25,13 +26,12 @@ foo`remove this part ${keep} and this ${alsoKeep}`;
 `remove this part ${keep} and this ${alsoKeep}`;
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,4 +1,7 @@
  function foo() {}
 +foo`remove`;

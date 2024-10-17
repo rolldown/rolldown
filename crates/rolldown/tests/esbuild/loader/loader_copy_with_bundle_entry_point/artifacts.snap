@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets_some.js
+
+```js
+import { require_some } from "./some.js";
+
+export default require_some();
+
+```
+## some.js
+
+```js
+
+
+//#region assets/some.file
+var require_some = __commonJS({ "assets/some.file"() {
+	stuff;
+} });
+
+//#endregion
+export { __toESM, require_some };
+```
+## src_entry.js
+
+```js
+import { __toESM, require_some } from "./some.js";
+
+//#region src/entry.js
+var import_some = __toESM(require_some());
+console.log(import_some.default);
+
+//#endregion
+```
+## src_entry2.css
+
+```css
+body {
+	background: url(../assets/some.file);
+}
+
+```
+## src_entry2.js
+
+```js
+
+```

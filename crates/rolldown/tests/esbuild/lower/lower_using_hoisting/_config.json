@@ -1,0 +1,83 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "hoist-use-strict",
+        "import": "hoist-use-strict.js"
+      },
+      {
+        "name": "hoist-directive",
+        "import": "hoist-directive.js"
+      },
+      {
+        "name": "hoist-import",
+        "import": "hoist-import.js"
+      },
+      {
+        "name": "hoist-export-star",
+        "import": "hoist-export-star.js"
+      },
+      {
+        "name": "hoist-export-from",
+        "import": "hoist-export-from.js"
+      },
+      {
+        "name": "hoist-export-clause",
+        "import": "hoist-export-clause.js"
+      },
+      {
+        "name": "hoist-export-local-direct",
+        "import": "hoist-export-local-direct.js"
+      },
+      {
+        "name": "hoist-export-local-indirect",
+        "import": "hoist-export-local-indirect.js"
+      },
+      {
+        "name": "hoist-export-class-direct",
+        "import": "hoist-export-class-direct.js"
+      },
+      {
+        "name": "hoist-export-class-indirect",
+        "import": "hoist-export-class-indirect.js"
+      },
+      {
+        "name": "hoist-export-function-direct",
+        "import": "hoist-export-function-direct.js"
+      },
+      {
+        "name": "hoist-export-function-indirect",
+        "import": "hoist-export-function-indirect.js"
+      },
+      {
+        "name": "hoist-export-default-class-name-unused",
+        "import": "hoist-export-default-class-name-unused.js"
+      },
+      {
+        "name": "hoist-export-default-class-name-used",
+        "import": "hoist-export-default-class-name-used.js"
+      },
+      {
+        "name": "hoist-export-default-class-anonymous",
+        "import": "hoist-export-default-class-anonymous.js"
+      },
+      {
+        "name": "hoist-export-default-function-name-unused",
+        "import": "hoist-export-default-function-name-unused.js"
+      },
+      {
+        "name": "hoist-export-default-function-name-used",
+        "import": "hoist-export-default-function-name-used.js"
+      },
+      {
+        "name": "hoist-export-default-function-anonymous",
+        "import": "hoist-export-default-function-anonymous.js"
+      },
+      {
+        "name": "hoist-export-default-expr",
+        "import": "hoist-export-default-expr.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

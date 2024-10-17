@@ -1,22 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `foo` will always be undefined because there is no matching export in 'bar.js'
+   ╭─[entry.js:3:18]
+   │
+ 3 │ assert.deepEqual(ns.foo, void 0)
+   │                  ───┬──  
+   │                     ╰──── 
+───╯
+
+```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
-
-//#region bar.js
-var bar_exports = {};
-__export(bar_exports, { x: () => x });
-const x = 123;
-
-//#endregion
 //#region entry.js
-assert.deepEqual(bar_exports, { x: 123 });
+assert.deepEqual(void 0, void 0);
 
 //#endregion
 ```

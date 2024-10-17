@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## js-define.js
+
+```js
+
+//#region js-define.js
+class Foo {
+	accessor one = 1;
+	accessor #two = 2;
+	accessor [three()] = 3;
+	static accessor four = 4;
+	static accessor #five = 5;
+	static accessor [six()] = 6;
+}
+
+//#endregion
+```
+## ts-assign_ts-assign.js
+
+```js
+
+//#region ts-assign/ts-assign.ts
+class Foo {
+	accessor one = 1;
+	accessor #two = 2;
+	accessor [three()] = 3;
+	static accessor four = 4;
+	static accessor #five = 5;
+	static accessor [six()] = 6;
+}
+class Normal {
+	accessor a = b;
+	c = d;
+}
+class Private {
+	accessor #a = b;
+	c = d;
+}
+class StaticNormal {
+	static accessor a = b;
+	static c = d;
+}
+class StaticPrivate {
+	static accessor #a = b;
+	static c = d;
+}
+
+//#endregion
+```
+## ts-define_ts-define.js
+
+```js
+
+//#region ts-define/ts-define.ts
+class Foo {
+	accessor one = 1;
+	accessor #two = 2;
+	accessor [three()] = 3;
+	static accessor four = 4;
+	static accessor #five = 5;
+	static accessor [six()] = 6;
+}
+class Normal {
+	accessor a = b;
+	c = d;
+}
+class Private {
+	accessor #a = b;
+	c = d;
+}
+class StaticNormal {
+	static accessor a = b;
+	static c = d;
+}
+class StaticPrivate {
+	static accessor #a = b;
+	static c = d;
+}
+
+//#endregion
+```

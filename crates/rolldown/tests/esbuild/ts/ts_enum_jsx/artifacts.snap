@@ -1,0 +1,113 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "element.tsx", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "fragment.tsx", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "nested-element.tsx", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "nested-fragment.tsx", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## element.js
+
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region element.tsx
+let Foo = function(Foo$1) {
+	Foo$1["Div"] = "div";
+	return Foo$1;
+}({});
+console.log(_jsx(Foo.Div, {}));
+
+//#endregion
+export { Foo };
+```
+## fragment.js
+
+```js
+import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+
+//#region fragment.tsx
+let React = function(React$1) {
+	React$1["Fragment"] = "div";
+	return React$1;
+}({});
+console.log(_jsx(_Fragment, { children: "test" }));
+
+//#endregion
+export { React };
+```
+## nested-element.js
+
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region nested-element.tsx
+let x;
+(function(_x) {
+	let y;
+	(function(_y) {
+		let Foo = function(Foo$1) {
+			Foo$1["Div"] = "div";
+			return Foo$1;
+		}({});
+		_y.Foo = Foo;
+	})(y || (y = _x.y || (_x.y = {})));
+})(x || (x = {}));
+(function(_x2) {
+	let y;
+	(function(_y2) {
+		console.log(_jsx(x.y.Foo.Div, {}));
+	})(y || (y = _x2.y || (_x2.y = {})));
+})(x || (x = {}));
+
+//#endregion
+```
+## nested-fragment.js
+
+```js
+import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+
+//#region nested-fragment.tsx
+let x;
+(function(_x) {
+	let y;
+	(function(_y) {
+		let React = function(React$1) {
+			React$1["Fragment"] = "div";
+			return React$1;
+		}({});
+		_y.React = React;
+	})(y || (y = _x.y || (_x.y = {})));
+})(x || (x = {}));
+(function(_x2) {
+	let y;
+	(function(_y2) {
+		console.log(_jsx(_Fragment, { children: "test" }));
+	})(y || (y = _x2.y || (_x2.y = {})));
+})(x || (x = {}));
+
+//#endregion
+```

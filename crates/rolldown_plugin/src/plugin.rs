@@ -14,7 +14,7 @@ use crate::{
   HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
+use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk, WatcherChangeKind};
 use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
@@ -249,6 +249,32 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn close_bundle_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  // watch hooks
+
+  fn watch_change(
+    &self,
+    _ctx: &PluginContext,
+    _path: &str,
+    _event: WatcherChangeKind,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn watch_change_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  fn close_watcher(
+    &self,
+    _ctx: &PluginContext,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn close_watcher_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 

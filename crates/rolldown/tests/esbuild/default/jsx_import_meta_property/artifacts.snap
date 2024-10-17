@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## factory_jsx.js
+## factory.js
 
 ```js
 import { jsx as _jsx } from "react/jsx-runtime";
@@ -30,7 +30,7 @@ f = function() {
 
 //#endregion
 ```
-## fragment_jsx.js
+## fragment.js
 
 ```js
 import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";

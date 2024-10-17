@@ -1,4 +1,5 @@
 use oxc::{semantic::SymbolId, span::CompactStr};
+use rolldown_std_utils::OptionExt;
 
 use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 
@@ -16,8 +17,12 @@ impl From<(ModuleIdx, SymbolId)> for SymbolRef {
 }
 
 impl SymbolRef {
-  pub fn name<'db>(&self, db: &'db SymbolRefDb) -> &'db CompactStr {
-    &db.get(*self).name
+  pub fn name<'db>(&self, db: &'db SymbolRefDb) -> &'db str {
+    db.inner[self.owner].unpack_ref().get_name(self.symbol)
+  }
+
+  pub fn set_name(&self, db: &mut SymbolRefDb, name: &str) {
+    db.inner[self.owner].unpack_ref_mut().set_name(self.symbol, CompactStr::new(name));
   }
 
   pub fn flags<'db>(&self, db: &'db SymbolRefDb) -> Option<&'db SymbolRefFlags> {
@@ -44,6 +49,10 @@ impl SymbolRef {
       // Not having this flag means we don't know
       None
     }
+  }
+
+  pub fn is_declared_in_root_scope(&self, db: &SymbolRefDb) -> bool {
+    db.is_declared_in_root_scope(*self)
   }
 
   #[must_use]

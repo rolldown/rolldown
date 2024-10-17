@@ -2,27 +2,27 @@
   "config": {
     "input": [
       {
-        "name": "named_js",
+        "name": "named",
         "import": "named.js"
       },
       {
-        "name": "star_js",
+        "name": "star",
         "import": "star.js"
       },
       {
-        "name": "star-capture_js",
+        "name": "star-capture",
         "import": "star-capture.js"
       },
       {
-        "name": "bare_js",
+        "name": "bare",
         "import": "bare.js"
       },
       {
-        "name": "require_js",
+        "name": "require",
         "import": "require.js"
       },
       {
-        "name": "import_js",
+        "name": "import",
         "import": "import.js"
       }
     ]

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+class Foo {
+	@dec(1) prop1 = null;
+	@dec(2) prop2_ = null;
+	@dec(3) ["prop3"] = null;
+	@dec(4) ["prop4_"] = null;
+	@dec(5) ["prop5"] = null;
+	@dec(6) ["prop6_"] = null;
+}
+
+//#endregion
+```

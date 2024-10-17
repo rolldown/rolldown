@@ -1,0 +1,1 @@
+class Foo extends Bar { @dec static accessor foo = Foo }

@@ -1,5 +1,12 @@
 import * as diff from 'diff'
-import { rewriteEsbuild, rewriteRolldown } from './rewrite.js'
+import {
+  rewriteEsbuild,
+  rewriteRolldown,
+  defaultRewriteConfig,
+} from './rewrite.js'
+import { DebugConfig } from './types'
+import * as path from 'node:path'
+import * as fs from 'node:fs'
 /**
  * our filename generate logic is not the same as esbuild
  * so hardcode some filename remapping
@@ -8,31 +15,37 @@ function defaultResolveFunction(
   esbuildFilename: string,
   rolldownFilename: string,
 ) {
-  if (esbuildFilename === '/out.js' && /entry_js\.*/.test(rolldownFilename)) {
+  if (esbuildFilename === '/out.js' && /entry\.js/.test(rolldownFilename)) {
+    return true
+  }
+  let extractedCaseName = /\/out\/(.*)/.exec(esbuildFilename)?.[1]
+  if (extractedCaseName === rolldownFilename) {
     return true
   }
 }
 /**
  * TODO: custom resolve
  */
-export function diffCase(
+export async function diffCase(
   esbuildSnap: {
     name: string
     sourceList: Array<{ name: string; content: string }>
   },
   rolldownSnap: Array<{ filename: string; content: string }> | undefined,
-  debug?: boolean,
-):
-  | 'bypass'
-  | 'missing'
-  | Array<{
+  caseDir: string,
+  debugConfig?: DebugConfig,
+): Promise<
+  | {
       esbuildName: string
       rolldownName: string
       esbuild: string
       rolldown: string
       diff: string
-    }>
-  | 'same' {
+    }[]
+  | 'bypass'
+  | 'missing'
+  | 'same'
+> {
   if (!rolldownSnap) {
     return 'missing'
   }
@@ -49,19 +62,27 @@ export function diffCase(
     let esbuildContent = esbuildSource.content
     let rolldownContent = matchedSource.content
     try {
+      let rewriteConfig = {}
+      let configPath = path.join(caseDir, 'diff.config.js')
+      if (fs.existsSync(configPath)) {
+        const mod = (await import(configPath)).default
+        rewriteConfig = mod.rewrite ?? {}
+      }
       esbuildContent = rewriteEsbuild(esbuildSource.content)
-      rolldownContent = rewriteRolldown(matchedSource.content)
+      rolldownContent = rewriteRolldown(matchedSource.content, {
+        ...defaultRewriteConfig,
+        ...rewriteConfig,
+      })
     } catch (err) {
       console.error(esbuildSnap.name)
       console.error(esbuildSource.name)
       if (
-        debug &&
+        debugConfig?.debug &&
         (esbuildSource.name.endsWith('.mjs') ||
           esbuildSource.name.endsWith('.js'))
       ) {
         console.error(`err: `, err)
       }
-      continue
     }
 
     if (matchedSource.content !== esbuildSource.content) {

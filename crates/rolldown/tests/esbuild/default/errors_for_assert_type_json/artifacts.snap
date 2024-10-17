@@ -86,7 +86,8 @@ source: crates/rolldown_testing/src/integration_test.rs
    │            ╰─── Missing export
 ───╯
 
-```# warnings
+```
+# warnings
 
 ## IMPORT_IS_UNDEFINED
 
@@ -124,7 +125,7 @@ var foo_default = {};
 //#endregion
 export { foo_default };
 ```
-## js-entry_js.js
+## js-entry.js
 
 ```js
 import { foo_default } from "./foo.js";
@@ -135,7 +136,7 @@ use(used, void 0);
 //#endregion
 export { foo_default as def2, foo_default$1 as default, exported };
 ```
-## ts-entry_ts.js
+## ts-entry.js
 
 ```js
 import { foo_default } from "./foo.js";

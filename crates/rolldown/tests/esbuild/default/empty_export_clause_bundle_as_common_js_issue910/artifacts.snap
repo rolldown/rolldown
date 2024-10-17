@@ -3,17 +3,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region types.mjs
-var types_exports;
-var init_types = __esm({ "types.mjs"() {
-	types_exports = {};
-} });
+var types_exports = {};
+var init_types = __esm({ "types.mjs"() {} });
 
 //#endregion
 //#region entry.js

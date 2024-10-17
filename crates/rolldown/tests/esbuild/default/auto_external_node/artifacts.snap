@@ -23,10 +23,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
-import { default as fs } from "node:fs/promises";
+import fs from "node:fs/promises";
 import "node:path";
 import "node:what-is-this";
 

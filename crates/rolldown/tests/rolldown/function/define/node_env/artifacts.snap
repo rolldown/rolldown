@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { default as nodeAssert } from "node:assert";
+import nodeAssert from "node:assert";
 
 //#region main.js
 const processNodeEnv = "production";

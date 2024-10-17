@@ -2,10 +2,15 @@
   "config": {
     "input": [
       {
-        "name": "entry_js",
+        "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "define": {
+      "this": "1",
+      "this.foo": "2",
+      "this.foo.bar": "3"
+    }
   },
   "expectExecuted": false
 }

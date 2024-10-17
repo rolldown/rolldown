@@ -1,17 +1,27 @@
+# Reason
+1. not support legal comments
 # Diff
-## /out/entry.js
+## /out/entry.css
 ### esbuild
 ```js
-// a.js
-console.log("in a");
+/* a.css */
+a {
+  zoom: 2;
+}
 
-// b.js
-console.log("in b");
+/* b.css */
+b {
+  zoom: 2;
+}
 
-// c.js
-console.log("in c");
-//! Copyright notice 1
-//! Copyright notice 2
+/* c.css */
+c {
+  zoom: 2;
+}
+
+/* entry.css */
+/*! Copyright notice 1 */
+/*! Copyright notice 2 */
 ```
 ### rolldown
 ```js
@@ -20,11 +30,27 @@ console.log("in c");
 ### diff
 ```diff
 ===================================================================
---- esbuild	/out/entry.js
+--- esbuild	/out/entry.css
 +++ rolldown	
-@@ -1,3 +0,0 @@
--console.log("in a");
--console.log("in b");
--console.log("in c");
+@@ -1,18 +0,0 @@
+-/* a.css */
+-a {
+-  zoom: 2;
+-}
+-
+-/* b.css */
+-b {
+-  zoom: 2;
+-}
+-
+-/* c.css */
+-c {
+-  zoom: 2;
+-}
+-
+-/* entry.css */
+-/*! Copyright notice 1 */
+-/*! Copyright notice 2 */
+\ No newline at end of file
 
 ```

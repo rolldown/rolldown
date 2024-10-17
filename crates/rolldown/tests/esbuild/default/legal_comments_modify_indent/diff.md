@@ -1,16 +1,18 @@
+# Reason
+1. not support legal comments
 # Diff
-## /out/entry.js
+## /out/entry.css
 ### esbuild
 ```js
-// entry.js
-var entry_default = () => {
+/* entry.css */
+@media (x: y) {
   /**
    * @preserve
    */
-};
-export {
-  entry_default as default
-};
+  z {
+    zoom: 2;
+  }
+}
 ```
 ### rolldown
 ```js
@@ -19,10 +21,18 @@ export {
 ### diff
 ```diff
 ===================================================================
---- esbuild	/out/entry.js
+--- esbuild	/out/entry.css
 +++ rolldown	
-@@ -1,2 +0,0 @@
--var entry_default = () => {};
--export {entry_default as default};
+@@ -1,9 +0,0 @@
+-/* entry.css */
+-@media (x: y) {
+-  /**
+-   * @preserve
+-   */
+-  z {
+-    zoom: 2;
+-  }
+-}
+\ No newline at end of file
 
 ```

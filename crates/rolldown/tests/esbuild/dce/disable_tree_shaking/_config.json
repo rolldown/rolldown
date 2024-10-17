@@ -2,11 +2,10 @@
   "config": {
     "input": [
       {
-        "name": "entry_jsx",
+        "name": "entry",
         "import": "entry.jsx"
       }
     ],
-    "treeshake": false,
     "external": [
       "react/jsx-runtime"
     ]

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
@@ -6,10 +6,13 @@ use crate::{
   options::{BindingInputOptions, BindingOnLog, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::{
-    binding_log::BindingLog, binding_log_level::BindingLogLevel,
-    binding_outputs::FinalBindingOutputs,
+    binding_log::BindingLog, binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
+    watcher::BindingWatcher,
   },
-  utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
+  utils::{
+    handle_result, normalize_binding_options::normalize_binding_options,
+    try_init_custom_trace_subscriber,
+  },
 };
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
@@ -18,7 +21,7 @@ use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 
 #[napi]
 pub struct Bundler {
-  inner: Mutex<NativeBundler>,
+  inner: Arc<Mutex<NativeBundler>>,
   on_log: BindingOnLog,
   log_level: Option<BindingLogLevel>,
   cwd: PathBuf,
@@ -65,7 +68,7 @@ impl Bundler {
 
     Ok(Self {
       cwd: ret.bundler_options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap()),
-      inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)),
+      inner: Arc::new(Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins))),
       log_level,
       on_log,
     })
@@ -73,13 +76,13 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn write(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn write(&self) -> napi::Result<BindingOutputs> {
     self.write_impl().await
   }
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn generate(&self) -> napi::Result<BindingOutputs> {
     self.generate_impl().await
   }
 
@@ -94,6 +97,12 @@ impl Bundler {
   pub async fn close(&self) -> napi::Result<()> {
     self.close_impl().await
   }
+
+  #[napi]
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub async fn watch(&self) -> napi::Result<BindingWatcher> {
+    self.watch_impl().await
+  }
 }
 
 impl Bundler {
@@ -103,7 +112,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let output = Self::handle_result(bundler_core.scan().await)?;
+    let output = handle_result(bundler_core.scan().await)?;
 
     match output {
       Ok(output) => {
@@ -118,12 +127,12 @@ impl Bundler {
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let outputs = Self::handle_result(bundler_core.write().await)?;
+    let outputs = handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
       return Err(self.handle_errors(outputs.errors));
@@ -131,16 +140,16 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings).await;
 
-    Ok(FinalBindingOutputs::new(outputs.assets))
+    Ok(outputs.assets.into())
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let outputs = Self::handle_result(bundler_core.generate().await)?;
+    let outputs = handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
       return Err(self.handle_errors(outputs.errors));
@@ -148,7 +157,7 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings).await;
 
-    Ok(FinalBindingOutputs::new(outputs.assets))
+    Ok(outputs.assets.into())
   }
 
   #[allow(clippy::significant_drop_tightening)]
@@ -157,13 +166,15 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    Self::handle_result(bundler_core.close().await)?;
+    handle_result(bundler_core.close().await)?;
 
     Ok(())
   }
 
-  fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
-    result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
+  #[allow(clippy::significant_drop_tightening)]
+  pub async fn watch_impl(&self) -> napi::Result<BindingWatcher> {
+    let watcher = handle_result(NativeBundler::watch(Arc::clone(&self.inner)).await)?;
+    Ok(BindingWatcher::new(watcher))
   }
 
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "test",
+        "import": "test.json"
+      }
+    ],
+    "format": "cjs"
+  }
+}

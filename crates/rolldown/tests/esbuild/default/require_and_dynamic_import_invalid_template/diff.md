@@ -1,3 +1,5 @@
+# Reason
+1. not support invalid template
 # Diff
 ## /out.js
 ### esbuild
@@ -75,13 +77,12 @@ try {
 })();
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,41 +1,18 @@
 -var globRequire;
 -var init_ = __esm({

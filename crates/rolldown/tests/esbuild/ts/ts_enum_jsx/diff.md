@@ -1,0 +1,255 @@
+# Diff
+## /out/element.js
+### esbuild
+```js
+export var Foo = /* @__PURE__ */ ((Foo2) => {
+  Foo2["Div"] = "div";
+  return Foo2;
+})(Foo || {});
+console.log(/* @__PURE__ */ React.createElement("div" /* Div */, null));
+```
+### rolldown
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region element.tsx
+let Foo = function(Foo$1) {
+	Foo$1["Div"] = "div";
+	return Foo$1;
+}({});
+console.log(_jsx(Foo.Div, {}));
+
+//#endregion
+export { Foo };
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/element.js
++++ rolldown	element.js
+@@ -1,5 +1,7 @@
+-export var Foo = (Foo2 => {
+-    Foo2["Div"] = "div";
+-    return Foo2;
+-})(Foo || ({}));
+-console.log(React.createElement("div", null));
++import {jsx as _jsx} from "react/jsx-runtime";
++var Foo = (function (Foo$1) {
++    Foo$1["Div"] = "div";
++    return Foo$1;
++})({});
++console.log(_jsx(Foo.Div, {}));
++export {Foo};
+
+```
+## /out/fragment.js
+### esbuild
+```js
+export var React = /* @__PURE__ */ ((React2) => {
+  React2["Fragment"] = "div";
+  return React2;
+})(React || {});
+console.log(/* @__PURE__ */ React.createElement("div" /* Fragment */, null, "test"));
+```
+### rolldown
+```js
+import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+
+//#region fragment.tsx
+let React = function(React$1) {
+	React$1["Fragment"] = "div";
+	return React$1;
+}({});
+console.log(_jsx(_Fragment, { children: "test" }));
+
+//#endregion
+export { React };
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/fragment.js
++++ rolldown	fragment.js
+@@ -1,5 +1,9 @@
+-export var React = (React2 => {
+-    React2["Fragment"] = "div";
+-    return React2;
+-})(React || ({}));
+-console.log(React.createElement("div", null, "test"));
++import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
++var React = (function (React$1) {
++    React$1["Fragment"] = "div";
++    return React$1;
++})({});
++console.log(_jsx(_Fragment, {
++    children: "test"
++}));
++export {React};
+
+```
+## /out/nested-element.js
+### esbuild
+```js
+var x;
+((x2) => {
+  let y;
+  ((y2) => {
+    let Foo;
+    ((Foo2) => {
+      Foo2["Div"] = "div";
+    })(Foo = y2.Foo || (y2.Foo = {}));
+  })(y = x2.y || (x2.y = {}));
+})(x || (x = {}));
+((x2) => {
+  let y;
+  ((y2) => {
+    console.log(/* @__PURE__ */ React.createElement("div" /* Div */, null));
+  })(y = x2.y || (x2.y = {}));
+})(x || (x = {}));
+```
+### rolldown
+```js
+import { jsx as _jsx } from "react/jsx-runtime";
+
+//#region nested-element.tsx
+let x;
+(function(_x) {
+	let y;
+	(function(_y) {
+		let Foo = function(Foo$1) {
+			Foo$1["Div"] = "div";
+			return Foo$1;
+		}({});
+		_y.Foo = Foo;
+	})(y || (y = _x.y || (_x.y = {})));
+})(x || (x = {}));
+(function(_x2) {
+	let y;
+	(function(_y2) {
+		console.log(_jsx(x.y.Foo.Div, {}));
+	})(y || (y = _x2.y || (_x2.y = {})));
+})(x || (x = {}));
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/nested-element.js
++++ rolldown	nested-element.js
+@@ -1,16 +1,18 @@
++import {jsx as _jsx} from "react/jsx-runtime";
+ var x;
+-(x2 => {
++(function (_x) {
+     let y;
+-    (y2 => {
+-        let Foo;
+-        (Foo2 => {
+-            Foo2["Div"] = "div";
+-        })(Foo = y2.Foo || (y2.Foo = {}));
+-    })(y = x2.y || (x2.y = {}));
++    (function (_y) {
++        let Foo = (function (Foo$1) {
++            Foo$1["Div"] = "div";
++            return Foo$1;
++        })({});
++        _y.Foo = Foo;
++    })(y || (y = _x.y || (_x.y = {})));
+ })(x || (x = {}));
+-(x2 => {
++(function (_x2) {
+     let y;
+-    (y2 => {
+-        console.log(React.createElement("div", null));
+-    })(y = x2.y || (x2.y = {}));
++    (function (_y2) {
++        console.log(_jsx(x.y.Foo.Div, {}));
++    })(y || (y = _x2.y || (_x2.y = {})));
+ })(x || (x = {}));
+
+```
+## /out/nested-fragment.js
+### esbuild
+```js
+var x;
+((x2) => {
+  let y;
+  ((y2) => {
+    let React;
+    ((React2) => {
+      React2["Fragment"] = "div";
+    })(React = y2.React || (y2.React = {}));
+  })(y = x2.y || (x2.y = {}));
+})(x || (x = {}));
+((x2) => {
+  let y;
+  ((y2) => {
+    console.log(/* @__PURE__ */ y2.React.createElement("div" /* Fragment */, null, "test"));
+  })(y = x2.y || (x2.y = {}));
+})(x || (x = {}));
+```
+### rolldown
+```js
+import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+
+//#region nested-fragment.tsx
+let x;
+(function(_x) {
+	let y;
+	(function(_y) {
+		let React = function(React$1) {
+			React$1["Fragment"] = "div";
+			return React$1;
+		}({});
+		_y.React = React;
+	})(y || (y = _x.y || (_x.y = {})));
+})(x || (x = {}));
+(function(_x2) {
+	let y;
+	(function(_y2) {
+		console.log(_jsx(_Fragment, { children: "test" }));
+	})(y || (y = _x2.y || (_x2.y = {})));
+})(x || (x = {}));
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/nested-fragment.js
++++ rolldown	nested-fragment.js
+@@ -1,16 +1,20 @@
++import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
+ var x;
+-(x2 => {
++(function (_x) {
+     let y;
+-    (y2 => {
+-        let React;
+-        (React2 => {
+-            React2["Fragment"] = "div";
+-        })(React = y2.React || (y2.React = {}));
+-    })(y = x2.y || (x2.y = {}));
++    (function (_y) {
++        let React = (function (React$1) {
++            React$1["Fragment"] = "div";
++            return React$1;
++        })({});
++        _y.React = React;
++    })(y || (y = _x.y || (_x.y = {})));
+ })(x || (x = {}));
+-(x2 => {
++(function (_x2) {
+     let y;
+-    (y2 => {
+-        console.log(y2.React.createElement("div", null, "test"));
+-    })(y = x2.y || (x2.y = {}));
++    (function (_y2) {
++        console.log(_jsx(_Fragment, {
++            children: "test"
++        }));
++    })(y || (y = _x2.y || (_x2.y = {})));
+ })(x || (x = {}));
+
+```

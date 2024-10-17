@@ -3,7 +3,7 @@
 	"config": {
 		"input": [
 			{
-				"name": "entry_js",
+				"name": "entry",
 				"import": "entry.js"
 			}
 		],

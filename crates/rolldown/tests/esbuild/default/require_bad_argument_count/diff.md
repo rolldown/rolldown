@@ -1,3 +1,5 @@
+# Reason
+1. should rewrite when bad arg count
 # Diff
 ## /out.js
 ### esbuild
@@ -23,13 +25,12 @@ try {
 } catch {}
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -__require();
 -__require("a", "b");

@@ -1,3 +1,5 @@
+# Reason
+1. needs to disable split chunks
 # Diff
 ## /out/a.js
 ### esbuild
@@ -20,14 +22,27 @@ export * as fromB from "./b";
 ```
 ### rolldown
 ```js
+import { b_exports } from "./b2.js";
 
+//#region a.js
+var a_default = 123;
+var varName = 234;
+let letName = 234;
+const constName = 234;
+function Func2() {}
+class Class2 {}
+function Func() {}
+class Class {}
+
+//#endregion
+export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,11 +0,0 @@
++++ rolldown	a.js
+@@ -1,11 +1,10 @@
 -export default 123;
 -export var varName = 234;
 -export let letName = 234;
@@ -39,6 +54,16 @@ export * as fromB from "./b";
 -export class Class {}
 -export * from "./a";
 -export * as fromB from "./b";
++import {b_exports} from "./b2.js";
++var a_default = 123;
++var varName = 234;
++var letName = 234;
++var constName = 234;
++function Func2() {}
++class Class2 {}
++function Func() {}
++class Class {}
++export {Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName};
 
 ```
 ## /out/b.js
@@ -49,15 +74,19 @@ export default function() {
 ```
 ### rolldown
 ```js
+import { b_default } from "./b2.js";
 
+export { b_default as default };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	b.js
+@@ -1,1 +1,2 @@
 -export default function () {}
++import {b_default} from "./b2.js";
++export {b_default as default};
 
 ```
 ## /out/c.js
@@ -69,14 +98,21 @@ export default function o() {
 ### rolldown
 ```js
 
+//#region c.js
+function foo() {}
+
+//#endregion
+export { foo as default };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/c.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	c.js
+@@ -1,1 +1,2 @@
 -export default function o() {}
++function foo() {}
++export {foo as default};
 
 ```
 ## /out/d.js
@@ -88,14 +124,21 @@ export default class {
 ### rolldown
 ```js
 
+//#region d.js
+class d_default {}
+
+//#endregion
+export { d_default as default };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/d.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	d.js
+@@ -1,1 +1,2 @@
 -export default class {}
++class d_default {}
++export {d_default as default};
 
 ```
 ## /out/e.js
@@ -107,13 +150,20 @@ export default class o {
 ### rolldown
 ```js
 
+//#region e.js
+class Foo {}
+
+//#endregion
+export { Foo as default };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/e.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	e.js
+@@ -1,1 +1,2 @@
 -export default class o {}
++class Foo {}
++export {Foo as default};
 
 ```

@@ -1,0 +1,351 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad0.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad1.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad11.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad12.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad2.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad3.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad4.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad5.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "bad6.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "good0.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "good1.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "good2.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "good3.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "good4.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "good5.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught10.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught13.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught14.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught15.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught7.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught8.js", but could not be resolved – treating it as an external dependency.
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "uncaught9.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## bad0.js
+
+```js
+import { default as x } from "foo";
+
+//#region bad0.js
+x = 1;
+
+//#endregion
+```
+## bad1.js
+
+```js
+import { default as x } from "foo";
+
+//#region bad1.js
+x++;
+
+//#endregion
+```
+## bad11.js
+
+```js
+import "foo";
+
+```
+## bad12.js
+
+```js
+import "foo";
+
+```
+## bad2.js
+
+```js
+import { default as x } from "foo";
+
+//#region bad2.js
+[x] = 1;
+
+//#endregion
+```
+## bad3.js
+
+```js
+import { default as x } from "foo";
+
+//#region bad3.js
+({x} = 1);
+
+//#endregion
+```
+## bad4.js
+
+```js
+import { default as x } from "foo";
+
+//#region bad4.js
+({y: x} = 1);
+
+//#endregion
+```
+## bad5.js
+
+```js
+import { x } from "foo";
+
+//#region bad5.js
+x++;
+
+//#endregion
+```
+## bad6.js
+
+```js
+import * as x from "foo";
+
+//#region bad6.js
+x++;
+
+//#endregion
+```
+## good0.js
+
+```js
+import { default as x } from "foo";
+
+//#region good0.js
+({y = x} = 1);
+
+//#endregion
+```
+## good1.js
+
+```js
+import { default as x } from "foo";
+
+//#region good1.js
+({[x]: y} = 1);
+
+//#endregion
+```
+## good2.js
+
+```js
+import { default as x } from "foo";
+
+//#region good2.js
+x.y = 1;
+
+//#endregion
+```
+## good3.js
+
+```js
+import { default as x } from "foo";
+
+//#region good3.js
+x[y] = 1;
+
+//#endregion
+```
+## good4.js
+
+```js
+import { default as x } from "foo";
+
+//#region good4.js
+x["y"] = 1;
+
+//#endregion
+```
+## good5.js
+
+```js
+import { default as x } from "foo";
+
+//#region good5.js
+x["y z"] = 1;
+
+//#endregion
+```
+## uncaught10.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught10.js
+x["y z"] = 1;
+
+//#endregion
+```
+## uncaught13.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught13.js
+delete x.y;
+
+//#endregion
+```
+## uncaught14.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught14.js
+delete x["y"];
+
+//#endregion
+```
+## uncaught15.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught15.js
+delete x[y];
+
+//#endregion
+```
+## uncaught7.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught7.js
+x.y = 1;
+
+//#endregion
+```
+## uncaught8.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught8.js
+x[y] = 1;
+
+//#endregion
+```
+## uncaught9.js
+
+```js
+import * as x from "foo";
+
+//#region uncaught9.js
+x["y"] = 1;
+
+//#endregion
+```

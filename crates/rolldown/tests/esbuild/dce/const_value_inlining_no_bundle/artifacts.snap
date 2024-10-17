@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## backwards-reference-nested-function_js.js
+## backwards-reference-nested-function.js
 
 ```js
 
 ```
-## backwards-reference-top-level_js.js
+## backwards-reference-top-level.js
 
 ```js
 
@@ -19,7 +19,7 @@ console.log(x, x, y, y);
 
 //#endregion
 ```
-## comment-before_js.js
+## comment-before.js
 
 ```js
 
@@ -31,7 +31,7 @@ console.log(x, x, y, y);
 
 //#endregion
 ```
-## debugger-before_js.js
+## debugger-before.js
 
 ```js
 
@@ -44,12 +44,12 @@ console.log(x, x, y, y);
 
 //#endregion
 ```
-## directive-before_js.js
+## directive-before.js
 
 ```js
 
 ```
-## disabled-tdz_js.js
+## disabled-tdz.js
 
 ```js
 
@@ -62,17 +62,17 @@ function foo() {
 
 //#endregion
 ```
-## exprs-before_js.js
+## exprs-before.js
 
 ```js
 
 ```
-## issue-3125_js.js
+## issue-3125.js
 
 ```js
 
 ```
-## namespace-export_ts.js
+## namespace-export.js
 
 ```js
 
@@ -86,7 +86,7 @@ let ns;
 
 //#endregion
 ```
-## nested-block_js.js
+## nested-block.js
 
 ```js
 
@@ -114,12 +114,12 @@ let ns;
 
 //#endregion
 ```
-## nested-function_js.js
+## nested-function.js
 
 ```js
 
 ```
-## semicolon-before_js.js
+## semicolon-before.js
 
 ```js
 
@@ -131,7 +131,7 @@ let ns;
 
 //#endregion
 ```
-## top-level_js.js
+## top-level.js
 
 ```js
 
@@ -157,7 +157,7 @@ console.log(
 
 //#endregion
 ```
-## type-before_ts.js
+## type-before.js
 
 ```js
 

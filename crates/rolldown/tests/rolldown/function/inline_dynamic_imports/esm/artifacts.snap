@@ -31,10 +31,10 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 
 //#endregion
 //#region esm.js
-var esm_exports, value;
+var esm_exports = {};
+__export(esm_exports, { value: () => value });
+var value;
 var init_esm = __esm({ "esm.js"() {
-	esm_exports = {};
-	__export(esm_exports, { value: () => value });
 	value = 1;
 } });
 

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.ts
+const keepThis = Symbol("keepThis");
+class Foo {
+	REMOVE_THIS;
+	[keepThis];
+}
+(() => new Foo())();
+
+//#endregion
+```

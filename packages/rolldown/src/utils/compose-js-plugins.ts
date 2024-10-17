@@ -131,6 +131,25 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
+
+        case 'watchChange': {
+          const handlers = batchedHooks.watchChange ?? []
+          batchedHooks.watchChange = handlers
+          if (plugin.watchChange) {
+            handlers.push([plugin.watchChange, plugin])
+          }
+          break
+        }
+
+        case 'closeWatcher': {
+          const handlers = batchedHooks.closeWatcher ?? []
+          batchedHooks.closeWatcher = handlers
+          if (plugin.closeWatcher) {
+            handlers.push([plugin.closeWatcher, plugin])
+          }
+          break
+        }
+
         default: {
           // All known hooks should be handled above.
           // User-defined custom properties will hit this branch and it's ok. Just ignore them.
@@ -378,6 +397,38 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         if (batchedHooks.closeBundle) {
           const batchedHandlers = batchedHooks.closeBundle
           composed.closeBundle = async function () {
+            await Promise.all(
+              batchedHandlers.map(([handler, plugin]) => {
+                const { handler: handlerFn } = normalizeHook(handler)
+                return handlerFn.call(applyFixedPluginResolveFn(this, plugin))
+              }),
+            )
+          }
+        }
+        break
+      }
+      case 'watchChange': {
+        if (batchedHooks.watchChange) {
+          const batchedHandlers = batchedHooks.watchChange
+          composed.watchChange = async function (id, event) {
+            await Promise.all(
+              batchedHandlers.map(([handler, plugin]) => {
+                const { handler: handlerFn } = normalizeHook(handler)
+                return handlerFn.call(
+                  applyFixedPluginResolveFn(this, plugin),
+                  id,
+                  event,
+                )
+              }),
+            )
+          }
+        }
+        break
+      }
+      case 'closeWatcher': {
+        if (batchedHooks.closeWatcher) {
+          const batchedHandlers = batchedHooks.closeWatcher
+          composed.closeWatcher = async function () {
             await Promise.all(
               batchedHandlers.map(([handler, plugin]) => {
                 const { handler: handlerFn } = normalizeHook(handler)

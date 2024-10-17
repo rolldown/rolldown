@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -89,13 +90,12 @@ if (nested) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -5,24 +5,23 @@
      foo(x = this) {
          console.log(this);

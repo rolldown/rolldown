@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal
+2. esbuild will reuse `ns` variable
 # Diff
 ## /out.js
 ### esbuild
@@ -16,7 +19,7 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-import { default as assert } from "node:assert";
+import assert from "node:assert";
 
 
 //#region foo.js
@@ -31,13 +34,12 @@ let foo = 234;
 assert.equal(foo, 234);
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -2,7 +2,7 @@
      "foo.js"(exports) {
          exports.foo = 123;

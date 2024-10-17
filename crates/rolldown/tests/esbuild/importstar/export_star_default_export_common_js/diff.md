@@ -1,3 +1,5 @@
+# Reason 
+1. cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out.js
 ### esbuild
@@ -14,19 +16,19 @@ var foo = "foo";
 ```
 ### rolldown
 ```js
+"use strict";
 
 //#region foo.js
 let foo = "foo";
 
 //#endregion
-export { foo };
-
+exports.foo = foo
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,6 +1,2 @@
 -var entry_exports = {};
 -__export(entry_exports, {
@@ -34,6 +36,6 @@ export { foo };
 -});
 -module.exports = __toCommonJS(entry_exports);
  var foo = "foo";
-+export {foo};
++exports.foo = foo;
 
 ```

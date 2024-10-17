@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "js-define",
+        "import": "js-define.js"
+      },
+      {
+        "name": "ts-define_ts-define",
+        "import": "ts-define/ts-define.ts"
+      },
+      {
+        "name": "ts-assign_ts-assign",
+        "import": "ts-assign/ts-assign.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

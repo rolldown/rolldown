@@ -21,15 +21,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## entry_mjs.js
+## entry.js
 
 ```js
+"use strict";
 
 //#region entry.mjs
-function confuseNode(exports) {
-	exports.notAnExport = function() {};
+function confuseNode(exports$1) {
+	exports$1.notAnExport = function() {};
 }
 
 //#endregion
-export { confuseNode };
+exports.confuseNode = confuseNode
 ```

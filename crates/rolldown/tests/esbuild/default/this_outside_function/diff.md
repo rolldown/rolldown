@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+# Reason
+1. not align
 # Diff
 ## /out.js
 ### esbuild
@@ -91,13 +92,12 @@ if (shouldBeThisNotExports) {
 }
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_js.js
++++ rolldown	entry.js
 @@ -1,43 +1,38 @@
 -var require_entry = __commonJS({
 -    "entry.js"(exports) {

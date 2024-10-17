@@ -3,28 +3,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## read_js.js
+## read.js
 
 ```js
 
 //#region read.js
 console.log([
-	a,
-	b.c,
+	null,
+	null,
 	b["c"]
 ], [
-	d,
-	e.f,
+	ident,
+	ident,
 	e["f"]
 ], [
-	g,
-	h.i,
+	dot.chain,
+	dot.chain,
 	h["i"]
 ]);
 
 //#endregion
 ```
-## write_js.js
+## write.js
 
 ```js
 

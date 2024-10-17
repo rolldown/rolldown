@@ -1,3 +1,5 @@
+# Reason
+1. `jsx.factory`
 # Diff
 ## /out.js
 ### esbuild
@@ -19,13 +21,12 @@ import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 console.log(_jsx("div", {}), _jsx(_Fragment, { children: "fragment" }));
 
 //#endregion
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry_jsx.js
++++ rolldown	entry.js
 @@ -1,3 +1,4 @@
 -function elem() {}
 -function frag() {}

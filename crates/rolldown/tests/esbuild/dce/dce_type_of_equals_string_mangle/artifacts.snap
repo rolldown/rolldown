@@ -3,12 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry_js.js
+## entry.js
 
 ```js
+(function() {
 
-//#region entry.js
-var hasBar = typeof bar !== "undefined";
 
-//#endregion
+})();
 ```

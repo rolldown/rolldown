@@ -40,6 +40,30 @@ const moduleTypesSchema = z.record(
     .or(z.literal('empty')),
 )
 
+const jsxOptionsSchema = z.strictObject({
+  mode: z
+    .literal('classic')
+    .or(z.literal('automatic'))
+    .describe('Jsx transformation mode')
+    .optional(), // The rollup preserve is not supported at now
+  factory: z.string().describe('Jsx element transformation').optional(),
+  fragment: z.string().describe('Jsx fragment transformation').optional(),
+  importSource: z
+    .string()
+    .describe('Import the factory of element and fragment if mode is classic')
+    .optional(),
+  jsxImportSource: z
+    .string()
+    .describe('Import the factory of element and fragment if mode is automatic')
+    .optional(),
+  refresh: z.boolean().describe('React refresh transformation').optional(),
+  development: z
+    .boolean()
+    .describe('Development specific information')
+    .optional(),
+  // The rollup preset is not supported at now
+})
+
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
   plugins: zodExt.phantom<RolldownPluginRec>().array().optional(),
@@ -108,6 +132,7 @@ export const inputOptionsSchema = z.strictObject({
   define: z.record(z.string()).describe('define global variables').optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
   profilerNames: z.boolean().optional(),
+  jsx: jsxOptionsSchema.optional(),
 })
 
 export const inputCliOptionsSchema = inputOptionsSchema
@@ -173,3 +198,5 @@ export type InputOptions = Omit<
 > &
   OverwriteInputOptionsWithDoc
 export type ExternalOption = z.infer<typeof externalSchema>
+
+export type JsxOptions = z.infer<typeof jsxOptionsSchema>

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "remove-these_js",
+        "name": "remove-these",
         "import": "remove-these.js"
       },
       {
-        "name": "keep-these_js",
+        "name": "keep-these",
         "import": "keep-these.js"
       }
     ]

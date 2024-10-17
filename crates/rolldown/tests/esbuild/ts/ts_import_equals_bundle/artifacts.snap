@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "pkg" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.js
+
+```js
+import { foo } from "pkg";
+
+//#region entry.ts
+var used = foo.used;
+var unused = foo.unused;
+
+//#endregion
+export { used };
+```

@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entries_entry",
+        "import": "entries/entry.js"
+      },
+      {
+        "name": "entries_other_entry",
+        "import": "entries/other/entry.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

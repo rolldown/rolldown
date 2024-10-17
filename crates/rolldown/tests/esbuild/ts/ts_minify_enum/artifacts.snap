@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+
+//#region a.ts
+var Foo = function(Foo$1) {
+	Foo$1[Foo$1["A"] = 0] = "A";
+	Foo$1[Foo$1["B"] = 1] = "B";
+	Foo$1[Foo$1["C"] = Foo$1] = "C";
+	return Foo$1;
+}(Foo || {});
+
+//#endregion
+```
+## b.js
+
+```js
+
+//#region b.ts
+let Foo = function(Foo$1) {
+	Foo$1[Foo$1["X"] = 0] = "X";
+	Foo$1[Foo$1["Y"] = 1] = "Y";
+	Foo$1[Foo$1["Z"] = Foo$1] = "Z";
+	return Foo$1;
+}({});
+
+//#endregion
+export { Foo };
+```

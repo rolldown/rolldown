@@ -1,10 +1,16 @@
 import type { InputOptions } from './options/input-options'
 import { RolldownBuild } from './rolldown-build'
+import { Watcher } from './watcher'
 import { createBundler } from './utils/create-bundler'
 
 // Compat to `rollup.rollup`, it is included scan module graph and linker.
 export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {
   return new RolldownBuild(input)
+}
+
+// Compat to `rollup.watch`
+export const watch = async (input: InputOptions): Promise<Watcher> => {
+  return new RolldownBuild(input).watch()
 }
 
 /**

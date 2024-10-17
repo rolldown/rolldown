@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "keep_js",
+        "name": "keep",
         "import": "keep.js"
       },
       {
-        "name": "do-not-keep_js",
+        "name": "do-not-keep",
         "import": "do-not-keep.js"
       }
     ]

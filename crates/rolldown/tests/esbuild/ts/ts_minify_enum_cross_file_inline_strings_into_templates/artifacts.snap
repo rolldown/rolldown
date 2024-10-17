@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region cross-file.ts
+let CrossFile = function(CrossFile$1) {
+	CrossFile$1["STR"] = "str 2";
+	CrossFile$1[CrossFile$1["NUM"] = 321] = "NUM";
+	return CrossFile$1;
+}({});
+
+//#endregion
+//#region entry.ts
+var SameFile = function(SameFile$1) {
+	SameFile$1["STR"] = "str 1";
+	SameFile$1[SameFile$1["NUM"] = 123] = "NUM";
+	return SameFile$1;
+}(SameFile || {});
+console.log(`
+	SameFile.STR = ${SameFile.STR}
+	SameFile.NUM = ${SameFile.NUM}
+	CrossFile.STR = ${CrossFile.STR}
+	CrossFile.NUM = ${CrossFile.NUM}
+`);
+
+//#endregion
+```

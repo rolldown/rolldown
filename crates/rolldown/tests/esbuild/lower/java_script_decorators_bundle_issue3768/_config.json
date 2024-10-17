@@ -1,0 +1,55 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "base-instance-method",
+        "import": "base-instance-method.js"
+      },
+      {
+        "name": "base-instance-field",
+        "import": "base-instance-field.js"
+      },
+      {
+        "name": "base-instance-accessor",
+        "import": "base-instance-accessor.js"
+      },
+      {
+        "name": "base-static-method",
+        "import": "base-static-method.js"
+      },
+      {
+        "name": "base-static-field",
+        "import": "base-static-field.js"
+      },
+      {
+        "name": "base-static-accessor",
+        "import": "base-static-accessor.js"
+      },
+      {
+        "name": "derived-instance-method",
+        "import": "derived-instance-method.js"
+      },
+      {
+        "name": "derived-instance-field",
+        "import": "derived-instance-field.js"
+      },
+      {
+        "name": "derived-instance-accessor",
+        "import": "derived-instance-accessor.js"
+      },
+      {
+        "name": "derived-static-method",
+        "import": "derived-static-method.js"
+      },
+      {
+        "name": "derived-static-field",
+        "import": "derived-static-field.js"
+      },
+      {
+        "name": "derived-static-accessor",
+        "import": "derived-static-accessor.js"
+      }
+    ]
+  }
+}

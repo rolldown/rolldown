@@ -2,7 +2,14 @@ import * as acorn from 'acorn'
 import * as gen from 'astring'
 import { traverse, builders as b, Scope, NodePath } from 'estree-toolkit'
 
-export function rewriteRolldown(code: string) {
+export type RewriteConfig = {
+  topLevelVar: boolean
+}
+export const defaultRewriteConfig: RewriteConfig = {
+  topLevelVar: true,
+}
+
+export function rewriteRolldown(code: string, config: RewriteConfig) {
   let ast = acorn.parse(code, {
     ecmaVersion: 'latest',
     sourceType: 'module',
@@ -76,6 +83,9 @@ export function rewriteRolldown(code: string) {
       }
     },
     VariableDeclaration(path) {
+      if (!config.topLevelVar) {
+        return
+      }
       // related to https://esbuild.github.io/faq/#top-level-var
       let node = path.node as acorn.VariableDeclaration
       if (path.scope === programScope) {

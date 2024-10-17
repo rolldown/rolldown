@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## array_js.js
+## array.js
 
 ```js
 
@@ -12,7 +12,7 @@ let x = [require];
 
 //#endregion
 ```
-## assign_js.js
+## assign.js
 
 ```js
 
@@ -21,7 +21,7 @@ require = x;
 
 //#endregion
 ```
-## dot_js.js
+## dot.js
 
 ```js
 
@@ -30,7 +30,7 @@ let x = require.cache;
 
 //#endregion
 ```
-## ident_js.js
+## ident.js
 
 ```js
 
@@ -39,7 +39,7 @@ let x = require;
 
 //#endregion
 ```
-## index_js.js
+## index.js
 
 ```js
 

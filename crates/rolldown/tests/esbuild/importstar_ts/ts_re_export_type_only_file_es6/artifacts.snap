@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "Foo" is not exported by "type.ts".
+   ╭─[types2.ts:1:9]
+   │
+ 1 │ import {Foo} from "./type"
+   │         ─┬─  
+   │          ╰─── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "Foo" is not exported by "type.ts".
+   ╭─[types3.ts:1:9]
+   │
+ 1 │ export {Foo} from "./type"
+   │         ─┬─  
+   │          ╰─── Missing export
+───╯
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+
+//#region types1.ts
+console.log("some code");
+
+//#endregion
+//#region types2.ts
+console.log("some code");
+
+//#endregion
+//#region types3.ts
+console.log("some code");
+
+//#endregion
+//#region values.ts
+let foo = 123;
+
+//#endregion
+//#region entry.ts
+console.log(foo);
+
+//#endregion
+```

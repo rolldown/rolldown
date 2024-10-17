@@ -45,7 +45,11 @@ pub use crate::{
     },
     Chunk,
   },
-  css::{css_module::CssModule, css_module_idx::CssModuleIdx, css_view::CssView},
+  css::{
+    css_module::CssModule,
+    css_module_idx::CssModuleIdx,
+    css_view::{CssRenderer, CssView},
+  },
   ecmascript::{
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{EcmaModuleAstUsage, EcmaView},
@@ -91,11 +95,16 @@ pub use crate::{
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,
+  types::source_mutation::SourceMutation,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
   types::str_or_bytes::StrOrBytes,
+  types::symbol_name_ref_token::SymbolNameRefToken,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
   types::symbol_ref::SymbolRef,
   types::symbol_ref_db::{SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
+  types::watch::{
+    BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
+  },
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

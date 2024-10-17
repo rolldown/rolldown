@@ -1,6 +1,12 @@
 import * as diff from 'diff'
-import { rewriteEsbuild, rewriteRolldown } from './rewrite.js'
+import {
+  rewriteEsbuild,
+  rewriteRolldown,
+  defaultRewriteConfig,
+} from './rewrite.js'
 import { DebugConfig } from './types'
+import * as path from 'node:path'
+import * as fs from 'node:fs'
 /**
  * our filename generate logic is not the same as esbuild
  * so hardcode some filename remapping
@@ -20,24 +26,26 @@ function defaultResolveFunction(
 /**
  * TODO: custom resolve
  */
-export function diffCase(
+export async function diffCase(
   esbuildSnap: {
     name: string
     sourceList: Array<{ name: string; content: string }>
   },
   rolldownSnap: Array<{ filename: string; content: string }> | undefined,
+  caseDir: string,
   debugConfig?: DebugConfig,
-):
-  | 'bypass'
-  | 'missing'
-  | Array<{
+): Promise<
+  | {
       esbuildName: string
       rolldownName: string
       esbuild: string
       rolldown: string
       diff: string
-    }>
-  | 'same' {
+    }[]
+  | 'bypass'
+  | 'missing'
+  | 'same'
+> {
   if (!rolldownSnap) {
     return 'missing'
   }
@@ -54,8 +62,17 @@ export function diffCase(
     let esbuildContent = esbuildSource.content
     let rolldownContent = matchedSource.content
     try {
+      let rewriteConfig = {}
+      let configPath = path.join(caseDir, 'diff.config.js')
+      if (fs.existsSync(configPath)) {
+        const mod = (await import(configPath)).default
+        rewriteConfig = mod.rewrite ?? {}
+      }
       esbuildContent = rewriteEsbuild(esbuildSource.content)
-      rolldownContent = rewriteRolldown(matchedSource.content)
+      rolldownContent = rewriteRolldown(matchedSource.content, {
+        ...defaultRewriteConfig,
+        ...rewriteConfig,
+      })
     } catch (err) {
       console.error(esbuildSnap.name)
       console.error(esbuildSource.name)

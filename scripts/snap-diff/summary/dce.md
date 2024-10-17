@@ -71,10 +71,6 @@
   diff
 ## [tree_shaking_binary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators/diff.md)
   diff
-## [tree_shaking_class_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_property/diff.md)
-  diff
-## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property/diff.md)
-  diff
 ## [tree_shaking_import_identifier](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier/diff.md)
   diff
 ## [tree_shaking_js_with_associated_css](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css/diff.md)
@@ -135,6 +131,8 @@
 ## [remove_unused_imports_eval_ts](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval_ts)
 ## [remove_unused_pure_comment_calls](../../../crates/rolldown/tests/esbuild/dce/remove_unused_pure_comment_calls)
 ## [text_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/text_loader_remove_unused)
+## [tree_shaking_class_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_property)
+## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)

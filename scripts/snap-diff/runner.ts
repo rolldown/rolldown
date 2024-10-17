@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js'
 import { diffCase } from './diff'
-import { DebugConfig } from './types'
+import { DebugConfig, UnwrapPromise } from './types'
 import { aggregateReason } from './aggregate-reason.js'
 const esbuildTestDir = path.join(
   import.meta.dirname,
@@ -38,7 +38,7 @@ type Stats = {
   failed: number
   total: number
 }
-export function run(includeList: string[], debugConfig: DebugConfig) {
+export async function run(includeList: string[], debugConfig: DebugConfig) {
   let aggregatedStats: AggregateStats = {
     stats: {
       pass: 0,
@@ -71,7 +71,12 @@ export function run(includeList: string[], debugConfig: DebugConfig) {
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name)
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
-      let diffResult = diffCase(snap, parsedRolldownSnap, debugConfig)
+      let diffResult = await diffCase(
+        snap,
+        parsedRolldownSnap,
+        rolldownTestPath,
+        debugConfig,
+      )
       // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')
@@ -139,7 +144,9 @@ function getRolldownSnap(caseDir: string) {
   }
 }
 
-function getDiffMarkdown(diffResult: ReturnType<typeof diffCase>) {
+function getDiffMarkdown(
+  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
+) {
   if (typeof diffResult === 'string') {
     throw new Error('diffResult should not be string')
   }
@@ -181,7 +188,10 @@ type Summary = {
 }
 
 function getSummaryMarkdownAndStats(
-  diffList: Array<{ diffResult: ReturnType<typeof diffCase>; name: string }>,
+  diffList: Array<{
+    diffResult: UnwrapPromise<ReturnType<typeof diffCase>>
+    name: string
+  }>,
   snapshotCategory: string,
 ): Summary {
   let bypassList = []
@@ -250,7 +260,7 @@ function getSummaryMarkdownAndStats(
 
 function updateBypassOrDiffMarkdown(
   markdownPath: string,
-  diffResult: ReturnType<typeof diffCase>,
+  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
 ) {
   let bypassContent = ''
   if (fs.existsSync(markdownPath)) {

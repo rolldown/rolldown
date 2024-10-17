@@ -51,6 +51,10 @@ impl SymbolRef {
     }
   }
 
+  pub fn is_declared_in_root_scope(&self, db: &SymbolRefDb) -> bool {
+    db.is_declared_in_root_scope(*self)
+  }
+
   #[must_use]
   pub fn canonical_ref(&self, db: &SymbolRefDb) -> SymbolRef {
     db.canonical_ref_for(*self)

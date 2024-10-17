@@ -26,7 +26,7 @@ use anyhow::Result;
 use super::emitter::{SharedWatcherEmitter, WatcherEmitter};
 
 pub struct Watcher {
-  pub(crate) emitter: SharedWatcherEmitter,
+  pub emitter: SharedWatcherEmitter,
   bundler: Arc<Mutex<Bundler>>,
   inner: Arc<Mutex<RecommendedWatcher>>,
   running: AtomicBool,
@@ -102,11 +102,12 @@ impl Watcher {
       .bundler
       .try_lock()
       .expect("Failed to lock the bundler. Is another operation in progress?");
+    self.emitter.emit(WatcherEvent::ReStart, WatcherEventData::default()).await?;
 
     self.running.store(true, Ordering::Relaxed);
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::Start.into());
+    self.emitter.emit(WatcherEvent::Event, BundleEventKind::Start.into()).await?;
 
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleStart.into());
+    self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleStart.into()).await?;
     bundler.plugin_driver = bundler.plugin_driver.new_shared_from_self();
     bundler.file_emitter.clear();
 
@@ -120,10 +121,10 @@ impl Watcher {
         self.watch_files.insert(file.clone());
       }
     }
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleEnd.into());
+    self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleEnd.into()).await?;
 
     self.running.store(false, Ordering::Relaxed);
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::End.into());
+    self.emitter.emit(WatcherEvent::Event, BundleEventKind::End.into()).await?;
 
     Ok(())
   }
@@ -149,7 +150,7 @@ impl Watcher {
       inner.unwatch(Path::new(path.as_str()))?;
     }
     // emit close event
-    self.emitter.emit(WatcherEvent::Close, WatcherEventData::default());
+    self.emitter.emit(WatcherEvent::Close, WatcherEventData::default()).await?;
     // call close watcher hook
     let bundler = self.bundler.try_lock()?;
     bundler.plugin_driver.close_watcher().await?;
@@ -159,7 +160,11 @@ impl Watcher {
 }
 
 pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {
-  watcher.emitter.emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into());
+  let _ = watcher
+    .emitter
+    .emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into())
+    .await
+    .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
   let bundler = watcher.bundler.try_lock().expect("Failed to lock the bundler. ");
   let _ = bundler
     .plugin_driver

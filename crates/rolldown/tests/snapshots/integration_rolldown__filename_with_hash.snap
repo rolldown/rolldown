@@ -486,7 +486,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
-- entry-!~{000}~.js => entry-VGtmoQV4.js
+- entry-!~{000}~.js => entry-frkeZcnF.js
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css
 
@@ -628,7 +628,7 @@ expression: output
 
 # tests/esbuild/default/common_js_from_es6
 
-- entry-!~{000}~.js => entry-rtJVoJnx.js
+- entry-!~{000}~.js => entry-6XkriiJw.js
 
 # tests/esbuild/default/conditional_import
 
@@ -745,7 +745,7 @@ expression: output
 
 # tests/esbuild/default/export_forms_common_js
 
-- entry-!~{000}~.js => entry-9WTbSQm1.js
+- entry-!~{000}~.js => entry-yLS2uCyQ.js
 
 # tests/esbuild/default/export_forms_es6
 
@@ -3760,7 +3760,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/basic_commonjs
 
-- main-!~{000}~.js => main-bSckRXwK.js
+- main-!~{000}~.js => main-SvK9u-Cx.js
 
 # tests/rolldown/cjs_compat/cjs_entry
 
@@ -4562,8 +4562,8 @@ expression: output
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.js => main-96VGlA74.js
-- main-96VGlA74.js.map
+- main-!~{000}~.js => main-C7qpmxS2.js
+- main-C7qpmxS2.js.map
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
@@ -4666,13 +4666,13 @@ expression: output
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.js => main-T7ynT_hf.js
-- main-T7ynT_hf.js.map
+- main-!~{000}~.js => main-7eEJ6hiU.js
+- main-7eEJ6hiU.js.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_export_named_function
 
-- main-!~{000}~.js => main-9BoygsaE.js
-- main-9BoygsaE.js.map
+- main-!~{000}~.js => main-6Bfknxp0.js
+- main-6Bfknxp0.js.map
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

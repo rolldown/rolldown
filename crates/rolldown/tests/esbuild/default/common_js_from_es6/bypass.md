@@ -1,6 +1,5 @@
 # Reason
-1. sub optimal wrap impl, `__export`  should not be wrapped in module 
-initialization
+1. different deconflict naming convention
 # Diff
 ## /out.js
 ### esbuild
@@ -42,20 +41,20 @@ import assert from "node:assert";
 
 
 //#region foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
-var foo_exports = {};
-__export(foo_exports, { foo: () => foo$1 });
 var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region bar.js
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
-var bar_exports = {};
-__export(bar_exports, { bar: () => bar$1 });
 var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
@@ -73,31 +72,27 @@ const { bar } = (init_bar(), __toCommonJS(bar_exports));
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,23 +1,23 @@
-+function foo$1() {
-+    return "foo";
-+}
  var foo_exports = {};
  __export(foo_exports, {
 -    foo: () => foo
 +    foo: () => foo$1
  });
 -function foo() {
--    return "foo";
--}
++function foo$1() {
+     return "foo";
+ }
  var init_foo = __esm({
      "foo.js"() {}
  });
-+function bar$1() {
-+    return "bar";
-+}
  var bar_exports = {};
  __export(bar_exports, {
 -    bar: () => bar
 +    bar: () => bar$1
  });
 -function bar() {
--    return "bar";
--}
++function bar$1() {
+     return "bar";
+ }
  var init_bar = __esm({
      "bar.js"() {}
  });

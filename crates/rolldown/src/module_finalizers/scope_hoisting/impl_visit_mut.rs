@@ -286,11 +286,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               stmts_inside_closure.push(stmt);
             }
           });
-          dbg!(&self.ctx.module.stable_id);
-          program.body.extend(fn_stmts);
-          dbg!(&hoisted_names);
-
           program.body.extend(declaration_of_module_namespace_object);
+          program.body.extend(fn_stmts);
+
           if !hoisted_names.is_empty() {
             let mut declarators = allocator::Vec::new_in(self.alloc);
             declarators.reserve_exact(hoisted_names.len());

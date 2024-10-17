@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. require json should not wrapped in `__esm`
 # Diff
 ## /out.js
 ### esbuild

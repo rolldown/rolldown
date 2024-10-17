@@ -10,20 +10,20 @@ import assert from "node:assert";
 
 
 //#region foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
-var foo_exports = {};
-__export(foo_exports, { foo: () => foo$1 });
 var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region bar.js
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
-var bar_exports = {};
-__export(bar_exports, { bar: () => bar$1 });
 var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion

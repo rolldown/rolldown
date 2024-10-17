@@ -1,3 +1,5 @@
+# Reason
+1. require `.json`, the json file should not wrapped in `__esm`
 # Diff
 ## /out/entry.js
 ### esbuild

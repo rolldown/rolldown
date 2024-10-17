@@ -25,8 +25,6 @@
   diff
 ## [comment_preservation_transform_jsx](../../../crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx/diff.md)
   diff
-## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/diff.md)
-  diff
 ## [conditional_import](../../../crates/rolldown/tests/esbuild/default/conditional_import/diff.md)
   diff
 ## [conditional_require](../../../crates/rolldown/tests/esbuild/default/conditional_require/diff.md)
@@ -341,6 +339,7 @@
 ## [use_strict_directive_bundle_esm_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_esm_issue2264)
 # Bypassed Cases
 ## [char_freq_ignore_comments](../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments/bypass.md)
+## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/bypass.md)
 ## [const_with_let](../../../crates/rolldown/tests/esbuild/default/const_with_let/bypass.md)
 ## [direct_eval_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/direct_eval_tainting_no_bundle/bypass.md)
 ## [dot_import](../../../crates/rolldown/tests/esbuild/default/dot_import/bypass.md)

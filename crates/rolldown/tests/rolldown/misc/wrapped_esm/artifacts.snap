@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo.js
-function foo() {}
 var foo_exports = {};
 __export(foo_exports, {
 	a: () => a,
@@ -22,6 +21,7 @@ __export(foo_exports, {
 	foo: () => foo,
 	g: () => g
 });
+function foo() {}
 var a, b, c, d, e, g, bar, baz;
 var init_foo = __esm({ "foo.js"() {
 	[b] = [];
@@ -44,11 +44,12 @@ init_foo(), __toCommonJS(foo_exports);
 
 ```
 - ../foo.js
-(2:7-2:16) " function" --> (29:0-29:9) "\nfunction"
-(2:16-2:22) " foo()" --> (29:9-29:15) " foo()"
-(2:22-2:25) " { " --> (29:15-29:16) " "
-(2:25-0:0) "" --> (29:16-30:0) "{}"
-(0:0-0:15) "export var a, [" --> (30:0-44:2) "\nvar foo_exports = {};\n__export(foo_exports, {\n\ta: () => a,\n\tb: () => b,\n\tbar: () => bar,\n\tc: () => c,\n\td: () => d,\n\tdefault: () => baz,\n\te: () => e,\n\tfoo: () => foo,\n\tg: () => g\n});\nvar a, b, c, d, e, g, bar, baz;\nvar init_foo = __esm({ \"foo.js\"() {\n\t"
+(0:0-2:7) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport" --> (29:0-41:0) "\nvar foo_exports = {};\n__export(foo_exports, {\n\ta: () => a,\n\tb: () => b,\n\tbar: () => bar,\n\tc: () => c,\n\td: () => d,\n\tdefault: () => baz,\n\te: () => e,\n\tfoo: () => foo,\n\tg: () => g\n});"
+(2:7-2:16) " function" --> (41:0-41:9) "\nfunction"
+(2:16-2:22) " foo()" --> (41:9-41:15) " foo()"
+(2:22-2:25) " { " --> (41:15-41:16) " "
+(2:25-0:0) "" --> (41:16-42:0) "{}"
+(0:0-0:15) "export var a, [" --> (42:0-44:2) "\nvar a, b, c, d, e, g, bar, baz;\nvar init_foo = __esm({ \"foo.js\"() {\n\t"
 (0:15-0:0) "export var a, [" --> (44:2-44:4) "[b"
 (0:0-0:20) "export var a, [b] = " --> (44:4-44:7) "] ="
 (0:20-0:22) "[]" --> (44:7-44:8) " "

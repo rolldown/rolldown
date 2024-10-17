@@ -323,10 +323,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6
 ## import record with attributes
 - crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes
-## not fully align for `txt` dataurl
-- crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8
-## lack `charset=utf-8`
-- crates/rolldown/tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
 ## esbuild treated `.txt` as cjs, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6
 ## Not align with esbuild

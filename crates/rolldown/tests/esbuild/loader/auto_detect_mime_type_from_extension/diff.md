@@ -23,7 +23,7 @@ var test_exports = {};
 __export(test_exports, { default: () => test_default });
 var test_default;
 var init_test = __esm({ "test.svg"() {
-	test_default = "data:image/svg+xml;base64,YQBigGP/ZA==";
+	test_default = "data:image/svg+xml;charset=utf-8;base64,YQBigGP/ZA==";
 } });
 
 //#endregion
@@ -48,7 +48,7 @@ console.log((init_test(), __toCommonJS(test_exports)));
 +var test_default;
 +var init_test = __esm({
 +    "test.svg"() {
-+        test_default = "data:image/svg+xml;base64,YQBigGP/ZA==";
++        test_default = "data:image/svg+xml;charset=utf-8;base64,YQBigGP/ZA==";
      }
  });
 -console.log(require_test());

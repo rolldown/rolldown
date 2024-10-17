@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region binary.txt
-var binary_default = "data:text/plain;base64,/w==";
+var binary_default = "data:text/plain;charset=utf-8;base64,/w==";
 
 //#endregion
 //#region entry.js

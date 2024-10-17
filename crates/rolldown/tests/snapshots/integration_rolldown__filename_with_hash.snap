@@ -2288,7 +2288,7 @@ expression: output
 
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 
-- entry-!~{000}~.js => entry-cZgSS0SR.js
+- entry-!~{000}~.js => entry-rBy2II0m.js
 
 # tests/esbuild/loader/empty_loader_js
 
@@ -2371,11 +2371,11 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
-- entry-!~{000}~.js => entry-QBZryykl.js
+- entry-!~{000}~.js => entry-xCEM3vse.js
 
 # tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
 
-- entry-!~{000}~.js => entry-U-YjTgqt.js
+- entry-!~{000}~.js => entry-WroxBkxT.js
 
 # tests/esbuild/loader/loader_data_url_common_js_and_es6
 
@@ -2534,7 +2534,7 @@ expression: output
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry-!~{000}~.js => entry-uR_SkLeG.js
+- entry-!~{000}~.js => entry-xfpXtmYS.js
 
 # tests/esbuild/loader/require_custom_extension_prefer_longest
 
@@ -4284,7 +4284,7 @@ expression: output
 
 # tests/rolldown/function/module_types/dataurl/binary
 
-- main-!~{000}~.js => main-Lpr8nq84.js
+- main-!~{000}~.js => main-GKdau5pb.js
 
 # tests/rolldown/function/module_types/dataurl/empty
 

@@ -47,13 +47,10 @@ pub fn mime_type_by_extension(ext: &str) -> Option<(&'static str, bool)> {
 }
 
 pub fn try_from_ext(ext: &str) -> anyhow::Result<MimeExt> {
-  dbg!(&ext);
   mime_type_by_extension(ext)
     .ok_or_else(|| anyhow::Error::msg(format!("No mime type found for extension: {ext}")))
     .and_then(|(mime, is_utf8_encoded)| {
-      dbg!(&mime);
       let mime = Mime::from_str(mime)?;
-      dbg!(&mime);
       Ok(MimeExt::from((mime, is_utf8_encoded)))
     })
 }

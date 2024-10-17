@@ -148,9 +148,6 @@
 ## comments codegen
 - crates/rolldown/tests/esbuild/default/comment_preservation
 - crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx
-## lowering jsx
-- crates/rolldown/tests/esbuild/default/duplicate_property_warning
-- crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 ## should not rewrite `fs` to `node:fs`
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6
 - crates/rolldown/tests/esbuild/default/import_fs_node_common_js
@@ -242,8 +239,6 @@
 - crates/rolldown/tests/esbuild/default/define_optional_chain_lowered
 ## oxc define dont support this expr
 - crates/rolldown/tests/esbuild/default/define_this
-## not support duplicate property warning
-- crates/rolldown/tests/esbuild/default/duplicate_property_warning
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## Not sure if we needs to use `Object.define` pattern in iife
@@ -318,10 +313,12 @@
 - crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
 ## esbuild will wrap `empty` module as a cjs module, rolldown did not
 - crates/rolldown/tests/esbuild/loader/empty_loader_js
-## rolldown don't have `jsx.AutomaticRuntime` option
+## esbuild did not needs `__toESM`
 - crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision
 ## rolldown don't have `jsx.Preserve` and `jsx.Parse` option
 - crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter
+## lowering jsx
+- crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 ## esbuild treated x.b64 as cjs, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6
 ## import record with attributes

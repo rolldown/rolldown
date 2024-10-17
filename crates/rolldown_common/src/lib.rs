@@ -98,6 +98,7 @@ pub use crate::{
   types::source_mutation::SourceMutation,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
   types::str_or_bytes::StrOrBytes,
+  types::symbol_name_ref_token::SymbolNameRefToken,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
   types::symbol_ref::SymbolRef,
   types::symbol_ref_db::{SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},

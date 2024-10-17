@@ -1,7 +1,7 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
+  IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
@@ -30,6 +30,7 @@ pub struct Renamer<'name> {
   ///
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
+  canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
 }
 
@@ -43,6 +44,7 @@ impl<'name> Renamer<'name> {
     };
     Self {
       canonical_names: FxHashMap::default(),
+      canonical_token_to_name: FxHashMap::default(),
       symbol_db: symbols,
       used_canonical_names: manual_reserved
         .iter()
@@ -104,6 +106,26 @@ impl<'name> Renamer<'name> {
       }
     }
     conflictless_name.to_string()
+  }
+
+  pub fn add_root_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
+    let hint = Rstr::new(token.value());
+    let mut conflictless_name = hint.clone();
+    loop {
+      match self.used_canonical_names.entry(conflictless_name.clone()) {
+        Entry::Occupied(mut occ) => {
+          let next_conflict_index = *occ.get() + 1;
+          *occ.get_mut() = next_conflict_index;
+          conflictless_name =
+            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into();
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(0);
+          break;
+        }
+      }
+    }
+    self.canonical_token_to_name.insert(token.clone(), conflictless_name.clone());
   }
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
@@ -195,7 +217,9 @@ impl<'name> Renamer<'name> {
     self.canonical_names.extend(canonical_names_of_nested_scopes);
   }
 
-  pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, Rstr> {
-    self.canonical_names
+  pub fn into_canonical_names(
+    self,
+  ) -> (FxHashMap<SymbolRef, Rstr>, FxHashMap<SymbolNameRefToken, Rstr>) {
+    (self.canonical_names, self.canonical_token_to_name)
   }
 }

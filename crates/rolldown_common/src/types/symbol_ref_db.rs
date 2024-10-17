@@ -5,6 +5,7 @@ use oxc::semantic::{NodeId, ScopeId, SymbolFlags, SymbolTable};
 use oxc::span::Span;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_rstr::Rstr;
+use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
 
 use crate::{ChunkIdx, ModuleIdx, SymbolRef};
@@ -33,7 +34,7 @@ bitflags::bitflags! {
   }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SymbolRefDbForModule {
   pub symbol_table: SymbolTable,
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
@@ -55,7 +56,7 @@ impl SymbolRefDbForModule {
         })
         .collect(),
       symbol_table,
-      ..Default::default()
+      flags: FxHashMap::default(),
     }
   }
 
@@ -94,26 +95,26 @@ impl DerefMut for SymbolRefDbForModule {
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct SymbolRefDb {
-  inner: IndexVec<ModuleIdx, SymbolRefDbForModule>,
+  inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
 impl SymbolRefDb {
   fn ensure_exact_capacity(&mut self, module_idx: ModuleIdx) {
     let new_len = module_idx.index() + 1;
     if self.inner.len() < new_len {
-      self.inner.resize_with(new_len, SymbolRefDbForModule::default);
+      self.inner.resize_with(new_len, || None);
     }
   }
 
   pub fn store_local_db(&mut self, module_id: ModuleIdx, local_db: SymbolRefDbForModule) {
     self.ensure_exact_capacity(module_id);
 
-    self.inner[module_id] = local_db;
+    self.inner[module_id] = Some(local_db);
   }
 
   pub fn create_symbol(&mut self, owner: ModuleIdx, name: CompactString) -> SymbolRef {
     self.ensure_exact_capacity(owner);
-    let symbol_id = self.inner[owner].classic_data.push(SymbolRefDataClassic {
+    let symbol_id = self.inner[owner].unpack_ref_mut().classic_data.push(SymbolRefDataClassic {
       name,
       link: None,
       chunk_id: None,
@@ -148,11 +149,11 @@ impl SymbolRefDb {
   }
 
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {
-    &self.inner[refer.owner].classic_data[refer.symbol]
+    &self.inner[refer.owner].unpack_ref().classic_data[refer.symbol]
   }
 
   pub fn get_mut(&mut self, refer: SymbolRef) -> &mut SymbolRefDataClassic {
-    &mut self.inner[refer.owner].classic_data[refer.symbol]
+    &mut self.inner[refer.owner].unpack_ref_mut().classic_data[refer.symbol]
   }
 
   /// https://en.wikipedia.org/wiki/Disjoint-set_data_structure
@@ -178,6 +179,6 @@ impl SymbolRefDb {
   }
 
   pub(crate) fn get_flags(&self, refer: SymbolRef) -> Option<&SymbolRefFlags> {
-    self.inner[refer.owner].flags.get(&refer.symbol)
+    self.inner[refer.owner].unpack_ref().flags.get(&refer.symbol)
   }
 }

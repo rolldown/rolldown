@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process'
-import { resolve } from 'node:path'
 import { BindingWatcher, BindingWatcherEvent } from './binding'
 
 export class Watcher {
@@ -62,7 +61,7 @@ export class Watcher {
   // The rust side already create a thread for watcher, but it isn't at main thread.
   // So here we need to spawn a process to avoid main process exit util the user call `watcher.close()`.
   watch() {
-    const watcherWorkerPath = resolve('rolldown', './watcher-worker.js')
+    const watcherWorkerPath = require.resolve('rolldown/watcher-worker')
     const child = spawn(process.argv[0], [watcherWorkerPath], {
       signal: this.controller.signal,
     })

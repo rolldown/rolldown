@@ -4,7 +4,7 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
-use oxc::semantic::SymbolTable;
+use oxc::semantic::{Reference, SymbolTable};
 use oxc::{
   ast::{
     ast::{
@@ -275,21 +275,21 @@ impl<'me> AstScanner<'me> {
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
-    let is_const = self.result.symbol_ref_db.get_flags(local).is_const_variable();
-    let flags = self.result.symbol_ref_db.flags.entry(local).or_default();
-    let mut is_reassigned = false;
+    let symbol_ref: SymbolRef = (self.idx, local).into();
 
-    self.scopes.get_resolved_references(local).for_each(|refer| {
-      if refer.is_write() {
-        is_reassigned = true;
-      }
-    });
+    let is_const = self.result.symbol_ref_db.get_flags(local).is_const_variable();
+
+    // If there is any write reference to the local variable, it is reassigned.
+    let is_reassigned = self.scopes.get_resolved_references(local).any(Reference::is_write);
+
+    let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if is_const {
-      flags.insert(SymbolRefFlags::IS_CONST);
+      ref_flags.insert(SymbolRefFlags::IS_CONST);
     }
     if !is_reassigned {
-      flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
+      ref_flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
     }
+
     self
       .result
       .named_exports

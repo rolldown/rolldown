@@ -37,7 +37,7 @@ bitflags::bitflags! {
 pub struct SymbolRefDbForModule {
   owner_idx: ModuleIdx,
   root_scope_id: ScopeId,
-  pub symbol_table: SymbolTable,
+  pub(crate) symbol_table: SymbolTable,
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
@@ -182,12 +182,42 @@ impl SymbolRefDb {
     canonical
   }
 
-  pub(crate) fn get_flags(&self, refer: SymbolRef) -> Option<&SymbolRefFlags> {
-    self.inner[refer.owner].unpack_ref().flags.get(&refer.symbol)
-  }
-
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.get_scope_id(refer.symbol) == local_db.root_scope_id
+  }
+}
+
+pub trait GetLocalDb {
+  fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule;
+}
+
+pub trait GetLocalDbMut {
+  fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule;
+}
+
+impl GetLocalDb for SymbolRefDb {
+  fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule {
+    self.inner[owner].unpack_ref()
+  }
+}
+
+impl GetLocalDbMut for SymbolRefDb {
+  fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
+    self.inner[owner].unpack_ref_mut()
+  }
+}
+
+impl GetLocalDb for SymbolRefDbForModule {
+  fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule {
+    debug_assert!(self.owner_idx == owner);
+    self
+  }
+}
+
+impl GetLocalDbMut for SymbolRefDbForModule {
+  fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
+    debug_assert!(self.owner_idx == owner);
+    self
   }
 }

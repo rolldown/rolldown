@@ -707,7 +707,7 @@ expression: output
 
 # tests/esbuild/default/duplicate_property_warning
 
-- entry-!~{000}~.js => entry-r2pWxbi1.js
+- entry-!~{000}~.js => entry-MHZ3lI5Q.js
 
 # tests/esbuild/default/dynamic_import_with_expression_cjs
 

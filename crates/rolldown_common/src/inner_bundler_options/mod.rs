@@ -205,7 +205,6 @@ where
   D: Deserializer<'de>,
 {
   let value = Option::<Value>::deserialize(deserializer)?;
-  dbg!(&value);
   match value {
     None => Ok(None),
     Some(Value::Object(obj)) => {
@@ -220,7 +219,7 @@ where
               "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
               "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
               _ => {
-                return Err(serde::de::Error::custom(format!("unknown jsx runtime: {}", runtime)))
+                return Err(serde::de::Error::custom(format!("unknown jsx runtime: {runtime}",)))
               }
             }
           }
@@ -248,7 +247,7 @@ where
               .ok_or_else(|| serde::de::Error::custom("jsx.pragmaFrag should be a string"))?;
             default_jsx_option.pragma_frag = Some(pragma_frag.to_string());
           }
-          _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {}", k))),
+          _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
         }
       }
 

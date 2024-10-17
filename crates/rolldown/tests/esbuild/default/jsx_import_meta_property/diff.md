@@ -19,12 +19,11 @@ f = function() {
 ```
 ### rolldown
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region factory.jsx
-console.log([_jsx("x", {}), /* @__PURE__ */ import.meta.factory("x", null)]);
+console.log([React.createElement("x", null), /* @__PURE__ */ import.meta.factory("x", null)]);
 f = function() {
-	console.log([_jsx("y", {}), /* @__PURE__ */ import.meta.factory("y", null)]);
+	console.log([React.createElement("y", null), /* @__PURE__ */ import.meta.factory("y", null)]);
 };
 
 //#endregion
@@ -34,14 +33,13 @@ f = function() {
 ===================================================================
 --- esbuild	/out/factory.js
 +++ rolldown	factory.js
-@@ -1,5 +1,5 @@
+@@ -1,5 +1,4 @@
 -var import_meta = {};
 -console.log([import_meta.factory("x", null), import_meta.factory("x", null)]);
-+import {jsx as _jsx} from "react/jsx-runtime";
-+console.log([_jsx("x", {}), import.meta.factory("x", null)]);
++console.log([React.createElement("x", null), import.meta.factory("x", null)]);
  f = function () {
 -    console.log([import_meta.factory("y", null), import_meta.factory("y", null)]);
-+    console.log([_jsx("y", {}), import.meta.factory("y", null)]);
++    console.log([React.createElement("y", null), import.meta.factory("y", null)]);
  };
 
 ```
@@ -62,11 +60,10 @@ console.log([
 ```
 ### rolldown
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 
 //#region fragment.jsx
-console.log([_jsx(_Fragment, { children: "x" }), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x")]), f = function() {
-	console.log([_jsx(_Fragment, { children: "y" }), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y")]);
+console.log([React.createElement(React.Fragment, null, "x"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x")]), f = function() {
+	console.log([React.createElement(React.Fragment, null, "y"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y")]);
 };
 
 //#endregion
@@ -76,17 +73,12 @@ console.log([_jsx(_Fragment, { children: "x" }), /* @__PURE__ */ import.meta.fac
 ===================================================================
 --- esbuild	/out/fragment.js
 +++ rolldown	fragment.js
-@@ -1,4 +1,8 @@
+@@ -1,4 +1,3 @@
 -var import_meta = {};
 -(console.log([import_meta.factory(import_meta.fragment, null, "x"), import_meta.factory(import_meta.fragment, null, "x")]), f = function () {
 -    console.log([import_meta.factory(import_meta.fragment, null, "y"), import_meta.factory(import_meta.fragment, null, "y")]);
-+import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
-+(console.log([_jsx(_Fragment, {
-+    children: "x"
-+}), import.meta.factory(import.meta.fragment, null, "x")]), f = function () {
-+    console.log([_jsx(_Fragment, {
-+        children: "y"
-+    }), import.meta.factory(import.meta.fragment, null, "y")]);
++(console.log([React.createElement(React.Fragment, null, "x"), import.meta.factory(import.meta.fragment, null, "x")]), f = function () {
++    console.log([React.createElement(React.Fragment, null, "y"), import.meta.factory(import.meta.fragment, null, "y")]);
  });
 
 ```

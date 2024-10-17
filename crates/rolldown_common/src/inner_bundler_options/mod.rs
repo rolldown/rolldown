@@ -1,4 +1,4 @@
-use oxc::transformer::JsxOptions;
+use oxc::transformer::{JsxOptions, JsxRuntime};
 use rolldown_utils::indexmap::FxIndexMap;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
@@ -135,7 +135,11 @@ pub struct BundlerOptions {
   pub inline_dynamic_imports: Option<bool>,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: Option<ChecksOptions>,
-  #[cfg_attr(feature = "deserialize_bundler_options", serde(default), schemars(skip))]
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(deserialize_with = "deserialize_jsx", default),
+    schemars(with = "Option<HashMap<String, String>>")
+  )]
   pub jsx: Option<JsxOptions>,
 }
 
@@ -192,5 +196,63 @@ where
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions { module_side_effects }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),
+  }
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_jsx<'de, D>(deserializer: D) -> Result<Option<JsxOptions>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let value = Option::<Value>::deserialize(deserializer)?;
+  match value {
+    None => Ok(None),
+    Some(Value::Object(obj)) => {
+      let mut default_jsx_option = JsxOptions::default();
+      for (k, v) in obj {
+        match k.as_str() {
+          "runtime" => {
+            let runtime = v
+              .as_str()
+              .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
+            match runtime {
+              "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
+              "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
+              _ => {
+                return Err(serde::de::Error::custom(format!("unknown jsx runtime: {runtime}",)))
+              }
+            }
+          }
+          "importSource" => {
+            let import_source = v
+              .as_str()
+              .ok_or_else(|| serde::de::Error::custom("jsx.importSource should be a string"))?;
+            default_jsx_option.import_source = Some(import_source.to_string());
+          }
+          "development" => {
+            let development = v
+              .as_bool()
+              .ok_or_else(|| serde::de::Error::custom("jsx.development should be a boolean"))?;
+            default_jsx_option.development = development;
+          }
+          "pragma" => {
+            let pragma = v
+              .as_str()
+              .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
+            default_jsx_option.pragma = Some(pragma.to_string());
+          }
+          "pragmaFrag" => {
+            let pragma_frag = v
+              .as_str()
+              .ok_or_else(|| serde::de::Error::custom("jsx.pragmaFrag should be a string"))?;
+            default_jsx_option.pragma_frag = Some(pragma_frag.to_string());
+          }
+          _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
+        }
+      }
+
+      Ok(Some(default_jsx_option))
+    }
+    _ => Err(serde::de::Error::custom("jsx should be an object")),
   }
 }

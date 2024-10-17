@@ -265,6 +265,15 @@
             "null"
           ]
         },
+        "jsx": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "minify": {
           "type": [
             "boolean",

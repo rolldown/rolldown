@@ -1,31 +1,16 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "factory.jsx", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "fragment.jsx", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## factory.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region factory.jsx
-console.log([_jsx("x", {}), /* @__PURE__ */ this.factory("x", null)]);
+console.log([this.factory("x", null), /* @__PURE__ */ this.factory("x", null)]);
 f = function() {
-	console.log([_jsx("y", {}), /* @__PURE__ */ this.factory("y", null)]);
+	console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 };
 
 //#endregion
@@ -33,11 +18,10 @@ f = function() {
 ## fragment.js
 
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 
 //#region fragment.jsx
-console.log([_jsx(_Fragment, { children: "x" }), /* @__PURE__ */ this.factory(this.fragment, null, "x")]), f = function() {
-	console.log([_jsx(_Fragment, { children: "y" }), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
+console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ this.factory(this.fragment, null, "x")]), f = function() {
+	console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 };
 
 //#endregion

@@ -1,23 +1,22 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "entry.jsx", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 
+
+//#region custom-react.js
+var require_custom_react = __commonJS({ "custom-react.js"(exports, module) {
+	module.exports = {};
+} });
+
+//#endregion
 //#region entry.jsx
-console.log(_jsx("div", {}), _jsx(_Fragment, { children: "fragment" }));
+var import_custom_react = __toESM(require_custom_react());
+console.log((0, import_custom_react.elem)("div", null), (0, import_custom_react.elem)(import_custom_react.frag, null, "fragment"));
 
 //#endregion
 ```

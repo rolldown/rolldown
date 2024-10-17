@@ -9,7 +9,12 @@
         "name": "fragment",
         "import": "fragment.jsx"
       }
-    ]
+    ],
+    "jsx": {
+      "pragma": "import.meta.factory",
+      "pragmaFrag": "import.meta.fragment",
+      "runtime": "classic"
+    }
   },
   "expectExecuted": false
 }

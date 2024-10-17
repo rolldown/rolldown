@@ -5,7 +5,12 @@
         "name": "entry",
         "import": "entry.jsx"
       }
-    ]
+    ],
+    "jsx": {
+      "pragma": "elem",
+      "pragmaFrag": "frag",
+      "runtime": "classic"
+    }
   },
   "expectExecuted": false
 }

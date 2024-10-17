@@ -53,8 +53,6 @@
   diff
 ## [define_this](../../../crates/rolldown/tests/esbuild/default/define_this/diff.md)
   diff
-## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning/diff.md)
-  diff
 ## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs/diff.md)
   diff
 ## [entry_names_chunk_names_ext_placeholder](../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder/diff.md)
@@ -138,10 +136,6 @@
 ## [jsx_import_meta_property](../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_property/diff.md)
   diff
 ## [jsx_import_meta_value](../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value/diff.md)
-  diff
-## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js/diff.md)
-  diff
-## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6/diff.md)
   diff
 ## [jsx_this_property_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_common_js/diff.md)
   diff
@@ -304,6 +298,7 @@
 ## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external)
 ## [await_import_inside_try](../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
+## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
 ## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
@@ -317,6 +312,8 @@
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
+## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
+## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [output_extension_remapping_file](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_file)
 ## [preserve_key_comment](../../../crates/rolldown/tests/esbuild/default/preserve_key_comment)

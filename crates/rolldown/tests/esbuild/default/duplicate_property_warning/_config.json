@@ -6,6 +6,9 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "jsx": {
+      "runtime": "classic"
+    }
   }
 }

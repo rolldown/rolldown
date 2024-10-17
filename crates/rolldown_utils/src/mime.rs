@@ -1,4 +1,4 @@
-use crate::light_guess;
+use crate::light_guess::{self, RawMimeExt};
 use mime::Mime;
 use std::{fmt::Display, path::Path, str::FromStr};
 
@@ -26,6 +26,15 @@ impl From<(Mime, bool)> for MimeExt {
   fn from(value: (Mime, bool)) -> Self {
     Self { mime: value.0, is_utf8_encoded: value.1 }
   }
+}
+
+impl TryFrom<RawMimeExt> for MimeExt {
+  fn try_from(raw_mime_ext: RawMimeExt) -> Result<Self, Self::Error> {
+    let mime = Mime::from_str(raw_mime_ext.mime_str)?;
+    Ok(MimeExt { mime, is_utf8_encoded: raw_mime_ext.is_utf8_encoded })
+  }
+
+  type Error = anyhow::Error;
 }
 
 // second param is whether the data is utf8 encoded

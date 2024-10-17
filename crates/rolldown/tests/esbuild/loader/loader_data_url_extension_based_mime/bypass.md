@@ -1,5 +1,5 @@
 # Reason
-1. Not align with esbuild
+1. different deconflict naming style
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -138,7 +138,7 @@ var example_default$10 = "data:font/otf,otf";
 
 //#endregion
 //#region example.pdf
-var example_default$11 = "data:text/plain;charset=utf-8,pdf";
+var example_default$11 = "data:application/pdf,pdf";
 
 //#endregion
 //#region example.png
@@ -158,7 +158,7 @@ var example_default$15 = "data:font/ttf,ttf";
 
 //#endregion
 //#region example.wasm
-var example_default$16 = "data:text/plain;charset=utf-8,wasm";
+var example_default$16 = "data:application/wasm,wasm";
 
 //#endregion
 //#region example.webp
@@ -217,12 +217,12 @@ export { example_default as css, example_default$1 as eot, example_default$2 as 
 +var example_default$8 = "data:application/json;charset=utf-8,json";
 +var example_default$9 = "data:text/javascript;charset=utf-8,mjs";
 +var example_default$10 = "data:font/otf,otf";
-+var example_default$11 = "data:text/plain;charset=utf-8,pdf";
++var example_default$11 = "data:application/pdf,pdf";
 +var example_default$12 = "data:image/png,png";
 +var example_default$13 = "data:font/sfnt,sfnt";
 +var example_default$14 = "data:image/svg+xml,svg";
 +var example_default$15 = "data:font/ttf,ttf";
-+var example_default$16 = "data:text/plain;charset=utf-8,wasm";
++var example_default$16 = "data:application/wasm,wasm";
 +var example_default$17 = "data:image/webp,webp";
 +var example_default$18 = "data:font/woff,woff";
 +var example_default$19 = "data:font/woff2,woff2";

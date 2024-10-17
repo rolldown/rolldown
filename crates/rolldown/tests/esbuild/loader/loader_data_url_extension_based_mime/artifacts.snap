@@ -52,7 +52,7 @@ var example_default$10 = "data:font/otf,otf";
 
 //#endregion
 //#region example.pdf
-var example_default$11 = "data:text/plain;charset=utf-8,pdf";
+var example_default$11 = "data:application/pdf,pdf";
 
 //#endregion
 //#region example.png
@@ -72,7 +72,7 @@ var example_default$15 = "data:font/ttf,ttf";
 
 //#endregion
 //#region example.wasm
-var example_default$16 = "data:text/plain;charset=utf-8,wasm";
+var example_default$16 = "data:application/wasm,wasm";
 
 //#endregion
 //#region example.webp

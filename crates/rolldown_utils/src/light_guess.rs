@@ -4,41 +4,6 @@ use phf::{phf_map, Map};
 use std::str::FromStr;
 
 use crate::mime::MimeExt;
-// var builtinTypesLower = map[string]string{
-// 	// Text
-// 	".css":      "text/css; charset=utf-8",
-// 	".htm":      "text/html; charset=utf-8",
-// 	".html":     "text/html; charset=utf-8",
-// 	".js":       "text/javascript; charset=utf-8",
-// 	".json":     "application/json; charset=utf-8",
-// 	".markdown": "text/markdown; charset=utf-8",
-// 	".md":       "text/markdown; charset=utf-8",
-// 	".mjs":      "text/javascript; charset=utf-8",
-// 	".xhtml":    "application/xhtml+xml; charset=utf-8",
-// 	".xml":      "text/xml; charset=utf-8",
-//
-// 	// Images
-// 	".avif": "image/avif",
-// 	".gif":  "image/gif",
-// 	".jpeg": "image/jpeg",
-// 	".jpg":  "image/jpeg",
-// 	".png":  "image/png",
-// 	".svg":  "image/svg+xml",
-// 	".webp": "image/webp",
-//
-// 	// Fonts
-// 	".eot":   "application/vnd.ms-fontobject",
-// 	".otf":   "font/otf",
-// 	".sfnt":  "font/sfnt",
-// 	".ttf":   "font/ttf",
-// 	".woff":  "font/woff",
-// 	".woff2": "font/woff2",
-//
-// 	// Other
-// 	".pdf":         "application/pdf",
-// 	".wasm":        "application/wasm",
-// 	".webmanifest": "application/manifest+json",
-// }
 pub static MIME_TYPES: Map<&'static str, (&'static str, bool)> = phf_map! {
     // Text
     "css" => ("text/css", true),
@@ -67,11 +32,9 @@ pub static MIME_TYPES: Map<&'static str, (&'static str, bool)> = phf_map! {
     "woff" => ("font/woff", false),
     "woff2" => ("font/woff2", false),
     // Others
-
-
-  ".pdf" =>         ("application/pdf", false),
-  ".wasm" =>        ("application/wasm", false),
-  ".webmanifest" => ("application/manifest+json", false),
+    "pdf" => ("application/pdf", false),
+    "wasm" => ("application/wasm", false),
+    "webmanifest" => ("application/manifest+json", false),
 };
 
 /// Adapted from:
@@ -84,10 +47,13 @@ pub fn mime_type_by_extension(ext: &str) -> Option<(&'static str, bool)> {
 }
 
 pub fn try_from_ext(ext: &str) -> anyhow::Result<MimeExt> {
+  dbg!(&ext);
   mime_type_by_extension(ext)
     .ok_or_else(|| anyhow::Error::msg(format!("No mime type found for extension: {ext}")))
     .and_then(|(mime, is_utf8_encoded)| {
+      dbg!(&mime);
       let mime = Mime::from_str(mime)?;
+      dbg!(&mime);
       Ok(MimeExt::from((mime, is_utf8_encoded)))
     })
 }

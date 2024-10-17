@@ -2387,7 +2387,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_extension_based_mime
 
-- entry-!~{000}~.js => entry-FK3v9h_V.js
+- entry-!~{000}~.js => entry-lnRtvxoi.js
 
 # tests/esbuild/loader/loader_data_url_text_css
 

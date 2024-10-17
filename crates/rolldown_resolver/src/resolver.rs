@@ -199,7 +199,7 @@ impl<F: FileSystem + Default> Resolver<F> {
         }
       }
     }
-
+    dbg!(&resolution);
     match resolution {
       Ok(info) => {
         let package_json = info.package_json().map(|p| self.cached_package_json(p));

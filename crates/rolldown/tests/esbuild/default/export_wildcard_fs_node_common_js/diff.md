@@ -35,14 +35,14 @@ Object.keys(__external).forEach(function (k) {
     get: function () { return __external[k]; }
   });
 });
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
+var fs = require("fs");
+Object.keys(fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return node_fs[k]; }
+    get: function () { return fs[k]; }
   });
 });
-require("node:fs");
+require("fs");
 require("./external");
 
 //#region internal.js
@@ -77,16 +77,16 @@ exports.foo = foo
 -    foo,
 -    ...require("fs"),
 -    ...require("./external")
-+var node_fs = require("node:fs");
-+Object.keys(node_fs).forEach(function (k) {
++var fs = require("fs");
++Object.keys(fs).forEach(function (k) {
 +    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 +        enumerable: true,
 +        get: function () {
-+            return node_fs[k];
++            return fs[k];
 +        }
 +    });
  });
-+require("node:fs");
++require("fs");
 +require("./external");
 +var foo = 123;
 +exports.foo = foo;

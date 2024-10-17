@@ -1,4 +1,5 @@
 // MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
+import fs from 'fs';
 
-console.log(hyperCube(5));
+
+fs.read()

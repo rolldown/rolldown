@@ -10,8 +10,8 @@ http.createServer();
 ```
 ### rolldown
 ```js
-import fs from "node:fs";
-import http from "node:http";
+import fs from "#fs";
+import http from "#http";
 
 //#region entry.js
 fs.readFileSync();
@@ -26,8 +26,9 @@ http.createServer();
 +++ rolldown	entry.js
 @@ -1,4 +1,4 @@
 -import fs from "fs";
-+import fs from "node:fs";
- import http from "node:http";
+-import http from "node:http";
++import fs from "#fs";
++import http from "#http";
  fs.readFileSync();
  http.createServer();
 

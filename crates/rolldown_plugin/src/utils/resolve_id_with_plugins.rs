@@ -155,8 +155,8 @@ fn resolve_id(
 
   if let Err(err) = resolved {
     match err {
-      ResolveError::Builtin(specifier) => Ok(Ok(ResolvedId {
-        id: specifier.into(),
+      ResolveError::Builtin(_) => Ok(Ok(ResolvedId {
+        id: request.into(),
         ignored: false,
         is_external: true,
         module_def_format: ModuleDefFormat::Unknown,

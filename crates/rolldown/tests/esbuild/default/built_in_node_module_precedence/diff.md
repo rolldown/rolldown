@@ -47,8 +47,8 @@ var require_fs_index = __commonJS({ "node_modules/fs/index.js"() {
 //#endregion
 //#region entry.js
 console.log([
-	require("node:fs"),
-	require("node:fs/promises"),
+	require("fs"),
+	require("fs/promises"),
 	require("node:foo"),
 	require_abc(),
 	require_fs_index()
@@ -73,6 +73,6 @@ console.log([
      }
  });
 -console.log([require("fs"), require("fs/promises"), require("node:foo"), require_abc(), require_fs()]);
-+console.log([require("node:fs"), require("node:fs/promises"), require("node:foo"), require_abc(), require_fs_index()]);
++console.log([require("fs"), require("fs/promises"), require("node:foo"), require_abc(), require_fs_index()]);
 
 ```

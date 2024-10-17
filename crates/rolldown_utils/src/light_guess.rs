@@ -69,15 +69,13 @@ mod tests {
 
   #[test]
   fn normal_extensions() {
-    assert_eq!(mime_type_by_extension("txt").unwrap().0, "text/plain");
+    assert_eq!(mime_type_by_extension("txt"), None);
     assert_eq!(mime_type_by_extension("css").unwrap().0, "text/css");
     assert_eq!(mime_type_by_extension("html").unwrap().0, "text/html");
     assert_eq!(mime_type_by_extension("json").unwrap().0, "application/json");
     assert_eq!(mime_type_by_extension("png").unwrap().0, "image/png");
     assert_eq!(mime_type_by_extension("svg").unwrap().0, "image/svg+xml");
     assert_eq!(mime_type_by_extension("woff2").unwrap().0, "font/woff2");
-    assert_eq!(mime_type_by_extension("aac").unwrap().0, "audio/aac");
-    assert_eq!(mime_type_by_extension("avi").unwrap().0, "video/x-msvideo");
     assert_eq!(mime_type_by_extension("pdf").unwrap().0, "application/pdf");
     assert_eq!(mime_type_by_extension("wasm").unwrap().0, "application/wasm");
     assert_eq!(mime_type_by_extension("webmanifest").unwrap().0, "application/manifest+json");

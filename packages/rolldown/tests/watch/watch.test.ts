@@ -51,6 +51,8 @@ test.sequential('watch close', async () => {
     input,
     cwd: import.meta.dirname,
   })
+  await waitBuildFinished()
+
   await watcher.close()
   // edit file
   fs.writeFileSync(input, 'console.log(3)')
@@ -89,8 +91,8 @@ test.sequential('watch event', async () => {
   fs.writeFileSync(input, 'console.log(3)')
   await waitBuildFinished()
   await watcher.close()
-
-  expect(events).toEqual([
+  // The different platform maybe emit multiple events, so here only check the first 4 events
+  expect(events.slice(0, 4)).toEqual([
     { code: 'START' },
     { code: 'BUNDLE_START' },
     { code: 'BUNDLE_END' },

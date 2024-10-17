@@ -70,14 +70,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_format
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_injected_file_bundle
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_transform
-## top level var rewrite
-- crates/rolldown/tests/esbuild/dce/tree_shaking_class_property
-- crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_capture
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_no_capture
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_unused
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_no_bundle_capture
-- crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_no_bundle_no_capture
 ## needs css stable
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
@@ -86,13 +78,6 @@
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
-## needs rewrite tool ignore top level `let` binding -> var
-- crates/rolldown/tests/esbuild/importstar/import_star_mangle_no_bundle_capture
-- crates/rolldown/tests/esbuild/importstar/import_star_mangle_no_bundle_no_capture
-- crates/rolldown/tests/esbuild/importstar/import_star_mangle_no_bundle_unused
-- crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_capture
-- crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_no_capture
-- crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_unused
 ## side effects detect
 - crates/rolldown/tests/esbuild/dce/dce_of_destructuring
 - crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition
@@ -331,6 +316,8 @@
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## esbuild will reuse `ns` variable
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
+## needs rewrite tool ignore top level `let` binding -> var
+- crates/rolldown/tests/esbuild/importstar/import_star_no_bundle_unused
 ## esbuild treated svg as commonjs module, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
 ## esbuild will wrap `empty` module as a cjs module, rolldown did not

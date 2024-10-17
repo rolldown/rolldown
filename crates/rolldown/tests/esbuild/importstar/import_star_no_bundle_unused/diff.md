@@ -1,5 +1,5 @@
 # Reason
-1. needs rewrite tool ignore top level `let` binding -> var
+1. we don't support no bundle mode, rest part should be same
 # Diff
 ## /out.js
 ### esbuild
@@ -25,9 +25,8 @@ console.log(foo);
 +++ rolldown	entry.js
 @@ -1,3 +1,3 @@
 -import * as ns from "./foo";
--let foo = 234;
 +import "./foo";
-+var foo = 234;
+ let foo = 234;
  console.log(foo);
 
 ```

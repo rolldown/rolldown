@@ -38,7 +38,7 @@ type Stats = {
   failed: number
   total: number
 }
-export function run(includeList: string[], debugConfig: DebugConfig) {
+export async function run(includeList: string[], debugConfig: DebugConfig) {
   let aggregatedStats: AggregateStats = {
     stats: {
       pass: 0,
@@ -71,7 +71,12 @@ export function run(includeList: string[], debugConfig: DebugConfig) {
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name)
       let rolldownSnap = getRolldownSnap(rolldownTestPath)
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap)
-      let diffResult = diffCase(snap, parsedRolldownSnap, debugConfig)
+      let diffResult = await diffCase(
+        snap,
+        parsedRolldownSnap,
+        rolldownTestPath,
+        debugConfig,
+      )
       // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')

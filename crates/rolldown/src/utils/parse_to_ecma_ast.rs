@@ -68,7 +68,6 @@ pub fn parse_to_ecma_ast(
     ModuleType::Dataurl => {
       let data = source.try_into_bytes()?;
       let guessed_mime = guess_mime(path, &data)?;
-      dbg!(&path);
       dbg!(&guessed_mime);
       let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
       (text_to_esm(&dataurl)?, OxcParseType::Js)

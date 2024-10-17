@@ -3,70 +3,75 @@ use mime::Mime;
 use phf::{phf_map, Map};
 use std::str::FromStr;
 
-pub static MIME_TYPES: Map<&'static str, &'static str> = phf_map! {
+use crate::mime::MimeExt;
+// var builtinTypesLower = map[string]string{
+// 	// Text
+// 	".css":      "text/css; charset=utf-8",
+// 	".htm":      "text/html; charset=utf-8",
+// 	".html":     "text/html; charset=utf-8",
+// 	".js":       "text/javascript; charset=utf-8",
+// 	".json":     "application/json; charset=utf-8",
+// 	".markdown": "text/markdown; charset=utf-8",
+// 	".md":       "text/markdown; charset=utf-8",
+// 	".mjs":      "text/javascript; charset=utf-8",
+// 	".xhtml":    "application/xhtml+xml; charset=utf-8",
+// 	".xml":      "text/xml; charset=utf-8",
+//
+// 	// Images
+// 	".avif": "image/avif",
+// 	".gif":  "image/gif",
+// 	".jpeg": "image/jpeg",
+// 	".jpg":  "image/jpeg",
+// 	".png":  "image/png",
+// 	".svg":  "image/svg+xml",
+// 	".webp": "image/webp",
+//
+// 	// Fonts
+// 	".eot":   "application/vnd.ms-fontobject",
+// 	".otf":   "font/otf",
+// 	".sfnt":  "font/sfnt",
+// 	".ttf":   "font/ttf",
+// 	".woff":  "font/woff",
+// 	".woff2": "font/woff2",
+//
+// 	// Other
+// 	".pdf":         "application/pdf",
+// 	".wasm":        "application/wasm",
+// 	".webmanifest": "application/manifest+json",
+// }
+pub static MIME_TYPES: Map<&'static str, (&'static str, bool)> = phf_map! {
     // Text
-    "txt" => "text/plain",
-    "css" => "text/css",
-    "htm" => "text/html",
-    "html" => "text/html",
-    "js" => "text/javascript",
-    "mjs" => "text/javascript",
-    "jsx" => "text/javascript",
-    "json" => "application/json",
-    "yaml" => "text/x-yaml",
-    "yml" => "text/x-yaml",
-    "toml" => "text/x-toml",
-    "markdown" => "text/markdown",
-    "md" => "text/markdown",
-    "xml" => "text/xml",
-    "csv" => "text/csv",
-    "tsv" => "text/tab-separated-values",
+    "css" => ("text/css", true),
+    "htm" => ("text/html", true),
+    "html" => ("text/html", true),
+    "js" => ("text/javascript", true),
+    "json" => ("application/json", true),
+    "markdown" => ("text/markdown", true),
+    "md" => ("text/markdown", true),
+    "mjs" => ("text/javascript", true),
+
     // Images
-    "bmp" => "image/bmp",
-    "avif" => "image/avif",
-    "gif" => "image/gif",
-    "ico" => "image/x-icon",
-    "icns" => "image/x-icns",
-    "jpg" => "image/jpeg",
-    "jpeg" => "image/jpeg",
-    "png" => "image/png",
-    "svg" => "image/svg+xml",
-    "webp" => "image/webp",
+    "avif" => ("image/avif", false),
+    "gif" => ("image/gif", false),
+    "jpg" => ("image/jpeg", false),
+    "jpeg" => ("image/jpeg", false),
+    "png" => ("image/png", false),
+    "svg" => ("image/svg+xml",false),
+    "webp" => ("image/webp", false),
+
     // Fonts
-    "otf" => "font/otf",
-    "ttf" => "font/ttf",
-    "ttc" => "font/collection",
-    "woff" => "font/woff",
-    "woff2" => "font/woff2",
-    "eot" => "application/vnd.ms-fontobject",
-    "sfnt" => "font/sfnt",
-    // Audios
-    "aac" => "audio/aac",
-    "midi" => "audio/midi",
-    "mid" => "audio/midi",
-    "mp3" => "audio/mpeg",
-    "ogg" => "audio/ogg",
-    "oga" => "audio/ogg",
-    "wav" => "audio/wav",
-    "weba" => "audio/webm",
-    "flac" => "audio/flac",
-    "m3u8" => "audio/x-mpegurl",
-    "m4a" => "audio/m4a",
-    // Videos
-    "avi" => "video/x-msvideo",
-    "mpeg" => "video/mpeg",
-    "ogv" => "video/ogg",
-    "ivf" => "video/x-ivf",
-    "webm" => "video/webm",
-    "mp4" => "video/mp4",
-    "flv" => "video/x-flv",
-    "ts" => "audio/vnd.dlna.mpeg-tts", // Though I write TypeScript, this is not TypeScript
-    "mov" => "video/quicktime",
-    "wmv" => "video/x-ms-wmv",
-    // Other
-    "pdf" => "application/pdf",
-    "wasm" => "application/wasm",
-    "webmanifest" => "application/manifest+json",
+    "eot" => ("application/vnd.ms-fontobject", false),
+    "otf" => ("font/otf", false),
+    "sfnt" => ("font/sfnt", false),
+    "ttf" => ("font/ttf", false),
+    "woff" => ("font/woff", false),
+    "woff2" => ("font/woff2", false),
+    // Others
+
+
+  ".pdf" =>         ("application/pdf", false),
+  ".wasm" =>        ("application/wasm", false),
+  ".webmanifest" => ("application/manifest+json", false),
 };
 
 /// Adapted from:
@@ -74,17 +79,20 @@ pub static MIME_TYPES: Map<&'static str, &'static str> = phf_map! {
 /// - https://github.com/evanw/esbuild/blob/fc37c2fa9de2ad77476a6d4a8f1516196b90187e/internal/helpers/mime.go#L5
 ///
 /// Thanks to @ikkz and @evanw for the inspiration.
-pub fn mime_type_by_extension(ext: &str) -> Option<&'static str> {
+pub fn mime_type_by_extension(ext: &str) -> Option<(&'static str, bool)> {
   MIME_TYPES.get(ext).copied()
 }
 
-pub fn try_from_ext(ext: &str) -> anyhow::Result<Mime> {
+pub fn try_from_ext(ext: &str) -> anyhow::Result<MimeExt> {
   mime_type_by_extension(ext)
     .ok_or_else(|| anyhow::Error::msg(format!("No mime type found for extension: {ext}")))
-    .and_then(|mime| Ok(Mime::from_str(mime)?))
+    .and_then(|(mime, is_utf8_encoded)| {
+      let mime = Mime::from_str(mime)?;
+      Ok(MimeExt::from((mime, is_utf8_encoded)))
+    })
 }
 
-pub fn try_from_path(path: &std::path::Path) -> anyhow::Result<Mime> {
+pub fn try_from_path(path: &std::path::Path) -> anyhow::Result<MimeExt> {
   if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
     try_from_ext(ext)
   } else {
@@ -98,18 +106,18 @@ mod tests {
 
   #[test]
   fn normal_extensions() {
-    assert_eq!(mime_type_by_extension("txt").unwrap(), "text/plain");
-    assert_eq!(mime_type_by_extension("css").unwrap(), "text/css");
-    assert_eq!(mime_type_by_extension("html").unwrap(), "text/html");
-    assert_eq!(mime_type_by_extension("json").unwrap(), "application/json");
-    assert_eq!(mime_type_by_extension("png").unwrap(), "image/png");
-    assert_eq!(mime_type_by_extension("svg").unwrap(), "image/svg+xml");
-    assert_eq!(mime_type_by_extension("woff2").unwrap(), "font/woff2");
-    assert_eq!(mime_type_by_extension("aac").unwrap(), "audio/aac");
-    assert_eq!(mime_type_by_extension("avi").unwrap(), "video/x-msvideo");
-    assert_eq!(mime_type_by_extension("pdf").unwrap(), "application/pdf");
-    assert_eq!(mime_type_by_extension("wasm").unwrap(), "application/wasm");
-    assert_eq!(mime_type_by_extension("webmanifest").unwrap(), "application/manifest+json");
+    assert_eq!(mime_type_by_extension("txt").unwrap().0, "text/plain");
+    assert_eq!(mime_type_by_extension("css").unwrap().0, "text/css");
+    assert_eq!(mime_type_by_extension("html").unwrap().0, "text/html");
+    assert_eq!(mime_type_by_extension("json").unwrap().0, "application/json");
+    assert_eq!(mime_type_by_extension("png").unwrap().0, "image/png");
+    assert_eq!(mime_type_by_extension("svg").unwrap().0, "image/svg+xml");
+    assert_eq!(mime_type_by_extension("woff2").unwrap().0, "font/woff2");
+    assert_eq!(mime_type_by_extension("aac").unwrap().0, "audio/aac");
+    assert_eq!(mime_type_by_extension("avi").unwrap().0, "video/x-msvideo");
+    assert_eq!(mime_type_by_extension("pdf").unwrap().0, "application/pdf");
+    assert_eq!(mime_type_by_extension("wasm").unwrap().0, "application/wasm");
+    assert_eq!(mime_type_by_extension("webmanifest").unwrap().0, "application/manifest+json");
   }
 
   #[test]
@@ -119,8 +127,8 @@ mod tests {
 
   #[test]
   fn try_from_exts() {
-    assert!(matches!(try_from_ext("png").unwrap().subtype(), mime::PNG));
-    assert!(matches!(try_from_ext("svg").unwrap().subtype(), mime::SVG));
-    assert!(matches!(try_from_ext("woff2").unwrap().type_(), mime::FONT));
+    assert!(matches!(try_from_ext("png").unwrap().mime.subtype(), mime::PNG));
+    assert!(matches!(try_from_ext("svg").unwrap().mime.subtype(), mime::SVG));
+    assert!(matches!(try_from_ext("woff2").unwrap().mime.type_(), mime::FONT));
   }
 }

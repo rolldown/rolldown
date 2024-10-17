@@ -41,6 +41,8 @@
   diff
 ## [loader_copy_with_transform](../../../crates/rolldown/tests/esbuild/loader/loader_copy_with_transform/diff.md)
   diff
+## [loader_data_url_base64_invalid_utf8](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8/diff.md)
+  diff
 ## [loader_data_url_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6/diff.md)
   diff
 ## [loader_data_url_extension_based_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_extension_based_mime/diff.md)
@@ -115,7 +117,6 @@
   missing
 # Passed Cases
 ## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js)
-## [loader_data_url_base64_invalid_utf8](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8)
 ## [loader_data_url_base64_vs_percent_encoding](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding)
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)

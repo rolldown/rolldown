@@ -325,8 +325,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes
 ## esbuild treated `.txt` as cjs, rolldown treated it as esm
 - crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6
-## Not align with esbuild
-- crates/rolldown/tests/esbuild/loader/loader_data_url_extension_based_mime
 ## Wrong wrapkind, when json is imported by `require`
 - crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking

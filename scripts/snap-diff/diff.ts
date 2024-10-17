@@ -62,16 +62,16 @@ export async function diffCase(
     let esbuildContent = esbuildSource.content
     let rolldownContent = matchedSource.content
     try {
-      let rewritConfig = {}
+      let rewriteConfig = {}
       let configPath = path.join(caseDir, 'diff.config.js')
       if (fs.existsSync(configPath)) {
         const mod = (await import(configPath)).default
-        rewritConfig = mod.rewrite ?? {}
+        rewriteConfig = mod.rewrite ?? {}
       }
       esbuildContent = rewriteEsbuild(esbuildSource.content)
       rolldownContent = rewriteRolldown(matchedSource.content, {
         ...defaultRewriteConfig,
-        ...rewritConfig,
+        ...rewriteConfig,
       })
     } catch (err) {
       console.error(esbuildSnap.name)

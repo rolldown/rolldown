@@ -2371,11 +2371,11 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
-- entry-!~{000}~.js => entry-QBZryykl.js
+- entry-!~{000}~.js => entry-r9JAgZGd.js
 
 # tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
 
-- entry-!~{000}~.js => entry-U-YjTgqt.js
+- entry-!~{000}~.js => entry-WroxBkxT.js
 
 # tests/esbuild/loader/loader_data_url_common_js_and_es6
 
@@ -2387,7 +2387,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_extension_based_mime
 
-- entry-!~{000}~.js => entry-D3wJ17Nw.js
+- entry-!~{000}~.js => entry-lnRtvxoi.js
 
 # tests/esbuild/loader/loader_data_url_text_css
 

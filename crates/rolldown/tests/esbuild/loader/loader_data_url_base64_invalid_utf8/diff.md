@@ -1,5 +1,3 @@
-# Reason
-1. not fully align for `txt` dataurl
 # Diff
 ## /out.js
 ### esbuild
@@ -14,7 +12,7 @@ console.log(binary_default);
 ```js
 
 //#region binary.txt
-var binary_default = "data:text/plain;base64,/w==";
+var binary_default = "data:application/octet-stream;base64,/w==";
 
 //#endregion
 //#region entry.js
@@ -29,7 +27,7 @@ console.log(binary_default);
 +++ rolldown	entry.js
 @@ -1,2 +1,2 @@
 -var binary_default = "data:text/plain;charset=utf-8;base64,/w==";
-+var binary_default = "data:text/plain;base64,/w==";
++var binary_default = "data:application/octet-stream;base64,/w==";
  console.log(binary_default);
 
 ```

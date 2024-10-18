@@ -1,3 +1,6 @@
+# Reason
+1. could be done in minifier
+2. we don't have plan to support keep_names in rolldown
 # Diff
 ## /out.js
 ### esbuild

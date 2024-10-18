@@ -1,3 +1,5 @@
+# Reason
+1. commonjs json bundle
 # Diff
 ## /out.js
 ### esbuild

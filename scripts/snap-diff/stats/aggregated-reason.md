@@ -112,10 +112,6 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
-## cjs module lexer can't recognize esbuild interop pattern
-- crates/rolldown/tests/esbuild/default/export_forms_iife
-- crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
-- crates/rolldown/tests/esbuild/importstar/export_star_default_export_common_js
 ## limitation of test infra, the test may hard to pass in CI
 - crates/rolldown/tests/esbuild/default/import_abs_path_as_dir
 - crates/rolldown/tests/esbuild/default/import_abs_path_as_file
@@ -148,6 +144,9 @@
 ## comments codegen
 - crates/rolldown/tests/esbuild/default/comment_preservation
 - crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx
+## cjs module lexer can't recognize esbuild interop pattern
+- crates/rolldown/tests/esbuild/default/export_forms_iife
+- crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
 ## should not rewrite `fs` to `node:fs`
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6
 - crates/rolldown/tests/esbuild/default/import_fs_node_common_js
@@ -181,8 +180,6 @@
 - crates/rolldown/tests/esbuild/dce/dce_of_iife
 ## rolldown don't have `ignoreDCEAnnotations` option
 - crates/rolldown/tests/esbuild/dce/disable_tree_shaking
-## Related to codegen
-- crates/rolldown/tests/esbuild/dce/inline_function_call_behavior_changes
 ## annotation codegen
 - crates/rolldown/tests/esbuild/dce/no_side_effects_comment
 ## rolldown should not shake the namespace iife

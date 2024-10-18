@@ -1,5 +1,5 @@
 # Reason
-1. Related to codegen
+1. could be done in minifier
 # Diff
 ## /out/entry.js
 ### esbuild

@@ -93,7 +93,22 @@ impl<F: FileSystem + Default> Resolver<F> {
       exports_fields: raw_resolve
         .exports_fields
         .unwrap_or_else(|| vec![vec!["exports".to_string()]]),
-      extension_alias: raw_resolve.extension_alias.unwrap_or_default(),
+      // var rewrittenFileExtensions = map[string][]string{
+      // 	// Note that the official compiler code always tries ".ts" before
+      // 	// ".tsx" even if the original extension was ".jsx".
+      // 	".js":  {".ts", ".tsx"},
+      // 	".jsx": {".ts", ".tsx"},
+      // 	".mjs": {".mts"},
+      // 	".cjs": {".cts"},
+      // }
+      extension_alias: raw_resolve.extension_alias.unwrap_or_else(|| {
+        vec![
+          (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string()]),
+          (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string()]),
+          (".mjs".to_string(), vec![".mts".to_string()]),
+          (".cjs".to_string(), vec![".cts".to_string()]),
+        ]
+      }),
       extensions: raw_resolve.extensions.unwrap_or_else(|| {
         [".jsx", ".js", ".ts", ".tsx"].into_iter().map(str::to_string).collect()
       }),

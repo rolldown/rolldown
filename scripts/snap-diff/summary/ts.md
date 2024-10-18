@@ -13,8 +13,6 @@
   diff
 ## [ts_abstract_class_field_use_assign](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_assign/diff.md)
   diff
-## [ts_abstract_class_field_use_define](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define/diff.md)
-  diff
 ## [ts_common_js_variable_in_esm_type_module](../../../crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module/diff.md)
   diff
 ## [ts_computed_class_field_use_define_false](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false/diff.md)
@@ -136,6 +134,7 @@
 ## [ts_this_is_undefined_warning](../../../crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning/diff.md)
   diff
 # Passed Cases
+## [ts_abstract_class_field_use_define](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define)
 ## [ts_declare_class](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class)
 ## [ts_declare_const](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const)
 ## [ts_declare_const_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const_enum)

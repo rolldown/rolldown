@@ -1,3 +1,7 @@
+# Reason
+1. rolldown get the code after transpiled, there is no way to get `abstract` annotation,
+also it generate the same code as `webpack`, so treated it as passed
+
 # Diff
 ## /out.js
 ### esbuild

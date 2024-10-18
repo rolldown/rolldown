@@ -106,6 +106,41 @@ test.sequential('watch event', async () => {
   fs.writeFileSync(input, inputSource)
 })
 
+test.sequential('PluginContext addWatchFile', async () => {
+  const foo = path.join(import.meta.dirname, './foo.js')
+  const watcher = await watch({
+    input,
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        buildStart() {
+          this.addWatchFile(foo)
+        },
+      },
+    ],
+  })
+
+  await waitBuildFinished()
+
+  const changeFn = vi.fn()
+  watcher.on('change', (id, event) => {
+    changeFn()
+    expect(id).toBe(foo)
+    expect(event.event).toBe('update')
+  })
+
+  // edit file
+  fs.writeFileSync(foo, 'console.log(2)')
+  // wait for watcher to detect the change
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50)
+  })
+  expect(changeFn).toBeCalled()
+
+  // revert change
+  fs.writeFileSync(foo, 'console.log(1)')
+})
+
 async function waitBuildFinished() {
   // sleep 50ms
   await new Promise((resolve) => {

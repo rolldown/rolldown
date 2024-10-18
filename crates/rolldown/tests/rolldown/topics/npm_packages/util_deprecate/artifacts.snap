@@ -15,7 +15,7 @@ var require_node = __commonJS({ "../../../../../../../node_modules/.pnpm/util-de
 /**
 	* For Node.js, simply re-export the core `util.deprecate` function.
 	*/
-		module.exports = require("node:util").deprecate;
+		module.exports = require("util").deprecate;
 } });
 
 //#endregion

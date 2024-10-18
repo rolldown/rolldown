@@ -93,7 +93,15 @@ impl<F: FileSystem + Default> Resolver<F> {
       exports_fields: raw_resolve
         .exports_fields
         .unwrap_or_else(|| vec![vec!["exports".to_string()]]),
-      extension_alias: raw_resolve.extension_alias.unwrap_or_default(),
+      extension_alias: raw_resolve.extension_alias.unwrap_or_else(|| {
+        // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/resolver/resolver.go#L1690-L1697
+        vec![
+          (".js".to_string(), vec![".js".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+          (".jsx".to_string(), vec![".jsx".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+          (".mjs".to_string(), vec![".mjs".to_string(), ".mts".to_string()]),
+          (".cjs".to_string(), vec![".cjs".to_string(), ".cts".to_string()]),
+        ]
+      }),
       extensions: raw_resolve.extensions.unwrap_or_else(|| {
         [".jsx", ".js", ".ts", ".tsx"].into_iter().map(str::to_string).collect()
       }),

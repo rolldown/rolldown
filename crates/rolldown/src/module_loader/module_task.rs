@@ -304,7 +304,7 @@ impl ModuleTask {
           ret.push(info);
         }
         Err(e) => match &e {
-          ResolveError::NotFound(..) => {
+          ResolveError::ExtensionAlias(_) | ResolveError::NotFound(..) => {
             warnings.push(
               BuildDiagnostic::unresolved_import_treated_as_external(
                 specifier.to_string(),

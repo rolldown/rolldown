@@ -2929,7 +2929,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_bad_main
 
-- entry-!~{000}~.js => entry-v2UN4-S5.js
+- entry-!~{000}~.js => entry-mAJn3tQu.js
 
 # tests/esbuild/packagejson/package_json_browser_index_no_ext
 
@@ -3591,7 +3591,7 @@ expression: output
 
 # tests/esbuild/ts/ts_implicit_extensions
 
-- entry-!~{000}~.js => entry-XoKX_tpD.js
+- entry-!~{000}~.js => entry-OT2OuRyH.js
 
 # tests/esbuild/ts/ts_implicit_extensions_missing
 
@@ -3644,7 +3644,7 @@ expression: output
 
 # tests/esbuild/ts/ts_import_mts
 
-- entry-!~{000}~.js => entry-X5wcHcwM.js
+- entry-!~{000}~.js => entry-FooxoANa.js
 
 # tests/esbuild/ts/ts_import_type_only_file
 

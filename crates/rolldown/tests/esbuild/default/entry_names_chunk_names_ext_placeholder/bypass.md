@@ -1,5 +1,6 @@
 # Reason
-1. custom diff resolver
+1. css comments
+2. different chunk file naming style
 # Diff
 ## /out/main/js/entry1-4X3SO762.js
 ### esbuild
@@ -11,16 +12,22 @@ console.log("entry1");
 ```
 ### rolldown
 ```js
+import "./shared.js";
 
+//#region entries/entry1.js
+console.log("entry1");
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/main/js/entry1-4X3SO762.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	entries_entry1.js
+@@ -1,2 +1,2 @@
 -import "../../common/js/chunk-XHGYOYUR.js";
--console.log("entry1");
++import "./shared.js";
+ console.log("entry1");
 
 ```
 ## /out/main/js/entry2-URQRHZS5.js
@@ -33,35 +40,22 @@ console.log("entry2");
 ```
 ### rolldown
 ```js
+import "./shared.js";
 
+//#region entries/entry2.js
+console.log("entry2");
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/main/js/entry2-URQRHZS5.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	entries_entry2.js
+@@ -1,2 +1,2 @@
 -import "../../common/js/chunk-XHGYOYUR.js";
--console.log("entry2");
-
-```
-## /out/common/js/chunk-XHGYOYUR.js
-### esbuild
-```js
-// src/lib/shared.js
-console.log("shared");
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/common/js/chunk-XHGYOYUR.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
--console.log("shared");
++import "./shared.js";
+ console.log("entry2");
 
 ```
 ## /out/main/css/entry1-3JZGIUSL.css
@@ -74,19 +68,21 @@ a:after {
 ```
 ### rolldown
 ```js
+a:after { content: "entry1" }
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/main/css/entry1-3JZGIUSL.css
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entries_entry1.css
+@@ -1,4 +1,1 @@
 -/* src/entries/entry1.css */
 -a:after {
 -  content: "entry1";
 -}
 \ No newline at end of file
++a:after { content: "entry1" }
 
 ```
 ## /out/main/css/entry2-NXZBPPIA.css
@@ -99,18 +95,20 @@ a:after {
 ```
 ### rolldown
 ```js
+a:after { content: "entry2" }
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/main/css/entry2-NXZBPPIA.css
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entries_entry2.css
+@@ -1,4 +1,1 @@
 -/* src/entries/entry2.css */
 -a:after {
 -  content: "entry2";
 -}
 \ No newline at end of file
++a:after { content: "entry2" }
 
 ```

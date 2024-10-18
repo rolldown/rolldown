@@ -52,18 +52,8 @@ console.log("correct");
 ```
 ### rolldown
 ```js
-import "./pick-ts.js";
-import "./pick-tsx.jsx";
-import "./order-js.js";
-import "./order-jsx.jsx";
-import "pkg/foo-js.js";
-import "pkg/foo-jsx.jsx";
-import "pkg-exports/xyz-js";
-import "pkg-exports/xyz-jsx";
 import "pkg-exports/foo-js.js";
 import "pkg-exports/foo-jsx.jsx";
-import "#xyz-js";
-import "#xyz-jsx";
 import "#bar/foo-js.js";
 import "#bar/foo-jsx.jsx";
 
@@ -71,7 +61,47 @@ import "#bar/foo-jsx.jsx";
 console.log("correct");
 
 //#endregion
+//#region pick-ts.ts
+console.log("correct");
+
+//#endregion
 //#region pick-jsx.jsx
+console.log("correct");
+
+//#endregion
+//#region pick-tsx.tsx
+console.log("correct");
+
+//#endregion
+//#region order-js.ts
+console.log("correct");
+
+//#endregion
+//#region order-jsx.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg/foo-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg/foo-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/abc-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/abc-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/abc-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/abc-jsx.tsx
 console.log("correct");
 
 //#endregion
@@ -81,33 +111,20 @@ console.log("correct");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,16 +1,16 @@
-+import "./pick-ts.js";
-+import "./pick-tsx.jsx";
-+import "./order-js.js";
-+import "./order-jsx.jsx";
-+import "pkg/foo-js.js";
-+import "pkg/foo-jsx.jsx";
-+import "pkg-exports/xyz-js";
-+import "pkg-exports/xyz-jsx";
+@@ -1,4 +1,8 @@
 +import "pkg-exports/foo-js.js";
 +import "pkg-exports/foo-jsx.jsx";
-+import "#xyz-js";
-+import "#xyz-jsx";
 +import "#bar/foo-js.js";
 +import "#bar/foo-jsx.jsx";
  console.log("correct");
  console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
--console.log("correct");
+ console.log("correct");
+ console.log("correct");
+@@ -9,8 +13,4 @@
+ console.log("correct");
+ console.log("correct");
+ console.log("correct");
+ console.log("correct");
 -console.log("correct");
 -console.log("correct");
 -console.log("correct");

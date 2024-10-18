@@ -145,6 +145,7 @@ impl ScanStage {
           ResolveError::PackagePathNotExported(..) => {
             errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
+          ResolveError::ExtensionAlias(_) => {}
           _ => {
             return Err(e.into());
           }

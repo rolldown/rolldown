@@ -18,42 +18,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "#xyz-js" is imported by "node_modules/pkg-imports/index.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "#xyz-jsx" is imported by "node_modules/pkg-imports/index.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "./order-js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "./order-jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "./pick-ts.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "./pick-tsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
 [UNRESOLVED_IMPORT] Warning: "pkg-exports/foo-js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
 
 ```
@@ -63,47 +27,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: "pkg-exports/foo-jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg-exports/xyz-js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg-exports/xyz-jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo-js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo-jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-import "./pick-ts.js";
-import "./pick-tsx.jsx";
-import "./order-js.js";
-import "./order-jsx.jsx";
-import "pkg/foo-js.js";
-import "pkg/foo-jsx.jsx";
-import "pkg-exports/xyz-js";
-import "pkg-exports/xyz-jsx";
 import "pkg-exports/foo-js.js";
 import "pkg-exports/foo-jsx.jsx";
-import "#xyz-js";
-import "#xyz-jsx";
 import "#bar/foo-js.js";
 import "#bar/foo-jsx.jsx";
 
@@ -111,7 +41,47 @@ import "#bar/foo-jsx.jsx";
 console.log("correct");
 
 //#endregion
+//#region pick-ts.ts
+console.log("correct");
+
+//#endregion
 //#region pick-jsx.jsx
+console.log("correct");
+
+//#endregion
+//#region pick-tsx.tsx
+console.log("correct");
+
+//#endregion
+//#region order-js.ts
+console.log("correct");
+
+//#endregion
+//#region order-jsx.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg/foo-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg/foo-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/abc-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/abc-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/abc-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/abc-jsx.tsx
 console.log("correct");
 
 //#endregion

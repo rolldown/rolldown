@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import fs from "node:fs";
-import http from "node:http";
+import fs from "#fs";
+import http from "#http";
 
 //#region entry.js
 fs.readFileSync();

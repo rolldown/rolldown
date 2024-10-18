@@ -100,6 +100,7 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingInjectImportNamed_struct_9']?.()
   __napiInstance.exports['__napi_register__BindingInjectImportNamespace_struct_10']?.()
   __napiInstance.exports['__napi_register__BindingInputItem_struct_11']?.()
+<<<<<<< HEAD
   __napiInstance.exports['__napi_register__BindingWatchOption_struct_12']?.()
   __napiInstance.exports['__napi_register__BindingResolveOptions_struct_13']?.()
   __napiInstance.exports['__napi_register__BindingTreeshake_struct_14']?.()
@@ -108,6 +109,15 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingMatchGroup_struct_17']?.()
   __napiInstance.exports['__napi_register__BindingOutputOptions_struct_18']?.()
   __napiInstance.exports['__napi_register__BindingPluginContext_struct_19']?.()
+=======
+  __napiInstance.exports['__napi_register__BindingResolveOptions_struct_12']?.()
+  __napiInstance.exports['__napi_register__BindingTreeshake_struct_13']?.()
+  __napiInstance.exports['__napi_register__BindingInputOptions_struct_14']?.()
+  __napiInstance.exports['__napi_register__BindingAdvancedChunksOptions_struct_15']?.()
+  __napiInstance.exports['__napi_register__BindingMatchGroup_struct_16']?.()
+  __napiInstance.exports['__napi_register__BindingOutputOptions_struct_17']?.()
+  __napiInstance.exports['__napi_register__BindingPluginContext_struct_18']?.()
+>>>>>>> 7f7549c40 (feat: support PluginContext addWatchFile)
   __napiInstance.exports['__napi_register__BindingPluginContext_impl_25']?.()
   __napiInstance.exports['__napi_register__BindingPluginContextResolvedId_struct_26']?.()
   __napiInstance.exports['__napi_register__BindingPluginOptions_struct_27']?.()

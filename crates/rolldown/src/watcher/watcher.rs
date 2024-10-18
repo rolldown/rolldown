@@ -135,16 +135,6 @@ impl Watcher {
     Ok(())
   }
 
-  pub fn watch_file(&self, path: &str) -> Result<()> {
-    let path = Path::new(path);
-    if path.exists() {
-      let mut inner = self.inner.try_lock().expect("Failed to lock the notify watcher.");
-      inner.watch(path, RecursiveMode::Recursive)?;
-      self.watch_files.insert(path.to_string_lossy().into());
-    }
-    Ok(())
-  }
-
   pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
     let mut tx = self.tx.try_lock()?;

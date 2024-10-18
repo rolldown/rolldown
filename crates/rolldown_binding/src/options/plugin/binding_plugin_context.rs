@@ -61,6 +61,11 @@ impl BindingPluginContext {
   pub fn get_module_ids(&self) -> Option<Vec<String>> {
     self.inner.get_module_ids()
   }
+
+  #[napi]
+  pub fn add_watch_file(&self, file: String) {
+    self.inner.add_watch_file(&file);
+  }
 }
 
 impl From<PluginContext> for BindingPluginContext {

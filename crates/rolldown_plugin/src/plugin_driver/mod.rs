@@ -4,6 +4,8 @@ use std::{
   vec,
 };
 
+use arcstr::ArcStr;
+use dashmap::DashSet;
 use rolldown_common::{ModuleTable, SharedFileEmitter, SharedNormalizedBundlerOptions};
 use rolldown_resolver::Resolver;
 
@@ -30,6 +32,7 @@ pub struct PluginDriver {
   resolver: Arc<Resolver>,
   file_emitter: SharedFileEmitter,
   options: SharedNormalizedBundlerOptions,
+  pub watch_files: Arc<DashSet<ArcStr>>,
 }
 
 impl PluginDriver {
@@ -39,6 +42,7 @@ impl PluginDriver {
     file_emitter: &SharedFileEmitter,
     options: &SharedNormalizedBundlerOptions,
   ) -> SharedPluginDriver {
+    let watch_files = Arc::new(DashSet::default());
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(plugins.len());
@@ -61,6 +65,7 @@ impl PluginDriver {
             file_emitter: Arc::clone(file_emitter),
             module_table: OnceLock::default(),
             options: Arc::clone(options),
+            watch_files: Arc::clone(&watch_files),
           }
           .into(),
         );
@@ -74,11 +79,13 @@ impl PluginDriver {
         resolver: Arc::clone(resolver),
         file_emitter: Arc::clone(file_emitter),
         options: Arc::clone(options),
+        watch_files,
       }
     })
   }
 
   pub fn new_shared_from_self(&self) -> SharedPluginDriver {
+    let watch_files = Arc::new(DashSet::default());
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
@@ -101,6 +108,7 @@ impl PluginDriver {
             file_emitter: Arc::clone(&self.file_emitter),
             module_table: OnceLock::default(),
             options: Arc::clone(&self.options),
+            watch_files: Arc::clone(&watch_files),
           }
           .into(),
         );
@@ -114,6 +122,7 @@ impl PluginDriver {
         resolver: Arc::clone(&self.resolver),
         file_emitter: Arc::clone(&self.file_emitter),
         options: Arc::clone(&self.options),
+        watch_files,
       }
     })
   }

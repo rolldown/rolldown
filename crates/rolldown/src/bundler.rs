@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::Result;
 
+use arcstr::ArcStr;
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -188,12 +189,16 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
-    output.watch_files = link_stage_output
-      .module_table
-      .modules
-      .iter()
-      .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
-      .collect();
+    output.watch_files = {
+      let mut files = link_stage_output
+        .module_table
+        .modules
+        .iter()
+        .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
+        .collect::<Vec<ArcStr>>();
+      files.extend(self.plugin_driver.watch_files.iter().map(|f| f.clone()));
+      files
+    };
 
     Ok(output)
   }

@@ -8,16 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-class KeepMe2 {
+var KeepMe2 = class {
 	static x = "x";
 	static y = sideEffects();
 	static z = "z";
-}
-class KeepMe3 {
+};
+var KeepMe3 = class {
 	static x = "x";
 	static y = "y";
 	static z = "z";
-}
+};
 new KeepMe3();
 
 //#endregion

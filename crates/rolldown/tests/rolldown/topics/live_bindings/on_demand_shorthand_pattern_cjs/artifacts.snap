@@ -12,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 const short1 = "";
 let short2 = "";
 function short3() {}
-class short4 {}
+var short4 = class {};
 let nonShort1 = "";
 nonShort1 = "";
 function nonShort2() {}

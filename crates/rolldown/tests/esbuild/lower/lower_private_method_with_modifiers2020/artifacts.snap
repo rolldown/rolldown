@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	*#g() {}
 	async #a() {}
 	async *#ag() {}
 	static *#sg() {}
 	static async #sa() {}
 	static async *#sag() {}
-}
+};
 
 //#endregion
 export { Foo };

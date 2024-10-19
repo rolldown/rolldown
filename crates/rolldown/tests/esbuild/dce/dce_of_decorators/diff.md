@@ -43,19 +43,19 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.js
-@fn class Class {}
-class Field {
+var Class = @fn class {};
+var Field = class {
 	@fn field;
-}
-class Method {
+};
+var Method = class {
 	@fn method() {}
-}
-class StaticField {
+};
+var StaticField = class {
 	@fn static field;
-}
-class StaticMethod {
+};
+var StaticMethod = class {
 	@fn static method() {}
-}
+};
 
 //#endregion
 ```
@@ -76,43 +76,35 @@ class StaticMethod {
 +const fn = () => {
 +	console.log("side effect");
  };
--var Field = class {
++
++//#endregion
++//#region keep-these.js
++var Class = @fn class {};
+ var Field = class {
 -  @fn field;
--};
--var Method = class {
++	@fn field;
+ };
+ var Method = class {
 -  @fn method() {
 -  }
--};
++	@fn method() {}
+ };
 -var Accessor = class {
 -  @fn accessor accessor;
 -};
--var StaticField = class {
+ var StaticField = class {
 -  @fn static field;
--};
--var StaticMethod = class {
++	@fn static field;
+ };
+ var StaticMethod = class {
 -  @fn static method() {
 -  }
--};
++	@fn static method() {}
+ };
 -var StaticAccessor = class {
 -  @fn static accessor accessor;
 -};
 \ No newline at end of file
-+
-+//#endregion
-+//#region keep-these.js
-+@fn class Class {}
-+class Field {
-+	@fn field;
-+}
-+class Method {
-+	@fn method() {}
-+}
-+class StaticField {
-+	@fn static field;
-+}
-+class StaticMethod {
-+	@fn static method() {}
-+}
 +
 +//#endregion
 \ No newline at end of file

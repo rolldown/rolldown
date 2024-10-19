@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region b.ts
-class Foo {}
+var Foo = class {};
 (function(_Foo) {
 	let foo = _Foo.foo = 1;
 })(Foo || (Foo = {}));

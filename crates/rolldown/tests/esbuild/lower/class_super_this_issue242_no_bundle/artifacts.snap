@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-class A {}
-class B extends A {
+var A = class {};
+var B = class extends A {
 	#e;
 	constructor(c) {
 		super();
@@ -18,7 +18,7 @@ class B extends A {
 	f() {
 		return this.#e;
 	}
-}
+};
 
 //#endregion
 export { A, B };

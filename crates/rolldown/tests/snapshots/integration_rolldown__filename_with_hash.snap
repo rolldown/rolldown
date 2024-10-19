@@ -69,15 +69,15 @@ expression: output
 
 # tests/esbuild/dce/dce_class_static_blocks
 
-- entry-!~{000}~.js => entry-UtNzdk_d.js
+- entry-!~{000}~.js => entry-ydSnHRHP.js
 
 # tests/esbuild/dce/dce_class_static_blocks_minify_syntax
 
-- entry-!~{000}~.js => entry-UtNzdk_d.js
+- entry-!~{000}~.js => entry-ydSnHRHP.js
 
 # tests/esbuild/dce/dce_of_decorators
 
-- keep-these-!~{000}~.js => keep-these-UgSZFBol.js
+- keep-these-!~{000}~.js => keep-these-sx7aWdLv.js
 
 # tests/esbuild/dce/dce_of_destructuring
 
@@ -85,7 +85,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-v27V2Tbt.js
+- keep-these-!~{000}~.js => keep-these-Eol8W5A7.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -98,7 +98,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
-- class-!~{000}~.js => class-2uWxd9xm.js
+- class-!~{000}~.js => class-DbB4MfwL.js
 - object-!~{001}~.js => object-idHXeIcl.js
 
 # tests/esbuild/dce/dce_of_using_declarations
@@ -482,7 +482,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 
-- entry-!~{000}~.js => entry-RvtnQEeE.js
+- entry-!~{000}~.js => entry-sC_azwl8.js
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
@@ -523,15 +523,15 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
-- entry-!~{000}~.js => entry-_3nHuN8C.js
+- entry-!~{000}~.js => entry-gXkO7pY3.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 
-- entry-!~{000}~.js => entry-Qh-ZRqFU.js
+- entry-!~{000}~.js => entry-PblpdjJh.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
 
-- entry-!~{000}~.js => entry-_3nHuN8C.js
+- entry-!~{000}~.js => entry-gXkO7pY3.js
 
 # tests/esbuild/dce/tree_shaking_no_bundle_cjs
 
@@ -563,7 +563,7 @@ expression: output
 
 # tests/esbuild/default/argument_default_value_scope_no_bundle
 
-- entry-!~{000}~.js => entry-heFj9wC3.js
+- entry-!~{000}~.js => entry-K6_0Ssgv.js
 
 # tests/esbuild/default/arguments_special_case_no_bundle
 
@@ -583,11 +583,11 @@ expression: output
 
 # tests/esbuild/default/avoid_tdz
 
-- entry-!~{000}~.js => entry-A1nNw3to.js
+- entry-!~{000}~.js => entry-b8SesfVS.js
 
 # tests/esbuild/default/avoid_tdz_no_bundle
 
-- entry-!~{000}~.js => entry-Imx1Ybbo.js
+- entry-!~{000}~.js => entry-R4wuRpW5.js
 
 # tests/esbuild/default/await_import_inside_try
 
@@ -749,19 +749,19 @@ expression: output
 
 # tests/esbuild/default/export_forms_es6
 
-- entry-!~{000}~.js => entry-RaecnKcd.js
+- entry-!~{000}~.js => entry-KsD22hz5.js
 
 # tests/esbuild/default/export_forms_iife
 
-- entry-!~{000}~.js => entry-5chQIRYZ.js
+- entry-!~{000}~.js => entry-tWnm0zx6.js
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
-- a-!~{000}~.js => a-nMpcVPeA.js
+- a-!~{000}~.js => a-vd8JZz7u.js
 - b-!~{001}~.js => b-3I-u9Ihp.js
 - c-!~{002}~.js => c-SXH08z-q.js
-- d-!~{003}~.js => d-JEROi8we.js
-- e-!~{004}~.js => e-54qVHJax.js
+- d-!~{003}~.js => d-GndxEicf.js
+- e-!~{004}~.js => e-zqLTbQrw.js
 - b-!~{005}~.js => b-OEnBzryX.js
 
 # tests/esbuild/default/export_fs_browser
@@ -1086,11 +1086,11 @@ expression: output
 
 # tests/esbuild/default/keep_names_class_static_name
 
-- entry-!~{000}~.js => entry-_kuqXaE-.js
+- entry-!~{000}~.js => entry-EmVt--jB.js
 
 # tests/esbuild/default/keep_names_tree_shaking
 
-- entry-!~{000}~.js => entry-mFqnVUL4.js
+- entry-!~{000}~.js => entry-LONGxrtA.js
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 
@@ -1232,7 +1232,7 @@ expression: output
 
 # tests/esbuild/default/mangle_props_lowered_class_fields
 
-- entry-!~{000}~.js => entry-P7du9Yte.js
+- entry-!~{000}~.js => entry--2TudukU.js
 
 # tests/esbuild/default/mangle_props_lowered_optional_chain
 
@@ -1373,7 +1373,7 @@ expression: output
 
 # tests/esbuild/default/minify_private_identifiers_no_bundle
 
-- entry-!~{000}~.js => entry-yaWV1aKI.js
+- entry-!~{000}~.js => entry-qRgt--Cg.js
 
 # tests/esbuild/default/minify_sibling_labels_no_bundle
 
@@ -1407,7 +1407,7 @@ expression: output
 
 # tests/esbuild/default/new_expression_common_js
 
-- entry-!~{000}~.js => entry-ngknVB--.js
+- entry-!~{000}~.js => entry-Q7mYxTwE.js
 
 # tests/esbuild/default/no_overwrite_input_file_error
 
@@ -1526,7 +1526,7 @@ expression: output
 
 # tests/esbuild/default/rename_private_identifiers_no_bundle
 
-- entry-!~{000}~.js => entry-yaWV1aKI.js
+- entry-!~{000}~.js => entry-qRgt--Cg.js
 
 # tests/esbuild/default/require_and_dynamic_import_invalid_template
 
@@ -1649,7 +1649,7 @@ expression: output
 
 # tests/esbuild/default/this_inside_function
 
-- entry-!~{000}~.js => entry-AkZsYrRm.js
+- entry-!~{000}~.js => entry-Xf0IOEkF.js
 
 # tests/esbuild/default/this_outside_function
 
@@ -2304,11 +2304,11 @@ expression: output
 
 # tests/esbuild/loader/jsx_preserve_capital_letter
 
-- entry-!~{000}~.js => entry-jpCuCf9p.js
+- entry-!~{000}~.js => entry-Uh1ojmQo.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify
 
-- entry-!~{000}~.js => entry-n5nkRNA3.js
+- entry-!~{000}~.js => entry-9v6Mn1-r.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested
 
@@ -2549,60 +2549,60 @@ expression: output
 
 # tests/esbuild/lower/class_super_this_issue242_no_bundle
 
-- entry-!~{000}~.js => entry-Q2HaOl0f.js
+- entry-!~{000}~.js => entry-SGJaZHCV.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es2021
 
-- js-define-!~{000}~.js => js-define-6jWEUQGh.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-UJPIAnh9.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-rAi7Lvnf.js
+- js-define-!~{000}~.js => js-define-aXyK_Xwq.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-kZpcceii.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es2022
 
-- js-define-!~{000}~.js => js-define-6jWEUQGh.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-UJPIAnh9.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-rAi7Lvnf.js
+- js-define-!~{000}~.js => js-define-aXyK_Xwq.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-kZpcceii.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es_next
 
-- js-define-!~{000}~.js => js-define-6jWEUQGh.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-UJPIAnh9.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-rAi7Lvnf.js
+- js-define-!~{000}~.js => js-define-aXyK_Xwq.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-kZpcceii.js
 
 # tests/esbuild/lower/java_script_decorators_bundle_issue3768
 
-- base-instance-method-!~{000}~.js => base-instance-method-yHncQdU2.js
-- base-instance-field-!~{001}~.js => base-instance-field-Rysiuiw3.js
+- base-instance-method-!~{000}~.js => base-instance-method-TOUlI-gg.js
+- base-instance-field-!~{001}~.js => base-instance-field-9WUpMusJ.js
 - base-instance-accessor-!~{002}~.js => base-instance-accessor-zfdJig88.js
-- base-static-method-!~{003}~.js => base-static-method-HpU48Ur6.js
-- base-static-field-!~{004}~.js => base-static-field-aUNn_tsp.js
+- base-static-method-!~{003}~.js => base-static-method-dubSmZAG.js
+- base-static-field-!~{004}~.js => base-static-field-zO7zpUGv.js
 - base-static-accessor-!~{005}~.js => base-static-accessor-WB7tiHMm.js
-- derived-instance-method-!~{006}~.js => derived-instance-method-hk0n1BQb.js
-- derived-instance-field-!~{007}~.js => derived-instance-field-mNi_dWYK.js
+- derived-instance-method-!~{006}~.js => derived-instance-method-JbD8OG7c.js
+- derived-instance-field-!~{007}~.js => derived-instance-field-FMd8NxBx.js
 - derived-instance-accessor-!~{008}~.js => derived-instance-accessor-XlS0wVAn.js
-- derived-static-method-!~{009}~.js => derived-static-method-rPMR-G9c.js
-- derived-static-field-!~{00a}~.js => derived-static-field-XOiLARIw.js
+- derived-static-method-!~{009}~.js => derived-static-method-mtkOzFK_.js
+- derived-static-field-!~{00a}~.js => derived-static-field-KCg03J3T.js
 - derived-static-accessor-!~{00b}~.js => derived-static-accessor-JXovLVER.js
 
 # tests/esbuild/lower/java_script_decorators_es_next
 
-- entry-!~{000}~.js => entry-mbLV5ynA.js
+- entry-!~{000}~.js => entry-Q-lIYXCd.js
 
 # tests/esbuild/lower/lower_async2016_no_bundle
 
-- entry-!~{000}~.js => entry-NRvNuU2e.js
+- entry-!~{000}~.js => entry-BW5AxcwT.js
 
 # tests/esbuild/lower/lower_async2017_no_bundle
 
-- entry-!~{000}~.js => entry-dQvJmuhr.js
+- entry-!~{000}~.js => entry-qUr20Uci.js
 
 # tests/esbuild/lower/lower_async_arrow_super_es2016
 
-- entry-!~{000}~.js => entry-Ddn93Lsn.js
+- entry-!~{000}~.js => entry--JLc72tW.js
 
 # tests/esbuild/lower/lower_async_arrow_super_setter_es2016
 
-- entry-!~{000}~.js => entry-V57Wzb61.js
+- entry-!~{000}~.js => entry-QFQN8kaf.js
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -2610,11 +2610,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-pCeNqumw.js
+- entry-!~{000}~.js => entry-jsOJBBzo.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-pCeNqumw.js
+- entry-!~{000}~.js => entry-jsOJBBzo.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2642,7 +2642,7 @@ expression: output
 
 # tests/esbuild/lower/lower_class_field_strict_tsconfig_json2020
 
-- entry-!~{000}~.js => entry-8JrrZPwc.js
+- entry-!~{000}~.js => entry-LsQoo_ac.js
 
 # tests/esbuild/lower/lower_exponentiation_operator_no_bundle
 
@@ -2681,7 +2681,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-Kn6DKMLm.js
+- entry-!~{000}~.js => entry-o6G_594y.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2693,7 +2693,7 @@ expression: output
 
 # tests/esbuild/lower/lower_private_class_accessor_order
 
-- entry-!~{000}~.js => entry-tlYFb74P.js
+- entry-!~{000}~.js => entry-Mwu2GcWR.js
 
 # tests/esbuild/lower/lower_private_class_brand_check_supported
 
@@ -2709,27 +2709,27 @@ expression: output
 
 # tests/esbuild/lower/lower_private_class_field_order
 
-- entry-!~{000}~.js => entry-O1C8SzKR.js
+- entry-!~{000}~.js => entry-xpJkceQK.js
 
 # tests/esbuild/lower/lower_private_class_field_static_issue1424
 
-- entry-!~{000}~.js => entry-UvBmOBQk.js
+- entry-!~{000}~.js => entry-P4Y3Ig4z.js
 
 # tests/esbuild/lower/lower_private_class_method_order
 
-- entry-!~{000}~.js => entry-F4wtQwjU.js
+- entry-!~{000}~.js => entry-A5csyUVC.js
 
 # tests/esbuild/lower/lower_private_class_static_accessor_order
 
-- entry-!~{000}~.js => entry-LsCv39Nb.js
+- entry-!~{000}~.js => entry-t3HCQ-Op.js
 
 # tests/esbuild/lower/lower_private_class_static_field_order
 
-- entry-!~{000}~.js => entry-g9gOjsR0.js
+- entry-!~{000}~.js => entry-7QjXKD6z.js
 
 # tests/esbuild/lower/lower_private_class_static_method_order
 
-- entry-!~{000}~.js => entry-s-ZLRsTa.js
+- entry-!~{000}~.js => entry-yH04T7Gu.js
 
 # tests/esbuild/lower/lower_private_field_assignments2015_no_bundle
 
@@ -2761,47 +2761,47 @@ expression: output
 
 # tests/esbuild/lower/lower_private_getter_setter2015
 
-- entry-!~{000}~.js => entry-qShxsz35.js
+- entry-!~{000}~.js => entry-pUPKhVp7.js
 
 # tests/esbuild/lower/lower_private_getter_setter2019
 
-- entry-!~{000}~.js => entry-qShxsz35.js
+- entry-!~{000}~.js => entry-pUPKhVp7.js
 
 # tests/esbuild/lower/lower_private_getter_setter2020
 
-- entry-!~{000}~.js => entry-qShxsz35.js
+- entry-!~{000}~.js => entry-pUPKhVp7.js
 
 # tests/esbuild/lower/lower_private_getter_setter_next
 
-- entry-!~{000}~.js => entry-qShxsz35.js
+- entry-!~{000}~.js => entry-pUPKhVp7.js
 
 # tests/esbuild/lower/lower_private_method2019
 
-- entry-!~{000}~.js => entry-p5inpo8U.js
+- entry-!~{000}~.js => entry-ovsB9fWW.js
 
 # tests/esbuild/lower/lower_private_method2020
 
-- entry-!~{000}~.js => entry-p5inpo8U.js
+- entry-!~{000}~.js => entry-ovsB9fWW.js
 
 # tests/esbuild/lower/lower_private_method_next
 
-- entry-!~{000}~.js => entry-p5inpo8U.js
+- entry-!~{000}~.js => entry-ovsB9fWW.js
 
 # tests/esbuild/lower/lower_private_method_with_modifiers2020
 
-- entry-!~{000}~.js => entry-DsArbRfD.js
+- entry-!~{000}~.js => entry-v1s1of1m.js
 
 # tests/esbuild/lower/lower_private_super_es2021
 
-- entry-!~{000}~.js => entry-dw35Oq4h.js
+- entry-!~{000}~.js => entry-MU1a61L2.js
 
 # tests/esbuild/lower/lower_private_super_es2022
 
-- entry-!~{000}~.js => entry-dw35Oq4h.js
+- entry-!~{000}~.js => entry-MU1a61L2.js
 
 # tests/esbuild/lower/lower_private_super_static_bundle_issue2158
 
-- entry-!~{000}~.js => entry-xIcqPFNu.js
+- entry-!~{000}~.js => entry-U710CLp8.js
 
 # tests/esbuild/lower/lower_reg_exp_name_collision
 
@@ -2809,11 +2809,11 @@ expression: output
 
 # tests/esbuild/lower/lower_static_async_arrow_super_es2016
 
-- entry-!~{000}~.js => entry-ffh5oIkx.js
+- entry-!~{000}~.js => entry-xdKeCT59.js
 
 # tests/esbuild/lower/lower_static_async_arrow_super_setter_es2016
 
-- entry-!~{000}~.js => entry-EprnWjKz.js
+- entry-!~{000}~.js => entry-ITnCR5nn.js
 
 # tests/esbuild/lower/lower_static_async_super_es2016_no_bundle
 
@@ -2855,13 +2855,13 @@ expression: output
 - hoist-export-clause-!~{005}~.js => hoist-export-clause-_USK_I--.js
 - hoist-export-local-direct-!~{006}~.js => hoist-export-local-direct-grFamSzS.js
 - hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-j7hlmGVc.js
-- hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-zibXbFAU.js
-- hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-ZRHr45MS.js
+- hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-GYMTQzne.js
+- hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-DYqkN_7-.js
 - hoist-export-function-direct-!~{00a}~.js => hoist-export-function-direct-hl6f48kH.js
 - hoist-export-function-indirect-!~{00b}~.js => hoist-export-function-indirect-QyGH-kT1.js
-- hoist-export-default-class-name-unused-!~{00c}~.js => hoist-export-default-class-name-unused-h3gCDlh2.js
-- hoist-export-default-class-name-used-!~{00d}~.js => hoist-export-default-class-name-used-P2C3Yi86.js
-- hoist-export-default-class-anonymous-!~{00e}~.js => hoist-export-default-class-anonymous-81t37v5R.js
+- hoist-export-default-class-name-unused-!~{00c}~.js => hoist-export-default-class-name-unused-lpeDZBzT.js
+- hoist-export-default-class-name-used-!~{00d}~.js => hoist-export-default-class-name-used-XwDgTlTn.js
+- hoist-export-default-class-anonymous-!~{00e}~.js => hoist-export-default-class-anonymous-zKZuREwe.js
 - hoist-export-default-function-name-unused-!~{00f}~.js => hoist-export-default-function-name-unused-lqeCNVHP.js
 - hoist-export-default-function-name-used-!~{00g}~.js => hoist-export-default-function-name-used-rOLkP3gc.js
 - hoist-export-default-function-anonymous-!~{00h}~.js => hoist-export-default-function-anonymous-UVtUFena.js
@@ -2885,11 +2885,11 @@ expression: output
 
 # tests/esbuild/lower/static_class_block_es2021
 
-- entry-!~{000}~.js => entry-RQTfS613.js
+- entry-!~{000}~.js => entry-E3Uu7BFd.js
 
 # tests/esbuild/lower/static_class_block_es_next
 
-- entry-!~{000}~.js => entry-RQTfS613.js
+- entry-!~{000}~.js => entry-E3Uu7BFd.js
 
 # tests/esbuild/lower/ts_lower_class_field2020_no_bundle
 
@@ -2897,7 +2897,7 @@ expression: output
 
 # tests/esbuild/lower/ts_lower_class_field_strict_tsconfig_json2020
 
-- entry-!~{000}~.js => entry-q5VEb44l.js
+- entry-!~{000}~.js => entry-18KlMgFQ.js
 
 # tests/esbuild/lower/ts_lower_class_private_field_next_no_bundle
 
@@ -2913,7 +2913,7 @@ expression: output
 
 # tests/esbuild/lower/ts_lower_private_field_and_method_avoid_name_collision2015
 
-- entry-!~{000}~.js => entry-9iz-LUMX.js
+- entry-!~{000}~.js => entry-LED0dn4-.js
 
 # tests/esbuild/lower/ts_lower_private_field_optional_chain2015_no_bundle
 
@@ -3402,27 +3402,27 @@ expression: output
 
 # tests/esbuild/ts/this_inside_function_ts
 
-- entry-!~{000}~.js => entry-cVylm1yV.js
+- entry-!~{000}~.js => entry-m4ZCvGvg.js
 
 # tests/esbuild/ts/this_inside_function_ts_no_bundle
 
-- entry-!~{000}~.js => entry-cVylm1yV.js
+- entry-!~{000}~.js => entry-m4ZCvGvg.js
 
 # tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields
 
-- entry-!~{000}~.js => entry-cVylm1yV.js
+- entry-!~{000}~.js => entry-m4ZCvGvg.js
 
 # tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields
 
-- entry-!~{000}~.js => entry-cVylm1yV.js
+- entry-!~{000}~.js => entry-m4ZCvGvg.js
 
 # tests/esbuild/ts/ts_abstract_class_field_use_assign
 
-- entry-!~{000}~.js => entry-8WFhHeio.js
+- entry-!~{000}~.js => entry-XkN4ZOt_.js
 
 # tests/esbuild/ts/ts_abstract_class_field_use_define
 
-- entry-!~{000}~.js => entry-K108LA7D.js
+- entry-!~{000}~.js => entry-qsief026.js
 
 # tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
 
@@ -3430,15 +3430,15 @@ expression: output
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_false
 
-- entry-!~{000}~.js => entry-Ua9rf_i5.js
+- entry-!~{000}~.js => entry-m5vKTF4W.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true
 
-- entry-!~{000}~.js => entry-Ua9rf_i5.js
+- entry-!~{000}~.js => entry-m5vKTF4W.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 
-- entry-!~{000}~.js => entry-Ua9rf_i5.js
+- entry-!~{000}~.js => entry-m5vKTF4W.js
 
 # tests/esbuild/ts/ts_const_enum_comments
 
@@ -3450,7 +3450,7 @@ expression: output
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-sLOicUhb.js
+- entry-!~{000}~.js => entry-r-9tGJec.js
 
 # tests/esbuild/ts/ts_declare_const
 
@@ -3536,46 +3536,46 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 
-- entry-!~{000}~.js => entry-Ftq4oNEB.js
+- entry-!~{000}~.js => entry-T8A4EeN-.js
 
 # tests/esbuild/ts/ts_experimental_decorators
 
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
-- entry-!~{000}~.js => entry-7wibT0de.js
+- entry-!~{000}~.js => entry-bKZD75bH.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
 
-- entry-!~{000}~.js => entry-6b2FgTM_.js
+- entry-!~{000}~.js => entry-xlbutysc.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
 
-- entry-!~{000}~.js => entry-6b2FgTM_.js
+- entry-!~{000}~.js => entry-xlbutysc.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
 
-- entry-!~{000}~.js => entry-NQgiV9xv.js
+- entry-!~{000}~.js => entry-MHhkK4C3.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 
-- entry-!~{000}~.js => entry-9bmzNcnu.js
+- entry-!~{000}~.js => entry-DKZoGEGE.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 
-- entry-!~{000}~.js => entry-9bmzNcnu.js
+- entry-!~{000}~.js => entry-DKZoGEGE.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
 
-- entry-!~{000}~.js => entry-GsOXfiYM.js
+- entry-!~{000}~.js => entry-QQk5MSZZ.js
 
 # tests/esbuild/ts/ts_experimental_decorators_no_config
 
-- entry-!~{000}~.js => entry-A5Sh7GH0.js
+- entry-!~{000}~.js => entry-igZudsVK.js
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry-HxYWU2Xb.js
+- entry-!~{000}~.js => entry--b3Aackz.js
 
 # tests/esbuild/ts/ts_export_equals
 
@@ -3587,7 +3587,7 @@ expression: output
 
 # tests/esbuild/ts/ts_export_namespace
 
-- a-!~{000}~.js => a-QKP6NZ0I.js
+- a-!~{000}~.js => a-hCpViOYz.js
 
 # tests/esbuild/ts/ts_implicit_extensions
 
@@ -3652,11 +3652,11 @@ expression: output
 
 # tests/esbuild/ts/ts_import_vs_local_collision_all_types
 
-- entry-!~{000}~.js => entry-nSxvKDT_.js
+- entry-!~{000}~.js => entry-En8chO8C.js
 
 # tests/esbuild/ts/ts_import_vs_local_collision_mixed
 
-- entry-!~{000}~.js => entry-Ltk_QxC-.js
+- entry-!~{000}~.js => entry-aFAJkuyd.js
 
 # tests/esbuild/ts/ts_minified_bundle_common_js
 
@@ -3681,7 +3681,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_enum_property_names
 
-- entry-!~{000}~.js => entry-o0PBX6tS.js
+- entry-!~{000}~.js => entry-buRGvNpg.js
 
 # tests/esbuild/ts/ts_minify_namespace
 
@@ -4732,7 +4732,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/on_demand_shorthand_pattern_cjs
 
-- main-!~{000}~.js => main-xeH2Y-L_.js
+- main-!~{000}~.js => main-CTJmP0eL.js
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 

@@ -33,30 +33,30 @@ var A_keep = class {
 ```js
 
 //#region entry.ts
-class A_keep {
+var A_keep = class {
 	static {
 		foo;
 	}
-}
-class B_keep {
+};
+var B_keep = class {
 	static {
 		this.foo;
 	}
-}
-class C_keep {
+};
+var C_keep = class {
 	static {
 		try {
 			foo;
 		} catch {}
 	}
-}
-class D_keep {
+};
+var D_keep = class {
 	static {
 		try {} finally {
 			foo;
 		}
 	}
-}
+};
 
 //#endregion
 ```
@@ -65,35 +65,31 @@ class D_keep {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,21 +1,24 @@
--var A_keep = class {
-+class A_keep {
+@@ -1,19 +1,22 @@
+ var A_keep = class {
      static {
          foo;
      }
 -}, B_keep = class {
-+}
-+class B_keep {
++};
++var B_keep = class {
      static {
          this.foo;
      }
 -}, C_keep = class {
-+}
-+class C_keep {
++};
++var C_keep = class {
      static {
          try {
              foo;
          } catch {}
      }
 -}, D_keep = class {
-+}
-+class D_keep {
++};
++var D_keep = class {
      static {
          try {} finally {
              foo;
          }
-     }
--};
-+}
 
 ```

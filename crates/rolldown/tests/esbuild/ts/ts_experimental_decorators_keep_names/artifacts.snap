@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-@decoratorMustComeAfterName class Foo {}
+var Foo = @decoratorMustComeAfterName class {};
 
 //#endregion
 export { Foo };

@@ -36,7 +36,7 @@ var v = 234;
 let l = 234;
 const c = 234;
 function Fn() {}
-class Class {}
+var Class = class {};
 
 //#endregion
 exports.C = Class

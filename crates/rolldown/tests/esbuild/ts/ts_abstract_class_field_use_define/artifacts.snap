@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region entry.ts
 const keepThisToo = Symbol("keepThisToo");
-class Foo {
+var Foo = class {
 	keepThis;
 	[keepThisToo];
-}
+};
 (() => new Foo())();
 
 //#endregion

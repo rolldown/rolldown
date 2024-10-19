@@ -3,10 +3,14 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{self, Expression, SimpleAssignmentTarget},
+    ast::{
+      self, ClassType, Expression, IdentifierReference, SimpleAssignmentTarget,
+      VariableDeclarationKind,
+    },
     visit::walk_mut,
-    VisitMut,
+    VisitMut, NONE,
   },
+  semantic::SymbolId,
   span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind};
@@ -224,7 +228,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
       }
     });
-
     walk_mut::walk_program(self, program);
 
     if needs_wrapper {
@@ -352,6 +355,26 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       ident.name,
       self.ctx.module.repr_name
     );
+    // detect if the toplevel class decl name is referenced in inner scope
+    if Some(&ident.name) == self.class_decl_symbol_id.as_ref().map(|(name, _)| name) {
+      let class_decl_symbol_id = self.class_decl_symbol_id.as_ref().unwrap().1;
+      let Some(mut current_scope) = self.current_scope() else {
+        return;
+      };
+      loop {
+        if let Some(referenced_symbol_id) = self.scope.get_binding(current_scope, &ident.name) {
+          if referenced_symbol_id == class_decl_symbol_id {
+            self.class_decl_symbol_id_referenced = true;
+          }
+          break;
+        }
+        if let Some(parent_scope) = self.scope.get_parent_id(current_scope) {
+          current_scope = parent_scope;
+        } else {
+          break;
+        }
+      }
+    }
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
@@ -651,5 +674,58 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     self.rewrite_simple_assignment_target(target);
 
     walk_mut::walk_simple_assignment_target(self, target);
+  }
+
+  // rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
+  fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
+    if let ast::Declaration::ClassDeclaration(class) = it {
+      if let Some(scope_id) = class.scope_id.get() {
+        if self.scope.get_parent_id(scope_id) == Some(self.scope.root_scope_id()) {
+          let id = class.id.take().expect("should have binding id");
+          let previous_referenced = self.class_decl_symbol_id_referenced;
+          let previous_id = self.class_decl_symbol_id.take();
+          self.class_decl_symbol_id_referenced = false;
+          self.class_decl_symbol_id =
+            id.symbol_id.get().map(|symbol_id| (id.name.clone(), symbol_id));
+          walk_mut::walk_class(self, class);
+          if self.class_decl_symbol_id_referenced {
+            class.id = Some(id.clone());
+          }
+          self.class_decl_symbol_id_referenced = previous_referenced;
+          self.class_decl_symbol_id = previous_id;
+          let var_decl = self.snippet.builder.declaration_variable(
+            SPAN,
+            VariableDeclarationKind::Var,
+            self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
+              SPAN,
+              VariableDeclarationKind::Var,
+              self.snippet.builder.binding_pattern(
+                ast::BindingPatternKind::BindingIdentifier(self.snippet.builder.alloc(id)),
+                NONE,
+                false,
+              ),
+              Some(Expression::ClassExpression(class.take_in(&self.alloc))),
+              false,
+            )),
+            false,
+          );
+          *it = var_decl;
+        }
+      }
+    }
+
+    walk_mut::walk_declaration(self, it);
+  }
+
+  fn enter_scope(
+    &mut self,
+    _flag: oxc::semantic::ScopeFlags,
+    scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
+  ) {
+    self.scope_stack.push(scope_id.get())
+  }
+
+  fn leave_scope(&mut self) {
+    self.scope_stack.pop();
   }
 }

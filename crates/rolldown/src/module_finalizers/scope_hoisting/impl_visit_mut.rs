@@ -3,10 +3,7 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{
-      self, Expression, SimpleAssignmentTarget,
-      VariableDeclarationKind,
-    },
+    ast::{self, Expression, SimpleAssignmentTarget, VariableDeclarationKind},
     visit::walk_mut,
     VisitMut, NONE,
   },

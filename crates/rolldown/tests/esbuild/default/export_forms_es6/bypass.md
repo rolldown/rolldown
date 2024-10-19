@@ -1,5 +1,5 @@
 # Reason
-1. trivial different in codegen `undefined` 
+1. trivial different in codegen `undefined`
 # Diff
 ## /out.js
 ### esbuild

@@ -7,6 +7,11 @@ import {
 import { DebugConfig } from './types'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
+
+type Resolver = (
+  esbuildFilename: string,
+  rolldownFilename: string,
+) => boolean | Record<string, string>
 /**
  * our filename generate logic is not the same as esbuild
  * so hardcode some filename remapping
@@ -14,7 +19,20 @@ import * as fs from 'node:fs'
 function defaultResolveFunction(
   esbuildFilename: string,
   rolldownFilename: string,
+  resolver?: Resolver,
 ) {
+  if (
+    typeof resolver === 'function' &&
+    resolver(esbuildFilename, rolldownFilename)
+  ) {
+    return true
+  }
+  if (resolver && typeof resolver === 'object') {
+    if (resolver[esbuildFilename] == rolldownFilename) {
+      return true
+    }
+  }
+
   if (esbuildFilename === '/out.js' && /entry\.js/.test(rolldownFilename)) {
     return true
   }
@@ -23,9 +41,7 @@ function defaultResolveFunction(
     return true
   }
 }
-/**
- * TODO: custom resolve
- */
+
 export async function diffCase(
   esbuildSnap: {
     name: string
@@ -51,8 +67,22 @@ export async function diffCase(
   }
   let diffList = []
   for (let esbuildSource of esbuildSnap.sourceList) {
+    let rewriteConfig: any = {}
+    let customResolver: Resolver | undefined
+    let configPath = path.join(caseDir, 'diff.config.js')
+    if (fs.existsSync(configPath)) {
+      const mod = (await import(configPath)).default
+      rewriteConfig = mod.rewrite ?? {}
+      customResolver = mod.resolver
+    }
     let matchedSource = rolldownSnap.find((rolldownSource) => {
-      if (defaultResolveFunction(esbuildSource.name, rolldownSource.filename)) {
+      if (
+        defaultResolveFunction(
+          esbuildSource.name,
+          rolldownSource.filename,
+          customResolver,
+        )
+      ) {
         return true
       }
       return rolldownSnap.find((snap) => {
@@ -62,12 +92,6 @@ export async function diffCase(
     let esbuildContent = esbuildSource.content
     let rolldownContent = matchedSource.content
     try {
-      let rewriteConfig = {}
-      let configPath = path.join(caseDir, 'diff.config.js')
-      if (fs.existsSync(configPath)) {
-        const mod = (await import(configPath)).default
-        rewriteConfig = mod.rewrite ?? {}
-      }
       esbuildContent = rewriteEsbuild(esbuildSource.content)
       rolldownContent = rewriteRolldown(matchedSource.content, {
         ...defaultRewriteConfig,

@@ -35,7 +35,6 @@
 - crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544
 - crates/rolldown/tests/esbuild/default/package_alias
 - crates/rolldown/tests/esbuild/default/quoted_property_mangle
-- crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
@@ -70,12 +69,6 @@
 - crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
-## custom diff resolver
-- crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder
-- crates/rolldown/tests/esbuild/default/outbase
-- crates/rolldown/tests/esbuild/default/output_extension_remapping_dir
-- crates/rolldown/tests/esbuild/default/require_with_template
-- crates/rolldown/tests/esbuild/default/scoped_external_module_exclusion
 ## Wrong output
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
@@ -87,11 +80,6 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
-## lowering class
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
-- crates/rolldown/tests/esbuild/default/export_forms_es6
-- crates/rolldown/tests/esbuild/default/this_inside_function
 ## should rewrite `require`
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_with_call_inside_try
@@ -138,6 +126,9 @@
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 - crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators
+## lowering class
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
 ## comments codegen
 - crates/rolldown/tests/esbuild/default/comment_preservation
 - crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx
@@ -159,9 +150,6 @@
 ## Wrong impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle
-## require custom resolver
-- crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6
-- crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
 ## should inline variable
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
@@ -194,6 +182,8 @@
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
+## class field lowering
+- crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
 ## related to minifier
 - crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
 ## the deconflict of no top level is sub optimal
@@ -268,6 +258,8 @@
 - crates/rolldown/tests/esbuild/default/non_determinism_issue2537
 ## alias not align
 - crates/rolldown/tests/esbuild/default/package_alias_match_longest
+## rename private identifier
+- crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 ## not support invalid template
 - crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template
 ## should rewrite when bad arg count
@@ -282,6 +274,8 @@
 - crates/rolldown/tests/esbuild/default/string_export_names_common_js
 ## string export name not correct
 - crates/rolldown/tests/esbuild/default/string_export_names_iife
+## lowering not align
+- crates/rolldown/tests/esbuild/default/this_inside_function
 ## this undefined
 - crates/rolldown/tests/esbuild/default/this_undefined_warning_esm
 ## should not appear top level `await` in cjs

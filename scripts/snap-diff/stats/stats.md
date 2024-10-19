@@ -1,7 +1,7 @@
 # Compatibility metric
 - total: 784
-- passed: 293
-- passed ratio: 37.37%
+- passed: 301
+- passed ratio: 38.39%
 # Compatibility metric details
 ## dce
 - total: 113
@@ -9,8 +9,8 @@
 - passed ratio: 58.41%
 ## default
 - total: 254
-- passed: 110
-- passed ratio: 43.31%
+- passed: 116
+- passed ratio: 45.67%
 ## glob
 - total: 9
 - passed: 0
@@ -25,8 +25,8 @@
 - passed ratio: 100.00%
 ## loader
 - total: 67
-- passed: 10
-- passed ratio: 14.93%
+- passed: 12
+- passed ratio: 17.91%
 ## lower
 - total: 79
 - passed: 4

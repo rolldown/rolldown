@@ -106,7 +106,7 @@ let bar$11 = 123;
 
 //#endregion
 //#region keep/interface-merged.ts
-var foo$3 = class {
+var foo$3 = class foo$3 {
 	static x = new foo$3();
 };
 var interface_merged_default = foo$3;
@@ -214,7 +214,7 @@ export { entry_default as default };
 -        this.x = new _foo();
 -    }
 +var bar$11 = 123;
-+var foo$3 = class {
++var foo$3 = class foo$3 {
 +    static x = new foo$3();
  };
 -var interface_merged_default = foo2;

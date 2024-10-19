@@ -32,15 +32,8 @@ pub fn finalize_normal_module(
 ) {
   ast.program.with_mut(|fields| {
     let (oxc_program, alloc) = (fields.program, fields.allocator);
-    let mut finalizer = ScopeHoistingFinalizer {
-      alloc,
-      ctx,
-      scope: &module.scope,
-      snippet: AstSnippet::new(alloc),
-      class_decl_symbol_id: None,
-      class_decl_symbol_id_referenced: false,
-      scope_stack: vec![],
-    };
+    let mut finalizer =
+      ScopeHoistingFinalizer { alloc, ctx, scope: &module.scope, snippet: AstSnippet::new(alloc) };
     finalizer.visit_program(oxc_program);
   });
 }

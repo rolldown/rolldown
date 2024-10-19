@@ -27,7 +27,7 @@ var Foo = class Foo {
 	static foo = new Foo();
 };
 let foo = Foo.foo;
-assert(foo instanceof Foo);
+assert(foo instanceof Foo, true);
 var Bar = class {};
 let bar = 123;
 
@@ -47,7 +47,7 @@ export { Bar, bar };
  };
  var foo = Foo.foo;
 -console.log(foo);
-+assert(foo instanceof Foo);
++assert(foo instanceof Foo, true);
  var Bar = class {};
  var bar = 123;
  export {Bar, bar};

@@ -105,6 +105,7 @@ pub async fn create_ecma_view<'any>(
     errors,
     ast_usage,
     symbol_ref_db,
+    self_referenced_class_decl_symbol_ids,
   } = scan_result;
   if !errors.is_empty() {
     return Ok(Err(errors));
@@ -179,6 +180,7 @@ pub async fn create_ecma_view<'any>(
     side_effects,
     has_eval,
     ast_usage,
+    self_referenced_class_decl_symbol_ids,
   };
 
   Ok(Ok(CreateEcmaViewReturn {

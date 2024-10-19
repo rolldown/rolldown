@@ -1,7 +1,6 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
-  semantic::{ScopeId, SymbolId},
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
@@ -21,13 +20,6 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
-  /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser_lower_class.go#L2277-L2283
-  /// used for check if current class decl symbol was referenced in its class scope
-  /// first element is the class name, second element is the symbol id
-  /// Since we don't have `nodes` in semantic, we needs to check every `IdentifierReference`
-  pub class_decl_symbol_id: Option<(Atom<'ast>, SymbolId)>,
-  pub class_decl_symbol_id_referenced: bool,
-  pub scope_stack: Vec<Option<ScopeId>>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -311,8 +303,5 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ret.extend(re_export_external_stmts.unwrap_or_default());
 
     ret
-  }
-  pub fn current_scope(&self) -> Option<ScopeId> {
-    *self.scope_stack.last().expect("should have at least one scope")
   }
 }

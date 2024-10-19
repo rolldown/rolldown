@@ -3575,7 +3575,7 @@ expression: output
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry--b3Aackz.js
+- entry-!~{000}~.js => entry-75tSoeOJ.js
 
 # tests/esbuild/ts/ts_export_equals
 

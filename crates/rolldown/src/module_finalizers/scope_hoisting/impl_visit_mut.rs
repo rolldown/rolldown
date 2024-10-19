@@ -4,13 +4,12 @@ use oxc::{
   allocator::{self, IntoIn},
   ast::{
     ast::{
-      self, ClassType, Expression, IdentifierReference, SimpleAssignmentTarget,
+      self, Expression, SimpleAssignmentTarget,
       VariableDeclarationKind,
     },
     visit::walk_mut,
     VisitMut, NONE,
   },
-  semantic::SymbolId,
   span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind};
@@ -267,7 +266,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
           // Hoist all top-level "var" and "function" declarations out of the closure
           old_body.into_iter().for_each(|mut stmt| match &mut stmt {
-            ast::Statement::VariableDeclaration(_) | ast::Statement::ClassDeclaration(_) => {
+            ast::Statement::VariableDeclaration(_) => {
               if let Some(converted) =
                 self.convert_decl_to_assignment(stmt.to_declaration_mut(), &mut hoisted_names)
               {
@@ -689,6 +688,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             id.symbol_id.get().map(|symbol_id| (id.name.clone(), symbol_id));
           walk_mut::walk_class(self, class);
           if self.class_decl_symbol_id_referenced {
+            // class T { static a = new T(); }
+            // needs to rewrite to `var T = class T { static a = new T(); }`
             class.id = Some(id.clone());
           }
           self.class_decl_symbol_id_referenced = previous_referenced;
@@ -704,7 +705,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 NONE,
                 false,
               ),
-              Some(Expression::ClassExpression(class.take_in(&self.alloc))),
+              Some(Expression::ClassExpression(class.take_in(self.alloc))),
               false,
             )),
             false,
@@ -722,7 +723,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     _flag: oxc::semantic::ScopeFlags,
     scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
   ) {
-    self.scope_stack.push(scope_id.get())
+    self.scope_stack.push(scope_id.get());
   }
 
   fn leave_scope(&mut self) {

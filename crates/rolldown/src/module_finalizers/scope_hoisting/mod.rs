@@ -2,7 +2,7 @@ use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
   semantic::{ScopeId, SymbolId},
-  span::{Atom, CompactStr, SPAN},
+  span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};

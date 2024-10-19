@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. dce decorator
 # Diff
 ## /out/keep-these.js
 ### esbuild

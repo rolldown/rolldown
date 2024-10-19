@@ -5,8 +5,6 @@
   diff
 ## [cross_module_constant_folding_string](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string/diff.md)
   diff
-## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/diff.md)
-  diff
 ## [dce_of_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
   diff
 ## [dce_of_destructuring](../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring/diff.md)
@@ -136,6 +134,7 @@
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)
 ## [const_value_inlining_direct_eval](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_direct_eval/bypass.md)
+## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/bypass.md)
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)
 ## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/bypass.md)

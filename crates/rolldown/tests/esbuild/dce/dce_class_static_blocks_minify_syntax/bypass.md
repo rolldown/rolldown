@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. trivial codegen diff, esbuild will try to join multiple `varDeclaration`
 # Diff
 ## /out.js
 ### esbuild

@@ -81,7 +81,6 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md')
       let diffMarkdownPath = path.join(rolldownTestPath, 'diff.md')
-
       if (fs.existsSync(bypassMarkdownPath) && typeof diffResult === 'object') {
         if (fs.existsSync(diffMarkdownPath)) {
           fs.rmSync(diffMarkdownPath, {})
@@ -92,18 +91,14 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
         if (fs.existsSync(bypassMarkdownPath)) {
           fs.rmSync(bypassMarkdownPath, {})
         }
-      } else {
-        if (typeof diffResult !== 'string') {
-          updateBypassOrDiffMarkdown(
-            path.join(rolldownTestPath, 'diff.md'),
-            diffResult,
-          )
-        } else {
-          if (diffResult === 'same' && fs.existsSync(diffMarkdownPath)) {
-            // this happens when we fixing some issues and the snapshot is align with esbuild,
-            fs.rmSync(diffMarkdownPath, {})
-          }
+        if (fs.existsSync(diffMarkdownPath)) {
+          fs.rmSync(diffMarkdownPath, {})
         }
+      } else {
+        updateBypassOrDiffMarkdown(
+          path.join(rolldownTestPath, 'diff.md'),
+          diffResult,
+        )
       }
       diffList.push({ diffResult, name: snap.name })
     }

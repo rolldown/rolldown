@@ -39,16 +39,6 @@
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
-## lowering class
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
-- crates/rolldown/tests/esbuild/dce/dce_of_decorators
-- crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
-- crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle
-- crates/rolldown/tests/esbuild/default/export_forms_es6
-- crates/rolldown/tests/esbuild/default/new_expression_common_js
-- crates/rolldown/tests/esbuild/default/this_inside_function
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -97,6 +87,11 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
+## lowering class
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
+- crates/rolldown/tests/esbuild/default/export_forms_es6
+- crates/rolldown/tests/esbuild/default/this_inside_function
 ## should rewrite `require`
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_with_call_inside_try
@@ -173,6 +168,8 @@
 ## `.txt` should be treated as cjs
 - crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 - crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest
+## dce decorator
+- crates/rolldown/tests/esbuild/dce/dce_of_decorators
 ## lower decorator
 - crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators
 ## don't support dce iife

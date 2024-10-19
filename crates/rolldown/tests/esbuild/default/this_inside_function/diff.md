@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. lowering not align
 # Diff
 ## /out.js
 ### esbuild

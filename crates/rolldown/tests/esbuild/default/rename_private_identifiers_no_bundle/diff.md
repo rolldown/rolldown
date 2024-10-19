@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. rename private identifier
 # Diff
 ## /out.js
 ### esbuild

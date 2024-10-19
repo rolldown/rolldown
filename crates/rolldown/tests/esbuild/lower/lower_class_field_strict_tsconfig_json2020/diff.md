@@ -23,15 +23,15 @@ console.log(loose_default, strict_default);
 ```js
 
 //#region loose/index.js
-class loose_index_default {
+var loose_index_default = class {
 	foo;
-}
+};
 
 //#endregion
 //#region strict/index.js
-class strict_index_default {
+var strict_index_default = class {
 	foo;
-}
+};
 
 //#endregion
 //#region entry.js
@@ -49,19 +49,17 @@ console.log(loose_index_default, strict_index_default);
 -    constructor() {
 -        __publicField(this, "foo");
 -    }
--};
++var loose_index_default = class {
++    foo;
+ };
 -var strict_default = class {
 -    constructor() {
 -        __publicField(this, "foo");
 -    }
--};
++var strict_index_default = class {
++    foo;
+ };
 -console.log(loose_default, strict_default);
-+class loose_index_default {
-+    foo;
-+}
-+class strict_index_default {
-+    foo;
-+}
 +console.log(loose_index_default, strict_index_default);
 
 ```

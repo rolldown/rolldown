@@ -82,7 +82,7 @@ var SameFileBad = function(SameFileBad$1) {
 	SameFileBad$1["PROTOTYPE"] = "prototype";
 	return SameFileBad$1;
 }(SameFileBad || {});
-class Foo {
+var Foo = class {
 	[100] = 100;
 	"200" = 200;
 	["300"] = 300;
@@ -90,7 +90,7 @@ class Foo {
 	[SameFileGood.NUM] = SameFileGood.NUM;
 	[CrossFileGood.STR] = CrossFileGood.STR;
 	[CrossFileGood.NUM] = CrossFileGood.NUM;
-}
+};
 shouldNotBeComputed(class {
 	[100] = 100;
 	"200" = 200;
@@ -126,15 +126,6 @@ mustBeComputed({ [SameFileBad.PROTO]: null }, { [CrossFileBad.PROTO]: null }, cl
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,39 +1,61 @@
--var Foo = class {
--    100 = 100;
--    200 = 200;
--    300 = 300;
--    "str 1" = "str 1";
--    123 = 123;
--    "str 2" = "str 2";
--    321 = 321;
--};
 +var CrossFileGood = (function (CrossFileGood$1) {
 +    CrossFileGood$1["STR"] = "str 2";
 +    CrossFileGood$1[CrossFileGood$1["NUM"] = 321] = "NUM";
@@ -157,7 +148,14 @@ mustBeComputed({ [SameFileBad.PROTO]: null }, { [CrossFileBad.PROTO]: null }, cl
 +    SameFileBad$1["PROTOTYPE"] = "prototype";
 +    return SameFileBad$1;
 +})(SameFileBad || ({}));
-+class Foo {
+ var Foo = class {
+-    100 = 100;
+-    200 = 200;
+-    300 = 300;
+-    "str 1" = "str 1";
+-    123 = 123;
+-    "str 2" = "str 2";
+-    321 = 321;
 +    [100] = 100;
 +    "200" = 200;
 +    ["300"] = 300;
@@ -165,7 +163,7 @@ mustBeComputed({ [SameFileBad.PROTO]: null }, { [CrossFileBad.PROTO]: null }, cl
 +    [SameFileGood.NUM] = SameFileGood.NUM;
 +    [CrossFileGood.STR] = CrossFileGood.STR;
 +    [CrossFileGood.NUM] = CrossFileGood.NUM;
-+}
+ };
  shouldNotBeComputed(class {
 -    100 = 100;
 -    200 = 200;

@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. Different naming style
 # Diff
 ## /out.js
 ### esbuild
@@ -23,12 +23,12 @@ export {
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class Foo {
 	static foo = new Foo();
-}
+};
 let foo = Foo.foo;
 assert(foo instanceof Foo);
-class Bar {}
+var Bar = class {};
 let bar = 123;
 
 //#endregion
@@ -42,15 +42,13 @@ export { Bar, bar };
 @@ -1,8 +1,8 @@
 -var Foo = class _Foo {
 -    static foo = new _Foo();
--};
-+class Foo {
++var Foo = class Foo {
 +    static foo = new Foo();
-+}
+ };
  var foo = Foo.foo;
 -console.log(foo);
--var Bar = class {};
 +assert(foo instanceof Foo);
-+class Bar {}
+ var Bar = class {};
  var bar = 123;
  export {Bar, bar};
 

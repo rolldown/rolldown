@@ -22,8 +22,8 @@ _e = new WeakMap();
 ```js
 
 //#region entry.ts
-class A {}
-class B extends A {
+var A = class {};
+var B = class extends A {
 	#e;
 	constructor(c) {
 		super();
@@ -32,7 +32,7 @@ class B extends A {
 	f() {
 		return this.#e;
 	}
-}
+};
 
 //#endregion
 export { A, B };
@@ -46,8 +46,8 @@ export { A, B };
 -var _e;
 -export class A {}
 -export class B extends A {
-+class A {}
-+class B extends A {
++var A = class {};
++var B = class extends A {
 +    #e;
      constructor(c) {
 -        var _a;
@@ -60,8 +60,9 @@ export { A, B };
 -        return __privateGet(this, _e);
 +        return this.#e;
      }
- }
+-}
 -_e = new WeakMap();
++};
 +export {A, B};
 
 ```

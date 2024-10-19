@@ -15,14 +15,14 @@ class Foo {
 ```js
 
 //#region js-define.js
-class Foo {
+var Foo = class {
 	accessor one = 1;
 	accessor #two = 2;
 	accessor [three()] = 3;
 	static accessor four = 4;
 	static accessor #five = 5;
 	static accessor [six()] = 6;
-}
+};
 
 //#endregion
 ```
@@ -32,9 +32,7 @@ class Foo {
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
 @@ -1,8 +1,12 @@
-+
-+//#region js-define.js
- class Foo {
+-class Foo {
 -  accessor one = 1;
 -  accessor #two = 2;
 -  accessor [three()] = 3;
@@ -43,13 +41,16 @@ class Foo {
 -  static accessor [six()] = 6;
 -}
 \ No newline at end of file
++
++//#region js-define.js
++var Foo = class {
 +	accessor one = 1;
 +	accessor #two = 2;
 +	accessor [three()] = 3;
 +	static accessor four = 4;
 +	static accessor #five = 5;
 +	static accessor [six()] = 6;
-+}
++};
 +
 +//#endregion
 \ No newline at end of file

@@ -87,15 +87,11 @@
   diff
 ## [lower_private_field_optional_chain2020_no_bundle](../../../crates/rolldown/tests/esbuild/lower/lower_private_field_optional_chain2020_no_bundle/diff.md)
   diff
-## [lower_private_getter_setter_next](../../../crates/rolldown/tests/esbuild/lower/lower_private_getter_setter_next/diff.md)
-  diff
 ## [lower_private_getter_setter2015](../../../crates/rolldown/tests/esbuild/lower/lower_private_getter_setter2015/diff.md)
   diff
 ## [lower_private_getter_setter2019](../../../crates/rolldown/tests/esbuild/lower/lower_private_getter_setter2019/diff.md)
   diff
 ## [lower_private_getter_setter2020](../../../crates/rolldown/tests/esbuild/lower/lower_private_getter_setter2020/diff.md)
-  diff
-## [lower_private_method_next](../../../crates/rolldown/tests/esbuild/lower/lower_private_method_next/diff.md)
   diff
 ## [lower_private_method_with_modifiers2020](../../../crates/rolldown/tests/esbuild/lower/lower_private_method_with_modifiers2020/diff.md)
   diff
@@ -104,10 +100,6 @@
 ## [lower_private_method2020](../../../crates/rolldown/tests/esbuild/lower/lower_private_method2020/diff.md)
   diff
 ## [lower_private_super_es2021](../../../crates/rolldown/tests/esbuild/lower/lower_private_super_es2021/diff.md)
-  diff
-## [lower_private_super_es2022](../../../crates/rolldown/tests/esbuild/lower/lower_private_super_es2022/diff.md)
-  diff
-## [lower_private_super_static_bundle_issue2158](../../../crates/rolldown/tests/esbuild/lower/lower_private_super_static_bundle_issue2158/diff.md)
   diff
 ## [lower_reg_exp_name_collision](../../../crates/rolldown/tests/esbuild/lower/lower_reg_exp_name_collision/diff.md)
   diff
@@ -158,4 +150,8 @@
 ## [ts_lower_private_static_members2015_no_bundle](../../../crates/rolldown/tests/esbuild/lower/ts_lower_private_static_members2015_no_bundle/diff.md)
   diff
 # Passed Cases
+## [lower_private_getter_setter_next](../../../crates/rolldown/tests/esbuild/lower/lower_private_getter_setter_next)
+## [lower_private_method_next](../../../crates/rolldown/tests/esbuild/lower/lower_private_method_next)
+## [lower_private_super_es2022](../../../crates/rolldown/tests/esbuild/lower/lower_private_super_es2022)
+## [lower_private_super_static_bundle_issue2158](../../../crates/rolldown/tests/esbuild/lower/lower_private_super_static_bundle_issue2158)
 # Bypassed Cases

@@ -6,15 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "node:assert";
+import assert from "node:assert";
 
 //#region entry.js
 var Foo = class Foo {
 	static foo = new Foo();
 };
 let foo = Foo.foo;
-let foo2 = Foo.foo;
-let foo3 = Foo.foo;
+assert(foo instanceof Foo);
+var Bar = class {};
+let bar = 123;
 
 //#endregion
+export { Bar, bar };
 ```

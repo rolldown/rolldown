@@ -583,7 +583,7 @@ expression: output
 
 # tests/esbuild/default/avoid_tdz
 
-- entry-!~{000}~.js => entry-b8SesfVS.js
+- entry-!~{000}~.js => entry-yUoDFnK5.js
 
 # tests/esbuild/default/avoid_tdz_no_bundle
 

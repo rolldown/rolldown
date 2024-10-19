@@ -13,10 +13,10 @@ class Foo {
 
 //#region entry.ts
 const keepThis = Symbol("keepThis");
-class Foo {
+var Foo = class {
 	REMOVE_THIS;
 	[keepThis];
-}
+};
 (() => new Foo())();
 
 //#endregion
@@ -31,10 +31,10 @@ class Foo {
 -keepThis;
 -class Foo {}
 +var keepThis = Symbol("keepThis");
-+class Foo {
++var Foo = class {
 +    REMOVE_THIS;
 +    [keepThis];
-+}
++};
  (() => new Foo())();
 
 ```

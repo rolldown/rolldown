@@ -48,7 +48,7 @@ export {
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	#field;
 	#method() {}
 	baseline() {
@@ -74,7 +74,7 @@ class Foo {
 		e()?.#method?.(x);
 		f()?.foo.#method(x).bar();
 	}
-}
+};
 
 //#endregion
 export { Foo };
@@ -86,12 +86,11 @@ export { Foo };
 +++ rolldown	entry.js
 @@ -1,37 +1,28 @@
 -var _field, _Foo_instances, method_fn;
--var Foo = class {
+ var Foo = class {
 -    constructor() {
 -        __privateAdd(this, _Foo_instances);
 -        __privateAdd(this, _field);
 -    }
-+class Foo {
 +    #field;
 +    #method() {}
      baseline() {
@@ -135,11 +134,10 @@ export { Foo };
 +        e()?.#method?.(x);
 +        f()?.foo.#method(x).bar();
      }
--};
+ };
 -_field = new WeakMap();
 -_Foo_instances = new WeakSet();
 -method_fn = function () {};
-+}
  export {Foo};
 
 ```

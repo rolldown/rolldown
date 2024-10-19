@@ -33,7 +33,7 @@ class Bar {
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	#foo;
 	foo = class {
 		#foo;
@@ -42,8 +42,8 @@ class Foo {
 	};
 	get #bar() {}
 	set #bar(x) {}
-}
-class Bar {
+};
+var Bar = class {
 	#foo;
 	foo = class {
 		#foo2;
@@ -52,7 +52,7 @@ class Bar {
 	};
 	get #bar() {}
 	set #bar(x) {}
-}
+};
 
 //#endregion
 ```
@@ -62,8 +62,9 @@ class Bar {
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,20 +1,20 @@
- class Foo {
+-class Foo {
 -    #a;
++var Foo = class {
 +    #foo;
      foo = class {
 -        #s;
@@ -75,11 +76,13 @@ class Bar {
      };
 -    get #o() {}
 -    set #o(a) {}
+-}
+-class Bar {
+-    #a;
 +    get #bar() {}
 +    set #bar(x) {}
- }
- class Bar {
--    #a;
++};
++var Bar = class {
 +    #foo;
      foo = class {
 -        #s;
@@ -91,8 +94,9 @@ class Bar {
      };
 -    get #o() {}
 -    set #o(a) {}
+-}
 +    get #bar() {}
 +    set #bar(x) {}
- }
++};
 
 ```

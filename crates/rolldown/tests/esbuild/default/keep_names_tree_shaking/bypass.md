@@ -33,7 +33,7 @@ function fnStmtKeep() {}
 x = fnStmtKeep;
 let fnExprKeep = function keep() {};
 x = fnExprKeep;
-class clsStmtKeep {}
+var clsStmtKeep = class {};
 new clsStmtKeep();
 let clsExprKeep = class keep {};
 new clsExprKeep();
@@ -57,7 +57,7 @@ new clsExprKeep();
 -        __name(this, "clsStmtKeep");
 -    }
 -};
-+class clsStmtKeep {}
++var clsStmtKeep = class {};
  new clsStmtKeep();
 -var clsExprKeep = class {
 -    static {

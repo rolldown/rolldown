@@ -16,7 +16,7 @@ console.log(<MustStartWithUpperCaseLetter />);
 import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region foo.js
-class mustStartWithUpperCaseLetter {}
+var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
@@ -39,7 +39,7 @@ console.log(_jsx(mustStartWithUpperCaseLetter, {}));
 -console.log(<MustStartWithUpperCaseLetter />);
 \ No newline at end of file
 +//#region foo.js
-+class mustStartWithUpperCaseLetter {}
++var mustStartWithUpperCaseLetter = class {};
 +
 +//#endregion
 +//#region entry.jsx

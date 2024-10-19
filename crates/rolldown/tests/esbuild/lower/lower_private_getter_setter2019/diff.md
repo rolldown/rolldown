@@ -61,7 +61,7 @@ export {
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	get #foo() {
 		return this.foo;
 	}
@@ -104,7 +104,7 @@ class Foo {
 		fn().#prop ||= 1;
 		fn().#prop ??= 1;
 	}
-}
+};
 
 //#endregion
 export { Foo };
@@ -116,10 +116,9 @@ export { Foo };
 +++ rolldown	entry.js
 @@ -1,51 +1,45 @@
 -var _Foo_instances, foo_get, bar_set, prop_get, prop_set;
--var Foo = class {
+ var Foo = class {
 -    constructor() {
 -        __privateAdd(this, _Foo_instances);
-+class Foo {
 +    get #foo() {
 +        return this.foo;
      }
@@ -187,7 +186,7 @@ export { Foo };
 +        fn().#prop ||= 1;
 +        fn().#prop ??= 1;
      }
--};
+ };
 -_Foo_instances = new WeakSet();
 -foo_get = function () {
 -    return this.foo;
@@ -201,7 +200,6 @@ export { Foo };
 -prop_set = function (val) {
 -    this.prop = val;
 -};
-+}
  export {Foo};
 
 ```

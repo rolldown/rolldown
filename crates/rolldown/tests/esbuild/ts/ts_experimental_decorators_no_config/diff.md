@@ -41,7 +41,7 @@ export {
 ```js
 
 //#region entry.ts
-@x.y() @(new y.x()) class Foo {
+var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y mUndef;
 	@x @y mDef = 1;
 	@x @y method() {
@@ -70,7 +70,7 @@ export {
 	}
 	@x @y static accessor #asUndef;
 	@x @y static accessor #asDef = 1;
-}
+};
 
 //#endregion
 export { Foo as default };
@@ -111,14 +111,9 @@ export { Foo as default };
 -  }
 -  @x @y static accessor #asUndef;
 -  @x @y static accessor #asDef = 1;
--};
--export {
--  Foo as default
--};
-\ No newline at end of file
 +
 +//#region entry.ts
-+@x.y() @(new y.x()) class Foo {
++var Foo = @x.y() @(new y.x()) class Foo {
 +	@x @y mUndef;
 +	@x @y mDef = 1;
 +	@x @y method() {
@@ -147,7 +142,11 @@ export { Foo as default };
 +	}
 +	@x @y static accessor #asUndef;
 +	@x @y static accessor #asDef = 1;
-+}
+ };
+-export {
+-  Foo as default
+-};
+\ No newline at end of file
 +
 +//#endregion
 +export { Foo as default };

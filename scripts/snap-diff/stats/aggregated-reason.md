@@ -28,18 +28,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_js
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
-## lowering class
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
-- crates/rolldown/tests/esbuild/dce/dce_of_decorators
-- crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
-- crates/rolldown/tests/esbuild/default/avoid_tdz
-- crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle
-- crates/rolldown/tests/esbuild/default/export_forms_es6
-- crates/rolldown/tests/esbuild/default/new_expression_common_js
-- crates/rolldown/tests/esbuild/default/this_inside_function
 ## not align
 - crates/rolldown/tests/esbuild/dce/dead_code_following_jump
 - crates/rolldown/tests/esbuild/default/indirect_require_message
@@ -51,6 +39,16 @@
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
+## lowering class
+- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
+- crates/rolldown/tests/esbuild/dce/dce_of_decorators
+- crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
+- crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle
+- crates/rolldown/tests/esbuild/default/export_forms_es6
+- crates/rolldown/tests/esbuild/default/new_expression_common_js
+- crates/rolldown/tests/esbuild/default/this_inside_function
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths

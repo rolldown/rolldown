@@ -58,10 +58,10 @@ class Bar {
 ```js
 
 //#region entry.ts
-class Foo {
+var Foo = class {
 	method1(@dec(foo) foo = 2) {}
 	method2(@dec(() => foo) foo = 3) {}
-}
+};
 
 //#endregion
 ```
@@ -72,14 +72,10 @@ class Foo {
 +++ rolldown	entry.js
 @@ -1,30 +1,8 @@
 -let foo = 1;
-+
-+//#region entry.ts
- class Foo {
+-class Foo {
 -    method1(foo2 = 2) {}
 -    method2(foo2 = 3) {}
-+	method1(@dec(foo) foo = 2) {}
-+	method2(@dec(() => foo) foo = 3) {}
- }
+-}
 -__decorateClass([__decorateParam(0, dec(foo))], Foo.prototype, "method1", 1);
 -__decorateClass([__decorateParam(0, dec(() => foo))], Foo.prototype, "method2", 1);
 -class Bar {
@@ -105,6 +101,12 @@ class Foo {
 -        };
 -    }
 -}
++
++//#region entry.ts
++var Foo = class {
++	method1(@dec(foo) foo = 2) {}
++	method2(@dec(() => foo) foo = 3) {}
++};
 +
 +//#endregion
 \ No newline at end of file

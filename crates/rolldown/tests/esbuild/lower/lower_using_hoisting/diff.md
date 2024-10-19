@@ -539,16 +539,16 @@ export {
 
 //#region hoist-export-class-direct.js
 using a = b;
-class Foo1 {
+var Foo1 = class {
 	ac = [a, c];
-}
-class Bar1 {
+};
+var Bar1 = class Bar1 {
 	ac = [
 		a,
 		c,
 		Bar1
 	];
-}
+};
 using c = d;
 
 //#endregion
@@ -580,20 +580,21 @@ export { Bar1, Foo1 };
 -    var _error = _, _hasError = true;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
+-}
+-export {Foo1, Bar1};
 +
 +//#region hoist-export-class-direct.js
 +using a = b;
-+class Foo1 {
++var Foo1 = class {
 +	ac = [a, c];
- }
--export {Foo1, Bar1};
-+class Bar1 {
++};
++var Bar1 = class Bar1 {
 +	ac = [
 +		a,
 +		c,
 +		Bar1
 +	];
-+}
++};
 +using c = d;
 +
 +//#endregion
@@ -635,16 +636,16 @@ export {
 
 //#region hoist-export-class-indirect.js
 using a = b;
-class Foo1 {
+var Foo1 = class {
 	ac = [a, c];
-}
-class Bar1 {
+};
+var Bar1 = class Bar1 {
 	ac = [
 		a,
 		c,
 		Bar1
 	];
-}
+};
 using c = d;
 
 //#endregion
@@ -676,20 +677,21 @@ export { Bar1, Foo1 };
 -    var _error = _, _hasError = true;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
+-}
+-export {Foo1, Bar1};
 +
 +//#region hoist-export-class-indirect.js
 +using a = b;
-+class Foo1 {
++var Foo1 = class {
 +	ac = [a, c];
- }
--export {Foo1, Bar1};
-+class Bar1 {
++};
++var Bar1 = class Bar1 {
 +	ac = [
 +		a,
 +		c,
 +		Bar1
 +	];
-+}
++};
 +using c = d;
 +
 +//#endregion
@@ -904,9 +906,9 @@ export {
 
 //#region hoist-export-default-class-name-unused.js
 using a = b;
-class Foo {
+var Foo = class {
 	ac = [a, c];
-}
+};
 using c = d;
 
 //#endregion
@@ -929,13 +931,14 @@ export { Foo as default };
 -    var _error = _, _hasError = true;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
+-}
+-export {Foo as default};
 +
 +//#region hoist-export-default-class-name-unused.js
 +using a = b;
-+class Foo {
++var Foo = class {
 +	ac = [a, c];
- }
--export {Foo as default};
++};
 +using c = d;
 +
 +//#endregion
@@ -967,13 +970,13 @@ export {
 
 //#region hoist-export-default-class-name-used.js
 using a = b;
-class Foo {
+var Foo = class Foo {
 	ac = [
 		a,
 		c,
 		Foo
 	];
-}
+};
 using c = d;
 
 //#endregion
@@ -996,17 +999,18 @@ export { Foo as default };
 -    var _error = _, _hasError = true;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
+-}
+-export {Foo as default};
 +
 +//#region hoist-export-default-class-name-used.js
 +using a = b;
-+class Foo {
++var Foo = class Foo {
 +	ac = [
 +		a,
 +		c,
 +		Foo
 +	];
- }
--export {Foo as default};
++};
 +using c = d;
 +
 +//#endregion
@@ -1038,9 +1042,9 @@ export {
 
 //#region hoist-export-default-class-anonymous.js
 using a = b;
-class hoist_export_default_class_anonymous_default {
+var hoist_export_default_class_anonymous_default = class {
 	ac = [a, c];
-}
+};
 using c = d;
 
 //#endregion
@@ -1063,13 +1067,14 @@ export { hoist_export_default_class_anonymous_default as default };
 -    var _error = _, _hasError = true;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
+-}
+-export {hoist_export_default_class_anonymous_default as default};
 +
 +//#region hoist-export-default-class-anonymous.js
 +using a = b;
-+class hoist_export_default_class_anonymous_default {
++var hoist_export_default_class_anonymous_default = class {
 +	ac = [a, c];
- }
--export {hoist_export_default_class_anonymous_default as default};
++};
 +using c = d;
 +
 +//#endregion

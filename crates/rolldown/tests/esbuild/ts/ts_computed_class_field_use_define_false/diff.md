@@ -22,12 +22,12 @@ new Foo();
 ```js
 
 //#region entry.ts
-class Foo {
+var Foo = class {
 	[q];
 	[r] = s;
 	@dec [x];
 	@dec [y] = z;
-}
+};
 new Foo();
 
 //#endregion
@@ -40,20 +40,22 @@ new Foo();
 @@ -1,11 +1,11 @@
 -var _a, _b, _c;
 -(q, _c = r, _b = x, _a = y);
-+
-+//#region entry.ts
- class Foo {
+-class Foo {
 -    constructor() {
 -        this[_c] = s;
 -        this[_a] = z;
 -    }
+-}
+-__decorateClass([dec], Foo.prototype, _b, 2);
+-__decorateClass([dec], Foo.prototype, _a, 2);
++
++//#region entry.ts
++var Foo = class {
 +	[q];
 +	[r] = s;
 +	@dec [x];
 +	@dec [y] = z;
- }
--__decorateClass([dec], Foo.prototype, _b, 2);
--__decorateClass([dec], Foo.prototype, _a, 2);
++};
  new Foo();
 +
 +//#endregion

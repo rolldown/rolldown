@@ -1,3 +1,5 @@
+# Reason
+1. const enum inline
 # Diff
 ## /out/entry.js
 ### esbuild

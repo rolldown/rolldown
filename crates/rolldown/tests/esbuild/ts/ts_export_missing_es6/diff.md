@@ -1,3 +1,5 @@
+# Reason
+1. export missing es6
 # Diff
 ## /out.js
 ### esbuild

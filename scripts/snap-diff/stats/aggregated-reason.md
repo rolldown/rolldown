@@ -1,4 +1,21 @@
 # Aggregate Reason
+## lowering class
+- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks
+- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
+- crates/rolldown/tests/esbuild/dce/dce_of_decorators
+- crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
+- crates/rolldown/tests/esbuild/default/avoid_tdz
+- crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle
+- crates/rolldown/tests/esbuild/default/export_forms_es6
+- crates/rolldown/tests/esbuild/default/new_expression_common_js
+- crates/rolldown/tests/esbuild/default/this_inside_function
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
+- crates/rolldown/tests/esbuild/ts/ts_declare_class_fields
+- crates/rolldown/tests/esbuild/ts/ts_minify_derived_class
 ## not support legal comments
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
@@ -28,18 +45,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_js
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
-## lowering class
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
-- crates/rolldown/tests/esbuild/dce/dce_of_decorators
-- crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
-- crates/rolldown/tests/esbuild/default/avoid_tdz
-- crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle
-- crates/rolldown/tests/esbuild/default/export_forms_es6
-- crates/rolldown/tests/esbuild/default/new_expression_common_js
-- crates/rolldown/tests/esbuild/default/this_inside_function
 ## not align
 - crates/rolldown/tests/esbuild/dce/dead_code_following_jump
 - crates/rolldown/tests/esbuild/default/indirect_require_message
@@ -51,6 +56,17 @@
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
+## const enum inline
+- crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_re_export
+- crates/rolldown/tests/esbuild/ts/ts_enum_export_clause
+- crates/rolldown/tests/esbuild/ts/ts_enum_same_module_inlining_access
+- crates/rolldown/tests/esbuild/ts/ts_enum_tree_shaking
+- crates/rolldown/tests/esbuild/ts/ts_enum_use_before_declare
+- crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -76,6 +92,14 @@
 - crates/rolldown/tests/esbuild/default/jsx_this_property_esm
 - crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
 - crates/rolldown/tests/esbuild/default/jsx_this_value_esm
+## lowering ts experimental decorator
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_keep_names
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
 ## side effects detect
 - crates/rolldown/tests/esbuild/dce/dce_of_destructuring
 - crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition
@@ -94,6 +118,12 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
 - crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
+## not support ts import equal
+- crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle
+- crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test
+- crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false
+- crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true
+- crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import
 ## throw should be kept
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
@@ -162,6 +192,9 @@
 ## should not appear `await`
 - crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch
 - crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
+## sub optimal
+- crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
+- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
@@ -177,6 +210,12 @@
 ## `.txt` should be treated as cjs
 - crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 - crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest
+## lowering decorator
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
+## class decl transform
+- crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_all_types
+- crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_mixed
 ## lower decorator
 - crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators
 ## don't support dce iife
@@ -305,8 +344,6 @@
 - crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446
 ## Format cjs should not appear `export`
 - crates/rolldown/tests/esbuild/importstar/import_self_common_js
-## sub optimal
-- crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## esbuild will reuse `ns` variable
 - crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused
 ## esbuild treated svg as commonjs module, rolldown treated it as esm
@@ -335,6 +372,18 @@
 - crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
+## rolldown is not ts aware after ts transformation, We can't aware that `Test` is just a type
+- crates/rolldown/tests/esbuild/ts/export_type_issue379
+## redundant wrap function
+- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
+## enum side effects
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_tree_shaking
+## pure annotation for enum
+- crates/rolldown/tests/esbuild/ts/ts_enum_same_module_inlining_access
+## enum tree shaking
+- crates/rolldown/tests/esbuild/ts/ts_enum_tree_shaking
+## export missing es6
+- crates/rolldown/tests/esbuild/ts/ts_export_missing_es6
 ## commonjs json bundle
 - crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js
 ## needs support target
@@ -343,5 +392,3 @@
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
 ## we have similar output as webpack but different with esbuild, because of https://github.com/evanw/esbuild/commit/54ae9962ba18eafc0fc3f1c8c76641def9b08aa0
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
-## const enum inline
-- crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with

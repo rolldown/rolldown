@@ -1,45 +1,45 @@
 # Compatibility metric
-- total: 784
-- passed: 291
-- passed ratio: 37.12%
+- total: 1
+- passed: 0
+- passed ratio: 0.00%
 # Compatibility metric details
 ## dce
-- total: 113
-- passed: 64
-- passed ratio: 56.64%
+- total: 0
+- passed: 0
+- passed ratio: NaN%
 ## default
-- total: 254
-- passed: 107
-- passed ratio: 42.13%
+- total: 0
+- passed: 0
+- passed ratio: NaN%
 ## glob
-- total: 9
+- total: 0
 - passed: 0
-- passed ratio: 0.00%
+- passed ratio: NaN%
 ## importstar
-- total: 76
-- passed: 60
-- passed ratio: 78.95%
+- total: 0
+- passed: 0
+- passed ratio: NaN%
 ## importstar_ts
-- total: 23
-- passed: 23
-- passed ratio: 100.00%
+- total: 0
+- passed: 0
+- passed ratio: NaN%
 ## loader
-- total: 67
-- passed: 10
-- passed ratio: 14.93%
+- total: 0
+- passed: 0
+- passed ratio: NaN%
 ## lower
-- total: 79
+- total: 0
+- passed: 0
+- passed ratio: NaN%
+## packagejson
+- total: 0
+- passed: 0
+- passed ratio: NaN%
+## splitting
+- total: 0
+- passed: 0
+- passed ratio: NaN%
+## ts
+- total: 1
 - passed: 0
 - passed ratio: 0.00%
-## packagejson
-- total: 59
-- passed: 4
-- passed ratio: 6.78%
-## splitting
-- total: 23
-- passed: 2
-- passed ratio: 8.70%
-## ts
-- total: 81
-- passed: 21
-- passed ratio: 25.93%

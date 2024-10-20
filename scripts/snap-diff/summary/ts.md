@@ -85,6 +85,8 @@
   diff
 ## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css/diff.md)
   diff
+## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts/diff.md)
+  diff
 ## [ts_import_vs_local_collision_all_types](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_all_types/diff.md)
   diff
 ## [ts_import_vs_local_collision_mixed](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_mixed/diff.md)
@@ -124,7 +126,6 @@
 ## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts)
 ## [ts_import_empty_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
 ## [ts_import_missing_unused_es6](../../../crates/rolldown/tests/esbuild/ts/ts_import_missing_unused_es6)
-## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts)
 ## [ts_import_type_only_file](../../../crates/rolldown/tests/esbuild/ts/ts_import_type_only_file)
 ## [ts_side_effects_false_warning_type_declarations](../../../crates/rolldown/tests/esbuild/ts/ts_side_effects_false_warning_type_declarations)
 # Bypassed Cases

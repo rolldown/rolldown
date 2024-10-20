@@ -1,10 +1,15 @@
 # Testing
 
+:::tip TLDR
+run `just test-update` to run all tests and update snapshots automatically
+:::
+
 We have two groups of test suites: one for Rust, and one for Node.js.
 
 ## Summary
 
 - `just test` for running all tests.
+- `just test-update` running all tests and update snapshots automatically
 - `just test-rust` for running all Rust tests.
 - `just test-node` for running all Node.js tests.
 - `just test-node rolldown` for running only Rolldown's Node.js tests.

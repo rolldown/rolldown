@@ -1,90 +1,5 @@
-## /out/a.js
-### esbuild
-```js
-import {
-  foo
-} from "./chunk-QVTGQSXT.js";
-
-// a.js
-console.log(foo());
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--import {foo} from "./chunk-QVTGQSXT.js";
--console.log(foo());
-
-```
-## /out/b.js
-### esbuild
-```js
-import {
-  bar
-} from "./chunk-QVTGQSXT.js";
-
-// b.js
-console.log(bar());
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--import {bar} from "./chunk-QVTGQSXT.js";
--console.log(bar());
-
-```
-## /out/chunk-QVTGQSXT.js
-### esbuild
-```js
-// empty.js
-var empty_exports = {};
-
-// common.js
-function foo() {
-  return [empty_exports, void 0];
-}
-function bar() {
-  return [void 0];
-}
-
-export {
-  foo,
-  bar
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/chunk-QVTGQSXT.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
--var empty_exports = {};
--function foo() {
--    return [empty_exports, void 0];
--}
--function bar() {
--    return [void 0];
--}
--export {foo, bar};
-
-```
+# Reason
+1. should convert missing property to `void 0`
 # Diff
 ## /out/a.js
 ### esbuild
@@ -168,20 +83,43 @@ export {
 ### rolldown
 ```js
 
+
+//#region empty.js
+var require_empty = __commonJS({ "empty.js"() {} });
+
+//#endregion
+//#region common.js
+var import_empty = __toESM(require_empty());
+function foo() {
+	return [import_empty, import_empty.missing];
+}
+function bar() {
+	return [import_empty.missing];
+}
+
+//#endregion
+export { bar, foo };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/chunk-QVTGQSXT.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
++++ rolldown	common.js
+@@ -1,8 +1,11 @@
 -var empty_exports = {};
--function foo() {
++var require_empty = __commonJS({
++    "empty.js"() {}
++});
++var import_empty = __toESM(require_empty());
+ function foo() {
 -    return [empty_exports, void 0];
--}
--function bar() {
++    return [import_empty, import_empty.missing];
+ }
+ function bar() {
 -    return [void 0];
--}
++    return [import_empty.missing];
+ }
 -export {foo, bar};
++export {bar, foo};
 
 ```

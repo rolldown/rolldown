@@ -1,7 +1,7 @@
 # Compatibility metric
 - total: 784
-- passed: 288
-- passed ratio: 36.73%
+- passed: 306
+- passed ratio: 39.03%
 # Compatibility metric details
 ## dce
 - total: 113
@@ -37,8 +37,8 @@
 - passed ratio: 6.78%
 ## splitting
 - total: 23
-- passed: 2
-- passed ratio: 8.70%
+- passed: 20
+- passed ratio: 86.96%
 ## ts
 - total: 81
 - passed: 13

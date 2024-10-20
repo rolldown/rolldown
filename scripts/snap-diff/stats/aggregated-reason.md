@@ -326,3 +326,5 @@
 - crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
+## should convert missing property to `void 0`
+- crates/rolldown/tests/esbuild/splitting/splitting_missing_lazy_export

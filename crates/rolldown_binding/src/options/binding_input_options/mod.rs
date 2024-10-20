@@ -1,4 +1,5 @@
 // cSpell:disable
+use binding_watch_option::BindingWatchOption;
 use oxc_transform_napi::transform::JsxOptions;
 use std::collections::HashMap;
 
@@ -16,6 +17,7 @@ use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
+mod binding_watch_option;
 // mod binding_jsx_options;
 mod binding_resolve_options;
 mod treeshake;
@@ -61,7 +63,6 @@ pub struct BindingInputOptions {
   pub shim_missing_exports: Option<bool>,
   // strictDeprecations?: boolean;
   // pub treeshake: Option<bool>,
-  // watch?: WatcherOptions | false;
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
   #[serde(skip_deserializing)]
@@ -85,6 +86,7 @@ pub struct BindingInputOptions {
   #[serde(skip_deserializing)]
   #[derivative(Debug = "ignore")]
   pub jsx: Option<JsxOptions>,
+  pub watch: Option<BindingWatchOption>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

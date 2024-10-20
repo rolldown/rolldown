@@ -12,6 +12,7 @@ use super::checks_options::ChecksOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::output_option::ChunkFilenamesOutputOption;
 use super::treeshake::TreeshakeOptions;
+use super::watch_option::WatchOption;
 use super::{
   filename_template::FilenameTemplate, is_external::IsExternal, output_exports::OutputExports,
   output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
@@ -64,6 +65,7 @@ pub struct NormalizedBundlerOptions {
   pub checks: ChecksOptions,
   pub profiler_names: bool,
   pub jsx: Option<JsxOptions>,
+  pub watch: WatchOption,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

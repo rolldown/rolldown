@@ -138,6 +138,9 @@
 ## drop label feature
 - crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 - crates/rolldown/tests/esbuild/dce/drop_labels
+## low priority
+- crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
+- crates/rolldown/tests/esbuild/dce/drop_labels
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 - crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators
@@ -332,3 +335,13 @@
 - crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
+## commonjs json bundle
+- crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js
+## needs support target
+- crates/rolldown/tests/esbuild/ts/ts_namespace_keep_names_target_es2015
+## controversial
+- crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
+## we have similar output as webpack but different with esbuild, because of https://github.com/evanw/esbuild/commit/54ae9962ba18eafc0fc3f1c8c76641def9b08aa0
+- crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
+## const enum inline
+- crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with

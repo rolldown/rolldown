@@ -1,5 +1,5 @@
 # Reason
-1. could be done in minifier 
+1. could be done in minifier
 # Diff
 ## /a.js
 ### esbuild

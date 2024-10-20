@@ -1,60 +1,5 @@
-## /out/a.js
-### esbuild
-```js
-import {
-  foo,
-  init_a
-} from "./chunk-PDZFCFBH.js";
-init_a();
-export {
-  foo
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
--import {foo, init_a} from "./chunk-PDZFCFBH.js";
--init_a();
--export {foo};
-
-```
-## /out/b.js
-### esbuild
-```js
-import {
-  __toCommonJS,
-  a_exports,
-  init_a
-} from "./chunk-PDZFCFBH.js";
-
-// b.js
-var bar = (init_a(), __toCommonJS(a_exports));
-export {
-  bar
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
--import {__toCommonJS, a_exports, init_a} from "./chunk-PDZFCFBH.js";
--var bar = (init_a(), __toCommonJS(a_exports));
--export {bar};
-
-```
+# Reason
+1. different chunk naming style
 # Diff
 ## /out/a.js
 ### esbuild
@@ -148,30 +93,47 @@ export {
 ### rolldown
 ```js
 
+
+//#region a.js
+var a_exports = {};
+__export(a_exports, { foo: () => foo });
+var foo;
+var init_a = __esm({ "a.js"() {} });
+
+//#endregion
+export { __toCommonJS, a_exports, foo, init_a };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/chunk-PDZFCFBH.js
-+++ rolldown	
-@@ -1,17 +0,0 @@
++++ rolldown	a2.js
+@@ -1,17 +1,10 @@
 -// a.js
--var a_exports = {};
++
++
++//#region a.js
+ var a_exports = {};
 -__export(a_exports, {
 -  foo: () => foo
 -});
--var foo;
++__export(a_exports, { foo: () => foo });
+ var foo;
 -var init_a = __esm({
 -  "a.js"() {
 -  }
 -});
--
++var init_a = __esm({ "a.js"() {} });
+ 
 -export {
 -  __toCommonJS,
 -  foo,
 -  a_exports,
 -  init_a
 -};
+\ No newline at end of file
++//#endregion
++export { __toCommonJS, a_exports, foo, init_a };
 \ No newline at end of file
 
 ```

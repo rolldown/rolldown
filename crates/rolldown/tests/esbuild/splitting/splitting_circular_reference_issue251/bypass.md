@@ -1,84 +1,5 @@
-## /out/a.js
-### esbuild
-```js
-import {
-  p,
-  q
-} from "./chunk-HK23737J.js";
-export {
-  p,
-  q
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/a.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--import {p, q} from "./chunk-HK23737J.js";
--export {p, q};
-
-```
-## /out/b.js
-### esbuild
-```js
-import {
-  p,
-  q
-} from "./chunk-HK23737J.js";
-export {
-  p,
-  q
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/b.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
--import {p, q} from "./chunk-HK23737J.js";
--export {p, q};
-
-```
-## /out/chunk-HK23737J.js
-### esbuild
-```js
-// a.js
-var p = 5;
-
-// b.js
-var q = 6;
-
-export {
-  q,
-  p
-};
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/chunk-HK23737J.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
--var p = 5;
--var q = 6;
--export {q, p};
-
-```
+# Reason
+1. different chunk naming style
 # Diff
 ## /out/a.js
 ### esbuild
@@ -155,15 +76,26 @@ export {
 ### rolldown
 ```js
 
+//#region b.js
+var q = 6;
+
+//#endregion
+//#region a.js
+var p = 5;
+
+//#endregion
+export { p, q };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/chunk-HK23737J.js
-+++ rolldown	
-@@ -1,3 +0,0 @@
++++ rolldown	a2.js
+@@ -1,3 +1,3 @@
 -var p = 5;
--var q = 6;
+ var q = 6;
 -export {q, p};
++var p = 5;
++export {p, q};
 
 ```

@@ -106,6 +106,22 @@ test.sequential('watch event', async () => {
   fs.writeFileSync(input, inputSource)
 })
 
+test.sequential('watch skipWrite', async () => {
+  const dir = path.join(import.meta.dirname, './skipWrite-dist/')
+  await watch({
+    input,
+    cwd: import.meta.dirname,
+    output: {
+      dir,
+    },
+    watch: {
+      skipRewrite: true,
+    },
+  })
+  await waitBuildFinished()
+  expect(fs.existsSync(dir)).toBe(false)
+})
+
 async function waitBuildFinished() {
   // sleep 50ms
   await new Promise((resolve) => {

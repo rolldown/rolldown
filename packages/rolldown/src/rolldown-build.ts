@@ -48,8 +48,8 @@ export class RolldownBuild {
     await bundler.close()
   }
 
-  async watch(): Promise<Watcher> {
-    const bundler = await this.#getBundler({})
+  async watch(outputOptions: OutputOptions = {}): Promise<Watcher> {
+    const bundler = await this.#getBundler(outputOptions)
     const bindingWatcher = await bundler.watch()
     const watcher = new Watcher(bindingWatcher)
     watcher.watch()

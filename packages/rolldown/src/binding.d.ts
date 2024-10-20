@@ -235,6 +235,7 @@ export interface BindingInputOptions {
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
   jsx?: JsxOptions
+  watch?: BindingWatchOption
 }
 
 export interface BindingJsonPluginConfig {
@@ -441,6 +442,10 @@ export declare enum BindingWatcherEvent {
   Event = 1,
   ReStart = 2,
   Change = 3
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
 }
 
 export interface Es2015Options {

@@ -1,8 +1,6 @@
 # Failed Cases
 ## [edge_case_issue2793_without_splitting](../../../crates/rolldown/tests/esbuild/splitting/edge_case_issue2793_without_splitting/diff.md)
   diff
-## [splitting_dynamic_and_not_dynamic_common_js_into_es6](../../../crates/rolldown/tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6/diff.md)
-  diff
 ## [splitting_missing_lazy_export](../../../crates/rolldown/tests/esbuild/splitting/splitting_missing_lazy_export/diff.md)
   diff
 # Passed Cases
@@ -15,6 +13,7 @@
 ## [splitting_cross_chunk_assignment_dependencies](../../../crates/rolldown/tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies/bypass.md)
 ## [splitting_cross_chunk_assignment_dependencies_recursive](../../../crates/rolldown/tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive/bypass.md)
 ## [splitting_duplicate_chunk_collision](../../../crates/rolldown/tests/esbuild/splitting/splitting_duplicate_chunk_collision/bypass.md)
+## [splitting_dynamic_and_not_dynamic_common_js_into_es6](../../../crates/rolldown/tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6/bypass.md)
 ## [splitting_dynamic_and_not_dynamic_es6_into_es6](../../../crates/rolldown/tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6/bypass.md)
 ## [splitting_dynamic_common_js_into_es6](../../../crates/rolldown/tests/esbuild/splitting/splitting_dynamic_common_js_into_es6/bypass.md)
 ## [splitting_dynamic_es6_into_es6](../../../crates/rolldown/tests/esbuild/splitting/splitting_dynamic_es6_into_es6/bypass.md)

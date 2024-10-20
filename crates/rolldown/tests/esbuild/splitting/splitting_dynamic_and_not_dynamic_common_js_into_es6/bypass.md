@@ -1,3 +1,5 @@
+# Reason
+1. different chunk naming style
 # Diff
 ## /out/entry.js
 ### esbuild

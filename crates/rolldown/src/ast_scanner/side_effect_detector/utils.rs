@@ -220,6 +220,12 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
   }
 }
 
+pub fn can_change_strict_to_loose(scope: &AstScopes, a: &Expression, b: &Expression) -> bool {
+  let x = known_primitive_type(scope, a);
+  let y = known_primitive_type(scope, &b);
+  x == y && !matches!(x, PrimitiveType::Unknown | PrimitiveType::Mixed)
+}
+
 pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
   match expr {
     Expression::NullLiteral(_)

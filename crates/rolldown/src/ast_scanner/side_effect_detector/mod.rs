@@ -12,6 +12,7 @@ use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
 };
+use utils::can_change_strict_to_loose;
 
 use self::utils::{known_primitive_type, PrimitiveType};
 
@@ -221,11 +222,41 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
-      Expression::BinaryExpression(binary_expr) => {
-        // For binary expressions, both sides could potentially have side effects
-        self.detect_side_effect_of_expr(&binary_expr.left)
-          || self.detect_side_effect_of_expr(&binary_expr.right)
-      }
+      Expression::BinaryExpression(binary_expr) => match binary_expr.operator {
+        ast::BinaryOperator::StrictEquality | ast::BinaryOperator::StrictInequality => {
+          self.detect_side_effect_of_expr(&binary_expr.left)
+            || self.detect_side_effect_of_expr(&binary_expr.right)
+        }
+        // Special-case "<" and ">" with string, number, or bigint arguments
+        ast::BinaryOperator::GreaterThan
+        | ast::BinaryOperator::LessThan
+        | ast::BinaryOperator::GreaterEqualThan
+        | ast::BinaryOperator::LessEqualThan => {
+          let lt = known_primitive_type(&self.scope, &binary_expr.left);
+          match lt {
+            PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
+              known_primitive_type(&self.scope, &binary_expr.right) != lt
+                || self.detect_side_effect_of_expr(&binary_expr.left)
+                || self.detect_side_effect_of_expr(&binary_expr.right)
+            }
+            _ => true,
+          }
+        }
+
+        // For "==" and "!=", pretend the operator was actually "===" or "!==". If
+        // we know that we can convert it to "==" or "!=", then we can consider the
+        // operator itself to have no side effects. This matters because our mangle
+        // logic will convert "typeof x === 'object'" into "typeof x == 'object'"
+        // and since "typeof x === 'object'" is considered to be side-effect free,
+        // we must also consider "typeof x == 'object'" to be side-effect free.
+        ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
+          !can_change_strict_to_loose(&self.scope, &binary_expr.left, &binary_expr.right)
+            || self.detect_side_effect_of_expr(&binary_expr.left)
+            || self.detect_side_effect_of_expr(&binary_expr.right)
+        }
+
+        _ => true,
+      },
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
@@ -660,11 +691,12 @@ mod test {
 
   #[test]
   fn test_binary_expression() {
-    assert!(!get_statements_side_effect("1 + 1"));
-    assert!(!get_statements_side_effect("const a = 1; const b = 2; a + b"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("1 + foo"));
     assert!(get_statements_side_effect("2 + bar"));
+    // + will invoke valueOf, which may have side effect
+    assert!(get_statements_side_effect("1 + 1"));
+    assert!(!get_statements_side_effect("const a = 1; const b = 2; a + b"));
   }
 
   #[test]

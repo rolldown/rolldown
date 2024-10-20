@@ -93,17 +93,11 @@
   diff
 ## [ts_minify_derived_class](../../../crates/rolldown/tests/esbuild/ts/ts_minify_derived_class/diff.md)
   diff
-## [ts_minify_enum](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum/diff.md)
-  diff
 ## [ts_minify_enum_cross_file_inline_strings_into_templates](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates/diff.md)
   diff
 ## [ts_minify_enum_property_names](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names/diff.md)
   diff
-## [ts_minify_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_minify_namespace/diff.md)
-  diff
 ## [ts_minify_namespace_no_arrow](../../../crates/rolldown/tests/esbuild/ts/ts_minify_namespace_no_arrow/diff.md)
-  diff
-## [ts_minify_nested_enum_no_logical_assignment](../../../crates/rolldown/tests/esbuild/ts/ts_minify_nested_enum_no_logical_assignment/diff.md)
   diff
 ## [ts_namespace_keep_names_target_es2015](../../../crates/rolldown/tests/esbuild/ts/ts_namespace_keep_names_target_es2015/diff.md)
   diff
@@ -137,7 +131,10 @@
 ## [ts_abstract_class_field_use_assign](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_assign/bypass.md)
 ## [ts_enum_define](../../../crates/rolldown/tests/esbuild/ts/ts_enum_define/bypass.md)
 ## [ts_minified_bundle_es6](../../../crates/rolldown/tests/esbuild/ts/ts_minified_bundle_es6/bypass.md)
+## [ts_minify_enum](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum/bypass.md)
+## [ts_minify_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_minify_namespace/bypass.md)
 ## [ts_minify_namespace_no_logical_assignment](../../../crates/rolldown/tests/esbuild/ts/ts_minify_namespace_no_logical_assignment/bypass.md)
 ## [ts_minify_nested_enum](../../../crates/rolldown/tests/esbuild/ts/ts_minify_nested_enum/bypass.md)
 ## [ts_minify_nested_enum_no_arrow](../../../crates/rolldown/tests/esbuild/ts/ts_minify_nested_enum_no_arrow/bypass.md)
+## [ts_minify_nested_enum_no_logical_assignment](../../../crates/rolldown/tests/esbuild/ts/ts_minify_nested_enum_no_logical_assignment/bypass.md)
 ## [ts_namespace_keep_names](../../../crates/rolldown/tests/esbuild/ts/ts_namespace_keep_names/bypass.md)

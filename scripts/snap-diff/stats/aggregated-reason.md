@@ -45,6 +45,19 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_js
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
+## const enum inline
+- crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot
+- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_re_export
+- crates/rolldown/tests/esbuild/ts/ts_enum_export_clause
+- crates/rolldown/tests/esbuild/ts/ts_enum_same_module_inlining_access
+- crates/rolldown/tests/esbuild/ts/ts_enum_tree_shaking
+- crates/rolldown/tests/esbuild/ts/ts_enum_use_before_declare
+- crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
+- crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names
+- crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
 ## not align
 - crates/rolldown/tests/esbuild/dce/dead_code_following_jump
 - crates/rolldown/tests/esbuild/default/indirect_require_message
@@ -56,17 +69,6 @@
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
-## const enum inline
-- crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
-- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access
-- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
-- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot
-- crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_re_export
-- crates/rolldown/tests/esbuild/ts/ts_enum_export_clause
-- crates/rolldown/tests/esbuild/ts/ts_enum_same_module_inlining_access
-- crates/rolldown/tests/esbuild/ts/ts_enum_tree_shaking
-- crates/rolldown/tests/esbuild/ts/ts_enum_use_before_declare
-- crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -383,3 +385,5 @@
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
 ## we have similar output as webpack but different with esbuild, because of https://github.com/evanw/esbuild/commit/54ae9962ba18eafc0fc3f1c8c76641def9b08aa0
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
+## rewrite this when it is undefined
+- crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning

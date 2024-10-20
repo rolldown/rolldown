@@ -53,6 +53,7 @@ import { MinimalPluginContext } from './log/logger'
 import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
+import { WatchOptions } from './options/watch-option'
 
 export { defineConfig, rolldown, watch }
 export const VERSION: string = version
@@ -103,6 +104,7 @@ export type {
   SourceMapInput,
   OutputBundle,
   JsxOptions,
+  WatchOptions,
 }
 
 // Exports for compatibility

@@ -130,6 +130,7 @@ export function bindingifyInputOptions(
     },
     profilerNames: options?.profilerNames,
     jsx: bindingifyJsx(options.jsx),
+    watch: bindingifyWatch(options.watch),
   }
 }
 
@@ -184,6 +185,16 @@ function bindingifyJsx(
       pragmaFrag: input.fragment,
       development: input.development,
       refresh: input.refresh,
+    }
+  }
+}
+
+function bindingifyWatch(
+  watch: NormalizedInputOptions['watch'],
+): BindingInputOptions['watch'] {
+  if (watch) {
+    return {
+      skipWrite: watch.skipRewrite,
     }
   }
 }

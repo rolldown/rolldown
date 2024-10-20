@@ -4,9 +4,7 @@ import { run } from './runner'
 const args = process.argv.slice(2)
 const debug = args.includes('--debug')
 const verbose = args.includes('--verbose')
-const caseNames: string[] = [
-  "ts_minify_enum"
-]
+const caseNames: string[] = []
 const includeList = [
   'snapshots_importstar.txt',
   'snapshots_default.txt',

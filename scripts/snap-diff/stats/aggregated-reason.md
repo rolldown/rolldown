@@ -106,12 +106,6 @@
 - crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
-## custom diff resolver
-- crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder
-- crates/rolldown/tests/esbuild/default/outbase
-- crates/rolldown/tests/esbuild/default/output_extension_remapping_dir
-- crates/rolldown/tests/esbuild/default/require_with_template
-- crates/rolldown/tests/esbuild/default/scoped_external_module_exclusion
 ## Wrong output
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
@@ -201,9 +195,6 @@
 ## Wrong impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle
-## require custom resolver
-- crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6
-- crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
 ## should inline variable
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5

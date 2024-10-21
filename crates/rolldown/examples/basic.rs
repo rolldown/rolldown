@@ -20,3 +20,5 @@ async fn main() {
   let result = bundler.write().await.unwrap();
   assert!(result.errors.is_empty(), "failed to bundle: {:?}", result.errors);
 }
+
+// trigger

@@ -323,10 +323,7 @@ pub fn is_side_effect_free_unbound_identifier_ref(
   if !is_unresolved {
     return Some(false);
   }
-  let bin_expr = match guard_condition {
-    Expression::BinaryExpression(expr) => expr,
-    _ => return Some(false),
-  };
+  let bin_expr = guard_condition.as_binary_expression()?;
   match bin_expr.operator {
     BinaryOperator::StrictEquality
     | BinaryOperator::StrictInequality
@@ -334,9 +331,7 @@ pub fn is_side_effect_free_unbound_identifier_ref(
     | BinaryOperator::Inequality => {
       let (mut ty_of, mut string) = (&bin_expr.left, &bin_expr.right);
       if matches!(ty_of, Expression::StringLiteral(_)) {
-        let tmp = string;
-        string = ty_of;
-        ty_of = tmp;
+        std::mem::swap(&mut string, &mut ty_of);
       }
       let unary = ty_of.as_unary_expression()?;
       if !(unary.operator == UnaryOperator::Typeof
@@ -364,11 +359,10 @@ pub fn is_side_effect_free_unbound_identifier_ref(
     | BinaryOperator::GreaterEqualThan => {
       let (mut ty_of, mut string) = (&bin_expr.left, &bin_expr.right);
       if matches!(ty_of, Expression::StringLiteral(_)) {
-        let tmp = string;
-        string = ty_of;
-        ty_of = tmp;
+        std::mem::swap(&mut string, &mut ty_of);
         is_yes_branch = !is_yes_branch;
       }
+
       let unary = ty_of.as_unary_expression()?;
       if !(unary.operator == UnaryOperator::Typeof
         && matches!(unary.argument, Expression::Identifier(_)))

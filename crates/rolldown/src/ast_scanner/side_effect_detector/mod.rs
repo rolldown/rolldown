@@ -187,10 +187,7 @@ impl<'a> SideEffectDetector<'a> {
         ast::UnaryOperator::Typeof if matches!(unary_expr.argument, Expression::Identifier(_)) => {
           false
         }
-        ast::UnaryOperator::Void | ast::UnaryOperator::LogicalNot => {
-          self.detect_side_effect_of_expr(&unary_expr.argument)
-        }
-        _ => true,
+        _ => self.detect_side_effect_of_expr(&unary_expr.argument),
       },
       oxc::ast::match_member_expression!(Expression) => {
         self.detect_side_effect_of_member_expr(expr.to_member_expression())
@@ -207,7 +204,7 @@ impl<'a> SideEffectDetector<'a> {
       }),
       Expression::LogicalExpression(logic_expr) => match logic_expr.operator {
         ast::LogicalOperator::Or => {
-          return self.detect_side_effect_of_expr(&logic_expr.left)
+          self.detect_side_effect_of_expr(&logic_expr.left)
             || (!is_side_effect_free_unbound_identifier_ref(
               self.scope,
               &logic_expr.right,
@@ -218,7 +215,7 @@ impl<'a> SideEffectDetector<'a> {
               && self.detect_side_effect_of_expr(&logic_expr.right))
         }
         ast::LogicalOperator::And => {
-          return self.detect_side_effect_of_expr(&logic_expr.left)
+          self.detect_side_effect_of_expr(&logic_expr.left)
             || (!is_side_effect_free_unbound_identifier_ref(
               self.scope,
               &logic_expr.right,
@@ -228,7 +225,7 @@ impl<'a> SideEffectDetector<'a> {
             .unwrap_or_default()
               && self.detect_side_effect_of_expr(&logic_expr.right))
         }
-        _ => {
+        ast::LogicalOperator::Coalesce => {
           self.detect_side_effect_of_expr(&logic_expr.left)
             || self.detect_side_effect_of_expr(&logic_expr.right)
         }
@@ -243,7 +240,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ConditionalExpression(cond_expr) => {
         self.detect_side_effect_of_expr(&cond_expr.test)
           || (!is_side_effect_free_unbound_identifier_ref(
-            &self.scope,
+            self.scope,
             &cond_expr.consequent,
             &cond_expr.test,
             true,
@@ -251,7 +248,7 @@ impl<'a> SideEffectDetector<'a> {
           .unwrap_or_default()
             && self.detect_side_effect_of_expr(&cond_expr.consequent))
           || (!is_side_effect_free_unbound_identifier_ref(
-            &self.scope,
+            self.scope,
             &cond_expr.alternate,
             &cond_expr.test,
             false,
@@ -275,10 +272,10 @@ impl<'a> SideEffectDetector<'a> {
         | ast::BinaryOperator::LessThan
         | ast::BinaryOperator::GreaterEqualThan
         | ast::BinaryOperator::LessEqualThan => {
-          let lt = known_primitive_type(&self.scope, &binary_expr.left);
+          let lt = known_primitive_type(self.scope, &binary_expr.left);
           match lt {
             PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
-              known_primitive_type(&self.scope, &binary_expr.right) != lt
+              known_primitive_type(self.scope, &binary_expr.right) != lt
                 || self.detect_side_effect_of_expr(&binary_expr.left)
                 || self.detect_side_effect_of_expr(&binary_expr.right)
             }
@@ -293,7 +290,7 @@ impl<'a> SideEffectDetector<'a> {
         // and since "typeof x === 'object'" is considered to be side-effect free,
         // we must also consider "typeof x == 'object'" to be side-effect free.
         ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
-          !can_change_strict_to_loose(&self.scope, &binary_expr.left, &binary_expr.right)
+          !can_change_strict_to_loose(self.scope, &binary_expr.left, &binary_expr.right)
             || self.detect_side_effect_of_expr(&binary_expr.left)
             || self.detect_side_effect_of_expr(&binary_expr.right)
         }

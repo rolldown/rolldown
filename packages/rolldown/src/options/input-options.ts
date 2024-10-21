@@ -66,7 +66,15 @@ const jsxOptionsSchema = z.strictObject({
 })
 
 const watchOptionsSchema = z.strictObject({
-  skipRewrite: z.boolean().describe('Skip the bundle.write() step').optional(),
+  skipWrite: z.boolean().describe('Skip the bundle.write() step').optional(),
+  notify: z
+    .strictObject({
+      pollInterval: z.number().optional(),
+      compareContents: z.boolean().optional(),
+    })
+    .describe('Notify options')
+    .optional(),
+  chokidar: z.any().optional(),
 })
 
 export const inputOptionsSchema = z.strictObject({

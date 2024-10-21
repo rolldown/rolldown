@@ -277,6 +277,11 @@ export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
 
+export interface BindingNotifyOption {
+  pollInterval?: number
+  compareContents?: boolean
+}
+
 export interface BindingOutputOptions {
   name?: string
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
@@ -447,6 +452,7 @@ export declare enum BindingWatcherEvent {
 
 export interface BindingWatchOption {
   skipWrite?: boolean
+  notify?: BindingNotifyOption
 }
 
 export interface Es2015Options {

@@ -1,7 +1,7 @@
 use std::{
   ops::Deref,
   path::PathBuf,
-  sync::{Arc, Mutex, OnceLock, Weak},
+  sync::{Arc, Mutex, Weak},
 };
 
 use arcstr::ArcStr;
@@ -33,7 +33,7 @@ impl PluginContext {
       plugin_driver: Weak::clone(&self.plugin_driver),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
-      module_table: self.module_table.clone(),
+      module_table: Arc::clone(&self.module_table),
       options: Arc::clone(&self.options),
       watch_files: Arc::clone(&self.watch_files),
     }))
@@ -133,7 +133,7 @@ impl PluginContextImpl {
     // TODO external module
     None
   }
-
+  #[allow(clippy::unnecessary_wraps)]
   pub fn get_module_ids(&self) -> Option<Vec<String>> {
     let module_table = self.module_table.lock().unwrap();
     let mut ids = Vec::with_capacity(module_table.modules.len());

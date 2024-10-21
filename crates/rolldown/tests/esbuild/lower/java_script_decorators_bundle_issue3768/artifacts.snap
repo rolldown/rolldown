@@ -13,9 +13,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region base-instance-field.js
-class Foo {
+var Foo = class Foo {
 	@dec foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -24,11 +24,11 @@ class Foo {
 ```js
 
 //#region base-instance-method.js
-class Foo {
+var Foo = class Foo {
 	@dec foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -42,9 +42,9 @@ class Foo {
 ```js
 
 //#region base-static-field.js
-class Foo {
+var Foo = class Foo {
 	@dec static foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -53,11 +53,11 @@ class Foo {
 ```js
 
 //#region base-static-method.js
-class Foo {
+var Foo = class Foo {
 	@dec static foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -71,9 +71,9 @@ class Foo {
 ```js
 
 //#region derived-instance-field.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -82,11 +82,11 @@ class Foo extends Bar {
 ```js
 
 //#region derived-instance-method.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -100,9 +100,9 @@ class Foo extends Bar {
 ```js
 
 //#region derived-static-field.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec static foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -111,11 +111,11 @@ class Foo extends Bar {
 ```js
 
 //#region derived-static-method.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec static foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```

@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-class A {
+var A = class A {
 	static {}
 	static {
 		this.thisField++;
@@ -16,7 +16,7 @@ class A {
 		super.superField = super.superField + 1;
 		super.superField++;
 	}
-}
+};
 let B = class {
 	static {}
 	static {

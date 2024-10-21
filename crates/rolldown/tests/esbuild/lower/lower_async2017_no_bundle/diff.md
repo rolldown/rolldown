@@ -39,9 +39,9 @@ async function foo(bar) {
 	await bar;
 	return arguments;
 }
-class Foo {
+var Foo = class {
 	async foo() {}
-}
+};
 var entry_default = [
 	foo,
 	Foo,
@@ -67,12 +67,17 @@ export { entry_default as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -4,9 +4,9 @@
+@@ -1,12 +1,12 @@
+ async function foo(bar) {
+     await bar;
+     return arguments;
  }
- class Foo {
+-class Foo {
++var Foo = class {
      async foo() {}
- }
+-}
 -export default [foo, Foo, async function () {}, async () => {}, {
++};
 +var entry_default = [foo, Foo, async function () {}, async () => {}, {
      async foo() {}
  }, class {

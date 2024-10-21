@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	get #foo() {
 		return this.foo;
 	}
@@ -51,7 +51,7 @@ class Foo {
 		fn().#prop ||= 1;
 		fn().#prop ??= 1;
 	}
-}
+};
 
 //#endregion
 export { Foo };

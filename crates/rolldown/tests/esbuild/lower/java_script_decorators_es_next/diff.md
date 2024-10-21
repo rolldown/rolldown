@@ -21,7 +21,7 @@ export default class Foo {
 ```js
 
 //#region entry.js
-@x.y() @(new y.x()) class Foo {
+var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y mUndef;
 	@x @y mDef = 1;
 	@x @y method() {
@@ -32,7 +32,7 @@ export default class Foo {
 	@x @y static sMethod() {
 		return new Foo();
 	}
-}
+};
 
 //#endregion
 export { Foo as default };
@@ -60,7 +60,7 @@ export { Foo as default };
 \ No newline at end of file
 +
 +//#region entry.js
-+@x.y() @(new y.x()) class Foo {
++var Foo = @x.y() @(new y.x()) class Foo {
 +	@x @y mUndef;
 +	@x @y mDef = 1;
 +	@x @y method() {
@@ -71,7 +71,7 @@ export { Foo as default };
 +	@x @y static sMethod() {
 +		return new Foo();
 +	}
-+}
++};
 +
 +//#endregion
 +export { Foo as default };

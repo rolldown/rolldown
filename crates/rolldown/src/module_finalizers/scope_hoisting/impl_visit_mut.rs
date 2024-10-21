@@ -3,9 +3,9 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{self, Expression, SimpleAssignmentTarget},
+    ast::{self, Expression, SimpleAssignmentTarget, VariableDeclarationKind},
     visit::walk_mut,
-    VisitMut,
+    VisitMut, NONE,
   },
   span::{GetSpan, Span, SPAN},
 };
@@ -224,7 +224,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
       }
     });
-
     walk_mut::walk_program(self, program);
 
     if needs_wrapper {
@@ -264,7 +263,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
           // Hoist all top-level "var" and "function" declarations out of the closure
           old_body.into_iter().for_each(|mut stmt| match &mut stmt {
-            ast::Statement::VariableDeclaration(_) | ast::Statement::ClassDeclaration(_) => {
+            ast::Statement::VariableDeclaration(_) => {
               if let Some(converted) =
                 self.convert_decl_to_assignment(stmt.to_declaration_mut(), &mut hoisted_names)
               {
@@ -651,5 +650,62 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     self.rewrite_simple_assignment_target(target);
 
     walk_mut::walk_simple_assignment_target(self, target);
+  }
+
+  /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
+  /// using this style to avoid nested if else unti we support if let chain
+  fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
+    let ast::Declaration::ClassDeclaration(class) = it else {
+      walk_mut::walk_declaration(self, it);
+      return;
+    };
+
+    let Some(scope_id) = class.scope_id.get() else {
+      walk_mut::walk_declaration(self, it);
+      return;
+    };
+
+    if self.scope.get_parent_id(scope_id) != Some(self.scope.root_scope_id()) {
+      walk_mut::walk_declaration(self, it);
+      return;
+    };
+
+    // eliminat class name and transformed it into class expr
+    let Some(id) = class.id.take() else {
+      walk_mut::walk_declaration(self, it);
+      return;
+    };
+
+    if let Some(symbol_id) = id.symbol_id.get() {
+      if self.ctx.module.self_referenced_class_decl_symbol_ids.contains(&symbol_id) {
+        // class T { static a = new T(); }
+        // needs to rewrite to `var T = class T { static a = new T(); }`
+        let mut id = id.clone();
+        let new_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+        id.name = self.snippet.atom(new_name);
+        class.id = Some(id);
+      }
+    }
+
+    let var_decl = self.snippet.builder.declaration_variable(
+      SPAN,
+      VariableDeclarationKind::Var,
+      self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
+        SPAN,
+        VariableDeclarationKind::Var,
+        self.snippet.builder.binding_pattern(
+          ast::BindingPatternKind::BindingIdentifier(self.snippet.builder.alloc(id)),
+          NONE,
+          false,
+        ),
+        Some(Expression::ClassExpression(class.take_in(self.alloc))),
+        false,
+      )),
+      false,
+    );
+    *it = var_decl;
+
+    // deconflict class name
+    walk_mut::walk_declaration(self, it);
   }
 }

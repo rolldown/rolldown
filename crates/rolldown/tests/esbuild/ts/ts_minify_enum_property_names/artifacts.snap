@@ -33,7 +33,7 @@ var SameFileBad = function(SameFileBad$1) {
 	SameFileBad$1["PROTOTYPE"] = "prototype";
 	return SameFileBad$1;
 }(SameFileBad || {});
-class Foo {
+var Foo = class {
 	[100] = 100;
 	"200" = 200;
 	["300"] = 300;
@@ -41,7 +41,7 @@ class Foo {
 	[SameFileGood.NUM] = SameFileGood.NUM;
 	[CrossFileGood.STR] = CrossFileGood.STR;
 	[CrossFileGood.NUM] = CrossFileGood.NUM;
-}
+};
 shouldNotBeComputed(class {
 	[100] = 100;
 	"200" = 200;

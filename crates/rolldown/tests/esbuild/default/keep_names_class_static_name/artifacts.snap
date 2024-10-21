@@ -8,24 +8,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-class A {
+var A = class {
 	static foo;
-}
-class B {
+};
+var B = class {
 	static name;
-}
-class C {
+};
+var C = class {
 	static name() {}
-}
-class D {
+};
+var D = class {
 	static get name() {}
-}
-class E {
+};
+var E = class {
 	static set name(x) {}
-}
-class F {
+};
+var F = class {
 	static ["name"] = 0;
-}
+};
 let a = class a$1 {
 	static foo;
 };

@@ -26,16 +26,16 @@ new KeepMe3();
 ```js
 
 //#region entry.ts
-class KeepMe2 {
+var KeepMe2 = class {
 	static x = "x";
 	static y = sideEffects();
 	static z = "z";
-}
-class KeepMe3 {
+};
+var KeepMe3 = class {
 	static x = "x";
 	static y = "y";
 	static z = "z";
-}
+};
 new KeepMe3();
 
 //#endregion
@@ -58,16 +58,16 @@ new KeepMe3();
 -KeepMe3.x = "x";
 -KeepMe3.y = "y";
 -KeepMe3.z = "z";
-+class KeepMe2 {
++var KeepMe2 = class {
 +    static x = "x";
 +    static y = sideEffects();
 +    static z = "z";
-+}
-+class KeepMe3 {
++};
++var KeepMe3 = class {
 +    static x = "x";
 +    static y = "y";
 +    static z = "z";
-+}
++};
  new KeepMe3();
 
 ```

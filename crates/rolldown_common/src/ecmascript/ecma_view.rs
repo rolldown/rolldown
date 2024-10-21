@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
 use bitflags::bitflags;
-use oxc::{index::IndexVec, span::Span};
+use oxc::{index::IndexVec, semantic::SymbolId, span::Span};
 use rolldown_rstr::Rstr;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaAstIdx, ExportsKind, ImportRecordIdx,
@@ -42,6 +42,7 @@ pub struct EcmaView {
   pub dynamically_imported_ids: Vec<ModuleId>,
   pub side_effects: DeterminedSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
+  pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
 }
 
 bitflags! {

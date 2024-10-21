@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-class Foo {
+var Foo = class {
 	[q];
 	[r] = s;
 	@dec [x];
 	@dec [y] = z;
-}
+};
 new Foo();
 
 //#endregion

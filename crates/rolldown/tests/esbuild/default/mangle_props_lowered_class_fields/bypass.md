@@ -16,10 +16,10 @@ Foo.b = new Foo().a;
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	foo_ = 123;
 	static bar_ = 234;
-}
+};
 Foo.bar_ = new Foo().foo_;
 
 //#endregion
@@ -30,15 +30,17 @@ Foo.bar_ = new Foo().foo_;
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,7 +1,5 @@
- class Foo {
+-class Foo {
 -    constructor() {
 -        __publicField(this, "a", 123);
 -    }
-+    foo_ = 123;
-+    static bar_ = 234;
- }
+-}
 -__publicField(Foo, "b", 234);
 -Foo.b = new Foo().a;
++var Foo = class {
++    foo_ = 123;
++    static bar_ = 234;
++};
 +Foo.bar_ = new Foo().foo_;
 
 ```

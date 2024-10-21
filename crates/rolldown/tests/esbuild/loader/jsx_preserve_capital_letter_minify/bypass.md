@@ -16,7 +16,7 @@ console.log(<Y tag-must-start-with-capital-letter />);
 import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region foo.js
-class mustStartWithUpperCaseLetter {}
+var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
@@ -39,7 +39,7 @@ console.log(_jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-le
 -console.log(<Y tag-must-start-with-capital-letter />);
 \ No newline at end of file
 +//#region foo.js
-+class mustStartWithUpperCaseLetter {}
++var mustStartWithUpperCaseLetter = class {};
 +
 +//#endregion
 +//#region entry.jsx

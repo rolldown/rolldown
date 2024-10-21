@@ -32,7 +32,7 @@ foo = { async *bar() {
 	for await (let x$1 of y) {}
 	for await (await using x of y) {}
 } };
-class Foo {
+var Foo = class {
 	async *bar() {
 		yield;
 		yield x;
@@ -41,7 +41,7 @@ class Foo {
 		for await (let x$1 of y) {}
 		for await (await using x of y) {}
 	}
-}
+};
 Foo = class {
 	async *bar() {
 		yield;

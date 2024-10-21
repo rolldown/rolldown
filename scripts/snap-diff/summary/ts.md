@@ -11,6 +11,8 @@
   diff
 ## [this_inside_function_ts_use_define_for_class_fields](../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields/diff.md)
   diff
+## [ts_abstract_class_field_use_define](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define/diff.md)
+  diff
 ## [ts_common_js_variable_in_esm_type_module](../../../crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module/diff.md)
   diff
 ## [ts_computed_class_field_use_define_false](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false/diff.md)
@@ -87,10 +89,6 @@
   diff
 ## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts/diff.md)
   diff
-## [ts_import_vs_local_collision_all_types](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_all_types/diff.md)
-  diff
-## [ts_import_vs_local_collision_mixed](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_mixed/diff.md)
-  diff
 ## [ts_minified_bundle_common_js](../../../crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js/diff.md)
   diff
 ## [ts_minify_derived_class](../../../crates/rolldown/tests/esbuild/ts/ts_minify_derived_class/diff.md)
@@ -114,7 +112,6 @@
 ## [ts_this_is_undefined_warning](../../../crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning/diff.md)
   diff
 # Passed Cases
-## [ts_abstract_class_field_use_define](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define)
 ## [ts_declare_class](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class)
 ## [ts_declare_const](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const)
 ## [ts_declare_const_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const_enum)
@@ -127,6 +124,8 @@
 ## [ts_import_empty_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
 ## [ts_import_missing_unused_es6](../../../crates/rolldown/tests/esbuild/ts/ts_import_missing_unused_es6)
 ## [ts_import_type_only_file](../../../crates/rolldown/tests/esbuild/ts/ts_import_type_only_file)
+## [ts_import_vs_local_collision_all_types](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_all_types)
+## [ts_import_vs_local_collision_mixed](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_mixed)
 ## [ts_side_effects_false_warning_type_declarations](../../../crates/rolldown/tests/esbuild/ts/ts_side_effects_false_warning_type_declarations)
 # Bypassed Cases
 ## [ts_abstract_class_field_use_assign](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_assign/bypass.md)

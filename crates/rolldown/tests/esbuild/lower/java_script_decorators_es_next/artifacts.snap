@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-@x.y() @(new y.x()) class Foo {
+var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y mUndef;
 	@x @y mDef = 1;
 	@x @y method() {
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	@x @y static sMethod() {
 		return new Foo();
 	}
-}
+};
 
 //#endregion
 export { Foo as default };

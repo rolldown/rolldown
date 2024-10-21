@@ -19,7 +19,7 @@ export {
 ```js
 
 //#region entry.ts
-@decoratorMustComeAfterName class Foo {}
+var Foo = @decoratorMustComeAfterName class {};
 
 //#endregion
 export { Foo };
@@ -36,7 +36,7 @@ export { Foo };
 -export {Foo};
 +
 +//#region entry.ts
-+@decoratorMustComeAfterName class Foo {}
++var Foo = @decoratorMustComeAfterName class {};
 +
 +//#endregion
 +export { Foo };

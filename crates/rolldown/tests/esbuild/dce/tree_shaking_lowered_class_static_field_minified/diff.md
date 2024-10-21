@@ -17,16 +17,16 @@ new KeepMe2();
 ```js
 
 //#region entry.js
-class KeepMe1 {
+var KeepMe1 = class {
 	static x = "x";
 	static y = sideEffects();
 	static z = "z";
-}
-class KeepMe2 {
+};
+var KeepMe2 = class {
 	static x = "x";
 	static y = "y";
 	static z = "z";
-}
+};
 new KeepMe2();
 
 //#endregion
@@ -41,16 +41,16 @@ new KeepMe2();
 -(__publicField(KeepMe1, "x", "x"), __publicField(KeepMe1, "y", sideEffects()), __publicField(KeepMe1, "z", "z"));
 -var KeepMe2 = class {};
 -(__publicField(KeepMe2, "x", "x"), __publicField(KeepMe2, "y", "y"), __publicField(KeepMe2, "z", "z"));
-+class KeepMe1 {
++var KeepMe1 = class {
 +    static x = "x";
 +    static y = sideEffects();
 +    static z = "z";
-+}
-+class KeepMe2 {
++};
++var KeepMe2 = class {
 +    static x = "x";
 +    static y = "y";
 +    static z = "z";
-+}
++};
  new KeepMe2();
 
 ```

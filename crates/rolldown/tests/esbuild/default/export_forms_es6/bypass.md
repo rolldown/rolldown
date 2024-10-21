@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. trivial different in codegen `undefined`
 # Diff
 ## /out.js
 ### esbuild
@@ -55,7 +55,7 @@ var v = 234;
 let l = 234;
 const c = 234;
 function Fn() {}
-class Class {}
+var Class = class {};
 
 //#endregion
 export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
@@ -72,13 +72,5 @@ export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default
  __export(b_exports, {
      xyz: () => xyz
  });
-@@ -8,6 +8,6 @@
- var v = 234;
- var l = 234;
- var c = 234;
- function Fn() {}
--var Class = class {};
-+class Class {}
- export {Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v};
 
 ```

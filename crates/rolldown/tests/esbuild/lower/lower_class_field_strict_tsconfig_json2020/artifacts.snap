@@ -8,15 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region loose/index.js
-class loose_index_default {
+var loose_index_default = class {
 	foo;
-}
+};
 
 //#endregion
 //#region strict/index.js
-class strict_index_default {
+var strict_index_default = class {
 	foo;
-}
+};
 
 //#endregion
 //#region entry.js

@@ -25,15 +25,15 @@ console.log(FooThis.bar === 123);
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class Foo {
 	static #foo = 123;
 	static bar = Foo.#foo;
-}
+};
 assert.equal(Foo.bar, 123);
-class FooThis {
+var FooThis = class {
 	static #foo = 123;
 	static bar = this.#foo;
-}
+};
 assert.equal(FooThis.bar, 123);
 
 //#endregion
@@ -57,14 +57,14 @@ assert.equal(FooThis.bar, 123);
 -__publicField(_FooThis, "bar", __privateGet(_FooThis, _foo2));
 -let FooThis = _FooThis;
 -console.log(FooThis.bar === 123);
-+class Foo {
++var Foo = class Foo {
 +    static #foo = 123;
 +    static bar = Foo.#foo;
-+}
-+class FooThis {
++};
++var FooThis = class {
 +    static #foo = 123;
 +    static bar = this.#foo;
-+}
++};
 +console.log(Foo.bar, FooThis.bar);
 
 ```

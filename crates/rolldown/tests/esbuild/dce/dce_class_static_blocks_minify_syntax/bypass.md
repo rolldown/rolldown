@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. trivial codegen diff, esbuild will try to join multiple `varDeclaration`
 # Diff
 ## /out.js
 ### esbuild
@@ -9,21 +9,18 @@ var A_keep = class {
   static {
     foo;
   }
-};
-var B_keep = class {
+}, B_keep = class {
   static {
     this.foo;
   }
-};
-var C_keep = class {
+}, C_keep = class {
   static {
     try {
       foo;
     } catch {
     }
   }
-};
-var D_keep = class {
+}, D_keep = class {
   static {
     try {
     } finally {
@@ -36,30 +33,30 @@ var D_keep = class {
 ```js
 
 //#region entry.ts
-class A_keep {
+var A_keep = class {
 	static {
 		foo;
 	}
-}
-class B_keep {
+};
+var B_keep = class {
 	static {
 		this.foo;
 	}
-}
-class C_keep {
+};
+var C_keep = class {
 	static {
 		try {
 			foo;
 		} catch {}
 	}
-}
-class D_keep {
+};
+var D_keep = class {
 	static {
 		try {} finally {
 			foo;
 		}
 	}
-}
+};
 
 //#endregion
 ```
@@ -68,38 +65,31 @@ class D_keep {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,24 +1,24 @@
--var A_keep = class {
-+class A_keep {
+@@ -1,19 +1,22 @@
+ var A_keep = class {
      static {
          foo;
      }
--};
--var B_keep = class {
-+}
-+class B_keep {
+-}, B_keep = class {
++};
++var B_keep = class {
      static {
          this.foo;
      }
--};
--var C_keep = class {
-+}
-+class C_keep {
+-}, C_keep = class {
++};
++var C_keep = class {
      static {
          try {
              foo;
          } catch {}
      }
--};
--var D_keep = class {
-+}
-+class D_keep {
+-}, D_keep = class {
++};
++var D_keep = class {
      static {
          try {} finally {
              foo;
          }
-     }
--};
-+}
 
 ```

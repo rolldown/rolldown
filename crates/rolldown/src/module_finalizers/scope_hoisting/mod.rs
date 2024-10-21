@@ -184,29 +184,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           ))
         }
       }
-      ast::Declaration::ClassDeclaration(cls_decl) => {
-        let cls_name = cls_decl.id.take().expect("should have a name at this point").name;
-        hoisted_names.push(cls_name.clone());
-        // Turn `class xxx {}` to `xxx = class {}`
-        Some(ast::Statement::ExpressionStatement(
-          ast::ExpressionStatement {
-            expression: ast::Expression::AssignmentExpression(
-              ast::AssignmentExpression {
-                left: self.snippet.simple_id_assignment_target(&cls_name, cls_decl.span),
-                right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
-                ..TakeIn::dummy(self.alloc)
-              }
-              .into_in(self.alloc),
-            ),
-            ..TakeIn::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ))
-      }
-      ast::Declaration::FunctionDeclaration(_) => {
-        // Function declaration itself as a whole will be hoisted, so we don't need to convert it to an assignment.
-        None
-      }
       _ => unreachable!("TypeScript code should be preprocessed"),
     }
   }

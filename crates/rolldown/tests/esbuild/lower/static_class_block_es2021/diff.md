@@ -18,7 +18,7 @@ var B = (_a = class {
 ```js
 
 //#region entry.js
-class A {
+var A = class A {
 	static {}
 	static {
 		this.thisField++;
@@ -26,7 +26,7 @@ class A {
 		super.superField = super.superField + 1;
 		super.superField++;
 	}
-}
+};
 let B = class {
 	static {}
 	static {
@@ -52,7 +52,7 @@ let B = class {
 -var A = _A;
 -var _a;
 -var B = (_a = class {}, _a.thisField++, __superSet(_a, _a, "superField", __superGet(_a, _a, "superField") + 1), __superWrapper(_a, _a, "superField")._++, _a);
-+class A {
++var A = class A {
 +    static {}
 +    static {
 +        this.thisField++;
@@ -60,7 +60,7 @@ let B = class {
 +        super.superField = super.superField + 1;
 +        super.superField++;
 +    }
-+}
++};
 +var B = class {
 +    static {}
 +    static {

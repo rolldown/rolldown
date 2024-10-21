@@ -27,7 +27,7 @@ new T().d();
 import assert from "node:assert";
 
 //#region entry.js
-class T {
+var T = class {
 	#a() {
 		return "a";
 	}
@@ -38,7 +38,7 @@ class T {
 	d() {
 		assert.equal(this.#a(), "a");
 	}
-}
+};
 new T().d();
 
 //#endregion
@@ -50,10 +50,9 @@ new T().d();
 +++ rolldown	entry.js
 @@ -1,18 +1,13 @@
 -var _T_instances, a_fn, b_fn;
--var T = class {
+ var T = class {
 -    constructor() {
 -        __privateAdd(this, _T_instances);
-+class T {
 +    #a() {
 +        return "a";
      }
@@ -65,7 +64,7 @@ new T().d();
 -        console.log(__privateMethod(this, _T_instances, a_fn).call(this));
 +        assert.equal(this.#a(), "a");
      }
--};
+ };
 -_T_instances = new WeakSet();
 -a_fn = function () {
 -    return "a";
@@ -74,7 +73,6 @@ new T().d();
 -    return "b";
 -};
 -__publicField(T, "c");
-+}
  new T().d();
 
 ```

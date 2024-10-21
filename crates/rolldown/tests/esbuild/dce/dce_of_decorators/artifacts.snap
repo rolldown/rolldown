@@ -14,19 +14,19 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.js
-@fn class Class {}
-class Field {
+var Class = @fn class {};
+var Field = class {
 	@fn field;
-}
-class Method {
+};
+var Method = class {
 	@fn method() {}
-}
-class StaticField {
+};
+var StaticField = class {
 	@fn static field;
-}
-class StaticMethod {
+};
+var StaticMethod = class {
 	@fn static method() {}
-}
+};
 
 //#endregion
 ```

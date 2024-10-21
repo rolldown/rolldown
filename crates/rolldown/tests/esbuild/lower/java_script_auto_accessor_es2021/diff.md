@@ -64,14 +64,14 @@ __privateAdd(Foo, _b2, 6);
 ```js
 
 //#region js-define.js
-class Foo {
+var Foo = class {
 	accessor one = 1;
 	accessor #two = 2;
 	accessor [three()] = 3;
 	static accessor four = 4;
 	static accessor #five = 5;
 	static accessor [six()] = 6;
-}
+};
 
 //#endregion
 ```
@@ -82,9 +82,7 @@ class Foo {
 +++ rolldown	js-define.js
 @@ -1,57 +1,12 @@
 -var _a, _b, _one, __two, _Foo_instances, two_get, two_set, _a2, _four, __five, _Foo_static, five_get, five_set, _b2;
-+
-+//#region js-define.js
- class Foo {
+-class Foo {
 -    constructor() {
 -        __privateAdd(this, _Foo_instances);
 -        __privateAdd(this, _one, 1);
@@ -115,19 +113,22 @@ class Foo {
 -    static set [_a](_) {
 -        __privateSet(this, _b2, _);
 -    }
+-}
+-_one = new WeakMap();
+-__two = new WeakMap();
+-_Foo_instances = new WeakSet();
+-two_get = function () {
+-    return __privateGet(this, __two);
++
++//#region js-define.js
++var Foo = class {
 +	accessor one = 1;
 +	accessor #two = 2;
 +	accessor [three()] = 3;
 +	static accessor four = 4;
 +	static accessor #five = 5;
 +	static accessor [six()] = 6;
- }
--_one = new WeakMap();
--__two = new WeakMap();
--_Foo_instances = new WeakSet();
--two_get = function () {
--    return __privateGet(this, __two);
--};
+ };
 -two_set = function (_) {
 -    __privateSet(this, __two, _);
 -};

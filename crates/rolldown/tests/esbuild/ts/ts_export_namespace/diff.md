@@ -19,7 +19,7 @@ console.log(new Foo());
 ```js
 
 //#region b.ts
-class Foo {}
+var Foo = class {};
 (function(_Foo) {
 	let foo = _Foo.foo = 1;
 })(Foo || (Foo = {}));
@@ -39,10 +39,9 @@ console.log(new Foo());
 --- esbuild	/out.js
 +++ rolldown	a.js
 @@ -1,8 +1,8 @@
--var Foo = class {};
+ var Foo = class {};
 -(Foo2 => {
 -    Foo2.foo = 1;
-+class Foo {}
 +(function (_Foo) {
 +    let foo = _Foo.foo = 1;
  })(Foo || (Foo = {}));

@@ -4,7 +4,7 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
-use oxc::semantic::{Reference, SymbolTable};
+use oxc::semantic::{Reference, ReferenceId, SymbolTable};
 use oxc::{
   ast::{
     ast::{
@@ -26,7 +26,7 @@ use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
@@ -44,6 +44,11 @@ pub struct ScanResult {
   pub has_eval: bool,
   pub ast_usage: EcmaModuleAstUsage,
   pub symbol_ref_db: SymbolRefDbForModule,
+  /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser_lower_class.go#L2277-L2283
+  /// used for check if current class decl symbol was referenced in its class scope
+  /// We needs to record the info in ast scanner since after that the ast maybe touched, etc
+  /// (naming deconflict)
+  pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
 }
 
 pub struct AstScanner<'me> {
@@ -68,6 +73,7 @@ pub struct AstScanner<'me> {
   /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
   /// lhs of AssignmentExpression
   ast_usage: EcmaModuleAstUsage,
+  cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
 }
 
 impl<'me> AstScanner<'me> {
@@ -110,6 +116,7 @@ impl<'me> AstScanner<'me> {
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty(),
       symbol_ref_db,
+      self_referenced_class_decl_symbol_ids: FxHashSet::default(),
     };
 
     Self {
@@ -127,6 +134,7 @@ impl<'me> AstScanner<'me> {
       file_path,
       trivias,
       ast_usage: EcmaModuleAstUsage::empty(),
+      cur_class_decl_and_symbol_referenced_ids: None,
     }
   }
 
@@ -536,6 +544,13 @@ impl<'me> AstScanner<'me> {
       ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_default_decl(decl);
+        match &decl.declaration {
+          ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+            self.scan_class_declaration(class);
+            // walk::walk_declaration(self, &ast::Declaration::ClassDeclaration(func));
+          }
+          _ => {}
+        }
       }
       _ => {}
     }

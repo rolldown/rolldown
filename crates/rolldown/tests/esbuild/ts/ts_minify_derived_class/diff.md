@@ -17,7 +17,7 @@ class Foo extends Bar {
 ```js
 
 //#region entry.ts
-class Foo extends Bar {
+var Foo = class extends Bar {
 	foo = 1;
 	bar = 2;
 	constructor() {
@@ -25,7 +25,7 @@ class Foo extends Bar {
 		foo();
 		bar();
 	}
-}
+};
 
 //#endregion
 ```
@@ -35,7 +35,8 @@ class Foo extends Bar {
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,8 +1,9 @@
- class Foo extends Bar {
+-class Foo extends Bar {
++var Foo = class extends Bar {
 +    foo = 1;
 +    bar = 2;
      constructor() {
@@ -46,6 +47,7 @@ class Foo extends Bar {
 +        foo();
 +        bar();
      }
- }
+-}
++};
 
 ```

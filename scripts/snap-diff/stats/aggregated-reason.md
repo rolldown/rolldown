@@ -1,21 +1,4 @@
 # Aggregate Reason
-## lowering class
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks
-- crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
-- crates/rolldown/tests/esbuild/dce/dce_of_decorators
-- crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
-- crates/rolldown/tests/esbuild/default/avoid_tdz
-- crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle
-- crates/rolldown/tests/esbuild/default/export_forms_es6
-- crates/rolldown/tests/esbuild/default/new_expression_common_js
-- crates/rolldown/tests/esbuild/default/this_inside_function
-- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false
-- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true
-- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
-- crates/rolldown/tests/esbuild/ts/ts_declare_class_fields
-- crates/rolldown/tests/esbuild/ts/ts_minify_derived_class
 ## not support legal comments
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
@@ -65,7 +48,6 @@
 - crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544
 - crates/rolldown/tests/esbuild/default/package_alias
 - crates/rolldown/tests/esbuild/default/quoted_property_mangle
-- crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 - crates/rolldown/tests/esbuild/default/this_outside_function
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 - crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle
@@ -86,6 +68,14 @@
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
 - crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
+## lowering class
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
+- crates/rolldown/tests/esbuild/ts/ts_declare_class_fields
+- crates/rolldown/tests/esbuild/ts/ts_minify_derived_class
 ## `jsx.factory`
 - crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
 - crates/rolldown/tests/esbuild/default/jsx_import_meta_property
@@ -206,9 +196,8 @@
 ## lowering decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
-## class decl transform
-- crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_all_types
-- crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_mixed
+## dce decorator
+- crates/rolldown/tests/esbuild/dce/dce_of_decorators
 ## lower decorator
 - crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators
 ## don't support dce iife
@@ -231,6 +220,8 @@
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
+## class field lowering
+- crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
 ## related to minifier
 - crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
 ## the deconflict of no top level is sub optimal
@@ -305,6 +296,8 @@
 - crates/rolldown/tests/esbuild/default/non_determinism_issue2537
 ## alias not align
 - crates/rolldown/tests/esbuild/default/package_alias_match_longest
+## rename private identifier
+- crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 ## not support invalid template
 - crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template
 ## should rewrite when bad arg count
@@ -319,6 +312,8 @@
 - crates/rolldown/tests/esbuild/default/string_export_names_common_js
 ## string export name not correct
 - crates/rolldown/tests/esbuild/default/string_export_names_iife
+## lowering not align
+- crates/rolldown/tests/esbuild/default/this_inside_function
 ## this undefined
 - crates/rolldown/tests/esbuild/default/this_undefined_warning_esm
 ## should not appear top level `await` in cjs

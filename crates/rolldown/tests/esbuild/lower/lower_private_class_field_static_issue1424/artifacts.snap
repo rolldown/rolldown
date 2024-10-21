@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region entry.js
-class T {
+var T = class {
 	#a() {
 		return "a";
 	}
@@ -20,7 +20,7 @@ class T {
 	d() {
 		assert.equal(this.#a(), "a");
 	}
-}
+};
 new T().d();
 
 //#endregion

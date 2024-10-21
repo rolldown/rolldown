@@ -7,6 +7,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
+use rustc_hash::FxHashSet;
 
 use super::Msg;
 use crate::{
@@ -72,6 +73,7 @@ impl RuntimeModuleTask {
       errors: _,
       ast_usage,
       symbol_ref_db,
+      self_referenced_class_decl_symbol_ids: _,
     } = scan_result;
 
     let module = NormalModule {
@@ -110,6 +112,7 @@ impl RuntimeModuleTask {
         namespace_object_ref,
         def_format: ModuleDefFormat::EsmMjs,
         ast_usage,
+        self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       },
       css_view: None,
     };

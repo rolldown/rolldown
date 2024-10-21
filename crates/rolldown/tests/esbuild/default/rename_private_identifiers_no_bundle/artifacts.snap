@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	#foo;
 	foo = class {
 		#foo;
@@ -17,8 +17,8 @@ class Foo {
 	};
 	get #bar() {}
 	set #bar(x) {}
-}
-class Bar {
+};
+var Bar = class {
 	#foo;
 	foo = class {
 		#foo2;
@@ -27,7 +27,7 @@ class Bar {
 	};
 	get #bar() {}
 	set #bar(x) {}
-}
+};
 
 //#endregion
 ```

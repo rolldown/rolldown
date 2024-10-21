@@ -28,12 +28,12 @@ export {
 ```js
 
 //#region entry.ts
-class WeakMap {
+var WeakMap = class {
 	#x;
-}
-class WeakSet {
+};
+var WeakSet = class {
 	#y() {}
-}
+};
 
 //#endregion
 export { WeakMap, WeakSet };
@@ -49,23 +49,21 @@ export { WeakMap, WeakSet };
 -    constructor() {
 -        __privateAdd(this, _x);
 -    }
--};
++var WeakMap = class {
++    #x;
+ };
 -_x = new WeakMap();
 -var _WeakSet_instances, y_fn;
 -var WeakSet2 = class {
 -    constructor() {
 -        __privateAdd(this, _WeakSet_instances);
 -    }
--};
++var WeakSet = class {
++    #y() {}
+ };
 -_WeakSet_instances = new WeakSet();
 -y_fn = function () {};
 -export {WeakMap2 as WeakMap, WeakSet2 as WeakSet};
-+class WeakMap {
-+    #x;
-+}
-+class WeakSet {
-+    #y() {}
-+}
 +export {WeakMap, WeakSet};
 
 ```

@@ -83,8 +83,23 @@ pub fn render_iife(
   // You can refer to the function for more details.
   let (definition, assignment) = generate_identifier(ctx, &export_mode)?;
 
+  let exports_prefix = if has_exports && named_exports {
+    if ctx.options.extend {
+      // If using `output.extend`, the first caller argument should be `name = name || {}`,
+      // then the result will be assigned to `name`.
+      Some(assignment.as_str())
+    } else {
+      // If not using `output.extend`, the first caller argument should be `{}`,
+      // then the result will be assigned to `exports`.
+      Some("{}")
+    }
+  } else {
+    // If there is no export or not using named export,
+    // there shouldn't be an argument shouldn't be related to the export.
+    None
+  };
   // The function argument and the external imports are passed as arguments to the wrapper function.
-  let factory_parameters = render_factory_parameters(ctx, &externals, has_exports);
+  let factory_parameters = render_factory_parameters(ctx, &externals, exports_prefix.is_some());
 
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{definition}{}(function({factory_parameters}) {{\n",
@@ -142,21 +157,6 @@ pub fn render_iife(
   }
 
   // iife wrapper end
-  let exports_prefix = if has_exports && named_exports {
-    if ctx.options.extend {
-      // If using `output.extend`, the first caller argument should be `name = name || {}`,
-      // then the result will be assigned to `name`.
-      Some(assignment.as_str())
-    } else {
-      // If not using `output.extend`, the first caller argument should be `{}`,
-      // then the result will be assigned to `exports`.
-      Some("{}")
-    }
-  } else {
-    // If there is no export or not using named export,
-    // there shouldn't be an argument shouldn't be related to the export.
-    None
-  };
   let factory_arguments = render_iife_factory_arguments(ctx, &externals, exports_prefix);
   concat_source.add_source(Box::new(RawSource::new(format!("}})({factory_arguments});"))));
 

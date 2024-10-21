@@ -120,6 +120,8 @@ test.sequential('watch skipWrite', async () => {
   })
   await waitBuildFinished()
   expect(fs.existsSync(dir)).toBe(false)
+})
+
 test.sequential('PluginContext addWatchFile', async () => {
   const foo = path.join(import.meta.dirname, './foo.js')
   const watcher = await watch({

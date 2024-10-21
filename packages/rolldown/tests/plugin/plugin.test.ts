@@ -1,5 +1,6 @@
 import { expect, test, vi, describe } from 'vitest'
 import { rolldown, Plugin } from 'rolldown'
+import { sleep } from '@tests/utils'
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -133,6 +134,6 @@ test('rolldown write twice', async () => {
     cwd: import.meta.dirname,
   })
   await build.write({})
-
+  await sleep(100)
   await build.write({})
 })

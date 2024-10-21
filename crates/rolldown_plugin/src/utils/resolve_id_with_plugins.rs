@@ -155,8 +155,9 @@ fn resolve_id(
 
   if let Err(err) = resolved {
     match err {
-      ResolveError::Builtin(specifier) => Ok(Ok(ResolvedId {
-        id: specifier.into(),
+      ResolveError::Builtin(_rewritten_specifier) => Ok(Ok(ResolvedId {
+        // Oxc will rewrite `fs` to `node:fs` while we want to keep it as it is
+        id: request.into(),
         ignored: false,
         is_external: true,
         module_def_format: ModuleDefFormat::Unknown,

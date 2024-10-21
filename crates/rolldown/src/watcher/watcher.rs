@@ -41,6 +41,17 @@ impl Watcher {
     let (tx, rx) = channel(100);
     let tx = Arc::new(Mutex::new(tx));
     let cloned_tx = Arc::clone(&tx);
+    let watch_option = {
+      let config = Config::default();
+      let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
+      if let Some(notify) = &bundler_guard.options.watch.notify {
+        if let Some(poll_interval) = notify.poll_interval {
+          config.with_poll_interval(poll_interval);
+        }
+        config.with_compare_contents(notify.compare_contents);
+      }
+      config
+    };
     let inner = RecommendedWatcher::new(
       move |res| {
         let mut tx = tx.try_lock().expect("Failed to lock the watcher sender");
@@ -56,7 +67,7 @@ impl Watcher {
           };
         });
       },
-      Config::default(),
+      watch_option,
     )?;
 
     Ok(Self {

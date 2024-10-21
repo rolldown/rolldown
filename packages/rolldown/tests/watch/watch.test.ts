@@ -115,7 +115,7 @@ test.sequential('watch skipWrite', async () => {
       dir,
     },
     watch: {
-      skipRewrite: true,
+      skipWrite: true,
     },
   })
   await waitBuildFinished()

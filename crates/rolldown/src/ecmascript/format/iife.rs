@@ -23,10 +23,7 @@
 //! 10. Render the footer if it exists.
 
 use crate::ecmascript::format::utils::namespace::generate_identifier;
-use crate::utils::chunk::collect_render_chunk_imports::{
-  collect_render_chunk_imports, ExternalRenderImportStmt, RenderImportDeclarationSpecifier,
-  RenderImportStmt,
-};
+use crate::utils::chunk::collect_render_chunk_imports::ExternalRenderImportStmt;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
@@ -38,14 +35,13 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use itertools::Itertools;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
-use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
-// TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
+use super::utils::{render_chunk_external_imports, render_factory_parameters};
+
 /// The main function for rendering the IIFE format chunks.
 pub fn render_iife(
   ctx: &mut GenerateContext<'_>,
@@ -54,7 +50,6 @@ pub fn render_iife(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
-  invoke: bool,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
@@ -82,35 +77,32 @@ pub fn render_iife(
   let named_exports = matches!(&export_mode, OutputExports::Named);
 
   // It is similar to CJS.
-  let (import_code, externals) = render_iife_chunk_imports(ctx);
+  let (import_code, externals) = render_chunk_external_imports(ctx);
 
   // Generate the identifier for the IIFE wrapper function.
   // You can refer to the function for more details.
   let (definition, assignment) = generate_identifier(ctx, &export_mode)?;
 
-  // The function argument and the external imports are passed as arguments to the wrapper function.
-  let (input_args, output_args) = render_iife_arguments(
-    ctx,
-    &externals,
-    if has_exports && named_exports {
-      if ctx.options.extend {
-        // If using `output.extend`, the first caller argument should be `name = name || {}`,
-        // then the result will be assigned to `name`.
-        Some(assignment.as_str())
-      } else {
-        // If not using `output.extend`, the first caller argument should be `{}`,
-        // then the result will be assigned to `exports`.
-        Some("{}")
-      }
+  let exports_prefix = if has_exports && named_exports {
+    if ctx.options.extend {
+      // If using `output.extend`, the first caller argument should be `name = name || {}`,
+      // then the result will be assigned to `name`.
+      Some(assignment.as_str())
     } else {
-      // If there is no export or not using named export,
-      // there shouldn't be an argument shouldn't be related to the export.
-      None
-    },
-  );
+      // If not using `output.extend`, the first caller argument should be `{}`,
+      // then the result will be assigned to `exports`.
+      Some("{}")
+    }
+  } else {
+    // If there is no export or not using named export,
+    // there shouldn't be an argument shouldn't be related to the export.
+    None
+  };
+  // The function argument and the external imports are passed as arguments to the wrapper function.
+  let factory_parameters = render_factory_parameters(ctx, &externals, exports_prefix.is_some());
 
   concat_source.add_source(Box::new(RawSource::new(format!(
-    "{definition}{}(function({input_args}) {{\n",
+    "{definition}{}(function({factory_parameters}) {{\n",
     if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
       // If facing following situations, there shouldn't an assignment for the wrapper function:
       // - Using `output.extend` and named export.
@@ -165,11 +157,8 @@ pub fn render_iife(
   }
 
   // iife wrapper end
-  if invoke {
-    concat_source.add_source(Box::new(RawSource::new(format!("}})({output_args});"))));
-  } else {
-    concat_source.add_source(Box::new(RawSource::new("})".to_string())));
-  }
+  let factory_arguments = render_iife_factory_arguments(ctx, &externals, exports_prefix);
+  concat_source.add_source(Box::new(RawSource::new(format!("}})({factory_arguments});"))));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));
@@ -178,90 +167,28 @@ pub fn render_iife(
   Ok(concat_source)
 }
 
-/// Handling external imports needs to modify the arguments of the wrapper function.
-fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<ExternalRenderImportStmt>) {
-  let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
-
-  let mut import_code = String::new();
-  let externals = render_import_stmts
-    .into_iter()
-    .filter_map(|stmt| {
-      if let RenderImportStmt::ExternalRenderImportStmt(external_stmt) = stmt {
-        let symbol_name =
-          ctx.chunk.canonical_name_by_token.get(&external_stmt.binding_name_token).unpack();
-        match &external_stmt.specifiers {
-          RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-            // Empty specifiers can be ignored in IIFE.
-            if specifiers.is_empty() {
-              None
-            } else {
-              let specifiers = specifiers
-                .iter()
-                .map(|specifier| {
-                  if let Some(alias) = &specifier.alias {
-                    format!("{}: {alias}", specifier.imported)
-                  } else {
-                    specifier.imported.to_string()
-                  }
-                })
-                .collect::<Vec<_>>();
-              import_code
-                .push_str(&format!("const {{ {} }} = {symbol_name};\n", specifiers.join(", ")));
-              Some(external_stmt)
-            }
-          }
-          RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-            import_code.push_str(&format!("const {alias} = {symbol_name};\n"));
-            Some(external_stmt)
-          }
-        }
-      } else {
-        None
-      }
-    })
-    .collect_vec();
-
-  (import_code, externals)
-}
-
-/// Rendering the arguments of the wrapper function, including the function arguments and calling arguments.
-/// - If `output.exports` is `named`, the first argument is `exports`.
-///    - If you are using `extend: true`, the inputted argument will be extended;
-///    - If you aren't using it, the wrapper function will return the `exports` object as the result.
-///
-///    If `output.exports` is `default`, there is no need to pass the `exports` argument.
-///    The return value of the wrapper function will be the default export value.
-/// - The rest of the arguments are the external imports, which are directly assigned to the global variables.
-///    - If the global variable is not defined in `output.globals`,
-///      you will be warned and rolldown will use the defined name after legitimizing it.
-///    - If the global variable is defined in `output.globals`, the global variable will be used directly (after legitimizing it).
-fn render_iife_arguments(
+fn render_iife_factory_arguments(
   ctx: &mut GenerateContext<'_>,
   externals: &[ExternalRenderImportStmt],
   exports_prefix: Option<&str>,
-) -> (String, String) {
-  let mut input_args = if exports_prefix.is_some() { vec!["exports"] } else { vec![] };
-  let mut output_args = if let Some(exports_prefix) = exports_prefix {
+) -> String {
+  let mut factory_arguments = if let Some(exports_prefix) = exports_prefix {
     vec![exports_prefix.to_string()]
   } else {
     vec![]
   };
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
-    let symbol_name = ctx.chunk.canonical_name_by_token.get(&external.binding_name_token).unpack();
-    input_args.push(symbol_name.as_str());
-
     if let Some(global) = globals.get(external.path.as_str()) {
-      output_args.push(legitimize_identifier_name(global).to_string());
+      factory_arguments.push(legitimize_identifier_name(global).to_string());
     } else {
       let target = legitimize_identifier_name(external.path.as_str()).to_string();
       ctx.warnings.push(
         BuildDiagnostic::missing_global_name(external.path.clone(), ArcStr::from(&target))
           .with_severity_warning(),
       );
-      output_args.push(target);
+      factory_arguments.push(target);
     }
   });
-  (input_args.join(", "), output_args.join(", "))
+  factory_arguments.join(", ")
 }

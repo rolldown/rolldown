@@ -114,7 +114,7 @@ impl Generator for EcmaGenerator {
       }
       OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer, intro, outro),
       OutputFormat::Iife => {
-        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro, true) {
+        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro) {
           Ok(concat_source) => concat_source,
           Err(errors) => return Ok(Err(errors)),
         }

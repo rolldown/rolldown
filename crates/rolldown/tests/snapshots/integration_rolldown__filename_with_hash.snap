@@ -3502,7 +3502,7 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_define
 
-- entry-!~{000}~.js => entry-xray_Ftm.js
+- entry-!~{000}~.js => entry-OkC1PSpW.js
 
 # tests/esbuild/ts/ts_enum_export_clause
 
@@ -3510,10 +3510,10 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_jsx
 
-- element-!~{000}~.js => element-3R12hgqb.js
-- fragment-!~{001}~.js => fragment-nelYC-G4.js
-- nested-element-!~{002}~.js => nested-element-vqTwwdz9.js
-- nested-fragment-!~{003}~.js => nested-fragment-z7sRMW-I.js
+- element-!~{000}~.js => element-XLe7ZLOf.js
+- fragment-!~{001}~.js => fragment-9N1OP32Z.js
+- nested-element-!~{002}~.js => nested-element-lN5LkHWb.js
+- nested-fragment-!~{003}~.js => nested-fragment-ojCggouK.js
 
 # tests/esbuild/ts/ts_enum_same_module_inlining_access
 
@@ -3668,7 +3668,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_derived_class
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-wssgQTGv.js
 
 # tests/esbuild/ts/ts_minify_enum
 

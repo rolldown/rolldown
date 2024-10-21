@@ -1,3 +1,5 @@
+# Reason
+1. not support ts import equal
 # Diff
 ## /out.js
 ### esbuild

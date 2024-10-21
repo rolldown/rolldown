@@ -5,6 +5,8 @@
         "name": "entry",
         "import": "entry.ts"
       }
-    ]
-  }
+    ],
+    "treeshake": false
+  },
+  "expectExecuted": false
 }

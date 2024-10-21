@@ -1,3 +1,5 @@
+# Reason
+1. enum side effects
 # Diff
 ## /out/entry.js
 ### esbuild

@@ -17,7 +17,10 @@
         "name": "nested-fragment",
         "import": "nested-fragment.tsx"
       }
-    ]
+    ],
+    "jsx": {
+      "runtime": "classic"
+    }
   },
   "expectExecuted": false
 }

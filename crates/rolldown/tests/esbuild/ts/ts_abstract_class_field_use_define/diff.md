@@ -28,9 +28,8 @@ var Foo = class {
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,6 +1,6 @@
--const keepThisToo = Symbol("keepThisToo");
+ const keepThisToo = Symbol("keepThisToo");
 -class Foo {
-+var keepThisToo = Symbol("keepThisToo");
 +var Foo = class {
      keepThis;
      [keepThisToo];

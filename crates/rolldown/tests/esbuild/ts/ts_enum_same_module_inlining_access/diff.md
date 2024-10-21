@@ -1,3 +1,6 @@
+# Reason
+1. pure annotation for enum
+2. const enum inline
 # Diff
 ## /out/entry.js
 ### esbuild

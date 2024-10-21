@@ -18,20 +18,39 @@ console.log(new Foo());
 ### rolldown
 ```js
 
+//#region b.ts
+class Foo {}
+(function(_Foo) {
+	let foo = _Foo.foo = 1;
+})(Foo || (Foo = {}));
+(function(_Foo2) {
+	let bar = _Foo2.bar = 2;
+})(Foo || (Foo = {}));
+
+//#endregion
+//#region a.ts
+console.log(new Foo());
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,8 +0,0 @@
++++ rolldown	a.js
+@@ -1,8 +1,8 @@
 -var Foo = class {};
 -(Foo2 => {
 -    Foo2.foo = 1;
--})(Foo || (Foo = {}));
++class Foo {}
++(function (_Foo) {
++    let foo = _Foo.foo = 1;
+ })(Foo || (Foo = {}));
 -(Foo2 => {
 -    Foo2.bar = 2;
--})(Foo || (Foo = {}));
--console.log(new Foo());
++(function (_Foo2) {
++    let bar = _Foo2.bar = 2;
+ })(Foo || (Foo = {}));
+ console.log(new Foo());
 
 ```

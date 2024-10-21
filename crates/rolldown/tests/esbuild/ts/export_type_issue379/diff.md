@@ -1,3 +1,5 @@
+# Reason
+1. rolldown is not ts aware after ts transformation, We can't aware that `Test` is just a type
 # Diff
 ## /out.js
 ### esbuild

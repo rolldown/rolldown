@@ -1,3 +1,6 @@
+# Reason
+1. sub optimal
+2. redundant wrap function
 # Diff
 ## /out.js
 ### esbuild

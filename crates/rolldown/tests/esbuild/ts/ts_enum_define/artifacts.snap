@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.ts
 var a = function(a$1) {
 	a$1[a$1["b"] = 123] = "b";
-	a$1[a$1["c"] = a$1.d] = "c";
+	a$1[a$1["c"] = 124] = "c";
 	return a$1;
 }(a || {});
 

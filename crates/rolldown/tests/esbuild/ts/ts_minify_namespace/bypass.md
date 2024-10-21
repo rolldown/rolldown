@@ -1,8 +1,10 @@
+# Reason
+1. could be done in minifier
 # Diff
 ## /a.js
 ### esbuild
 ```js
-var Foo;(function(e){let a;(function(p){foo(e,p)})(a=e.Bar||={})})(Foo||={});
+var Foo;(e=>{let a;(p=>foo(e,p))(a=e.Bar||={})})(Foo||={});
 ```
 ### rolldown
 ```js
@@ -23,13 +25,11 @@ let Foo;
 ===================================================================
 --- esbuild	/a.js
 +++ rolldown	a.js
-@@ -1,7 +1,7 @@
+@@ -1,5 +1,7 @@
  var Foo;
--(function (e) {
+-(e => {
 -    let a;
--    (function (p) {
--        foo(e, p);
--    })(a = e.Bar ||= {});
+-    (p => foo(e, p))(a = e.Bar ||= {});
 -})(Foo ||= {});
 +(function (_Foo) {
 +    let Bar;
@@ -42,7 +42,7 @@ let Foo;
 ## /b.js
 ### esbuild
 ```js
-export var Foo;(function(e){let a;(function(p){foo(e,p)})(a=e.Bar||={})})(Foo||={});
+export var Foo;(e=>{let a;(p=>foo(e,p))(a=e.Bar||={})})(Foo||={});
 ```
 ### rolldown
 ```js
@@ -64,13 +64,11 @@ export { Foo };
 ===================================================================
 --- esbuild	/b.js
 +++ rolldown	b.js
-@@ -1,7 +1,8 @@
+@@ -1,5 +1,8 @@
 -export var Foo;
--(function (e) {
+-(e => {
 -    let a;
--    (function (p) {
--        foo(e, p);
--    })(a = e.Bar ||= {});
+-    (p => foo(e, p))(a = e.Bar ||= {});
 -})(Foo ||= {});
 +var Foo;
 +(function (_Foo) {

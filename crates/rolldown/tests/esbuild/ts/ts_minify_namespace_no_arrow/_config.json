@@ -9,7 +9,8 @@
         "name": "b",
         "import": "b.ts"
       }
-    ]
+    ],
+    "treeshake": false
   },
   "expectExecuted": false
 }

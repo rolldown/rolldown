@@ -187,7 +187,10 @@ impl<'a> SideEffectDetector<'a> {
         ast::UnaryOperator::Typeof if matches!(unary_expr.argument, Expression::Identifier(_)) => {
           false
         }
-        _ => self.detect_side_effect_of_expr(&unary_expr.argument),
+        ast::UnaryOperator::Void | ast::UnaryOperator::LogicalNot => {
+          self.detect_side_effect_of_expr(&unary_expr.argument)
+        }
+        _ => true,
       },
       oxc::ast::match_member_expression!(Expression) => {
         self.detect_side_effect_of_member_expr(expr.to_member_expression())
@@ -236,6 +239,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::SequenceExpression(seq_expr) => {
         seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
+      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2460-L2463
       Expression::ConditionalExpression(cond_expr) => {
         self.detect_side_effect_of_expr(&cond_expr.test)
           || (!is_side_effect_free_unbound_identifier_ref(
@@ -260,6 +264,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
+      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
       Expression::BinaryExpression(binary_expr) => match binary_expr.operator {
         ast::BinaryOperator::StrictEquality | ast::BinaryOperator::StrictInequality => {
           self.detect_side_effect_of_expr(&binary_expr.left)

@@ -91,6 +91,6 @@ export class PluginContext extends MinimalPluginContext {
     this.parse = unsupported(
       '`PluginContext#parse` is not supported by rolldown.',
     )
-    this.addWatchFile = () => {}
+    this.addWatchFile = context.addWatchFile.bind(context)
   }
 }

@@ -51,6 +51,7 @@ export declare class BindingPluginContext {
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string> | null
+  addWatchFile(file: string): void
 }
 
 export declare class BindingTransformPluginContext {
@@ -774,3 +775,4 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
+

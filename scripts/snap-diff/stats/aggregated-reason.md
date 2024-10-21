@@ -128,10 +128,6 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
-## limitation of test infra, the test may hard to pass in CI
-- crates/rolldown/tests/esbuild/default/import_abs_path_as_dir
-- crates/rolldown/tests/esbuild/default/import_abs_path_as_file
-- crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter
 ## css stabilization
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_from_css
@@ -278,6 +274,8 @@
 - crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js
 ## should rename `require` when it is appear in param position
 - crates/rolldown/tests/esbuild/default/false_require
+## query and hashban in specifier
+- crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter
 ## commonjs don't have `import.meta`, should rewrite
 - crates/rolldown/tests/esbuild/default/import_meta_common_js
 ## rolldown extract common module

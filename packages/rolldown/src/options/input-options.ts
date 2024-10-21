@@ -65,6 +65,10 @@ const jsxOptionsSchema = z.strictObject({
   // The rollup preset is not supported at now
 })
 
+const stringOrRegExpSchema = zodExt
+  .stringOrRegExp()
+  .or(zodExt.stringOrRegExp().array())
+
 const watchOptionsSchema = z.strictObject({
   skipWrite: z.boolean().describe('Skip the bundle.write() step').optional(),
   notify: z
@@ -74,6 +78,8 @@ const watchOptionsSchema = z.strictObject({
     })
     .describe('Notify options')
     .optional(),
+  include: stringOrRegExpSchema.optional(),
+  exclude: stringOrRegExpSchema.optional(),
   chokidar: z.any().optional(),
 })
 

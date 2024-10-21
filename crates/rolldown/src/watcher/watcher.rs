@@ -10,6 +10,7 @@ use notify::{
 use rolldown_common::{
   BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
 };
+use rolldown_utils::pattern_filter;
 use std::{
   path::Path,
   sync::{
@@ -17,6 +18,7 @@ use std::{
     Arc,
   },
 };
+use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use crate::Bundler;
@@ -134,8 +136,19 @@ impl Watcher {
     for file in &output.watch_files {
       let path = Path::new(file.as_str());
       if path.exists() {
-        inner.watch(path, RecursiveMode::Recursive)?;
-        self.watch_files.insert(file.clone());
+        let normalized_path = path.relative(&bundler.options.cwd);
+        let normalized_id = normalized_path.to_string_lossy();
+        if pattern_filter::filter(
+          bundler.options.watch.exclude.as_deref(),
+          bundler.options.watch.include.as_deref(),
+          file.as_str(),
+          &normalized_id,
+        )
+        .inner()
+        {
+          inner.watch(path, RecursiveMode::Recursive)?;
+          self.watch_files.insert(file.clone());
+        }
       }
     }
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleEnd.into()).await?;

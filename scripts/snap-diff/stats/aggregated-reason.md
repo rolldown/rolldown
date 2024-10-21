@@ -153,9 +153,6 @@
 ## low priority
 - crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 - crates/rolldown/tests/esbuild/dce/drop_labels
-## side effects detector not align
-- crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
-- crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators
 ## comments codegen
 - crates/rolldown/tests/esbuild/default/comment_preservation
 - crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx
@@ -214,6 +211,8 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork
 ## sub optimal for pure call with spread
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
+## side effects detector not align
+- crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 ## class field lowering

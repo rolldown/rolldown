@@ -12,7 +12,7 @@ use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
 };
-use utils::can_change_strict_to_loose;
+use utils::{can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref};
 
 use self::utils::{known_primitive_type, PrimitiveType};
 
@@ -202,10 +202,34 @@ impl<'a> SideEffectDetector<'a> {
         known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
           || self.detect_side_effect_of_expr(expr)
       }),
-      Expression::LogicalExpression(logic_expr) => {
-        self.detect_side_effect_of_expr(&logic_expr.left)
-          || self.detect_side_effect_of_expr(&logic_expr.right)
-      }
+      Expression::LogicalExpression(logic_expr) => match logic_expr.operator {
+        ast::LogicalOperator::Or => {
+          return self.detect_side_effect_of_expr(&logic_expr.left)
+            || (!is_side_effect_free_unbound_identifier_ref(
+              self.scope,
+              &logic_expr.right,
+              &logic_expr.left,
+              false,
+            )
+            .unwrap_or_default()
+              && self.detect_side_effect_of_expr(&logic_expr.right))
+        }
+        ast::LogicalOperator::And => {
+          return self.detect_side_effect_of_expr(&logic_expr.left)
+            || (!is_side_effect_free_unbound_identifier_ref(
+              self.scope,
+              &logic_expr.right,
+              &logic_expr.left,
+              true,
+            )
+            .unwrap_or_default()
+              && self.detect_side_effect_of_expr(&logic_expr.right))
+        }
+        _ => {
+          self.detect_side_effect_of_expr(&logic_expr.left)
+            || self.detect_side_effect_of_expr(&logic_expr.right)
+        }
+      },
       Expression::ParenthesizedExpression(paren_expr) => {
         self.detect_side_effect_of_expr(&paren_expr.expression)
       }
@@ -214,8 +238,22 @@ impl<'a> SideEffectDetector<'a> {
       }
       Expression::ConditionalExpression(cond_expr) => {
         self.detect_side_effect_of_expr(&cond_expr.test)
-          || self.detect_side_effect_of_expr(&cond_expr.consequent)
-          || self.detect_side_effect_of_expr(&cond_expr.alternate)
+          || (!is_side_effect_free_unbound_identifier_ref(
+            &self.scope,
+            &cond_expr.consequent,
+            &cond_expr.test,
+            true,
+          )
+          .unwrap_or_default()
+            && self.detect_side_effect_of_expr(&cond_expr.consequent))
+          || (!is_side_effect_free_unbound_identifier_ref(
+            &self.scope,
+            &cond_expr.alternate,
+            &cond_expr.test,
+            false,
+          )
+          .unwrap_or_default()
+            && self.detect_side_effect_of_expr(&cond_expr.alternate))
       }
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
@@ -696,7 +734,7 @@ mod test {
     assert!(get_statements_side_effect("2 + bar"));
     // + will invoke valueOf, which may have side effect
     assert!(get_statements_side_effect("1 + 1"));
-    assert!(!get_statements_side_effect("const a = 1; const b = 2; a + b"));
+    assert!(get_statements_side_effect("const a = 1; const b = 2; a + b"));
   }
 
   #[test]

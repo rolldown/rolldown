@@ -1,5 +1,5 @@
 # Reason
-1. side effects detector not align
+1. var decl not join, trivial
 # Diff
 ## /out.js
 ### esbuild

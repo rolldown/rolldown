@@ -258,6 +258,8 @@ pub trait ExpressionExt<'ast> {
 
   fn as_identifier(&self) -> Option<&ast::IdentifierReference<'ast>>;
   fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference<'ast>>;
+  fn as_unary_expression(&self) -> Option<&ast::UnaryExpression<'ast>>;
+  fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>>;
 }
 
 impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
@@ -291,5 +293,19 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     } else {
       None
     }
+  }
+
+  fn as_unary_expression(&self) -> Option<&ast::UnaryExpression<'ast>> {
+    let ast::Expression::UnaryExpression(expr) = self else {
+      return None;
+    };
+    Some(expr)
+  }
+
+  fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>> {
+    let ast::Expression::StringLiteral(expr) = self else {
+      return None;
+    };
+    Some(expr)
   }
 }

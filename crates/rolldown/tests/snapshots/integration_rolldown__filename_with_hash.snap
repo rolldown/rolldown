@@ -3668,7 +3668,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_derived_class
 
-- entry-!~{000}~.js => entry-wssgQTGv.js
+- entry-!~{000}~.js => entry-o01pV0xl.js
 
 # tests/esbuild/ts/ts_minify_enum
 

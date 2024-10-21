@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-class Foo extends Bar {
+var Foo = class extends Bar {
 	foo = 1;
 	bar = 2;
 	constructor() {
@@ -16,7 +16,7 @@ class Foo extends Bar {
 		foo();
 		bar();
 	}
-}
+};
 
 //#endregion
 ```

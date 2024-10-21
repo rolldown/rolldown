@@ -2741,6 +2741,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-trait",
+ "dashmap 6.1.0",
  "oxc_index",
  "rolldown_common",
  "rolldown_ecmascript",

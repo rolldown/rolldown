@@ -111,8 +111,14 @@ impl Watcher {
     bundler.plugin_driver = bundler.plugin_driver.new_shared_from_self();
     bundler.file_emitter.clear();
 
-    // TODO support skipWrite option
-    let output = bundler.write().await?;
+    let output = {
+      if bundler.options.watch.skip_write {
+        // TODO Here should be call scan
+        bundler.generate().await?
+      } else {
+        bundler.write().await?
+      }
+    };
     let mut inner = self.inner.try_lock().expect("Failed to lock the notify watcher.");
     for file in &output.watch_files {
       let path = Path::new(file.as_str());
@@ -126,16 +132,6 @@ impl Watcher {
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::End.into()).await?;
 
-    Ok(())
-  }
-
-  pub fn watch_file(&self, path: &str) -> Result<()> {
-    let path = Path::new(path);
-    if path.exists() {
-      let mut inner = self.inner.try_lock().expect("Failed to lock the notify watcher.");
-      inner.watch(path, RecursiveMode::Recursive)?;
-      self.watch_files.insert(path.to_string_lossy().into());
-    }
     Ok(())
   }
 

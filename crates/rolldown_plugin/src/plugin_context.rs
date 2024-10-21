@@ -5,6 +5,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use dashmap::DashSet;
 use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions};
 use rolldown_resolver::{ResolveError, Resolver};
 
@@ -34,6 +35,7 @@ impl PluginContext {
       file_emitter: Arc::clone(&self.file_emitter),
       module_table: self.module_table.clone(),
       options: Arc::clone(&self.options),
+      watch_files: Arc::clone(&self.watch_files),
     }))
   }
 }
@@ -56,6 +58,7 @@ pub struct PluginContextImpl {
   #[allow(clippy::redundant_allocation)]
   pub(crate) module_table: OnceLock<&'static ModuleTable>,
   pub(crate) options: SharedNormalizedBundlerOptions,
+  pub(crate) watch_files: Arc<DashSet<ArcStr>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -147,5 +150,9 @@ impl PluginContextImpl {
 
   pub fn cwd(&self) -> &PathBuf {
     self.resolver.cwd()
+  }
+
+  pub fn add_watch_file(&self, file: &str) {
+    self.watch_files.insert(file.into());
   }
 }

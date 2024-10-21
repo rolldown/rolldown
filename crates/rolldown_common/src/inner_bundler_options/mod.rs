@@ -1,9 +1,10 @@
-use oxc::transformer::{JsxOptions, JsxRuntime};
+use oxc::transformer::JsxOptions;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::checks_options::ChecksOptions;
 use types::inject_import::InjectImport;
+use types::watch_option::WatchOption;
 
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -141,6 +142,7 @@ pub struct BundlerOptions {
     schemars(with = "Option<HashMap<String, String>>")
   )]
   pub jsx: Option<JsxOptions>,
+  pub watch: Option<WatchOption>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -204,6 +206,8 @@ fn deserialize_jsx<'de, D>(deserializer: D) -> Result<Option<JsxOptions>, D::Err
 where
   D: Deserializer<'de>,
 {
+  use oxc::transformer::JsxRuntime;
+
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
     None => Ok(None),

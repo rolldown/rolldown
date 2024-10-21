@@ -346,6 +346,16 @@
         },
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"
+        },
+        "watch": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WatchOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -751,6 +761,18 @@
           "$ref": "#/definitions/InnerOptions"
         }
       ]
+    },
+    "WatchOption": {
+      "type": "object",
+      "required": [
+        "skipWrite"
+      ],
+      "properties": {
+        "skipWrite": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

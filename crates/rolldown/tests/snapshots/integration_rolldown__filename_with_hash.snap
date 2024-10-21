@@ -115,7 +115,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_compare_string_guard_condition
 
-- entry-!~{000}~.js => entry-bRxi2PAU.js
+- entry-!~{000}~.js => entry-74PaBMSB.js
 
 # tests/esbuild/dce/dce_type_of_equals_string
 
@@ -123,7 +123,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 
-- entry-!~{000}~.js => entry-H0HwCuq5.js
+- entry-!~{000}~.js => entry-xmLqraJu.js
 
 # tests/esbuild/dce/dce_type_of_equals_string_mangle
 
@@ -470,7 +470,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
-- entry-!~{000}~.js => entry-DNvjziyx.js
+- entry-!~{000}~.js => entry-uk_zkPj_.js
 
 # tests/esbuild/dce/tree_shaking_class_property
 
@@ -1184,11 +1184,11 @@ expression: output
 
 # tests/esbuild/default/mangle_no_quoted_props
 
-- entry-!~{000}~.js => entry-Qbsv9-NW.js
+- entry-!~{000}~.js => entry-OkEe9WtI.js
 
 # tests/esbuild/default/mangle_no_quoted_props_minify_syntax
 
-- entry-!~{000}~.js => entry-Qbsv9-NW.js
+- entry-!~{000}~.js => entry-OkEe9WtI.js
 
 # tests/esbuild/default/mangle_props
 
@@ -1262,12 +1262,12 @@ expression: output
 # tests/esbuild/default/mangle_quoted_props
 
 - keep-!~{000}~.js => keep-PGQSPSKC.js
-- mangle-!~{001}~.js => mangle-8zaqAC7r.js
+- mangle-!~{001}~.js => mangle-D8OK8SnX.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
 - keep-!~{000}~.js => keep-PGQSPSKC.js
-- mangle-!~{001}~.js => mangle-8zaqAC7r.js
+- mangle-!~{001}~.js => mangle-D8OK8SnX.js
 
 # tests/esbuild/default/many_entry_points
 

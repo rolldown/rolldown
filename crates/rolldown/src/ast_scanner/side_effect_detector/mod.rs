@@ -12,6 +12,7 @@ use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
 };
+use utils::{can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref};
 
 use self::utils::{known_primitive_type, PrimitiveType};
 
@@ -201,31 +202,101 @@ impl<'a> SideEffectDetector<'a> {
         known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
           || self.detect_side_effect_of_expr(expr)
       }),
-      Expression::LogicalExpression(logic_expr) => {
-        self.detect_side_effect_of_expr(&logic_expr.left)
-          || self.detect_side_effect_of_expr(&logic_expr.right)
-      }
+      Expression::LogicalExpression(logic_expr) => match logic_expr.operator {
+        ast::LogicalOperator::Or => {
+          self.detect_side_effect_of_expr(&logic_expr.left)
+            || (!is_side_effect_free_unbound_identifier_ref(
+              self.scope,
+              &logic_expr.right,
+              &logic_expr.left,
+              false,
+            )
+            .unwrap_or_default()
+              && self.detect_side_effect_of_expr(&logic_expr.right))
+        }
+        ast::LogicalOperator::And => {
+          self.detect_side_effect_of_expr(&logic_expr.left)
+            || (!is_side_effect_free_unbound_identifier_ref(
+              self.scope,
+              &logic_expr.right,
+              &logic_expr.left,
+              true,
+            )
+            .unwrap_or_default()
+              && self.detect_side_effect_of_expr(&logic_expr.right))
+        }
+        ast::LogicalOperator::Coalesce => {
+          self.detect_side_effect_of_expr(&logic_expr.left)
+            || self.detect_side_effect_of_expr(&logic_expr.right)
+        }
+      },
       Expression::ParenthesizedExpression(paren_expr) => {
         self.detect_side_effect_of_expr(&paren_expr.expression)
       }
       Expression::SequenceExpression(seq_expr) => {
         seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
+      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2460-L2463
       Expression::ConditionalExpression(cond_expr) => {
         self.detect_side_effect_of_expr(&cond_expr.test)
-          || self.detect_side_effect_of_expr(&cond_expr.consequent)
-          || self.detect_side_effect_of_expr(&cond_expr.alternate)
+          || (!is_side_effect_free_unbound_identifier_ref(
+            self.scope,
+            &cond_expr.consequent,
+            &cond_expr.test,
+            true,
+          )
+          .unwrap_or_default()
+            && self.detect_side_effect_of_expr(&cond_expr.consequent))
+          || (!is_side_effect_free_unbound_identifier_ref(
+            self.scope,
+            &cond_expr.alternate,
+            &cond_expr.test,
+            false,
+          )
+          .unwrap_or_default()
+            && self.detect_side_effect_of_expr(&cond_expr.alternate))
       }
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
-      Expression::BinaryExpression(binary_expr) => {
-        // For binary expressions, both sides could potentially have side effects
-        self.detect_side_effect_of_expr(&binary_expr.left)
-          || self.detect_side_effect_of_expr(&binary_expr.right)
-      }
+      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
+      Expression::BinaryExpression(binary_expr) => match binary_expr.operator {
+        ast::BinaryOperator::StrictEquality | ast::BinaryOperator::StrictInequality => {
+          self.detect_side_effect_of_expr(&binary_expr.left)
+            || self.detect_side_effect_of_expr(&binary_expr.right)
+        }
+        // Special-case "<" and ">" with string, number, or bigint arguments
+        ast::BinaryOperator::GreaterThan
+        | ast::BinaryOperator::LessThan
+        | ast::BinaryOperator::GreaterEqualThan
+        | ast::BinaryOperator::LessEqualThan => {
+          let lt = known_primitive_type(self.scope, &binary_expr.left);
+          match lt {
+            PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
+              known_primitive_type(self.scope, &binary_expr.right) != lt
+                || self.detect_side_effect_of_expr(&binary_expr.left)
+                || self.detect_side_effect_of_expr(&binary_expr.right)
+            }
+            _ => true,
+          }
+        }
+
+        // For "==" and "!=", pretend the operator was actually "===" or "!==". If
+        // we know that we can convert it to "==" or "!=", then we can consider the
+        // operator itself to have no side effects. This matters because our mangle
+        // logic will convert "typeof x === 'object'" into "typeof x == 'object'"
+        // and since "typeof x === 'object'" is considered to be side-effect free,
+        // we must also consider "typeof x == 'object'" to be side-effect free.
+        ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
+          !can_change_strict_to_loose(self.scope, &binary_expr.left, &binary_expr.right)
+            || self.detect_side_effect_of_expr(&binary_expr.left)
+            || self.detect_side_effect_of_expr(&binary_expr.right)
+        }
+
+        _ => true,
+      },
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
@@ -660,11 +731,12 @@ mod test {
 
   #[test]
   fn test_binary_expression() {
-    assert!(!get_statements_side_effect("1 + 1"));
-    assert!(!get_statements_side_effect("const a = 1; const b = 2; a + b"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("1 + foo"));
     assert!(get_statements_side_effect("2 + bar"));
+    // + will invoke valueOf, which may have side effect
+    assert!(get_statements_side_effect("1 + 1"));
+    assert!(get_statements_side_effect("const a = 1; const b = 2; a + b"));
   }
 
   #[test]

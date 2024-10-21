@@ -78,6 +78,7 @@ x?.[y, "_mangleThis"];
 var { "_mangleThis": x } = y;
 var { ["_mangleThis"]: x } = y;
 var { [(z, "_mangleThis")]: x } = y;
+"_mangleThis" in x;
 (y ? "_mangleThis" : z) in x;
 (y ? z : "_mangleThis") in x;
 (y, "_mangleThis") in x;
@@ -89,7 +90,7 @@ var { [(z, "_mangleThis")]: x } = y;
 ===================================================================
 --- esbuild	/out/mangle.js
 +++ rolldown	mangle.js
-@@ -1,5 +1,20 @@
+@@ -1,5 +1,21 @@
 -(x.a, x?.a, x[y ? "a" : z], x?.[y ? "a" : z], x[y ? z : "a"], x?.[y ? z : "a"], x[(y, "a")], x?.[(y, "a")], (y, "a") + "", class {
 -    [(y, "a")] = x;
 +x["_mangleThis"];
@@ -111,6 +112,7 @@ var { [(z, "_mangleThis")]: x } = y;
 +var {"_mangleThis": x} = y;
 +var {["_mangleThis"]: x} = y;
 +var {[(z, "_mangleThis")]: x} = y;
++("_mangleThis" in x);
 +((y ? "_mangleThis" : z) in x);
 +((y ? z : "_mangleThis") in x);
 +((y, "_mangleThis") in x);

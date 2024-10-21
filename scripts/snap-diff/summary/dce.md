@@ -13,10 +13,6 @@
   diff
 ## [dce_of_iife](../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   diff
-## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/diff.md)
-  diff
-## [dce_type_of_equals_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition/diff.md)
-  diff
 ## [dead_code_following_jump](../../../crates/rolldown/tests/esbuild/dce/dead_code_following_jump/diff.md)
   diff
 ## [disable_tree_shaking](../../../crates/rolldown/tests/esbuild/dce/disable_tree_shaking/diff.md)
@@ -62,8 +58,6 @@
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread/diff.md)
   diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
-  diff
-## [tree_shaking_binary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators/diff.md)
   diff
 ## [tree_shaking_js_with_associated_css](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css/diff.md)
   diff
@@ -135,7 +129,9 @@
 ## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/bypass.md)
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)
+## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/bypass.md)
 ## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/bypass.md)
+## [dce_type_of_equals_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition/bypass.md)
 ## [dce_type_of_equals_string_mangle](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle/bypass.md)
 ## [dce_var_exports](../../../crates/rolldown/tests/esbuild/dce/dce_var_exports/bypass.md)
 ## [import_re_export_of_namespace_import](../../../crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import/bypass.md)
@@ -157,6 +153,7 @@
 ## [remove_code_after_label_with_return](../../../crates/rolldown/tests/esbuild/dce/remove_code_after_label_with_return/bypass.md)
 ## [remove_trailing_return](../../../crates/rolldown/tests/esbuild/dce/remove_trailing_return/bypass.md)
 ## [top_level_function_inlining_with_spread](../../../crates/rolldown/tests/esbuild/dce/top_level_function_inlining_with_spread/bypass.md)
+## [tree_shaking_binary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators/bypass.md)
 ## [tree_shaking_no_bundle_cjs](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_cjs/bypass.md)
 ## [tree_shaking_no_bundle_esm](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_esm/bypass.md)
 ## [tree_shaking_no_bundle_iife](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_iife/bypass.md)

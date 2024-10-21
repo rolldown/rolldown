@@ -1,5 +1,5 @@
 # Reason
-1. side effects detector not align
+1. var decl not join, trivial
 # Diff
 ## /out.js
 ### esbuild
@@ -49,6 +49,26 @@ keep &&= keep2;
 
 //#region entry.js
 let keep, keep2;
+keep + keep2;
+keep - keep2;
+keep * keep2;
+keep / keep2;
+keep % keep2;
+keep ** keep2;
+keep < keep2;
+keep <= keep2;
+keep > keep2;
+keep >= keep2;
+keep in keep2;
+keep instanceof keep2;
+keep << keep2;
+keep >> keep2;
+keep >>> keep2;
+keep == keep2;
+keep != keep2;
+keep | keep2;
+keep & keep2;
+keep ^ keep2;
 keep = keep2;
 keep += keep2;
 keep -= keep2;
@@ -73,33 +93,13 @@ keep &&= keep2;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,26 +1,5 @@
+@@ -1,6 +1,5 @@
 -var keep;
 -var keep2;
--keep + keep2;
--keep - keep2;
--keep * keep2;
--keep / keep2;
--keep % keep2;
--keep ** keep2;
--keep < keep2;
--keep <= keep2;
--keep > keep2;
--keep >= keep2;
--(keep in keep2);
--keep instanceof keep2;
--keep << keep2;
--keep >> keep2;
--keep >>> keep2;
--keep == keep2;
--keep != keep2;
--keep | keep2;
--keep & keep2;
--keep ^ keep2;
 +var keep, keep2;
- keep = keep2;
- keep += keep2;
- keep -= keep2;
- keep *= keep2;
+ keep + keep2;
+ keep - keep2;
+ keep * keep2;
+ keep / keep2;
 
 ```

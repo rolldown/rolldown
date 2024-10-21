@@ -8,6 +8,7 @@ use oxc::{
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
+use rolldown_ecmascript::ExpressionExt;
 
 use super::SideEffectDetector;
 
@@ -220,6 +221,12 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
   }
 }
 
+pub fn can_change_strict_to_loose(scope: &AstScopes, a: &Expression, b: &Expression) -> bool {
+  let x = known_primitive_type(scope, a);
+  let y = known_primitive_type(scope, b);
+  x == y && !matches!(x, PrimitiveType::Unknown | PrimitiveType::Mixed)
+}
+
 pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
   match expr {
     Expression::NullLiteral(_)
@@ -302,4 +309,80 @@ fn extract_rest_member_expr_chain<'a>(
     }
   }
   None
+}
+
+/// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2594-L2639
+pub fn is_side_effect_free_unbound_identifier_ref(
+  scope: &AstScopes,
+  value: &Expression,
+  guard_condition: &Expression,
+  mut is_yes_branch: bool,
+) -> Option<bool> {
+  let ident = value.as_identifier()?;
+  let is_unresolved = scope.is_unresolved(ident.reference_id()?);
+  if !is_unresolved {
+    return Some(false);
+  }
+  let bin_expr = guard_condition.as_binary_expression()?;
+  match bin_expr.operator {
+    BinaryOperator::StrictEquality
+    | BinaryOperator::StrictInequality
+    | BinaryOperator::Equality
+    | BinaryOperator::Inequality => {
+      let (mut ty_of, mut string) = (&bin_expr.left, &bin_expr.right);
+      if matches!(ty_of, Expression::StringLiteral(_)) {
+        std::mem::swap(&mut string, &mut ty_of);
+      }
+      let unary = ty_of.as_unary_expression()?;
+      if !(unary.operator == UnaryOperator::Typeof
+        && matches!(unary.argument, Expression::Identifier(_)))
+      {
+        return Some(false);
+      }
+      let string = string.as_string_literal()?;
+
+      if (string.value.eq("undefined") == is_yes_branch)
+        == matches!(
+          bin_expr.operator,
+          BinaryOperator::Inequality | BinaryOperator::StrictInequality
+        )
+      {
+        let type_of_value = unary.argument.as_identifier()?;
+        if type_of_value.name == ident.name {
+          return Some(true);
+        }
+      }
+    }
+    BinaryOperator::LessThan
+    | BinaryOperator::LessEqualThan
+    | BinaryOperator::GreaterThan
+    | BinaryOperator::GreaterEqualThan => {
+      let (mut ty_of, mut string) = (&bin_expr.left, &bin_expr.right);
+      if matches!(ty_of, Expression::StringLiteral(_)) {
+        std::mem::swap(&mut string, &mut ty_of);
+        is_yes_branch = !is_yes_branch;
+      }
+
+      let unary = ty_of.as_unary_expression()?;
+      if !(unary.operator == UnaryOperator::Typeof
+        && matches!(unary.argument, Expression::Identifier(_)))
+      {
+        return Some(false);
+      }
+
+      let string = string.as_string_literal()?;
+
+      if string.value == "u"
+        && is_yes_branch
+          == matches!(bin_expr.operator, BinaryOperator::LessThan | BinaryOperator::LessEqualThan)
+      {
+        let type_of_value = unary.argument.as_identifier()?;
+        if type_of_value.name == ident.name {
+          return Some(true);
+        }
+      }
+    }
+    _ => {}
+  }
+  Some(false)
 }

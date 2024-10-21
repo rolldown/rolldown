@@ -19,6 +19,7 @@ x?.[y ? "_doNotMangleThis" : z];
 x[y ? z : "_doNotMangleThis"];
 x?.[y ? z : "_doNotMangleThis"];
 var { "_doNotMangleThis": x } = y;
+"_doNotMangleThis" in x;
 (y ? "_doNotMangleThis" : z) in x;
 (y ? z : "_doNotMangleThis") in x;
 
@@ -29,7 +30,7 @@ var { "_doNotMangleThis": x } = y;
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,3 +1,9 @@
+@@ -1,3 +1,10 @@
 -(x._doNotMangleThis, x?._doNotMangleThis, x[y ? "_doNotMangleThis" : z], x?.[y ? "_doNotMangleThis" : z], x[y ? z : "_doNotMangleThis"], x?.[y ? z : "_doNotMangleThis"]);
 -var {_doNotMangleThis: x} = y;
 -(("_doNotMangleThis" in x), ((y ? "_doNotMangleThis" : z) in x), ((y ? z : "_doNotMangleThis") in x));
@@ -40,6 +41,7 @@ var { "_doNotMangleThis": x } = y;
 +x[y ? z : "_doNotMangleThis"];
 +x?.[y ? z : "_doNotMangleThis"];
 +var {"_doNotMangleThis": x} = y;
++("_doNotMangleThis" in x);
 +((y ? "_doNotMangleThis" : z) in x);
 +((y ? z : "_doNotMangleThis") in x);
 

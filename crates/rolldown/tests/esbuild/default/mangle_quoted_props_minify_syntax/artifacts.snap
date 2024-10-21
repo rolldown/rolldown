@@ -42,6 +42,7 @@ x?.[y, "_mangleThis"];
 var { "_mangleThis": x } = y;
 var { ["_mangleThis"]: x } = y;
 var { [(z, "_mangleThis")]: x } = y;
+"_mangleThis" in x;
 (y ? "_mangleThis" : z) in x;
 (y ? z : "_mangleThis") in x;
 (y, "_mangleThis") in x;

@@ -1,6 +1,6 @@
 use std::{
   ops::Deref,
-  sync::{Arc, OnceLock, Weak},
+  sync::{Arc, Mutex, OnceLock, Weak},
   vec,
 };
 
@@ -43,6 +43,9 @@ impl PluginDriver {
     options: &SharedNormalizedBundlerOptions,
   ) -> SharedPluginDriver {
     let watch_files = Arc::new(DashSet::default());
+
+    let dummy_module_table = Box::new(ModuleTable::default());
+    let dummy_module_table = Box::leak(dummy_module_table) as &'static mut ModuleTable;
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(plugins.len());
@@ -63,7 +66,7 @@ impl PluginDriver {
             plugin_driver: Weak::clone(plugin_driver),
             resolver: Arc::clone(resolver),
             file_emitter: Arc::clone(file_emitter),
-            module_table: OnceLock::default(),
+            module_table: Arc::new(Mutex::new(dummy_module_table)),
             options: Arc::clone(options),
             watch_files: Arc::clone(&watch_files),
           }
@@ -86,6 +89,8 @@ impl PluginDriver {
 
   pub fn new_shared_from_self(&self) -> SharedPluginDriver {
     let watch_files = Arc::new(DashSet::default());
+    let dummy_module_table = Box::new(ModuleTable::default());
+    let dummy_module_table = Box::leak(dummy_module_table) as &'static mut ModuleTable;
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
@@ -99,6 +104,7 @@ impl PluginDriver {
           resolve_id: plugin.call_resolve_id_filter().unwrap(),
           transform: plugin.call_transform_filter().unwrap(),
         });
+
         index_contexts.push(
           PluginContextImpl {
             skipped_resolve_calls: vec![],
@@ -106,7 +112,7 @@ impl PluginDriver {
             plugin_driver: Weak::clone(plugin_driver),
             resolver: Arc::clone(&self.resolver),
             file_emitter: Arc::clone(&self.file_emitter),
-            module_table: OnceLock::default(),
+            module_table: Arc::new(Mutex::new(dummy_module_table)),
             options: Arc::clone(&self.options),
             watch_files: Arc::clone(&watch_files),
           }
@@ -128,9 +134,10 @@ impl PluginDriver {
   }
 
   pub fn set_module_table(&self, module_table: &'static ModuleTable) {
-    self.contexts.iter().for_each(|ctx| {
-      ctx.module_table.set(module_table).expect("module_table is already set before");
-    });
+    if let Some(ctx) = self.contexts.first() {
+      let mut table = ctx.module_table.lock().unwrap();
+      *table = module_table;
+    }
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(

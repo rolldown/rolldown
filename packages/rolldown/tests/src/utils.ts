@@ -58,3 +58,7 @@ assert.deepEqual(testsDir().split(nodePath.sep).slice(-4), [
   'rolldown',
   'tests',
 ])
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}

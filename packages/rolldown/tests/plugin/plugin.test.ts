@@ -126,3 +126,13 @@ test('call transformContext error', async () => {
     )
   }
 })
+
+test('rolldown write twice', async () => {
+  const build = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+  })
+  await build.write({})
+
+  await build.write({})
+})

@@ -1,7 +1,7 @@
 use std::{
   ops::Deref,
   path::PathBuf,
-  sync::{Arc, OnceLock, Weak},
+  sync::{Arc, Mutex, OnceLock, Weak},
 };
 
 use arcstr::ArcStr;
@@ -56,7 +56,7 @@ pub struct PluginContextImpl {
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
   #[allow(clippy::redundant_allocation)]
-  pub(crate) module_table: OnceLock<&'static ModuleTable>,
+  pub(crate) module_table: Arc<Mutex<&'static ModuleTable>>,
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<DashSet<ArcStr>>,
 }
@@ -122,30 +122,26 @@ impl PluginContextImpl {
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
-    self.module_table.get().as_ref().and_then(|module_table| {
-      for normal_module in &module_table.modules {
-        if let Some(ecma_module) = normal_module.as_normal() {
-          if ecma_module.id.as_str() == module_id {
-            return Some(ecma_module.to_module_info());
-          }
+    let module_table = self.module_table.lock().unwrap();
+    for normal_module in &module_table.modules {
+      if let Some(ecma_module) = normal_module.as_normal() {
+        if ecma_module.id.as_str() == module_id {
+          return Some(ecma_module.to_module_info());
         }
       }
-      // TODO external module
-      None
-    })
+    }
+    // TODO external module
+    None
   }
 
   pub fn get_module_ids(&self) -> Option<Vec<String>> {
-    if let Some(module_table) = self.module_table.get() {
-      let mut ids = Vec::with_capacity(module_table.modules.len());
-      for normal_module in &module_table.modules {
-        ids.push(normal_module.id().to_string());
-      }
-      // TODO external module
-      Some(ids)
-    } else {
-      None
+    let module_table = self.module_table.lock().unwrap();
+    let mut ids = Vec::with_capacity(module_table.modules.len());
+    for normal_module in &module_table.modules {
+      ids.push(normal_module.id().to_string());
     }
+    // TODO external module
+    Some(ids)
   }
 
   pub fn cwd(&self) -> &PathBuf {

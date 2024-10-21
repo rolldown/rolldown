@@ -75,10 +75,6 @@
   diff
 ## [hashbang_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_bundle/diff.md)
   diff
-## [import_abs_path_as_dir](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_dir/diff.md)
-  diff
-## [import_abs_path_as_file](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_file/diff.md)
-  diff
 ## [import_abs_path_with_query_parameter](../../../crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter/diff.md)
   diff
 ## [import_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/import_fs_node_common_js/diff.md)
@@ -336,6 +332,8 @@
 ## [exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js/bypass.md)
 ## [external_module_exclusion_relative_path](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_relative_path/bypass.md)
 ## [hashbang_no_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_no_bundle/bypass.md)
+## [import_abs_path_as_dir](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_dir/bypass.md)
+## [import_abs_path_as_file](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_file/bypass.md)
 ## [import_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle/bypass.md)
 ## [import_forms_with_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_no_bundle/bypass.md)
 ## [import_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/import_fs_node_es6/bypass.md)

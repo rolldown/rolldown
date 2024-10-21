@@ -385,9 +385,4 @@
 ## we have similar output as webpack but different with esbuild, because of https://github.com/evanw/esbuild/commit/54ae9962ba18eafc0fc3f1c8c76641def9b08aa0
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
 ## rewrite this when it is undefined
-- crates/rolldown/tests/esbuild/tsfejaajijioojijfeoiajioj/ts_this_is_undefined_warning
-
-
-
-
-
+- crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning

@@ -146,7 +146,7 @@ export const inputOptionsSchema = z.strictObject({
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
-  watch: watchOptionsSchema.optional(),
+  watch: watchOptionsSchema.or(z.literal(false)).optional(),
 })
 
 export const inputCliOptionsSchema = inputOptionsSchema

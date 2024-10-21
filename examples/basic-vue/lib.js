@@ -1,2 +1,8 @@
-import { a } from './dir/a.js'
-export const a = 1000
+import { rolldown } from 'rolldown'
+
+const bundle = await rolldown({
+  input: ['./index.js'],
+})
+await bundle.write({ format: 'esm', dir: './dist' })
+// Execute twice
+await bundle.write({ format: 'esm', dir: './dist' })

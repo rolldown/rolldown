@@ -1,5 +1,5 @@
 # Reason
-1. side effects detect
+1. different iife wrapper, esbuild use arrow function
 # Diff
 ## /out.js
 ### esbuild

@@ -92,12 +92,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
-## side effects detect
-- crates/rolldown/tests/esbuild/dce/dce_of_destructuring
-- crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition
-- crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
 ## Wrong output
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
@@ -120,6 +114,10 @@
 - crates/rolldown/tests/esbuild/default/require_with_call_inside_try
 - crates/rolldown/tests/esbuild/default/require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call_inside_try
+## side effects detect
+- crates/rolldown/tests/esbuild/dce/dce_of_destructuring
+- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
+- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main

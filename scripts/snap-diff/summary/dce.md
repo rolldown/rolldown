@@ -13,10 +13,6 @@
   diff
 ## [dce_of_iife](../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   diff
-## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/diff.md)
-  diff
-## [dce_type_of_equals_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition/diff.md)
-  diff
 ## [dead_code_following_jump](../../../crates/rolldown/tests/esbuild/dce/dead_code_following_jump/diff.md)
   diff
 ## [disable_tree_shaking](../../../crates/rolldown/tests/esbuild/dce/disable_tree_shaking/diff.md)
@@ -133,7 +129,9 @@
 ## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/bypass.md)
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)
+## [dce_type_of_compare_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition/bypass.md)
 ## [dce_type_of_equals_string](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string/bypass.md)
+## [dce_type_of_equals_string_guard_condition](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_guard_condition/bypass.md)
 ## [dce_type_of_equals_string_mangle](../../../crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string_mangle/bypass.md)
 ## [dce_var_exports](../../../crates/rolldown/tests/esbuild/dce/dce_var_exports/bypass.md)
 ## [import_re_export_of_namespace_import](../../../crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import/bypass.md)

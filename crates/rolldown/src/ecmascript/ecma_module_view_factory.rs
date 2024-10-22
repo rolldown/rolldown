@@ -132,7 +132,7 @@ pub async fn create_ecma_view<'any>(
       .and_then(|p| {
         // the glob expr is based on parent path of package.json, which is package path
         // so we should use the relative path of the module to package path
-        let module_path_relative_to_package = id.as_path().relative(&p.path.parent()?);
+        let module_path_relative_to_package = id.as_path().relative(p.path.parent()?);
         p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
           .map(DeterminedSideEffects::UserDefined)
       })

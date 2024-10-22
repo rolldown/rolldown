@@ -33,9 +33,6 @@ impl PackageJson {
   }
 
   pub fn check_side_effects_for(&self, module_path: &str) -> Option<bool> {
-    dbg!(&module_path);
-    dbg!(&self.side_effects);
-    dbg!(&self.path);
     let side_effects = self.side_effects.as_ref()?;
     // Is it necessary to convert module_path to relative path?
     match side_effects {

@@ -25,7 +25,6 @@ pub fn render_esm(
 ) -> ConcatSource {
   let mut concat_source = ConcatSource::default();
 
-  dbg!(&hashbang);
   if let Some(hashbang) = hashbang {
     concat_source.add_source(Box::new(RawSource::new(hashbang.to_string())));
   }

@@ -64,8 +64,6 @@ impl Generator for EcmaGenerator {
         let module = &ctx.link_output.module_table.modules[module];
         match module {
           rolldown_common::Module::Normal(normal_module) => {
-            dbg!(&normal_module.stable_id);
-            dbg!(&normal_module.ecma_view.hashbang_range);
             let source = &normal_module.source;
             normal_module
               .ecma_view

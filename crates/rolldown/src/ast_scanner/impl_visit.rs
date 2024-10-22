@@ -30,7 +30,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
-    self.result.hashbang_range = program.hashbang.as_ref().map(|item| item.span().clone())
+    self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {

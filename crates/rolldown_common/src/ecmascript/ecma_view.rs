@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{index::IndexVec, semantic::SymbolId, span::Span};

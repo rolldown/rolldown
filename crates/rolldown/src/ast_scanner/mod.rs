@@ -1,8 +1,6 @@
 pub mod impl_visit;
 pub mod side_effect_detector;
 
-use std::ops::Range;
-
 use arcstr::ArcStr;
 use oxc::ast::ast;
 use oxc::index::IndexVec;

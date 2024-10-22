@@ -16,6 +16,7 @@ use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
+#[allow(clippy::too_many_lines)]
 pub fn render_cjs(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,

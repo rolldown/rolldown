@@ -11,20 +11,14 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import { Link } from "@remix-run/react"
    │                      ─────────┬────────  
-   │                               ╰────────── 
+   │                               ╰────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve import  in entry.jsx
-   ╭─[entry.jsx:1:1]
-   │
- 1 │ import { Link } from "@remix-run/react"
-   │ ───┬───  
-   │    ╰───── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react in entry.jsx
 
 ```
 # Assets

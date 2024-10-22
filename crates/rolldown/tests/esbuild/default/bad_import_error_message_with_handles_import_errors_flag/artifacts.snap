@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  6 │ import('bar').catch()
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  7 │ import('bar').catch()
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  8 │ import('bar') // We should get an error report here even though the earlier imports have the "HandlesImportErrors" flag
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  9 │ import('bar')
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  11 │ import('baz').catch()
     │        ──┬──  
-    │          ╰──── 
+    │          ╰──── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  12 │ import('baz').catch()
     │        ──┬──  
-    │          ╰──── 
+    │          ╰──── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -83,7 +83,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import('foo')
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -95,7 +95,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import('foo')
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -107,7 +107,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import('foo').catch()
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -119,7 +119,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import('foo').catch()
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

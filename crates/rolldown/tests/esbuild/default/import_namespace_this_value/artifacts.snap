@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, {foo} from 'external'
    │                        ─────┬────  
-   │                             ╰────── 
+   │                             ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```

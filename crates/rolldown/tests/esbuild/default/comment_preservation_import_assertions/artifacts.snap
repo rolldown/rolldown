@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import 'foo' /* before */ assert { type: 'json' }
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import 'foo' assert /* before */ { type: 'json' }
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import 'foo' assert { /* before */ type: 'json' }
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import 'foo' assert { type: /* before */ 'json' }
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  5 │ import 'foo' assert { type: 'json' /* before */ }
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

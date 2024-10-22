@@ -1,5 +1,8 @@
 use std::fmt::Debug;
 
+use arcstr::ArcStr;
+use oxc::span::Span;
+
 use crate::{
   diagnostic::Diagnostic, event_kind::EventKind, types::diagnostic_options::DiagnosticOptions,
 };
@@ -70,6 +73,20 @@ impl BuildEvent for std::io::Error {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("IO error: {self}")
   }
+}
+
+/// A Hybrid string type used for diagnostic, e.g.
+/// for `UnresolvedError`, a specifier could be either a slice from raw source, or
+/// created during ast transformation. When the specifier came from raw source, we could
+/// use the `Span` information to give user better DX, otherwise, we could just use the string to
+/// create a fallback message.
+/// ## Panic
+/// they type is only used for store information, user should check the span could be referenced
+/// the raw source, or the userside may panic.
+#[derive(Debug)]
+pub enum DiagnosableArcstr {
+  String(ArcStr),
+  Span(Span),
 }
 
 // --- end

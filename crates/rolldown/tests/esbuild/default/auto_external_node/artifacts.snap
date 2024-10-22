@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import fs from "node:fs/promises";
    │                ─────────┬────────  
-   │                         ╰────────── 
+   │                         ╰────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  6 │ import "node:path";
    │        ─────┬─────  
-   │             ╰─────── 
+   │             ╰─────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  9 │ import "node:what-is-this";
    │        ─────────┬─────────  
-   │                 ╰─────────── 
+   │                 ╰─────────── Module not found, treating it as an external dependency
 ───╯
 
 ```

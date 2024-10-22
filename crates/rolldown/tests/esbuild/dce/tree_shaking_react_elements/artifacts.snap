@@ -6,16 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve function Foo() {}
-
- in entry.jsx
-   ╭─[entry.jsx:1:1]
-   │
- 1 │ ╭─▶ function Foo() {}
- 2 │ ├─▶ 
-   │ │      
-   │ ╰────── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in entry.jsx
 
 ```
 # Assets

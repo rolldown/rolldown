@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, {default as default2} from 'external'
    │                                        ─────┬────  
-   │                                             ╰────── 
+   │                                             ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -83,7 +83,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -95,7 +95,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
-   │                               ╰────── 
+   │                               ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```

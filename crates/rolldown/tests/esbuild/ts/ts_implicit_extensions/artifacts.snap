@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import "#bar/foo-js.js"
    │        ────────┬───────  
-   │                ╰───────── 
+   │                ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import "#bar/foo-jsx.jsx"
    │        ─────────┬────────  
-   │                 ╰────────── 
+   │                 ╰────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import "#xyz-js"
    │        ────┬────  
-   │            ╰────── 
+   │            ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import "#xyz-jsx"
    │        ─────┬────  
-   │             ╰────── 
+   │             ╰────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  5 │ import './order-js.js'
    │        ───────┬───────  
-   │               ╰───────── 
+   │               ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  6 │ import './order-jsx.jsx'
    │        ────────┬────────  
-   │                ╰────────── 
+   │                ╰────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -83,7 +83,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import './pick-ts.js'
    │        ───────┬──────  
-   │               ╰──────── 
+   │               ╰──────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -95,7 +95,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import './pick-tsx.jsx'
    │        ────────┬───────  
-   │                ╰───────── 
+   │                ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -107,7 +107,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  12 │ import 'pkg-exports/foo-js.js'
     │        ───────────┬───────────  
-    │                   ╰───────────── 
+    │                   ╰───────────── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -119,7 +119,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  13 │ import 'pkg-exports/foo-jsx.jsx'
     │        ────────────┬────────────  
-    │                    ╰────────────── 
+    │                    ╰────────────── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -131,7 +131,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  10 │ import 'pkg-exports/xyz-js'
     │        ──────────┬─────────  
-    │                  ╰─────────── 
+    │                  ╰─────────── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -143,7 +143,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  11 │ import 'pkg-exports/xyz-jsx'
     │        ──────────┬──────────  
-    │                  ╰──────────── 
+    │                  ╰──────────── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -155,7 +155,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  8 │ import 'pkg/foo-js.js'
    │        ───────┬───────  
-   │               ╰───────── 
+   │               ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -167,7 +167,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  9 │ import 'pkg/foo-jsx.jsx'
    │        ────────┬────────  
-   │                ╰────────── 
+   │                ╰────────── Module not found, treating it as an external dependency
 ───╯
 
 ```

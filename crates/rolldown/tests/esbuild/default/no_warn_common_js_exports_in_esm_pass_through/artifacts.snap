@@ -42,7 +42,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import { foo } from 'bar'
    │                     ──┬──  
-   │                       ╰──── 
+   │                       ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

@@ -6,15 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve let tests = [
-	{... in entry.jsx
-   ╭─[entry.jsx:1:1]
-   │
- 1 │ ╭─▶ let tests = [
- 2 │ ├─▶     {...a, ...b},
-   │ │                       
-   │ ╰─────────────────────── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in entry.jsx
 
 ```
 # Assets

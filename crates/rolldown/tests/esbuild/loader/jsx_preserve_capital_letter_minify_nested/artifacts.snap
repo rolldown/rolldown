@@ -6,15 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve x = () => {
-	class  in entry.jsx
-   ╭─[entry.jsx:1:1]
-   │
- 1 │ ╭─▶ x = () => {
- 2 │ ├─▶     class XYYYYY {} // This should be named "Y" due to frequency analysis
-   │ │                                                                               
-   │ ╰─────────────────────────────────────────────────────────────────────────────── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in entry.jsx
 
 ```
 # Assets

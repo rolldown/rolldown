@@ -11,32 +11,20 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import { h, render } from 'preact';
    │                           ────┬───  
-   │                               ╰───── 
+   │                               ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve import { p as Part, in app.jsx
-   ╭─[app.jsx:1:1]
-   │
- 1 │ import { p as Part, h, render } from './import';
-   │ ─────────┬─────────  
-   │          ╰─────────── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in app.jsx
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve import { p as Part, in in2.jsx
-   ╭─[in2.jsx:1:1]
-   │
- 1 │ import { p as Part, h } from './import';
-   │ ─────────┬─────────  
-   │          ╰─────────── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in in2.jsx
 
 ```
 # Assets

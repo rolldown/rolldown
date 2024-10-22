@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  10 │     function nested() { return import('foo') },
     │                                       ──┬──  
-    │                                         ╰──── 
+    │                                         ╰──── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import 'foo'
    │        ──┬──  
-   │          ╰──── 
+   │          ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import {} from 'foo'
    │                ──┬──  
-   │                  ╰──── 
+   │                  ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import * as ns from 'foo'
    │                     ──┬──  
-   │                       ╰──── 
+   │                       ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import {a, b as c} from 'foo'
    │                         ──┬──  
-   │                           ╰──── 
+   │                           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  5 │ import def from 'foo'
    │                 ──┬──  
-   │                   ╰──── 
+   │                   ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -83,7 +83,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  6 │ import def2, * as ns2 from 'foo'
    │                            ──┬──  
-   │                              ╰──── 
+   │                              ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -95,7 +95,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  7 │ import def3, {a2, b as c3} from 'foo'
    │                                 ──┬──  
-   │                                   ╰──── 
+   │                                   ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -107,7 +107,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  9 │     import('foo'),
    │            ──┬──  
-   │              ╰──── 
+   │              ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

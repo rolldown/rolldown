@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import 'pkg1'
    │        ───┬──  
-   │           ╰──── 
+   │           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import 'pkg2'
    │        ───┬──  
-   │           ╰──── 
+   │           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import 'pkg3'
    │        ───┬──  
-   │           ╰──── 
+   │           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import 'pkg4'
    │        ───┬──  
-   │           ╰──── 
+   │           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  5 │ import 'pkg5'
    │        ───┬──  
-   │           ╰──── 
+   │           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  6 │ import 'pkg6'
    │        ───┬──  
-   │           ╰──── 
+   │           ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

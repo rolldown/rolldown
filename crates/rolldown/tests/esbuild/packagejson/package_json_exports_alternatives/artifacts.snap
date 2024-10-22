@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import redApple from 'pkg/apples/red.js'
    │                      ─────────┬─────────  
-   │                               ╰─────────── 
+   │                               ╰─────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import redBook from 'pkg/books/red'
    │                     ───────┬───────  
-   │                            ╰───────── 
+   │                            ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```

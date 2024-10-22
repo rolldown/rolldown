@@ -12,6 +12,7 @@ pub use crate::{
   events::commonjs_variable_in_esm::CjsExportSpan,
   events::invalid_option::InvalidOptionTypes,
   events::unloadable_dependency::UnloadableDependencyContext,
+  events::DiagnosableArcstr,
   type_aliases::{DiagnosableResult, UnhandleableResult},
   types::diagnostic_options::DiagnosticOptions,
 };

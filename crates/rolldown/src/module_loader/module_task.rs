@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::{index::IndexVec, span::Span};
+use rolldown_ecmascript::{SpanExt, TakeIn};
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
@@ -13,7 +14,9 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule,
   RawImportRecord, ResolvedId, StrOrBytes,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnloadableDependencyContext};
+use rolldown_error::{
+  BuildDiagnostic, DiagnosableArcstr, DiagnosableResult, UnloadableDependencyContext,
+};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -303,42 +306,55 @@ impl ModuleTask {
         Ok(info) => {
           ret.push(info);
         }
-        Err(e) => match &e {
-          ResolveError::NotFound(..) => {
-            let dep = &dependencies[idx];
-            // dbg!(&dep, &source);
-            println!("{}\n", source);
-            warnings.push(
-              BuildDiagnostic::resolve_error(
+        Err(e) => {
+          let dep = &dependencies[idx];
+          match &e {
+            ResolveError::NotFound(..) => {
+              warnings.push(
+                BuildDiagnostic::resolve_error(
+                  source.clone(),
+                  self.resolved_id.id.clone(),
+                  if dep.is_unspanned() {
+                    DiagnosableArcstr::String(specifier.as_str().into())
+                  } else {
+                    DiagnosableArcstr::Span(Span::new(
+                      dep.module_request_start,
+                      dep.module_request_end(),
+                    ))
+                  },
+                  "Module not found, treating it as an external dependency".into(),
+                  Some("UNRESOLVED_IMPORT"),
+                )
+                .with_severity_warning(),
+              );
+              ret.push(ResolvedId {
+                id: specifier.to_string().into(),
+                ignored: false,
+                module_def_format: ModuleDefFormat::Unknown,
+                is_external: true,
+                package_json: None,
+                side_effects: None,
+              });
+            }
+            e => {
+              let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
+              build_errors.push(BuildDiagnostic::resolve_error(
                 source.clone(),
                 self.resolved_id.id.clone(),
-                Span::new(dep.module_request_start, dep.module_request_end()),
-                "Module not found, treating it as an external dependency".into(),
-                Some("UNRESOLVED_IMPORT"),
-              )
-              .with_severity_warning(),
-            );
-            ret.push(ResolvedId {
-              id: specifier.to_string().into(),
-              ignored: false,
-              module_def_format: ModuleDefFormat::Unknown,
-              is_external: true,
-              package_json: None,
-              side_effects: None,
-            });
-          }
-          e => {
-            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
-            let dep = &dependencies[idx];
-            build_errors.push(BuildDiagnostic::resolve_error(
-              source.clone(),
-              self.resolved_id.id.clone(),
-              Span::new(dep.module_request_start, dep.module_request_end()),
-              reason,
-              None,
-            ));
-          }
-        },
+                if dep.is_unspanned() {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(Span::new(
+                    dep.module_request_start,
+                    dep.module_request_end(),
+                  ))
+                },
+                reason,
+                None,
+              ));
+            }
+          };
+        }
       }
     }
 

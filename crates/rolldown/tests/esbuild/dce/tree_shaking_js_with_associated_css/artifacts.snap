@@ -6,13 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve import { Button } f in test.jsx
-   ╭─[test.jsx:1:1]
-   │
- 1 │ import { Button } from 'pkg/button'
-   │ ─────────┬─────────  
-   │          ╰─────────── 
-───╯
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in test.jsx
 
 ```
 # Assets

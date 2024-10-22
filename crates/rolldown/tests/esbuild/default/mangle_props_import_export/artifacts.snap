@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ let bar_ = require('xyz').bar_
    │                    ──┬──  
-   │                      ╰──── 
+   │                      ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import { bar_ } from 'xyz'
    │                      ──┬──  
-   │                        ╰──── 
+   │                        ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

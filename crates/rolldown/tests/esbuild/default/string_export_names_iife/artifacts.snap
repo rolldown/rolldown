@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import { "some import" as someImport } from "./foo"
    │                                             ───┬───  
-   │                                                ╰───── 
+   │                                                ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -41,7 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ export * as "all the stuff" from "./foo"
    │                                  ───┬───  
-   │                                     ╰───── 
+   │                                     ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```

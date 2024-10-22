@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  10 │ import "./file.ping";
     │        ──────┬──────  
-    │              ╰──────── 
+    │              ╰──────── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  5 │ import "./file.png";
    │        ──────┬─────  
-   │              ╰─────── 
+   │              ╰─────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import "/assets/images/test.jpg";
    │        ────────────┬────────────  
-   │                    ╰────────────── 
+   │                    ╰────────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import "/dir//file.gif";
    │        ────────┬───────  
-   │                ╰───────── 
+   │                ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  9 │ import "/dir/file.gif";
    │        ───────┬───────  
-   │               ╰───────── 
+   │               ╰───────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import "/dir/x/file.gif";
    │        ────────┬────────  
-   │                ╰────────── 
+   │                ╰────────── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -83,7 +83,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  8 │ import "/sassets/images/test.jpg";
    │        ─────────────┬────────────  
-   │                     ╰────────────── 
+   │                     ╰────────────── Module not found, treating it as an external dependency
 ───╯
 
 ```

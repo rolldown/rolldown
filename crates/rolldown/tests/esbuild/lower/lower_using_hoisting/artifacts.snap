@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import "./foo"
    │        ───┬───  
-   │           ╰───── 
+   │           ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ export {x, y} from './foo'
    │                    ───┬───  
-   │                       ╰───── 
+   │                       ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ export * from './foo'
    │               ───┬───  
-   │                  ╰───── 
+   │                  ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```

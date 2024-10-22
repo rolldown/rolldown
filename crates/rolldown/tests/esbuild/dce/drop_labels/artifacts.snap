@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ DROP_1: require('bar1')
    │                 ───┬──  
-   │                    ╰──── 
+   │                    ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  5 │     if (y) keep_2: require('bar2')
    │                            ───┬──  
-   │                               ╰──── 
+   │                               ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ keep_1: require('foo1')
    │                 ───┬──  
-   │                    ╰──── 
+   │                    ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │     if (x) DROP_2: require('foo2')
    │                            ───┬──  
-   │                               ╰──── 
+   │                               ╰──── Module not found, treating it as an external dependency
 ───╯
 
 ```

@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import { "an import" as anImport } from "./foo"
    │                                         ───┬───  
-   │                                            ╰───── 
+   │                                            ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ export { "another import" as "an export" } from "./foo"
    │                                                 ───┬───  
-   │                                                    ╰───── 
+   │                                                    ╰───── Module not found, treating it as an external dependency
 ───╯
 
 ```

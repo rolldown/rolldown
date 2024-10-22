@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[derive(Debug, Copy, Clone)]
 /// represent the side-effects of module is derived from `side effect hook`, package.json or analyzed from source file
 pub enum DeterminedSideEffects {

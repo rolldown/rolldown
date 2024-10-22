@@ -263,8 +263,6 @@
   diff
 ## [var_relocating_no_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_no_bundle/diff.md)
   diff
-## [warn_common_js_exports_in_esm_bundle](../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle/diff.md)
-  diff
 ## [warn_common_js_exports_in_esm_convert](../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_convert/diff.md)
   diff
 ## [warnings_inside_node_modules](../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules/diff.md)
@@ -391,3 +389,4 @@
 ## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)
 ## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/bypass.md)
 ## [use_strict_directive_bundle_cjs_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264/bypass.md)
+## [warn_common_js_exports_in_esm_bundle](../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle/bypass.md)

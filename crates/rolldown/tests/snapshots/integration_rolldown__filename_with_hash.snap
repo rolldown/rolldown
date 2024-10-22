@@ -283,7 +283,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main
 
-- src_entry-!~{000}~.js => src_entry-FB5GMnAq.js
+- src_entry-!~{000}~.js => src_entry-5UaId-ji.js
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_use_module
 
@@ -316,7 +316,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash
 
-- src_entry-!~{000}~.js => src_entry-kRUkXBz9.js
+- src_entry-!~{000}~.js => src_entry-o9hvdwyv.js
 
 # tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
 

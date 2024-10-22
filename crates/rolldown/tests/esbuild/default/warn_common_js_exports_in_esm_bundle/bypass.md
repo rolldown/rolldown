@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out/cjs-in-esm.js
 ### esbuild

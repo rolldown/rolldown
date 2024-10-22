@@ -9,9 +9,13 @@ pub fn render_app(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
+  hashbang: Option<&str>,
 ) -> ConcatSource {
   let mut concat_source = ConcatSource::default();
 
+  if let Some(hashbang) = hashbang {
+    concat_source.add_source(Box::new(RawSource::new(hashbang.to_string())));
+  }
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }

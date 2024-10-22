@@ -14,32 +14,37 @@
 ```
 ### rolldown
 ```js
+#! from banner
+(function() {
+
+"use strict";
 
 //#region entry.js
-#! in file
 foo();
 
 //#endregion
+})();
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,6 @@
+@@ -1,7 +1,10 @@
+-#! in file
+ #! from banner
++(function() {
 +
-+//#region entry.js
- #! in file
--#! from banner
--"use strict";
+ "use strict";
 -(() => {
 -  // entry.js
 -  foo();
--})();
-\ No newline at end of file
++
++//#region entry.js
 +foo();
 +
 +//#endregion
+ })();
 \ No newline at end of file
 
 ```

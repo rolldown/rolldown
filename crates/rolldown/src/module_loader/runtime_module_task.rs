@@ -74,6 +74,7 @@ impl RuntimeModuleTask {
       ast_usage,
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: _,
+      hashbang_range: _,
     } = scan_result;
 
     let module = NormalModule {
@@ -113,6 +114,7 @@ impl RuntimeModuleTask {
         def_format: ModuleDefFormat::EsmMjs,
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+        hashbang_range: None,
       },
       css_view: None,
     };

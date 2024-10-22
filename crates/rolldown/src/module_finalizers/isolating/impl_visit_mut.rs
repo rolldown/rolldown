@@ -12,6 +12,8 @@ use super::IsolatingModuleFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
+    // drop the hashbang since we already store them in ast_scan phase
+    program.hashbang.take();
     let mut stmts = self.snippet.builder.vec();
 
     for mut stmt in program.body.take_in(self.alloc) {

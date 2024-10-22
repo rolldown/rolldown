@@ -155,9 +155,6 @@
 ## should not rewrite `fs` to `node:fs`
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6
 - crates/rolldown/tests/esbuild/default/import_fs_node_common_js
-## hashban not align
-- crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order
-- crates/rolldown/tests/esbuild/default/hashbang_bundle
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
@@ -265,6 +262,8 @@
 - crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js
 ## should rename `require` when it is appear in param position
 - crates/rolldown/tests/esbuild/default/false_require
+## hashban not align
+- crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order
 ## query and hashban in specifier
 - crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter
 ## commonjs don't have `import.meta`, should rewrite

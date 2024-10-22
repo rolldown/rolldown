@@ -19,6 +19,8 @@ use super::ScopeHoistingFinalizer;
 impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
+    // drop the hashbang since we already store them in ast_scan phase
+    program.hashbang.take();
     let old_body = self.alloc.take(&mut program.body);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)

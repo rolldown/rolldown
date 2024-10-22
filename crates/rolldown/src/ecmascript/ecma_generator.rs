@@ -59,6 +59,24 @@ impl Generator for EcmaGenerator {
       ctx.chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk"),
       ctx.chunk_graph,
     );
+    let hashbang = match ctx.chunk.kind {
+      rolldown_common::ChunkKind::EntryPoint { is_user_defined, module, .. } if is_user_defined => {
+        let module = &ctx.link_output.module_table.modules[module];
+        match module {
+          rolldown_common::Module::Normal(normal_module) => {
+            dbg!(&normal_module.stable_id);
+            dbg!(&normal_module.ecma_view.hashbang_range);
+            let source = &normal_module.source;
+            normal_module
+              .ecma_view
+              .hashbang_range
+              .map(|range| &source.as_str()[range.start as usize..range.end as usize])
+          }
+          rolldown_common::Module::External(_) => None,
+        }
+      }
+      _ => None,
+    };
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
@@ -105,16 +123,20 @@ impl Generator for EcmaGenerator {
     };
 
     let concat_source = match ctx.options.format {
-      OutputFormat::Esm => render_esm(ctx, rendered_module_sources, banner, footer, intro, outro),
+      OutputFormat::Esm => {
+        render_esm(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang)
+      }
       OutputFormat::Cjs => {
-        match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro) {
+        match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang) {
           Ok(concat_source) => concat_source,
           Err(errors) => return Ok(Err(errors)),
         }
       }
-      OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer, intro, outro),
+      OutputFormat::App => {
+        render_app(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang)
+      }
       OutputFormat::Iife => {
-        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro) {
+        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang) {
           Ok(concat_source) => concat_source,
           Err(errors) => return Ok(Err(errors)),
         }

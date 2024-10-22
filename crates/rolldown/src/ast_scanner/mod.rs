@@ -1,6 +1,8 @@
 pub mod impl_visit;
 pub mod side_effect_detector;
 
+use std::ops::Range;
+
 use arcstr::ArcStr;
 use oxc::ast::ast;
 use oxc::index::IndexVec;
@@ -49,6 +51,11 @@ pub struct ScanResult {
   /// We needs to record the info in ast scanner since after that the ast maybe touched, etc
   /// (naming deconflict)
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
+  /// hashbang only works if it's literally the first character.So we need to generate it in chunk
+  /// level rather than module level, or it will raised as a syntax
+  /// error. So we need to take the original hashbang range of source, and remove the hashbang from
+  /// the ast to avoid generated in ast code generation.
+  pub hashbang_range: Option<Span>,
 }
 
 pub struct AstScanner<'me> {
@@ -117,6 +124,7 @@ impl<'me> AstScanner<'me> {
       ast_usage: EcmaModuleAstUsage::empty(),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+      hashbang_range: None,
     };
 
     Self {

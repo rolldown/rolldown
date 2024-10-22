@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./other.js" is imported by "data:text/javascript,import './other.js'", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './other.js' in data:text/javascript,import './other.js'
+   ╭─[data:text/javascript,import './other.js':1:8]
+   │
+ 1 │ import './other.js'
+   │        ──────┬─────  
+   │              ╰─────── 
+───╯
 
 ```
 # Assets

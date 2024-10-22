@@ -6,13 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "factory.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve console.log([
+	<>x< in fragment.jsx
+   ╭─[fragment.jsx:1:1]
+   │
+ 1 │ ╭─▶ console.log([
+ 2 │ ├─▶     <>x</>,
+   │ │                 
+   │ ╰───────────────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "fragment.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve console.log([
+	<x / in factory.jsx
+   ╭─[factory.jsx:1:1]
+   │
+ 1 │ ╭─▶ console.log([
+ 2 │ ├─▶     <x />,
+   │ │                
+   │ ╰──────────────── 
+───╯
 
 ```
 # Assets

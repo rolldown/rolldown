@@ -6,13 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "/Users/user/project/file.txt#bar" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '/Users/user/project/file.txt#bar' in entry.js
+   ╭─[entry.js:3:17]
+   │
+ 3 │ import bar from '/Users/user/project/file.txt#bar'
+   │                 ─────────────────┬────────────────  
+   │                                  ╰────────────────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "/Users/user/project/file.txt?foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '/Users/user/project/file.txt?foo' in entry.js
+   ╭─[entry.js:2:17]
+   │
+ 2 │ import foo from '/Users/user/project/file.txt?foo'
+   │                 ─────────────────┬────────────────  
+   │                                  ╰────────────────── 
+───╯
 
 ```
 # Assets

@@ -10,11 +10,12 @@ pub struct DiagnosableResolveError {
   pub importer_id: ArcStr,
   pub importee_span: Span,
   pub reason: String,
+  pub title: Option<&'static str>,
 }
 
 impl BuildEvent for DiagnosableResolveError {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::DiagnosableResolveError
+    crate::event_kind::EventKind::ResolveError(self.title)
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {

@@ -181,7 +181,7 @@ impl ModuleTask {
     if !matches!(module_type, ModuleType::Css) {
       raw_import_records = ecma_raw_import_records;
     }
-
+    dbg!(&ecma_view.sourcemap_chain);
     let resolved_deps = match self
       .resolve_dependencies(&raw_import_records, ecma_view.source.clone(), &mut warnings)
       .await?
@@ -305,11 +305,16 @@ impl ModuleTask {
         }
         Err(e) => match &e {
           ResolveError::NotFound(..) => {
+            let dep = &dependencies[idx];
+            // dbg!(&dep, &source);
+            println!("{}\n", source);
             warnings.push(
-              BuildDiagnostic::unresolved_import_treated_as_external(
-                specifier.to_string(),
-                self.resolved_id.id.to_string(),
-                Some(e),
+              BuildDiagnostic::resolve_error(
+                source.clone(),
+                self.resolved_id.id.clone(),
+                Span::new(dep.module_request_start, dep.module_request_end()),
+                "Module not found, treating it as an external dependency".into(),
+                Some("UNRESOLVED_IMPORT"),
               )
               .with_severity_warning(),
             );
@@ -325,11 +330,12 @@ impl ModuleTask {
           e => {
             let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
             let dep = &dependencies[idx];
-            build_errors.push(BuildDiagnostic::diagnosable_resolve_error(
+            build_errors.push(BuildDiagnostic::resolve_error(
               source.clone(),
               self.resolved_id.id.clone(),
               Span::new(dep.module_request_start, dep.module_request_end()),
               reason,
+              None,
             ));
           }
         },

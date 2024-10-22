@@ -30,37 +30,73 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-def.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-def.js
+   ╭─[external-def.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-default.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-default.js
+   ╭─[external-default.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-default2.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-default2.js
+   ╭─[external-default2.js:1:40]
+   │
+ 1 │ import def, {default as default2} from 'external'
+   │                                        ─────┬────  
+   │                                             ╰────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-ns-def.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-ns-def.js
+   ╭─[external-ns-def.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-ns-default.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-ns-default.js
+   ╭─[external-ns-default.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "external-ns.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-ns.js
+   ╭─[external-ns.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── 
+───╯
 
 ```
 # Assets

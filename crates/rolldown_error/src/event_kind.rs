@@ -20,7 +20,7 @@ pub enum EventKind {
   // --- These kinds are rolldown specific
   IllegalReassignment,
   UnloadableDependency,
-  DiagnosableResolveError,
+  ResolveError(Option<&'static str>),
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // TODO remove following kinds
@@ -57,7 +57,10 @@ impl Display for EventKind {
       EventKind::IoError => write!(f, "IO_ERROR"),
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
       EventKind::ExportUndefinedVariable => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
-      EventKind::DiagnosableResolveError => write!(f, "DIAGNOSABLE_RESOLVE_ERROR"),
+      EventKind::ResolveError(title) => match title {
+        Some(title) => write!(f, "{title}"),
+        None => write!(f, "RESOLVE_ERROR"),
+      },
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
     }
   }

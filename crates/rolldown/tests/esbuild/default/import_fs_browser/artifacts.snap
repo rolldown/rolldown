@@ -6,25 +6,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
+   ╭─[entry.js:1:8]
+   │
+ 1 │ import 'fs'
+   │        ──┬─  
+   │          ╰─── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
+   ╭─[entry.js:2:21]
+   │
+ 2 │ import * as fs from 'fs'
+   │                     ──┬─  
+   │                       ╰─── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
+   ╭─[entry.js:3:26]
+   │
+ 3 │ import defaultValue from 'fs'
+   │                          ──┬─  
+   │                            ╰─── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
+   ╭─[entry.js:4:28]
+   │
+ 4 │ import {readFileSync} from 'fs'
+   │                            ──┬─  
+   │                              ╰─── 
+───╯
 
 ```
 # Assets

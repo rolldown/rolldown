@@ -65,13 +65,14 @@ impl BuildDiagnostic {
     Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
   }
 
-  pub fn diagnosable_resolve_error(
+  pub fn resolve_error(
     source: ArcStr,
     importer_id: ArcStr,
     importee_span: Span,
     reason: String,
+    title: Option<&'static str>,
   ) -> Self {
-    Self::new_inner(DiagnosableResolveError { source, importer_id, importee_span, reason })
+    Self::new_inner(DiagnosableResolveError { source, importer_id, importee_span, reason, title })
   }
 
   pub fn unloadable_dependency(

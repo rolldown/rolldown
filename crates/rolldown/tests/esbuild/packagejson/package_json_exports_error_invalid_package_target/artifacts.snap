@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## DIAGNOSABLE_RESOLVE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg1' in src/entry.js
+[RESOLVE_ERROR] Error: Could not resolve 'pkg1' in src/entry.js
    ╭─[src/entry.js:1:8]
    │
  1 │ import 'pkg1'
@@ -15,10 +15,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
-## DIAGNOSABLE_RESOLVE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg2' in src/entry.js
+[RESOLVE_ERROR] Error: Could not resolve 'pkg2' in src/entry.js
    ╭─[src/entry.js:2:8]
    │
  2 │ import 'pkg2'
@@ -27,10 +27,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
-## DIAGNOSABLE_RESOLVE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg3' in src/entry.js
+[RESOLVE_ERROR] Error: Could not resolve 'pkg3' in src/entry.js
    ╭─[src/entry.js:3:8]
    │
  3 │ import 'pkg3'

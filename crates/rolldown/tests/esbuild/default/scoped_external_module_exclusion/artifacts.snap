@@ -6,13 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@scope/foo" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@scope/foo' in index.js
+   ╭─[index.js:1:21]
+   │
+ 1 │ import { Foo } from '@scope/foo';
+   │                     ──────┬─────  
+   │                           ╰─────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@scope/foo/bar" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@scope/foo/bar' in index.js
+   ╭─[index.js:2:21]
+   │
+ 2 │ import { Bar } from '@scope/foo/bar';
+   │                     ────────┬───────  
+   │                             ╰───────── 
+───╯
 
 ```
 # Assets

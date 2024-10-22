@@ -6,7 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "entry.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve console.log(
+	<div  in entry.jsx
+   ╭─[entry.jsx:1:1]
+   │
+ 1 │ ╭─▶ console.log(
+ 2 │ ├─▶     <div x={/*before*/x} />,
+   │ │                                  
+   │ ╰────────────────────────────────── 
+───╯
 
 ```
 # Assets

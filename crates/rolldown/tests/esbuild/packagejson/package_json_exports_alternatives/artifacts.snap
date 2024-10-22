@@ -6,13 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg/apples/red.js" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg/apples/red.js' in src/entry.js
+   ╭─[src/entry.js:1:22]
+   │
+ 1 │ import redApple from 'pkg/apples/red.js'
+   │                      ─────────┬─────────  
+   │                               ╰─────────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg/books/red" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg/books/red' in src/entry.js
+   ╭─[src/entry.js:3:21]
+   │
+ 3 │ import redBook from 'pkg/books/red'
+   │                     ───────┬───────  
+   │                            ╰───────── 
+───╯
 
 ```
 # Assets

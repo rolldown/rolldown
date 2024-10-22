@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "third" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'third' in entry.ts
+   ╭─[entry.ts:1:8]
+   │
+ 1 │ import 'third'
+   │        ───┬───  
+   │           ╰───── 
+───╯
 
 ```
 # Assets

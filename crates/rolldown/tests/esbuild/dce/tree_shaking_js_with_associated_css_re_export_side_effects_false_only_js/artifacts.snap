@@ -6,13 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "node_modules/pkg/components.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve import { Button } f in test.jsx
+   ╭─[test.jsx:1:1]
+   │
+ 1 │ import { Button } from 'pkg'
+   │ ─────────┬─────────  
+   │          ╰─────────── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "test.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve require('./button.c in node_modules/pkg/components.jsx
+   ╭─[node_modules/pkg/components.jsx:1:1]
+   │
+ 1 │ require('./button.css')
+   │ ─────────┬─────────  
+   │          ╰─────────── 
+───╯
 
 ```
 # Assets

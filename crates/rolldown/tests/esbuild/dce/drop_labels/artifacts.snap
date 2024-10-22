@@ -6,25 +6,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "bar1" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'bar1' in entry.js
+   ╭─[entry.js:2:17]
+   │
+ 2 │ DROP_1: require('bar1')
+   │                 ───┬──  
+   │                    ╰──── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "bar2" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'bar2' in entry.js
+   ╭─[entry.js:5:25]
+   │
+ 5 │     if (y) keep_2: require('bar2')
+   │                            ───┬──  
+   │                               ╰──── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo1" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo1' in entry.js
+   ╭─[entry.js:1:17]
+   │
+ 1 │ keep_1: require('foo1')
+   │                 ───┬──  
+   │                    ╰──── 
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo2" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo2' in entry.js
+   ╭─[entry.js:4:25]
+   │
+ 4 │     if (x) DROP_2: require('foo2')
+   │                            ───┬──  
+   │                               ╰──── 
+───╯
 
 ```
 # Assets

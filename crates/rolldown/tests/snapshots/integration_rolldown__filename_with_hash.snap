@@ -1470,7 +1470,7 @@ expression: output
 
 # tests/esbuild/default/package_alias_match_longest
 
-- entry-!~{000}~.js => entry-m_i4V-A_.js
+- entry-!~{000}~.js => entry-N5pMKFjJ.js
 
 # tests/esbuild/default/preserve_key_comment
 

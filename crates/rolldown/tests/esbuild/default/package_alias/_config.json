@@ -13,10 +13,10 @@
 				["pkg3", ["alias3"]],
 				["@scope/pkg4", ["alias4"]],
 				["@scope/pkg5", ["alias5"]],
-				["@abs-path/pkg6", ["alias6/dir"]],
-				["@abs-path/pkg7", ["alias7/dir"]],
-				["@scope-only", ["alias8/dir"]],
-				["slash", ["alias9/some/file.js"]],
+				["@abs-path/pkg6", ["./alias6/dir"]],
+				["@abs-path/pkg7", ["./alias7/dir"]],
+				["@scope-only", ["./alias8/dir"]],
+				["slash", ["./alias9/some/file.js"]],
 				["prefix", ["alias10"]],
 				["@scope/prefix", ["alias11"]]
 			]

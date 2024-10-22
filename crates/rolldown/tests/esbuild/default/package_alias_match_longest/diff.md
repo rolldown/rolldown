@@ -17,9 +17,6 @@ import "alias/pkg/baz";
 import "pkg";
 import "pkg/foo";
 import "pkg/foo/bar";
-import "pkg/foo/bar/baz";
-import "pkg/bar/baz";
-import "pkg/baz";
 
 ```
 ### diff
@@ -27,7 +24,7 @@ import "pkg/baz";
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,6 @@
+@@ -1,6 +1,3 @@
 -import "alias/pkg";
 -import "alias/pkg_foo";
 -import "alias/pkg_foo_bar";
@@ -37,8 +34,5 @@ import "pkg/baz";
 +import "pkg";
 +import "pkg/foo";
 +import "pkg/foo/bar";
-+import "pkg/foo/bar/baz";
-+import "pkg/bar/baz";
-+import "pkg/baz";
 
 ```

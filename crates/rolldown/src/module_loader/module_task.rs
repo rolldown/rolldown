@@ -322,6 +322,27 @@ impl ModuleTask {
               side_effects: None,
             });
           }
+          ResolveError::MatchedAliasNotFound(_specifier, alias) => {
+            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(&e);
+            let dep = &dependencies[idx];
+            warnings.push(
+              BuildDiagnostic::diagnosable_resolve_error(
+                source.clone(),
+                self.resolved_id.id.clone(),
+                Span::new(dep.module_request_start, dep.module_request_end()),
+                reason,
+              )
+              .with_severity_warning(),
+            );
+            ret.push(ResolvedId {
+              id: alias.into(),
+              ignored: false,
+              module_def_format: ModuleDefFormat::Unknown,
+              is_external: true,
+              package_json: None,
+              side_effects: None,
+            });
+          }
           e => {
             let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
             let dep = &dependencies[idx];

@@ -334,7 +334,6 @@ impl ModuleTask {
               )
               .with_severity_warning(),
             );
-            dbg!(&alias, _specifier);
             ret.push(ResolvedId {
               id: alias.into(),
               ignored: false,

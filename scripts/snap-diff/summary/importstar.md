@@ -11,8 +11,6 @@
   diff
 ## [import_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_self_common_js/diff.md)
   diff
-## [import_star_common_js_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused/diff.md)
-  diff
 ## [re_export_star_as_external_iife](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife/diff.md)
   diff
 ## [re_export_star_as_iife_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle/diff.md)
@@ -75,6 +73,7 @@
 ## [import_star_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_capture/bypass.md)
 ## [import_star_common_js_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_capture/bypass.md)
 ## [import_star_common_js_no_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_no_capture/bypass.md)
+## [import_star_common_js_unused](../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused/bypass.md)
 ## [import_star_export_import_star_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_import_star_capture/bypass.md)
 ## [import_star_export_import_star_no_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_import_star_no_capture/bypass.md)
 ## [import_star_export_star_as_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_export_star_as_capture/bypass.md)

@@ -33,15 +33,11 @@
   diff
 ## [package_json_side_effects_array_keep_main_implicit_main](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main/diff.md)
   diff
-## [package_json_side_effects_array_keep_main_use_main](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main/diff.md)
-  diff
 ## [package_json_side_effects_array_keep_module_implicit_main](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main/diff.md)
   diff
 ## [package_json_side_effects_array_keep_module_use_main](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_use_main/diff.md)
   diff
 ## [package_json_side_effects_false_all_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_all_fork/diff.md)
-  diff
-## [package_json_side_effects_false_cross_platform_slash](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash/diff.md)
   diff
 ## [package_json_side_effects_false_intermediate_files_chain_all](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all/diff.md)
   diff
@@ -97,10 +93,12 @@
 ## [package_json_side_effects_array_glob](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_glob)
 ## [package_json_side_effects_array_keep](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep)
 ## [package_json_side_effects_array_keep_main_implicit_module](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module)
+## [package_json_side_effects_array_keep_main_use_main](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_main)
 ## [package_json_side_effects_array_keep_main_use_module](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_use_module)
 ## [package_json_side_effects_array_keep_module_implicit_module](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module)
 ## [package_json_side_effects_array_keep_module_use_module](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_use_module)
 ## [package_json_side_effects_array_remove](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_remove)
+## [package_json_side_effects_false_cross_platform_slash](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash)
 ## [package_json_side_effects_false_intermediate_files_unused](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused)
 ## [package_json_side_effects_false_keep_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6)
 ## [package_json_side_effects_false_no_warning_in_node_modules_issue999](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999)

@@ -14,7 +14,6 @@ export default defineConfig({
         singleFork: true,
       },
     },
-    include: ['tests/watch/**/*.test.ts'],
   },
   resolve: {
     alias: {

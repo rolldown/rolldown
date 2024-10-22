@@ -114,7 +114,7 @@ test.sequential('watch event', async () => {
 
 test.sequential('watch skipWrite', async () => {
   const dir = path.join(import.meta.dirname, './skipWrite-dist/')
-  await watch({
+  const watcher = await watch({
     input,
     cwd: import.meta.dirname,
     output: {
@@ -126,6 +126,7 @@ test.sequential('watch skipWrite', async () => {
   })
   await waitBuildFinished()
   expect(fs.existsSync(dir)).toBe(false)
+  await watcher.close()
 })
 
 test.sequential('PluginContext addWatchFile', async () => {
@@ -164,10 +165,11 @@ test.sequential('PluginContext addWatchFile', async () => {
 
   // revert change
   fs.writeFileSync(foo, 'console.log(1)')
+  await watcher.close()
 })
 
 test.sequential('watch include/exclude', async () => {
-  await watch({
+  const watcher = await watch({
     input,
     cwd: import.meta.dirname,
     watch: {
@@ -188,6 +190,7 @@ test.sequential('watch include/exclude', async () => {
 
   // revert change
   fs.writeFileSync(input, 'console.log(1)')
+  await watcher.close()
 })
 
 async function waitBuildFinished() {

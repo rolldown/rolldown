@@ -1,5 +1,5 @@
 # Reason
-1. hashban not align
+1. iife impl follows rollup
 # Diff
 ## /out.js
 ### esbuild

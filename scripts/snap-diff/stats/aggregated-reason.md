@@ -262,8 +262,6 @@
 - crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js
 ## should rename `require` when it is appear in param position
 - crates/rolldown/tests/esbuild/default/false_require
-## hashban not align
-- crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order
 ## query and hashban in specifier
 - crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter
 ## commonjs don't have `import.meta`, should rewrite

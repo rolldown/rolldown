@@ -632,7 +632,8 @@
         "esm",
         "cjs",
         "app",
-        "iife"
+        "iife",
+        "umd"
       ]
     },
     "Platform": {

@@ -858,15 +858,15 @@ expression: output
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
-- entry-!~{000}~.js => entry-jV0vePSl.js
+- entry-!~{000}~.js => entry-lJykAK8l.js
 
 # tests/esbuild/default/hashbang_bundle
 
-- entry-!~{000}~.js => entry-gVMdjuq5.js
+- entry-!~{000}~.js => entry--LXH52Wv.js
 
 # tests/esbuild/default/hashbang_no_bundle
 
-- entry-!~{000}~.js => entry-HnA9UXuP.js
+- entry-!~{000}~.js => entry-mSmZIi2z.js
 
 # tests/esbuild/default/iife_es5
 

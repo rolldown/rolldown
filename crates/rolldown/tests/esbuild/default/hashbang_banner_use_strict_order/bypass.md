@@ -1,5 +1,5 @@
 # Reason
-1. iife impl follows rollup
+1. `"use strict"` generation follows rollup
 # Diff
 ## /out.js
 ### esbuild
@@ -14,6 +14,7 @@
 ```
 ### rolldown
 ```js
+#! in file
 #! from banner
 (function() {
 
@@ -30,8 +31,8 @@ foo();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,10 @@
--#! in file
+@@ -1,7 +1,11 @@
+ #! in file
  #! from banner
 +(function() {
 +

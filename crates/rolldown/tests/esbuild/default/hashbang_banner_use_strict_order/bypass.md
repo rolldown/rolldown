@@ -1,5 +1,5 @@
 # Reason
-1. hashban not align
+1. `"use strict"` generation follows rollup
 # Diff
 ## /out.js
 ### esbuild
@@ -14,32 +14,38 @@
 ```
 ### rolldown
 ```js
+#! in file
+#! from banner
+(function() {
+
+"use strict";
 
 //#region entry.js
-#! in file
 foo();
 
 //#endregion
+})();
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,6 @@
-+
-+//#region entry.js
+@@ -1,7 +1,11 @@
  #! in file
--#! from banner
--"use strict";
+ #! from banner
++(function() {
++
+ "use strict";
 -(() => {
 -  // entry.js
 -  foo();
--})();
-\ No newline at end of file
++
++//#region entry.js
 +foo();
 +
 +//#endregion
+ })();
 \ No newline at end of file
 
 ```

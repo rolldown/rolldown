@@ -49,6 +49,10 @@ pub struct ScanResult {
   /// We needs to record the info in ast scanner since after that the ast maybe touched, etc
   /// (naming deconflict)
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
+  /// hashbang only works if it's literally the first character.So we need to generate it in chunk
+  /// level rather than module level, or a syntax error will be raised if there are multi modules
+  /// has hashbang. Storing the span of hashbang used for hashbang codegen in chunk level
+  pub hashbang_range: Option<Span>,
 }
 
 pub struct AstScanner<'me> {
@@ -117,6 +121,7 @@ impl<'me> AstScanner<'me> {
       ast_usage: EcmaModuleAstUsage::empty(),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+      hashbang_range: None,
     };
 
     Self {

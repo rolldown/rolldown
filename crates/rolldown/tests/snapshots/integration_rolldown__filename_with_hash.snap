@@ -4077,13 +4077,21 @@ expression: output
 
 - main-!~{000}~.js => main-CHjIHX2b.js
 
+# tests/rolldown/function/export_mode/umd/complex_name_default
+
+- main-!~{000}~.js => main-Kuxl-0aF.js
+
+# tests/rolldown/function/export_mode/umd/complex_name_named
+
+- main-!~{000}~.js => main-YTZDSXCM.js
+
 # tests/rolldown/function/export_mode/umd/default
 
-- main-!~{000}~.js => main-o-KgstYL.js
+- main-!~{000}~.js => main-GT9UcjVv.js
 
 # tests/rolldown/function/export_mode/umd/named
 
-- main-!~{000}~.js => main-VULp-aQz.js
+- main-!~{000}~.js => main-Var5L6sG.js
 
 # tests/rolldown/function/extend/iife/namespace_default
 
@@ -4108,6 +4116,22 @@ expression: output
 # tests/rolldown/function/extend/iife/non_namespace_named
 
 - main-!~{000}~.js => main-Zod18VCe.js
+
+# tests/rolldown/function/extend/umd/complex_name_default
+
+- main-!~{000}~.js => main-Kuxl-0aF.js
+
+# tests/rolldown/function/extend/umd/complex_name_named
+
+- main-!~{000}~.js => main-2UFzA9Zc.js
+
+# tests/rolldown/function/extend/umd/default
+
+- main-!~{000}~.js => main-GT9UcjVv.js
+
+# tests/rolldown/function/extend/umd/named
+
+- main-!~{000}~.js => main-LVQT67nX.js
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -4232,6 +4256,33 @@ expression: output
 # tests/rolldown/function/format/iife/namespaced_name_reserved
 
 - main-!~{000}~.js => main-KMMEdTO_.js
+
+# tests/rolldown/function/format/umd/conflict_exports_key
+
+- main-!~{000}~.js => main-wJ9zIaSP.js
+
+# tests/rolldown/function/format/umd/conflict_exports_key_loop
+
+- main-!~{000}~.js => main-f4cy6HW5.js
+
+# tests/rolldown/function/format/umd/external_modules
+
+- main-!~{000}~.js => main-uX-RzQoj.js
+
+# tests/rolldown/function/format/umd/external_modules_with_complex_globals
+
+- main-!~{000}~.js => main-WZbsVwLx.js
+
+# tests/rolldown/function/format/umd/external_modules_with_globals
+
+- main-!~{000}~.js => main-pDG-KOOK.js
+
+# tests/rolldown/function/format/umd/missing_name_option
+
+
+# tests/rolldown/function/format/umd/namespaced_name_reserved
+
+- main-!~{000}~.js => main-rWjDd2Pc.js
 
 # tests/rolldown/function/inject
 

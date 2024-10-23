@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "umd",
+    "name": "1.2",
+    "banner": "import assert from \"node:assert\"",
+    "footer": "assert(typeof globalThis[\"1\"][\"2\"] === \"object\");"
+  }
+}

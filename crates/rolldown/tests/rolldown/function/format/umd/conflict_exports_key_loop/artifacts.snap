@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import assert from "node:assert"
 (function(global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
   typeof define === 'function' && define.amd ? define([exports], factory) :
@@ -15,10 +14,11 @@ import assert from "node:assert"
 "use strict";
 
 //#region main.js
-const a = 1;
+const exports$1 = "exports";
+const exports$1$1 = "exports$1";
 
 //#endregion
-exports.a = a
+exports.exports = exports$1
+exports.exports$1 = exports$1$1
 });
-assert(globalThis.module.a === 1);
 ```

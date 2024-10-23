@@ -10,7 +10,7 @@ import assert from "node:assert"
 (function(global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
   typeof define === 'function' && define.amd ? define([], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.module = factory()));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.test = global.test || {},global.test.module = factory()));
 })(this, function() {
 "use strict";
 
@@ -20,5 +20,5 @@ var main_default = "default";
 //#endregion
 return main_default;
 });
-assert(globalThis.module === "default");
+assert(globalThis.test.module === "default");
 ```

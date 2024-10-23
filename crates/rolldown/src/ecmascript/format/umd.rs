@@ -145,10 +145,10 @@ fn render_amd_dependencies(externals: &[ExternalRenderImportStmt], has_exports: 
   let mut dependencies = Vec::with_capacity(externals.len());
   if has_exports {
     dependencies.reserve(1);
-    dependencies.push("exports");
+    dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(&external.path.as_str());
+    dependencies.push(format!("'{}'", external.path.as_str()));
   });
   dependencies.join(", ")
 }
@@ -185,27 +185,29 @@ fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
   externals.iter().for_each(|external| {
     if let Some(global) = ctx.options.globals.get(external.path.as_str()) {
-      dependencies.push(render_property_access(global));
+      dependencies.push(format!(
+        "global{}",
+        global.split(".").map(render_property_access).collect::<Vec<_>>().join("")
+      ));
     } else {
       let target = legitimize_identifier_name(external.path.as_str()).to_string();
       ctx.warnings.push(
         BuildDiagnostic::missing_global_name(external.path.clone(), ArcStr::from(&target))
           .with_severity_warning(),
       );
-      dependencies.push(render_property_access(external.path.as_str()));
+      dependencies.push(format!("global{}", render_property_access(&target)));
     }
   });
-  let deps = dependencies.join(", ");
-  let stmt_code = if stmt.is_empty() { "".to_string() } else { format!("{stmt}, ") };
+  let deps = dependencies.join(",");
   if has_exports {
     if named_exports {
       Ok(format!(
-        "factory(({stmt_code}{namespace} = {}){})",
+        "factory(({stmt}{namespace} = {}){})",
         if ctx.options.extend { format!("{namespace} || {{}}") } else { "{}".to_string() },
         if dependencies.is_empty() { "".to_string() } else { format!(", {deps}") }
       ))
     } else {
-      Ok(format!("({stmt_code}{namespace} = factory({deps}))"))
+      Ok(format!("({stmt}{namespace} = factory({deps}))"))
     }
   } else {
     Ok(format!("factory({deps})"))

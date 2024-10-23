@@ -2530,7 +2530,7 @@ expression: output
 
 # tests/esbuild/loader/require_custom_extension_base64
 
-- entry-!~{000}~.js => entry-Fm_LrecV.js
+- entry-!~{000}~.js => entry-U7-hCe1a.js
 
 # tests/esbuild/loader/require_custom_extension_data_url
 

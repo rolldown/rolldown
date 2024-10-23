@@ -1,6 +1,5 @@
 # Reason
 1. `.custom` should be treated as cjs
-2. the base64 result is also wrong
 # Diff
 ## /out.js
 ### esbuild
@@ -24,7 +23,7 @@ var test_exports = {};
 __export(test_exports, { default: () => test_default });
 var test_default;
 var init_test = __esm({ "test.custom"() {
-	test_default = "YVx4MDBiXHg4MGNceEZGZA==";
+	test_default = "YQBigGP/ZA==";
 } });
 
 //#endregion
@@ -49,7 +48,7 @@ console.log((init_test(), __toCommonJS(test_exports)));
 +var test_default;
 +var init_test = __esm({
 +    "test.custom"() {
-+        test_default = "YVx4MDBiXHg4MGNceEZGZA==";
++        test_default = "YQBigGP/ZA==";
      }
  });
 -console.log(require_test());

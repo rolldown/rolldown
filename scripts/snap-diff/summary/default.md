@@ -201,6 +201,8 @@
   diff
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
   diff
+## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle/diff.md)
+  diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
   diff
 ## [require_and_dynamic_import_invalid_template](../../../crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template/diff.md)
@@ -295,7 +297,6 @@
 ## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property)
 ## [re_export_default_internal](../../../crates/rolldown/tests/esbuild/default/re_export_default_internal)
 ## [re_export_fs_node](../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
-## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)
 ## [require_fs_node](../../../crates/rolldown/tests/esbuild/default/require_fs_node)
 ## [require_fs_node_minify](../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
 ## [require_property_access_common_js](../../../crates/rolldown/tests/esbuild/default/require_property_access_common_js)

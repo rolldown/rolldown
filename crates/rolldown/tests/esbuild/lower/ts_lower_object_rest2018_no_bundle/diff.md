@@ -81,7 +81,6 @@ for ({...x} of [{}]) {}
 for ({...x} = {}; x; x = null) {}
 ({...assign} = {});
 ({...x} = x);
-for ({...x} = x; 0;);
 console.log({...x} = x);
 console.log({x,...xx} = { x });
 console.log({x: {...xx}} = { x });
@@ -120,7 +119,7 @@ console.log({x: {...xx}} = { x });
      abc
  }) {}
  for (let {...for_in_let} in {
-@@ -35,11 +26,8 @@
+@@ -35,13 +26,9 @@
  }) {}
  for ({...x} of [{}]) {}
  for ({...x} = {}; x; x = null) {}
@@ -129,8 +128,10 @@ console.log({x: {...xx}} = { x });
 -    obj_method({...x2}) {}
 -});
  ({...x} = x);
- for ({...x} = x; 0; ) ;
+-for ({...x} = x; 0; ) ;
  console.log({...x} = x);
  console.log({x, ...xx} = {
+     x
+ });
 
 ```

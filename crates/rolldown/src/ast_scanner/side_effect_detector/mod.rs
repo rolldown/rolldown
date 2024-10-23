@@ -3,10 +3,10 @@ use crate::ast_scanner::side_effect_detector::utils::{
 };
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
-  BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
-  VariableDeclarationKind,
+  BindingPatternKind, CallExpression, ChainElement, Comment, Expression, IdentifierReference,
+  PropertyKey, VariableDeclarationKind,
 };
-use oxc::ast::{match_expression, match_member_expression, Trivias};
+use oxc::ast::{match_expression, match_member_expression};
 use rolldown_common::AstScopes;
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
@@ -23,12 +23,16 @@ mod utils;
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
   pub source: &'a str,
-  pub trivias: &'a Trivias,
+  pub comments: &'a oxc::allocator::Vec<'a, Comment>,
 }
 
 impl<'a> SideEffectDetector<'a> {
-  pub fn new(scope: &'a AstScopes, source: &'a str, trivias: &'a Trivias) -> Self {
-    Self { scope, source, trivias }
+  pub fn new(
+    scope: &'a AstScopes,
+    source: &'a str,
+    comments: &'a oxc::allocator::Vec<'a, Comment>,
+  ) -> Self {
+    Self { scope, source, comments }
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
@@ -520,7 +524,7 @@ mod test {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let ast_scope = {
-      let semantic = EcmaAst::make_semantic(ast.source(), ast.program());
+      let semantic = EcmaAst::make_semantic(ast.program());
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
       AstScopes::new(
         scope,
@@ -530,7 +534,7 @@ mod test {
     };
 
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.source(), &ast.trivias)
+      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments())
         .detect_side_effect_of_stmt(stmt)
     });
 

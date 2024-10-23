@@ -180,9 +180,7 @@ function bar() {
 
 //#region loops.js
 for (using a of b) c(() => a);
-if (nested) {
-	for (using a of b) c(() => a);
-}
+if (nested) for (using a of b) c(() => a);
 
 //#endregion
 ```
@@ -191,7 +189,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,64 +1,8 @@
+@@ -1,64 +1,6 @@
 -for (var _a of b) {
 -    var _stack = [];
 -    try {
@@ -203,10 +201,7 @@ if (nested) {
 -        __callDispose(_stack, _error, _hasError);
 -    }
 -}
-+
-+//#region loops.js
-+for (using a of b) c(() => a);
- if (nested) {
+-if (nested) {
 -    for (var _a of b) {
 -        var _stack2 = [];
 -        try {
@@ -218,8 +213,7 @@ if (nested) {
 -            __callDispose(_stack2, _error2, _hasError2);
 -        }
 -    }
-+	for (using a of b) c(() => a);
- }
+-}
 -function foo() {
 -    for (var _a of b) {
 -        var _stack3 = [];
@@ -260,6 +254,10 @@ if (nested) {
 -        }
 -    });
 -}
++
++//#region loops.js
++for (using a of b) c(() => a);
++if (nested) for (using a of b) c(() => a);
 +
 +//#endregion
 \ No newline at end of file

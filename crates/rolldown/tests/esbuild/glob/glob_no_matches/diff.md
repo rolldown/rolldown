@@ -25,7 +25,7 @@ console.log({
 ```js
 
 //#region entry.js
-const ab = Math.random() < 0.5 ? "a.js" : "b.js";
+const ab = Math.random() < .5 ? "a.js" : "b.js";
 console.log({
 	concat: {
 		require: require("./src/" + ab + ".json"),
@@ -47,7 +47,8 @@ console.log({
 @@ -1,13 +1,11 @@
 -var globRequire_src_json = __glob({});
 -var globImport_src_json = __glob({});
- var ab = Math.random() < 0.5 ? "a.js" : "b.js";
+-var ab = Math.random() < 0.5 ? "a.js" : "b.js";
++var ab = Math.random() < .5 ? "a.js" : "b.js";
  console.log({
      concat: {
 -        require: globRequire_src_json("./src/" + ab + ".json"),

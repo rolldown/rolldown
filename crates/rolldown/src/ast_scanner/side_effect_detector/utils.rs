@@ -1,7 +1,7 @@
 use oxc::{
   ast::{
     ast::{Expression, MemberExpression},
-    Comment, CommentKind,
+    comments_range, Comment, CommentKind,
   },
   semantic::ReferenceId,
   span::{Atom, Span},
@@ -32,7 +32,7 @@ impl<'a> SideEffectDetector<'a> {
   /// ```
   /// Derived from https://github.com/oxc-project/oxc/blob/147864cfeb112df526bb83d5b8671b465c005066/crates/oxc_linter/src/utils/tree_shaking.rs#L204
   pub fn leading_comment_for(&self, span: Span) -> Option<(&Comment, &str)> {
-    let comment = self.trivias.comments_range(..span.start).next_back()?;
+    let comment = comments_range(self.comments, ..span.start).next_back()?;
 
     let comment_text = comment.span.source_text(self.source);
     // If there are non-whitespace characters between the `comment` and the `span`,

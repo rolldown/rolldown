@@ -86,16 +86,14 @@ for (let i = 0; i < 3; i++) {
 ```js
 
 //#region entry.js
-for (let i = 0; i < 3; i++) {
-	objs.push({
-		__proto__: { foo() {
-			return i;
-		} },
-		async bar() {
-			return super.foo();
-		}
-	});
-}
+for (let i = 0; i < 3; i++) objs.push({
+	__proto__: { foo() {
+		return i;
+	} },
+	async bar() {
+		return super.foo();
+	}
+});
 
 //#endregion
 ```
@@ -104,7 +102,7 @@ for (let i = 0; i < 3; i++) {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,44 +1,4 @@
+@@ -1,52 +1,10 @@
 -class Derived extends Base {
 -    async test(key) {
 -        var _a, _b, _c, _d;
@@ -145,9 +143,26 @@ for (let i = 0; i < 3; i++) {
 -        });
 -    }
 -}
- for (let i = 0; i < 3; i++) {
-     objs.push({
-         __proto__: {
-             foo() {
+-for (let i = 0; i < 3; i++) {
+-    objs.push({
+-        __proto__: {
+-            foo() {
+-                return i;
+-            }
+-        },
+-        async bar() {
+-            return super.foo();
++for (let i = 0; i < 3; i++) objs.push({
++    __proto__: {
++        foo() {
++            return i;
+         }
+-    });
+-}
++    },
++    async bar() {
++        return super.foo();
++    }
++});
 
 ```

@@ -14,9 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region loops.js
 for (using a of b) c(() => a);
-if (nested) {
-	for (using a of b) c(() => a);
-}
+if (nested) for (using a of b) c(() => a);
 
 //#endregion
 ```

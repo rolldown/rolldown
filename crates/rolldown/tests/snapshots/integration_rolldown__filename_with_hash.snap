@@ -4073,6 +4073,18 @@ expression: output
 
 - main-!~{000}~.js => main-RntF0uYV.js
 
+# tests/rolldown/function/export_mode/umd/auto/none
+
+- main-!~{000}~.js => main-CHjIHX2b.js
+
+# tests/rolldown/function/export_mode/umd/default
+
+- main-!~{000}~.js => main-o-KgstYL.js
+
+# tests/rolldown/function/export_mode/umd/named
+
+- main-!~{000}~.js => main-VULp-aQz.js
+
 # tests/rolldown/function/extend/iife/namespace_default
 
 - main-!~{000}~.js => main-mH8ZlNuq.js

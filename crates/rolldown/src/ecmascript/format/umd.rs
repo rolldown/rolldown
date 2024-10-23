@@ -80,17 +80,18 @@ pub fn render_umd(
     "".to_string()
   };
   let iife_start = if need_global {
-    format!("(global = typeof globalThis !== 'undefined' ? globalThis : global || self,",)
+    "(global = typeof globalThis !== 'undefined' ? globalThis : global || self, "
   } else {
-    "".to_string()
+    ""
   };
   let iife_end = if need_global { ")" } else { "" };
   let iife_export = render_iife_export(ctx, &externals, has_exports, named_exports, &export_mode)?;
   concat_source.add_source(Box::new(RawSource::new(format!(
-    "(function({wrapper_parameters}) {{\n {cjs_intro}
-    typeof define === 'function' && define.amd ? define([{amd_dependencies}], factory) :
-    {iife_start}{iife_export}{iife_end};
-  }})({global_argument}(function({factory_parameters}) {{",
+    "(function({wrapper_parameters}) {{
+  {cjs_intro}
+  typeof define === 'function' && define.amd ? define([{amd_dependencies}], factory) :
+  {iife_start}{iife_export}{iife_end};
+}})({global_argument}function({factory_parameters}) {{",
   ))));
 
   if determine_use_strict(ctx) {
@@ -195,12 +196,18 @@ fn render_iife_export(
     }
   });
   let deps = dependencies.join(", ");
-  if !named_exports && has_exports {
-    Ok(format!("({stmt}, {namespace} = factory({deps}))"))
+  let stmt_code = if stmt.is_empty() { "".to_string() } else { format!("{stmt}, ") };
+  if has_exports {
+    if named_exports {
+      Ok(format!(
+        "factory(({stmt_code}{namespace} = {}){})",
+        if ctx.options.extend { format!("{namespace} || {{}}") } else { "{}".to_string() },
+        if dependencies.is_empty() { "".to_string() } else { format!(", {deps}") }
+      ))
+    } else {
+      Ok(format!("({stmt_code}{namespace} = factory({deps}))"))
+    }
   } else {
-    Ok(format!(
-      "factory(({stmt}, {namespace} = {}), {deps})",
-      if ctx.options.extend { format!("{namespace} || {{}}") } else { "".to_string() },
-    ))
+    Ok(format!("factory({deps})"))
   }
 }

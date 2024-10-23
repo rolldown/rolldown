@@ -10,20 +10,17 @@ import assert from "node:assert";
 
 
 //#region y.txt
-var y_default = "y";
+"y";
 
 //#endregion
 //#region x.txt
-var x_exports = {};
-__export(x_exports, { default: () => x_default });
-var x_default;
-var init_x = __esm({ "x.txt"() {
-	x_default = "x";
+var require_x = __commonJS({ "x.txt"() {
+	module.exports = "x";
 } });
 
 //#endregion
 //#region entry.js
-const x_txt = (init_x(), __toCommonJS(x_exports));
+const x_txt = require_x();
 assert.deepEqual(x_txt, { default: "x" });
 assert.equal(y_default, "y");
 

@@ -59,20 +59,17 @@ console.log(x_url, y_default);
 
 
 //#region y.txt
-var y_default = "y";
+"y";
 
 //#endregion
 //#region x.txt
-var x_exports = {};
-__export(x_exports, { default: () => x_default });
-var x_default;
-var init_x = __esm({ "x.txt"() {
-	x_default = "x";
+var require_x = __commonJS({ "x.txt"() {
+	module.exports = "x";
 } });
 
 //#endregion
 //#region entry.js
-const x_url = (init_x(), __toCommonJS(x_exports));
+const x_url = require_x();
 console.log(x_url, y_default);
 
 //#endregion
@@ -82,24 +79,17 @@ console.log(x_url, y_default);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,13 @@
--var require_x = __commonJS({
+@@ -1,8 +1,8 @@
++"y";
+ var require_x = __commonJS({
 -    "x.txt"(exports, module) {
 -        module.exports = "./x-LSAMBFUD.txt";
-+var y_default = "y";
-+var x_exports = {};
-+__export(x_exports, {
-+    default: () => x_default
-+});
-+var x_default;
-+var init_x = __esm({
 +    "x.txt"() {
-+        x_default = "x";
++        module.exports = "x";
      }
  });
 -var y_default = "./y-YE5AYNFB.txt";
--var x_url = require_x();
-+var x_url = (init_x(), __toCommonJS(x_exports));
+ var x_url = require_x();
  console.log(x_url, y_default);
 
 ```

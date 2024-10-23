@@ -14,7 +14,7 @@ function bar() {
 
 //#endregion
 //#region data.txt
-var data_default = "#2041";
+"#2041";
 
 //#endregion
 //#region entry.js

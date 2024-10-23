@@ -113,6 +113,7 @@ impl RuntimeModuleTask {
         def_format: ModuleDefFormat::EsmMjs,
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+        has_lazy_export: false,
       },
       css_view: None,
     };
@@ -145,7 +146,7 @@ impl RuntimeModuleTask {
         return Ok(Err(errs));
       }
     };
-    tweak_ast_for_scanning(&mut ast);
+    tweak_ast_for_scanning(&mut ast, false);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScopes::new(

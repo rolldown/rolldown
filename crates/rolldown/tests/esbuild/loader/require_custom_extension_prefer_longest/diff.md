@@ -26,11 +26,8 @@ console.log(require_test(), require_test_base64());
 
 
 //#region test.txt
-var test_exports = {};
-__export(test_exports, { default: () => test_default });
-var test_default;
-var init_test = __esm({ "test.txt"() {
-	test_default = "test.txt";
+var require_test = __commonJS({ "test.txt"() {
+	module.exports = "test.txt";
 } });
 
 //#endregion
@@ -44,7 +41,7 @@ var init_test_base64 = __esm({ "test.base64.txt"() {
 
 //#endregion
 //#region entry.js
-console.log((init_test(), __toCommonJS(test_exports)), (init_test_base64(), __toCommonJS(test_base64_exports)));
+console.log(require_test(), (init_test_base64(), __toCommonJS(test_base64_exports)));
 
 //#endregion
 ```
@@ -53,18 +50,11 @@ console.log((init_test(), __toCommonJS(test_exports)), (init_test_base64(), __to
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,21 @@
--var require_test = __commonJS({
+@@ -1,11 +1,16 @@
+ var require_test = __commonJS({
 -    "test.txt"(exports, module) {
--        module.exports = "test.txt";
-+var test_exports = {};
-+__export(test_exports, {
-+    default: () => test_default
-+});
-+var test_default;
-+var init_test = __esm({
 +    "test.txt"() {
-+        test_default = "test.txt";
+         module.exports = "test.txt";
      }
  });
 -var require_test_base64 = __commonJS({
@@ -81,6 +71,6 @@ console.log((init_test(), __toCommonJS(test_exports)), (init_test_base64(), __to
      }
  });
 -console.log(require_test(), require_test_base64());
-+console.log((init_test(), __toCommonJS(test_exports)), (init_test_base64(), __toCommonJS(test_base64_exports)));
++console.log(require_test(), (init_test_base64(), __toCommonJS(test_base64_exports)));
 
 ```

@@ -79,6 +79,8 @@
   diff
 ## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149/diff.md)
   diff
+## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path/diff.md)
+  diff
 ## import_with_hash_parameter
   missing
 ## import_with_query_parameter
@@ -281,7 +283,6 @@
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
-## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)

@@ -75,12 +75,13 @@ pub async fn create_ecma_view<'any>(
     ctx.replace_global_define_config.as_ref(),
   )?;
 
-  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree } = match parse_result {
-    Ok(parse_result) => parse_result,
-    Err(errs) => {
-      return Ok(Err(errs));
-    }
-  };
+  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export } =
+    match parse_result {
+      Ok(parse_result) => parse_result,
+      Err(errs) => {
+        return Ok(Err(errs));
+      }
+    };
 
   let (scope, scan_result, namespace_object_ref) = scan_ast(
     ctx.module_index,
@@ -187,6 +188,7 @@ pub async fn create_ecma_view<'any>(
     has_eval,
     ast_usage,
     self_referenced_class_decl_symbol_ids,
+    has_lazy_export,
   };
 
   Ok(Ok(CreateEcmaViewReturn {

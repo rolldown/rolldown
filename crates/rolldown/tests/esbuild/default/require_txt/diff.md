@@ -19,16 +19,13 @@ console.log(require_test());
 
 
 //#region test.txt
-var test_exports = {};
-__export(test_exports, { default: () => test_default });
-var test_default;
-var init_test = __esm({ "test.txt"() {
-	test_default = "This is a test.";
+var require_test = __commonJS({ "test.txt"() {
+	module.exports = "This is a test.";
 } });
 
 //#endregion
 //#region entry.js
-console.log((init_test(), __toCommonJS(test_exports)));
+console.log(require_test());
 
 //#endregion
 ```
@@ -37,21 +34,13 @@ console.log((init_test(), __toCommonJS(test_exports)));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,11 @@
--var require_test = __commonJS({
+@@ -1,6 +1,6 @@
+ var require_test = __commonJS({
 -    "test.txt"(exports, module) {
--        module.exports = "This is a test.";
-+var test_exports = {};
-+__export(test_exports, {
-+    default: () => test_default
-+});
-+var test_default;
-+var init_test = __esm({
 +    "test.txt"() {
-+        test_default = "This is a test.";
+         module.exports = "This is a test.";
      }
  });
--console.log(require_test());
-+console.log((init_test(), __toCommonJS(test_exports)));
+ console.log(require_test());
 
 ```

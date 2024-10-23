@@ -82,7 +82,7 @@ impl BuildEvent for std::io::Error {
 /// create a fallback message.
 /// ## Panic
 /// they type is only used for store information, user should check the span could be referenced
-/// the raw source, or the userside may panic.
+/// the raw source, or the user side may panic.
 #[derive(Debug)]
 pub enum DiagnosableArcstr {
   String(ArcStr),

@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import "shouldRenamedToFs";
+import "fs";
 
 //#region main.js
-require("shouldRenamedToFs");
+require("fs");
 
 //#endregion
 ```

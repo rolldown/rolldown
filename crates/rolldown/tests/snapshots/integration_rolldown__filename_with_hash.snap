@@ -3244,7 +3244,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485
 
-- entry-!~{000}~.js => entry-g6UQL41F.js
+- entry-!~{000}~.js => entry-kam7-w9y.js
 
 # tests/esbuild/packagejson/package_json_syntax_error_comment
 
@@ -4364,7 +4364,7 @@ expression: output
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-6nJvLgM4.js
+- main-!~{000}~.js => main-zP-y6uht.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 

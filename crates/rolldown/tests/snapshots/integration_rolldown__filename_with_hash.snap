@@ -599,7 +599,7 @@ expression: output
 
 # tests/esbuild/default/built_in_node_module_precedence
 
-- entry-!~{000}~.js => entry-qqGXr0O3.js
+- entry-!~{000}~.js => entry-iqGCv7Tr.js
 
 # tests/esbuild/default/bundling_files_outside_of_outbase
 
@@ -790,11 +790,11 @@ expression: output
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
-- entry-!~{000}~.js => entry-VHGBja1y.js
+- entry-!~{000}~.js => entry-bizT-vXm.js
 
 # tests/esbuild/default/export_wildcard_fs_node_es6
 
-- entry-!~{000}~.js => entry-yO3YBfR9.js
+- entry-!~{000}~.js => entry-jT6V7H-q.js
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
@@ -898,11 +898,11 @@ expression: output
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry-!~{000}~.js => entry-aeX0cU5C.js
+- entry-!~{000}~.js => entry-UYD9SEYt.js
 
 # tests/esbuild/default/import_fs_node_es6
 
-- entry-!~{000}~.js => entry-pU4T9QnB.js
+- entry-!~{000}~.js => entry-7D8tcVzt.js
 
 # tests/esbuild/default/import_inside_try
 
@@ -3244,7 +3244,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485
 
-- entry-!~{000}~.js => entry-65QhBHlG.js
+- entry-!~{000}~.js => entry-kam7-w9y.js
 
 # tests/esbuild/packagejson/package_json_syntax_error_comment
 
@@ -4360,11 +4360,11 @@ expression: output
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-wAGW04su.js
+- main-!~{000}~.js => main-rNYcy1fv.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-DcwEc0dN.js
+- main-!~{000}~.js => main-zP-y6uht.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 
@@ -4736,7 +4736,7 @@ expression: output
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 
-- main-!~{000}~.js => main-nS7xfPtY.js
+- main-!~{000}~.js => main-rVlgr34S.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 

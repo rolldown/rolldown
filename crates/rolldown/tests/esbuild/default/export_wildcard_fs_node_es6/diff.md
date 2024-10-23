@@ -1,6 +1,5 @@
 # Reason
 1. two `import` statement are redundant
-2. should not rewrite `fs` to `node:fs`
 # Diff
 ## /out.js
 ### esbuild
@@ -19,10 +18,10 @@ export {
 ```
 ### rolldown
 ```js
-import "node:fs";
+import "fs";
 import "./external";
 
-export * from "node:fs"
+export * from "fs"
 
 export * from "./external"
 
@@ -38,11 +37,10 @@ export { foo };
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,4 +1,6 @@
--export * from "fs";
--var foo = 123;
-+import "node:fs";
++import "fs";
 +import "./external";
-+export * from "node:fs";
+ export * from "fs";
+-var foo = 123;
  export * from "./external";
 +var foo = 123;
  export {foo};

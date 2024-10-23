@@ -6,19 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "preact" is imported by "import.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'preact' in import.js
+   ╭─[import.js:1:27]
+   │
+ 1 │ import { h, render } from 'preact';
+   │                           ────┬───  
+   │                               ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "app.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in app.jsx
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "react/jsx-runtime" is imported by "in2.jsx", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in in2.jsx
 
 ```
 # Assets

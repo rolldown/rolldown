@@ -13,7 +13,9 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule,
   RawImportRecord, ResolvedId, StrOrBytes,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnloadableDependencyContext};
+use rolldown_error::{
+  BuildDiagnostic, DiagnosableArcstr, DiagnosableResult, UnloadableDependencyContext,
+};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -181,9 +183,13 @@ impl ModuleTask {
     if !matches!(module_type, ModuleType::Css) {
       raw_import_records = ecma_raw_import_records;
     }
-
     let resolved_deps = match self
-      .resolve_dependencies(&raw_import_records, ecma_view.source.clone(), &mut warnings)
+      .resolve_dependencies(
+        &raw_import_records,
+        ecma_view.source.clone(),
+        &mut warnings,
+        &module_type,
+      )
       .await?
     {
       Ok(deps) => deps,
@@ -276,6 +282,7 @@ impl ModuleTask {
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
+    module_type: &ModuleType,
   ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
@@ -293,7 +300,9 @@ impl ModuleTask {
     });
 
     let resolved_ids = join_all(jobs).await;
-
+    // FIXME: if the import records came from css view, but source from ecma view,
+    // the span will not matched.
+    let is_css_module = matches!(module_type, ModuleType::Css);
     let mut ret = IndexVec::with_capacity(dependencies.len());
     let mut build_errors = vec![];
     for resolved_id in resolved_ids {
@@ -303,57 +312,55 @@ impl ModuleTask {
         Ok(info) => {
           ret.push(info);
         }
-        Err(e) => match &e {
-          ResolveError::NotFound(..) => {
-            warnings.push(
-              BuildDiagnostic::unresolved_import_treated_as_external(
-                specifier.to_string(),
-                self.resolved_id.id.to_string(),
-                Some(e),
-              )
-              .with_severity_warning(),
-            );
-            ret.push(ResolvedId {
-              id: specifier.to_string().into(),
-              ignored: false,
-              module_def_format: ModuleDefFormat::Unknown,
-              is_external: true,
-              package_json: None,
-              side_effects: None,
-            });
-          }
-          ResolveError::MatchedAliasNotFound(_specifier, alias) => {
-            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(&e);
-            let dep = &dependencies[idx];
-            warnings.push(
-              BuildDiagnostic::diagnosable_resolve_error(
+        Err(e) => {
+          let dep = &dependencies[idx];
+          match &e {
+            ResolveError::NotFound(..) => {
+              warnings.push(
+                BuildDiagnostic::resolve_error(
+                  source.clone(),
+                  self.resolved_id.id.clone(),
+                  if dep.is_unspanned() || is_css_module {
+                    DiagnosableArcstr::String(specifier.as_str().into())
+                  } else {
+                    DiagnosableArcstr::Span(Span::new(
+                      dep.module_request_start,
+                      dep.module_request_end(),
+                    ))
+                  },
+                  "Module not found, treating it as an external dependency".into(),
+                  Some("UNRESOLVED_IMPORT"),
+                )
+                .with_severity_warning(),
+              );
+              ret.push(ResolvedId {
+                id: specifier.to_string().into(),
+                ignored: false,
+                module_def_format: ModuleDefFormat::Unknown,
+                is_external: true,
+                package_json: None,
+                side_effects: None,
+              });
+            }
+            e => {
+              let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
+              build_errors.push(BuildDiagnostic::resolve_error(
                 source.clone(),
                 self.resolved_id.id.clone(),
-                Span::new(dep.module_request_start, dep.module_request_end()),
+                if dep.is_unspanned() || is_css_module {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(Span::new(
+                    dep.module_request_start,
+                    dep.module_request_end(),
+                  ))
+                },
                 reason,
-              )
-              .with_severity_warning(),
-            );
-            ret.push(ResolvedId {
-              id: alias.into(),
-              ignored: false,
-              module_def_format: ModuleDefFormat::Unknown,
-              is_external: true,
-              package_json: None,
-              side_effects: None,
-            });
-          }
-          e => {
-            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
-            let dep = &dependencies[idx];
-            build_errors.push(BuildDiagnostic::diagnosable_resolve_error(
-              source.clone(),
-              self.resolved_id.id.clone(),
-              Span::new(dep.module_request_start, dep.module_request_end()),
-              reason,
-            ));
-          }
-        },
+                None,
+              ));
+            }
+          };
+        }
       }
     }
 

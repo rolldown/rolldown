@@ -1,36 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
-## DIAGNOSABLE_RESOLVE_ERROR
-
-```text
-[DIAGNOSABLE_RESOLVE_ERROR] Warning: Could not resolve "pkg/bar/baz" in entry.js
-   ╭─[entry.js:5:8]
-   │
- 5 │ import "pkg/bar/baz"
-   │        ──────┬──────  
-   │              ╰──────── Matched alias not found
-───╯
-
-```
-## DIAGNOSABLE_RESOLVE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[DIAGNOSABLE_RESOLVE_ERROR] Warning: Could not resolve "pkg/baz" in entry.js
-   ╭─[entry.js:6:8]
-   │
- 6 │ import "pkg/baz"
-   │        ────┬────  
-   │            ╰────── Matched alias not found
-───╯
-
-```
-## DIAGNOSABLE_RESOLVE_ERROR
-
-```text
-[DIAGNOSABLE_RESOLVE_ERROR] Warning: Could not resolve "pkg/foo/bar/baz" in entry.js
+[RESOLVE_ERROR] Error: Could not resolve "pkg/foo/bar/baz" in entry.js
    ╭─[entry.js:4:8]
    │
  4 │ import "pkg/foo/bar/baz"
@@ -39,13 +15,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
-# Assets
+## RESOLVE_ERROR
 
-## entry.js
+```text
+[RESOLVE_ERROR] Error: Could not resolve "pkg/bar/baz" in entry.js
+   ╭─[entry.js:5:8]
+   │
+ 5 │ import "pkg/bar/baz"
+   │        ──────┬──────  
+   │              ╰──────── Matched alias not found
+───╯
 
-```js
-import "pkg";
-import "pkg/foo";
-import "pkg/foo/bar";
+```
+## RESOLVE_ERROR
+
+```text
+[RESOLVE_ERROR] Error: Could not resolve "pkg/baz" in entry.js
+   ╭─[entry.js:6:8]
+   │
+ 6 │ import "pkg/baz"
+   │        ────┬────  
+   │            ╰────── Matched alias not found
+───╯
 
 ```

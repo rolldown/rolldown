@@ -6,19 +6,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "extern-cjs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'extern-cjs' in entry.js
+    ╭─[entry.js:12:10]
+    │
+ 12 │     require('extern-cjs'),
+    │             ──────┬─────  
+    │                   ╰─────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "extern-esm" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'extern-esm' in entry.js
+   ╭─[entry.js:1:15]
+   │
+ 1 │ import a from 'extern-esm'
+   │               ──────┬─────  
+   │                     ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "extern.css" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve extern.css in entry.css
 
 ```
 # Assets

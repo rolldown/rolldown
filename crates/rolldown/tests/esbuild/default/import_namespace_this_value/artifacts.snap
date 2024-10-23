@@ -6,19 +6,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "a.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in a.js
+   ╭─[a.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "b.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in b.js
+   ╭─[b.js:1:26]
+   │
+ 1 │ import def, * as ns from 'external'
+   │                          ─────┬────  
+   │                               ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "external" is imported by "c.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in c.js
+   ╭─[c.js:1:24]
+   │
+ 1 │ import def, {foo} from 'external'
+   │                        ─────┬────  
+   │                             ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

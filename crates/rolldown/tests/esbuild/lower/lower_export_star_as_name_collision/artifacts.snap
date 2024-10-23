@@ -6,13 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "path1" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'path1' in entry.js
+   ╭─[entry.js:3:21]
+   │
+ 3 │ export * as ns from 'path1'
+   │                     ───┬───  
+   │                        ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "path2" is imported by "nested.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'path2' in nested.js
+   ╭─[nested.js:1:22]
+   │
+ 1 │ export * as foo from 'path2'
+   │                      ───┬───  
+   │                         ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

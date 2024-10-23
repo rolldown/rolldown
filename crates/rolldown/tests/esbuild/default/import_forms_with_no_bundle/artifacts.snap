@@ -6,55 +6,109 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:10:36]
+    │
+ 10 │     function nested() { return import('foo') },
+    │                                       ──┬──  
+    │                                         ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:1:8]
+   │
+ 1 │ import 'foo'
+   │        ──┬──  
+   │          ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:2:16]
+   │
+ 2 │ import {} from 'foo'
+   │                ──┬──  
+   │                  ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:3:21]
+   │
+ 3 │ import * as ns from 'foo'
+   │                     ──┬──  
+   │                       ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:4:25]
+   │
+ 4 │ import {a, b as c} from 'foo'
+   │                         ──┬──  
+   │                           ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:5:17]
+   │
+ 5 │ import def from 'foo'
+   │                 ──┬──  
+   │                   ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:6:28]
+   │
+ 6 │ import def2, * as ns2 from 'foo'
+   │                            ──┬──  
+   │                              ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:7:33]
+   │
+ 7 │ import def3, {a2, b as c3} from 'foo'
+   │                                 ──┬──  
+   │                                   ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:9:9]
+   │
+ 9 │     import('foo'),
+   │            ──┬──  
+   │              ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

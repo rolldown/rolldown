@@ -34,5 +34,6 @@
       "pkg/foo/bar"
     ]
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "expectError": true
 }

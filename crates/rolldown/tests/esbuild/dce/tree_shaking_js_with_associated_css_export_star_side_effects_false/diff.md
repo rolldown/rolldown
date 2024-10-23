@@ -37,6 +37,7 @@ const Button = () => _jsx$1("button", {});
 render(_jsx(Button, {}));
 
 //#endregion
+//# sourceMappingURL=test.js.map
 ```
 ### diff
 ```diff

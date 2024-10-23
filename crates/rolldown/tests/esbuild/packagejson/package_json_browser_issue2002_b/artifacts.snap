@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "sub" is imported by "src/node_modules/pkg/sub/foo.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'sub' in src/node_modules/pkg/sub/foo.js
+   ╭─[src/node_modules/pkg/sub/foo.js:1:9]
+   │
+ 1 │ require('sub')
+   │         ──┬──  
+   │           ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

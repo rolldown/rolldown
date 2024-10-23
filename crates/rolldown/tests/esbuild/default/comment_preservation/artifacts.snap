@@ -6,73 +6,145 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:10:9]
+    │
+ 10 │     import('foo', { /* before */ assert: { type: 'json' } }),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:11:9]
+    │
+ 11 │     import('foo', { assert: /* before */ { type: 'json' } }),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:12:9]
+    │
+ 12 │     import('foo', { assert: { /* before */ type: 'json' } }),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:13:9]
+    │
+ 13 │     import('foo', { assert: { type: /* before */ 'json' } }),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:14:9]
+    │
+ 14 │     import('foo', { assert: { type: 'json' /* before */ } }),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:15:9]
+    │
+ 15 │     import('foo', { assert: { type: 'json' } /* before */ }),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:16:9]
+    │
+ 16 │     import('foo', { assert: { type: 'json' } } /* before */),
+    │            ──┬──  
+    │              ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:21:23]
+    │
+ 21 │     require(/* before */ 'foo'),
+    │                          ──┬──  
+    │                            ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+    ╭─[entry.js:23:10]
+    │
+ 23 │     require('foo' /* after */),
+    │             ──┬──  
+    │               ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:3:22]
+   │
+ 3 │     import(/* before */ 'foo'),
+   │                         ──┬──  
+   │                           ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:5:9]
+   │
+ 5 │     import('foo' /* after */),
+   │            ──┬──  
+   │              ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+   ╭─[entry.js:9:9]
+   │
+ 9 │     import('foo', /* before */ { assert: { type: 'json' } }),
+   │            ──┬──  
+   │              ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

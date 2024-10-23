@@ -33,6 +33,7 @@ bitflags::bitflags! {
     const CONTAINS_IMPORT_DEFAULT = 1 << 1;
     /// If it is `import {} from '...'` or `import '...'`
     const IS_PLAIN_IMPORT = 1 << 2;
+    const IS_UNSPANNED_IMPORT = 1 << 3;
   }
 }
 
@@ -46,6 +47,12 @@ pub struct ImportRecord<State: Debug> {
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
   pub meta: ImportRecordMeta,
+}
+
+impl<State: Debug> ImportRecord<State> {
+  pub fn is_unspanned(&self) -> bool {
+    self.meta.contains(ImportRecordMeta::IS_UNSPANNED_IMPORT)
+  }
 }
 
 impl<T: Debug> Deref for ImportRecord<T> {

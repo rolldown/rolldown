@@ -6,25 +6,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "../../../out/in-out-dir.js" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '../../../out/in-out-dir.js' in nested/folder/test.js
+   ╭─[nested/folder/test.js:2:17]
+   │
+ 2 │ import out from '../../../out/in-out-dir.js'
+   │                 ──────────────┬─────────────  
+   │                               ╰─────────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "../../sha256.min.js" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '../../sha256.min.js' in nested/folder/test.js
+   ╭─[nested/folder/test.js:3:20]
+   │
+ 3 │ import sha256 from '../../sha256.min.js'
+   │                    ──────────┬──────────  
+   │                              ╰──────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo.js" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './foo.js' in nested/folder/test.js
+   ╭─[nested/folder/test.js:1:17]
+   │
+ 1 │ import foo from './foo.js'
+   │                 ─────┬────  
+   │                      ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "/api/config?a=1&b=2" is imported by "nested/folder/test.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '/api/config?a=1&b=2' in nested/folder/test.js
+   ╭─[nested/folder/test.js:4:20]
+   │
+ 4 │ import config from '/api/config?a=1&b=2'
+   │                    ──────────┬──────────  
+   │                              ╰──────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

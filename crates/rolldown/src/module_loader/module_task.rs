@@ -185,7 +185,12 @@ impl ModuleTask {
       raw_import_records = ecma_raw_import_records;
     }
     let resolved_deps = match self
-      .resolve_dependencies(&raw_import_records, ecma_view.source.clone(), &mut warnings)
+      .resolve_dependencies(
+        &raw_import_records,
+        ecma_view.source.clone(),
+        &mut warnings,
+        &module_type,
+      )
       .await?
     {
       Ok(deps) => deps,
@@ -278,6 +283,7 @@ impl ModuleTask {
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
+    module_type: &ModuleType,
   ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
@@ -295,7 +301,9 @@ impl ModuleTask {
     });
 
     let resolved_ids = join_all(jobs).await;
-
+    // FIXME: if the import records came from css view, but source from ecma view,
+    // the span will not matched.
+    let is_css_module = matches!(module_type, ModuleType::Css);
     let mut ret = IndexVec::with_capacity(dependencies.len());
     let mut build_errors = vec![];
     for resolved_id in resolved_ids {
@@ -313,7 +321,7 @@ impl ModuleTask {
                 BuildDiagnostic::resolve_error(
                   source.clone(),
                   self.resolved_id.id.clone(),
-                  if dep.is_unspanned() {
+                  if dep.is_unspanned() || is_css_module {
                     DiagnosableArcstr::String(specifier.as_str().into())
                   } else {
                     DiagnosableArcstr::Span(Span::new(
@@ -340,7 +348,7 @@ impl ModuleTask {
               build_errors.push(BuildDiagnostic::resolve_error(
                 source.clone(),
                 self.resolved_id.id.clone(),
-                if dep.is_unspanned() {
+                if dep.is_unspanned() || is_css_module {
                   DiagnosableArcstr::String(specifier.as_str().into())
                 } else {
                   DiagnosableArcstr::Span(Span::new(

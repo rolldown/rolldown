@@ -497,6 +497,7 @@ expression: output
 
 - test-!~{000}~.js => test-anEgNndy.js
 - test.css
+- test-anEgNndy.js.map
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
 
@@ -1470,7 +1471,6 @@ expression: output
 
 # tests/esbuild/default/package_alias_match_longest
 
-- entry-!~{000}~.js => entry-N5pMKFjJ.js
 
 # tests/esbuild/default/preserve_key_comment
 

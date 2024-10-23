@@ -214,8 +214,6 @@
 - crates/rolldown/tests/esbuild/default/auto_external_node
 ## `node:path` is side effects free
 - crates/rolldown/tests/esbuild/default/auto_external_node
-## needs custom resolver
-- crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase
 ## not support `jsx.preserve`
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## not support conditional import
@@ -226,8 +224,6 @@
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve
 ## inline could be done in minifier
 - crates/rolldown/tests/esbuild/default/const_with_let_no_bundle
-## oxc dead branch remove
-- crates/rolldown/tests/esbuild/default/const_with_let_no_mangle
 ## oxc define not support computed member expr
 - crates/rolldown/tests/esbuild/default/define_assign_warning
 ## not support member expr with write

@@ -7,8 +7,6 @@
   diff
 ## [auto_external_node](../../../crates/rolldown/tests/esbuild/default/auto_external_node/diff.md)
   diff
-## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase/diff.md)
-  diff
 ## call_import_namespace_warning
   missing
 ## [comment_preservation](../../../crates/rolldown/tests/esbuild/default/comment_preservation/diff.md)
@@ -26,8 +24,6 @@
 ## [conditional_require_resolve](../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve/diff.md)
   diff
 ## [const_with_let_no_bundle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_bundle/diff.md)
-  diff
-## [const_with_let_no_mangle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle/diff.md)
   diff
 ## decorator_printing_cjs
   missing
@@ -201,8 +197,6 @@
   diff
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
   diff
-## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle/diff.md)
-  diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
   diff
 ## [require_and_dynamic_import_invalid_template](../../../crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template/diff.md)
@@ -271,6 +265,8 @@
 ## [ambiguous_reexport_msg](../../../crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg)
 ## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external)
 ## [await_import_inside_try](../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
+## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)
+## [const_with_let_no_mangle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
@@ -297,6 +293,7 @@
 ## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property)
 ## [re_export_default_internal](../../../crates/rolldown/tests/esbuild/default/re_export_default_internal)
 ## [re_export_fs_node](../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
+## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)
 ## [require_fs_node](../../../crates/rolldown/tests/esbuild/default/require_fs_node)
 ## [require_fs_node_minify](../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
 ## [require_property_access_common_js](../../../crates/rolldown/tests/esbuild/default/require_property_access_common_js)

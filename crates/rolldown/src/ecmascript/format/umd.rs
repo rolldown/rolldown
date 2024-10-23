@@ -59,15 +59,7 @@ pub fn render_umd(
   let (import_code, externals) = render_chunk_external_imports(ctx);
 
   // The function argument and the external imports are passed as arguments to the wrapper function.
-  if has_exports && named_exports {
-    if ctx.options.name.as_ref().map_or(true, String::is_empty)
-      && !matches!(export_mode, OutputExports::None)
-    {
-      return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
-    }
-  }
-
-  let need_global = has_exports || named_exports || externals.len() > 0;
+  let need_global = has_exports || named_exports || !externals.is_empty();
   let wrapper_parameters = if need_global { "global, factory" } else { "factory" };
   let amd_dependencies = render_amd_dependencies(&externals, has_exports && named_exports);
   let global_argument = if need_global { "this, " } else { "" };
@@ -77,7 +69,7 @@ pub fn render_umd(
     let cjs_dependencies = render_cjs_dependencies(&externals, has_exports && named_exports);
     format!("typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",)
   } else {
-    "".to_string()
+    String::new()
   };
   let iife_start = if need_global {
     "(global = typeof globalThis !== 'undefined' ? globalThis : global || self, "
@@ -132,7 +124,7 @@ pub fn render_umd(
   }
 
   // umd wrapper end
-  concat_source.add_source(Box::new(RawSource::new(format!("}});"))));
+  concat_source.add_source(Box::new(RawSource::new("}});.".to_string())));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));
@@ -175,7 +167,7 @@ fn render_iife_export(
     return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
   }
   let (stmt, namespace) = generate_namespace_definition(
-    &ctx.options.name.as_ref().expect("should have name"),
+    ctx.options.name.as_ref().expect("should have name"),
     "global",
     ",",
   );
@@ -184,7 +176,7 @@ fn render_iife_export(
     if let Some(global) = ctx.options.globals.get(external.path.as_str()) {
       dependencies.push(format!(
         "global{}",
-        global.split(".").map(render_property_access).collect::<Vec<_>>().join("")
+        global.split('.').map(render_property_access).collect::<String>()
       ));
     } else {
       let target = legitimize_identifier_name(external.path.as_str()).to_string();
@@ -201,7 +193,7 @@ fn render_iife_export(
       Ok(format!(
         "factory(({stmt}{namespace} = {}){})",
         if ctx.options.extend { format!("{namespace} || {{}}") } else { "{}".to_string() },
-        if dependencies.is_empty() { "".to_string() } else { format!(", {deps}") }
+        if dependencies.is_empty() { String::new() } else { format!(", {deps}") }
       ))
     } else {
       Ok(format!("({stmt}{namespace} = factory({deps}))"))

@@ -124,7 +124,7 @@ pub fn render_umd(
   }
 
   // umd wrapper end
-  concat_source.add_source(Box::new(RawSource::new("}});.".to_string())));
+  concat_source.add_source(Box::new(RawSource::new("});".to_string())));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));

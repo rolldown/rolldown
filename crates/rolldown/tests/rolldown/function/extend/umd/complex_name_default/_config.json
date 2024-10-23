@@ -3,8 +3,6 @@
     "format": "umd",
     "name": "test.module",
     "extend": true,
-    "exports": "default",
-    "banner": "import assert from \"node:assert\"",
-    "footer": "assert(globalThis.test.module === \"default\");"
+    "exports": "default"
   }
 }

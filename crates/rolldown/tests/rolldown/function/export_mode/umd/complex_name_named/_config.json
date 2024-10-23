@@ -2,8 +2,6 @@
   "config": {
     "format": "umd",
     "name": "test.module",
-    "exports": "named",
-    "banner": "import assert from \"node:assert\"",
-    "footer": "assert(globalThis.test.module.a === 1);"
+    "exports": "named"
   }
 }

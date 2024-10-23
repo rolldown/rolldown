@@ -4079,19 +4079,19 @@ expression: output
 
 # tests/rolldown/function/export_mode/umd/complex_name_default
 
-- main-!~{000}~.js => main-Kuxl-0aF.js
+- main-!~{000}~.js => main-AD_nMADa.js
 
 # tests/rolldown/function/export_mode/umd/complex_name_named
 
-- main-!~{000}~.js => main-YTZDSXCM.js
+- main-!~{000}~.js => main-fjbRgeLG.js
 
 # tests/rolldown/function/export_mode/umd/default
 
-- main-!~{000}~.js => main-GT9UcjVv.js
+- main-!~{000}~.js => main-y3fOkUed.js
 
 # tests/rolldown/function/export_mode/umd/named
 
-- main-!~{000}~.js => main-Var5L6sG.js
+- main-!~{000}~.js => main-NSHqQ11Q.js
 
 # tests/rolldown/function/extend/iife/namespace_default
 
@@ -4119,19 +4119,19 @@ expression: output
 
 # tests/rolldown/function/extend/umd/complex_name_default
 
-- main-!~{000}~.js => main-Kuxl-0aF.js
+- main-!~{000}~.js => main-AD_nMADa.js
 
 # tests/rolldown/function/extend/umd/complex_name_named
 
-- main-!~{000}~.js => main-2UFzA9Zc.js
+- main-!~{000}~.js => main-91-jGlFp.js
 
 # tests/rolldown/function/extend/umd/default
 
-- main-!~{000}~.js => main-GT9UcjVv.js
+- main-!~{000}~.js => main-y3fOkUed.js
 
 # tests/rolldown/function/extend/umd/named
 
-- main-!~{000}~.js => main-LVQT67nX.js
+- main-!~{000}~.js => main-GfJuyWnU.js
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -4282,7 +4282,7 @@ expression: output
 
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 
-- main-!~{000}~.js => main-rWjDd2Pc.js
+- main-!~{000}~.js => main-NermBffp.js
 
 # tests/rolldown/function/inject
 

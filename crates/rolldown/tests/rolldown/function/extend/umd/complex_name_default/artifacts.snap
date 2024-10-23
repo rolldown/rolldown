@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import assert from "node:assert"
 (function(global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
   typeof define === 'function' && define.amd ? define([], factory) :
@@ -20,5 +19,4 @@ var main_default = "default";
 //#endregion
 return main_default;
 });
-assert(globalThis.test.module === "default");
 ```

@@ -163,6 +163,7 @@ pub fn normalize_binding_options(
       "cjs" => OutputFormat::Cjs,
       "app" => OutputFormat::App,
       "iife" => OutputFormat::Iife,
+      "umd" => OutputFormat::Umd,
       _ => panic!("Invalid format: {format_str}"),
     }),
     globals: output_options.globals,

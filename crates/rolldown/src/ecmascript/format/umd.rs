@@ -1,9 +1,13 @@
+use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources,
+  ecmascript::{
+    ecma_generator::RenderedModuleSources, format::utils::namespace::generate_namespace_definition,
+  },
   types::generator::GenerateContext,
   utils::chunk::{
     collect_render_chunk_imports::ExternalRenderImportStmt,
@@ -14,7 +18,9 @@ use crate::{
   },
 };
 
-use super::utils::{render_chunk_external_imports, render_factory_parameters};
+use super::utils::{
+  namespace::render_property_access, render_chunk_external_imports, render_factory_parameters,
+};
 
 pub fn render_umd(
   ctx: &mut GenerateContext<'_>,
@@ -53,19 +59,38 @@ pub fn render_umd(
   let (import_code, externals) = render_chunk_external_imports(ctx);
 
   // The function argument and the external imports are passed as arguments to the wrapper function.
-  let factory_parameters = render_factory_parameters(ctx, &externals, has_exports && named_exports);
-
-  concat_source.add_source(Box::new(RawSource::new(format!(
-    "{definition}{}(function({factory_parameters}) {{\n",
-    if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
-      // If facing following situations, there shouldn't an assignment for the wrapper function:
-      // - Using `output.extend` and named export.
-      // - No export.
-      // - the `assignment` is empty.
-      String::new()
-    } else {
-      format!("{assignment} = ")
+  if has_exports && named_exports {
+    if ctx.options.name.as_ref().map_or(true, String::is_empty)
+      && !matches!(export_mode, OutputExports::None)
+    {
+      return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
     }
+  }
+
+  let need_global = has_exports || named_exports || externals.len() > 0;
+  let wrapper_parameters = if need_global { "global, factory" } else { "factory" };
+  let amd_dependencies = render_amd_dependencies(&externals, has_exports && named_exports);
+  let global_argument = if need_global { "this, " } else { "" };
+  let factory_parameters = render_factory_parameters(ctx, &externals, has_exports && named_exports);
+  let cjs_intro = if need_global {
+    let cjs_export = if has_exports && !named_exports { "module.exports = " } else { "" };
+    let cjs_dependencies = render_cjs_dependencies(&externals, has_exports && named_exports);
+    format!("typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",)
+  } else {
+    "".to_string()
+  };
+  let iife_start = if need_global {
+    format!("(global = typeof globalThis !== 'undefined' ? globalThis : global || self,",)
+  } else {
+    "".to_string()
+  };
+  let iife_end = if need_global { ")" } else { "" };
+  let iife_export = render_iife_export(ctx, &externals, has_exports, named_exports, &export_mode)?;
+  concat_source.add_source(Box::new(RawSource::new(format!(
+    "(function({wrapper_parameters}) {{\n {cjs_intro}
+    typeof define === 'function' && define.amd ? define([{amd_dependencies}], factory) :
+    {iife_start}{iife_export}{iife_end};
+  }})({global_argument}(function({factory_parameters}) {{",
   ))));
 
   if determine_use_strict(ctx) {
@@ -116,7 +141,11 @@ pub fn render_umd(
 }
 
 fn render_amd_dependencies(externals: &[ExternalRenderImportStmt], has_exports: bool) -> String {
-  let mut dependencies = if has_exports { vec!["exports"] } else { vec![] };
+  let mut dependencies = Vec::with_capacity(externals.len());
+  if has_exports {
+    dependencies.reserve(1);
+    dependencies.push("exports");
+  }
   externals.iter().for_each(|external| {
     dependencies.push(&external.path.as_str());
   });
@@ -124,51 +153,54 @@ fn render_amd_dependencies(externals: &[ExternalRenderImportStmt], has_exports: 
 }
 
 fn render_cjs_dependencies(externals: &[ExternalRenderImportStmt], has_exports: bool) -> String {
-  let mut dependencies = if has_exports { vec!["exports".to_string()] } else { vec![] };
+  let mut dependencies = Vec::with_capacity(externals.len());
+  if has_exports {
+    dependencies.reserve(1);
+    dependencies.push("exports".to_string());
+  }
   externals.iter().for_each(|external| {
     dependencies.push(format!("require('{}')", external.path.as_str()));
   });
   dependencies.join(", ")
 }
 
-fn render_global_dependencies(
+fn render_iife_export(
   ctx: &mut GenerateContext<'_>,
   externals: &[ExternalRenderImportStmt],
   has_exports: bool,
+  named_exports: bool,
   export_mode: &OutputExports,
 ) -> DiagnosableResult<String> {
-  let mut dependencies = if has_exports {
-    if ctx.options.name.as_ref().map_or(true, String::is_empty)
-      && !matches!(export_mode, OutputExports::None)
-    {
-      return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
-    }
-    vec!["exports".to_string()]
-  } else {
-    vec![]
-  };
-  externals.iter().for_each(|external| {
-    dependencies.push(format!("require('{}')", external.path.as_str()));
-  });
-  Ok(dependencies.join(", "))
-}
-
-fn generate_namespace_definition(name: &str) -> (String, String) {
-  let mut initial_code = String::new();
-  let mut final_code = String::from("this");
-
-  let context_len = final_code.len();
-  let parts: Vec<&str> = name.split('.').collect();
-
-  for (i, part) in parts.iter().enumerate() {
-    let caller = generate_caller(part);
-    final_code.push_str(&caller);
-
-    if i < parts.len() - 1 {
-      let callers = &final_code[context_len..];
-      initial_code.push_str(&format!("this{callers} = this{callers} || {{}};\n"));
-    }
+  if ctx.options.name.as_ref().map_or(true, String::is_empty)
+    && !matches!(export_mode, OutputExports::None)
+  {
+    return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
   }
-
-  (initial_code, final_code)
+  let (stmt, namespace) = generate_namespace_definition(
+    &ctx.options.name.as_ref().expect("should have name"),
+    "global",
+    ",",
+  );
+  let mut dependencies = Vec::with_capacity(externals.len());
+  externals.iter().for_each(|external| {
+    if let Some(global) = ctx.options.globals.get(external.path.as_str()) {
+      dependencies.push(render_property_access(global));
+    } else {
+      let target = legitimize_identifier_name(external.path.as_str()).to_string();
+      ctx.warnings.push(
+        BuildDiagnostic::missing_global_name(external.path.clone(), ArcStr::from(&target))
+          .with_severity_warning(),
+      );
+      dependencies.push(render_property_access(external.path.as_str()));
+    }
+  });
+  let deps = dependencies.join(", ");
+  if !named_exports && has_exports {
+    Ok(format!("({stmt}, {namespace} = factory({deps}))"))
+  } else {
+    Ok(format!(
+      "factory(({stmt}, {namespace} = {}), {deps})",
+      if ctx.options.extend { format!("{namespace} || {{}}") } else { "".to_string() },
+    ))
+  }
 }

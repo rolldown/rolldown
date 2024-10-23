@@ -22,10 +22,10 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
-    if matches!(self.options.format, OutputFormat::Iife) {
+    if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {
       let user_defined_entry_count =
         self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
-      debug_assert!(user_defined_entry_count == 1, "IIFE format only supports one entry point");
+      debug_assert!(user_defined_entry_count == 1, "IIFE/UMD format only supports one entry point");
     }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
@@ -109,7 +109,9 @@ impl<'a> GenerateStage<'a> {
       }
     }
 
-    if matches!(self.options.format, OutputFormat::Iife) && chunk_graph.chunk_table.len() > 1 {
+    if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd)
+      && chunk_graph.chunk_table.len() > 1
+    {
       self.link_output.errors.push(BuildDiagnostic::invalid_option(
         InvalidOptionTypes::UnsupportedCodeSplittingFormat,
         self.options.format.to_string(),

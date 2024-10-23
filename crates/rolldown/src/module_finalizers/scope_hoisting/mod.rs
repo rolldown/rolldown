@@ -229,7 +229,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
         }
-        OutputFormat::Cjs | OutputFormat::Iife => {
+        OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
           let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
             // Insert `__reExport(exports, require('ext'))`
             let importer_namespace_name =

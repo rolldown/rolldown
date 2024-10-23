@@ -1,5 +1,5 @@
 # Reason
-1. should not rewrite `fs` to `node:fs`
+1. rolldown merge two import stmt
 # Diff
 ## /out.js
 ### esbuild

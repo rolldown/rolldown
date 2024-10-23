@@ -1,6 +1,5 @@
 # Reason
 1. two `import` statement are redundant
-2. should not rewrite `fs` to `node:fs`
 # Diff
 ## /out.js
 ### esbuild

@@ -654,7 +654,7 @@ expression: output
 
 # tests/esbuild/default/const_with_let_no_mangle
 
-- entry-!~{000}~.js => entry-5SNuGAko.js
+- entry-!~{000}~.js => entry-5UHkCUYP.js
 
 # tests/esbuild/default/define_assign_warning
 
@@ -1522,7 +1522,7 @@ expression: output
 
 # tests/esbuild/default/rename_labels_no_bundle
 
-- entry-!~{000}~.js => entry-TkIRynSL.js
+- entry-!~{000}~.js => entry-K_XF9bPN.js
 
 # tests/esbuild/default/rename_private_identifiers_no_bundle
 

@@ -72,6 +72,10 @@ function getFormat(
       return 'iife'
     }
 
+    case 'umd': {
+      return 'umd'
+    }
+
     default:
       unimplemented(`output.format: ${format}`)
   }

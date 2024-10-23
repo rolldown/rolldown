@@ -85,7 +85,7 @@ pub fn render_umd(
     ""
   };
   let iife_end = if need_global { ")" } else { "" };
-  let iife_export = render_iife_export(ctx, &externals, has_exports, named_exports, &export_mode)?;
+  let iife_export = render_iife_export(ctx, &externals, has_exports, named_exports)?;
   concat_source.add_source(Box::new(RawSource::new(format!(
     "(function({wrapper_parameters}) {{
   {cjs_intro}
@@ -170,11 +170,8 @@ fn render_iife_export(
   externals: &[ExternalRenderImportStmt],
   has_exports: bool,
   named_exports: bool,
-  export_mode: &OutputExports,
 ) -> DiagnosableResult<String> {
-  if ctx.options.name.as_ref().map_or(true, String::is_empty)
-    && !matches!(export_mode, OutputExports::None)
-  {
+  if ctx.options.name.as_ref().map_or(true, String::is_empty) {
     return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
   }
   let (stmt, namespace) = generate_namespace_definition(

@@ -113,9 +113,7 @@ function bar() {
 
 //#region loops.js
 for (using a of b) c(() => a);
-if (nested) {
-	for (using a of b) c(() => a);
-}
+if (nested) for (using a of b) c(() => a);
 
 //#endregion
 ```
@@ -124,14 +122,13 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,24 +1,8 @@
+@@ -1,24 +1,6 @@
 +
 +//#region loops.js
  for (using a of b) c(() => a);
- if (nested) {
+-if (nested) {
 -  for (using a of b) c(() => a);
-+	for (using a of b) c(() => a);
- }
+-}
 -function foo() {
 -  for (using a of b) c(() => a);
 -}
@@ -153,6 +150,7 @@ if (nested) {
 -  });
 -}
 \ No newline at end of file
++if (nested) for (using a of b) c(() => a);
 +
 +//#endregion
 \ No newline at end of file

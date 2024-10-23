@@ -20,10 +20,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "node:fs";
+import "fs";
 import "./external";
 
-export * from "node:fs"
+export * from "fs"
 
 export * from "./external"
 

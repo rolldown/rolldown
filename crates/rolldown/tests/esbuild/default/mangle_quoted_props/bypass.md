@@ -1,6 +1,59 @@
 # Reason
 1. could be done in minifier
 # Diff
+## /out/keep.js
+### esbuild
+```js
+foo("_keepThisProperty");
+foo((x, "_keepThisProperty"));
+foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+x[foo("_keepThisProperty")];
+x?.[foo("_keepThisProperty")];
+({ [foo("_keepThisProperty")]: x });
+(class {
+  [foo("_keepThisProperty")] = x;
+});
+var { [foo("_keepThisProperty")]: x } = y;
+foo("_keepThisProperty") in x;
+```
+### rolldown
+```js
+
+//#region keep.js
+foo("_keepThisProperty");
+foo((x, "_keepThisProperty"));
+foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+x[foo("_keepThisProperty")];
+x?.[foo("_keepThisProperty")];
+foo("_keepThisProperty");
+(class {
+	[foo("_keepThisProperty")] = x;
+});
+var { [foo("_keepThisProperty")]: x } = y;
+foo("_keepThisProperty") in x;
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/keep.js
++++ rolldown	keep.js
+@@ -2,11 +2,9 @@
+ foo((x, "_keepThisProperty"));
+ foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+ x[foo("_keepThisProperty")];
+ x?.[foo("_keepThisProperty")];
+-({
+-    [foo("_keepThisProperty")]: x
+-});
++foo("_keepThisProperty");
+ (class {
+     [foo("_keepThisProperty")] = x;
+ });
+ var {[foo("_keepThisProperty")]: x} = y;
+
+```
 ## /out/mangle.js
 ### esbuild
 ```js
@@ -44,7 +97,6 @@ x[y ? z : "_mangleThis"];
 x?.[y ? z : "_mangleThis"];
 x[y, "_mangleThis"];
 x?.[y, "_mangleThis"];
-({ [(y, "_mangleThis")]: x });
 (class {
 	[(y, "_mangleThis")] = x;
 });
@@ -63,7 +115,7 @@ var { [(z, "_mangleThis")]: x } = y;
 ===================================================================
 --- esbuild	/out/mangle.js
 +++ rolldown	mangle.js
-@@ -1,33 +1,21 @@
+@@ -1,33 +1,18 @@
 -x.a;
 -x?.a;
 -x[y ? "a" : z];
@@ -72,6 +124,15 @@ var { [(z, "_mangleThis")]: x } = y;
 -x?.[y ? z : "a"];
 -x[(y, "a")];
 -x?.[(y, "a")];
+-({
+-    a: x
+-});
+-({
+-    ["a"]: x
+-});
+-({
+-    [(y, "a")]: x
+-});
 +x["_mangleThis"];
 +x?.["_mangleThis"];
 +x[y ? "_mangleThis" : z];
@@ -80,16 +141,6 @@ var { [(z, "_mangleThis")]: x } = y;
 +x?.[y ? z : "_mangleThis"];
 +x[(y, "_mangleThis")];
 +x?.[(y, "_mangleThis")];
- ({
--    a: x
-+    [(y, "_mangleThis")]: x
- });
--({
--    ["a"]: x
--});
--({
--    [(y, "a")]: x
--});
  (class {
 -    a = x;
 +    [(y, "_mangleThis")] = x;

@@ -28,7 +28,12 @@
         ],
       ]
     },
-    "external": ["pkg", "pkg/foo", "pkg/foo/bar"]
+    "external": [
+      "pkg",
+      "pkg/foo",
+      "pkg/foo/bar"
+    ]
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "expectError": true
 }

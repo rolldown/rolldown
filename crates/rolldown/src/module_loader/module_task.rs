@@ -184,7 +184,6 @@ impl ModuleTask {
     if !matches!(module_type, ModuleType::Css) {
       raw_import_records = ecma_raw_import_records;
     }
-    dbg!(&ecma_view.sourcemap_chain);
     let resolved_deps = match self
       .resolve_dependencies(&raw_import_records, ecma_view.source.clone(), &mut warnings)
       .await?

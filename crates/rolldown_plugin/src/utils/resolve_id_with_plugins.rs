@@ -155,8 +155,14 @@ fn resolve_id(
 
   if let Err(err) = resolved {
     match err {
-      ResolveError::Builtin(specifier) => Ok(Ok(ResolvedId {
-        id: specifier.into(),
+      ResolveError::Builtin { resolved, is_runtime_module } => Ok(Ok(ResolvedId {
+        // `resolved` is always prefixed with "node:" in compliance with the ESM specification.
+        // we needs to use `is_runtime_module` to get the original specifier
+        id: if resolved.starts_with("node:") && !is_runtime_module {
+          resolved[5..].to_string().into()
+        } else {
+          resolved.into()
+        },
         ignored: false,
         is_external: true,
         module_def_format: ModuleDefFormat::Unknown,

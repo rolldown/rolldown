@@ -1,5 +1,5 @@
 use oxc::{
-  codegen::{CodeGenerator, CodegenReturn},
+  codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
   semantic::SemanticBuilder,
   span::SourceType,
   transformer::{TransformOptions, Transformer},
@@ -57,7 +57,6 @@ impl Plugin for TransformPlugin {
         return Err(anyhow::format_err!("Error occurred when parsing {}\n: {:?}", args.id, errs));
       }
     };
-    let trivias = ast.trivias.clone();
     let ret = ast.program.with_mut(move |fields| {
       let mut transformer_options = if let Some(targets) = &self.targets {
         TransformOptions::from_preset_env(&EnvOptions {
@@ -78,25 +77,21 @@ impl Plugin for TransformPlugin {
         }
       }
 
-      let (symbols, scopes) = SemanticBuilder::new(fields.source)
-        .build(fields.program)
-        .semantic
-        .into_symbol_table_and_scope_tree();
-      Transformer::new(
-        fields.allocator,
-        Path::new(args.id),
-        fields.source,
-        trivias,
-        transformer_options,
-      )
-      .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+      let (symbols, scopes) =
+        SemanticBuilder::new().build(fields.program).semantic.into_symbol_table_and_scope_tree();
+      Transformer::new(fields.allocator, Path::new(args.id), transformer_options)
+        .build_with_symbols_and_scopes(symbols, scopes, fields.program)
     });
     if !ret.errors.is_empty() {
       // TODO: better error handling
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
-    let CodegenReturn { code, map } =
-      CodeGenerator::new().enable_source_map(args.id, args.code).build(ast.program());
+    let CodegenReturn { code, map } = CodeGenerator::new()
+      .with_options(CodegenOptions {
+        source_map_path: Some(args.id.into()),
+        ..CodegenOptions::default()
+      })
+      .build(ast.program());
     let code = if let Some(ref inject) = self.jsx_inject {
       let mut ret = String::with_capacity(code.len() + 1 + inject.len());
       ret.push_str(inject);

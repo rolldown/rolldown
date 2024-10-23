@@ -1,7 +1,7 @@
 # Compatibility metric
 - total: 784
-- passed: 341
-- passed ratio: 43.49%
+- passed: 343
+- passed ratio: 43.75%
 # Compatibility metric details
 ## dce
 - total: 113
@@ -9,8 +9,8 @@
 - passed ratio: 63.72%
 ## default
 - total: 254
-- passed: 119
-- passed ratio: 46.85%
+- passed: 120
+- passed ratio: 47.24%
 ## glob
 - total: 9
 - passed: 0
@@ -33,8 +33,8 @@
 - passed ratio: 5.06%
 ## packagejson
 - total: 59
-- passed: 4
-- passed ratio: 6.78%
+- passed: 5
+- passed ratio: 8.47%
 ## splitting
 - total: 23
 - passed: 21

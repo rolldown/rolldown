@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-const ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+const ab = Math.random() < .5 ? "a.ts" : "b.ts";
 console.log({
 	concat: {
 		require: require("./src/" + ab),

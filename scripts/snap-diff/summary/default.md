@@ -7,8 +7,6 @@
   diff
 ## [auto_external_node](../../../crates/rolldown/tests/esbuild/default/auto_external_node/diff.md)
   diff
-## [built_in_node_module_precedence](../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence/diff.md)
-  diff
 ## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase/diff.md)
   diff
 ## call_import_namespace_warning
@@ -76,8 +74,6 @@
 ## [hashbang_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_bundle/diff.md)
   diff
 ## [import_abs_path_with_query_parameter](../../../crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter/diff.md)
-  diff
-## [import_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/import_fs_node_common_js/diff.md)
   diff
 ## [import_meta_common_js](../../../crates/rolldown/tests/esbuild/default/import_meta_common_js/diff.md)
   diff
@@ -205,6 +201,8 @@
   diff
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
   diff
+## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle/diff.md)
+  diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
   diff
 ## [require_and_dynamic_import_invalid_template](../../../crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template/diff.md)
@@ -299,7 +297,6 @@
 ## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property)
 ## [re_export_default_internal](../../../crates/rolldown/tests/esbuild/default/re_export_default_internal)
 ## [re_export_fs_node](../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
-## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)
 ## [require_fs_node](../../../crates/rolldown/tests/esbuild/default/require_fs_node)
 ## [require_fs_node_minify](../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
 ## [require_property_access_common_js](../../../crates/rolldown/tests/esbuild/default/require_property_access_common_js)
@@ -318,6 +315,7 @@
 # Bypassed Cases
 ## [avoid_tdz](../../../crates/rolldown/tests/esbuild/default/avoid_tdz/bypass.md)
 ## [avoid_tdz_no_bundle](../../../crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle/bypass.md)
+## [built_in_node_module_precedence](../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence/bypass.md)
 ## [char_freq_ignore_comments](../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments/bypass.md)
 ## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/bypass.md)
 ## [const_with_let](../../../crates/rolldown/tests/esbuild/default/const_with_let/bypass.md)
@@ -334,6 +332,7 @@
 ## [import_abs_path_as_file](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_file/bypass.md)
 ## [import_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle/bypass.md)
 ## [import_forms_with_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_no_bundle/bypass.md)
+## [import_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/import_fs_node_common_js/bypass.md)
 ## [import_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/import_fs_node_es6/bypass.md)
 ## [jsx_automatic_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_es6/bypass.md)
 ## [keep_names_all_forms](../../../crates/rolldown/tests/esbuild/default/keep_names_all_forms/bypass.md)

@@ -152,9 +152,6 @@
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
-## should not rewrite `fs` to `node:fs`
-- crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6
-- crates/rolldown/tests/esbuild/default/import_fs_node_common_js
 ## hashban not align
 - crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order
 - crates/rolldown/tests/esbuild/default/hashbang_bundle
@@ -217,8 +214,6 @@
 - crates/rolldown/tests/esbuild/default/auto_external_node
 ## `node:path` is side effects free
 - crates/rolldown/tests/esbuild/default/auto_external_node
-## It seems rolldown rewrite `fs` to `node:fs`
-- crates/rolldown/tests/esbuild/default/built_in_node_module_precedence
 ## needs custom resolver
 - crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase
 ## not support `jsx.preserve`
@@ -343,8 +338,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
-## the base64 result is also wrong
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## dynamic import with cycle reference

@@ -67,18 +67,18 @@ let ns;
 	let { ...x$1 } = {};
 	_ns.x = x$1;
 })(ns || (ns = {}));
-for (const { ...for_in_const } in { abc }) {}
-for (let { ...for_in_let } in { abc }) {}
+for (const { ...for_in_const } in { abc });
+for (let { ...for_in_let } in { abc });
 for (var { ...for_in_var } in { abc });
 for (const { ...for_of_const } of [{}]);
 for (let { ...for_of_let } of [{}]) x();
 for (var { ...for_of_var } of [{}]) x();
-for (const { ...for_const } = {}; x; x = null) {}
-for (let { ...for_let } = {}; x; x = null) {}
-for (var { ...for_var } = {}; x; x = null) {}
-for ({...x} in { abc }) {}
-for ({...x} of [{}]) {}
-for ({...x} = {}; x; x = null) {}
+for (const { ...for_const } = {}; x; x = null);
+for (let { ...for_let } = {}; x; x = null);
+for (var { ...for_var } = {}; x; x = null);
+for ({...x} in { abc });
+for ({...x} of [{}]);
+for ({...x} = {}; x; x = null);
 ({...assign} = {});
 ({...x} = x);
 console.log({...x} = x);
@@ -92,7 +92,7 @@ console.log({x: {...xx}} = { x });
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,21 +1,12 @@
+@@ -1,47 +1,34 @@
 -const {...local_const} = {};
 -let {...local_let} = {};
 +var {...local_const} = {};
@@ -117,12 +117,32 @@ console.log({x: {...xx}} = { x });
 -try {} catch ({...catch_clause}) {}
  for (const {...for_in_const} in {
      abc
- }) {}
+-}) {}
++}) ;
  for (let {...for_in_let} in {
-@@ -35,13 +26,9 @@
- }) {}
- for ({...x} of [{}]) {}
- for ({...x} = {}; x; x = null) {}
+     abc
+-}) {}
++}) ;
+ for (var {...for_in_var} in {
+     abc
+ }) ;
+ for (const {...for_of_const} of [{}]) ;
+ for (let {...for_of_let} of [{}]) x();
+ for (var {...for_of_var} of [{}]) x();
+-for (const {...for_const} = {}; x; x = null) {}
+-for (let {...for_let} = {}; x; x = null) {}
+-for (var {...for_var} = {}; x; x = null) {}
++for (const {...for_const} = {}; x; x = null) ;
++for (let {...for_let} = {}; x; x = null) ;
++for (var {...for_var} = {}; x; x = null) ;
+ for ({...x} in {
+     abc
+-}) {}
+-for ({...x} of [{}]) {}
+-for ({...x} = {}; x; x = null) {}
++}) ;
++for ({...x} of [{}]) ;
++for ({...x} = {}; x; x = null) ;
  ({...assign} = {});
 -({
 -    obj_method({...x2}) {}

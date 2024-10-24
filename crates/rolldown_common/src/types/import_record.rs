@@ -33,7 +33,10 @@ bitflags::bitflags! {
     const CONTAINS_IMPORT_DEFAULT = 1 << 1;
     /// If it is `import {} from '...'` or `import '...'`
     const IS_PLAIN_IMPORT = 1 << 2;
+    /// the import is inserted during ast transformation, can't get source slice from the original source file
     const IS_UNSPANNED_IMPORT = 1 << 3;
+    /// `export * from 'mod'` only
+    const IS_EXPORT_START = 1 << 4;
   }
 }
 

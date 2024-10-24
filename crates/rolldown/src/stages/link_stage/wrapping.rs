@@ -103,7 +103,7 @@ impl LinkStage<'_> {
         );
       }
 
-      if !module.star_exports.is_empty() {
+      if module.has_star_export() {
         has_dynamic_exports_due_to_export_star(
           module_id,
           &self.module_table.modules,

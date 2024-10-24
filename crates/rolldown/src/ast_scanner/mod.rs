@@ -35,7 +35,6 @@ pub struct ScanResult {
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
-  pub star_exports: Vec<ImportRecordIdx>,
   pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
@@ -107,7 +106,6 @@ impl<'me> AstScanner<'me> {
         stmt_infos
       },
       import_records: IndexVec::new(),
-      star_exports: Vec::new(),
       default_export_ref,
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
@@ -412,7 +410,7 @@ impl<'me> AstScanner<'me> {
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
     } else {
       // export * from '...'
-      self.result.star_exports.push(id);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_START);
     }
     self.result.imports.insert(decl.span, id);
   }

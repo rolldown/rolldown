@@ -126,7 +126,7 @@ impl<'link> LinkStage<'link> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      if !module.star_exports.is_empty() {
+      if module.has_star_export() {
         Self::add_exports_for_export_star(
           &self.module_table.modules,
           &mut resolved_exports,

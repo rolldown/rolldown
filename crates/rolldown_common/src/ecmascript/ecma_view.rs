@@ -25,8 +25,6 @@ pub struct EcmaView {
   /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
   /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<Span, ImportRecordIdx>,
-  // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
-  pub star_exports: Vec<ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub scope: AstScopes,
   pub default_export_ref: SymbolRef,

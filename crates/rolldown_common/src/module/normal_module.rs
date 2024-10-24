@@ -3,8 +3,8 @@ use std::ops::{Deref, DerefMut};
 
 use crate::css::css_view::CssView;
 use crate::{
-  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ModuleId, ModuleIdx, ModuleInfo,
-  StmtInfo,
+  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
+  ModuleInfo, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 
@@ -29,10 +29,17 @@ pub struct NormalModule {
 
 impl NormalModule {
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    self.ecma_view.star_exports.iter().map(|rec_id| {
-      let rec = &self.ecma_view.import_records[*rec_id];
-      rec.resolved_module
+    self.ecma_view.import_records.iter().filter_map(|rec| {
+      rec.meta.contains(ImportRecordMeta::IS_EXPORT_START).then(|| rec.resolved_module)
     })
+  }
+
+  pub fn has_star_export(&self) -> bool {
+    self
+      .ecma_view
+      .import_records
+      .iter()
+      .any(|rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
   }
 
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
@@ -127,10 +134,12 @@ impl NormalModule {
     &'me self,
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
-    self.ecma_view.star_exports.iter().filter_map(move |rec_id| {
-      let rec = &self.ecma_view.import_records[*rec_id];
+    self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
+      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_START) {
+        return None;
+      }
       match modules[rec.resolved_module] {
-        Module::External(_) => Some(*rec_id),
+        Module::External(_) => Some(rec_id),
         Module::Normal(_) => None,
       }
     })

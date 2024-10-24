@@ -35,7 +35,8 @@ impl<'link> LinkStage<'link> {
       }
     });
 
-    let ast_idx_to_exports_kind = FxHashMap::from_iter(module_idx_to_exports_kind.into_iter());
+    let ast_idx_to_exports_kind =
+      module_idx_to_exports_kind.into_iter().collect::<FxHashMap<_, _>>();
     self.ast_table.par_iter_mut().for_each(|(ecma_ast, idx)| {
       let Some(item) = ast_idx_to_exports_kind.get(idx) else {
         return;

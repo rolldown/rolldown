@@ -26,7 +26,6 @@ use super::scan_stage::ScanStageOutput;
 mod bind_imports_and_exports;
 mod generate_lazy_export;
 mod sort_modules;
-
 pub(crate) mod tree_shaking;
 mod wrapping;
 
@@ -105,7 +104,6 @@ impl<'a> LinkStage<'a> {
 
     self.determine_module_exports_kind();
     self.wrap_modules();
-    //
     self.generate_lazy_export();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();

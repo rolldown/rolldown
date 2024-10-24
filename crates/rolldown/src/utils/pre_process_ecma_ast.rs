@@ -52,7 +52,7 @@ impl PreProcessEcmaAst {
         &source,
         path,
         &severity::Severity::Warning,
-      ))
+      ));
     }
 
     self.stats = semantic_ret.semantic.stats();

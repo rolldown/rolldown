@@ -8,7 +8,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
@@ -117,7 +117,26 @@ pub fn parse_to_ecma_ast(
 
   PreProcessEcmaAst::default()
     .build(ecma_ast, &parsed_type, path, replace_global_define_config, options, has_lazy_export)
-    .map(|(ast, symbol_table, scope_tree)| {
-      Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export })
-    })
+    .map_or_else(
+      |errors| {
+        Ok(Err(
+          errors
+            .into_iter()
+            .map(|error| {
+              let path = path.to_string_lossy().to_string();
+              BuildDiagnostic::oxc_parse_error(
+                source.clone(),
+                path.clone(),
+                error.help.clone().unwrap_or_default().into(),
+                error.message.to_string(),
+                error.labels.clone().unwrap_or_default(),
+              )
+            })
+            .collect::<Vec<_>>(),
+        ))
+      },
+      |(ast, symbol_table, scope_tree)| {
+        Ok(Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export }))
+      },
+    )
 }

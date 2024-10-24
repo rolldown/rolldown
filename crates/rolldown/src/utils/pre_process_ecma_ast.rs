@@ -2,7 +2,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use oxc::ast::VisitMut;
-use oxc::diagnostics::Severity;
+use oxc::diagnostics::{OxcDiagnostic, Severity};
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
 use oxc::transformer::{
@@ -38,15 +38,14 @@ impl PreProcessEcmaAst {
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
-  ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
+  ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree), Vec<OxcDiagnostic>> {
     // Build initial semantic data and check for semantic errors.
     let semantic_ret =
       ast.program.with_mut(|WithMutFields { program, .. }| SemanticBuilder::new().build(program));
 
-    // TODO:
-    // if !semantic_ret.errors.is_empty() {
-    // return Err(anyhow::anyhow!("Semantic Error: {:#?}", semantic_ret.errors));
-    // }
+    if !semantic_ret.errors.is_empty() {
+      return Err(semantic_ret.errors);
+    }
 
     self.stats = semantic_ret.semantic.stats();
     let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
@@ -79,7 +78,7 @@ impl PreProcessEcmaAst {
         .filter(|item| matches!(item.severity, Severity::Error))
         .collect_vec();
       if !errors.is_empty() {
-        return Err(anyhow::anyhow!("Transform failed, got {:#?}", errors));
+        return Err(errors);
       }
 
       symbols = ret.symbols;
@@ -87,7 +86,8 @@ impl PreProcessEcmaAst {
       self.ast_changed = true;
     }
 
-    ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
+    ast.program.with_mut(|fields| -> anyhow::Result<(), Vec<OxcDiagnostic>> {
+      let WithMutFields { allocator, program, .. } = fields;
       // Use built-in define plugin.
       if let Some(replace_global_define_config) = replace_global_define_config {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())

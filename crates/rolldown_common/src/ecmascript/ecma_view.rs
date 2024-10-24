@@ -43,6 +43,7 @@ pub struct EcmaView {
   pub side_effects: DeterminedSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
+  pub has_lazy_export: bool,
 }
 
 bitflags! {

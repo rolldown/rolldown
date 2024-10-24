@@ -37,6 +37,7 @@ impl PreProcessEcmaAst {
     path: &Path,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
+    has_lazy_export: bool,
   ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
     // Build initial semantic data and check for semantic errors.
     let semantic_ret =
@@ -121,7 +122,7 @@ impl PreProcessEcmaAst {
       Ok(())
     })?;
 
-    tweak_ast_for_scanning(&mut ast);
+    tweak_ast_for_scanning(&mut ast, has_lazy_export);
 
     ast.program.with_mut(|fields| {
       EnsureSpanUniqueness::new().visit_program(fields.program);

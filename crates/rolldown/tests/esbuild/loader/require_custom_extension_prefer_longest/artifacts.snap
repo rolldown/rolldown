@@ -9,11 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region test.txt
-var test_exports = {};
-__export(test_exports, { default: () => test_default });
-var test_default;
-var init_test = __esm({ "test.txt"() {
-	test_default = "test.txt";
+var require_test = __commonJS({ "test.txt"(exports, module) {
+	module.exports = "test.txt";
 } });
 
 //#endregion
@@ -27,7 +24,7 @@ var init_test_base64 = __esm({ "test.base64.txt"() {
 
 //#endregion
 //#region entry.js
-console.log((init_test(), __toCommonJS(test_exports)), (init_test_base64(), __toCommonJS(test_base64_exports)));
+console.log(require_test(), (init_test_base64(), __toCommonJS(test_base64_exports)));
 
 //#endregion
 ```

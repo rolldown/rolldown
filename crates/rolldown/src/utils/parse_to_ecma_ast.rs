@@ -9,7 +9,7 @@ use oxc::{
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::DiagnosableResult;
-use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm};
+use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
 
@@ -31,6 +31,7 @@ pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
   pub symbol_table: SymbolTable,
   pub scope_tree: ScopeTree,
+  pub has_lazy_export: bool,
 }
 
 pub fn parse_to_ecma_ast(
@@ -42,6 +43,7 @@ pub fn parse_to_ecma_ast(
   source: StrOrBytes,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
 ) -> anyhow::Result<DiagnosableResult<ParseToEcmaAstResult>> {
+  let mut has_lazy_export = false;
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
     ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
@@ -57,7 +59,8 @@ pub fn parse_to_ecma_ast(
       (content, OxcParseType::Js)
     }
     ModuleType::Text => {
-      let content = text_to_esm(&source.try_into_string()?)?;
+      let content = text_to_string_literal(&source.try_into_string()?)?;
+      has_lazy_export = true;
       (content, OxcParseType::Js)
     }
     ModuleType::Base64 => {
@@ -111,8 +114,8 @@ pub fn parse_to_ecma_ast(
   })?;
 
   PreProcessEcmaAst::default()
-    .build(ecma_ast, &parsed_type, path, replace_global_define_config, options)
+    .build(ecma_ast, &parsed_type, path, replace_global_define_config, options, has_lazy_export)
     .map(|(ast, symbol_table, scope_tree)| {
-      Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree })
+      Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export })
     })
 }

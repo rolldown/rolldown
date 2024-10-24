@@ -1589,7 +1589,7 @@ expression: output
 
 # tests/esbuild/default/require_txt
 
-- entry-!~{000}~.js => entry-fR3g9gxn.js
+- entry-!~{000}~.js => entry-qRvhs1Ck.js
 
 # tests/esbuild/default/require_with_call_inside_try
 
@@ -2417,7 +2417,7 @@ expression: output
 
 # tests/esbuild/loader/loader_file_common_js_and_es6
 
-- entry-!~{000}~.js => entry-GhucilnO.js
+- entry-!~{000}~.js => entry-UoZnabaC.js
 
 # tests/esbuild/loader/loader_file_ext_path_asset_names_js
 
@@ -2425,7 +2425,7 @@ expression: output
 
 # tests/esbuild/loader/loader_file_multiple_no_collision
 
-- entry-!~{000}~.js => entry-VThoeNps.js
+- entry-!~{000}~.js => entry-dViSj6DC.js
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
@@ -2526,7 +2526,7 @@ expression: output
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
-- entry-!~{000}~.js => entry-AzgGUosL.js
+- entry-!~{000}~.js => entry-XQ48TDh2.js
 
 # tests/esbuild/loader/require_custom_extension_base64
 
@@ -2538,11 +2538,11 @@ expression: output
 
 # tests/esbuild/loader/require_custom_extension_prefer_longest
 
-- entry-!~{000}~.js => entry-baywyBYP.js
+- entry-!~{000}~.js => entry-cXsPb9M5.js
 
 # tests/esbuild/loader/require_custom_extension_string
 
-- entry-!~{000}~.js => entry-o6jrum_1.js
+- entry-!~{000}~.js => entry-JWhLJ_q2.js
 
 # tests/esbuild/loader/with_type_json_override_loader
 

@@ -133,10 +133,6 @@
 - crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js
-## `.custom` should be treated as cjs
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_string
 ## cross module constant folding
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
@@ -173,6 +169,9 @@
 ## `.txt` should be treated as cjs
 - crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 - crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest
+## `.custom` should be treated as cjs
+- crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
+- crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url
 ## lowering decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
@@ -286,8 +285,6 @@
 - crates/rolldown/tests/esbuild/default/require_json
 ## require `.json`, the json file should not wrapped in `__esm`
 - crates/rolldown/tests/esbuild/default/require_shim_substitution
-## `.txt` module should be treated as cjs
-- crates/rolldown/tests/esbuild/default/require_txt
 ## obviously, the output is incorrect
 - crates/rolldown/tests/esbuild/default/string_export_names_common_js
 ## string export name not correct

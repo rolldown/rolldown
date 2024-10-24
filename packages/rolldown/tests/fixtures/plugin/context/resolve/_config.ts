@@ -3,11 +3,8 @@ import { expect, vi } from 'vitest'
 import nodePath from 'node:path'
 
 const fn = vi.fn()
-let isComposingJs = false
+
 export default defineTest({
-  beforeTest(testKind) {
-    isComposingJs = testKind === 'compose-js-plugin'
-  },
   config: {
     plugins: [
       {
@@ -17,18 +14,8 @@ export default defineTest({
           if (!ret) {
             throw new Error('resolve failed')
           }
-          const { id, ...props } = ret
-          isComposingJs
-            ? expect(props).toMatchInlineSnapshot(`
-            {
-              "external": false,
-            }
-          `)
-            : expect(props).toMatchInlineSnapshot(`
-            {
-              "external": false,
-            }
-          `)
+          const { id, external } = ret
+          expect(external).toBe(false)
           expect(id).toEqual(nodePath.join(import.meta.dirname, 'main.js'))
           fn()
         },

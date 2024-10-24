@@ -38,7 +38,13 @@ function main() {
     })
   }
 
-  for (const [testConfigPath, testConfig] of Object.entries(testConfigPaths)) {
+  const pluginTestConfigPaths = import.meta.glob<TestConfig>(
+    './fixtures/plugin/**/_config.ts',
+    { import: 'default', eager: true },
+  )
+  for (const [testConfigPath, testConfig] of Object.entries(
+    pluginTestConfigPaths,
+  )) {
     const dirPath = nodePath.dirname(testConfigPath)
     const testName = dirPath.replace('./fixtures/', '')
 

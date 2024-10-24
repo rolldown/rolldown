@@ -164,7 +164,7 @@ fn render_iife_export(
   named_exports: bool,
 ) -> BuildResult<String> {
   if ctx.options.name.as_ref().map_or(true, String::is_empty) {
-    return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
+    return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
   }
   let (stmt, namespace) = generate_namespace_definition(
     ctx.options.name.as_ref().expect("should have name"),

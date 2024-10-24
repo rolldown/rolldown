@@ -22,7 +22,7 @@ use rolldown_common::{
   Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
-use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -138,7 +138,7 @@ impl<'me> AstScanner<'me> {
     }
   }
 
-  pub fn scan(mut self, program: &Program<'_>) -> UnhandleableResult<ScanResult> {
+  pub fn scan(mut self, program: &Program<'_>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -203,7 +203,7 @@ impl<'me> AstScanner<'me> {
         if !scanned_symbols_in_root_scope.remove(&symbol_ref) {
           return Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
-          ));
+          ))?;
         }
       }
       // if !scanned_top_level_symbols.is_empty() {

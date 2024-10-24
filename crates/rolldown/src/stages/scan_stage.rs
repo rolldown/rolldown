@@ -153,7 +153,7 @@ impl ScanStage {
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors));
+      return Ok(Err(errors.into()));
     }
 
     Ok(Ok(ret))

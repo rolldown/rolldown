@@ -47,7 +47,7 @@ pub fn render_chunk_exports(
       s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
       Some(s)
     }
-    OutputFormat::Cjs | OutputFormat::Iife => {
+    OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
       let mut s = String::new();
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {

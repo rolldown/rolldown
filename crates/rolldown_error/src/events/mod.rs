@@ -21,6 +21,7 @@ pub mod invalid_option;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
+pub mod missing_name_option_for_umd_export;
 pub mod mixed_export;
 pub mod parse_error;
 pub mod resolve_error;

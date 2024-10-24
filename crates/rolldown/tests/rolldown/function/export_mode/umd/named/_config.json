@@ -1,0 +1,7 @@
+{
+  "config": {
+    "exports": "named",
+    "format": "umd",
+    "name": "module"
+  }
+}

@@ -10,6 +10,7 @@ const ModuleFormatSchema = z
   .or(z.literal('module'))
   .or(z.literal('commonjs'))
   .or(z.literal('iife'))
+  .or(z.literal('umd'))
   .describe(
     `output format of the generated bundle (supports ${underline('esm')}, cjs, and iife).`,
   )

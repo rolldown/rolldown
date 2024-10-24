@@ -13,9 +13,9 @@ pub fn deconflict_chunk_symbols(
   let mut renamer =
     Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), format);
 
-  if matches!(format, OutputFormat::Iife) {
+  if matches!(format, OutputFormat::Iife | OutputFormat::Umd) {
     // deconflict iife introduce symbols by external
-    // Also for UMD, AMD, but we don't support them yet.
+    // Also AMD, but we don't support them yet.
     chunk
       .imports_from_external_modules
       .iter()

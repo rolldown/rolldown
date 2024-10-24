@@ -110,6 +110,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm
                   | rolldown_common::OutputFormat::Iife
+                  | rolldown_common::OutputFormat::Umd
                   | rolldown_common::OutputFormat::Cjs => {
                     // Just remove the statement
                     return;

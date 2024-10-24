@@ -48,6 +48,7 @@ pub struct ScanResult {
   /// We needs to record the info in ast scanner since after that the ast maybe touched, etc
   /// (naming deconflict)
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
+  pub has_star_exports: bool,
 }
 
 pub struct AstScanner<'me> {
@@ -115,6 +116,7 @@ impl<'me> AstScanner<'me> {
       ast_usage: EcmaModuleAstUsage::empty(),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+      has_star_exports: false,
     };
 
     Self {
@@ -411,6 +413,7 @@ impl<'me> AstScanner<'me> {
     } else {
       // export * from '...'
       self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_START);
+      self.result.has_star_exports = true;
     }
     self.result.imports.insert(decl.span, id);
   }

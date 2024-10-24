@@ -236,7 +236,8 @@ impl<'a> LinkStage<'a> {
       }
 
       // TODO: should have a better place to put this
-      if is_entry && matches!(self.options.format, OutputFormat::Cjs) {
+      if is_entry && matches!(self.options.format, OutputFormat::Cjs) && importer.has_star_export()
+      {
         importer
           .import_records
           .iter()

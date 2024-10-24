@@ -73,6 +73,7 @@ impl RuntimeModuleTask {
       ast_usage,
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: _,
+      has_star_exports,
     } = scan_result;
 
     let module = NormalModule {
@@ -114,6 +115,7 @@ impl RuntimeModuleTask {
           meta.set_included(false);
           meta.set_eval(has_eval);
           meta.set_has_lazy_export(false);
+          meta.set_has_star_exports(has_star_exports);
           meta
         },
       },

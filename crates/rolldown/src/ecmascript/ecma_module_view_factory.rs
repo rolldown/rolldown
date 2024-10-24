@@ -106,6 +106,7 @@ pub async fn create_ecma_view<'any>(
     ast_usage,
     symbol_ref_db,
     self_referenced_class_decl_symbol_ids,
+    has_star_exports,
   } = scan_result;
   if !errors.is_empty() {
     return Ok(Err(errors));
@@ -189,6 +190,7 @@ pub async fn create_ecma_view<'any>(
       meta.set_included(false);
       meta.set_eval(has_eval);
       meta.set_has_lazy_export(has_lazy_export);
+      meta.set_has_star_exports(has_star_exports);
       meta
     },
   };

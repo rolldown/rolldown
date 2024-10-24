@@ -38,11 +38,7 @@ impl NormalModule {
   }
 
   pub fn has_star_export(&self) -> bool {
-    self
-      .ecma_view
-      .import_records
-      .iter()
-      .any(|rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+    self.ecma_view.meta.has_star_export()
   }
 
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {

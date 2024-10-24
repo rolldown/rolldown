@@ -29,9 +29,12 @@ pub struct NormalModule {
 
 impl NormalModule {
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    self.ecma_view.import_records.iter().filter_map(|rec| {
-      rec.meta.contains(ImportRecordMeta::IS_EXPORT_START).then(|| rec.resolved_module)
-    })
+    self
+      .ecma_view
+      .import_records
+      .iter()
+      .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+      .map(|rec| rec.resolved_module)
   }
 
   pub fn has_star_export(&self) -> bool {

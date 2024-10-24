@@ -764,4 +764,41 @@ impl<'ast> AstSnippet<'ast> {
       ),
     }
   }
+
+  /// convert `Expression` to
+  /// export default ${Expression}
+  pub fn export_default_expr_stmt(&self, expr: Expression<'ast>) -> Statement<'ast> {
+    let ast_builder = &self.builder;
+    ast_builder.statement_module_declaration(
+      ast_builder.module_declaration_export_default_declaration(
+        SPAN,
+        ast_builder.export_default_declaration_kind_expression(expr),
+        ast_builder.module_export_name_identifier_name(SPAN, "default"),
+      ),
+    )
+  }
+
+  /// convert `Expression` to
+  /// module.exports = ${Expression}
+  pub fn module_exports_expr_stmt(&self, expr: Expression<'ast>) -> Statement<'ast> {
+    let ast_builder = &self.builder;
+    ast_builder.statement_expression(
+      SPAN,
+      ast_builder.expression_assignment(
+        SPAN,
+        ast::AssignmentOperator::Assign,
+        ast_builder.assignment_target_simple(
+          ast_builder.simple_assignment_target_member_expression(
+            ast_builder.member_expression_static(
+              SPAN,
+              ast_builder.expression_identifier_reference(SPAN, "module"),
+              ast_builder.identifier_name(SPAN, "exports"),
+              false,
+            ),
+          ),
+        ),
+        expr,
+      ),
+    )
+  }
 }

@@ -229,7 +229,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       match self.ctx.linking_info.wrap_kind {
         WrapKind::Cjs => {
           let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-          dbg!(&wrap_ref_name);
           let commonjs_ref_name = if self.ctx.options.profiler_names {
             self.canonical_name_for_runtime("__commonJS")
           } else {

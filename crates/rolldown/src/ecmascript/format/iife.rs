@@ -36,7 +36,7 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
@@ -50,7 +50,7 @@ pub fn render_iife(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
-) -> DiagnosableResult<ConcatSource> {
+) -> BuildResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {

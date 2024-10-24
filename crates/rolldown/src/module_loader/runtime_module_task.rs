@@ -6,7 +6,7 @@ use rolldown_common::{
   ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, UnhandleableResult};
 use rustc_hash::FxHashSet;
 
 use super::Msg;
@@ -139,7 +139,7 @@ impl RuntimeModuleTask {
     &mut self,
     filename: &str,
     source: &ArcStr,
-  ) -> UnhandleableResult<DiagnosableResult<MakeEcmaAstResult>> {
+  ) -> UnhandleableResult<BuildResult<MakeEcmaAstResult>> {
     let source_type = SourceType::default();
 
     let parse_result = EcmaCompiler::parse(filename, source, source_type);

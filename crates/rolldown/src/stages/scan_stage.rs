@@ -4,7 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{EntryPoint, ImportKind, ModuleTable, ResolvedId, SymbolRefDb};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
@@ -46,7 +46,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self) -> anyhow::Result<DiagnosableResult<ScanStageOutput>> {
+  pub async fn scan(&mut self) -> anyhow::Result<BuildResult<ScanStageOutput>> {
     if self.options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
@@ -96,7 +96,7 @@ impl ScanStage {
   #[allow(clippy::type_complexity)]
   async fn resolve_user_defined_entries(
     &mut self,
-  ) -> Result<DiagnosableResult<Vec<(Option<ArcStr>, ResolvedId)>>> {
+  ) -> Result<BuildResult<Vec<(Option<ArcStr>, ResolvedId)>>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 

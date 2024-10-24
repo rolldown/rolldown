@@ -13,7 +13,7 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
@@ -88,7 +88,7 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self) -> Result<DiagnosableResult<ScanStageOutput>> {
+  pub async fn scan(&mut self) -> Result<BuildResult<ScanStageOutput>> {
     self.plugin_driver.build_start().await?;
 
     let mut error_for_build_end_hook = None;
@@ -138,7 +138,7 @@ impl Bundler {
     Ok(Ok(scan_stage_output))
   }
 
-  async fn try_build(&mut self) -> Result<DiagnosableResult<LinkStageOutput>> {
+  async fn try_build(&mut self) -> Result<BuildResult<LinkStageOutput>> {
     let build_info = match self.scan().await? {
       Ok(scan_stage_output) => scan_stage_output,
       Err(errors) => return Ok(Err(errors)),

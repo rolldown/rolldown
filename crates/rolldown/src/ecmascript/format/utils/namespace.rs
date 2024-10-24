@@ -7,7 +7,7 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
 
 /// According to the amount of `.` in the name (levels),
@@ -66,7 +66,7 @@ pub fn generate_namespace_definition(
 pub fn generate_identifier(
   ctx: &mut GenerateContext<'_>,
   export_mode: &OutputExports,
-) -> DiagnosableResult<(String, String)> {
+) -> BuildResult<(String, String)> {
   // Handle the diagnostic warning
   if ctx.options.name.as_ref().map_or(true, String::is_empty)
     && !matches!(export_mode, OutputExports::None)

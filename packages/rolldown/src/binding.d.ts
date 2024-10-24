@@ -453,6 +453,8 @@ export declare enum BindingWatcherEvent {
 export interface BindingWatchOption {
   skipWrite?: boolean
   notify?: BindingNotifyOption
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
 }
 
 export interface Es2015Options {

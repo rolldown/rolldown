@@ -10,6 +10,7 @@ use notify::{
 use rolldown_common::{
   BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
 };
+use rolldown_utils::pattern_filter;
 use std::{
   path::Path,
   sync::{
@@ -17,6 +18,7 @@ use std::{
     Arc,
   },
 };
+use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use crate::Bundler;
@@ -54,7 +56,7 @@ impl Watcher {
     };
     let inner = RecommendedWatcher::new(
       move |res| {
-        let mut tx = tx.try_lock().expect("Failed to lock the watcher sender");
+        let mut tx = tx.blocking_lock();
         futures::executor::block_on(async {
           if tx.is_closed() {
             return;
@@ -109,10 +111,7 @@ impl Watcher {
   }
 
   pub async fn run(&self) -> Result<()> {
-    let mut bundler = self
-      .bundler
-      .try_lock()
-      .expect("Failed to lock the bundler. Is another operation in progress?");
+    let mut bundler = self.bundler.lock().await;
     self.emitter.emit(WatcherEvent::ReStart, WatcherEventData::default()).await?;
 
     self.running.store(true, Ordering::Relaxed);
@@ -130,12 +129,23 @@ impl Watcher {
         bundler.write().await?
       }
     };
-    let mut inner = self.inner.try_lock().expect("Failed to lock the notify watcher.");
+    let mut inner = self.inner.lock().await;
     for file in &output.watch_files {
       let path = Path::new(file.as_str());
       if path.exists() {
-        inner.watch(path, RecursiveMode::Recursive)?;
-        self.watch_files.insert(file.clone());
+        let normalized_path = path.relative(&bundler.options.cwd);
+        let normalized_id = normalized_path.to_string_lossy();
+        if pattern_filter::filter(
+          bundler.options.watch.exclude.as_deref(),
+          bundler.options.watch.include.as_deref(),
+          file.as_str(),
+          &normalized_id,
+        )
+        .inner()
+        {
+          inner.watch(path, RecursiveMode::Recursive)?;
+          self.watch_files.insert(file.clone());
+        }
       }
     }
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleEnd.into()).await?;
@@ -148,18 +158,18 @@ impl Watcher {
 
   pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
-    let mut tx = self.tx.try_lock()?;
+    let mut tx = self.tx.lock().await;
     let _ = tx.close().await;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
-    let mut inner = self.inner.try_lock()?;
+    let mut inner = self.inner.lock().await;
     for path in self.watch_files.iter() {
       inner.unwatch(Path::new(path.as_str()))?;
     }
     // emit close event
     self.emitter.emit(WatcherEvent::Close, WatcherEventData::default()).await?;
     // call close watcher hook
-    let bundler = self.bundler.try_lock()?;
+    let bundler = self.bundler.lock().await;
     bundler.plugin_driver.close_watcher().await?;
 
     Ok(())
@@ -172,7 +182,7 @@ pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKi
     .emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into())
     .await
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
-  let bundler = watcher.bundler.try_lock().expect("Failed to lock the bundler. ");
+  let bundler = watcher.bundler.lock().await;
   let _ = bundler
     .plugin_driver
     .watch_change(path, kind)
@@ -182,7 +192,7 @@ pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKi
 
 pub fn wait_for_change(watcher: Arc<Watcher>) {
   let future = async move {
-    let mut rx = watcher.rx.try_lock().expect("Failed to lock the watcher receiver. ");
+    let mut rx = watcher.rx.lock().await;
     while let Some(res) = rx.next().await {
       match res {
         Ok(event) => {

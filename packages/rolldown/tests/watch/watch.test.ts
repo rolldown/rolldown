@@ -114,7 +114,7 @@ test.sequential('watch event', async () => {
 
 test.sequential('watch skipWrite', async () => {
   const dir = path.join(import.meta.dirname, './skipWrite-dist/')
-  await watch({
+  const watcher = await watch({
     input,
     cwd: import.meta.dirname,
     output: {
@@ -126,6 +126,7 @@ test.sequential('watch skipWrite', async () => {
   })
   await waitBuildFinished()
   expect(fs.existsSync(dir)).toBe(false)
+  await watcher.close()
 })
 
 test.sequential('PluginContext addWatchFile', async () => {
@@ -146,9 +147,12 @@ test.sequential('PluginContext addWatchFile', async () => {
 
   const changeFn = vi.fn()
   watcher.on('change', (id, event) => {
-    changeFn()
-    expect(id).toBe(foo)
-    expect(event.event).toBe('update')
+    // The macos emit create event when the file is changed, not sure the reason,
+    // so here only check the update event
+    if (event.event === 'update') {
+      changeFn()
+      expect(id).toBe(foo)
+    }
   })
 
   // edit file
@@ -161,6 +165,32 @@ test.sequential('PluginContext addWatchFile', async () => {
 
   // revert change
   fs.writeFileSync(foo, 'console.log(1)')
+  await watcher.close()
+})
+
+test.sequential('watch include/exclude', async () => {
+  const watcher = await watch({
+    input,
+    cwd: import.meta.dirname,
+    watch: {
+      exclude: 'main.js',
+    },
+  })
+
+  await waitBuildFinished()
+
+  // edit file
+  fs.writeFileSync(input, 'console.log(2)')
+  // wait for watcher to detect the change
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50)
+  })
+  // The input is excluded, so the output file should not be updated
+  expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
+
+  // revert change
+  fs.writeFileSync(input, 'console.log(1)')
+  await watcher.close()
 })
 
 async function waitBuildFinished() {

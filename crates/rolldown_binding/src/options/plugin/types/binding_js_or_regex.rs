@@ -28,3 +28,13 @@ impl TryFrom<BindingStringOrRegex> for StringOrRegex {
     Ok(ret)
   }
 }
+
+pub fn bindingify_string_or_regex_array(
+  items: Vec<BindingStringOrRegex>,
+) -> anyhow::Result<Vec<StringOrRegex>> {
+  let mut ret = Vec::with_capacity(items.len());
+  for i in items {
+    ret.push(i.try_into()?);
+  }
+  Ok(ret)
+}

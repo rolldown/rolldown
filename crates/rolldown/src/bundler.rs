@@ -157,7 +157,12 @@ impl Bundler {
     let mut link_stage_output = match self.try_build().await? {
       Ok(v) => v,
       Err(errors) => {
-        return Ok(BundleOutput { assets: vec![], warnings: vec![], errors, watch_files: vec![] })
+        return Ok(BundleOutput {
+          assets: vec![],
+          warnings: vec![],
+          errors: errors.into_vec(),
+          watch_files: vec![],
+        })
       }
     };
 

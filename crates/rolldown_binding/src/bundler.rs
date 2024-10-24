@@ -119,7 +119,7 @@ impl Bundler {
         self.handle_warnings(output.warnings).await;
       }
       Err(errs) => {
-        return Err(self.handle_errors(errs));
+        return Err(self.handle_errors(errs.into_vec()));
       }
     }
 

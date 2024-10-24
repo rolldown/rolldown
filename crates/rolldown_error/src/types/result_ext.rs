@@ -8,9 +8,9 @@ pub trait ResultExt<Val> {
   fn map_error_to_unhandleable(self) -> UnaryBuildResult<Val>;
 }
 
-impl<Val, Err> ResultExt<Val> for Result<Val, Err>
+impl<Val, Err_> ResultExt<Val> for Result<Val, Err_>
 where
-  Err: StdError + Send + Sync + 'static,
+  Err_: StdError + Send + Sync + 'static,
 {
   fn map_error_to_unhandleable(self) -> UnaryBuildResult<Val> {
     self.map_err(|err| {

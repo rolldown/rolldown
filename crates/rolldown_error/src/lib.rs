@@ -15,7 +15,7 @@ pub use crate::{
   events::invalid_option::InvalidOptionTypes,
   events::unloadable_dependency::UnloadableDependencyContext,
   events::DiagnosableArcstr,
-  type_aliases::{BuildResult, UnaryBuildResult, UnhandleableResult},
+  type_aliases::{BuildResult, UnaryBuildResult},
   types::diagnostic_options::DiagnosticOptions,
 };
 

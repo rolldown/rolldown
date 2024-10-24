@@ -120,7 +120,7 @@ pub fn generate_identifier(
   } else {
     // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.
     let name = ArcStr::from(name);
-    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name)])
+    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name)].into())
   }
 }
 

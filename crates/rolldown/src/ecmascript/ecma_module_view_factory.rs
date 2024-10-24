@@ -9,7 +9,7 @@ use rolldown_common::{
   ModuleType, RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::{BuildResult, UnhandleableResult};
+use rolldown_error::BuildResult;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
@@ -29,7 +29,7 @@ fn scan_ast(
   symbols: SymbolTable,
   scopes: ScopeTree,
   module_def_format: ModuleDefFormat,
-) -> UnhandleableResult<(AstScopes, ScanResult, SymbolRef)> {
+) -> BuildResult<(AstScopes, ScanResult, SymbolRef)> {
   let (symbol_table, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
   let module_id = ModuleId::new(ArcStr::clone(id));
   let repr_name = module_id.as_path().representative_file_name();
@@ -61,7 +61,7 @@ pub struct CreateEcmaViewReturn {
 pub async fn create_ecma_view<'any>(
   ctx: &mut CreateModuleContext<'any>,
   args: CreateModuleViewArgs,
-) -> UnhandleableResult<BuildResult<CreateEcmaViewReturn>> {
+) -> BuildResult<CreateEcmaViewReturn> {
   let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));
   let stable_id = id.stabilize(&ctx.options.cwd);
 
@@ -75,13 +75,7 @@ pub async fn create_ecma_view<'any>(
     ctx.replace_global_define_config.as_ref(),
   )?;
 
-  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export } =
-    match parse_result {
-      Ok(parse_result) => parse_result,
-      Err(errs) => {
-        return Ok(Err(errs));
-      }
-    };
+  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export } = parse_result;
 
   let (scope, scan_result, namespace_object_ref) = scan_ast(
     ctx.module_index,
@@ -109,7 +103,7 @@ pub async fn create_ecma_view<'any>(
     has_star_exports,
   } = scan_result;
   if !errors.is_empty() {
-    return Ok(Err(errors));
+    return Err(errors.into());
   }
   ctx.warnings.extend(scan_warnings);
 
@@ -195,10 +189,5 @@ pub async fn create_ecma_view<'any>(
     },
   };
 
-  Ok(Ok(CreateEcmaViewReturn {
-    view,
-    raw_import_records: import_records,
-    ast,
-    symbols: symbol_ref_db,
-  }))
+  Ok(CreateEcmaViewReturn { view, raw_import_records: import_records, ast, symbols: symbol_ref_db })
 }

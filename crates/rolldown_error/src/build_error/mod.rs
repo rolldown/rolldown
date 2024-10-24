@@ -1,10 +1,12 @@
 pub mod error_constructors;
 pub mod severity;
-use std::fmt::Display;
+use std::{
+  fmt::Display,
+  ops::{Deref, DerefMut},
+};
 
 use crate::{
-  diagnostic::Diagnostic, events::BuildEvent, type_aliases::BatchedBuildDiagnostic,
-  types::diagnostic_options::DiagnosticOptions,
+  diagnostic::Diagnostic, events::BuildEvent, types::diagnostic_options::DiagnosticOptions,
 };
 
 use self::severity::Severity;
@@ -80,6 +82,51 @@ impl From<napi::Error> for BuildDiagnostic {
 
 impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
   fn from(v: BuildDiagnostic) -> Self {
-    vec![v]
+    Self::new(vec![v])
+  }
+}
+
+impl From<anyhow::Error> for BatchedBuildDiagnostic {
+  fn from(err: anyhow::Error) -> Self {
+    Self::new(vec![BuildDiagnostic::unhandleable_error(err)])
+  }
+}
+
+impl From<Vec<BuildDiagnostic>> for BatchedBuildDiagnostic {
+  fn from(v: Vec<BuildDiagnostic>) -> Self {
+    Self::new(v)
+  }
+}
+
+impl From<anyhow::Error> for BuildDiagnostic {
+  fn from(err: anyhow::Error) -> Self {
+    BuildDiagnostic::unhandleable_error(err)
+  }
+}
+
+#[derive(Debug, Default)]
+pub struct BatchedBuildDiagnostic(Vec<BuildDiagnostic>);
+
+impl BatchedBuildDiagnostic {
+  pub fn new(vec: Vec<BuildDiagnostic>) -> Self {
+    Self(vec)
+  }
+
+  pub fn into_vec(self) -> Vec<BuildDiagnostic> {
+    self.0
+  }
+}
+
+impl Deref for BatchedBuildDiagnostic {
+  type Target = Vec<BuildDiagnostic>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl DerefMut for BatchedBuildDiagnostic {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
   }
 }

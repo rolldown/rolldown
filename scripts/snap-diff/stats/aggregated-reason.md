@@ -311,20 +311,14 @@
 - crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter
 ## lowering jsx
 - crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
-## esbuild treated x.b64 as cjs, rolldown treated it as esm
-- crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6
 ## import record with attributes
 - crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes
-## esbuild treated `.txt` as cjs, rolldown treated it as esm
-- crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6
 ## Wrong wrapkind, when json is imported by `require`
 - crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
-## `.txt` should be treated as cjs
-- crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## dynamic import with cycle reference

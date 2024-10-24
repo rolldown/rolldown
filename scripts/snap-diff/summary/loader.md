@@ -11,8 +11,6 @@
   diff
 ## [jsx_syntax_in_js_with_jsx_loader](../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader/diff.md)
   diff
-## [loader_base64_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6/diff.md)
-  diff
 ## [loader_bundle_with_import_attributes](../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes/diff.md)
   diff
 ## loader_bundle_with_unknown_import_attributes_and_copy_loader
@@ -40,8 +38,6 @@
 ## [loader_copy_with_transform](../../../crates/rolldown/tests/esbuild/loader/loader_copy_with_transform/diff.md)
   diff
 ## [loader_data_url_base64_invalid_utf8](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8/diff.md)
-  diff
-## [loader_data_url_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6/diff.md)
   diff
 ## [loader_data_url_text_css](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css/diff.md)
   diff
@@ -93,8 +89,6 @@
   diff
 ## [loader_json_shared_with_multiple_entries_issue413](../../../crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413/diff.md)
   diff
-## [loader_text_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6/diff.md)
-  diff
 ## [with_type_json_override_loader](../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader/diff.md)
   diff
 ## with_type_json_override_loader_glob
@@ -113,8 +107,11 @@
 # Bypassed Cases
 ## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/bypass.md)
 ## [jsx_preserve_capital_letter_minify_nested](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/bypass.md)
+## [loader_base64_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6/bypass.md)
 ## [loader_data_url_application_json](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_application_json/bypass.md)
+## [loader_data_url_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6/bypass.md)
 ## [loader_data_url_extension_based_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_extension_based_mime/bypass.md)
 ## [loader_data_url_text_java_script_plus_character](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script_plus_character/bypass.md)
 ## [loader_json_no_bundle_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6/bypass.md)
 ## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names/bypass.md)
+## [loader_text_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6/bypass.md)

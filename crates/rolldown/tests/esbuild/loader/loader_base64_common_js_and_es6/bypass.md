@@ -1,5 +1,5 @@
 # Reason
-1. esbuild treated x.b64 as cjs, rolldown treated it as esm
+1. Different codegen order
 # Diff
 ## /out.js
 ### esbuild

@@ -1,5 +1,5 @@
 # Reason
-1. esbuild treated `.txt` as cjs, rolldown treated it as esm
+1. Different codegen order
 # Diff
 ## /out.js
 ### esbuild

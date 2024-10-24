@@ -56,12 +56,13 @@ console.log(ns, import_c.default, void 0);
 ```js
 import assert from "node:assert";
 
+
 //#region b.empty
-var b_exports = {};
+var require_b = __commonJS({ "b.empty"() {} });
 
 //#endregion
 //#region c.empty
-var default$1 = void 0;
+var require_c = __commonJS({ "c.empty"() {} });
 
 //#endregion
 //#region d.empty
@@ -69,9 +70,11 @@ var named = void 0;
 
 //#endregion
 //#region entry.js
-console.log(b_exports, default$1, named);
-assert.deepEqual(b_exports, {});
-assert.equal(default$1, undefined);
+var import_b = __toESM(require_b());
+var import_c = __toESM(require_c());
+console.log(import_b, import_c.default, named);
+assert.deepEqual(import_b, {});
+assert.equal(import_c.default, undefined);
 assert.equal(named, undefined);
 
 //#endregion
@@ -81,21 +84,18 @@ assert.equal(named, undefined);
 ===================================================================
 --- esbuild	entry.js
 +++ rolldown	entry.js
-@@ -1,9 +1,5 @@
--var require_b = __commonJS({
--    "b.empty"() {}
--});
--var require_c = __commonJS({
--    "c.empty"() {}
--});
+@@ -3,7 +3,9 @@
+ });
+ var require_c = __commonJS({
+     "c.empty"() {}
+ });
 -var ns = __toESM(require_b());
--var import_c = __toESM(require_c());
--console.log(ns, import_c.default, void 0);
-+var b_exports = {};
-+var default$1 = void 0;
 +var named = void 0;
-+console.log(b_exports, default$1, named);
-+console.log(b_exports, default$1, named);
++var import_b = __toESM(require_b());
+ var import_c = __toESM(require_c());
+-console.log(ns, import_c.default, void 0);
++console.log(import_b, import_c.default, named);
++console.log(import_b, import_c.default, named);
 
 ```
 ## metafile.json

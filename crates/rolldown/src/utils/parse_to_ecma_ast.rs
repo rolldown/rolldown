@@ -81,7 +81,7 @@ pub fn parse_to_ecma_ast(
       let encoded = rolldown_utils::base64::to_standard_base64(source);
       (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
     }
-    ModuleType::Empty => ("export {}".to_string(), OxcParseType::Js),
+    ModuleType::Empty => ("".to_string(), OxcParseType::Js),
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks

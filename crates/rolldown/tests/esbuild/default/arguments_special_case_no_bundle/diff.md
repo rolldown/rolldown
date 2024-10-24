@@ -88,9 +88,9 @@
 	function foo(x = arguments) {
 		return arguments;
 	}
-	(function(x = arguments) {
+	({ foo(x = arguments) {
 		return arguments;
-	});
+	} });
 	class Foo {
 		foo(x = arguments) {
 			return arguments;
@@ -105,10 +105,10 @@
 		var arguments$1;
 		return arguments$1;
 	}
-	(function(x = arguments) {
+	({ foo(x = arguments) {
 		var arguments$1;
 		return arguments$1;
-	});
+	} });
 	(x) => arguments;
 	() => arguments;
 	async () => arguments;
@@ -241,9 +241,9 @@
 +	function foo(x = arguments) {
 +		return arguments;
 +	}
-+	(function(x = arguments) {
++	({ foo(x = arguments) {
 +		return arguments;
-+	});
++	} });
 +	class Foo {
 +		foo(x = arguments) {
 +			return arguments;
@@ -258,10 +258,10 @@
 +		var arguments$1;
 +		return arguments$1;
 +	}
-+	(function(x = arguments) {
++	({ foo(x = arguments) {
 +		var arguments$1;
 +		return arguments$1;
-+	});
++	} });
 +	(x) => arguments;
 +	() => arguments;
 +	async () => arguments;

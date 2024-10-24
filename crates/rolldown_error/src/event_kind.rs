@@ -31,6 +31,8 @@ pub enum EventKind {
   CommonJsVariableInEsm,
   ExportUndefinedVariable,
   ImportIsUndefined,
+
+  UnhandleableError,
 }
 
 impl Display for EventKind {
@@ -64,6 +66,7 @@ impl Display for EventKind {
         None => write!(f, "RESOLVE_ERROR"),
       },
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
+      EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
     }
   }
 }

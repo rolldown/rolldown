@@ -8,7 +8,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{severity, BuildDiagnostic, DiagnosableResult};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
@@ -32,6 +32,7 @@ pub struct ParseToEcmaAstResult {
   pub symbol_table: SymbolTable,
   pub scope_tree: ScopeTree,
   pub has_lazy_export: bool,
+  pub warning: Vec<BuildDiagnostic>,
 }
 
 pub fn parse_to_ecma_ast(
@@ -116,27 +117,25 @@ pub fn parse_to_ecma_ast(
   })?;
 
   PreProcessEcmaAst::default()
-    .build(ecma_ast, &parsed_type, path, replace_global_define_config, options, has_lazy_export)
+    .build(
+      ecma_ast,
+      &parsed_type,
+      stable_id,
+      replace_global_define_config,
+      options,
+      has_lazy_export,
+    )
     .map_or_else(
       |errors| {
-        Ok(Err(
-          errors
-            .into_iter()
-            .map(|error| {
-              let path = path.to_string_lossy().to_string();
-              BuildDiagnostic::oxc_parse_error(
-                source.clone(),
-                path.clone(),
-                error.help.clone().unwrap_or_default().into(),
-                error.message.to_string(),
-                error.labels.clone().unwrap_or_default(),
-              )
-            })
-            .collect::<Vec<_>>(),
-        ))
+        Ok(Err(BuildDiagnostic::from_oxc_diagnostics(
+          errors,
+          &source,
+          stable_id,
+          &severity::Severity::Error,
+        )))
       },
-      |(ast, symbol_table, scope_tree)| {
-        Ok(Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export }))
+      |(ast, symbol_table, scope_tree, warning)| {
+        Ok(Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning }))
       },
     )
 }

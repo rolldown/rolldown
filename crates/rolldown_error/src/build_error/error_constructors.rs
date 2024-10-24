@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
+use super::severity::Severity;
 use super::BuildDiagnostic;
 use arcstr::ArcStr;
+use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
@@ -185,6 +187,33 @@ impl BuildDiagnostic {
     Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
   }
 
+  pub fn from_oxc_diagnostics<T>(
+    diagnostics: T,
+    source: &ArcStr,
+    path: &str,
+    severity: &Severity,
+  ) -> Vec<Self>
+  where
+    T: IntoIterator<Item = OxcDiagnostic>,
+  {
+    diagnostics
+      .into_iter()
+      .map(|mut error| {
+        let diagnostic = BuildDiagnostic::oxc_parse_error(
+          source.clone(),
+          path.to_string(),
+          error.help.take().unwrap_or_default().into(),
+          error.message.to_string(),
+          error.labels.take().unwrap_or_default(),
+        );
+        if matches!(severity, Severity::Warning) {
+          diagnostic.with_severity_warning()
+        } else {
+          diagnostic
+        }
+      })
+      .collect::<Vec<_>>()
+  }
   pub fn forbid_const_assign(
     filename: String,
     source: ArcStr,

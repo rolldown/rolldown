@@ -9,7 +9,7 @@ use oxc::{
   sourcemap::SourceMap,
   span::SourceType,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 
 use crate::ecma_ast::{
   program_cell::{ProgramCell, ProgramCellDependent, ProgramCellOwner},
@@ -18,11 +18,7 @@ use crate::ecma_ast::{
 pub struct EcmaCompiler;
 
 impl EcmaCompiler {
-  pub fn parse(
-    filename: &str,
-    source: impl Into<ArcStr>,
-    ty: SourceType,
-  ) -> DiagnosableResult<EcmaAst> {
+  pub fn parse(filename: &str, source: impl Into<ArcStr>, ty: SourceType) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let inner =

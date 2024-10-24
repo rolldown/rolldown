@@ -9,7 +9,7 @@ use rolldown_common::{
   ModuleType, RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::{DiagnosableResult, UnhandleableResult};
+use rolldown_error::{BuildResult, UnhandleableResult};
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
@@ -61,7 +61,7 @@ pub struct CreateEcmaViewReturn {
 pub async fn create_ecma_view<'any>(
   ctx: &mut CreateModuleContext<'any>,
   args: CreateModuleViewArgs,
-) -> UnhandleableResult<DiagnosableResult<CreateEcmaViewReturn>> {
+) -> UnhandleableResult<BuildResult<CreateEcmaViewReturn>> {
   let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));
   let stable_id = id.stabilize(&ctx.options.cwd);
 

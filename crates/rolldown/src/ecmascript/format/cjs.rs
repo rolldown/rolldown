@@ -13,7 +13,7 @@ use crate::{
   },
 };
 use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::BuildResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 pub fn render_cjs(
@@ -23,7 +23,7 @@ pub fn render_cjs(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
-) -> DiagnosableResult<ConcatSource> {
+) -> BuildResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {

@@ -16,7 +16,7 @@ use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
   ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
@@ -205,7 +205,7 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-  ) -> anyhow::Result<DiagnosableResult<ModuleLoaderOutput>> {
+  ) -> anyhow::Result<BuildResult<ModuleLoaderOutput>> {
     if self.options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }

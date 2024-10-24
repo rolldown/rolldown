@@ -8,7 +8,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::BuildResult;
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
@@ -42,7 +42,7 @@ pub fn parse_to_ecma_ast(
   module_type: &ModuleType,
   source: StrOrBytes,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
-) -> anyhow::Result<DiagnosableResult<ParseToEcmaAstResult>> {
+) -> anyhow::Result<BuildResult<ParseToEcmaAstResult>> {
   let mut has_lazy_export = false;
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {

@@ -78,8 +78,6 @@ impl From<napi::Error> for BuildDiagnostic {
   }
 }
 
-pub type BuildResult<T> = std::result::Result<T, BuildDiagnostic>;
-
 impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
   fn from(v: BuildDiagnostic) -> Self {
     vec![v]

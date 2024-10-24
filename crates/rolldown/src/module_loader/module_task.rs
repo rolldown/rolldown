@@ -14,7 +14,7 @@ use rolldown_common::{
   RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{
-  BuildDiagnostic, DiagnosableArcstr, DiagnosableResult, UnloadableDependencyContext,
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
 };
 
 use super::{task_context::TaskContext, Msg};
@@ -283,7 +283,7 @@ impl ModuleTask {
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
     module_type: &ModuleType,
-  ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
+  ) -> anyhow::Result<BuildResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(&self.ctx.options);

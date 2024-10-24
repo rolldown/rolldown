@@ -2,7 +2,9 @@ use crate::BuildDiagnostic;
 
 pub type BatchedBuildDiagnostic = Vec<BuildDiagnostic>;
 
-pub type DiagnosableResult<T> = Result<T, BatchedBuildDiagnostic>;
+pub type UnaryBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
+
+pub type BuildResult<T> = Result<T, BatchedBuildDiagnostic>;
 
 /// This is used for returning errors that are not expected to be handled by rolldown. Such as
 /// - Error of converting u64 to usize in a platform that usize is 32-bit.

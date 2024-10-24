@@ -3,7 +3,8 @@ pub mod severity;
 use std::fmt::Display;
 
 use crate::{
-  diagnostic::Diagnostic, events::BuildEvent, types::diagnostic_options::DiagnosticOptions,
+  diagnostic::Diagnostic, events::BuildEvent, type_aliases::BatchedBuildDiagnostic,
+  types::diagnostic_options::DiagnosticOptions,
 };
 
 use self::severity::Severity;
@@ -78,3 +79,9 @@ impl From<napi::Error> for BuildDiagnostic {
 }
 
 pub type BuildResult<T> = std::result::Result<T, BuildDiagnostic>;
+
+impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
+  fn from(v: BuildDiagnostic) -> Self {
+    vec![v]
+  }
+}

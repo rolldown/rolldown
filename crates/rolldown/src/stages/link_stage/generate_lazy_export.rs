@@ -17,7 +17,7 @@ impl<'link> LinkStage<'link> {
       let Module::Normal(module) = module else {
         return;
       };
-      if !module.has_lazy_export {
+      if !module.meta.has_lazy_export() {
         return;
       }
       let default_symbol_ref = module.default_export_ref;

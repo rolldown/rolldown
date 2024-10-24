@@ -48,7 +48,7 @@ impl NormalModule {
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.to_string(),
-      is_included: self.ecma_view.is_included,
+      is_included: self.ecma_view.meta.is_included(),
       stmt_infos: self
         .ecma_view
         .stmt_infos

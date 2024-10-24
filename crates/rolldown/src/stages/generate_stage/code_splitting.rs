@@ -83,7 +83,7 @@ impl<'a> GenerateStage<'a> {
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
-      if !normal_module.is_included {
+      if !normal_module.meta.is_included() {
         continue;
       }
 
@@ -236,7 +236,7 @@ impl<'a> GenerateStage<'a> {
     };
     let meta = &self.link_output.metas[module_id];
 
-    if !module.is_included {
+    if !module.meta.is_included() {
       return;
     }
 
@@ -335,7 +335,7 @@ impl<'a> GenerateStage<'a> {
 
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
-      if !normal_module.is_included {
+      if !normal_module.meta.is_included() {
         continue;
       }
 

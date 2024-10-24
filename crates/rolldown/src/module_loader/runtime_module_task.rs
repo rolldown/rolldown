@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaView, ExportsKind, ModuleDefFormat, ModuleId,
-  ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaView, EcmaViewMeta, ExportsKind,
+  ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
@@ -91,7 +91,6 @@ impl RuntimeModuleTask {
         source,
 
         import_records: IndexVec::default(),
-        is_included: false,
         sourcemap_chain: vec![],
         // The internal runtime module `importers/imported` should be skip.
         importers: vec![],
@@ -99,7 +98,6 @@ impl RuntimeModuleTask {
         imported_ids: vec![],
         dynamically_imported_ids: vec![],
         side_effects: DeterminedSideEffects::Analyzed(false),
-        has_eval,
         named_imports,
         named_exports,
         stmt_infos,
@@ -111,7 +109,13 @@ impl RuntimeModuleTask {
         def_format: ModuleDefFormat::EsmMjs,
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
-        has_lazy_export: false,
+        meta: {
+          let mut meta = EcmaViewMeta::default();
+          meta.set_included(false);
+          meta.set_eval(has_eval);
+          meta.set_has_lazy_export(false);
+          meta
+        },
       },
       css_view: None,
     };

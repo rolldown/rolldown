@@ -469,7 +469,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
       &self.normal_modules[importee_id].as_normal().expect("external module is bailout above");
     debug_assert!(
       matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::CommonJs)
-        || importee.has_lazy_export
+        || importee.meta.has_lazy_export()
         || importee.module_type == ModuleType::Empty
     );
     // TODO: Deal with https://github.com/evanw/esbuild/blob/109449e5b80886f7bc7fc7e0cee745a0221eef8d/internal/linker/linker.go#L3062-L3072

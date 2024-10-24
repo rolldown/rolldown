@@ -5,8 +5,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaView, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
-  RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
+  AstScopes, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx,
+  ModuleType, RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{DiagnosableResult, UnhandleableResult};
@@ -177,16 +177,20 @@ pub async fn create_ecma_view<'any>(
     def_format: ctx.resolved_id.module_def_format,
     sourcemap_chain: args.sourcemap_chain,
     import_records: IndexVec::default(),
-    is_included: false,
     importers: vec![],
     dynamic_importers: vec![],
     imported_ids,
     dynamically_imported_ids,
     side_effects,
-    has_eval,
     ast_usage,
     self_referenced_class_decl_symbol_ids,
-    has_lazy_export,
+    meta: {
+      let mut meta = EcmaViewMeta::default();
+      meta.set_included(false);
+      meta.set_eval(has_eval);
+      meta.set_has_lazy_export(has_lazy_export);
+      meta
+    },
   };
 
   Ok(Ok(CreateEcmaViewReturn {

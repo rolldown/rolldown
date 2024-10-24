@@ -141,7 +141,9 @@ impl<'a> LinkStage<'a> {
 
         match rec.kind {
           ImportKind::Import => {
-            if matches!(importee.exports_kind, ExportsKind::None) && !importee.has_lazy_export {
+            if matches!(importee.exports_kind, ExportsKind::None)
+              && !importee.meta.has_lazy_export()
+            {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
                 if rec.meta.intersects(

@@ -166,12 +166,6 @@
 ## should inline variable
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
-## `.txt` should be treated as cjs
-- crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest
-## `.custom` should be treated as cjs
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_base64
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url
 ## lowering decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
@@ -309,8 +303,6 @@
 - crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446
 ## Format cjs should not appear `export`
 - crates/rolldown/tests/esbuild/importstar/import_self_common_js
-## esbuild treated svg as commonjs module, rolldown treated it as esm
-- crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
 ## esbuild will wrap `empty` module as a cjs module, rolldown did not
 - crates/rolldown/tests/esbuild/loader/empty_loader_js
 ## esbuild did not needs `__toESM`
@@ -331,6 +323,8 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
+## `.txt` should be treated as cjs
+- crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## dynamic import with cycle reference

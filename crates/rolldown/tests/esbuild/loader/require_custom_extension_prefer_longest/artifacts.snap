@@ -15,16 +15,13 @@ var require_test = __commonJS({ "test.txt"(exports, module) {
 
 //#endregion
 //#region test.base64.txt
-var test_base64_exports = {};
-__export(test_base64_exports, { default: () => test_base64_default });
-var test_base64_default;
-var init_test_base64 = __esm({ "test.base64.txt"() {
-	test_base64_default = "dGVzdC5iYXNlNjQudHh0";
+var require_test_base64 = __commonJS({ "test.base64.txt"(exports, module) {
+	module.exports = "dGVzdC5iYXNlNjQudHh0";
 } });
 
 //#endregion
 //#region entry.js
-console.log(require_test(), (init_test_base64(), __toCommonJS(test_base64_exports)));
+console.log(require_test(), require_test_base64());
 
 //#endregion
 ```

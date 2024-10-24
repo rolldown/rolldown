@@ -1,6 +1,4 @@
 # Failed Cases
-## [auto_detect_mime_type_from_extension](../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension/diff.md)
-  diff
 ## empty_loader_css
   missing
 ## [empty_loader_js](../../../crates/rolldown/tests/esbuild/loader/empty_loader_js/diff.md)
@@ -97,22 +95,20 @@
   diff
 ## [loader_text_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6/diff.md)
   diff
-## [require_custom_extension_base64](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64/diff.md)
-  diff
-## [require_custom_extension_data_url](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url/diff.md)
-  diff
-## [require_custom_extension_prefer_longest](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest/diff.md)
-  diff
 ## [with_type_json_override_loader](../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader/diff.md)
   diff
 ## with_type_json_override_loader_glob
   missing
 # Passed Cases
+## [auto_detect_mime_type_from_extension](../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension)
 ## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js)
 ## [loader_data_url_base64_vs_percent_encoding](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding)
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)
 ## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime)
+## [require_custom_extension_base64](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64)
+## [require_custom_extension_data_url](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url)
+## [require_custom_extension_prefer_longest](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest)
 ## [require_custom_extension_string](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_string)
 # Bypassed Cases
 ## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/bypass.md)

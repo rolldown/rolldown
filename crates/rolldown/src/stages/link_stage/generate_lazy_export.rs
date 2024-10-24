@@ -4,13 +4,16 @@ use oxc::{
 };
 use rolldown_common::{EcmaModuleAstUsage, ExportsKind, LocalExport, Module, StmtInfoIdx};
 use rolldown_ecmascript::{AstSnippet, TakeIn};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rustc_hash::FxHashMap;
 
 use super::LinkStage;
 
 impl<'link> LinkStage<'link> {
   pub fn generate_lazy_export(&mut self) {
+    let module_idx_to_exports_kind = append_only_vec::AppendOnlyVec::new();
     // let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.module_table.modules.iter_mut().for_each(|module| {
+    self.module_table.modules.par_iter_mut().for_each(|module| {
       let Module::Normal(module) = module else {
         return;
       };
@@ -23,12 +26,20 @@ impl<'link> LinkStage<'link> {
         .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
       module.stmt_infos.declare_symbol_for_stmt(1.into(), default_symbol_ref);
       module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true;
-      let (ecma_ast, _) = &mut self.ast_table[module.ecma_ast_idx()];
+      module_idx_to_exports_kind.push((module.idx, module.exports_kind));
 
       // generate `module.exports = expr`
       if module.exports_kind == ExportsKind::CommonJs {
         // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
         module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+      }
+    });
+    let ast_idx_to_exports_kind = FxHashMap::from_iter(module_idx_to_exports_kind.into_iter());
+    self.ast_table.par_iter_mut().for_each(|(ecma_ast, idx)| {
+      let Some(item) = ast_idx_to_exports_kind.get(idx) else {
+        return;
+      };
+      if matches!(item, ExportsKind::CommonJs) {
         ecma_ast.program.with_mut(|fields| {
           let snippet = AstSnippet::new(fields.allocator);
           let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
@@ -57,6 +68,5 @@ impl<'link> LinkStage<'link> {
         *stmt = snippet.export_default_expr_stmt(expr);
       });
     });
-    // This is safe since there is no two module mutate the same ast;
   }
 }

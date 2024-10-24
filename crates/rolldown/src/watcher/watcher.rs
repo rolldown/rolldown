@@ -1,9 +1,5 @@
 use arcstr::ArcStr;
 use dashmap::DashSet;
-use futures::{
-  channel::mpsc::{channel, Receiver, Sender},
-  SinkExt, StreamExt,
-};
 use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
@@ -15,6 +11,7 @@ use std::{
   path::Path,
   sync::{
     atomic::{AtomicBool, Ordering},
+    mpsc::{channel, Receiver, Sender},
     Arc,
   },
 };
@@ -27,6 +24,11 @@ use anyhow::Result;
 
 use super::emitter::{SharedWatcherEmitter, WatcherEmitter};
 
+enum WatcherChannelMsg {
+  NotifyEvent(notify::Result<notify::Event>),
+  Close,
+}
+
 pub struct Watcher {
   pub emitter: SharedWatcherEmitter,
   bundler: Arc<Mutex<Bundler>>,
@@ -34,14 +36,14 @@ pub struct Watcher {
   running: AtomicBool,
   rerun: AtomicBool,
   watch_files: DashSet<ArcStr>,
-  tx: Arc<Mutex<Sender<notify::Result<notify::Event>>>>,
-  rx: Arc<Mutex<Receiver<notify::Result<notify::Event>>>>,
+  tx: Arc<Sender<WatcherChannelMsg>>,
+  rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }
 
 impl Watcher {
   pub fn new(bundler: Arc<Mutex<Bundler>>) -> Result<Self> {
-    let (tx, rx) = channel(100);
-    let tx = Arc::new(Mutex::new(tx));
+    let (tx, rx) = channel();
+    let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
       let config = Config::default();
@@ -56,18 +58,9 @@ impl Watcher {
     };
     let inner = RecommendedWatcher::new(
       move |res| {
-        let mut tx = tx.blocking_lock();
-        futures::executor::block_on(async {
-          if tx.is_closed() {
-            return;
-          }
-          match tx.send(res).await {
-            Ok(()) => {}
-            Err(e) => {
-              eprintln!("send watch event error {e:?}");
-            }
-          };
-        });
+        if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
+          eprintln!("send watch event error {e:?}");
+        };
       },
       watch_option,
     )?;
@@ -158,8 +151,7 @@ impl Watcher {
 
   pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
-    let mut tx = self.tx.lock().await;
-    let _ = tx.close().await;
+    self.tx.send(WatcherChannelMsg::Close)?;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
     let mut inner = self.inner.lock().await;
@@ -192,37 +184,42 @@ pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKi
 
 pub fn wait_for_change(watcher: Arc<Watcher>) {
   let future = async move {
-    let mut rx = watcher.rx.lock().await;
-    while let Some(res) = rx.next().await {
-      match res {
-        Ok(event) => {
-          for path in event.paths {
-            let id = path.to_string_lossy();
-            match event.kind {
-              notify::EventKind::Create(_) => {
-                on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
+    let mut run = true;
+    while run {
+      let rx = watcher.rx.lock().await;
+      match rx.recv() {
+        Ok(msg) => match msg {
+          WatcherChannelMsg::NotifyEvent(event) => match event {
+            Ok(event) => {
+              for path in event.paths {
+                let id = path.to_string_lossy();
+                match event.kind {
+                  notify::EventKind::Create(_) => {
+                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
+                  }
+                  notify::EventKind::Modify(
+                    ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
+                  ) => {
+                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
+                    watcher.invalidate();
+                  }
+                  notify::EventKind::Remove(_) => {
+                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
+                  }
+                  _ => {}
+                }
               }
-              notify::EventKind::Modify(
-                ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
-              ) => {
-                on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
-                watcher.invalidate();
-              }
-              notify::EventKind::Remove(_) => {
-                on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
-              }
-              _ => {}
             }
-          }
-        }
+            Err(e) => eprintln!("notify error: {e:?}"),
+          },
+          WatcherChannelMsg::Close => run = false,
+        },
         Err(e) => {
           eprintln!("watcher receiver error: {e:?}");
         }
       }
     }
   };
-
-  // TODO the spawn task should be dropped
 
   #[cfg(target_family = "wasm")]
   {

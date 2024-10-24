@@ -24,11 +24,11 @@ import assert from "node:assert";
 
 
 //#region y.txt
-"y";
+var y_default = "y";
 
 //#endregion
 //#region x.txt
-var require_x = __commonJS({ "x.txt"() {
+var require_x = __commonJS({ "x.txt"(exports, module) {
 	module.exports = "x";
 } });
 
@@ -46,10 +46,9 @@ assert.equal(y_default, "y");
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,8 +1,8 @@
-+"y";
++var y_default = "y";
  var require_x = __commonJS({
--    "x.txt"(exports, module) {
-+    "x.txt"() {
+     "x.txt"(exports, module) {
          module.exports = "x";
      }
  });

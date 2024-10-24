@@ -24,9 +24,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
 
-    if self.ctx.module.stable_id.ends_with(".txt") {
-      dbg!(&self.ctx.module.stmt_infos);
-    }
+    // if self.ctx.module.stable_id.ends_with(".txt") {
+    //   dbg!(&self.ctx.module.stmt_infos);
+    // }
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
 
     // Skip the first statement info, which is the namespace variable declaration

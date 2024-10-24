@@ -9,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region y.txt
-"y";
+var y_default = "y";
 
 //#endregion
 //#region x.txt
-var require_x = __commonJS({ "x.txt"() {
+var require_x = __commonJS({ "x.txt"(exports, module) {
 	module.exports = "x";
 } });
 

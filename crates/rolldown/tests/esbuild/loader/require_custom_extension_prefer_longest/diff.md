@@ -26,7 +26,7 @@ console.log(require_test(), require_test_base64());
 
 
 //#region test.txt
-var require_test = __commonJS({ "test.txt"() {
+var require_test = __commonJS({ "test.txt"(exports, module) {
 	module.exports = "test.txt";
 } });
 
@@ -50,10 +50,8 @@ console.log(require_test(), (init_test_base64(), __toCommonJS(test_base64_export
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,16 @@
- var require_test = __commonJS({
--    "test.txt"(exports, module) {
-+    "test.txt"() {
+@@ -2,10 +2,15 @@
+     "test.txt"(exports, module) {
          module.exports = "test.txt";
      }
  });

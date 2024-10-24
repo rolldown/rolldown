@@ -8,11 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region file#foo.txt
-"foo";
+var file_foo_default = "foo";
 
 //#endregion
 //#region file#bar.txt
-"bar";
+var file_bar_default = "bar";
 
 //#endregion
 //#region entry.js

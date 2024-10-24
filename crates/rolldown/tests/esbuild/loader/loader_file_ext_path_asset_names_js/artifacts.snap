@@ -15,7 +15,7 @@ var require_image = __commonJS({ "images/image.png"() {
 
 //#endregion
 //#region uploads/file.txt
-"y";
+var file_default = "y";
 
 //#endregion
 //#region entries/entry.js

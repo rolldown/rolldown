@@ -79,8 +79,6 @@
   diff
 ## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149/diff.md)
   diff
-## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path/diff.md)
-  diff
 ## import_with_hash_parameter
   missing
 ## import_with_query_parameter
@@ -211,8 +209,6 @@
   diff
 ## [require_shim_substitution](../../../crates/rolldown/tests/esbuild/default/require_shim_substitution/diff.md)
   diff
-## [require_txt](../../../crates/rolldown/tests/esbuild/default/require_txt/diff.md)
-  diff
 ## [require_with_call_inside_try](../../../crates/rolldown/tests/esbuild/default/require_with_call_inside_try/diff.md)
   diff
 ## [require_without_call](../../../crates/rolldown/tests/esbuild/default/require_without_call/diff.md)
@@ -283,6 +279,7 @@
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
+## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
@@ -298,6 +295,7 @@
 ## [require_fs_node](../../../crates/rolldown/tests/esbuild/default/require_fs_node)
 ## [require_fs_node_minify](../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
 ## [require_property_access_common_js](../../../crates/rolldown/tests/esbuild/default/require_property_access_common_js)
+## [require_txt](../../../crates/rolldown/tests/esbuild/default/require_txt)
 ## [require_with_template](../../../crates/rolldown/tests/esbuild/default/require_with_template)
 ## [runtime_name_collision_no_bundle](../../../crates/rolldown/tests/esbuild/default/runtime_name_collision_no_bundle)
 ## [scoped_external_module_exclusion](../../../crates/rolldown/tests/esbuild/default/scoped_external_module_exclusion)

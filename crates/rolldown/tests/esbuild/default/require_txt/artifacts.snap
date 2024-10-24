@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region test.txt
-var require_test = __commonJS({ "test.txt"() {
+var require_test = __commonJS({ "test.txt"(exports, module) {
 	module.exports = "This is a test.";
 } });
 

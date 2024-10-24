@@ -8,13 +8,12 @@ use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt}
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
-use anyhow::Result;
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule,
   RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{
-  BuildDiagnostic, DiagnosableArcstr, DiagnosableResult, UnloadableDependencyContext,
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
 };
 
 use super::{task_context::TaskContext, Msg};
@@ -68,14 +67,14 @@ impl ModuleTask {
           self.ctx.tx.send(Msg::BuildErrors(self.errors)).await.expect("Send should not fail");
         }
       }
-      Err(err) => {
-        self.ctx.tx.send(Msg::Panics(err)).await.expect("Send should not fail");
+      Err(errs) => {
+        self.ctx.tx.send(Msg::BuildErrors(errs.into_vec())).await.expect("Send should not fail");
       }
     }
   }
 
   #[expect(clippy::too_many_lines)]
-  async fn run_inner(&mut self) -> Result<()> {
+  async fn run_inner(&mut self) -> BuildResult<()> {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
@@ -131,7 +130,7 @@ impl ModuleTask {
       return Err(anyhow::format_err!(
         "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
-      ));
+      ))?;
     };
 
     let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
@@ -172,13 +171,7 @@ impl ModuleTask {
       ast,
       symbols,
       raw_import_records: ecma_raw_import_records,
-    } = match ret {
-      Ok(ret) => ret,
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
+    } = ret;
 
     if !matches!(module_type, ModuleType::Css) {
       raw_import_records = ecma_raw_import_records;
@@ -194,7 +187,7 @@ impl ModuleTask {
     {
       Ok(deps) => deps,
       Err(errs) => {
-        self.errors.extend(errs);
+        self.errors.extend(errs.into_vec());
         return Ok(());
       }
     };
@@ -283,7 +276,7 @@ impl ModuleTask {
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
     module_type: &ModuleType,
-  ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
+  ) -> anyhow::Result<BuildResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(&self.ctx.options);
@@ -367,7 +360,7 @@ impl ModuleTask {
     if build_errors.is_empty() {
       Ok(Ok(ret))
     } else {
-      Ok(Err(build_errors))
+      Ok(Err(build_errors.into()))
     }
   }
 }

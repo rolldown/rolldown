@@ -16,7 +16,7 @@ use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
   ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
@@ -205,7 +205,7 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-  ) -> anyhow::Result<DiagnosableResult<ModuleLoaderOutput>> {
+  ) -> anyhow::Result<BuildResult<ModuleLoaderOutput>> {
     if self.options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
@@ -299,26 +299,12 @@ impl ModuleLoader {
         Msg::BuildErrors(e) => {
           errors.extend(e);
         }
-        // Expect cast to u32, since we are not going to have more than 2^32 tasks, or the
-        // `remaining` will overflow
-        #[allow(clippy::cast_possible_truncation)]
-        Msg::Panics(err) => {
-          // `self.remaining -1` for the panic task it self
-          self.remaining -= 1;
-          // gracefully shutdown all working thread, only receive and do not spawn
-          while self.remaining > 0 {
-            let mut task = Vec::with_capacity(self.remaining as usize);
-            let received = self.rx.recv_many(&mut task, self.remaining as usize).await;
-            self.remaining -= received as u32;
-          }
-          return Err(err);
-        }
       }
       self.remaining -= 1;
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors));
+      return Ok(Err(errors.into()));
     }
 
     let modules: IndexVec<ModuleIdx, Module> = self

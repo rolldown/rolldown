@@ -8,7 +8,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{severity, BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
@@ -43,7 +43,7 @@ pub fn parse_to_ecma_ast(
   module_type: &ModuleType,
   source: StrOrBytes,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
-) -> anyhow::Result<DiagnosableResult<ParseToEcmaAstResult>> {
+) -> BuildResult<ParseToEcmaAstResult> {
   let mut has_lazy_export = false;
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
@@ -86,7 +86,7 @@ pub fn parse_to_ecma_ast(
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks
-      return Err(anyhow::format_err!("Unknown module type: {custom_type}"));
+      return Err(anyhow::format_err!("Unknown module type: {custom_type}"))?;
     }
   };
 
@@ -101,14 +101,7 @@ pub fn parse_to_ecma_ast(
   };
 
   let source = ArcStr::from(source);
-  let parse_result = EcmaCompiler::parse(stable_id, &source, oxc_source_type);
-
-  let mut ecma_ast = match parse_result {
-    Ok(ecma_ast) => ecma_ast,
-    Err(errs) => {
-      return Ok(Err(errs));
-    }
-  };
+  let mut ecma_ast = EcmaCompiler::parse(stable_id, &source, oxc_source_type)?;
 
   ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
     cwd: &options.cwd,
@@ -127,15 +120,13 @@ pub fn parse_to_ecma_ast(
     )
     .map_or_else(
       |errors| {
-        Ok(Err(BuildDiagnostic::from_oxc_diagnostics(
-          errors,
-          &source,
-          stable_id,
-          &severity::Severity::Error,
-        )))
+        Err(
+          BuildDiagnostic::from_oxc_diagnostics(errors, &source, stable_id, &Severity::Error)
+            .into(),
+        )
       },
       |(ast, symbol_table, scope_tree, warning)| {
-        Ok(Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning }))
+        Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning })
       },
     )
 }

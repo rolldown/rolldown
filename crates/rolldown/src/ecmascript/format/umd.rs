@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
@@ -29,7 +29,7 @@ pub fn render_umd(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
-) -> DiagnosableResult<ConcatSource> {
+) -> BuildResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {
@@ -162,9 +162,9 @@ fn render_iife_export(
   externals: &[ExternalRenderImportStmt],
   has_exports: bool,
   named_exports: bool,
-) -> DiagnosableResult<String> {
+) -> BuildResult<String> {
   if ctx.options.name.as_ref().map_or(true, String::is_empty) {
-    return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()]);
+    return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
   }
   let (stmt, namespace) = generate_namespace_definition(
     ctx.options.name.as_ref().expect("should have name"),

@@ -11,7 +11,7 @@ use super::BuildEvent;
 /// - We might mark some errors as unhandleable for faster development, but we should convert them
 ///   to `BuildDiagnostic` to provide better error messages to users.
 #[derive(Debug)]
-pub struct UnhandleableError(anyhow::Error);
+pub struct UnhandleableError(pub(crate) anyhow::Error);
 
 impl BuildEvent for UnhandleableError {
   fn kind(&self) -> EventKind {

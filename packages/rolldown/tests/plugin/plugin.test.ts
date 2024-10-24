@@ -122,9 +122,7 @@ test('call transformContext error', async () => {
     })
     await build.write({})
   } catch (error: any) {
-    expect(error.message).toMatchInlineSnapshot(
-      `"Rolldown internal error: GenericFailure, RollupError: transform hook error"`,
-    )
+    expect(error.message).toMatchInlineSnapshot(`"Build failed"`)
   }
 })
 

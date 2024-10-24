@@ -2,7 +2,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use oxc::ast::VisitMut;
-use oxc::diagnostics::{OxcDiagnostic, Severity};
+use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
 use oxc::transformer::{
@@ -12,7 +12,7 @@ use oxc::transformer::{
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
-use rolldown_error::{severity, BuildDiagnostic};
+use rolldown_error::{BuildDiagnostic, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -51,7 +51,7 @@ impl PreProcessEcmaAst {
         semantic_ret.errors,
         &source,
         path,
-        &severity::Severity::Warning,
+        &Severity::Warning,
       ));
     }
 
@@ -82,7 +82,7 @@ impl PreProcessEcmaAst {
       let errors = ret
         .errors
         .into_iter()
-        .filter(|item| matches!(item.severity, Severity::Error))
+        .filter(|item| matches!(item.severity, OxcSeverity::Error))
         .collect_vec();
       if !errors.is_empty() {
         return Err(errors);

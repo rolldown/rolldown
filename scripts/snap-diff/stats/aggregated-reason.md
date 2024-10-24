@@ -319,6 +319,8 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
+## `.txt` should be treated as cjs
+- crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## dynamic import with cycle reference

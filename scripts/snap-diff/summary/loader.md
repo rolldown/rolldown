@@ -89,6 +89,8 @@
   diff
 ## [loader_json_shared_with_multiple_entries_issue413](../../../crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413/diff.md)
   diff
+## [require_custom_extension_prefer_longest](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest/diff.md)
+  diff
 ## [with_type_json_override_loader](../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader/diff.md)
   diff
 ## with_type_json_override_loader_glob
@@ -102,7 +104,6 @@
 ## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime)
 ## [require_custom_extension_base64](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64)
 ## [require_custom_extension_data_url](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url)
-## [require_custom_extension_prefer_longest](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest)
 ## [require_custom_extension_string](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_string)
 # Bypassed Cases
 ## [jsx_preserve_capital_letter_minify](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify/bypass.md)

@@ -92,18 +92,18 @@ let ns;
 	let { ...x$1 } = {};
 	_ns.x = x$1;
 })(ns || (ns = {}));
-for (const { ...for_in_const } in { abc }) {}
-for (let { ...for_in_let } in { abc }) {}
+for (const { ...for_in_const } in { abc });
+for (let { ...for_in_let } in { abc });
 for (var { ...for_in_var } in { abc });
 for (const { ...for_of_const } of [{}]);
 for (let { ...for_of_let } of [{}]) x();
 for (var { ...for_of_var } of [{}]) x();
-for (const { ...for_const } = {}; x; x = null) {}
-for (let { ...for_let } = {}; x; x = null) {}
-for (var { ...for_var } = {}; x; x = null) {}
-for ({...x} in { abc }) {}
-for ({...x} of [{}]) {}
-for ({...x} = {}; x; x = null) {}
+for (const { ...for_const } = {}; x; x = null);
+for (let { ...for_let } = {}; x; x = null);
+for (var { ...for_var } = {}; x; x = null);
+for ({...x} in { abc });
+for ({...x} of [{}]);
+for ({...x} = {}; x; x = null);
 ({...assign} = {});
 ({...x} = x);
 console.log({...x} = x);
@@ -162,14 +162,14 @@ console.log({x: {...xx}} = { x });
 -    const for_in_const = __objRest(_k, []);
 -}
 -for (let _l in {
-+}) {}
++}) ;
 +for (let {...for_in_let} in {
      abc
 -}) {
 -    let for_in_let = __objRest(_l, []);
 -}
 -for (var _m in {
-+}) {}
++}) ;
 +for (var {...for_in_var} in {
      abc
 -}) {
@@ -196,9 +196,9 @@ console.log({x: {...xx}} = { x });
 +for (const {...for_of_const} of [{}]) ;
 +for (let {...for_of_let} of [{}]) x();
 +for (var {...for_of_var} of [{}]) x();
-+for (const {...for_const} = {}; x; x = null) {}
-+for (let {...for_let} = {}; x; x = null) {}
-+for (var {...for_var} = {}; x; x = null) {}
++for (const {...for_const} = {}; x; x = null) ;
++for (let {...for_let} = {}; x; x = null) ;
++for (var {...for_var} = {}; x; x = null) ;
 +for ({...x} in {
      abc
 -}) {
@@ -213,9 +213,9 @@ console.log({x: {...xx}} = { x });
 -    obj_method(_s) {
 -        var x2 = __objRest(_s, []);
 -    }
-+}) {}
-+for ({...x} of [{}]) {}
-+for ({...x} = {}; x; x = null) {}
++}) ;
++for ({...x} of [{}]) ;
++for ({...x} = {}; x; x = null) ;
 +({...assign} = {});
 +({...x} = x);
 +console.log({...x} = x);

@@ -307,24 +307,24 @@ async function* foo() {
 	yield x;
 	yield* x;
 	await using x = await y;
-	for await (let x$1 of y) {}
-	for await (await using x of y) {}
+	for await (let x$1 of y);
+	for await (await using x of y);
 }
 foo = async function* () {
 	yield;
 	yield x;
 	yield* x;
 	await using x = await y;
-	for await (let x$1 of y) {}
-	for await (await using x of y) {}
+	for await (let x$1 of y);
+	for await (await using x of y);
 };
 foo = { async *bar() {
 	yield;
 	yield x;
 	yield* x;
 	await using x = await y;
-	for await (let x$1 of y) {}
-	for await (await using x of y) {}
+	for await (let x$1 of y);
+	for await (await using x of y);
 } };
 var Foo = class {
 	async *bar() {
@@ -332,8 +332,8 @@ var Foo = class {
 		yield x;
 		yield* x;
 		await using x = await y;
-		for await (let x$1 of y) {}
-		for await (await using x of y) {}
+		for await (let x$1 of y);
+		for await (await using x of y);
 	}
 };
 Foo = class {
@@ -342,8 +342,8 @@ Foo = class {
 		yield x;
 		yield* x;
 		await using x = await y;
-		for await (let x$1 of y) {}
-		for await (await using x of y) {}
+		for await (let x$1 of y);
+		for await (await using x of y);
 	}
 };
 
@@ -414,8 +414,8 @@ Foo = class {
 +	yield x;
 +	yield* x;
 +	await using x = await y;
-+	for await (let x$1 of y) {}
-+	for await (await using x of y) {}
++	for await (let x$1 of y);
++	for await (await using x of y);
  }
 -foo = function() {
 -  return __asyncGenerator(this, null, function* () {
@@ -474,8 +474,8 @@ Foo = class {
 +	yield x;
 +	yield* x;
 +	await using x = await y;
-+	for await (let x$1 of y) {}
-+	for await (await using x of y) {}
++	for await (let x$1 of y);
++	for await (await using x of y);
  };
 -foo = { bar() {
 -  return __asyncGenerator(this, null, function* () {
@@ -534,8 +534,8 @@ Foo = class {
 +	yield x;
 +	yield* x;
 +	await using x = await y;
-+	for await (let x$1 of y) {}
-+	for await (await using x of y) {}
++	for await (let x$1 of y);
++	for await (await using x of y);
  } };
 -class Foo {
 -  bar() {
@@ -598,8 +598,8 @@ Foo = class {
 +		yield x;
 +		yield* x;
 +		await using x = await y;
-+		for await (let x$1 of y) {}
-+		for await (await using x of y) {}
++		for await (let x$1 of y);
++		for await (await using x of y);
 +	}
 +};
  Foo = class {
@@ -661,8 +661,8 @@ Foo = class {
 +		yield x;
 +		yield* x;
 +		await using x = await y;
-+		for await (let x$1 of y) {}
-+		for await (await using x of y) {}
++		for await (let x$1 of y);
++		for await (await using x of y);
 +	}
  };
 -function bar() {

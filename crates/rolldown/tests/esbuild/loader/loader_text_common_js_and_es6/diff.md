@@ -35,7 +35,7 @@ var require_x = __commonJS({ "x.txt"(exports, module) {
 //#endregion
 //#region entry.js
 const x_txt = require_x();
-assert.deepEqual(x_txt, { default: "x" });
+assert.equal(x_txt, "x");
 assert.equal(y_default, "y");
 
 //#endregion

@@ -1,6 +1,4 @@
 // MULTIPLE ENTRY MODULES
-import res from './test.txt';
-// const res = require('./test.txt')
-console.log(`res: `, res)
+import hyperCube from './hyper-cube.js';
 
-// console.log(hyperCube);
+console.log(hyperCube(5));

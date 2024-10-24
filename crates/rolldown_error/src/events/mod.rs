@@ -26,6 +26,7 @@ pub mod mixed_export;
 pub mod parse_error;
 pub mod resolve_error;
 pub mod sourcemap_error;
+pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unresolved_import;

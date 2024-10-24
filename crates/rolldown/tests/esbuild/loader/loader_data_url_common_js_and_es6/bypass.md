@@ -1,5 +1,5 @@
 # Reason
-1. esbuild treated `.txt` as cjs, rolldown treated it as esm
+1. Different codegen order
 # Diff
 ## /out.js
 ### esbuild
@@ -27,16 +27,13 @@ var y_default = "data:text/plain;charset=utf-8,y";
 
 //#endregion
 //#region x.txt
-var x_exports = {};
-__export(x_exports, { default: () => x_default });
-var x_default;
-var init_x = __esm({ "x.txt"() {
-	x_default = "data:text/plain;charset=utf-8,x";
+var require_x = __commonJS({ "x.txt"(exports, module) {
+	module.exports = "data:text/plain;charset=utf-8,x";
 } });
 
 //#endregion
 //#region entry.js
-const x_url = (init_x(), __toCommonJS(x_exports));
+const x_url = require_x();
 console.log(x_url, y_default);
 
 //#endregion
@@ -46,24 +43,15 @@ console.log(x_url, y_default);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,13 @@
--var require_x = __commonJS({
--    "x.txt"(exports, module) {
--        module.exports = "data:text/plain;charset=utf-8,x";
+@@ -1,8 +1,8 @@
 +var y_default = "data:text/plain;charset=utf-8,y";
-+var x_exports = {};
-+__export(x_exports, {
-+    default: () => x_default
-+});
-+var x_default;
-+var init_x = __esm({
-+    "x.txt"() {
-+        x_default = "data:text/plain;charset=utf-8,x";
+ var require_x = __commonJS({
+     "x.txt"(exports, module) {
+         module.exports = "data:text/plain;charset=utf-8,x";
      }
  });
 -var y_default = "data:text/plain;charset=utf-8,y";
--var x_url = require_x();
-+var x_url = (init_x(), __toCommonJS(x_exports));
+ var x_url = require_x();
  console.log(x_url, y_default);
 
 ```

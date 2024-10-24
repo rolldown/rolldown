@@ -9,7 +9,7 @@ use oxc::{
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::DiagnosableResult;
-use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm, text_to_string_literal};
+use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
 
@@ -66,20 +66,22 @@ pub fn parse_to_ecma_ast(
     ModuleType::Base64 => {
       let source = source.try_into_bytes()?;
       let encoded = rolldown_utils::base64::to_standard_base64(source);
-      (text_to_esm(&encoded)?, OxcParseType::Js)
+      has_lazy_export = true;
+      (text_to_string_literal(&encoded)?, OxcParseType::Js)
     }
     ModuleType::Dataurl => {
       let data = source.try_into_bytes()?;
       let guessed_mime = guess_mime(path, &data)?;
       let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
-      (text_to_esm(&dataurl)?, OxcParseType::Js)
+      has_lazy_export = true;
+      (text_to_string_literal(&dataurl)?, OxcParseType::Js)
     }
     ModuleType::Binary => {
       let source = source.try_into_bytes()?;
       let encoded = rolldown_utils::base64::to_standard_base64(source);
       (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
     }
-    ModuleType::Empty => ("export {}".to_string(), OxcParseType::Js),
+    ModuleType::Empty => (String::new(), OxcParseType::Js),
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks

@@ -1,5 +1,5 @@
 # Reason
-1. `.txt` should be treated as cjs
+1. Different codegen order
 # Diff
 ## /out.js
 ### esbuild

@@ -21,7 +21,7 @@ var require_x = __commonJS({ "x.b64"(exports, module) {
 //#endregion
 //#region entry.js
 const x_b64 = require_x();
-assert.deepEqual(x_b64, { default: "eA==" });
+assert.deepEqual(x_b64, "eA==");
 assert.equal(y_default, "eQ==");
 
 //#endregion

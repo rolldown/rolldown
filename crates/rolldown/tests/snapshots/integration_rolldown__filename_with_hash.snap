@@ -2288,11 +2288,12 @@ expression: output
 
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 
-- entry-!~{000}~.js => entry-cZgSS0SR.js
+- entry-!~{000}~.js => entry-v8oCcsKu.js
 
 # tests/esbuild/loader/empty_loader_js
 
-- entry-!~{000}~.js => entry-rxZy0DAk.js
+- entry-!~{000}~.js => entry-aLyLhyTE.js
+- entry-aLyLhyTE.js.map
 
 # tests/esbuild/loader/extensionless_loader_js
 
@@ -2320,7 +2321,7 @@ expression: output
 
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
-- entry-!~{000}~.js => entry-7XY0o08g.js
+- entry-!~{000}~.js => entry-oWLA8_1A.js
 
 # tests/esbuild/loader/loader_bundle_with_import_attributes
 
@@ -2379,7 +2380,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_common_js_and_es6
 
-- entry-!~{000}~.js => entry-aX64bjhI.js
+- entry-!~{000}~.js => entry-aA6U7TTN.js
 
 # tests/esbuild/loader/loader_data_url_escape_percents
 
@@ -2530,15 +2531,15 @@ expression: output
 
 # tests/esbuild/loader/require_custom_extension_base64
 
-- entry-!~{000}~.js => entry-U7-hCe1a.js
+- entry-!~{000}~.js => entry-6W2pa4gX.js
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry-!~{000}~.js => entry-uR_SkLeG.js
+- entry-!~{000}~.js => entry-7TSzbTo2.js
 
 # tests/esbuild/loader/require_custom_extension_prefer_longest
 
-- entry-!~{000}~.js => entry-cXsPb9M5.js
+- entry-!~{000}~.js => entry-OOGjMzUZ.js
 
 # tests/esbuild/loader/require_custom_extension_string
 

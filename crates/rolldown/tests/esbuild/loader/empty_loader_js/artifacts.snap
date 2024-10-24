@@ -24,10 +24,10 @@ var named = void 0;
 //#region entry.js
 var import_b = __toESM(require_b());
 var import_c = __toESM(require_c());
-console.log(import_b, import_c.default, named);
-assert.deepEqual(import_b, {});
-assert.equal(import_c.default, undefined);
+assert.deepEqual(import_b, { default: {} });
+assert.deepEqual(import_c.default, {});
 assert.equal(named, undefined);
 
 //#endregion
+//# sourceMappingURL=entry.js.map
 ```

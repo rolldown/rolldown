@@ -303,8 +303,6 @@
 - crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446
 ## Format cjs should not appear `export`
 - crates/rolldown/tests/esbuild/importstar/import_self_common_js
-## esbuild will wrap `empty` module as a cjs module, rolldown did not
-- crates/rolldown/tests/esbuild/loader/empty_loader_js
 ## esbuild did not needs `__toESM`
 - crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision
 ## rolldown don't have `jsx.Preserve` and `jsx.Parse` option
@@ -319,8 +317,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
-## `.txt` should be treated as cjs
-- crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## dynamic import with cycle reference

@@ -25,15 +25,16 @@ impl<'link> LinkStage<'link> {
         .named_exports
         .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
       module.stmt_infos.declare_symbol_for_stmt(1.into(), default_symbol_ref);
-      module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true;
       module_idx_to_exports_kind.push((module.idx, module.exports_kind));
 
       // generate `module.exports = expr`
       if module.exports_kind == ExportsKind::CommonJs {
         // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
+        module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true;
         module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
       }
     });
+
     let ast_idx_to_exports_kind = FxHashMap::from_iter(module_idx_to_exports_kind.into_iter());
     self.ast_table.par_iter_mut().for_each(|(ecma_ast, idx)| {
       let Some(item) = ast_idx_to_exports_kind.get(idx) else {

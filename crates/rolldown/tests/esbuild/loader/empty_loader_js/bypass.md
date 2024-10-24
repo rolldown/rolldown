@@ -1,5 +1,5 @@
 # Reason
-1. esbuild will wrap `empty` module as a cjs module, rolldown did not
+1. rolldown don't have metafile, rest part are same
 # Diff
 ## entry.js.map
 ### esbuild
@@ -72,19 +72,19 @@ var named = void 0;
 //#region entry.js
 var import_b = __toESM(require_b());
 var import_c = __toESM(require_c());
-console.log(import_b, import_c.default, named);
-assert.deepEqual(import_b, {});
-assert.equal(import_c.default, undefined);
+assert.deepEqual(import_b, { default: {} });
+assert.deepEqual(import_c.default, {});
 assert.equal(named, undefined);
 
 //#endregion
+//# sourceMappingURL=entry.js.map
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	entry.js
 +++ rolldown	entry.js
-@@ -3,7 +3,9 @@
+@@ -3,7 +3,8 @@
  });
  var require_c = __commonJS({
      "c.empty"() {}
@@ -94,7 +94,6 @@ assert.equal(named, undefined);
 +var import_b = __toESM(require_b());
  var import_c = __toESM(require_c());
 -console.log(ns, import_c.default, void 0);
-+console.log(import_b, import_c.default, named);
 +console.log(import_b, import_c.default, named);
 
 ```

@@ -189,6 +189,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       .linking_info
       .wrapper_stmt_info
       .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included);
+
     // the order should be
     // 1. module namespace object declaration
     // 2. shimmed_exports
@@ -225,6 +226,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     });
     walk_mut::walk_program(self, program);
+
     if needs_wrapper {
       match self.ctx.linking_info.wrap_kind {
         WrapKind::Cjs => {
@@ -234,7 +236,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             self.canonical_name_for_runtime("__commonJSMin")
           };
+
           let old_body = program.body.take_in(self.alloc);
+
           program.body.push(self.snippet.commonjs_wrapper_stmt(
             wrap_ref_name,
             commonjs_ref_name,

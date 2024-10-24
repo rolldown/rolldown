@@ -188,6 +188,7 @@ impl<'me> AstScanner<'me> {
     }
 
     self.result.exports_kind = exports_kind;
+
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;
       let mut scanned_symbols_in_root_scope = self

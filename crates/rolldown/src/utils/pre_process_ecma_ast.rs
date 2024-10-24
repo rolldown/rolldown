@@ -2,7 +2,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use oxc::ast::VisitMut;
-use oxc::diagnostics::Severity;
+use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
 use oxc::transformer::{
@@ -12,6 +12,7 @@ use oxc::transformer::{
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rolldown_error::{BuildDiagnostic, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -34,52 +35,57 @@ impl PreProcessEcmaAst {
     &mut self,
     mut ast: EcmaAst,
     parse_type: &OxcParseType,
-    path: &Path,
+    path: &str,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
-  ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
+  ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree, Vec<BuildDiagnostic>), Vec<OxcDiagnostic>>
+  {
+    let mut warning = vec![];
+    let source = ast.source().clone();
     // Build initial semantic data and check for semantic errors.
     let semantic_ret =
       ast.program.with_mut(|WithMutFields { program, .. }| SemanticBuilder::new().build(program));
-
-    // TODO:
-    // if !semantic_ret.errors.is_empty() {
-    // return Err(anyhow::anyhow!("Semantic Error: {:#?}", semantic_ret.errors));
-    // }
+    if !semantic_ret.errors.is_empty() {
+      warning.extend(BuildDiagnostic::from_oxc_diagnostics(
+        semantic_ret.errors,
+        &source,
+        path,
+        &Severity::Warning,
+      ));
+    }
 
     self.stats = semantic_ret.semantic.stats();
     let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
 
     // Transform TypeScript and jsx.
     if !matches!(parse_type, OxcParseType::Js) {
-      let ret =
-        ast.program.with_mut(move |fields| {
-          let mut transformer_options = TransformOptions::default();
-          match parse_type {
-            OxcParseType::Js => unreachable!("Should not reach here"),
-            OxcParseType::Jsx | OxcParseType::Tsx => {
-              transformer_options.react.jsx_plugin = true;
-            }
-            OxcParseType::Ts => {}
+      let ret = ast.program.with_mut(move |fields| {
+        let mut transformer_options = TransformOptions::default();
+        match parse_type {
+          OxcParseType::Js => unreachable!("Should not reach here"),
+          OxcParseType::Jsx | OxcParseType::Tsx => {
+            transformer_options.react.jsx_plugin = true;
           }
-          if let Some(jsx) = &bundle_options.jsx {
-            transformer_options.react = jsx.clone();
-          }
+          OxcParseType::Ts => {}
+        }
+        if let Some(jsx) = &bundle_options.jsx {
+          transformer_options.react = jsx.clone();
+        }
 
-          Transformer::new(fields.allocator, path, transformer_options)
-            .build_with_symbols_and_scopes(symbols, scopes, fields.program)
-        });
+        Transformer::new(fields.allocator, Path::new(path), transformer_options)
+          .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+      });
 
       // TODO: emit diagnostic, aiming to pass more tests,
       // we ignore warning for now
       let errors = ret
         .errors
         .into_iter()
-        .filter(|item| matches!(item.severity, Severity::Error))
+        .filter(|item| matches!(item.severity, OxcSeverity::Error))
         .collect_vec();
       if !errors.is_empty() {
-        return Err(anyhow::anyhow!("Transform failed, got {:#?}", errors));
+        return Err(errors);
       }
 
       symbols = ret.symbols;
@@ -87,7 +93,8 @@ impl PreProcessEcmaAst {
       self.ast_changed = true;
     }
 
-    ast.program.with_mut(|WithMutFields { allocator, program, .. }| -> anyhow::Result<()> {
+    ast.program.with_mut(|fields| -> anyhow::Result<(), Vec<OxcDiagnostic>> {
+      let WithMutFields { allocator, program, .. } = fields;
       // Use built-in define plugin.
       if let Some(replace_global_define_config) = replace_global_define_config {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
@@ -127,7 +134,6 @@ impl PreProcessEcmaAst {
     ast.program.with_mut(|fields| {
       EnsureSpanUniqueness::new().visit_program(fields.program);
     });
-
     // NOTE: Recreate semantic data because AST is changed in the transformations above.
     (symbols, scopes) = ast.program.with_dependent(|_owner, dep| {
       SemanticBuilder::new()
@@ -140,6 +146,6 @@ impl PreProcessEcmaAst {
         .into_symbol_table_and_scope_tree()
     });
 
-    Ok((ast, symbols, scopes))
+    Ok((ast, symbols, scopes, warning))
   }
 }

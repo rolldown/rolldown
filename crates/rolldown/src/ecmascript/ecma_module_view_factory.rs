@@ -75,7 +75,10 @@ pub async fn create_ecma_view<'any>(
     ctx.replace_global_define_config.as_ref(),
   )?;
 
-  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export } = parse_result;
+  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export, warning } =
+    parse_result;
+
+  ctx.warnings.extend(warning);
 
   let (scope, scan_result, namespace_object_ref) = scan_ast(
     ctx.module_index,

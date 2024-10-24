@@ -15,11 +15,11 @@ pub use crate::{
   events::invalid_option::InvalidOptionTypes,
   events::unloadable_dependency::UnloadableDependencyContext,
   events::DiagnosableArcstr,
-  type_aliases::{BuildResult, UnaryBuildResult},
+  type_aliases::{BuildResult, SingleBuildResult},
   types::diagnostic_options::DiagnosticOptions,
 };
 
 fn _usage_should_able_to_auto_convert_outside_errors() -> BuildResult<()> {
-  let _: usize = 0u32.try_into().map_error_to_unhandleable()?;
+  let _: usize = 0u32.try_into().map_err_to_unhandleable()?;
   Ok(())
 }

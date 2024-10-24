@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
 
 use crate::css::css_view::CssView;
 use crate::{
@@ -7,6 +6,7 @@ use crate::{
   ModuleInfo, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
+use std::ops::{Deref, DerefMut};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashSet;
@@ -29,12 +29,18 @@ pub struct NormalModule {
 
 impl NormalModule {
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    self
-      .ecma_view
-      .import_records
-      .iter()
-      .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
-      .map(|rec| rec.resolved_module)
+    if self.has_star_export() {
+      itertools::Either::Left(
+        self
+          .ecma_view
+          .import_records
+          .iter()
+          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+          .map(|rec| rec.resolved_module),
+      )
+    } else {
+      itertools::Either::Right(std::iter::empty())
+    }
   }
 
   pub fn has_star_export(&self) -> bool {

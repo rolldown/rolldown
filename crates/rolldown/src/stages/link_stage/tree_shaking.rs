@@ -47,8 +47,9 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   if ctx.tree_shaking && !forced_no_treeshake {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
-      let bail_eval =
-        module.has_eval && !stmt_info.declared_symbols.is_empty() && stmt_info_id.index() != 0;
+      let bail_eval = module.meta.has_eval()
+        && !stmt_info.declared_symbols.is_empty()
+        && stmt_info_id.index() != 0;
       if stmt_info.side_effect || bail_eval {
         include_statement(ctx, module, stmt_info_id);
       }
@@ -70,7 +71,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       Module::External(_) => {}
     }
   });
-  if module.has_eval && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
+  if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
       include_symbol(ctx, *symbol);
     });
@@ -169,7 +170,8 @@ impl LinkStage<'_> {
     });
 
     self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
-      module.is_included = is_module_included_vec[module.idx];
+      let idx = module.idx;
+      module.meta.set_included(is_module_included_vec[idx]);
       is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });

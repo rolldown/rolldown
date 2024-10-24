@@ -35,7 +35,6 @@ pub struct ScanResult {
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
-  pub star_exports: Vec<ImportRecordIdx>,
   pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
@@ -49,6 +48,7 @@ pub struct ScanResult {
   /// We needs to record the info in ast scanner since after that the ast maybe touched, etc
   /// (naming deconflict)
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
+  pub has_star_exports: bool,
 }
 
 pub struct AstScanner<'me> {
@@ -107,7 +107,6 @@ impl<'me> AstScanner<'me> {
         stmt_infos
       },
       import_records: IndexVec::new(),
-      star_exports: Vec::new(),
       default_export_ref,
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
@@ -117,6 +116,7 @@ impl<'me> AstScanner<'me> {
       ast_usage: EcmaModuleAstUsage::empty(),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+      has_star_exports: false,
     };
 
     Self {
@@ -412,7 +412,8 @@ impl<'me> AstScanner<'me> {
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
     } else {
       // export * from '...'
-      self.result.star_exports.push(id);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_START);
+      self.result.has_star_exports = true;
     }
     self.result.imports.insert(decl.span, id);
   }

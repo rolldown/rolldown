@@ -53,7 +53,7 @@ pub use crate::{
   },
   ecmascript::{
     ecma_asset_meta::EcmaAssetMeta,
-    ecma_view::{EcmaModuleAstUsage, EcmaView},
+    ecma_view::{EcmaModuleAstUsage, EcmaView, EcmaViewMeta},
     module_idx::ModuleIdx,
   },
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},

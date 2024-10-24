@@ -2678,6 +2678,7 @@ dependencies = [
  "bitflags 2.6.0",
  "dashmap 6.1.0",
  "glob-match",
+ "itertools 0.13.0",
  "lightningcss",
  "oxc",
  "rolldown_fs",

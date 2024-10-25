@@ -141,6 +141,8 @@ impl Watcher {
         }
       }
     }
+    // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
+    std::mem::drop(inner);
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleEnd.into()).await?;
 
     self.running.store(false, Ordering::Relaxed);
@@ -158,6 +160,8 @@ impl Watcher {
     for path in self.watch_files.iter() {
       inner.unwatch(Path::new(path.as_str()))?;
     }
+    // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::run`
+    std::mem::drop(inner);
     // emit close event
     self.emitter.emit(WatcherEvent::Close, WatcherEventData::default()).await?;
     // call close watcher hook

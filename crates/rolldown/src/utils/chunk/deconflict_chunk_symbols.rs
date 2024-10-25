@@ -1,14 +1,17 @@
 use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
-use rolldown_common::{Chunk, ChunkKind, OutputFormat};
+use arcstr::ArcStr;
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, OutputFormat};
 use rolldown_rstr::ToRstr;
+use rustc_hash::FxHashMap;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
   chunk: &mut Chunk,
   link_output: &LinkStageOutput,
   format: &OutputFormat,
+  index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
   let mut renamer =
     Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), format);
@@ -45,9 +48,14 @@ pub fn deconflict_chunk_symbols(
     renamer.add_symbol_in_root_scope(item.import_ref);
   });
 
-  chunk.require_binding_names_for_other_chunks.values_mut().for_each(|name_hint| {
-    *name_hint = renamer.create_conflictless_name(&format!("require_{name_hint}"));
-  });
+  chunk.require_binding_names_for_other_chunks = chunk
+    .imports_from_other_chunks
+    .iter()
+    .map(|(id, _)| {
+      (*id, renamer.create_conflictless_name(&format!("require_{}", index_chunk_id_to_name[id])))
+    })
+    .collect();
+
   match chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &link_output.metas[module];

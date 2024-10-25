@@ -3866,6 +3866,12 @@ expression: output
 - dynamic-!~{004}~.js => dynamic-NChw5g6Q.js
 - share-!~{002}~.js => share-cLWtdHlT.js
 
+# tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
+
+- main-!~{002}~.js => main-bFG4lmCL.js
+- foo-!~{003}~.js => foo-18TjqVsl.js
+- foo-!~{000}~.js => foo-9HeppbY4.js
+
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
 - entry_js-!~{000}~.js => entry_js-2jgRP-V5.js

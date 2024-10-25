@@ -19,7 +19,7 @@ use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 
-use super::types::binding_js_or_regex::BindingStringOrRegex;
+use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
@@ -176,27 +176,9 @@ impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingTransformPluginConfig) -> Result<Self, Self::Error> {
-    let normalized_include = if let Some(include) = value.include {
-      let mut ret = Vec::with_capacity(include.len());
-      for item in include {
-        ret.push(StringOrRegex::new(item.value, &item.flag)?);
-      }
-      ret
-    } else {
-      vec![]
-    };
-    let normalized_exclude = if let Some(exclude) = value.exclude {
-      let mut ret = Vec::with_capacity(exclude.len());
-      for item in exclude {
-        ret.push(StringOrRegex::new(item.value, &item.flag)?);
-      }
-      ret
-    } else {
-      vec![]
-    };
     Ok(TransformPlugin {
-      include: normalized_include,
-      exclude: normalized_exclude,
+      include: value.include.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
+      exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
       jsx_inject: value.jsx_inject,
       targets: value.targets,
     })

@@ -135,6 +135,10 @@ build target="native" mode="debug":
 _build-native-debug:
     just build native debug
 
+# `just build && just run` to run the local build
+run:
+    ./packages/rolldown/bin/cli.js
+
 # BENCHING
 
 bench-rust:

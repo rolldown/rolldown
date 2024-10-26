@@ -3,10 +3,7 @@ import {
   TransformPluginConfig,
 } from '../options/normalized-ecma-transform-plugin-config'
 
-import {
-  AliasPluginConfig,
-  normalizeAliasPluginConfig,
-} from '../options/normalized-alias-plugin-config'
+import { AliasPluginConfig } from '../options/normalized-alias-plugin-config'
 import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
@@ -72,8 +69,7 @@ export class LoadFallbackPlugin extends BuiltinPlugin {
 
 export class AliasPlugin extends BuiltinPlugin {
   constructor(config?: AliasPluginConfig) {
-    let normalizedAliasPluginConfig = normalizeAliasPluginConfig(config)
-    super(BindingBuiltinPluginName.AliasPlugin, normalizedAliasPluginConfig)
+    super(BindingBuiltinPluginName.AliasPlugin, config)
   }
 }
 

@@ -6,7 +6,7 @@ use crate::options::plugin::types::binding_js_or_regex::{
   bindingify_string_or_regex_array, BindingStringOrRegex,
 };
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingWatchOption {

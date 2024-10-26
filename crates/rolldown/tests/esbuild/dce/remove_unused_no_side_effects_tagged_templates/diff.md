@@ -23,6 +23,7 @@ foo`remove${null}`;
 foo`remove${123}`;
 use(foo`keep`);
 foo`remove this part ${keep} and this ${alsoKeep}`;
+`remove this part ${keep} and this ${alsoKeep}`;
 
 //#endregion
 ```
@@ -31,7 +32,7 @@ foo`remove this part ${keep} and this ${alsoKeep}`;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,6 @@
+@@ -1,4 +1,7 @@
  function foo() {}
 +foo`remove`;
 +foo`remove${null}`;
@@ -40,5 +41,6 @@ foo`remove this part ${keep} and this ${alsoKeep}`;
 -(keep, alsoKeep);
 -`${keep}${alsoKeep}`;
 +foo`remove this part ${keep} and this ${alsoKeep}`;
++`remove this part ${keep} and this ${alsoKeep}`;
 
 ```

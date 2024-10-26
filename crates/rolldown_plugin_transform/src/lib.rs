@@ -69,7 +69,7 @@ impl Plugin for TransformPlugin {
       };
       match args.module_type {
         ModuleType::Jsx | ModuleType::Tsx => {
-          transformer_options.react.jsx_plugin = true;
+          transformer_options.jsx.jsx_plugin = true;
         }
         ModuleType::Ts => {}
         _ => {

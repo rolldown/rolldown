@@ -81,6 +81,7 @@ for ({...x} of [{}]);
 for ({...x} = {}; x; x = null);
 ({...assign} = {});
 ({...x} = x);
+for ({...x} = x; 0;);
 console.log({...x} = x);
 console.log({x,...xx} = { x });
 console.log({x: {...xx}} = { x });
@@ -92,7 +93,7 @@ console.log({x: {...xx}} = { x });
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,47 +1,34 @@
+@@ -1,45 +1,33 @@
 -const {...local_const} = {};
 -let {...local_let} = {};
 +var {...local_const} = {};
@@ -148,10 +149,8 @@ console.log({x: {...xx}} = { x });
 -    obj_method({...x2}) {}
 -});
  ({...x} = x);
--for ({...x} = x; 0; ) ;
+ for ({...x} = x; 0; ) ;
  console.log({...x} = x);
  console.log({x, ...xx} = {
-     x
- });
 
 ```

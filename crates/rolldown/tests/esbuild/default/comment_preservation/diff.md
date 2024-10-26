@@ -446,13 +446,13 @@ console.log(() => {
 }, () => {
 	throw null;
 }, () => {
-	return null + 1;
+	return 1;
 }, () => {
-	throw null + 1;
+	throw 1;
 }, () => {
-	return null + 1;
+	return 1;
 }, () => {
-	throw null + 1;
+	throw 1;
 });
 console.log(
 	/*a*/
@@ -808,13 +808,13 @@ switch (a) {}
 +}, () => {
 +	throw null;
 +}, () => {
-+	return null + 1;
++	return 1;
 +}, () => {
-+	throw null + 1;
++	throw 1;
 +}, () => {
-+	return null + 1;
++	return 1;
 +}, () => {
-+	throw null + 1;
++	throw 1;
 +});
  console.log(
 -  () => {

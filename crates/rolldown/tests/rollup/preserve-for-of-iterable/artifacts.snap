@@ -28,7 +28,7 @@ const zeroToFive = { [Symbol.iterator]() {
 //#endregion
 //#region loops.js
 const iterate = (iterable) => {
-	for (const value of iterable) {}
+	for (const value of iterable);
 };
 
 //#endregion

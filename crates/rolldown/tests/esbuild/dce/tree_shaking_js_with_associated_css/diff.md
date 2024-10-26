@@ -51,6 +51,7 @@ menu {
 ### rolldown
 ```js
 button { color: red }
+menu { color: red }
 
 ```
 ### diff
@@ -58,7 +59,7 @@ button { color: red }
 ===================================================================
 --- esbuild	/out/test.css
 +++ rolldown	test.css
-@@ -1,9 +1,1 @@
+@@ -1,9 +1,2 @@
 -/* project/node_modules/pkg/button.css */
 -button {
 -  color: red;
@@ -70,5 +71,6 @@ button { color: red }
 -}
 \ No newline at end of file
 +button { color: red }
++menu { color: red }
 
 ```

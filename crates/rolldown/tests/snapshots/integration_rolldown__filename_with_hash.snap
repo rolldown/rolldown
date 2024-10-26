@@ -568,7 +568,7 @@ expression: output
 
 # tests/esbuild/default/arguments_special_case_no_bundle
 
-- entry-!~{000}~.js => entry-0OAyIKaH.js
+- entry-!~{000}~.js => entry-fbsIIq1U.js
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -1262,13 +1262,13 @@ expression: output
 
 # tests/esbuild/default/mangle_quoted_props
 
-- keep-!~{000}~.js => keep-94eNLT1U.js
-- mangle-!~{001}~.js => mangle-lfOrDsM-.js
+- keep-!~{000}~.js => keep-PGQSPSKC.js
+- mangle-!~{001}~.js => mangle-D8OK8SnX.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
-- keep-!~{000}~.js => keep-94eNLT1U.js
-- mangle-!~{001}~.js => mangle-lfOrDsM-.js
+- keep-!~{000}~.js => keep-PGQSPSKC.js
+- mangle-!~{001}~.js => mangle-D8OK8SnX.js
 
 # tests/esbuild/default/many_entry_points
 
@@ -1804,7 +1804,7 @@ expression: output
 
 # tests/esbuild/default/warnings_inside_node_modules
 
-- entry-!~{000}~.js => entry-7V-2RdXq.js
+- entry-!~{000}~.js => entry-9q9aIAEq.js
 
 # tests/esbuild/default/with_statement_tainting_no_bundle
 
@@ -2611,11 +2611,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-jsOJBBzo.js
+- entry-!~{000}~.js => entry-_4beNHzz.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-jsOJBBzo.js
+- entry-!~{000}~.js => entry-_4beNHzz.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2906,11 +2906,11 @@ expression: output
 
 # tests/esbuild/lower/ts_lower_object_rest2017_no_bundle
 
-- entry-!~{000}~.js => entry-tcci23dv.js
+- entry-!~{000}~.js => entry-dPj09aCV.js
 
 # tests/esbuild/lower/ts_lower_object_rest2018_no_bundle
 
-- entry-!~{000}~.js => entry-tcci23dv.js
+- entry-!~{000}~.js => entry-dPj09aCV.js
 
 # tests/esbuild/lower/ts_lower_private_field_and_method_avoid_name_collision2015
 
@@ -3395,7 +3395,7 @@ expression: output
 # tests/esbuild/ts/enum_rules_from_type_script_5_0
 
 - supported-!~{000}~.js => supported-ESM2IFWu.js
-- not-supported-!~{001}~.js => not-supported-L5KuvdAU.js
+- not-supported-!~{001}~.js => not-supported-zSQ88y8v.js
 
 # tests/esbuild/ts/export_type_issue379
 
@@ -4941,7 +4941,7 @@ expression: output
 
 # tests/rollup/preserve-for-of-iterable
 
-- main-!~{000}~.js => main-9ss-XBzb.js
+- main-!~{000}~.js => main-8zE9V3Zd.js
 
 # tests/rollup/same-binding
 

@@ -264,7 +264,7 @@ var TemplateExpressions = function(TemplateExpressions$1) {
 	TemplateExpressions$1[TemplateExpressions$1["NULL"] = "null"] = "NULL";
 	TemplateExpressions$1[TemplateExpressions$1["TRUE"] = "true"] = "TRUE";
 	TemplateExpressions$1[TemplateExpressions$1["FALSE"] = "false"] = "FALSE";
-	TemplateExpressions$1[TemplateExpressions$1["BIGINT"] = "123n"] = "BIGINT";
+	TemplateExpressions$1[TemplateExpressions$1["BIGINT"] = "123"] = "BIGINT";
 	return TemplateExpressions$1;
 }(TemplateExpressions || {});
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);
@@ -304,7 +304,7 @@ console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressi
 +    TemplateExpressions$1[TemplateExpressions$1["NULL"] = "null"] = "NULL";
 +    TemplateExpressions$1[TemplateExpressions$1["TRUE"] = "true"] = "TRUE";
 +    TemplateExpressions$1[TemplateExpressions$1["FALSE"] = "false"] = "FALSE";
-+    TemplateExpressions$1[TemplateExpressions$1["BIGINT"] = "123n"] = "BIGINT";
++    TemplateExpressions$1[TemplateExpressions$1["BIGINT"] = "123"] = "BIGINT";
 +    return TemplateExpressions$1;
 +})(TemplateExpressions || ({}));
 +console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);

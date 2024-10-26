@@ -65,12 +65,12 @@ impl PreProcessEcmaAst {
         match parse_type {
           OxcParseType::Js => unreachable!("Should not reach here"),
           OxcParseType::Jsx | OxcParseType::Tsx => {
-            transformer_options.react.jsx_plugin = true;
+            transformer_options.jsx.jsx_plugin = true;
           }
           OxcParseType::Ts => {}
         }
         if let Some(jsx) = &bundle_options.jsx {
-          transformer_options.react = jsx.clone();
+          transformer_options.jsx = jsx.clone();
         }
 
         Transformer::new(fields.allocator, Path::new(path), transformer_options)

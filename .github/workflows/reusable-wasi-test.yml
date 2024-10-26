@@ -39,11 +39,10 @@ jobs:
         run: just build wasi release
 
       - name: Build Basic Example
-        run: pnpm --filter=@example/basic build
+        run: pnpm --filter '@example/*' run --sequential build
         if: ${{ inputs.os != 'windows-latest' }}
         env:
           NAPI_RS_FORCE_WASI: 1
-          RD_LOG: trace
 
       - name: Node Test
         run: pnpm run --recursive --filter=!rollup-tests test

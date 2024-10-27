@@ -146,8 +146,8 @@ importers:
         specifier: ^4.18.0
         version: 4.24.0
       tinybench:
-        specifier: ^2.8.0
-        version: 2.9.0
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@types/babel__core':
         specifier: 7.20.5
@@ -5691,6 +5691,10 @@ packages:
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
+
+  tinybench@3.0.0:
+    resolution: {integrity: sha512-931sGm66Zjp7c4o/DePaq8AKlCdq/ZldpS1b8O7r3SxSuxJpqoqeUprTOsW2CBhrw54U3mTmcS97LsBqPXEQLw==}
+    engines: {node: '>=18.0.0'}
 
   tinyexec@0.3.0:
     resolution: {integrity: sha512-tVGE0mVJPGb0chKhqmsoosjsS+qUnJVGJpZgsHYQcGoPlG3B51R3PouqTgEGH2Dc9jjFyOqOpix6ZHNMXp1FZg==}
@@ -11657,6 +11661,8 @@ snapshots:
       readable-stream: 3.6.2
 
   tinybench@2.9.0: {}
+
+  tinybench@3.0.0: {}
 
   tinyexec@0.3.0: {}
 

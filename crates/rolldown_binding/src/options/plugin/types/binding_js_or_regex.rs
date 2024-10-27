@@ -64,6 +64,17 @@ impl<'de> Deserialize<'de> for BindingStringOrRegex {
   }
 }
 
+impl TryFrom<BindingStringOrRegex> for HybridRegex {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
+    match value.0 {
+      Either::A(value) => HybridRegex::new(&value),
+      Either::B(value) => HybridRegex::with_flags(&value.source, &value.flags),
+    }
+  }
+}
+
 impl TryFrom<BindingStringOrRegex> for StringOrRegex {
   type Error = anyhow::Error;
 

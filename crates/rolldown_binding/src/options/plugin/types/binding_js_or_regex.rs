@@ -49,12 +49,6 @@ impl FromNapiValue for JsRegExp {
 #[derive(Debug, Clone)]
 pub struct BindingStringOrRegex(pub Either<String, JsRegExp>);
 
-impl Default for BindingStringOrRegex {
-  fn default() -> Self {
-    Self(Either::A(String::default()))
-  }
-}
-
 impl FromNapiValue for BindingStringOrRegex {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
     Ok(Self(Either::from_napi_value(env, napi_val)?))

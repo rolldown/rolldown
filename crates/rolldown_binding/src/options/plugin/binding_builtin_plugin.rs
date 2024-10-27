@@ -123,7 +123,7 @@ pub struct BindingAliasPluginConfig {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingAliasPluginAlias {
   pub find: BindingStringOrRegex,

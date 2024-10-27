@@ -5,7 +5,7 @@ use serde::Deserialize;
 use super::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Default, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingGeneralHookFilter {
   pub include: Option<Vec<BindingStringOrRegex>>,

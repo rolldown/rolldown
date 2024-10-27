@@ -15,7 +15,6 @@ use rolldown::{
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
-use rolldown_utils::js_regex::HybridRegex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -190,13 +189,7 @@ pub fn normalize_binding_options(
           .into_iter()
           .map(|item| MatchGroup {
             name: item.name,
-            test: item.test.map(|inner| {
-              (match inner {
-                Either::A(value) => value.try_into(),
-                Either::B(value) => HybridRegex::new(&value),
-              })
-              .expect("Invalid regex pass to test")
-            }),
+            test: item.test.map(|inner| inner.try_into().expect("Invalid regex pass to test")),
             priority: item.priority,
             min_size: item.min_size,
             min_share_count: item.min_share_count,

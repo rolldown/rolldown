@@ -14,7 +14,6 @@ export function group(name, collectBenches, options) {
   collectBenches(bench)
   return {
     async run() {
-      await bench.warmup()
       await bench.run()
 
       if (!bench.results) {

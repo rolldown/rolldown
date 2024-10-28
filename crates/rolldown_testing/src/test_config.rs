@@ -33,17 +33,12 @@ pub fn read_test_config(config_path: &std::path::Path) -> TestConfig {
   let config_json: serde_json::Value =
     serde_json::from_str(&config_str).expect("Failed to parse test config file");
 
-  let result = COMPILED_SCHEMA.validate(&config_json);
-
-  if let Err(errors) = result {
-    let mut msg = String::new();
-    for error in errors {
-      msg.push_str(&format!("Validation error: {} in {}\n", error, error.instance_path));
-    }
-    panic!("Failed to validate test config {config_path:?}. Got {msg}");
-  };
-
-  drop(result);
+  let errors = COMPILED_SCHEMA.iter_errors(&config_json);
+  let mut msg = String::new();
+  for error in errors {
+    msg.push_str(&format!("Validation error: {} in {}\n", error, error.instance_path));
+  }
+  assert!(msg.is_empty(), "Failed to validate test config {config_path:?}. Got {msg}");
 
   serde_json::from_value(config_json).expect("Failed to parse test config file")
 }

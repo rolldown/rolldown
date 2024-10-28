@@ -50,9 +50,9 @@ async function foo(bar) {
 	await bar;
 	return [this, arguments];
 }
-class Foo {
+var Foo = class {
 	async foo() {}
-}
+};
 var entry_default = [
 	foo,
 	Foo,
@@ -88,18 +88,20 @@ export { entry_default as default };
 +    await bar;
 +    return [this, arguments];
  }
- class Foo {
+-class Foo {
 -    foo() {
 -        return __async(this, null, function* () {});
 -    }
-+    async foo() {}
- }
+-}
 -export default [foo, Foo, function () {
 -    return __async(this, null, function* () {});
 -}, () => __async(void 0, null, function* () {}), {
 -    foo() {
 -        return __async(this, null, function* () {});
 -    }
++var Foo = class {
++    async foo() {}
++};
 +var entry_default = [foo, Foo, async function () {}, async () => {}, {
 +    async foo() {}
  }, class {

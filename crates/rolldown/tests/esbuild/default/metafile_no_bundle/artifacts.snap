@@ -6,43 +6,73 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./dynamic" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './dynamic' in entry.js
+   ╭─[entry.js:8:9]
+   │
+ 8 │     import('./dynamic'),
+   │            ─────┬─────  
+   │                 ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./file" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './file' in entry.js
+   ╭─[entry.js:2:15]
+   │
+ 2 │ import b from './file'
+   │               ────┬───  
+   │                   ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./file" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './file2' in entry.js
+   ╭─[entry.js:7:10]
+   │
+ 7 │     require('./file2'),
+   │             ────┬────  
+   │                 ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./file2" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg' in entry.js
+   ╭─[entry.js:1:15]
+   │
+ 1 │ import a from 'pkg'
+   │               ──┬──  
+   │                 ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg2' in entry.js
+   ╭─[entry.js:6:10]
+   │
+ 6 │     require('pkg2'),
+   │             ───┬──  
+   │                ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve ./file in entry.css
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg2" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve pkg in entry.css
 
 ```
 # Assets

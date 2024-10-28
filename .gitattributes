@@ -11,3 +11,4 @@ crates/rolldown/tests/**/*.tsx -linguist-detectable
 # https://github.com/rolldown/rolldown/issues/1354
 * text eol=lf
 *.png -text
+*.md text eol=lf

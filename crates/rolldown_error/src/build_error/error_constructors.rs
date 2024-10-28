@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
+use super::severity::Severity;
 use super::BuildDiagnostic;
 use arcstr::ArcStr;
+use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
@@ -11,8 +13,11 @@ use crate::events::import_is_undefined::ImportIsUndefined;
 use crate::events::invalid_option::{InvalidOption, InvalidOptionTypes};
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
+use crate::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
 use crate::events::resolve_error::DiagnosableResolveError;
+use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
+use crate::events::DiagnosableArcstr;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -65,13 +70,14 @@ impl BuildDiagnostic {
     Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
   }
 
-  pub fn diagnosable_resolve_error(
+  pub fn resolve_error(
     source: ArcStr,
     importer_id: ArcStr,
-    importee_span: Span,
+    importee: DiagnosableArcstr,
     reason: String,
+    title: Option<&'static str>,
   ) -> Self {
-    Self::new_inner(DiagnosableResolveError { source, importer_id, importee_span, reason })
+    Self::new_inner(DiagnosableResolveError { source, importer_id, importee, reason, title })
   }
 
   pub fn unloadable_dependency(
@@ -130,6 +136,10 @@ impl BuildDiagnostic {
     Self::new_inner(MissingNameOptionForIifeExport {})
   }
 
+  pub fn missing_name_option_for_umd_export() -> Self {
+    Self::new_inner(MissingNameOptionForUmdExport {})
+  }
+
   pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {
     Self::new_inner(IllegalIdentifierAsName { identifier_name })
   }
@@ -178,6 +188,33 @@ impl BuildDiagnostic {
     Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
   }
 
+  pub fn from_oxc_diagnostics<T>(
+    diagnostics: T,
+    source: &ArcStr,
+    path: &str,
+    severity: &Severity,
+  ) -> Vec<Self>
+  where
+    T: IntoIterator<Item = OxcDiagnostic>,
+  {
+    diagnostics
+      .into_iter()
+      .map(|mut error| {
+        let diagnostic = BuildDiagnostic::oxc_parse_error(
+          source.clone(),
+          path.to_string(),
+          error.help.take().unwrap_or_default().into(),
+          error.message.to_string(),
+          error.labels.take().unwrap_or_default(),
+        );
+        if matches!(severity, Severity::Warning) {
+          diagnostic.with_severity_warning()
+        } else {
+          diagnostic
+        }
+      })
+      .collect::<Vec<_>>()
+  }
   pub fn forbid_const_assign(
     filename: String,
     source: ArcStr,
@@ -207,5 +244,9 @@ impl BuildDiagnostic {
     name: ArcStr,
   ) -> Self {
     Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+  }
+
+  pub fn unhandleable_error(err: anyhow::Error) -> Self {
+    Self::new_inner(UnhandleableError(err))
   }
 }

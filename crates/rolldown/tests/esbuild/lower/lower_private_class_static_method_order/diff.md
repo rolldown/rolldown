@@ -31,19 +31,19 @@ console.log(FooThis.bar === 123);
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class Foo {
 	static bar = Foo.#foo();
 	static #foo() {
 		return 123;
 	}
-}
+};
 assert(Foo.bar === 123);
-class FooThis {
+var FooThis = class {
 	static bar = this.#foo();
 	static #foo() {
 		return 123;
 	}
-}
+};
 assert(FooThis.bar === 123);
 
 //#endregion
@@ -59,7 +59,12 @@ assert(FooThis.bar === 123);
 -_Foo_static = new WeakSet();
 -foo_fn = function () {
 -    return 123;
--};
++var Foo = class Foo {
++    static bar = Foo.#foo();
++    static #foo() {
++        return 123;
++    }
+ };
 -__privateAdd(_Foo, _Foo_static);
 -__publicField(_Foo, "bar", __privateMethod(_a = _Foo, _Foo_static, foo_fn).call(_a));
 -let Foo = _Foo;
@@ -68,24 +73,17 @@ assert(FooThis.bar === 123);
 -_FooThis_static = new WeakSet();
 -foo_fn2 = function () {
 -    return 123;
--};
--__privateAdd(_FooThis, _FooThis_static);
--__publicField(_FooThis, "bar", __privateMethod(_b = _FooThis, _FooThis_static, foo_fn2).call(_b));
--let FooThis = _FooThis;
--console.log(FooThis.bar === 123);
-+class Foo {
-+    static bar = Foo.#foo();
-+    static #foo() {
-+        return 123;
-+    }
-+}
 +assert(Foo.bar === 123);
-+class FooThis {
++var FooThis = class {
 +    static bar = this.#foo();
 +    static #foo() {
 +        return 123;
 +    }
-+}
+ };
+-__privateAdd(_FooThis, _FooThis_static);
+-__publicField(_FooThis, "bar", __privateMethod(_b = _FooThis, _FooThis_static, foo_fn2).call(_b));
+-let FooThis = _FooThis;
+-console.log(FooThis.bar === 123);
 +assert(FooThis.bar === 123);
 
 ```

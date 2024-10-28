@@ -8,12 +8,13 @@ use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt}
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
-use anyhow::Result;
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule,
   RawImportRecord, ResolvedId, StrOrBytes,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnloadableDependencyContext};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
+};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -66,14 +67,14 @@ impl ModuleTask {
           self.ctx.tx.send(Msg::BuildErrors(self.errors)).await.expect("Send should not fail");
         }
       }
-      Err(err) => {
-        self.ctx.tx.send(Msg::Panics(err)).await.expect("Send should not fail");
+      Err(errs) => {
+        self.ctx.tx.send(Msg::BuildErrors(errs.into_vec())).await.expect("Send should not fail");
       }
     }
   }
 
   #[expect(clippy::too_many_lines)]
-  async fn run_inner(&mut self) -> Result<()> {
+  async fn run_inner(&mut self) -> BuildResult<()> {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
@@ -129,7 +130,7 @@ impl ModuleTask {
       return Err(anyhow::format_err!(
         "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
-      ));
+      ))?;
     };
 
     let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
@@ -170,25 +171,23 @@ impl ModuleTask {
       ast,
       symbols,
       raw_import_records: ecma_raw_import_records,
-    } = match ret {
-      Ok(ret) => ret,
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
+    } = ret;
 
     if !matches!(module_type, ModuleType::Css) {
       raw_import_records = ecma_raw_import_records;
     }
-
     let resolved_deps = match self
-      .resolve_dependencies(&raw_import_records, ecma_view.source.clone(), &mut warnings)
+      .resolve_dependencies(
+        &raw_import_records,
+        ecma_view.source.clone(),
+        &mut warnings,
+        &module_type,
+      )
       .await?
     {
       Ok(deps) => deps,
       Err(errs) => {
-        self.errors.extend(errs);
+        self.errors.extend(errs.into_vec());
         return Ok(());
       }
     };
@@ -276,7 +275,8 @@ impl ModuleTask {
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
-  ) -> anyhow::Result<DiagnosableResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
+    module_type: &ModuleType,
+  ) -> anyhow::Result<BuildResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(&self.ctx.options);
@@ -293,7 +293,9 @@ impl ModuleTask {
     });
 
     let resolved_ids = join_all(jobs).await;
-
+    // FIXME: if the import records came from css view, but source from ecma view,
+    // the span will not matched.
+    let is_css_module = matches!(module_type, ModuleType::Css);
     let mut ret = IndexVec::with_capacity(dependencies.len());
     let mut build_errors = vec![];
     for resolved_id in resolved_ids {
@@ -303,43 +305,62 @@ impl ModuleTask {
         Ok(info) => {
           ret.push(info);
         }
-        Err(e) => match &e {
-          ResolveError::NotFound(..) => {
-            warnings.push(
-              BuildDiagnostic::unresolved_import_treated_as_external(
-                specifier.to_string(),
-                self.resolved_id.id.to_string(),
-                Some(e),
-              )
-              .with_severity_warning(),
-            );
-            ret.push(ResolvedId {
-              id: specifier.to_string().into(),
-              ignored: false,
-              module_def_format: ModuleDefFormat::Unknown,
-              is_external: true,
-              package_json: None,
-              side_effects: None,
-            });
-          }
-          e => {
-            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
-            let dep = &dependencies[idx];
-            build_errors.push(BuildDiagnostic::diagnosable_resolve_error(
-              source.clone(),
-              self.resolved_id.id.clone(),
-              Span::new(dep.module_request_start, dep.module_request_end()),
-              reason,
-            ));
-          }
-        },
+        Err(e) => {
+          let dep = &dependencies[idx];
+          match &e {
+            ResolveError::NotFound(..) => {
+              warnings.push(
+                BuildDiagnostic::resolve_error(
+                  source.clone(),
+                  self.resolved_id.id.clone(),
+                  if dep.is_unspanned() || is_css_module {
+                    DiagnosableArcstr::String(specifier.as_str().into())
+                  } else {
+                    DiagnosableArcstr::Span(Span::new(
+                      dep.module_request_start,
+                      dep.module_request_end(),
+                    ))
+                  },
+                  "Module not found, treating it as an external dependency".into(),
+                  Some("UNRESOLVED_IMPORT"),
+                )
+                .with_severity_warning(),
+              );
+              ret.push(ResolvedId {
+                id: specifier.to_string().into(),
+                ignored: false,
+                module_def_format: ModuleDefFormat::Unknown,
+                is_external: true,
+                package_json: None,
+                side_effects: None,
+              });
+            }
+            e => {
+              let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
+              build_errors.push(BuildDiagnostic::resolve_error(
+                source.clone(),
+                self.resolved_id.id.clone(),
+                if dep.is_unspanned() || is_css_module {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(Span::new(
+                    dep.module_request_start,
+                    dep.module_request_end(),
+                  ))
+                },
+                reason,
+                None,
+              ));
+            }
+          };
+        }
       }
     }
 
     if build_errors.is_empty() {
       Ok(Ok(ret))
     } else {
-      Ok(Err(build_errors))
+      Ok(Err(build_errors.into()))
     }
   }
 }

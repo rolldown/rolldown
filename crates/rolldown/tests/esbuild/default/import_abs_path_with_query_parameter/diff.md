@@ -1,5 +1,5 @@
 # Reason
-1. limitation of test infra, the test may hard to pass in CI
+1. query and hashban in specifier
 # Diff
 ## /out/entry.js
 ### esbuild

@@ -80,9 +80,7 @@ export { x };
 let x;
 (function(_x) {
 	let y$1;
-	(function(_y) {
-		0;
-	})(y$1 || (y$1 = _x.y || (_x.y = {})));
+	(function(_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;

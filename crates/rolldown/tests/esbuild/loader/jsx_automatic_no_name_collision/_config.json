@@ -6,7 +6,10 @@
         "import": "entry.jsx"
       }
     ],
-    "format": "cjs"
+    "format": "cjs",
+    "jsx": {
+      "runtime": "automatic"
+    }
   },
   "expectExecuted": false
 }

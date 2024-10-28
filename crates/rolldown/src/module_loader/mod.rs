@@ -12,5 +12,4 @@ pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeModuleTaskResult),
   BuildErrors(Vec<BuildDiagnostic>),
-  Panics(anyhow::Error),
 }

@@ -81,24 +81,24 @@ let f2 = class {
 ```js
 
 //#region entry.js
-class A {
+var A = class {
 	static foo;
-}
-class B {
+};
+var B = class {
 	static name;
-}
-class C {
+};
+var C = class {
 	static name() {}
-}
-class D {
+};
+var D = class {
 	static get name() {}
-}
-class E {
+};
+var E = class {
 	static set name(x) {}
-}
-class F {
+};
+var F = class {
 	static ["name"] = 0;
-}
+};
 let a = class a$1 {
 	static foo;
 };
@@ -143,24 +143,44 @@ let f2 = class {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,5 @@
- class A {
+@@ -1,63 +1,54 @@
+-class A {
 -    static {
 -        __name(this, "A");
 -    }
++var A = class {
      static foo;
- }
- class B {
+-}
+-class B {
++};
++var B = class {
      static name;
-@@ -18,46 +15,40 @@
- }
- class F {
+-}
+-class C {
++};
++var C = class {
+     static name() {}
+-}
+-class D {
++};
++var D = class {
+     static get name() {}
+-}
+-class E {
++};
++var E = class {
+     static set name(x) {}
+-}
+-class F {
++};
++var F = class {
      static ["name"] = 0;
- }
+-}
 -let a = class a3 {
 -    static {
 -        __name(this, "a");
 -    }
++};
 +var a = class a$1 {
      static foo;
  };

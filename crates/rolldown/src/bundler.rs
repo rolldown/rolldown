@@ -11,8 +11,9 @@ use crate::{
 };
 use anyhow::Result;
 
+use arcstr::ArcStr;
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
@@ -87,7 +88,7 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self) -> Result<DiagnosableResult<ScanStageOutput>> {
+  pub async fn scan(&mut self) -> Result<BuildResult<ScanStageOutput>> {
     self.plugin_driver.build_start().await?;
 
     let mut error_for_build_end_hook = None;
@@ -137,7 +138,7 @@ impl Bundler {
     Ok(Ok(scan_stage_output))
   }
 
-  async fn try_build(&mut self) -> Result<DiagnosableResult<LinkStageOutput>> {
+  async fn try_build(&mut self) -> Result<BuildResult<LinkStageOutput>> {
     let build_info = match self.scan().await? {
       Ok(scan_stage_output) => scan_stage_output,
       Err(errors) => return Ok(Err(errors)),
@@ -156,7 +157,12 @@ impl Bundler {
     let mut link_stage_output = match self.try_build().await? {
       Ok(v) => v,
       Err(errors) => {
-        return Ok(BundleOutput { assets: vec![], warnings: vec![], errors, watch_files: vec![] })
+        return Ok(BundleOutput {
+          assets: vec![],
+          warnings: vec![],
+          errors: errors.into_vec(),
+          watch_files: vec![],
+        })
       }
     };
 
@@ -188,12 +194,16 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
-    output.watch_files = link_stage_output
-      .module_table
-      .modules
-      .iter()
-      .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
-      .collect();
+    output.watch_files = {
+      let mut files = link_stage_output
+        .module_table
+        .modules
+        .iter()
+        .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
+        .collect::<Vec<ArcStr>>();
+      files.extend(self.plugin_driver.watch_files.iter().map(|f| f.clone()));
+      files
+    };
 
     Ok(output)
   }

@@ -121,75 +121,75 @@ export {
 ```js
 
 //#region foo1.js
-class foo1_default extends x {
+var foo1_default = class extends x {
 	static foo1() {
 		return async () => super.foo("foo1");
 	}
-}
+};
 
 //#endregion
 //#region foo2.js
-class foo2_default extends x {
+var foo2_default = class extends x {
 	static foo2() {
 		return async () => () => super.foo("foo2");
 	}
-}
+};
 
 //#endregion
 //#region foo3.js
-class foo3_default extends x {
+var foo3_default = class extends x {
 	static foo3() {
 		return () => async () => super.foo("foo3");
 	}
-}
+};
 
 //#endregion
 //#region foo4.js
-class foo4_default extends x {
+var foo4_default = class extends x {
 	static foo4() {
 		return async () => async () => super.foo("foo4");
 	}
-}
+};
 
 //#endregion
 //#region bar1.js
-class bar1_default extends x {
+var bar1_default = class extends x {
 	static bar1 = async () => super.foo("bar1");
-}
+};
 
 //#endregion
 //#region bar2.js
-class bar2_default extends x {
+var bar2_default = class extends x {
 	static bar2 = async () => () => super.foo("bar2");
-}
+};
 
 //#endregion
 //#region bar3.js
-class bar3_default extends x {
+var bar3_default = class extends x {
 	static bar3 = () => async () => super.foo("bar3");
-}
+};
 
 //#endregion
 //#region bar4.js
-class bar4_default extends x {
+var bar4_default = class extends x {
 	static bar4 = async () => async () => super.foo("bar4");
-}
+};
 
 //#endregion
 //#region baz1.js
-class baz1_default extends x {
+var baz1_default = class extends x {
 	static async baz1() {
 		return () => super.foo("baz1");
 	}
-}
+};
 
 //#endregion
 //#region baz2.js
-class baz2_default extends x {
+var baz2_default = class extends x {
 	static async baz2() {
 		return () => () => super.foo("baz2");
 	}
-}
+};
 
 //#endregion
 //#region outer.js
@@ -210,37 +210,34 @@ export { bar1_default as bar1, bar2_default as bar2, bar3_default as bar3, bar4_
 +++ rolldown	entry.js
 @@ -1,77 +1,49 @@
 -var foo1_default = class _foo1_default extends x {
-+class foo1_default extends x {
++var foo1_default = class extends x {
      static foo1() {
 -        return () => __async(this, null, function* () {
 -            return __superGet(_foo1_default, this, "foo").call(this, "foo1");
 -        });
 +        return async () => super.foo("foo1");
      }
--};
+ };
 -var foo2_default = class _foo2_default extends x {
-+}
-+class foo2_default extends x {
++var foo2_default = class extends x {
      static foo2() {
 -        return () => __async(this, null, function* () {
 -            return () => __superGet(_foo2_default, this, "foo").call(this, "foo2");
 -        });
 +        return async () => () => super.foo("foo2");
      }
--};
+ };
 -var foo3_default = class _foo3_default extends x {
-+}
-+class foo3_default extends x {
++var foo3_default = class extends x {
      static foo3() {
 -        return () => () => __async(this, null, function* () {
 -            return __superGet(_foo3_default, this, "foo").call(this, "foo3");
 -        });
 +        return () => async () => super.foo("foo3");
      }
--};
+ };
 -var foo4_default = class _foo4_default extends x {
-+}
-+class foo4_default extends x {
++var foo4_default = class extends x {
      static foo4() {
 -        return () => __async(this, null, function* () {
 -            return () => __async(this, null, function* () {
@@ -249,7 +246,7 @@ export { bar1_default as bar1, bar2_default as bar2, bar3_default as bar3, bar4_
 -        });
 +        return async () => async () => super.foo("foo4");
      }
--};
+ };
 -var _bar1_default = class _bar1_default extends x {};
 -__publicField(_bar1_default, "bar1", () => __async(_bar1_default, null, function* () {
 -    return __superGet(_bar1_default, _bar1_default, "foo").call(this, "bar1");
@@ -277,35 +274,33 @@ export { bar1_default as bar1, bar2_default as bar2, bar3_default as bar3, bar4_
 -        return __async(this, null, function* () {
 -            return () => __superGet(_baz1_default, this, "foo").call(this, "baz1");
 -        });
-+}
-+class bar1_default extends x {
++var bar1_default = class extends x {
 +    static bar1 = async () => super.foo("bar1");
-+}
-+class bar2_default extends x {
++};
++var bar2_default = class extends x {
 +    static bar2 = async () => () => super.foo("bar2");
-+}
-+class bar3_default extends x {
++};
++var bar3_default = class extends x {
 +    static bar3 = () => async () => super.foo("bar3");
-+}
-+class bar4_default extends x {
++};
++var bar4_default = class extends x {
 +    static bar4 = async () => async () => super.foo("bar4");
-+}
-+class baz1_default extends x {
++};
++var baz1_default = class extends x {
 +    static async baz1() {
 +        return () => super.foo("baz1");
      }
--};
+ };
 -var baz2_default = class _baz2_default extends x {
 -    static baz2() {
 -        return __async(this, null, function* () {
 -            return () => () => __superGet(_baz2_default, this, "foo").call(this, "baz2");
 -        });
-+}
-+class baz2_default extends x {
++var baz2_default = class extends x {
 +    static async baz2() {
 +        return () => () => super.foo("baz2");
      }
--};
+ };
 -var outer_default = (function () {
 -    return __async(this, null, function* () {
 -        const _y = class _y extends z {};
@@ -315,7 +310,6 @@ export { bar1_default as bar1, bar2_default as bar2, bar3_default as bar3, bar4_
 -        let y = _y;
 -        yield y.foo()();
 -    });
-+}
 +var outer_default = (async function () {
 +    class y extends z {
 +        static foo = async () => super.foo();

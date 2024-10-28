@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	#foo = 123;
 	bar = this.#foo;
-}
+};
 assert.equal(new Foo().bar, 123);
 
 //#endregion

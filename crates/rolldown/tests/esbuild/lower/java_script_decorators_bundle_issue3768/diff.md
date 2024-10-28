@@ -60,9 +60,9 @@ var Foo = _Foo;
 ```js
 
 //#region base-instance-field.js
-class Foo {
+var Foo = class Foo {
 	@dec foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -78,16 +78,15 @@ class Foo {
 -    constructor() {
 -        (__publicField(this, "foo", __runInitializers(_init, 8, this, _Foo)), __runInitializers(_init, 11, this));
 -    }
--};
++
++//#region base-instance-field.js
++var Foo = class Foo {
++	@dec foo = Foo;
+ };
 -_init = __decoratorStart(null);
 -__decorateElement(_init, 5, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
-+//#region base-instance-field.js
-+class Foo {
-+	@dec foo = Foo;
-+}
 +
 +//#endregion
 \ No newline at end of file
@@ -116,11 +115,11 @@ var Foo = _Foo;
 ```js
 
 //#region base-instance-method.js
-class Foo {
+var Foo = class Foo {
 	@dec foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -139,18 +138,17 @@ class Foo {
 -    foo() {
 -        return _Foo;
 -    }
--};
++
++//#region base-instance-method.js
++var Foo = class Foo {
++	@dec foo() {
++		return Foo;
++	}
+ };
 -_init = __decoratorStart(null);
 -__decorateElement(_init, 1, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
-+//#region base-instance-method.js
-+class Foo {
-+	@dec foo() {
-+		return Foo;
-+	}
-+}
 +
 +//#endregion
 \ No newline at end of file
@@ -210,9 +208,9 @@ var Foo = _Foo;
 ```js
 
 //#region base-static-field.js
-class Foo {
+var Foo = class Foo {
 	@dec static foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -232,9 +230,9 @@ class Foo {
 -var Foo = _Foo;
 +
 +//#region base-static-field.js
-+class Foo {
++var Foo = class Foo {
 +	@dec static foo = Foo;
-+}
++};
 +
 +//#endregion
 \ No newline at end of file
@@ -261,11 +259,11 @@ var Foo = _Foo;
 ```js
 
 //#region base-static-method.js
-class Foo {
+var Foo = class Foo {
 	@dec static foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -281,19 +279,18 @@ class Foo {
 -    static foo() {
 -        return _Foo;
 -    }
--};
++
++//#region base-static-method.js
++var Foo = class Foo {
++	@dec static foo() {
++		return Foo;
++	}
+ };
 -_init = __decoratorStart(null);
 -__decorateElement(_init, 9, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -__runInitializers(_init, 3, _Foo);
 -var Foo = _Foo;
-+
-+//#region base-static-method.js
-+class Foo {
-+	@dec static foo() {
-+		return Foo;
-+	}
-+}
 +
 +//#endregion
 \ No newline at end of file
@@ -360,9 +357,9 @@ var Foo = _Foo;
 ```js
 
 //#region derived-instance-field.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -378,16 +375,15 @@ class Foo extends Bar {
 -        super(...arguments);
 -        (__publicField(this, "foo", __runInitializers(_init, 8, this, _Foo)), __runInitializers(_init, 11, this));
 -    }
--};
++
++//#region derived-instance-field.js
++var Foo = class Foo extends Bar {
++	@dec foo = Foo;
+ };
 -_init = __decoratorStart(_a);
 -__decorateElement(_init, 5, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
-+//#region derived-instance-field.js
-+class Foo extends Bar {
-+	@dec foo = Foo;
-+}
 +
 +//#endregion
 \ No newline at end of file
@@ -416,11 +412,11 @@ var Foo = _Foo;
 ```js
 
 //#region derived-instance-method.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -439,18 +435,17 @@ class Foo extends Bar {
 -    foo() {
 -        return _Foo;
 -    }
--};
++
++//#region derived-instance-method.js
++var Foo = class Foo extends Bar {
++	@dec foo() {
++		return Foo;
++	}
+ };
 -_init = __decoratorStart(_a);
 -__decorateElement(_init, 1, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
-+//#region derived-instance-method.js
-+class Foo extends Bar {
-+	@dec foo() {
-+		return Foo;
-+	}
-+}
 +
 +//#endregion
 \ No newline at end of file
@@ -507,9 +502,9 @@ var Foo = _Foo;
 ```js
 
 //#region derived-static-field.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec static foo = Foo;
-}
+};
 
 //#endregion
 ```
@@ -528,9 +523,9 @@ class Foo extends Bar {
 -var Foo = _Foo;
 +
 +//#region derived-static-field.js
-+class Foo extends Bar {
++var Foo = class Foo extends Bar {
 +	@dec static foo = Foo;
-+}
++};
 +
 +//#endregion
 \ No newline at end of file
@@ -556,11 +551,11 @@ var Foo = _Foo;
 ```js
 
 //#region derived-static-method.js
-class Foo extends Bar {
+var Foo = class Foo extends Bar {
 	@dec static foo() {
 		return Foo;
 	}
-}
+};
 
 //#endregion
 ```
@@ -575,19 +570,18 @@ class Foo extends Bar {
 -    static foo() {
 -        return _Foo;
 -    }
--};
++
++//#region derived-static-method.js
++var Foo = class Foo extends Bar {
++	@dec static foo() {
++		return Foo;
++	}
+ };
 -_init = __decoratorStart(_a);
 -__decorateElement(_init, 9, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -__runInitializers(_init, 3, _Foo);
 -var Foo = _Foo;
-+
-+//#region derived-static-method.js
-+class Foo extends Bar {
-+	@dec static foo() {
-+		return Foo;
-+	}
-+}
 +
 +//#endregion
 \ No newline at end of file

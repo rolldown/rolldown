@@ -16,11 +16,11 @@ var shouldUsePercent_2_default = "data:text/plain;charset=utf-8,%0A%0A%0A%0A";
 
 //#endregion
 //#region shouldUseBase64_1.txt
-var shouldUseBase64_1_default = "data:text/plain;base64,CgoKCgo=";
+var shouldUseBase64_1_default = "data:text/plain;charset=utf-8;base64,CgoKCgo=";
 
 //#endregion
 //#region shouldUseBase64_2.txt
-var shouldUseBase64_2_default = "data:text/plain;base64,CgoKCgoK";
+var shouldUseBase64_2_default = "data:text/plain;charset=utf-8;base64,CgoKCgoK";
 
 //#endregion
 //#region entry.js

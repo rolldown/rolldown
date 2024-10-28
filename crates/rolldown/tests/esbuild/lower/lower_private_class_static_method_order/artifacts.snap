@@ -9,19 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class Foo {
 	static bar = Foo.#foo();
 	static #foo() {
 		return 123;
 	}
-}
+};
 assert(Foo.bar === 123);
-class FooThis {
+var FooThis = class {
 	static bar = this.#foo();
 	static #foo() {
 		return 123;
 	}
-}
+};
 assert(FooThis.bar === 123);
 
 //#endregion

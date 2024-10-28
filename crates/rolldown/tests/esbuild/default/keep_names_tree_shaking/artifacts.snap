@@ -12,7 +12,7 @@ function fnStmtKeep() {}
 x = fnStmtKeep;
 let fnExprKeep = function keep() {};
 x = fnExprKeep;
-class clsStmtKeep {}
+var clsStmtKeep = class {};
 new clsStmtKeep();
 let clsExprKeep = class keep {};
 new clsExprKeep();

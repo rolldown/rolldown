@@ -1,3 +1,5 @@
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -24,22 +26,22 @@ var Bar = class {
 ```js
 
 //#region define-false/index.ts
-class Foo {
+var Foo = class {
 	a;
 	[(() => null, c)];
 	static A;
 	static [(() => null, C)];
-}
+};
 (() => new Foo())();
 
 //#endregion
 //#region define-true/index.ts
-class Bar {
+var Bar = class {
 	a;
 	[(() => null, c)];
 	static A;
 	static [(() => null, C)];
-}
+};
 (() => new Bar())();
 
 //#endregion
@@ -52,27 +54,25 @@ class Bar {
 @@ -1,13 +1,14 @@
 -(() => null, c, () => null, C);
 -var Foo = class {};
-+class Foo {
++var Foo = class {
 +    a;
 +    [(() => null, c)];
 +    static A;
 +    static [(() => null, C)];
-+}
++};
  (() => new Foo())();
 -var _a;
--var Bar = class {
+ var Bar = class {
 -    constructor() {
 -        __publicField(this, "a");
 -        __publicField(this, _a);
 -    }
-+class Bar {
 +    a;
 +    [(() => null, c)];
      static A;
 -    static [(_a = (() => null, c), () => null, C)];
--};
 +    static [(() => null, C)];
-+}
+ };
  (() => new Bar())();
 
 ```

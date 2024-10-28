@@ -128,7 +128,7 @@ function testStmts() {
 		h,
 		i
 	];
-	var a, b, f, g, h, i;
+	var a, b, c, d, e, f, g, h, i;
 }
 testReturn();
 testThrow();
@@ -216,7 +216,7 @@ testStmts();
 -    if (x) var f;
 -    if (!x) var g;
 -    var h, i;
-+    var a, b, f, g, h, i;
++    var a, b, c, d, e, f, g, h, i;
  }
  testReturn();
  testThrow();

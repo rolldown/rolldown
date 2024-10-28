@@ -15,7 +15,6 @@ use rolldown::{
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
-use rolldown_utils::js_regex::HybridRegex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -164,6 +163,7 @@ pub fn normalize_binding_options(
       "cjs" => OutputFormat::Cjs,
       "app" => OutputFormat::App,
       "iife" => OutputFormat::Iife,
+      "umd" => OutputFormat::Umd,
       _ => panic!("Invalid format: {format_str}"),
     }),
     globals: output_options.globals,
@@ -190,9 +190,7 @@ pub fn normalize_binding_options(
           .into_iter()
           .map(|item| MatchGroup {
             name: item.name,
-            test: item
-              .test
-              .map(|inner| HybridRegex::new(&inner).expect("Invalid regex pass to test")),
+            test: item.test.map(|inner| inner.try_into().expect("Invalid regex pass to test")),
             priority: item.priority,
             min_size: item.min_size,
             min_share_count: item.min_share_count,
@@ -203,6 +201,7 @@ pub fn normalize_binding_options(
     checks: None,
     profiler_names: input_options.profiler_names,
     jsx: input_options.jsx.map(Into::into),
+    watch: input_options.watch.map(TryInto::try_into).transpose()?,
   };
 
   #[cfg(not(target_family = "wasm"))]

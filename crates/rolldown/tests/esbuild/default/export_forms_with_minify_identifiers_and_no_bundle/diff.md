@@ -30,9 +30,9 @@ var varName = 234;
 let letName = 234;
 const constName = 234;
 function Func2() {}
-class Class2 {}
+var Class2 = class {};
 function Func() {}
-class Class {}
+var Class = class {};
 
 //#endregion
 export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
@@ -60,9 +60,9 @@ export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_d
 +var letName = 234;
 +var constName = 234;
 +function Func2() {}
-+class Class2 {}
++var Class2 = class {};
 +function Func() {}
-+class Class {}
++var Class = class {};
 +export {Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName};
 
 ```
@@ -125,7 +125,7 @@ export default class {
 ```js
 
 //#region d.js
-class d_default {}
+var d_default = class {};
 
 //#endregion
 export { d_default as default };
@@ -137,7 +137,7 @@ export { d_default as default };
 +++ rolldown	d.js
 @@ -1,1 +1,2 @@
 -export default class {}
-+class d_default {}
++var d_default = class {};
 +export {d_default as default};
 
 ```
@@ -151,7 +151,7 @@ export default class o {
 ```js
 
 //#region e.js
-class Foo {}
+var Foo = class {};
 
 //#endregion
 export { Foo as default };
@@ -163,7 +163,7 @@ export { Foo as default };
 +++ rolldown	e.js
 @@ -1,1 +1,2 @@
 -export default class o {}
-+class Foo {}
++var Foo = class {};
 +export {Foo as default};
 
 ```

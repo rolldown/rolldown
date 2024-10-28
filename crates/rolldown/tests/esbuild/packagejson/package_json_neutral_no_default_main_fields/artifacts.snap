@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "demo-pkg" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'demo-pkg' in src/entry.js
+   ╭─[src/entry.js:1:16]
+   │
+ 1 │ import fn from 'demo-pkg'
+   │                ─────┬────  
+   │                     ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

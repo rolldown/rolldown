@@ -1,3 +1,5 @@
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -21,12 +23,12 @@ new Foo();
 ```js
 
 //#region entry.ts
-class Foo {
+var Foo = class {
 	[q];
 	[r] = s;
 	@dec [x];
 	@dec [y] = z;
-}
+};
 new Foo();
 
 //#endregion
@@ -38,20 +40,22 @@ new Foo();
 +++ rolldown	entry.js
 @@ -1,10 +1,11 @@
 -var _a, _b;
-+
-+//#region entry.ts
- class Foo {
+-class Foo {
 -    [q];
 -    [r] = s;
 -    [_b = x];
 -    [_a = y] = z;
+-}
+-__decorateClass([dec], Foo.prototype, _b, 2);
+-__decorateClass([dec], Foo.prototype, _a, 2);
++
++//#region entry.ts
++var Foo = class {
 +	[q];
 +	[r] = s;
 +	@dec [x];
 +	@dec [y] = z;
- }
--__decorateClass([dec], Foo.prototype, _b, 2);
--__decorateClass([dec], Foo.prototype, _a, 2);
++};
  new Foo();
 +
 +//#endregion

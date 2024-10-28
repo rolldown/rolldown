@@ -42,4 +42,4 @@ jobs:
       - name: Check if esbuild tests diff has changed
         run: |
           just ued
-          git diff --exit-code
+          node scripts/snap-diff/check.mjs

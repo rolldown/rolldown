@@ -171,9 +171,7 @@ export var x;
 let x;
 (function(_x) {
 	let y$1;
-	(function(_y) {
-		0;
-	})(y$1 || (y$1 = _x.y || (_x.y = {})));
+	(function(_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -187,18 +185,17 @@ export { x };
 ===================================================================
 --- esbuild	/out/namespace.js
 +++ rolldown	namespace.js
-@@ -1,10 +1,11 @@
+@@ -1,10 +1,9 @@
 -export var x;
 -(x2 => {
 -    let y;
 -    (y2 => {
+-        0;
+-    })(y = x2.y || (x2.y = {}));
 +var x;
 +(function (_x) {
 +    let y$1;
-+    (function (_y) {
-         0;
--    })(y = x2.y || (x2.y = {}));
-+    })(y$1 || (y$1 = _x.y || (_x.y = {})));
++    (function (_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;

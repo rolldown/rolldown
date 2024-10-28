@@ -14,7 +14,7 @@ function foo(x = this) {
 const objFoo = { foo(x = this) {
 	console.log(this);
 } };
-class Foo {
+var Foo = class {
 	x = this;
 	static y = this.z;
 	foo(x = this) {
@@ -23,7 +23,7 @@ class Foo {
 	static bar(x = this) {
 		console.log(this);
 	}
-}
+};
 new Foo(foo(objFoo));
 if (nested) {
 	function bar(x = this) {

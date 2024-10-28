@@ -2,7 +2,7 @@ use crate::types::generator::{GenerateContext, GenerateOutput, Generator};
 
 use anyhow::Result;
 use rolldown_common::{InstantiatedChunk, InstantiationKind};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::BuildResult;
 
 pub struct CssGenerator;
 
@@ -10,7 +10,7 @@ impl Generator for CssGenerator {
   #[allow(clippy::too_many_lines)]
   async fn instantiate_chunk<'a>(
     ctx: &mut GenerateContext<'a>,
-  ) -> Result<DiagnosableResult<GenerateOutput>> {
+  ) -> Result<BuildResult<GenerateOutput>> {
     let mut ordered_css_modules = ctx
       .chunk
       .modules

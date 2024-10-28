@@ -110,67 +110,67 @@ export {
 ```js
 
 //#region foo1.js
-class foo1_default extends x {
+var foo1_default = class extends x {
 	#foo() {
 		super.foo();
 	}
-}
+};
 
 //#endregion
 //#region foo2.js
-class foo2_default extends x {
+var foo2_default = class extends x {
 	#foo() {
 		super.foo++;
 	}
-}
+};
 
 //#endregion
 //#region foo3.js
-class foo3_default extends x {
+var foo3_default = class extends x {
 	static #foo() {
 		super.foo();
 	}
-}
+};
 
 //#endregion
 //#region foo4.js
-class foo4_default extends x {
+var foo4_default = class extends x {
 	static #foo() {
 		super.foo++;
 	}
-}
+};
 
 //#endregion
 //#region foo5.js
-class foo5_default extends x {
+var foo5_default = class extends x {
 	#foo = () => {
 		super.foo();
 	};
-}
+};
 
 //#endregion
 //#region foo6.js
-class foo6_default extends x {
+var foo6_default = class extends x {
 	#foo = () => {
 		super.foo++;
 	};
-}
+};
 
 //#endregion
 //#region foo7.js
-class foo7_default extends x {
+var foo7_default = class extends x {
 	static #foo = () => {
 		super.foo();
 	};
-}
+};
 
 //#endregion
 //#region foo8.js
-class foo8_default extends x {
+var foo8_default = class extends x {
 	static #foo = () => {
 		super.foo++;
 	};
-}
+};
 
 //#endregion
 export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_default as foo4, foo5_default as foo5, foo6_default as foo6, foo7_default as foo7, foo8_default as foo8 };
@@ -186,31 +186,38 @@ export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_
 -    constructor() {
 -        super(...arguments);
 -        __privateAdd(this, _default_instances);
-+class foo1_default extends x {
++var foo1_default = class extends x {
 +    #foo() {
 +        super.foo();
      }
--};
+ };
 -_default_instances = new WeakSet();
 -foo_fn = function () {
 -    __superGet(_foo1_default.prototype, this, "foo").call(this);
--};
++var foo2_default = class extends x {
++    #foo() {
++        super.foo++;
++    }
+ };
 -var foo1_default = _foo1_default;
 -var _default_instances2, foo_fn2;
 -var _foo2_default = class _foo2_default extends x {
 -    constructor() {
 -        super(...arguments);
 -        __privateAdd(this, _default_instances2);
-+}
-+class foo2_default extends x {
-+    #foo() {
-+        super.foo++;
++var foo3_default = class extends x {
++    static #foo() {
++        super.foo();
      }
--};
+ };
 -_default_instances2 = new WeakSet();
 -foo_fn2 = function () {
 -    __superWrapper(_foo2_default.prototype, this, "foo")._++;
--};
++var foo4_default = class extends x {
++    static #foo() {
++        super.foo++;
++    }
+ };
 -var foo2_default = _foo2_default;
 -var _default_static, foo_fn3;
 -var _foo3_default = class _foo3_default extends x {};
@@ -229,32 +236,30 @@ export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_
 -__privateAdd(_foo4_default, _default_static2);
 -var foo4_default = _foo4_default;
 -var _foo;
--var foo5_default = class extends x {
+ var foo5_default = class extends x {
 -    constructor() {
 -        super(...arguments);
 -        __privateAdd(this, _foo, () => {
 -            super.foo();
 -        });
-+}
-+class foo3_default extends x {
-+    static #foo() {
+-    }
++    #foo = () => {
 +        super.foo();
-     }
--};
++    };
+ };
 -_foo = new WeakMap();
 -var _foo2;
--var foo6_default = class extends x {
+ var foo6_default = class extends x {
 -    constructor() {
 -        super(...arguments);
 -        __privateAdd(this, _foo2, () => {
 -            super.foo++;
 -        });
-+}
-+class foo4_default extends x {
-+    static #foo() {
+-    }
++    #foo = () => {
 +        super.foo++;
-     }
--};
++    };
+ };
 -_foo2 = new WeakMap();
 -var _foo3;
 -var _foo7_default = class _foo7_default extends x {};
@@ -270,27 +275,16 @@ export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_
 -    __superWrapper(_foo8_default, _foo8_default, "foo")._++;
 -});
 -var foo8_default = _foo8_default;
-+}
-+class foo5_default extends x {
-+    #foo = () => {
-+        super.foo();
-+    };
-+}
-+class foo6_default extends x {
-+    #foo = () => {
-+        super.foo++;
-+    };
-+}
-+class foo7_default extends x {
++var foo7_default = class extends x {
 +    static #foo = () => {
 +        super.foo();
 +    };
-+}
-+class foo8_default extends x {
++};
++var foo8_default = class extends x {
 +    static #foo = () => {
 +        super.foo++;
 +    };
-+}
++};
  export {foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_default as foo4, foo5_default as foo5, foo6_default as foo6, foo7_default as foo7, foo8_default as foo8};
 
 ```

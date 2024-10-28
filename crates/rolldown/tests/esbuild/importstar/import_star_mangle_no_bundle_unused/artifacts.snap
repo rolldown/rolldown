@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './foo' in entry.js
+   ╭─[entry.js:1:21]
+   │
+ 1 │ import * as ns from './foo'
+   │                     ───┬───  
+   │                        ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

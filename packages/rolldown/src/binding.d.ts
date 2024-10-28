@@ -1,6 +1,8 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
+export type BindingStringOrRegex = string | RegExp
+
 export declare class BindingLog {
   code: string
   message: string
@@ -51,6 +53,7 @@ export declare class BindingPluginContext {
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string> | null
+  addWatchFile(file: string): void
 }
 
 export declare class BindingTransformPluginContext {
@@ -235,6 +238,7 @@ export interface BindingInputOptions {
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
   jsx?: JsxOptions
+  watch?: BindingWatchOption
 }
 
 export interface BindingJsonPluginConfig {
@@ -265,7 +269,7 @@ export interface BindingManifestPluginConfig {
 
 export interface BindingMatchGroup {
   name: string
-  test?: string
+  test?: BindingStringOrRegex
   priority?: number
   minSize?: number
   minShareCount?: number
@@ -273,6 +277,11 @@ export interface BindingMatchGroup {
 
 export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
+}
+
+export interface BindingNotifyOption {
+  pollInterval?: number
+  compareContents?: boolean
 }
 
 export interface BindingOutputOptions {
@@ -287,7 +296,7 @@ export interface BindingOutputOptions {
   extend?: boolean
   externalLiveBindings?: boolean
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'es' | 'cjs' | 'iife'
+  format?: 'es' | 'cjs' | 'iife' | 'umd'
   globals?: Record<string, string>
   inlineDynamicImports?: boolean
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
@@ -401,20 +410,6 @@ export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
 
-/**
- * For String, value is the string content, flag is the `None`
- * For Regex, value is the regular expression, flag is the `Some()`.
- * Make sure put a `Some("")` in flag even there is no flag in regexp.
- */
-export interface BindingStringOrRegex {
-  value: string
-  /**
-   * There is a more compact way to represent this, `Option<u8>` with bitflags, but it will be hard
-   * to use(in js side), since construct a `JsRegex` is not used frequently. Optimize it when it is needed.
-   */
-  flag?: string
-}
-
 export interface BindingTransformHookExtraArgs {
   moduleType: string
 }
@@ -441,6 +436,13 @@ export declare enum BindingWatcherEvent {
   Event = 1,
   ReStart = 2,
   Change = 3
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
+  notify?: BindingNotifyOption
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
 }
 
 export interface Es2015Options {
@@ -769,4 +771,3 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
-

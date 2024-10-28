@@ -20,7 +20,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
-        SideEffectDetector::new(self.scopes, self.source, self.trivias)
+        SideEffectDetector::new(self.scopes, self.source, self.comments)
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
@@ -85,6 +85,13 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
       self.add_referenced_symbol(root_symbol_id);
     }
+    ident.reference_id().and_then(|ref_id| {
+      let (symbol_id, ids) = self.cur_class_decl_and_symbol_referenced_ids?;
+      if ids.contains(&ref_id) {
+        self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
+      }
+      Some(())
+    });
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -100,12 +107,19 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         request.value.as_str(),
         ImportKind::DynamicImport,
         expr.source.span().start,
+        expr.source.span().is_empty(),
       );
       self.result.imports.insert(expr.span, id);
     }
     walk::walk_import_expression(self, expr);
   }
 
+  fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
+    if let ast::Declaration::ClassDeclaration(class) = it {
+      self.scan_class_declaration(class);
+    }
+    walk::walk_declaration(self, it);
+  }
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
       ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
@@ -159,12 +173,31 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     }
     if expr.is_global_require_call(self.scopes) {
       if let Some(ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
-        let id =
-          self.add_import_record(request.value.as_str(), ImportKind::Require, request.span().start);
+        let id = self.add_import_record(
+          request.value.as_str(),
+          ImportKind::Require,
+          request.span().start,
+          request.span().is_empty(),
+        );
         self.result.imports.insert(expr.span, id);
       }
     }
 
     walk::walk_call_expression(self, expr);
+  }
+}
+
+impl<'me> AstScanner<'me> {
+  /// visit `Class` of declaration
+  pub fn scan_class_declaration(&mut self, class: &ast::Class<'_>) {
+    let Some(id) = class.id.as_ref() else {
+      return;
+    };
+    let symbol_id = *id.symbol_id.get().unpack_ref();
+    let previous_reference_id = self.cur_class_decl_and_symbol_referenced_ids.take();
+    self.cur_class_decl_and_symbol_referenced_ids =
+      Some((symbol_id, &self.scopes.resolved_references[symbol_id]));
+    walk::walk_class(self, class);
+    self.cur_class_decl_and_symbol_referenced_ids = previous_reference_id;
   }
 }

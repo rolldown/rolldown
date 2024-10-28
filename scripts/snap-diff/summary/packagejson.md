@@ -107,11 +107,10 @@
   diff
 ## package_json_node_paths_issue2752
   missing
-## [package_json_subpath_import_node_builtin_issue3485](../../../crates/rolldown/tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485/diff.md)
-  diff
 # Passed Cases
 ## [package_json_exports_entry_point_import_over_require](../../../crates/rolldown/tests/esbuild/packagejson/package_json_exports_entry_point_import_over_require)
 ## [package_json_exports_entry_point_main_only](../../../crates/rolldown/tests/esbuild/packagejson/package_json_exports_entry_point_main_only)
 ## [package_json_exports_entry_point_module_over_main](../../../crates/rolldown/tests/esbuild/packagejson/package_json_exports_entry_point_module_over_main)
+## [package_json_subpath_import_node_builtin_issue3485](../../../crates/rolldown/tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485)
 ## [package_json_type_should_be_types](../../../crates/rolldown/tests/esbuild/packagejson/package_json_type_should_be_types)
 # Bypassed Cases

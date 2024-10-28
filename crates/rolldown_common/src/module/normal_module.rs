@@ -1,12 +1,12 @@
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
 
 use crate::css::css_view::CssView;
 use crate::{
-  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ModuleId, ModuleIdx, ModuleInfo,
-  StmtInfo,
+  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
+  ModuleInfo, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
+use std::ops::{Deref, DerefMut};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashSet;
@@ -29,16 +29,28 @@ pub struct NormalModule {
 
 impl NormalModule {
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    self.ecma_view.star_exports.iter().map(|rec_id| {
-      let rec = &self.ecma_view.import_records[*rec_id];
-      rec.resolved_module
-    })
+    if self.has_star_export() {
+      itertools::Either::Left(
+        self
+          .ecma_view
+          .import_records
+          .iter()
+          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+          .map(|rec| rec.resolved_module),
+      )
+    } else {
+      itertools::Either::Right(std::iter::empty())
+    }
+  }
+
+  pub fn has_star_export(&self) -> bool {
+    self.ecma_view.meta.has_star_export()
   }
 
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.to_string(),
-      is_included: self.ecma_view.is_included,
+      is_included: self.ecma_view.meta.is_included(),
       stmt_infos: self
         .ecma_view
         .stmt_infos
@@ -127,10 +139,12 @@ impl NormalModule {
     &'me self,
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
-    self.ecma_view.star_exports.iter().filter_map(move |rec_id| {
-      let rec = &self.ecma_view.import_records[*rec_id];
+    self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
+      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_START) {
+        return None;
+      }
       match modules[rec.resolved_module] {
-        Module::External(_) => Some(*rec_id),
+        Module::External(_) => Some(rec_id),
         Module::Normal(_) => None,
       }
     })

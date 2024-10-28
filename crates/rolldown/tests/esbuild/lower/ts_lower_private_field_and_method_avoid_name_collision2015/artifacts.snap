@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-class WeakMap {
+var WeakMap = class {
 	#x;
-}
-class WeakSet {
+};
+var WeakSet = class {
 	#y() {}
-}
+};
 
 //#endregion
 export { WeakMap, WeakSet };

@@ -8,22 +8,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region define-false/index.ts
-class Foo {
+var Foo = class {
 	a;
 	[(() => null, c)];
 	static A;
 	static [(() => null, C)];
-}
+};
 (() => new Foo())();
 
 //#endregion
 //#region define-true/index.ts
-class Bar {
+var Bar = class {
 	a;
 	[(() => null, c)];
 	static A;
 	static [(() => null, C)];
-}
+};
 (() => new Bar())();
 
 //#endregion

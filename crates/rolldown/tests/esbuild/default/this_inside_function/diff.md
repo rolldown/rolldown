@@ -1,5 +1,5 @@
 # Reason
-1. lowering class
+1. lowering not align
 # Diff
 ## /out.js
 ### esbuild
@@ -58,7 +58,7 @@ function foo(x = this) {
 const objFoo = { foo(x = this) {
 	console.log(this);
 } };
-class Foo {
+var Foo = class {
 	x = this;
 	static y = this.z;
 	foo(x = this) {
@@ -67,7 +67,7 @@ class Foo {
 	static bar(x = this) {
 		console.log(this);
 	}
-}
+};
 new Foo(foo(objFoo));
 if (nested) {
 	function bar(x = this) {
@@ -96,23 +96,9 @@ if (nested) {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -5,24 +5,23 @@
-     foo(x = this) {
-         console.log(this);
+@@ -17,12 +17,11 @@
      }
  };
--var Foo = class {
-+class Foo {
-     x = this;
-     static y = this.z;
-     foo(x = this) {
-         console.log(this);
-     }
-     static bar(x = this) {
-         console.log(this);
-     }
--};
-+}
  new Foo(foo(objFoo));
  if (nested) {
 -    let bar = function (x = this) {

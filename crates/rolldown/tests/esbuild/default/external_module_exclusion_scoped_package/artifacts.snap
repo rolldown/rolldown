@@ -6,73 +6,145 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@a1" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@a1' in index.js
+   ╭─[index.js:1:8]
+   │
+ 1 │ import '@a1'
+   │        ──┬──  
+   │          ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@a1-a2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@a1-a2' in index.js
+   ╭─[index.js:3:8]
+   │
+ 3 │ import '@a1-a2'
+   │        ────┬───  
+   │            ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@a1/a2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@a1/a2' in index.js
+   ╭─[index.js:2:8]
+   │
+ 2 │ import '@a1/a2'
+   │        ────┬───  
+   │            ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@b1" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@b1' in index.js
+   ╭─[index.js:5:8]
+   │
+ 5 │ import '@b1'
+   │        ──┬──  
+   │          ╰──── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@b1/b2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@b1/b2' in index.js
+   ╭─[index.js:6:8]
+   │
+ 6 │ import '@b1/b2'
+   │        ────┬───  
+   │            ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@b1/b2-b3" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@b1/b2-b3' in index.js
+   ╭─[index.js:8:8]
+   │
+ 8 │ import '@b1/b2-b3'
+   │        ─────┬─────  
+   │             ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@b1/b2/b3" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@b1/b2/b3' in index.js
+   ╭─[index.js:7:8]
+   │
+ 7 │ import '@b1/b2/b3'
+   │        ─────┬─────  
+   │             ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@c1" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@c1' in index.js
+    ╭─[index.js:10:8]
+    │
+ 10 │ import '@c1'
+    │        ──┬──  
+    │          ╰──── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@c1/c2" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2' in index.js
+    ╭─[index.js:11:8]
+    │
+ 11 │ import '@c1/c2'
+    │        ────┬───  
+    │            ╰───── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@c1/c2/c3" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2/c3' in index.js
+    ╭─[index.js:12:8]
+    │
+ 12 │ import '@c1/c2/c3'
+    │        ─────┬─────  
+    │             ╰─────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@c1/c2/c3-c4" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2/c3-c4' in index.js
+    ╭─[index.js:14:8]
+    │
+ 14 │ import '@c1/c2/c3-c4'
+    │        ───────┬──────  
+    │               ╰──────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "@c1/c2/c3/c4" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2/c3/c4' in index.js
+    ╭─[index.js:13:8]
+    │
+ 13 │ import '@c1/c2/c3/c4'
+    │        ───────┬──────  
+    │               ╰──────── Module not found, treating it as an external dependency
+────╯
 
 ```
 # Assets

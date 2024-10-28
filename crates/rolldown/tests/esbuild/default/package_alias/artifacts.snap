@@ -3,17 +3,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## PARSE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ╭─[nested3/node_modules/alias3/index.js:1:5]
+[RESOLVE_ERROR] Error: Could not resolve "@abs-path/pkg7/foo" in entry.js
+   ╭─[entry.js:7:8]
    │
- 1 │ test failure
-   │     │ 
-   │     ╰─ 
-   │ 
-   │ Help: Try insert a semicolon here
+ 7 │ import "@abs-path/pkg7/foo"
+   │        ──────────┬─────────  
+   │                  ╰─────────── Matched alias not found
+───╯
+
+```
+## RESOLVE_ERROR
+
+```text
+[RESOLVE_ERROR] Error: Could not resolve "@scope-only/pkg8" in entry.js
+   ╭─[entry.js:8:8]
+   │
+ 8 │ import "@scope-only/pkg8"
+   │        ─────────┬────────  
+   │                 ╰────────── Matched alias not found
 ───╯
 
 ```

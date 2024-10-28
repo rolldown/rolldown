@@ -12,12 +12,12 @@ function a(x = foo) {
 	var foo$1;
 	return x;
 }
-class b {
+var b = class {
 	fn(x = foo) {
 		var foo$1;
 		return x;
 	}
-}
+};
 let c = [
 	function(x = foo) {
 		var foo$1;

@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
+  typeof define === 'function' && define.amd ? define([], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.module = factory()));
+})(this, function() {
+"use strict";
+
+//#region main.js
+var main_default = "default";
+
+//#endregion
+return main_default;
+});
+```

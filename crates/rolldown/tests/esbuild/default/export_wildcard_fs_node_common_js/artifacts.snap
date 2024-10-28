@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./external" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './external' in entry.js
+   ╭─[entry.js:3:15]
+   │
+ 3 │ export * from './external'
+   │               ──────┬─────  
+   │                     ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets
@@ -22,14 +28,14 @@ Object.keys(__external).forEach(function (k) {
     get: function () { return __external[k]; }
   });
 });
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
+var fs = require("fs");
+Object.keys(fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return node_fs[k]; }
+    get: function () { return fs[k]; }
   });
 });
-require("node:fs");
+require("fs");
 require("./external");
 
 //#region internal.js

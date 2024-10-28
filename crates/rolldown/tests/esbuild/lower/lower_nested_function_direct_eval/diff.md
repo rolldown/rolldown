@@ -31,6 +31,43 @@ if (foo) {
  }
 
 ```
+## /out/3.js
+### esbuild
+```js
+if (foo) {
+  function x() {
+  }
+  if (bar) {
+    eval("");
+  }
+}
+```
+### rolldown
+```js
+
+//#region 3.js
+if (foo) {
+	function x() {}
+	if (bar) eval("");
+}
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/3.js
++++ rolldown	3.js
+@@ -1,6 +1,4 @@
+ if (foo) {
+     function x() {}
+-    if (bar) {
+-        eval("");
+-    }
++    if (bar) eval("");
+ }
+
+```
 ## /out/4.js
 ### esbuild
 ```js
@@ -148,9 +185,7 @@ if (foo) {
 //#region 7.js
 if (foo) {
 	function x() {}
-	if (bar) {
-		eval("");
-	}
+	if (bar) eval("");
 }
 
 //#endregion
@@ -160,12 +195,15 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/7.js
 +++ rolldown	7.js
-@@ -1,5 +1,4 @@
+@@ -1,7 +1,4 @@
 -"use strict";
  if (foo) {
      function x() {}
-     if (bar) {
-         eval("");
+-    if (bar) {
+-        eval("");
+-    }
++    if (bar) eval("");
+ }
 
 ```
 ## /out/8.js

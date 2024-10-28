@@ -5,6 +5,11 @@
         "name": "src_entry",
         "import": "src/entry.js"
       }
-    ]
+    ],
+    "resolve": {
+      "mainFields": [
+        "main"
+      ]
+    }
   }
 }

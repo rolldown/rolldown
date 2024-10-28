@@ -20,7 +20,6 @@ for (const suite of expandSuitesWithDerived(suitesForCI)) {
   }
 }
 
-await bench.warmup()
 await bench.run()
 
 const dataForGitHubBenchmarkAction = bench.tasks.map((task) => {

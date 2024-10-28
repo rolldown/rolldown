@@ -24,6 +24,7 @@ use self::wrapping::create_wrapper;
 use super::scan_stage::ScanStageOutput;
 
 mod bind_imports_and_exports;
+mod generate_lazy_export;
 mod sort_modules;
 pub(crate) mod tree_shaking;
 mod wrapping;
@@ -103,6 +104,7 @@ impl<'a> LinkStage<'a> {
 
     self.determine_module_exports_kind();
     self.wrap_modules();
+    self.generate_lazy_export();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
@@ -139,7 +141,9 @@ impl<'a> LinkStage<'a> {
 
         match rec.kind {
           ImportKind::Import => {
-            if matches!(importee.exports_kind, ExportsKind::None) {
+            if matches!(importee.exports_kind, ExportsKind::None)
+              && !importee.meta.has_lazy_export()
+            {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
                 if rec.meta.intersects(
@@ -232,25 +236,29 @@ impl<'a> LinkStage<'a> {
       }
 
       // TODO: should have a better place to put this
-      if is_entry && matches!(self.options.format, OutputFormat::Cjs) {
-        importer.star_exports.iter().for_each(|rec_idx| {
-          let rec = &importer.import_records[*rec_idx];
-          match &self.module_table.modules[rec.resolved_module] {
-            Module::Normal(_) => {}
-            Module::External(ext) => {
-              self.metas[importer.idx]
-                .require_bindings_for_star_exports
-                .entry(rec.resolved_module)
-                .or_insert_with(|| {
-                  // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
-                  self.symbols.create_facade_root_symbol_ref(
-                    importer.idx,
-                    legitimize_identifier_name(&ext.name).into_owned().into(),
-                  )
-                });
+      if is_entry && matches!(self.options.format, OutputFormat::Cjs) && importer.has_star_export()
+      {
+        importer
+          .import_records
+          .iter()
+          .filter(|rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+          .for_each(|rec| {
+            match &self.module_table.modules[rec.resolved_module] {
+              Module::Normal(_) => {}
+              Module::External(ext) => {
+                self.metas[importer.idx]
+                  .require_bindings_for_star_exports
+                  .entry(rec.resolved_module)
+                  .or_insert_with(|| {
+                    // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
+                    self.symbols.create_facade_root_symbol_ref(
+                      importer.idx,
+                      legitimize_identifier_name(&ext.name).into_owned().into(),
+                    )
+                  });
+              }
             }
-          }
-        });
+          });
       };
     });
   }
@@ -274,7 +282,7 @@ impl<'a> LinkStage<'a> {
               // Make sure symbols from external modules are included and de_conflicted
               match rec.kind {
                 ImportKind::Import => {
-                  let is_reexport_all = importer.star_exports.contains(rec_id);
+                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_START);
                   if is_reexport_all {
                     // export * from 'external' would be just removed. So it references nothing.
                     rec.namespace_ref.set_name(
@@ -298,7 +306,7 @@ impl<'a> LinkStage<'a> {
               let importee_linking_info = &self.metas[importee.idx];
               match rec.kind {
                 ImportKind::Import => {
-                  let is_reexport_all = importer.star_exports.contains(rec_id);
+                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_START);
                   match importee_linking_info.wrap_kind {
                     WrapKind::None => {
                       // for case:
@@ -484,7 +492,7 @@ impl<'a> LinkStage<'a> {
                   declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
                 });
               }
-              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::App => {}
+              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::App => {}
             }
           };
           // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.

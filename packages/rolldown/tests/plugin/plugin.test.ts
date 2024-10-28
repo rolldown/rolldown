@@ -1,5 +1,6 @@
 import { expect, test, vi, describe } from 'vitest'
 import { rolldown, Plugin } from 'rolldown'
+import { sleep } from '@tests/utils'
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -121,8 +122,16 @@ test('call transformContext error', async () => {
     })
     await build.write({})
   } catch (error: any) {
-    expect(error.message).toMatchInlineSnapshot(
-      `"Rolldown internal error: GenericFailure, RollupError: transform hook error"`,
-    )
+    expect(error.message).toMatchInlineSnapshot(`"Build failed"`)
   }
+})
+
+test('rolldown write twice', async () => {
+  const build = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+  })
+  await build.write({})
+  await sleep(100)
+  await build.write({})
 })

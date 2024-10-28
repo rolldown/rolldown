@@ -9,6 +9,7 @@
         "name": "b",
         "import": "b.ts"
       }
-    ]
+    ],
+    "treeshake": true
   }
 }

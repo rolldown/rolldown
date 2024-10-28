@@ -1,3 +1,5 @@
+# Reason
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild
@@ -14,20 +16,38 @@ class Foo extends Bar {
 ### rolldown
 ```js
 
+//#region entry.ts
+var Foo = class extends Bar {
+	foo = 1;
+	bar = 2;
+	constructor() {
+		super();
+		foo();
+		bar();
+	}
+};
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +0,0 @@
+@@ -1,8 +1,9 @@
 -class Foo extends Bar {
--    constructor() {
--        super();
++var Foo = class extends Bar {
++    foo = 1;
++    bar = 2;
+     constructor() {
+         super();
 -        this.foo = 1;
 -        this.bar = 2;
 -        (foo(), bar());
--    }
++        foo();
++        bar();
+     }
 -}
++};
 
 ```

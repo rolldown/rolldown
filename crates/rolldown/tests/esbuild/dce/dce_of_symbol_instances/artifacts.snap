@@ -8,17 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region class.js
-class Keep1 {
+var Keep1 = class {
 	*[Symbol.iterator]() {}
 	[keep];
-}
-class Keep2 {
+};
+var Keep2 = class {
 	[keep];
 	*[Symbol.iterator]() {}
-}
-class Keep3 {
+};
+var Keep3 = class {
 	*[Symbol.wtf]() {}
-}
+};
 
 //#endregion
 ```

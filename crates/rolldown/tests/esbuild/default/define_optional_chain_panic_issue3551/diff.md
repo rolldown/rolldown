@@ -23,19 +23,19 @@ delete 1["c"];
 
 //#region dot-define.js
 1 .c;
-a?.b.c;
+(a?.b).c;
 1["c"];
-a?.b["c"];
+(a?.b)["c"];
 1();
-a?.b();
+(a?.b)();
 1 .c();
-a?.b.c();
+(a?.b).c();
 1["c"]();
-a?.b["c"]();
+(a?.b)["c"]();
 delete 1 .c;
-delete a?.b.c;
+delete (a?.b).c;
 delete 1["c"];
-delete a?.b["c"];
+delete (a?.b)["c"];
 
 //#endregion
 ```

@@ -6,19 +6,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo" is imported by "hoist-export-from.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "./foo" in hoist-import.js
+   ╭─[hoist-import.js:2:8]
+   │
+ 2 │ import "./foo"
+   │        ───┬───  
+   │           ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo" is imported by "hoist-export-star.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './foo' in hoist-export-from.js
+   ╭─[hoist-export-from.js:2:20]
+   │
+ 2 │ export {x, y} from './foo'
+   │                    ───┬───  
+   │                       ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo" is imported by "hoist-import.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './foo' in hoist-export-star.js
+   ╭─[hoist-export-star.js:2:15]
+   │
+ 2 │ export * from './foo'
+   │               ───┬───  
+   │                  ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets
@@ -39,16 +57,16 @@ using a = b;
 
 //#region hoist-export-class-direct.js
 using a = b;
-class Foo1 {
+var Foo1 = class {
 	ac = [a, c];
-}
-class Bar1 {
+};
+var Bar1 = class Bar1 {
 	ac = [
 		a,
 		c,
 		Bar1
 	];
-}
+};
 using c = d;
 
 //#endregion
@@ -60,16 +78,16 @@ export { Bar1, Foo1 };
 
 //#region hoist-export-class-indirect.js
 using a = b;
-class Foo1 {
+var Foo1 = class {
 	ac = [a, c];
-}
-class Bar1 {
+};
+var Bar1 = class Bar1 {
 	ac = [
 		a,
 		c,
 		Bar1
 	];
-}
+};
 using c = d;
 
 //#endregion
@@ -92,9 +110,9 @@ export { a, c as 'c!' };
 
 //#region hoist-export-default-class-anonymous.js
 using a = b;
-class hoist_export_default_class_anonymous_default {
+var hoist_export_default_class_anonymous_default = class {
 	ac = [a, c];
-}
+};
 using c = d;
 
 //#endregion
@@ -106,9 +124,9 @@ export { hoist_export_default_class_anonymous_default as default };
 
 //#region hoist-export-default-class-name-unused.js
 using a = b;
-class Foo {
+var Foo = class {
 	ac = [a, c];
-}
+};
 using c = d;
 
 //#endregion
@@ -120,13 +138,13 @@ export { Foo as default };
 
 //#region hoist-export-default-class-name-used.js
 using a = b;
-class Foo {
+var Foo = class Foo {
 	ac = [
 		a,
 		c,
 		Foo
 	];
-}
+};
 using c = d;
 
 //#endregion

@@ -13,43 +13,43 @@ async function* foo() {
 	yield x;
 	yield* x;
 	await using x = await y;
-	for await (let x$1 of y) {}
-	for await (await using x of y) {}
+	for await (let x$1 of y);
+	for await (await using x of y);
 }
 foo = async function* () {
 	yield;
 	yield x;
 	yield* x;
 	await using x = await y;
-	for await (let x$1 of y) {}
-	for await (await using x of y) {}
+	for await (let x$1 of y);
+	for await (await using x of y);
 };
 foo = { async *bar() {
 	yield;
 	yield x;
 	yield* x;
 	await using x = await y;
-	for await (let x$1 of y) {}
-	for await (await using x of y) {}
+	for await (let x$1 of y);
+	for await (await using x of y);
 } };
-class Foo {
+var Foo = class {
 	async *bar() {
 		yield;
 		yield x;
 		yield* x;
 		await using x = await y;
-		for await (let x$1 of y) {}
-		for await (await using x of y) {}
+		for await (let x$1 of y);
+		for await (await using x of y);
 	}
-}
+};
 Foo = class {
 	async *bar() {
 		yield;
 		yield x;
 		yield* x;
 		await using x = await y;
-		for await (let x$1 of y) {}
-		for await (await using x of y) {}
+		for await (let x$1 of y);
+		for await (await using x of y);
 	}
 };
 

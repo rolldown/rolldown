@@ -18,8 +18,7 @@ function l() {
 ```js
 
 //#region top-level.js
-for (var b; 0;);
-for (var { c, x: [d] } = {}; 0;);
+var { c, x: [d] } = {};
 for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
@@ -33,7 +32,7 @@ for (var { j, x: [k] } in {});
 ===================================================================
 --- esbuild	/out/top-level.js
 +++ rolldown	top-level.js
-@@ -1,10 +1,11 @@
+@@ -1,10 +1,10 @@
 -var a;
 -for (var b; 0; ) ;
 -for (var {c, x: [d]} = {}; 0; ) ;
@@ -46,8 +45,7 @@ for (var { j, x: [k] } in {});
 -function l() {}
 +
 +//#region top-level.js
-+for (var b; 0;);
-+for (var { c, x: [d] } = {}; 0;);
++var { c, x: [d] } = {};
 +for (var e of []);
 +for (var { f, x: [g] } of []);
 +for (var h in {});
@@ -82,8 +80,8 @@ if (true) {
 //#region nested.js
 {
 	var a;
-	for (var b; 0;);
-	for (var { c, x: [d] } = {}; 0;);
+	var b;
+	var { c, x: [d] } = {};
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
@@ -116,8 +114,8 @@ if (true) {
 +//#region nested.js
 +{
 +	var a;
-+	for (var b; 0;);
-+	for (var { c, x: [d] } = {}; 0;);
++	var b;
++	var { c, x: [d] } = {};
 +	for (var e of []);
 +	for (var { f, x: [g] } of []);
 +	for (var h in {});
@@ -149,8 +147,6 @@ if (true) {
 //#region let.js
 {
 	let a;
-	for (let b; 0;);
-	for (let { c, x: [d] } = {}; 0;);
 	for (let e of []);
 	for (let { f, x: [g] } of []);
 	for (let h in {});
@@ -164,13 +160,16 @@ if (true) {
 ===================================================================
 --- esbuild	/out/let.js
 +++ rolldown	let.js
-@@ -1,5 +1,5 @@
+@@ -1,8 +1,6 @@
 -if (true) {
 +{
      let a;
-     for (let b; 0; ) ;
-     for (let {c, x: [d]} = {}; 0; ) ;
+-    for (let b; 0; ) ;
+-    for (let {c, x: [d]} = {}; 0; ) ;
      for (let e of []) ;
+     for (let {f, x: [g]} of []) ;
+     for (let h in {}) ;
+     for (let {j, x: [k]} in {}) ;
 
 ```
 ## /out/function.js
@@ -197,8 +196,8 @@ x();
 //#region function.js
 function x() {
 	var a;
-	for (var b; 0;);
-	for (var { c, x: [d] } = {}; 0;);
+	var b;
+	var { c, x: [d] } = {};
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
@@ -230,8 +229,8 @@ x();
 -    for (var {j, x: [k]} in {}) ;
 -    function l() {}
 +	var a;
-+	for (var b; 0;);
-+	for (var { c, x: [d] } = {}; 0;);
++	var b;
++	var { c, x: [d] } = {};
 +	for (var e of []);
 +	for (var { f, x: [g] } of []);
 +	for (var h in {});
@@ -273,8 +272,8 @@ x();
 function x() {
 	{
 		var a;
-		for (var b; 0;);
-		for (var { c, x: [d] } = {}; 0;);
+		var b;
+		var { c, x: [d] } = {};
 		for (var e of []);
 		for (var { f, x: [g] } of []);
 		for (var h in {});
@@ -311,8 +310,8 @@ x();
 -    }
 +	{
 +		var a;
-+		for (var b; 0;);
-+		for (var { c, x: [d] } = {}; 0;);
++		var b;
++		var { c, x: [d] } = {};
 +		for (var e of []);
 +		for (var { f, x: [g] } of []);
 +		for (var h in {});

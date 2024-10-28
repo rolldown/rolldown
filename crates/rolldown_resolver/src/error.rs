@@ -12,8 +12,10 @@ pub fn oxc_resolve_error_to_reason(e: &ResolveError) -> String {
       "Tsconfig's project reference path points to this tsconfig".to_string()
     }
     ResolveError::IOError(_) => "IO error".to_string(),
-    ResolveError::Builtin(_) => "Builtin module".to_string(),
-    ResolveError::ExtensionAlias(_) => "All of the aliased extensions are not found".to_string(),
+    ResolveError::Builtin { .. } => "Builtin module".to_string(),
+    ResolveError::ExtensionAlias { .. } => {
+      "All of the aliased extensions are not found".to_string()
+    }
     ResolveError::Specifier(_) => "The provided path specifier cannot be parsed".to_string(),
     ResolveError::JSON(_) => "JSON parse error".to_string(),
     ResolveError::Restriction(_, _) => "Path restriction".to_string(),
@@ -34,5 +36,7 @@ pub fn oxc_resolve_error_to_reason(e: &ResolveError) -> String {
     }
     ResolveError::Unimplemented(_) => "Unimplemented".to_string(),
     ResolveError::Recursion => "Recursion in resolving".to_string(),
+    ResolveError::MatchedAliasNotFound(_, _) => "Matched alias not found".to_string(),
+    _ => todo!(),
   }
 }

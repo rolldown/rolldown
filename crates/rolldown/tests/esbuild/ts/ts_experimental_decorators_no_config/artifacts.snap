@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.ts
-@x.y() @(new y.x()) class Foo {
+var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y mUndef;
 	@x @y mDef = 1;
 	@x @y method() {
@@ -37,7 +37,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	}
 	@x @y static accessor #asUndef;
 	@x @y static accessor #asDef = 1;
-}
+};
 
 //#endregion
 export { Foo as default };

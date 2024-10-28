@@ -27,23 +27,17 @@ a: {
 ```js
 
 //#region entry.js
-foo: {
-	bar: {
-		if (x) break bar;
-		break foo;
-	}
+foo: bar: {
+	if (x) break bar;
+	break foo;
 }
-foo2: {
-	bar2: {
-		if (x) break bar2;
-		break foo2;
-	}
+foo2: bar2: {
+	if (x) break bar2;
+	break foo2;
 }
-foo: {
-	bar: {
-		if (x) break bar;
-		break foo;
-	}
+foo: bar: {
+	if (x) break bar;
+	break foo;
 }
 
 //#endregion
@@ -53,36 +47,33 @@ foo: {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,18 +1,18 @@
+@@ -1,18 +1,12 @@
 -a: {
 -    b: {
 -        if (x) break b;
 -        break a;
-+foo: {
-+    bar: {
-+        if (x) break bar;
-+        break foo;
-     }
+-    }
++foo: bar: {
++    if (x) break bar;
++    break foo;
  }
 -a: {
 -    b: {
 -        if (x) break b;
 -        break a;
-+foo2: {
-+    bar2: {
-+        if (x) break bar2;
-+        break foo2;
-     }
+-    }
++foo2: bar2: {
++    if (x) break bar2;
++    break foo2;
  }
 -a: {
 -    b: {
 -        if (x) break b;
 -        break a;
-+foo: {
-+    bar: {
-+        if (x) break bar;
-+        break foo;
-     }
+-    }
++foo: bar: {
++    if (x) break bar;
++    break foo;
  }
 
 ```

@@ -18,10 +18,10 @@ console.log(new Foo().bar === 123);
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	#foo = 123;
 	bar = this.#foo;
-}
+};
 assert.equal(new Foo().bar, 123);
 
 //#endregion
@@ -33,16 +33,18 @@ assert.equal(new Foo().bar, 123);
 +++ rolldown	entry.js
 @@ -1,9 +1,5 @@
 -var _foo;
- class Foo {
+-class Foo {
 -    constructor() {
 -        __privateAdd(this, _foo, 123);
 -        __publicField(this, "bar", __privateGet(this, _foo));
 -    }
-+    #foo = 123;
-+    bar = this.#foo;
- }
+-}
 -_foo = new WeakMap();
 -console.log(new Foo().bar === 123);
++var Foo = class {
++    #foo = 123;
++    bar = this.#foo;
++};
 +console.log(new Foo().bar);
 
 ```

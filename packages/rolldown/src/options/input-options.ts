@@ -37,7 +37,8 @@ const moduleTypesSchema = z.record(
     .or(z.literal('base64'))
     .or(z.literal('dataurl'))
     .or(z.literal('binary'))
-    .or(z.literal('empty')),
+    .or(z.literal('empty'))
+    .or(z.literal('css')),
 )
 
 const jsxOptionsSchema = z.strictObject({
@@ -62,6 +63,24 @@ const jsxOptionsSchema = z.strictObject({
     .describe('Development specific information')
     .optional(),
   // The rollup preset is not supported at now
+})
+
+const stringOrRegExpSchema = zodExt
+  .stringOrRegExp()
+  .or(zodExt.stringOrRegExp().array())
+
+const watchOptionsSchema = z.strictObject({
+  skipWrite: z.boolean().describe('Skip the bundle.write() step').optional(),
+  notify: z
+    .strictObject({
+      pollInterval: z.number().optional(),
+      compareContents: z.boolean().optional(),
+    })
+    .describe('Notify options')
+    .optional(),
+  include: stringOrRegExpSchema.optional(),
+  exclude: stringOrRegExpSchema.optional(),
+  chokidar: z.any().optional(),
 })
 
 export const inputOptionsSchema = z.strictObject({
@@ -133,6 +152,7 @@ export const inputOptionsSchema = z.strictObject({
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
+  watch: watchOptionsSchema.or(z.literal(false)).optional(),
 })
 
 export const inputCliOptionsSchema = inputOptionsSchema
@@ -161,6 +181,7 @@ export const inputCliOptionsSchema = inputOptionsSchema
     resolve: true,
     experimental: true,
     profilerNames: true,
+    watch: true,
   })
 
 type RawInputOptions = z.infer<typeof inputOptionsSchema>

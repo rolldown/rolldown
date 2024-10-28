@@ -13,7 +13,6 @@ use super::types::{
 
 #[napi]
 pub struct BindingPluginContext {
-  #[allow(dead_code)]
   inner: PluginContext,
 }
 
@@ -60,6 +59,11 @@ impl BindingPluginContext {
   #[napi]
   pub fn get_module_ids(&self) -> Option<Vec<String>> {
     self.inner.get_module_ids()
+  }
+
+  #[napi]
+  pub fn add_watch_file(&self, file: String) {
+    self.inner.add_watch_file(&file);
   }
 }
 

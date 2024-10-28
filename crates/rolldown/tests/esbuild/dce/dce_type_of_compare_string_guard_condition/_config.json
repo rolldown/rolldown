@@ -5,7 +5,8 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "format": "iife"
   },
   "expectExecuted": false
 }

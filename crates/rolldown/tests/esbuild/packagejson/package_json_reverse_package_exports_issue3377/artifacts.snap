@@ -6,7 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "msw/browser" is imported by "lib/msw-config.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'msw/browser' in lib/msw-config.ts
+   ╭─[lib/msw-config.ts:1:47]
+   │
+ 1 │ import { setupWorker, type SetupWorker } from 'msw/browser'
+   │                                               ──────┬──────  
+   │                                                     ╰──────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

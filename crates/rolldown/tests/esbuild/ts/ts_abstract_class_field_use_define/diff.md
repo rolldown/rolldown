@@ -14,10 +14,10 @@ class Foo {
 
 //#region entry.ts
 const keepThisToo = Symbol("keepThisToo");
-class Foo {
+var Foo = class {
 	keepThis;
 	[keepThisToo];
-}
+};
 (() => new Foo())();
 
 //#endregion
@@ -27,12 +27,14 @@ class Foo {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,5 @@
--const keepThisToo = Symbol("keepThisToo");
-+var keepThisToo = Symbol("keepThisToo");
- class Foo {
+@@ -1,6 +1,6 @@
+ const keepThisToo = Symbol("keepThisToo");
+-class Foo {
++var Foo = class {
      keepThis;
      [keepThisToo];
- }
+-}
++};
+ (() => new Foo())();
 
 ```

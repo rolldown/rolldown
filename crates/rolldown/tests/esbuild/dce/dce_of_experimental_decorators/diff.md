@@ -78,25 +78,25 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.ts
-@fn class Class {}
-class Field {
+var Class = @fn class {};
+var Field = class {
 	@fn field;
-}
-class Method {
+};
+var Method = class {
 	@fn method() {}
-}
-class Parameter {
+};
+var Parameter = class {
 	foo(@fn bar) {}
-}
-class StaticField {
+};
+var StaticField = class {
 	@fn static field;
-}
-class StaticMethod {
+};
+var StaticMethod = class {
 	@fn static method() {}
-}
-class StaticParameter {
+};
+var StaticParameter = class {
 	static foo(@fn bar) {}
-}
+};
 
 //#endregion
 ```
@@ -120,16 +120,22 @@ class StaticParameter {
 -Class = __decorateClass([
 -  fn
 -], Class);
--var Field = class {
++
++//#endregion
++//#region keep-these.ts
++var Class = @fn class {};
+ var Field = class {
 -  field;
--};
++	@fn field;
+ };
 -__decorateClass([
 -  fn
 -], Field.prototype, "field", 2);
--var Method = class {
+ var Method = class {
 -  method() {
 -  }
--};
++	@fn method() {}
+ };
 -__decorateClass([
 -  fn
 -], Method.prototype, "method", 1);
@@ -139,23 +145,26 @@ class StaticParameter {
 -__decorateClass([
 -  fn
 -], Accessor.prototype, "accessor", 1);
--var Parameter = class {
+ var Parameter = class {
 -  foo(bar) {
 -  }
--};
++	foo(@fn bar) {}
+ };
 -__decorateClass([
 -  __decorateParam(0, fn)
 -], Parameter.prototype, "foo", 1);
--var StaticField = class {
+ var StaticField = class {
 -  static field;
--};
++	@fn static field;
+ };
 -__decorateClass([
 -  fn
 -], StaticField, "field", 2);
--var StaticMethod = class {
+ var StaticMethod = class {
 -  static method() {
 -  }
--};
++	@fn static method() {}
+ };
 -__decorateClass([
 -  fn
 -], StaticMethod, "method", 1);
@@ -165,36 +174,15 @@ class StaticParameter {
 -__decorateClass([
 -  fn
 -], StaticAccessor, "accessor", 1);
--var StaticParameter = class {
+ var StaticParameter = class {
 -  static foo(bar) {
 -  }
--};
++	static foo(@fn bar) {}
+ };
 -__decorateClass([
 -  __decorateParam(0, fn)
 -], StaticParameter, "foo", 1);
 \ No newline at end of file
-+
-+//#endregion
-+//#region keep-these.ts
-+@fn class Class {}
-+class Field {
-+	@fn field;
-+}
-+class Method {
-+	@fn method() {}
-+}
-+class Parameter {
-+	foo(@fn bar) {}
-+}
-+class StaticField {
-+	@fn static field;
-+}
-+class StaticMethod {
-+	@fn static method() {}
-+}
-+class StaticParameter {
-+	static foo(@fn bar) {}
-+}
 +
 +//#endregion
 \ No newline at end of file

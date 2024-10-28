@@ -234,7 +234,7 @@ impl<'a> GenerateStage<'a> {
         });
         warnings.extend(generate_output.warnings);
       }
-      Err(e) => errors.extend(e),
+      Err(e) => errors.extend(e.into_vec()),
     });
 
     index_chunk_to_assets.iter_mut().for_each(|assets| {

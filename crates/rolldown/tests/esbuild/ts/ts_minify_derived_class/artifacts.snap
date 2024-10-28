@@ -7,4 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region entry.ts
+var Foo = class extends Bar {
+	foo = 1;
+	bar = 2;
+	constructor() {
+		super();
+		foo();
+		bar();
+	}
+};
+
+//#endregion
 ```

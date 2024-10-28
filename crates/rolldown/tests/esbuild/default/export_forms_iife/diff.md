@@ -66,7 +66,7 @@ var v = 234;
 let l = 234;
 const c = 234;
 function Fn() {}
-class Class {}
+var Class = class {};
 
 //#endregion
 exports.C = Class
@@ -128,10 +128,9 @@ return exports;
 +    let l = 234;
 +    const c = 234;
      function Fn() {}
--    var Class = class {};
+     var Class = class {};
 -    return __toCommonJS(entry_exports);
 -})();
-+    class Class {}
 +    exports.C = Class;
 +    exports.Class = Class;
 +    exports.Fn = Fn;

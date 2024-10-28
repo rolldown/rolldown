@@ -57,18 +57,26 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks().await?;
 
-    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
-
     self.compute_cross_chunk_links(&mut chunk_graph);
 
+    let index_chunk_id_to_name =
+      self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
+
     chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
-      deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
+      deconflict_chunk_symbols(
+        chunk,
+        self.link_output,
+        &self.options.format,
+        &index_chunk_id_to_name,
+      );
     });
 
     let ast_table_iter = self.link_output.ast_table.par_iter_mut();
     ast_table_iter
       .filter(|(_ast, owner)| {
-        self.link_output.module_table.modules[*owner].as_normal().map_or(false, |m| m.is_included)
+        self.link_output.module_table.modules[*owner]
+          .as_normal()
+          .map_or(false, |m| m.meta.is_included())
       })
       .for_each(|(ast, owner)| {
         let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {
@@ -125,9 +133,10 @@ impl<'a> GenerateStage<'a> {
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<FxHashMap<ChunkIdx, ArcStr>> {
     let modules = &self.link_output.module_table.modules;
 
+    let mut index_chunk_id_to_name = FxHashMap::default();
     let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> = chunk_graph
       .chunk_table
       .as_vec()
@@ -178,7 +187,7 @@ impl<'a> GenerateStage<'a> {
       let pre_generated_name = &mut index_pre_generated_names[*chunk_id];
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
       chunk.name = Some(pre_generated_name.clone());
-
+      index_chunk_id_to_name.insert(*chunk_id, pre_generated_name.clone());
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
       let filename_template = chunk.filename_template(self.options, &pre_rendered_chunk).await?;
@@ -248,6 +257,6 @@ impl<'a> GenerateStage<'a> {
       chunk.css_preliminary_filename =
         Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
     }
-    Ok(())
+    Ok(index_chunk_id_to_name)
   }
 }

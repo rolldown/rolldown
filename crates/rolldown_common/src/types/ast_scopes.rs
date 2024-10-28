@@ -5,7 +5,7 @@ use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId};
 pub struct AstScopes {
   inner: ScopeTree,
   pub references: IndexVec<ReferenceId, Reference>,
-  resolved_references: IndexVec<SymbolId, Vec<ReferenceId>>,
+  pub resolved_references: IndexVec<SymbolId, Vec<ReferenceId>>,
 }
 
 impl AstScopes {

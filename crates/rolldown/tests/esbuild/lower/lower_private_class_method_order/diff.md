@@ -21,12 +21,12 @@ console.log(new Foo().bar === 123);
 import assert from "node:assert";
 
 //#region entry.js
-class Foo {
+var Foo = class {
 	bar = this.#foo();
 	#foo() {
 		return 123;
 	}
-}
+};
 assert.equal(new Foo().bar, 123);
 
 //#endregion
@@ -38,19 +38,20 @@ assert.equal(new Foo().bar, 123);
 +++ rolldown	entry.js
 @@ -1,12 +1,7 @@
 -var _Foo_instances, foo_fn;
- class Foo {
+-class Foo {
 -    constructor() {
 -        __privateAdd(this, _Foo_instances);
 -        __publicField(this, "bar", __privateMethod(this, _Foo_instances, foo_fn).call(this));
++var Foo = class {
 +    bar = this.#foo();
 +    #foo() {
 +        return 123;
      }
- }
+-}
 -_Foo_instances = new WeakSet();
 -foo_fn = function () {
 -    return 123;
--};
+ };
 -console.log(new Foo().bar === 123);
 +console.log(new Foo().bar);
 

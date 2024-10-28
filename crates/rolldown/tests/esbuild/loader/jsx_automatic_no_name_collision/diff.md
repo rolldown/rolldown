@@ -1,5 +1,5 @@
 # Reason
-1. rolldown don't have `jsx.AutomaticRuntime` option
+1. esbuild did not needs `__toESM`
 # Diff
 ## /out.js
 ### esbuild

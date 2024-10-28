@@ -1,6 +1,6 @@
 use oxc::codegen::CodegenReturn;
 use rolldown_common::{Chunk, ChunkIdx, InstantiatedChunk, NormalizedBundlerOptions};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
@@ -24,5 +24,5 @@ pub struct GenerateOutput {
 pub trait Generator {
   async fn instantiate_chunk(
     ctx: &mut GenerateContext,
-  ) -> anyhow::Result<DiagnosableResult<GenerateOutput>>;
+  ) -> anyhow::Result<BuildResult<GenerateOutput>>;
 }

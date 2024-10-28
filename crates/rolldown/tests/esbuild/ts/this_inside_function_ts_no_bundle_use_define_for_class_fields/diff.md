@@ -54,7 +54,7 @@ function foo(x = this) {
 const objFoo = { foo(x = this) {
 	console.log(this);
 } };
-class Foo {
+var Foo = class {
 	x = this;
 	static y = this.z;
 	foo(x = this) {
@@ -63,7 +63,7 @@ class Foo {
 	static bar(x = this) {
 		console.log(this);
 	}
-}
+};
 new Foo(foo(objFoo));
 if (nested) {
 	function bar(x = this) {
@@ -92,7 +92,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,8 @@
+@@ -1,28 +1,27 @@
  function foo(x = this) {
      console.log(this);
  }
@@ -102,9 +102,18 @@ if (nested) {
          console.log(this);
      }
  };
-@@ -17,12 +17,11 @@
+-class Foo {
++var Foo = class {
+     x = this;
+     static y = this.z;
+     foo(x = this) {
+         console.log(this);
      }
- }
+     static bar(x = this) {
+         console.log(this);
+     }
+-}
++};
  new Foo(foo(objFoo));
  if (nested) {
 -    let bar2 = function (x = this) {

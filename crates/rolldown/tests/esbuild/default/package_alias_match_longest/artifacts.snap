@@ -1,36 +1,41 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "pkg/bar/baz" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
+## RESOLVE_ERROR
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg/baz" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[RESOLVE_ERROR] Error: Could not resolve "pkg/foo/bar/baz" in entry.js
+   ╭─[entry.js:4:8]
+   │
+ 4 │ import "pkg/foo/bar/baz"
+   │        ────────┬────────  
+   │                ╰────────── Matched alias not found
+───╯
 
 ```
-## UNRESOLVED_IMPORT
+## RESOLVE_ERROR
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo/bar/baz" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[RESOLVE_ERROR] Error: Could not resolve "pkg/bar/baz" in entry.js
+   ╭─[entry.js:5:8]
+   │
+ 5 │ import "pkg/bar/baz"
+   │        ──────┬──────  
+   │              ╰──────── Matched alias not found
+───╯
 
 ```
-# Assets
+## RESOLVE_ERROR
 
-## entry.js
-
-```js
-import "pkg";
-import "pkg/foo";
-import "pkg/foo/bar";
-import "pkg/foo/bar/baz";
-import "pkg/bar/baz";
-import "pkg/baz";
+```text
+[RESOLVE_ERROR] Error: Could not resolve "pkg/baz" in entry.js
+   ╭─[entry.js:6:8]
+   │
+ 6 │ import "pkg/baz"
+   │        ────┬────  
+   │            ╰────── Matched alias not found
+───╯
 
 ```

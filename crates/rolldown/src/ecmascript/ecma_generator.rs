@@ -8,7 +8,7 @@ use rolldown_common::{
   EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx, OutputFormat,
   RenderedModule,
 };
-use rolldown_error::DiagnosableResult;
+use rolldown_error::BuildResult;
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
@@ -17,7 +17,9 @@ use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
+use super::format::{
+  app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd,
+};
 
 pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
 
@@ -27,7 +29,7 @@ impl Generator for EcmaGenerator {
   #[allow(clippy::too_many_lines)]
   async fn instantiate_chunk<'a>(
     ctx: &mut GenerateContext<'a>,
-  ) -> Result<DiagnosableResult<GenerateOutput>> {
+  ) -> Result<BuildResult<GenerateOutput>> {
     let mut rendered_modules = FxHashMap::default();
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources = ctx
@@ -114,7 +116,13 @@ impl Generator for EcmaGenerator {
       }
       OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer, intro, outro),
       OutputFormat::Iife => {
-        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro, true) {
+        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
+      OutputFormat::Umd => {
+        match render_umd(ctx, rendered_module_sources, banner, footer, intro, outro) {
           Ok(concat_source) => concat_source,
           Err(errors) => return Ok(Err(errors)),
         }

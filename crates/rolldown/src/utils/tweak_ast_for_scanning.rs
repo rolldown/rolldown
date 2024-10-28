@@ -1,14 +1,24 @@
 use itertools::Itertools;
-use oxc::allocator::Allocator;
-use oxc::ast::ast::{BindingPatternKind, Declaration, Statement};
+use oxc::allocator::{Allocator, Box};
+use oxc::ast::ast::{self, BindingPatternKind, Declaration, ExpressionStatement, Statement};
 use oxc::ast::{AstBuilder, NONE};
 use oxc::span::SPAN;
 use rolldown_ecmascript::{EcmaAst, StatementExt, TakeIn, WithMutFields};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
-pub fn tweak_ast_for_scanning(ast: &mut EcmaAst) {
+pub fn tweak_ast_for_scanning(ast: &mut EcmaAst, has_lazy_export: bool) {
   let mut contains_use_strict = false;
   ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+    if has_lazy_export {
+      let res = program.directives.take_in(allocator).into_iter().map(|d| {
+        let expr_stmt = ExpressionStatement {
+          span: d.expression.span,
+          expression: ast::Expression::StringLiteral(Box::new_in(d.expression, allocator)),
+        };
+        Statement::ExpressionStatement(Box::new_in(expr_stmt, allocator))
+      });
+      program.body.extend(res);
+    }
     // Remove all `"use strict"` directives.
     program.directives.retain(|directive| {
       let is_use_strict = directive.is_use_strict();

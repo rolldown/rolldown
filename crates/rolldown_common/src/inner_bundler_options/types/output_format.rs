@@ -15,11 +15,12 @@ pub enum OutputFormat {
   Cjs,
   App,
   Iife,
+  Umd,
 }
 
 impl OutputFormat {
   pub fn requires_scope_hoisting(&self) -> bool {
-    matches!(self, Self::Esm | Self::Cjs | Self::Iife)
+    matches!(self, Self::Esm | Self::Cjs | Self::Iife | Self::Umd)
   }
 }
 
@@ -30,6 +31,7 @@ impl Display for OutputFormat {
       Self::Cjs => write!(f, "cjs"),
       Self::App => write!(f, "app"),
       Self::Iife => write!(f, "iife"),
+      Self::Umd => write!(f, "umd"),
     }
   }
 }

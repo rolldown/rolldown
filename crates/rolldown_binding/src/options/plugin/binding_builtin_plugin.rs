@@ -15,11 +15,10 @@ use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
-use rolldown_utils::pattern_filter::StringOrRegex;
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 
-use super::types::binding_js_or_regex::BindingStringOrRegex;
+use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
@@ -106,7 +105,7 @@ pub struct BindingJsonPluginConfig {
   pub is_build: Option<bool>,
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingTransformPluginConfig {
@@ -116,15 +115,15 @@ pub struct BindingTransformPluginConfig {
   pub targets: Option<String>,
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingAliasPluginConfig {
   pub entries: Vec<BindingAliasPluginAlias>,
 }
 
-#[napi_derive::napi(object)]
-#[derive(Debug, Deserialize, Default)]
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingAliasPluginAlias {
   pub find: BindingStringOrRegex,
@@ -162,10 +161,7 @@ impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
   fn try_from(value: BindingAliasPluginConfig) -> Result<Self, Self::Error> {
     let mut ret = Vec::with_capacity(value.entries.len());
     for item in value.entries {
-      ret.push(Alias {
-        find: StringOrRegex::new(item.find.value, &item.find.flag)?,
-        replacement: item.replacement,
-      });
+      ret.push(Alias { find: item.find.try_into()?, replacement: item.replacement });
     }
 
     Ok(Self { entries: ret })
@@ -176,27 +172,9 @@ impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingTransformPluginConfig) -> Result<Self, Self::Error> {
-    let normalized_include = if let Some(include) = value.include {
-      let mut ret = Vec::with_capacity(include.len());
-      for item in include {
-        ret.push(StringOrRegex::new(item.value, &item.flag)?);
-      }
-      ret
-    } else {
-      vec![]
-    };
-    let normalized_exclude = if let Some(exclude) = value.exclude {
-      let mut ret = Vec::with_capacity(exclude.len());
-      for item in exclude {
-        ret.push(StringOrRegex::new(item.value, &item.flag)?);
-      }
-      ret
-    } else {
-      vec![]
-    };
     Ok(TransformPlugin {
-      include: normalized_include,
-      exclude: normalized_exclude,
+      include: value.include.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
+      exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
       jsx_inject: value.jsx_inject,
       targets: value.targets,
     })

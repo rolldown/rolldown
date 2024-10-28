@@ -1,3 +1,5 @@
+# Reason
+1. class field lowering
 # Diff
 ## /out.js
 ### esbuild
@@ -41,12 +43,12 @@ function a(x = foo) {
 	var foo$1;
 	return x;
 }
-class b {
+var b = class {
 	fn(x = foo) {
 		var foo$1;
 		return x;
 	}
-}
+};
 let c = [
 	function(x = foo) {
 		var foo$1;
@@ -88,18 +90,19 @@ export { a, b, c };
 -    fn(r = foo) {
 -        var f;
 -        return r;
-+class b {
++var b = class {
 +    fn(x = foo) {
 +        var foo$1;
 +        return x;
      }
- }
+-}
 -export let c = [function (o = foo) {
 -    var r;
 -    return o;
 -}, (o = foo) => {
 -    var r;
 -    return o;
++};
 +var c = [function (x = foo) {
 +    var foo$1;
 +    return x;

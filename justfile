@@ -135,6 +135,9 @@ build target="native" mode="debug":
 _build-native-debug:
     just build native debug
 
+run *args:
+    pnpm rolldown {{ args }}
+
 # BENCHING
 
 bench-rust:

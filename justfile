@@ -137,7 +137,7 @@ _build-native-debug:
 
 # `just build && just run` to run the local build
 run:
-    ./packages/rolldown/bin/cli.js
+    pnpm run rolldown
 
 # BENCHING
 

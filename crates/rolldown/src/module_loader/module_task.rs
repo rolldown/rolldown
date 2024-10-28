@@ -1,11 +1,11 @@
 use arcstr::ArcStr;
-use futures::{future::join_all, lock::Mutex};
+use futures::future::join_all;
 use oxc::{index::IndexVec, span::Span};
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
-use std::{cell::RefCell, sync::Arc};
+use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
@@ -76,7 +76,7 @@ impl ModuleTask {
   #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> BuildResult<()> {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let sourcemap_chain = Arc::new(Mutex::new(RefCell::new(vec![])));
+    let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
@@ -84,7 +84,7 @@ impl ModuleTask {
       &self.ctx.plugin_driver,
       &self.resolved_id,
       &self.ctx.fs,
-      Arc::clone(&sourcemap_chain),
+      &mut sourcemap_chain,
       &mut hook_side_effects,
       &self.ctx.options,
     )
@@ -112,7 +112,7 @@ impl ModuleTask {
           &self.ctx.plugin_driver,
           &self.resolved_id,
           source,
-          Arc::clone(&sourcemap_chain),
+          &mut sourcemap_chain,
           &mut hook_side_effects,
           &mut module_type,
         )
@@ -152,10 +152,6 @@ impl ModuleTask {
       None
     };
 
-    let sourcemap_chain = Arc::into_inner(sourcemap_chain)
-      .expect("Arc sourcemap_chain should have one strong reference")
-      .into_inner()
-      .into_inner();
     let ret = create_ecma_view(
       &mut CreateModuleContext {
         module_index: self.module_idx,

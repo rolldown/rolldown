@@ -1,4 +1,4 @@
-use std::{cell::RefCell, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
   pluginable::HookTransformAstReturn,
@@ -10,10 +10,9 @@ use crate::{
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
-use futures::lock::Mutex;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::futures::block_on_spawn_all;
+use rolldown_utils::{futures::block_on_spawn_all, unique_arc::UniqueArc};
 
 use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
 
@@ -164,12 +163,14 @@ impl PluginDriver {
   pub async fn transform(
     &self,
     args: &HookTransformArgs<'_>,
-    sourcemap_chain: Arc<Mutex<RefCell<Vec<SourceMap>>>>,
+    sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
     original_code: &str,
     module_type: &mut ModuleType,
   ) -> Result<String> {
     let mut code = args.code.to_string();
+    let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
+    let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
@@ -181,7 +182,7 @@ impl PluginDriver {
         .call_transform(
           Arc::new(TransformPluginContext::new(
             ctx.clone(),
-            Arc::downgrade(&sourcemap_chain),
+            plugin_sourcemap_chain.weak_ref(),
             original_code.into(),
             args.id.into(),
           )),
@@ -198,7 +199,9 @@ impl PluginDriver {
           if map.get_source_content(0).map_or(true, str::is_empty) {
             map.set_source_contents(vec![&code]);
           }
-          sourcemap_chain.lock().await.borrow_mut().push(map);
+          original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
+          original_sourcemap_chain.push(map);
+          plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         }
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
@@ -211,6 +214,7 @@ impl PluginDriver {
         }
       }
     }
+    *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)
   }
 

@@ -1,18 +1,15 @@
-use std::{
-  cell::RefCell,
-  sync::{Arc, Weak},
-};
+use std::sync::Arc;
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use futures::lock::Mutex;
 use rolldown_sourcemap::SourceMap;
+use rolldown_utils::unique_arc::WeakRef;
 
 #[allow(unused)]
 #[derive(Debug)]
 pub struct TransformPluginContext {
   pub inner: PluginContext,
-  sourcemap_chain: Weak<Mutex<RefCell<Vec<SourceMap>>>>,
+  sourcemap_chain: WeakRef<Vec<SourceMap>>,
   original_code: ArcStr,
   id: ArcStr,
 }
@@ -20,7 +17,7 @@ pub struct TransformPluginContext {
 impl TransformPluginContext {
   pub fn new(
     inner: PluginContext,
-    sourcemap_chain: Weak<Mutex<RefCell<Vec<SourceMap>>>>,
+    sourcemap_chain: WeakRef<Vec<SourceMap>>,
     original_code: ArcStr,
     id: ArcStr,
   ) -> Self {

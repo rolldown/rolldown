@@ -17,6 +17,8 @@ You could get a list of available commands by running the command `just` only.
 - `just lint` - Lint the codebase.
 - `just fmt` - Fix formatting issues.
 - `just fix` - Fix formatting and linting issues.
+- `just build` - Build the `rolldown` node package.
+- `just run` - Run the `rolldown` cli using node.
 
 > Most of commands will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just check-node`.
 
@@ -37,7 +39,7 @@ Rolldown is built on Rust and Node.js, so a building process includes building R
 
 Luckily, NAPI-RS has encapsulated the process of building the glue part, we don't need to worry about the details.
 
-## `rolldown`
+### `rolldown`
 
 To build the `rolldown` package, there are two commands:
 
@@ -59,10 +61,16 @@ Building the WASI version will remove the native version of Rolldown. We designe
 
 ## Running
 
-The `rolldown` package is linked to `node_modules` via pnpm workspace automatically.
+You could use `just run` to run the `rolldown` cli with node.
 
-Once you have built the `rolldown` package, you can run it with the following command:
+The `rolldown` package is linked to `node_modules` via pnpm workspace automatically, so you can run it with the following command:
 
 ```sh
 pnpm rolldown
 ```
+
+`just run` is just an alias for the above command.
+
+::: warning
+Make sure you have built the `rolldown` package using `just build` before running it.
+:::

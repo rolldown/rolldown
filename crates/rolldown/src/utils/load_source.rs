@@ -1,3 +1,6 @@
+use std::{cell::RefCell, sync::Arc};
+
+use futures::lock::Mutex;
 use rolldown_common::{
   side_effects::HookSideEffects, ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes,
 };
@@ -10,14 +13,14 @@ pub async fn load_source(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
   fs: &dyn rolldown_fs::FileSystem,
-  sourcemap_chain: &mut Vec<SourceMap>,
+  sourcemap_chain: Arc<Mutex<RefCell<Vec<SourceMap>>>>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?
   {
-    sourcemap_chain.extend(load_hook_output.map);
+    sourcemap_chain.lock().await.borrow_mut().extend(load_hook_output.map);
     if let Some(v) = load_hook_output.side_effects {
       *side_effects = Some(v);
     }

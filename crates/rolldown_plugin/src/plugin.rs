@@ -3,7 +3,6 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 use super::plugin_context::PluginContext;
 use crate::{
   plugin_hook_meta::PluginHookMeta,
-  transform_plugin_context::TransformPluginContext,
   types::{
     hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
     hook_render_error::HookRenderErrorArgs,
@@ -12,6 +11,7 @@ use crate::{
   },
   HookAddonArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
   HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
+  SharedTransformPluginContext,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk, WatcherChangeKind};
@@ -85,7 +85,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn transform(
     &self,
-    _ctx: &TransformPluginContext<'_>,
+    _ctx: SharedTransformPluginContext,
     _args: &HookTransformArgs<'_>,
   ) -> impl std::future::Future<Output = HookTransformReturn> + Send {
     async { Ok(None) }

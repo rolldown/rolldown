@@ -32,10 +32,10 @@ impl Plugin for TransformPlugin {
 
   async fn transform(
     &self,
-    ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if !self.filter(ctx, args.id, args.module_type) {
+    if !self.filter(&ctx, args.id, args.module_type) {
       return Ok(None);
     }
     let source_type = {
@@ -113,7 +113,7 @@ impl Plugin for TransformPlugin {
 impl TransformPlugin {
   fn filter(
     &self,
-    ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    ctx: &rolldown_plugin::SharedTransformPluginContext,
     id: &str,
     module_type: &ModuleType,
   ) -> bool {

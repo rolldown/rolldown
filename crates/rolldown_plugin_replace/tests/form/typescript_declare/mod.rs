@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use rolldown::BundlerOptions;
 
-use rolldown_plugin::{HookTransformArgs, HookTransformReturn, Plugin, TransformPluginContext};
+use rolldown_plugin::{
+  HookTransformArgs, HookTransformReturn, Plugin, SharedTransformPluginContext,
+};
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 use std::sync::Mutex;
@@ -17,7 +19,7 @@ impl Plugin for TestPlugin {
 
   fn transform(
     &self,
-    _ctx: &TransformPluginContext<'_>,
+    _ctx: SharedTransformPluginContext,
     args: &HookTransformArgs<'_>,
   ) -> impl std::future::Future<Output = HookTransformReturn> + Send {
     let mut code = self.0.lock().unwrap();

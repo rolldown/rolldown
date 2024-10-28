@@ -22,6 +22,7 @@ anyhow              = { workspace = true }
 arcstr              = { workspace = true }
 async-trait         = { workspace = true }
 dashmap             = { workspace = true }
+futures             = { workspace = true }
 oxc_index           = { workspace = true }
 rolldown_common     = { workspace = true }
 rolldown_ecmascript = { workspace = true }

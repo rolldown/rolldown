@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 
 use crate::{
   pluginable::HookTransformAstReturn,
@@ -10,6 +10,7 @@ use crate::{
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
+use futures::lock::Mutex;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
@@ -163,7 +164,7 @@ impl PluginDriver {
   pub async fn transform(
     &self,
     args: &HookTransformArgs<'_>,
-    sourcemap_chain: &mut Vec<SourceMap>,
+    sourcemap_chain: Arc<Mutex<RefCell<Vec<SourceMap>>>>,
     side_effects: &mut Option<HookSideEffects>,
     original_code: &str,
     module_type: &mut ModuleType,
@@ -178,7 +179,12 @@ impl PluginDriver {
       }
       if let Some(r) = plugin
         .call_transform(
-          &TransformPluginContext::new(ctx.clone(), sourcemap_chain, original_code, args.id),
+          Arc::new(TransformPluginContext::new(
+            ctx.clone(),
+            Arc::downgrade(&sourcemap_chain),
+            original_code.into(),
+            args.id.into(),
+          )),
           &HookTransformArgs { id: args.id, code: &code, module_type: &*module_type },
         )
         .await?
@@ -192,7 +198,7 @@ impl PluginDriver {
           if map.get_source_content(0).map_or(true, str::is_empty) {
             map.set_source_contents(vec![&code]);
           }
-          sourcemap_chain.push(map);
+          sourcemap_chain.lock().await.borrow_mut().push(map);
         }
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);

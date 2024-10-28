@@ -1,18 +1,17 @@
 use napi_derive::napi;
 
-use rolldown_plugin::TransformPluginContext;
+use rolldown_plugin::SharedTransformPluginContext;
 
 use super::binding_plugin_context::BindingPluginContext;
 
 #[napi]
 pub struct BindingTransformPluginContext {
-  #[allow(dead_code)]
-  inner: &'static TransformPluginContext<'static>,
+  inner: SharedTransformPluginContext,
 }
 
 #[napi]
 impl BindingTransformPluginContext {
-  pub fn new(inner: &'static TransformPluginContext<'static>) -> Self {
+  pub fn new(inner: SharedTransformPluginContext) -> Self {
     Self { inner }
   }
 

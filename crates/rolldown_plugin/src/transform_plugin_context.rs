@@ -1,21 +1,28 @@
+use std::{
+  cell::RefCell,
+  sync::{Arc, Weak},
+};
+
 use crate::PluginContext;
+use arcstr::ArcStr;
+use futures::lock::Mutex;
 use rolldown_sourcemap::SourceMap;
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct TransformPluginContext<'a> {
+pub struct TransformPluginContext {
   pub inner: PluginContext,
-  sourcemap_chain: &'a Vec<SourceMap>,
-  original_code: &'a str,
-  id: &'a str,
+  sourcemap_chain: Weak<Mutex<RefCell<Vec<SourceMap>>>>,
+  original_code: ArcStr,
+  id: ArcStr,
 }
 
-impl<'a> TransformPluginContext<'a> {
+impl TransformPluginContext {
   pub fn new(
     inner: PluginContext,
-    sourcemap_chain: &'a Vec<SourceMap>,
-    original_code: &'a str,
-    id: &'a str,
+    sourcemap_chain: Weak<Mutex<RefCell<Vec<SourceMap>>>>,
+    original_code: ArcStr,
+    id: ArcStr,
   ) -> Self {
     Self { inner, sourcemap_chain, original_code, id }
   }
@@ -42,3 +49,5 @@ impl<'a> TransformPluginContext<'a> {
   //   })
   // }
 }
+
+pub type SharedTransformPluginContext = Arc<TransformPluginContext>;

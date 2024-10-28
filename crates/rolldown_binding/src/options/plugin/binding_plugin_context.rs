@@ -13,7 +13,6 @@ use super::types::{
 
 #[napi]
 pub struct BindingPluginContext {
-  #[allow(dead_code)]
   inner: PluginContext,
 }
 

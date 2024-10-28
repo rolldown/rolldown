@@ -16,7 +16,7 @@ impl Plugin for JsonPlugin {
 
   async fn transform(
     &self,
-    _ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    _ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     // Not sure we should use `module type to filter, but for now prefer to follow vite behavior`

@@ -157,7 +157,7 @@ impl Plugin for ReplacePlugin {
 
   async fn transform(
     &self,
-    _ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    _ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let mut magic_string = MagicString::new(args.code);

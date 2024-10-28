@@ -10,8 +10,11 @@ use std::{borrow::Cow, ops::Deref, sync::Arc};
 
 use super::{
   binding_transform_context::BindingTransformPluginContext,
-  types::binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
-  types::binding_plugin_transform_extra_args::BindingTransformHookExtraArgs, BindingPluginOptions,
+  types::{
+    binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
+    binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
+  },
+  BindingPluginOptions,
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
@@ -146,13 +149,13 @@ impl Plugin for JsPlugin {
 
   async fn transform(
     &self,
-    ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if let Some(cb) = &self.transform {
       Ok(
         cb.await_call((
-          BindingTransformPluginContext::new(unsafe { std::mem::transmute(ctx) }),
+          BindingTransformPluginContext::new(Arc::clone(&ctx)),
           args.code.to_string(),
           args.id.to_string(),
           BindingTransformHookExtraArgs { module_type: args.module_type.to_string() },

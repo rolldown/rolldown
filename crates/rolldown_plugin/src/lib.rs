@@ -26,7 +26,7 @@ pub use crate::{
   plugin_context::PluginContext,
   plugin_driver::{PluginDriver, SharedPluginDriver},
   plugin_hook_meta::{PluginHookMeta, PluginOrder},
-  transform_plugin_context::TransformPluginContext,
+  transform_plugin_context::{SharedTransformPluginContext, TransformPluginContext},
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_filter::{

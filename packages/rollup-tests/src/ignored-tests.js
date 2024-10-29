@@ -41,6 +41,7 @@ const ignoreTests = [
   "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
   // The output code/sourcemap is not same as rollup,
   "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
+  "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
 ]
 
 module.exports = {

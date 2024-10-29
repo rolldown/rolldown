@@ -51,6 +51,20 @@ const ignoreTests = [
   "rollup@function@amd-base-path: throws when using only amd.basePath option",
   // The input option is emtpy string
   "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
+  // output.preserveModules is not supported
+  "rollup@function@circular-preserve-modules: correctly handles circular dependencies when preserving modules",
+  "rollup@function@missing-export-preserve-modules: supports shimming missing exports when preserving modules",
+  "rollup@function@preserve-modules-circular-order: preserves execution order for circular dependencies when preserving modules",
+  "rollup@function@preserve-modules@inline-dynamic-imports: Inlining dynamic imports is not supported when preserving modules",
+  "rollup@function@preserve-modules@invalid-default-export-mode: throws when using default export mode with named exports",
+  "rollup@function@preserve-modules@invalid-no-preserve-entry-signatures: throws when setting preserveEntrySignatures to false",
+  "rollup@function@preserve-modules@invalid-none-export-mode: throws when using none export mode with named exports",
+  "rollup@function@preserve-modules@manual-chunks: Assigning manual chunks fails when preserving modules",
+  "rollup@function@preserve-modules@mixed-exports: warns for mixed exports in all chunks when preserving modules",
+  "rollup@function@preserve-modules@virtual-modules-conflict: Generates actual files for virtual modules when preserving modules",
+  "rollup@function@preserve-modules@virtual-modules: Generates actual files for virtual modules when preserving modules",
+  "rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode",
+  "rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules",
 ]
 
 module.exports = {

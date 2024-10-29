@@ -215,8 +215,6 @@
 - crates/rolldown/tests/esbuild/default/conditional_require
 ## not support conditional `require.resolve`
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve
-## inline could be done in minifier
-- crates/rolldown/tests/esbuild/default/const_with_let_no_bundle
 ## oxc define not support computed member expr
 - crates/rolldown/tests/esbuild/default/define_assign_warning
 ## not support member expr with write

@@ -11,14 +11,21 @@ x ? y ? require.resolve("a") : require.resolve("b") : require.resolve(c);
 ### rolldown
 ```js
 
+//#region a.js
+require.resolve(x ? "a" : y ? "b" : "c");
+require.resolve(x ? y ? "a" : "b" : c);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	a.js
+@@ -1,2 +1,2 @@
 -x ? require.resolve("a") : y ? require.resolve("b") : require.resolve("c");
 -x ? y ? require.resolve("a") : require.resolve("b") : require.resolve(c);
++require.resolve(x ? "a" : y ? "b" : "c");
++require.resolve(x ? y ? "a" : "b" : c);
 
 ```

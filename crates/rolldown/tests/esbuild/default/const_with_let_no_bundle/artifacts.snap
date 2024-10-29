@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,11 +11,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 const a = 1;
 console.log(a);
-{
+if (true) {
 	const b = 2;
 	console.log(b);
 }
-{
+if (true) {
 	const b = 3;
 	unknownFn(b);
 }

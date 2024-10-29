@@ -145,6 +145,20 @@ const ignoreTests = [
   "rollup@function@max-parallel-file-operations@infinity: maxParallelFileOps set to infinity",
   "rollup@function@max-parallel-file-operations@set: maxParallelFileOps set to 3",
   "rollup@function@max-parallel-file-operations@with-plugin: maxParallelFileOps with plugin",
+  // Should error if call `this.error` at hooks
+  "rollup@function@plugin-error@buildEnd: buildStart hooks can use this.error",
+  "rollup@function@plugin-error@buildStart: buildStart hooks can use this.error",
+  "rollup@function@plugin-error@generateBundle: buildStart hooks can use this.error",
+  "rollup@function@plugin-error@load: buildStart hooks can use this.error",
+  "rollup@function@plugin-error@renderChunk: buildStart hooks can use this.error",
+  "rollup@function@plugin-error@renderStart: buildStart hooks can use this.error",
+  "rollup@function@plugin-error@resolveId: buildStart hooks can use this.error",
+  "rollup@function@load-module-error@buildEnd: buildStart hooks can use this.error",
+  "rollup@function@load-module-error@buildStart: buildStart hooks can use this.error",
+  "rollup@function@load-module-error@generateBundle: buildStart hooks can use this.error",
+  "rollup@function@load-module-error@renderChunk: buildStart hooks can use this.error",
+  "rollup@function@load-module-error@renderStart: buildStart hooks can use this.error",
+  "rollup@function@load-module-error@resolveId: buildStart hooks can use this.error",
 ]
 
 module.exports = {

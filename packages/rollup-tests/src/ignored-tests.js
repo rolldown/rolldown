@@ -78,7 +78,16 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-invalid2: throws when setting an empty asset source",
   "rollup@function@emit-file@asset-source-invalid3: throws when setting an empty asset source",
   "rollup@function@emit-file@asset-source-invalid4: throws when setting an empty asset source",
+  // Should throw error if PluginContext.emitFile asset source is null
   "rollup@function@emit-file@asset-source-invalid: throws when setting an empty asset source",
+  // PluginContext.getFilename throw error if asset source is not set
+  "rollup@function@emit-file@asset-source-missing3: throws when accessing the file name before the asset source is set",
+  "rollup@function@emit-file@asset-source-missing4: throws when accessing the file name before the asset source is set",
+  // Should throw error if asset source is not set at generate stage
+  "rollup@function@emit-file@asset-source-missing2: throws when not setting the asset source",
+  "rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL",
+  // import.meta.ROLLUP_FILE_URL_<referenceId> throw error if asset source is not set
+  "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
 ]
 
 module.exports = {

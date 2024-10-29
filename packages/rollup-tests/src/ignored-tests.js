@@ -10,7 +10,9 @@ const ignoreTests = [
 
   // Import Assertions related
   'rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve',
-
+"rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve",
+  "rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes",
+  "rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved",
   // FATAL ERROR: threadsafe_function.rs:573
   'rollup@function@external-ignore-reserved-null-marker: external function ignores \\0 started ids',
 

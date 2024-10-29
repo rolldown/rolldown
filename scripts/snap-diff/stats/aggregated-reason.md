@@ -235,7 +235,7 @@
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## Not sure if we needs to use `Object.define` pattern in iife
 - crates/rolldown/tests/esbuild/default/export_forms_iife
-## needs to disable split chunks
+## should not generate duplicate export binding
 - crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 ## should not generate two redundant `require`
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js

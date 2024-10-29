@@ -607,7 +607,6 @@
   "rollup@function@side-effects-only-default-exports: Wraps inlined default exports which are rendered for side-effects only",
   "rollup@function@simplified-nested-if: do not catch else branches from parent if statements when simplifiying if-statements",
   "rollup@function@simplify-arrow-expression-with-object: correctly simplifies arrow expressions where the right hand side becomes an object",
-  "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
   "rollup@function@statement-order: correct statement order is preserved even in weird edge cases",
   "rollup@function@strip-bom: Works correctly with BOM files.",
   "rollup@function@switch-cases-are-deconflicted: deconflicts variables in switch cases (#1970)",

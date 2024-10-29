@@ -39,7 +39,7 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   sourcemap: {
     abbreviation: 's',
-    default: false,
+    default: true,
   },
   minify: {
     abbreviation: 'm',

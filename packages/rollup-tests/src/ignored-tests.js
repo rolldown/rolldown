@@ -160,6 +160,14 @@ const ignoreTests = [
   "rollup@function@load-module-error@renderStart: buildStart hooks can use this.error",
   "rollup@function@load-module-error@resolveId: buildStart hooks can use this.error",
   "rollup@function@logging@this-error-onlog: can turn logs into errors via this.error in the onLog hook",
+  "rollup@function@plugin-error-only-first-render-chunk: throws error only with first plugin renderChunk",
+  "rollup@function@plugin-error-only-first-transform: throws error only with first plugin transform",
+  "rollup@function@plugin-error-module-parsed: errors in moduleParsed abort the build",
+  // PluginContext.error accpet more arguments with transform hooks 
+  "rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)",
+  "rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)",
+  // Error object is not compatible with rollup
+  "rollup@function@plugin-error-with-numeric-code: rollup do not break if get a plugin error that contains numeric code",
   // Should error if call `this.error` at hooks and the error object is not compatible with rollup
   "rollup@function@load-module-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
   "rollup@function@plugin-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
@@ -175,6 +183,8 @@ const ignoreTests = [
   "rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps",
   "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
   "rollup@function@warnings-to-string: provides a string conversion for warnings",
+  // shouldTransformCachedModule hook is not supported
+  "rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build",
 ]
 
 module.exports = {

@@ -93,6 +93,10 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
   // PluginContext.emitFile is not supported emit chunk
   "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
+  // Should throw error if input option key is `./path` or `/path` or `../path`
+  "rollup@function@input-name-validation2: throws for relative paths as input names",
+  "rollup@function@input-name-validation3: throws for relative paths as input names",
+  "rollup@function@input-name-validation: throws for absolute paths as input names",
 ]
 
 module.exports = {

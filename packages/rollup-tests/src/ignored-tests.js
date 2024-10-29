@@ -130,6 +130,9 @@ const ignoreTests = [
   // Should check the hook typing is correct
   "rollup@function@non-function-hook-async: throws when providing a value for an async function hook",
   "rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook",
+  // The normalziedOptions is not compatible with rollup
+  "rollup@function@options-hook: allows to read and modify options in the options hook",
+  "rollup@function@output-options-hook: allows to read and modify options in the options hook",
 ]
 
 module.exports = {

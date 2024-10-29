@@ -32,6 +32,13 @@ const ignoreTests = [
   // Here has unexpected error `Error: nul byte found in provided data at position: 0` from rust due to #967.
   // It crashed at call `banner` function at rust. 
   "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
+
+  // output.sourcemapBaseUrl is not supported
+  "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
+  "rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es",
+  // PluginContext.getCombinedSourcemap is not supported
+  "rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es",
+  "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
 ]
 
 module.exports = {

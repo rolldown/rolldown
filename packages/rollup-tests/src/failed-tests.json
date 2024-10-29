@@ -642,7 +642,6 @@
   "rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook",
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
   "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
-  "rollup@function@transformer-async: transformers can be asynchronous",
   "rollup@function@transformer-multiple: accepts multiple transformer functions",
   "rollup@function@transformer-single: accepts a single transformer function",
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",

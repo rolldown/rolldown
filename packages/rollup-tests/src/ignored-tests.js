@@ -73,6 +73,12 @@ const ignoreTests = [
   "rollup@function@manual-chunks-include-external-modules: throws for manualChunks' modules that are resolved as an external module by plugins",
   "rollup@function@manual-chunks-info: provides additional chunk information to a manualChunks function",
   "rollup@function@circular-namespace-reexport-manual-chunks: correctly handles namespace reexports with circular dependencies when using manual chunks",
+  // PluginContext.setAssetSource is not supported
+  // Should throw error if asset source is null
+  "rollup@function@emit-file@asset-source-invalid2: throws when setting an empty asset source",
+  "rollup@function@emit-file@asset-source-invalid3: throws when setting an empty asset source",
+  "rollup@function@emit-file@asset-source-invalid4: throws when setting an empty asset source",
+  "rollup@function@emit-file@asset-source-invalid: throws when setting an empty asset source",
 ]
 
 module.exports = {

@@ -637,7 +637,6 @@
   "rollup@function@track-async-arrow-function-return-value: tracks object mutations of async arrow function return values",
   "rollup@function@track-async-function-return-value: tracks object mutations of async function return values",
   "rollup@function@track-awaited-object: tracks object mutations through await",
-  "rollup@function@transform-empty-string: allows transformers to transform code to an empty string",
   "rollup@function@transform-without-code-warn-ast: warns when returning a map but no code from a transform hook",
   "rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook",
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",

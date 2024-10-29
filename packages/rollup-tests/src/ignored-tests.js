@@ -127,6 +127,9 @@ const ignoreTests = [
   "rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache",
   // PluginContext.parse is deprecated
   "rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method",
+  // Should check the hook typing is correct
+  "rollup@function@non-function-hook-async: throws when providing a value for an async function hook",
+  "rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook",
 ]
 
 module.exports = {

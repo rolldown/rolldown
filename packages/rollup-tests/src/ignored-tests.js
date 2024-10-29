@@ -127,6 +127,9 @@ const ignoreTests = [
   "rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache",
   // PluginContext.parse is deprecated
   "rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method",
+  "rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options",
+  "rollup@function@plugin-parse: plugin transform hooks can use `this.parse(code, options)`",
+  "rollup@function@call-marked-pure-with-plugin-parse-ast: external function calls marked with pure comment do not have effects and should be removed even if parsed by PluginContext.parse method",
   // Should check the hook typing is correct
   "rollup@function@non-function-hook-async: throws when providing a value for an async function hook",
   "rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook",

@@ -39,6 +39,8 @@ const ignoreTests = [
   // PluginContext.getCombinedSourcemap is not supported
   "rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es",
   "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
+  // The output code/sourcemap is not same as rollup,
+  "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
 ]
 
 module.exports = {

@@ -112,6 +112,14 @@ const ignoreTests = [
   "rollup@function@synthetic-named-exports@synthetic-exports-need-fallback-export: synthetic named exports modules need their fallback export",
   "rollup@function@synthetic-named-exports@synthetic-named-export-as-default: makes sure default exports of synthetic named exports are snapshots",
   "rollup@function@synthetic-named-exports@synthetic-named-export-entry: does not expose synthetic named exports on entry points",
+  // output.generatedCode.symbols is not supported 
+  "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
+  "rollup@function@namespace-tostring@dynamic-import: adds Symbol.toStringTag property to dynamic imports",
+  "rollup@function@namespace-tostring@entry-named: adds Symbol.toStringTag property to entry chunks with named exports",
+  "rollup@function@namespace-tostring@external-namespaces: adds Symbol.toStringTag property to external namespaces",
+  "rollup@function@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces",
+  "rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag",
+  "rollup@function@namespace-tostring@property-descriptor: namespace export should have @@toStringTag with correct property descriptors #4336",
 ]
 
 module.exports = {

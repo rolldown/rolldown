@@ -8,7 +8,7 @@ pub fn uuid_v4_string_from_u128(u: u128) -> String {
     if i == 4 || i == 6 || i == 8 || i == 10 {
       uuid.push('-');
     }
-    uuid.push_str(&format!("{:02x}", byte));
+    uuid.push_str(&format!("{byte:02x}"));
   }
   uuid
 }

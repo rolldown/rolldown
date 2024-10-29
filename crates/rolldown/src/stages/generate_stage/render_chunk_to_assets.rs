@@ -89,7 +89,7 @@ impl<'a> GenerateStage<'a> {
           if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
             let debug_id_str = uuid_v4_string_from_u128(rendered_chunk.debug_id);
             map.set_debug_id(&debug_id_str);
-            code.push_str(&format!("\n//# debugId={}", debug_id_str));
+            code.push_str(&format!("\n//# debugId={debug_id_str}"));
           }
 
           // Normalize the windows path at final.

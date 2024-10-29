@@ -139,6 +139,12 @@ const ignoreTests = [
   // The normalziedOptions is not compatible with rollup
   "rollup@function@options-hook: allows to read and modify options in the options hook",
   "rollup@function@output-options-hook: allows to read and modify options in the options hook",
+  // maxParallelFileOps is not supported
+  "rollup@function@max-parallel-file-operations@default: maxParallelFileOps not set",
+  "rollup@function@max-parallel-file-operations@error: maxParallelFileOps: fileRead error is forwarded",
+  "rollup@function@max-parallel-file-operations@infinity: maxParallelFileOps set to infinity",
+  "rollup@function@max-parallel-file-operations@set: maxParallelFileOps set to 3",
+  "rollup@function@max-parallel-file-operations@with-plugin: maxParallelFileOps with plugin",
 ]
 
 module.exports = {

@@ -238,7 +238,6 @@
   "rollup@function@plugin-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
   "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
   "rollup@function@plugin-module-information: provides module information on the plugin context",
-  "rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method",
   "rollup@function@plugin-parse: plugin transform hooks can use `this.parse(code, options)`",
   "rollup@function@preload-after-build: supports this.load() in buildEnd and renderStart",
   "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",

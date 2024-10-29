@@ -185,6 +185,11 @@ const ignoreTests = [
   "rollup@function@warnings-to-string: provides a string conversion for warnings",
   // shouldTransformCachedModule hook is not supported
   "rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build",
+  // PluginContext.load is not supported
+  "rollup@function@preload-after-build: supports this.load() in buildEnd and renderStart",
+  "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",
+  "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
+  "rollup@function@preload-module: allows pre-loading modules via this.load",
 ]
 
 module.exports = {

@@ -65,7 +65,6 @@
   "rollup@function@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions",
   "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",
   "rollup@function@dynamic-imports-shared-exports: allows sharing imports between dynamic chunks",
-  "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
   "rollup@function@emit-chunk-manual-asset-source: supports setting asset sources as side effect of the manual chunks option",
   "rollup@function@emit-chunk-manual: supports emitting chunks as side effect of the manual chunks option",
   "rollup@function@emit-file@chunk-filename-not-available-buildEnd: Throws when accessing the filename before it has been generated in buildEnd",

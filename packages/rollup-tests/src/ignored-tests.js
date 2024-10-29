@@ -88,6 +88,8 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL",
   // import.meta.ROLLUP_FILE_URL_<referenceId> throw error if asset source is not set
   "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
+  // PluginContext.emitFile is not supported emit chunk
+  "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
 ]
 
 module.exports = {

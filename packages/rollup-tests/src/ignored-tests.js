@@ -45,6 +45,10 @@ const ignoreTests = [
   "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
   // invalid output.exports should not panic
   "rollup@function@export-type-mismatch-b: export type must be auto, default, named or none",
+  // format amd not supported
+  "rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option",
+  "rollup@function@amd-base-path-id: throws when using both the amd.basePath and the amd.id option",
+  "rollup@function@amd-base-path: throws when using only amd.basePath option",
 ]
 
 module.exports = {

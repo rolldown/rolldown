@@ -1,6 +1,7 @@
 ---
 source: crates/rolldown/tests/integration_rolldown.rs
 expression: output
+snapshot_kind: text
 ---
 ```
 # tests/esbuild/dce/base64_loader_remove_unused
@@ -573,6 +574,10 @@ expression: output
 # tests/esbuild/default/arrow_fn_scope
 
 - entry-!~{000}~.js => entry-E03Z7U7b.js
+
+# tests/esbuild/default/assign_to_import
+
+- entry-!~{000}~.js => entry-XGa15SxT.js
 
 # tests/esbuild/default/auto_external
 

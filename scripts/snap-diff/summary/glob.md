@@ -1,6 +1,4 @@
 # Failed Cases
-## [glob_basic_no_bundle](../../../crates/rolldown/tests/esbuild/glob/glob_basic_no_bundle/diff.md)
-  diff
 ## [glob_basic_no_splitting](../../../crates/rolldown/tests/esbuild/glob/glob_basic_no_splitting/diff.md)
   diff
 ## [glob_basic_splitting](../../../crates/rolldown/tests/esbuild/glob/glob_basic_splitting/diff.md)
@@ -19,3 +17,4 @@
   diff
 # Passed Cases
 # Bypassed Cases
+## [glob_basic_no_bundle](../../../crates/rolldown/tests/esbuild/glob/glob_basic_no_bundle/bypass.md)

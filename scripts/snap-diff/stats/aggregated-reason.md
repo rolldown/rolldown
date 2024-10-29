@@ -215,8 +215,6 @@
 - crates/rolldown/tests/esbuild/default/conditional_require
 ## not support conditional `require.resolve`
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve
-## inline could be done in minifier
-- crates/rolldown/tests/esbuild/default/const_with_let_no_bundle
 ## oxc define not support computed member expr
 - crates/rolldown/tests/esbuild/default/define_assign_warning
 ## not support member expr with write
@@ -237,7 +235,7 @@
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## Not sure if we needs to use `Object.define` pattern in iife
 - crates/rolldown/tests/esbuild/default/export_forms_iife
-## needs to disable split chunks
+## should not generate duplicate export binding
 - crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 ## should not generate two redundant `require`
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js

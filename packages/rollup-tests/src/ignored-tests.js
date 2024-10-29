@@ -34,6 +34,7 @@ const ignoreTests = [
   "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
 
   // output.sourcemapBaseUrl is not supported
+  "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
   "rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es",
   // PluginContext.getCombinedSourcemap is not supported

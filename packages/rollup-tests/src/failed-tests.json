@@ -84,8 +84,6 @@
   "rollup@function@emit-file@prebuilt-chunk: get right prebuilt chunks",
   "rollup@function@emit-file@set-asset-source-chunk: throws when trying to set the asset source of a chunk",
   "rollup@function@emit-file@set-asset-source-transform: throws when setting the asset source in the transform hook",
-  "rollup@function@emit-file@set-asset-source-twice2: throws when setting the asset source twice",
-  "rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice",
   "rollup@function@emit-file@set-source-in-output-options: throws when trying to set file sources in  the outputOptions hook",
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",
   "rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file",

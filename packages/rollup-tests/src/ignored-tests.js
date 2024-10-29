@@ -80,6 +80,9 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-invalid2: throws when setting an empty asset source",
   "rollup@function@emit-file@asset-source-invalid3: throws when setting an empty asset source",
   "rollup@function@emit-file@asset-source-invalid4: throws when setting an empty asset source",
+  //  Should throw error if PluginContext.setAssetSource set asset source twice
+  "rollup@function@emit-file@set-asset-source-twice2: throws when setting the asset source twice",
+  "rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice",
   // Should throw error if PluginContext.emitFile asset source is null
   "rollup@function@emit-file@asset-source-invalid: throws when setting an empty asset source",
   // PluginContext.getFilename throw error if asset source is not set

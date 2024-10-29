@@ -139,7 +139,6 @@ impl<'a> GenerateStage<'a> {
     let mut index_chunk_id_to_name = FxHashMap::default();
     let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> = chunk_graph
       .chunk_table
-      .as_vec()
       .par_iter()
       .map(|chunk| {
         if let Some(name) = &chunk.name {

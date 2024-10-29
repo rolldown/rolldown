@@ -39,7 +39,6 @@ pub fn finalize_assets(
     .collect::<FxHashMap<ArcStr, _>>();
 
   let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
-    .as_vec()
     .par_iter()
     .map(|asset| {
       extract_hash_placeholders(&asset.content)
@@ -51,7 +50,6 @@ pub fn finalize_assets(
     .into();
 
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
-    .as_vec()
     .par_iter()
     .map(|chunk| xxhash_base64_url(chunk.content.as_bytes()))
     .collect::<Vec<_>>()

@@ -163,6 +163,18 @@ const ignoreTests = [
   // Should error if call `this.error` at hooks and the error object is not compatible with rollup
   "rollup@function@load-module-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
   "rollup@function@plugin-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
+  // The warning is not compatible with rollup
+  "rollup@function@warn-misplaced-annotations: warns for misplaced annotations",
+  "rollup@function@warn-missing-iife-name: warns if no name is provided for an IIFE bundle",
+  "rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode",
+  "rollup@function@warn-on-empty-bundle: warns if empty bundle is generated  (#444)",
+  "rollup@function@warn-on-eval: warns about use of eval",
+  "rollup@function@warn-on-namespace-conflict: warns on duplicate export * from",
+  "rollup@function@warn-on-top-level-this: warns on top-level this (#770)",
+  "rollup@function@warn-on-unused-missing-imports: warns on missing (but unused) imports",
+  "rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps",
+  "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
+  "rollup@function@warnings-to-string: provides a string conversion for warnings",
 ]
 
 module.exports = {

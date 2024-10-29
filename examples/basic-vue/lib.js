@@ -1,15 +1,8 @@
 import { rolldown } from 'rolldown'
 
 const bundle = await rolldown({
-  input: ['./input.js'],
+  input: ['./index.js'],
 })
-await write()
+await bundle.write({ format: 'esm', dir: './dist' })
 // Execute twice
-await write()
-
-async function write() {
-  await Promise.all([
-    bundle.write({ format: 'esm', dir: './dist' }),
-    bundle.write({ format: 'cjs', dir: './dist', entryFileNames: 'input.cjs' }),
-  ])
-}
+await bundle.write({ format: 'esm', dir: './dist' })

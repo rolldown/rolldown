@@ -135,3 +135,24 @@ test('rolldown write twice', async () => {
   await sleep(100)
   await build.write({})
 })
+
+test('rolldown concurrent write', async () => {
+  const bundle = await rolldown({
+    input: ['./main.js'],
+    cwd: import.meta.dirname,
+  })
+  await write()
+  // Execute twice
+  await write()
+
+  async function write() {
+    await Promise.all([
+      bundle.write({ format: 'esm', dir: './dist' }),
+      bundle.write({
+        format: 'cjs',
+        dir: './dist',
+        entryFileNames: 'main.cjs',
+      }),
+    ])
+  }
+})

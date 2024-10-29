@@ -97,6 +97,21 @@ const ignoreTests = [
   "rollup@function@input-name-validation2: throws for relative paths as input names",
   "rollup@function@input-name-validation3: throws for relative paths as input names",
   "rollup@function@input-name-validation: throws for absolute paths as input names",
+  // syntheticNamedExports is not supported
+  "rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy",
+  "rollup@function@synthetic-named-exports-fallback: adds a fallback in case synthetic named exports are falsy",
+  "rollup@function@synthetic-named-exports@circular-synthetic-exports2: handles circular synthetic exports",
+  "rollup@function@synthetic-named-exports@circular-synthetic-exports: handles circular synthetic exports",
+  "rollup@function@synthetic-named-exports@dynamic-import: supports dynamically importing a module with synthetic named exports",
+  "rollup@function@synthetic-named-exports@entry: does not expose the synthetic namespace if an entry point uses a string value",
+  "rollup@function@synthetic-named-exports@external-synthetic-exports: external modules can not have syntheticNamedExports",
+  "rollup@function@synthetic-named-exports@namespace-object: does not include named synthetic namespaces in namespace objects",
+  "rollup@function@synthetic-named-exports@namespace-overrides: supports re-exported synthetic exports in namespace objects with correct export precedence",
+  "rollup@function@synthetic-named-exports@non-default-export: supports providing a named export to generate synthetic exports",
+  "rollup@function@synthetic-named-exports@synthetic-exports-need-default: synthetic named exports modules need a default export",
+  "rollup@function@synthetic-named-exports@synthetic-exports-need-fallback-export: synthetic named exports modules need their fallback export",
+  "rollup@function@synthetic-named-exports@synthetic-named-export-as-default: makes sure default exports of synthetic named exports are snapshots",
+  "rollup@function@synthetic-named-exports@synthetic-named-export-entry: does not expose synthetic named exports on entry points",
 ]
 
 module.exports = {

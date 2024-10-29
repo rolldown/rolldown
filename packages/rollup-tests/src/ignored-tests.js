@@ -21,9 +21,7 @@ const ignoreTests = [
 
   // Not supported
   'rollup@function@enforce-plugin-order: allows to enforce plugin hook order',
-
-  // blocked by supporting `output.preserveModules: true`
-  'rollup@function@preserve-modules-default-mode-namespace: import namespace from chunks with default export mode when preserving modules',
+ 
   // The test case import test.js from rollup package, it's dependencies can't be resolved.
   "rollup@function@relative-outside-external: correctly resolves relative external imports from outside directories",
   // Ignore skipIfWindows test avoid test status error
@@ -54,6 +52,7 @@ const ignoreTests = [
   // The input option is emtpy string
   "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
   // output.preserveModules is not supported
+  'rollup@function@preserve-modules-default-mode-namespace: import namespace from chunks with default export mode when preserving modules',
   "rollup@function@circular-preserve-modules: correctly handles circular dependencies when preserving modules",
   "rollup@function@missing-export-preserve-modules: supports shimming missing exports when preserving modules",
   "rollup@function@preserve-modules-circular-order: preserves execution order for circular dependencies when preserving modules",

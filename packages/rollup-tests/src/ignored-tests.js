@@ -67,6 +67,12 @@ const ignoreTests = [
   "rollup@function@preserve-modules@virtual-modules: Generates actual files for virtual modules when preserving modules",
   "rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode",
   "rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules",
+  // output.manualChunks is not supported
+  "rollup@function@manual-chunks-conflict: Throws for conflicts between manual chunks",
+  "rollup@function@manual-chunks-include-external-modules3: throws an error EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES for manualChunks' modules that are resolved as an external module by the 'external' option",
+  "rollup@function@manual-chunks-include-external-modules: throws for manualChunks' modules that are resolved as an external module by plugins",
+  "rollup@function@manual-chunks-info: provides additional chunk information to a manualChunks function",
+  "rollup@function@circular-namespace-reexport-manual-chunks: correctly handles namespace reexports with circular dependencies when using manual chunks",
 ]
 
 module.exports = {

@@ -274,7 +274,6 @@
   "rollup@function@export-not-at-top-level-fails: disallows non-top-level exports",
   "rollup@function@export-two-ways-function: exports the same function more than one way (#648)",
   "rollup@function@export-two-ways: exports the same binding more than one way",
-  "rollup@function@export-type-mismatch-b: export type must be auto, default, named or none",
   "rollup@function@export-type-mismatch-c: cannot have named exports if explicit export type is default",
   "rollup@function@export-type-mismatch: cannot have named exports if explicit export type is default",
   "rollup@function@exports-flag-allowed-in-options: exports flag is passed through to bundle options",

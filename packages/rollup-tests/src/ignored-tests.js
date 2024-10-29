@@ -43,6 +43,8 @@ const ignoreTests = [
   // The output code/sourcemap is not same as rollup,
   "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
   "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
+  // invalid output.exports should not panic
+  "rollup@function@export-type-mismatch-b: export type must be auto, default, named or none",
 ]
 
 module.exports = {

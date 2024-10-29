@@ -120,6 +120,12 @@ const ignoreTests = [
   "rollup@function@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces",
   "rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag",
   "rollup@function@namespace-tostring@property-descriptor: namespace export should have @@toStringTag with correct property descriptors #4336",
+  // PluginContext.cache is not supported
+  "rollup@function@plugin-cache@anonymous-delete: throws for anonymous plugins deleting from the cache",
+  "rollup@function@plugin-cache@anonymous-get: throws for anonymous plugins reading the cache",
+  "rollup@function@plugin-cache@anonymous-has: throws for anonymous plugins checking the cache",
+  "rollup@function@plugin-cache@anonymous-set: throws for anonymous plugins adding to the cache",
+  "rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache",
 ]
 
 module.exports = {

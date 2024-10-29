@@ -159,6 +159,7 @@ const ignoreTests = [
   "rollup@function@load-module-error@renderChunk: buildStart hooks can use this.error",
   "rollup@function@load-module-error@renderStart: buildStart hooks can use this.error",
   "rollup@function@load-module-error@resolveId: buildStart hooks can use this.error",
+  "rollup@function@logging@this-error-onlog: can turn logs into errors via this.error in the onLog hook",
 ]
 
 module.exports = {

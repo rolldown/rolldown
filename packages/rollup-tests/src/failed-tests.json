@@ -164,7 +164,6 @@
   "rollup@function@logging@log-from-options: can log from the options hook",
   "rollup@function@logging@plugin-order: allows to order plugins when logging",
   "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
-  "rollup@function@logging@this-error-onlog: can turn logs into errors via this.error in the onLog hook",
   "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
   "rollup@function@mixed-external-paths: allows using the path option selectively",
   "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",

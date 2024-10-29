@@ -6,7 +6,6 @@
   "rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
   "rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable",
-  "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
   "rollup@function@banner-and-footer: adds a banner/footer",
   "rollup@function@call-marked-pure-with-plugin-parse-ast: external function calls marked with pure comment do not have effects and should be removed even if parsed by PluginContext.parse method",
   "rollup@function@can-import-self-treeshake: direct self import",

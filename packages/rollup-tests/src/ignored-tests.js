@@ -49,6 +49,8 @@ const ignoreTests = [
   "rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option",
   "rollup@function@amd-base-path-id: throws when using both the amd.basePath and the amd.id option",
   "rollup@function@amd-base-path: throws when using only amd.basePath option",
+  // The input option is emtpy string
+  "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
 ]
 
 module.exports = {

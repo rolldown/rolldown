@@ -255,7 +255,6 @@ impl<'link> LinkStage<'link> {
     let resolved_maps = self
       .module_table
       .modules
-      .as_vec()
       .par_iter()
       .map(|module| match module {
         Module::Normal(module) => {

@@ -40,6 +40,14 @@ const ignoreTests = [
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
 
+  // `PluginContext.resolve` is not working as expected
+  "rollup@function@resolve-relative-external-id: resolves relative external ids",
+
+  // The external module is not working as expected
+  "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",
+  "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
+  "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
+  "rollup@function@relative-external-include-once: includes a relative external module only once",
 
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",

@@ -40,6 +40,8 @@ const ignoreTests = [
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
+  // The `RenderChunk#modules` should ignores non-bundled modules
+  "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
 
   // `PluginContext.resolve` is not working as expected
   "rollup@function@resolve-relative-external-id: resolves relative external ids",
@@ -145,9 +147,17 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL",
   // import.meta.ROLLUP_FILE_URL_<referenceId> throw error if asset source is not set
   "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
+  
   // PluginContext.emitFile is not supported emit chunk
   "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
   "rollup@function@resolveid-is-entry: sends correct isEntry information to resolveId hooks",
+  "rollup@function@inline-dynamic-no-treeshake: handles inlining dynamic imports when treeshaking is disabled for modules (#4098)",
+  "rollup@function@implicit-dependencies@dependant-dynamic-import-no-effects: throws when a module that is loaded before an emitted chunk is fully tree-shaken",
+  "rollup@function@implicit-dependencies@dependant-dynamic-import-not-included: throws when a module that is loaded before an emitted chunk is only linked to the module graph via a tree-shaken dynamic import",
+  "rollup@function@implicit-dependencies@dependant-not-part-of-graph: throws when a module that is loaded before an emitted chunk is not part of the module graph",
+  "rollup@function@implicit-dependencies@external-dependant: throws when a module that is loaded before an emitted chunk does not exist",
+  "rollup@function@implicit-dependencies@missing-dependant: throws when a module that is loaded before an emitted chunk is external",
+
   // Should throw error if input option key is `./path` or `/path` or `../path`
   "rollup@function@input-name-validation2: throws for relative paths as input names",
   "rollup@function@input-name-validation3: throws for relative paths as input names",
@@ -274,6 +284,9 @@ const ignoreTests = [
   // The `output.compact` is not supported
   "rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode",
 
+  // The `import.meta.url` is not supported
+  "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
+  "rollup@function@import-meta-url: resolves import.meta.url",
 
   // The module information is not compatible with rollup
   "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
@@ -335,6 +348,8 @@ const ignoreTests = [
   "rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins",
   // Give warning for module level directive
   "rollup@function@module-level-directive: module level directives should produce warnings",    
+  // Give parse error for non-top-level imports
+  "rollup@function@import-not-at-top-level-fails: disallows non-top-level imports",
 
   // The error/warning msg info is not compatible with rollup
   "rollup@function@throws-not-found-module: throws error if module is not found",
@@ -362,6 +377,7 @@ const ignoreTests = [
   "rollup@function@load-module-error@load: throws when a module cannot be loaded",
   "rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports",
   "rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports",
+  "rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw",
 ]
 
 module.exports = {

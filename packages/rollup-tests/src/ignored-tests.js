@@ -170,6 +170,8 @@ const ignoreTests = [
   "rollup@function@plugin-cache@anonymous-has: throws for anonymous plugins checking the cache",
   "rollup@function@plugin-cache@anonymous-set: throws for anonymous plugins adding to the cache",
   "rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache",
+  // Bundle.cache is not supported
+  "rollup@function@module-tree: bundle.modules includes dependencies (#903)",
   // PluginContext.parse is deprecated
   "rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method",
   "rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options",

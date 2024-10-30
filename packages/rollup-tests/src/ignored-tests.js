@@ -169,6 +169,7 @@ const ignoreTests = [
   "rollup@function@synthetic-named-exports@synthetic-named-export-entry: does not expose synthetic named exports on entry points",
   "rollup@function@reexport-from-synthetic: handles reexporting a synthetic namespace from a non-synthetic module",
   "rollup@function@respect-synthetic-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
+  "rollup@function@internal-reexports-from-external: supports namespaces with external star reexports",
   // output.generatedCode.symbols is not supported 
   "rollup@function@reexport-ns: external namespace reexport",
   "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
@@ -237,6 +238,7 @@ const ignoreTests = [
   "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",
   "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
   "rollup@function@preload-module: allows pre-loading modules via this.load",
+  "rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees",
 
   // Retrun `meta` from transform hook is not supported
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
@@ -269,6 +271,9 @@ const ignoreTests = [
   // The `output.paths` is not supported
   "rollup@function@re-export-own: avoid using export.hasOwnProperty",
   "rollup@function@mixed-external-paths: allows using the path option selectively",
+  // The `output.compact` is not supported
+  "rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode",
+
 
   // The module information is not compatible with rollup
   "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
@@ -280,6 +285,7 @@ const ignoreTests = [
   "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
   "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
+  "rollup@function@keep-cjs-dynamic-import: keeps dynamic imports in CJS output by default",
 
   // Passed, but the output snapshot is same as rollup
   "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
@@ -353,6 +359,9 @@ const ignoreTests = [
   "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
   "rollup@function@warnings-to-string: provides a string conversion for warnings",
   "rollup@function@plugin-error-with-numeric-code: rollup do not break if get a plugin error that contains numeric code",
+  "rollup@function@load-module-error@load: throws when a module cannot be loaded",
+  "rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports",
+  "rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports",
 ]
 
 module.exports = {

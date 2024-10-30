@@ -101,6 +101,26 @@ export default defineConfig([
           })
         },
       },
+
+      {
+        name: 'cleanup binding.js',
+        transform: {
+          filter: {
+            code: {
+              include: ['require = createRequire(__filename)'],
+            },
+          },
+          handler(code, id) {
+            if (id.endsWith('binding.js')) {
+              const ret = code.replace(
+                'require = createRequire(__filename)',
+                '',
+              )
+              return ret
+            }
+          },
+        },
+      },
     ],
   },
   {
@@ -108,10 +128,17 @@ export default defineConfig([
     plugins: [
       {
         name: 'shim-import-meta',
-        transform(code, id) {
-          if (id.endsWith('.ts') && code.includes('import.meta.resolve')) {
-            return code.replace('import.meta.resolve', 'undefined')
-          }
+        transform: {
+          filter: {
+            code: {
+              include: ['import.meta.resolve'],
+            },
+          },
+          handler(code, id) {
+            if (id.endsWith('.ts') && code.includes('import.meta.resolve')) {
+              return code.replace('import.meta.resolve', 'undefined')
+            }
+          },
         },
       },
     ],

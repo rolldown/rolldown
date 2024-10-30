@@ -195,6 +195,18 @@ const ignoreTests = [
   "rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook",
   // Retrun `meta` from transform hook is not supported
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
+  // The output.interop is not supported
+  "rollup@function@interop-auto-live-bindings: handles interop \"auto\" with live-bindings support",
+  "rollup@function@interop-auto-no-live-bindings: handles interop \"auto\" without live-bindings support",
+  "rollup@function@interop-default-conflict: handles conflicts with added interop default variables and supports default live bindings",
+  "rollup@function@interop-default-only-named-import: throws when using a named import with interop \"defaultOnly\"",
+  "rollup@function@interop-default-only-named-namespace-reexport: allows reexporting a namespace as a name when interop is \"defaultOnly\"",
+  "rollup@function@interop-default-only-named-reexport: throws when reexporting a namespace with interop \"defaultOnly\"",
+  "rollup@function@interop-default-only-namespace-import: allows importing a namespace when interop is \"defaultOnly\"",
+  "rollup@function@interop-default-only-namespace-reexport: warns when reexporting a namespace with interop \"defaultOnly\"",
+  "rollup@function@interop-default-only: handles interop \"defaultOnly\"",
+  "rollup@function@interop-default: handles interop \"default\" with live-bindings support",
+  "rollup@function@interop-esmodule: handles interop \"esModule\" with live-bindings support",
 ]
 
 module.exports = {

@@ -67,6 +67,7 @@ const ignoreTests = [
   "rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules",
   "rollup@function@module-side-effects@array: supports setting module side effects via an array",
   "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",
+  "rollup@function@module-parsed-imported-ids: provides full importedIds and dynamicallyImportedIds in the moduleParsed hook",
 
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
@@ -313,13 +314,19 @@ const ignoreTests = [
   "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
   "rollup@function@namespace-missing-export: replaces missing namespace members with undefined and warns about them",
 
+  // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
+  "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",
+
   // The `output.paths` is not supported
   "rollup@function@re-export-own: avoid using export.hasOwnProperty",
+  "rollup@function@mixed-external-paths: allows using the path option selectively",
+
   // The module information is not compatible with rollup
   "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
   "rollup@function@plugin-module-information: provides module information on the plugin context",
+  "rollup@function@module-parsed-hook: calls the moduleParsedHook once a module is parsed",
 
   // Give warns when input hooks are used in output plugins
   "rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins",
@@ -329,6 +336,8 @@ const ignoreTests = [
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
   "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
 
+  // Give warning for module level directive
+  "rollup@function@module-level-directive: module level directives should produce warnings",
 ]
 
 module.exports = {

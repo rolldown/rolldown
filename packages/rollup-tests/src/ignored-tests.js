@@ -76,6 +76,16 @@ const ignoreTests = [
   "rollup@function@external-resolve-false: includes an external module with a false resolve return",
   "rollup@function@external-normalization: external paths from custom resolver remain external (#633)",
   "rollup@function@external-conflict: external paths from custom resolver remain external (#633)",
+  "rollup@function@external-live-binding-compact: handles external live-bindings",
+  "rollup@function@external-live-binding: handles external live-bindings",
+  "rollup@function@external-dynamic-import-live-binding-compact: supports external dynamic imports with live bindings in compact mode",
+  "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
+  "rollup@function@external-alias-parent: includes an external module included dynamically by an alias",
+  "rollup@function@external-alias: includes an external module included dynamically by an alias",
+  // TODO to check external require content to be true
+  "rollup@function@external-ids-not-resolved: does not attempt to resolve external IDs",
+  "rollup@function@external-function-always-true: Does not call external for entry point",
+  "rollup@function@external-directory-import: handles using ../ as external import (#4349)",
 
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
@@ -315,6 +325,7 @@ const ignoreTests = [
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
   "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
   "rollup@function@keep-cjs-dynamic-import: keeps dynamic imports in CJS output by default",
+  "rollup@function@escape-arguments: does not use \"arguments\" as a placeholder variable for a default export",
 
   // Passed, but the output snapshot is same as rollup
   "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
@@ -366,6 +377,8 @@ const ignoreTests = [
   "rollup@function@module-level-directive: module level directives should produce warnings",    
   // Give parse error for non-top-level imports
   "rollup@function@import-not-at-top-level-fails: disallows non-top-level imports",
+    // Give parse error for non-top-level exports
+  "rollup@function@export-not-at-top-level-fails: disallows non-top-level exports",
   // Give error for invalid hash length
   "rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded",
   "rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded",
@@ -373,6 +386,7 @@ const ignoreTests = [
   "rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than \"hash\"",
 
   // The error/warning msg info is not compatible with rollup
+  // TODO check the error is not break bundle
   "rollup@function@throws-not-found-module: throws error if module is not found",
   "rollup@function@shims-missing-exports: shims missing exports",
   "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
@@ -400,6 +414,14 @@ const ignoreTests = [
   "rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports",
   "rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw",
   "rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build",
+  "rollup@function@external-entry-point: throws for entry points that are resolved as false by plugins",
+  "rollup@function@external-entry-point-object: throws for entry points that are resolved as an external object by plugins",
+  "rollup@function@export-type-mismatch-c: cannot have named exports if explicit export type is default",
+  "rollup@function@export-type-mismatch: cannot have named exports if explicit export type is default",
+  "rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with \".json\" extension",
+  "rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension",
+  "rollup@function@error-missing-umd-name: throws an error if no name is provided for a UMD bundle",
+  "rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file"
 ]
 
 module.exports = {

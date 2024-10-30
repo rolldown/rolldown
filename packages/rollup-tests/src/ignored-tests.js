@@ -39,6 +39,7 @@ const ignoreTests = [
   // The dyanmic import inline is not compatible with rollup
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
+  "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
 
   // `PluginContext.resolve` is not working as expected
   "rollup@function@resolve-relative-external-id: resolves relative external ids",

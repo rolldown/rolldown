@@ -169,7 +169,6 @@
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
   "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
   "rollup@function@nested-and-async-plugin: works when nested plugin",
-  "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
   "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",

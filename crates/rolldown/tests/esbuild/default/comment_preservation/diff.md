@@ -384,13 +384,13 @@ console.log(import(
 console.log(require(
 	/* before */
 	foo
-), require(
+), __require(
 	/* before */
 	"foo"
 ), require(
 	foo
 	/* after */
-), require(
+), __require(
 	"foo"
 	/* after */
 ));
@@ -508,13 +508,13 @@ switch (a) {}
 +console.log(require(
 +	/* before */
 +	foo
-+), require(
++), __require(
 +	/* before */
 +	"foo"
 +), require(
 +	foo
 +	/* after */
-+), require(
++), __require(
 +	"foo"
 +	/* after */
 +));

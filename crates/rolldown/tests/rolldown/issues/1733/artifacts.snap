@@ -12,7 +12,7 @@ import "rewritten-./static.css";
 
 //#region entry.js
 import("rewritten-./dynamic.css");
-require("rewritten-./some.css");
+__require("rewritten-./some.css");
 
 //#endregion
 ```

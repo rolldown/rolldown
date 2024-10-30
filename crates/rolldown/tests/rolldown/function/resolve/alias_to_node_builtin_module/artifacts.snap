@@ -11,7 +11,7 @@ import "fs";
 
 
 //#region main.js
-require("fs");
+__require("fs");
 
 //#endregion
 ```

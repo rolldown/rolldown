@@ -37,10 +37,10 @@ snapshot_kind: text
 
 //#region entry.js
 require();
-require("a", "b");
+__require("a", "b");
 try {
 	require();
-	require("a", "b");
+	__require("a", "b");
 } catch {}
 
 //#endregion

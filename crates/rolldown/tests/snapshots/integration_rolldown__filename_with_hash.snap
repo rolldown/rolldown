@@ -618,7 +618,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-KZWY8M8G.js
+- entry-!~{000}~.js => entry-1jyoHRe8.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -1208,7 +1208,7 @@ snapshot_kind: text
 # tests/esbuild/default/mangle_props_import_export
 
 - esm-!~{000}~.js => esm-vob9d93d.js
-- cjs-!~{001}~.js => cjs-543glTnn.js
+- cjs-!~{001}~.js => cjs-eTIztEs_.js
 
 # tests/esbuild/default/mangle_props_import_export_bundled
 
@@ -1325,13 +1325,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_no_bundle
 
-- entry-!~{000}~.js => entry-zLRV9zBg.js
+- entry-!~{000}~.js => entry-aGukXlqQ.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-y8Yy-4Yg.js
+- entry-!~{000}~.js => entry-CtcGwjNP.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
 - dynamic-!~{002}~.js => dynamic-Z535ifNq.js
@@ -1539,7 +1539,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_bad_argument_count
 
-- entry-!~{000}~.js => entry-gLJD4075.js
+- entry-!~{000}~.js => entry-xEWSSaxR.js
 
 # tests/esbuild/default/require_bad_extension
 
@@ -1554,7 +1554,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_fs_browser
 
-- entry-!~{000}~.js => entry-EMDs9iWW.js
+- entry-!~{000}~.js => entry-PGC5pX2Q.js
 
 # tests/esbuild/default/require_fs_node
 
@@ -1598,7 +1598,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_with_call_inside_try
 
-- entry-!~{000}~.js => entry-BX5aAJ0M.js
+- entry-!~{000}~.js => entry-JMcPr_l2.js
 
 # tests/esbuild/default/require_with_template
 
@@ -2947,7 +2947,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_b
 
-- entry-!~{000}~.js => entry-L1D58S8r.js
+- entry-!~{000}~.js => entry-TpnZTahg.js
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_c
 
@@ -4435,11 +4435,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-jkoniX1_.js
+- main-!~{000}~.js => main-m0rkjCRP.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-NVuuWGmk.js
+- main-!~{000}~.js => main-VyZqKp3n.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 

@@ -24,7 +24,7 @@ snapshot_kind: text
 
 
 //#region entry.js
-console.log(require("fs"));
+console.log(__require("fs"));
 
 //#endregion
 ```

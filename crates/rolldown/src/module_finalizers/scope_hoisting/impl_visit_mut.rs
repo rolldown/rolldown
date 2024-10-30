@@ -371,10 +371,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
           // use `__require` instead of `require`
-          // if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
-          //   *call_expr.callee.get_inner_expression_mut() =
-          //     self.snippet.builder.expression_identifier_reference(SPAN, "__require");
-          // }
+          if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
+            *call_expr.callee.get_inner_expression_mut() =
+              self.snippet.builder.expression_identifier_reference(SPAN, "__require");
+          }
           match &self.ctx.modules[rec.resolved_module] {
             Module::Normal(importee) => {
               match importee.module_type {

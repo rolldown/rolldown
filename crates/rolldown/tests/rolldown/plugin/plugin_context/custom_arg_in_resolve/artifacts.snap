@@ -10,7 +10,7 @@ snapshot_kind: text
 
 
 //#region entry.js
-console.log(require("hello, world"));
+console.log(__require("hello, world"));
 
 //#endregion
 ```

@@ -1,5 +1,5 @@
 # Reason
-1. should rewrite when bad arg count
+1. `__require` rewrite
 # Diff
 ## /out.js
 ### esbuild
@@ -19,10 +19,10 @@ try {
 
 //#region entry.js
 require();
-require("a", "b");
+__require("a", "b");
 try {
 	require();
-	require("a", "b");
+	__require("a", "b");
 } catch {}
 
 //#endregion
@@ -34,14 +34,12 @@ try {
 +++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -__require();
--__require("a", "b");
 +require();
-+require("a", "b");
+ __require("a", "b");
  try {
 -    __require();
--    __require("a", "b");
 +    require();
-+    require("a", "b");
+     __require("a", "b");
  } catch {}
 
 ```

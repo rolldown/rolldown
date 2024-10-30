@@ -12,7 +12,7 @@ import * as nodeFs from "node:fs";
 
 
 //#region main.js
-console.log(fs, nodeFs, require("path"), require("node:path"));
+console.log(fs, nodeFs, __require("path"), __require("node:path"));
 
 //#endregion
 ```

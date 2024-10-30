@@ -25,7 +25,7 @@ snapshot_kind: text
 
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
-	require("sub");
+	__require("sub");
 } });
 
 //#endregion

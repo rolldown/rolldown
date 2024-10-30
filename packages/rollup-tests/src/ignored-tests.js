@@ -229,6 +229,8 @@ const ignoreTests = [
   "rollup@function@reexport-from-synthetic: handles reexporting a synthetic namespace from a non-synthetic module",
   "rollup@function@respect-synthetic-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@internal-reexports-from-external: supports namespaces with external star reexports",
+  "rollup@function@deconflict-synthetic-named-export-cross-chunk: deconflicts synthetic named exports across chunks",
+  "rollup@function@deconflict-synthetic-named-export: deconflicts synthetic named exports",
   // output.generatedCode.symbols is not supported 
   "rollup@function@reexport-ns: external namespace reexport",
   "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
@@ -317,6 +319,7 @@ const ignoreTests = [
   "rollup@function@interop-default: handles interop \"default\" with live-bindings support",
   "rollup@function@interop-esmodule: handles interop \"esModule\" with live-bindings support",
   "rollup@function@invalid-interop: throws for invalid interop values",
+  "rollup@function@deconflicts-interop: deconflicts the interop function",
   // The load hook retrun ast is not supported
   "rollup@function@uses-supplied-ast: uses supplied AST",
 
@@ -432,6 +435,10 @@ const ignoreTests = [
   "rollup@function@double-named-export: throws on duplicate named exports",
   "rollup@function@double-named-reexport: throws on duplicate named exports",
   "rollup@function@double-default-export: throws on double default exports",
+  "rollup@function@deprecations@externalImportAssertions: marks the \"output.externalImportAssertions\" option as deprecated",
+  "rollup@function@cannot-call-external-namespace: warns if code calls an external namespace",
+  "rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace",
+  "rollup@function@circular-reexport: throws proper error for circular reexports",
 
   // The error/warning msg info is not compatible with rollup
   // TODO check the error is not break bundle
@@ -473,6 +480,11 @@ const ignoreTests = [
   "rollup@function@dynamic-import-relative-not-found: throws if a dynamic relative import is not found",
   "rollup@function@dynamic-import-not-found: warns if a dynamic import is not found",
   "rollup@function@does-not-hang-on-missing-module: does not hang on missing module (#53)",
+  "rollup@function@default-not-reexported: default export is not re-exported with export *",
+  "rollup@function@banner-and-footer: adds a banner/footer",
+  "rollup@function@circular-missed-reexports-2: handles circular reexports",
+  "rollup@function@circular-missed-reexports: handles circular reexports",
+  "rollup@function@check-resolve-for-entry: checks that entry is resolved",
 ]
 
 module.exports = {

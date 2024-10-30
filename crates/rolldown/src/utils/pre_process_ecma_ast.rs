@@ -17,7 +17,7 @@ use rolldown_error::{BuildDiagnostic, Severity};
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::ecma_visitors::EnsureSpanUniqueness;
-use super::tweak_ast_for_scanning::tweak_ast_for_scanning;
+use super::tweak_ast_for_scanning::PreProcessor;
 
 #[derive(Default)]
 pub struct PreProcessEcmaAst {
@@ -129,7 +129,11 @@ impl PreProcessEcmaAst {
       Ok(())
     })?;
 
-    tweak_ast_for_scanning(&mut ast, has_lazy_export);
+    ast.program.with_mut(|fields| {
+      let mut pre_processor = PreProcessor::new(fields.allocator, has_lazy_export);
+      pre_processor.visit_program(fields.program);
+      ast.contains_use_strict = pre_processor.contains_use_strict;
+    });
 
     ast.program.with_mut(|fields| {
       EnsureSpanUniqueness::new().visit_program(fields.program);

@@ -143,7 +143,6 @@
   "rollup@function@logging@log-from-options: can log from the options hook",
   "rollup@function@logging@plugin-order: allows to order plugins when logging",
   "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
-  "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
   "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",

@@ -338,6 +338,9 @@ const ignoreTests = [
 
   // Give warning for module level directive
   "rollup@function@module-level-directive: module level directives should produce warnings",
+
+  // Passed, but the output snapshot is same as rollup
+  "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
 ]
 
 module.exports = {

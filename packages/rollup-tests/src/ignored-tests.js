@@ -33,6 +33,14 @@ const ignoreTests = [
   // It crashed at call `banner` function at rust. 
   "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
 
+  // The threeshake is not working as expected
+  "rollup@function@tree-shake-variable-declarations-2: remove unused variables from declarations (#1831)",
+
+  // The dyanmic import inline is not compatible with rollup
+  "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
+  "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
+
+
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
@@ -234,6 +242,23 @@ const ignoreTests = [
   "rollup@function@invalid-pattern: throws for invalid patterns",
   // Throw error for top-level await at format cjs
   "rollup@function@invalid-top-level-await: throws for invalid top-level-await format",
+  // The load hook retrun ast is not supported
+  "rollup@function@uses-supplied-ast: uses supplied AST",
+  // The resolveId hook resolvedBy is not supported
+  "rollup@function@validate-resolved-by-logic: validate resolvedBy logic",
+  // The `output.validate` is not supported
+  "rollup@function@validate-output: handles validate failure",
+  // Give warning for empty chunk
+  "rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198)",
+  // Give parse error for update imported bindings
+  "rollup@function@update-expression-of-import-fails: disallows updates to imported bindings",
+  // Give warning for unused imports
+  "rollup@function@unused-import: warns on unused imports ([#595])",
+
+  // The error/warning msg info is not compatible with rollup
+  "rollup@function@throws-not-found-module: throws error if module is not found",
+  "rollup@function@shims-missing-exports: shims missing exports",
+  "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
 ]
 
 module.exports = {

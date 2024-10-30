@@ -5,6 +5,7 @@ export interface OptionConfig {
   description?: string
   default?: string | boolean
   hint?: string
+  reverse?: boolean
 }
 
 export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
@@ -58,9 +59,11 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   externalLiveBindings: {
     default: true,
+    reverse: true,
   },
   treeshake: {
     default: true,
+    reverse: true,
   },
   moduleTypes: {
     hint: 'types',

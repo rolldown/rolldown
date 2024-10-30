@@ -37,13 +37,13 @@ export const options = Object.fromEntries(
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
+    // add `do not` prefix for need reverse options description
+    if (config && config.reverse) {
+      result.description = `do not ${result.description}`
+    }
     key = camelCaseToKebabCase(key)
-    return [
-      typeof config?.default === 'boolean' && config?.default
-        ? `no-${key}`
-        : key,
-      result,
-    ]
+    // add 'no-' prefix for need reverse options
+    return [config?.reverse ? `no-${key}` : key, result]
   }),
 )
 

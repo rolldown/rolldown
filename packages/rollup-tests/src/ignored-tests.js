@@ -215,6 +215,8 @@ const ignoreTests = [
   "rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option",
   // Throws with unknown output.treeshake options
   "rollup@function@unknown-treeshake-value: throws for unknown string values for the treeshake option",
+  // Give warning for invalid options or outputOptions
+  "rollup@function@warns-for-invalid-options: warns for invalid options",
 ]
 
 module.exports = {

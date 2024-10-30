@@ -220,7 +220,6 @@
   "rollup@function@validate-output: handles validate failure",
   "rollup@function@validate-resolved-by-logic: validate resolvedBy logic",
   "rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198)",
-  "rollup@function@warns-for-invalid-options: warns for invalid options",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",

@@ -281,6 +281,15 @@ const ignoreTests = [
 
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
+  // The `output.paths` is not supported
+  "rollup@function@re-export-own: avoid using export.hasOwnProperty",
+  // The module information is not compatible with rollup
+  "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
+  "rollup@function@plugin-module-information: provides module information on the plugin context",
+
+  // Give warns when input hooks are used in output plugins
+  "rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins",
+
 ]
 
 module.exports = {

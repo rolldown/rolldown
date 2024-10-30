@@ -1,5 +1,6 @@
 # Reason
-1. see https://hyrious.me/esbuild-repl/?version=0.23.0&b=e%00a.js%00import+a+from+%27pkg%27%0Aimport+b+from+%27.%2Ffile%27%0Aconsole.log%28%0A%09a%2C%0A%09b%2C%0A%09require%28%27pkg2%27%29%2C%0A%09require%28%27.%2Ffile2%27%29%2C%0A%09import%28%27.%2Fdynamic%27%29%2C%0A%29%0Aexport+let+exported%0A&b=%00b.js%00export+default+function%28%29+%7B%7D%0A&o=%7B%0A++treeShaking%3A+true%2C%0A%22bundle%22%3A+true%2C%0Aformat%3A+%22esm%22%2C%0A%22external%22%3A+%5B%22*%22%5D%0A%7D 
+1. crates/rolldown/tests/esbuild/default/metafile_no_bundle/bypass.md
+2. see https://hyrious.me/esbuild-repl/?version=0.23.0&b=e%00a.js%00import+a+from+%27pkg%27%0Aimport+b+from+%27.%2Ffile%27%0Aconsole.log%28%0A%09a%2C%0A%09b%2C%0A%09require%28%27pkg2%27%29%2C%0A%09require%28%27.%2Ffile2%27%29%2C%0A%09import%28%27.%2Fdynamic%27%29%2C%0A%29%0Aexport+let+exported%0A&b=%00b.js%00export+default+function%28%29+%7B%7D%0A&o=%7B%0A++treeShaking%3A+true%2C%0A%22bundle%22%3A+true%2C%0Aformat%3A+%22esm%22%2C%0A%22external%22%3A+%5B%22*%22%5D%0A%7D
 # Diff
 ## /out/entry.js
 ### esbuild

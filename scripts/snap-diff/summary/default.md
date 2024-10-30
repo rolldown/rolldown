@@ -207,8 +207,6 @@
   diff
 ## [require_shim_substitution](../../../crates/rolldown/tests/esbuild/default/require_shim_substitution/diff.md)
   diff
-## [require_with_call_inside_try](../../../crates/rolldown/tests/esbuild/default/require_with_call_inside_try/diff.md)
-  diff
 ## [require_without_call](../../../crates/rolldown/tests/esbuild/default/require_without_call/diff.md)
   diff
 ## [require_without_call_inside_try](../../../crates/rolldown/tests/esbuild/default/require_without_call_inside_try/diff.md)
@@ -378,6 +376,7 @@
 ## [require_parent_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_common_js/bypass.md)
 ## [require_parent_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_es6/bypass.md)
 ## [require_resolve](../../../crates/rolldown/tests/esbuild/default/require_resolve/bypass.md)
+## [require_with_call_inside_try](../../../crates/rolldown/tests/esbuild/default/require_with_call_inside_try/bypass.md)
 ## [reserve_props](../../../crates/rolldown/tests/esbuild/default/reserve_props/bypass.md)
 ## [source_map](../../../crates/rolldown/tests/esbuild/default/source_map/bypass.md)
 ## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)

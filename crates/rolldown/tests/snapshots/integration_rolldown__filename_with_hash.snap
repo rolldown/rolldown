@@ -1646,7 +1646,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-D3n07CNC.js
+- entry-!~{000}~.js => entry-hZbkTnYc.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 
@@ -1771,7 +1771,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
-- entry-!~{000}~.js => entry-_YNXJgdr.js
+- entry-!~{000}~.js => entry-VPWlOSmX.js
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
@@ -2145,11 +2145,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_as_external_iife
 
-- entry-!~{000}~.js => entry-rLq5t8Du.js
+- entry-!~{000}~.js => entry-W6SWDSu8.js
 
 # tests/esbuild/importstar/re_export_star_as_iife_no_bundle
 
-- entry-!~{000}~.js => entry-rLq5t8Du.js
+- entry-!~{000}~.js => entry-W6SWDSu8.js
 
 # tests/esbuild/importstar/re_export_star_common_js_no_bundle
 
@@ -2173,11 +2173,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_external_iife
 
-- entry-!~{000}~.js => entry-Rn7g4Hjo.js
+- entry-!~{000}~.js => entry-kSYMRsFs.js
 
 # tests/esbuild/importstar/re_export_star_iife_no_bundle
 
-- entry-!~{000}~.js => entry-Rn7g4Hjo.js
+- entry-!~{000}~.js => entry-kSYMRsFs.js
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
@@ -3924,7 +3924,7 @@ snapshot_kind: text
 
 # tests/rolldown/errors/invalid_option/unsupported_code_splitting_format
 
-- main-!~{000}~.js => main-ymV-uEVz.js
+- main-!~{000}~.js => main-1Tzh3PvE.js
 - lib-!~{001}~.js => lib-ztfX_AME.js
 
 # tests/rolldown/errors/missing_export
@@ -4251,11 +4251,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.js => main-kCOAJduz.js
+- main-!~{000}~.js => main-ywr3oHL4.js
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.js => main-ABdoQhqG.js
+- main-!~{000}~.js => main-DHc5BgQ7.js
 
 # tests/rolldown/function/format/iife/iife_with_name
 
@@ -4279,15 +4279,15 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/umd/external_modules
 
-- main-!~{000}~.js => main-Xme1arO1.js
+- main-!~{000}~.js => main-uX-RzQoj.js
 
 # tests/rolldown/function/format/umd/external_modules_with_complex_globals
 
-- main-!~{000}~.js => main-WqqFouH5.js
+- main-!~{000}~.js => main-WZbsVwLx.js
 
 # tests/rolldown/function/format/umd/external_modules_with_globals
 
-- main-!~{000}~.js => main-0_ALPhgh.js
+- main-!~{000}~.js => main-pDG-KOOK.js
 
 # tests/rolldown/function/format/umd/missing_name_option
 
@@ -4310,7 +4310,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.js => main-AD7NgHY-.js
+- main-!~{000}~.js => main-pWXQHGwy.js
 
 # tests/rolldown/function/intro/cjs
 
@@ -4914,7 +4914,7 @@ snapshot_kind: text
 
 # tests/rolldown/warnings/missing_global_name
 
-- main-!~{000}~.js => main-cIFzQd2y.js
+- main-!~{000}~.js => main-FBdzUKI2.js
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 

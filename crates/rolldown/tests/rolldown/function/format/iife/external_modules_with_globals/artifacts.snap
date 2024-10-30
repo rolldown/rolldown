@@ -12,7 +12,6 @@ snapshot_kind: text
 "use strict";
 const { default: nodePath } = node_path;
 
-
 //#region main.js
 console.log(nodePath);
 const node_path$1 = {};

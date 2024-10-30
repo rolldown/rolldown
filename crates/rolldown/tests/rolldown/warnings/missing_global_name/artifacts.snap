@@ -20,7 +20,6 @@ snapshot_kind: text
 "use strict";
 const { join } = node_path;
 
-
 //#region main.js
 console.log(join("a", "b"));
 

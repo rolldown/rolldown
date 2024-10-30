@@ -1,5 +1,6 @@
 # Reason
 1. could be done in minifier
+2. for `__require` diff, we don't have ModePassThrough
 # Diff
 ## /out/esm.js
 ### esbuild

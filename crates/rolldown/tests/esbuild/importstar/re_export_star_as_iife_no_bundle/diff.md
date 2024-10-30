@@ -20,7 +20,6 @@ var mod = (function(exports, foo) {
 "use strict";
 const out = foo;
 
-
 Object.defineProperty(exports, 'out', {
   enumerable: true,
   get: function () {

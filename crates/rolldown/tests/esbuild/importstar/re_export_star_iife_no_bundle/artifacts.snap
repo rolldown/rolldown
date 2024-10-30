@@ -25,6 +25,5 @@ snapshot_kind: text
 
 "use strict";
 
-
 })();
 ```

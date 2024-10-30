@@ -1,5 +1,5 @@
 # Reason
-1. should rewrite `require`
+1. oxc codegen remove the block
 # Diff
 ## /out.js
 ### esbuild

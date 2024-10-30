@@ -190,6 +190,11 @@ const ignoreTests = [
   "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",
   "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
   "rollup@function@preload-module: allows pre-loading modules via this.load",
+  // Give warning if return map or ast without code
+  "rollup@function@transform-without-code-warn-ast: warns when returning a map but no code from a transform hook",
+  "rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook",
+  // Retrun `meta` from transform hook is not supported
+  "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
 ]
 
 module.exports = {

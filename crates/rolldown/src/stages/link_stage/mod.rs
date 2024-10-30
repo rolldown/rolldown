@@ -8,7 +8,7 @@ use rolldown_common::{
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 use rustc_hash::FxHashSet;
 
@@ -275,7 +275,7 @@ impl<'a> LinkStage<'a> {
       // store the symbol reference to the declared statement index
       let mut declared_symbol_for_stmt_pairs = vec![];
       stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
-        stmt_info.import_records.iter().for_each(|rec_id| {
+        stmt_info.import_records.iter_mut().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
           match &self.module_table.modules[rec.resolved_module] {
             Module::External(importee) => {
@@ -289,6 +289,7 @@ impl<'a> LinkStage<'a> {
                       &mut symbols.lock().unwrap(),
                       &format!("import_{}", legitimize_identifier_name(&importee.name)),
                     );
+                    // rec.meta.insert(ImportRecordMeta::all());
                   } else {
                     // import ... from 'external' or export ... from 'external'
                     let cjs_format = matches!(self.options.format, OutputFormat::Cjs);

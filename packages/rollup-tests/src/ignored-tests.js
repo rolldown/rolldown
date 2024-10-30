@@ -131,7 +131,9 @@ const ignoreTests = [
   "rollup@function@synthetic-named-exports@synthetic-exports-need-fallback-export: synthetic named exports modules need their fallback export",
   "rollup@function@synthetic-named-exports@synthetic-named-export-as-default: makes sure default exports of synthetic named exports are snapshots",
   "rollup@function@synthetic-named-exports@synthetic-named-export-entry: does not expose synthetic named exports on entry points",
+  "rollup@function@reexport-from-synthetic: handles reexporting a synthetic namespace from a non-synthetic module",
   // output.generatedCode.symbols is not supported 
+  "rollup@function@reexport-ns: external namespace reexport",
   "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
   "rollup@function@namespace-tostring@dynamic-import: adds Symbol.toStringTag property to dynamic imports",
   "rollup@function@namespace-tostring@entry-named: adds Symbol.toStringTag property to entry chunks with named exports",
@@ -268,6 +270,7 @@ const ignoreTests = [
   "rollup@function@throws-not-found-module: throws error if module is not found",
   "rollup@function@shims-missing-exports: shims missing exports",
   "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
+  "rollup@function@reexport-missing-error: reexporting a missing identifier should print an error",
 
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",

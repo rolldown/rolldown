@@ -1,20 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
-   ╭─[entry.js:1:16]
-   │
- 1 │ return require('fs')
-   │                ──┬─  
-   │                  ╰─── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js

@@ -358,6 +358,7 @@ switch (
 ### rolldown
 ```js
 
+
 //#region entry.js
 console.log(import(
 	/* before */
@@ -479,7 +480,8 @@ switch (a) {}
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,116 @@
+@@ -1,350 +1,117 @@
++
 +
 +//#region entry.js
 +console.log(import(

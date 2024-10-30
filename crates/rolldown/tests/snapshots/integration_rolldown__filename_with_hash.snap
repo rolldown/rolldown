@@ -618,7 +618,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-_8jMt-re.js
+- entry-!~{000}~.js => entry-KZWY8M8G.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -1208,7 +1208,7 @@ snapshot_kind: text
 # tests/esbuild/default/mangle_props_import_export
 
 - esm-!~{000}~.js => esm-vob9d93d.js
-- cjs-!~{001}~.js => cjs--dZES9DJ.js
+- cjs-!~{001}~.js => cjs-543glTnn.js
 
 # tests/esbuild/default/mangle_props_import_export_bundled
 
@@ -1325,13 +1325,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_no_bundle
 
-- entry-!~{000}~.js => entry-9ZUMiKWm.js
+- entry-!~{000}~.js => entry-zLRV9zBg.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-HhQvBPCB.js
+- entry-!~{000}~.js => entry-y8Yy-4Yg.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
 - dynamic-!~{002}~.js => dynamic-Z535ifNq.js
@@ -1539,7 +1539,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_bad_argument_count
 
-- entry-!~{000}~.js => entry-eblQMWVt.js
+- entry-!~{000}~.js => entry-gLJD4075.js
 
 # tests/esbuild/default/require_bad_extension
 
@@ -1554,7 +1554,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_fs_browser
 
-- entry-!~{000}~.js => entry-Fzr-5wwz.js
+- entry-!~{000}~.js => entry-EMDs9iWW.js
 
 # tests/esbuild/default/require_fs_node
 
@@ -1598,7 +1598,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_with_call_inside_try
 
-- entry-!~{000}~.js => entry-nRZyo_Vu.js
+- entry-!~{000}~.js => entry-BX5aAJ0M.js
 
 # tests/esbuild/default/require_with_template
 
@@ -1646,7 +1646,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-hZbkTnYc.js
+- entry-!~{000}~.js => entry-D3n07CNC.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 
@@ -1771,7 +1771,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
-- entry-!~{000}~.js => entry-VPWlOSmX.js
+- entry-!~{000}~.js => entry-_YNXJgdr.js
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
@@ -2145,11 +2145,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_as_external_iife
 
-- entry-!~{000}~.js => entry-W6SWDSu8.js
+- entry-!~{000}~.js => entry-rLq5t8Du.js
 
 # tests/esbuild/importstar/re_export_star_as_iife_no_bundle
 
-- entry-!~{000}~.js => entry-W6SWDSu8.js
+- entry-!~{000}~.js => entry-rLq5t8Du.js
 
 # tests/esbuild/importstar/re_export_star_common_js_no_bundle
 
@@ -2173,11 +2173,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_external_iife
 
-- entry-!~{000}~.js => entry-kSYMRsFs.js
+- entry-!~{000}~.js => entry-Rn7g4Hjo.js
 
 # tests/esbuild/importstar/re_export_star_iife_no_bundle
 
-- entry-!~{000}~.js => entry-kSYMRsFs.js
+- entry-!~{000}~.js => entry-Rn7g4Hjo.js
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
@@ -2947,7 +2947,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_b
 
-- entry-!~{000}~.js => entry-se-v-OLb.js
+- entry-!~{000}~.js => entry-L1D58S8r.js
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_c
 
@@ -3924,7 +3924,7 @@ snapshot_kind: text
 
 # tests/rolldown/errors/invalid_option/unsupported_code_splitting_format
 
-- main-!~{000}~.js => main-1Tzh3PvE.js
+- main-!~{000}~.js => main-ymV-uEVz.js
 - lib-!~{001}~.js => lib-ztfX_AME.js
 
 # tests/rolldown/errors/missing_export
@@ -4177,7 +4177,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/export-all
 
-- main-!~{000}~.js => main--pSlkPVu.js
+- main-!~{000}~.js => main-uCLfMLLY.js
 
 # tests/rolldown/function/format/app/export-default-class
 
@@ -4197,7 +4197,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/export-named-from
 
-- main-!~{000}~.js => main-h6vOV3uK.js
+- main-!~{000}~.js => main-Lc25utDA.js
 
 # tests/rolldown/function/format/app/import
 
@@ -4251,11 +4251,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.js => main-ywr3oHL4.js
+- main-!~{000}~.js => main-kCOAJduz.js
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.js => main-DHc5BgQ7.js
+- main-!~{000}~.js => main-ABdoQhqG.js
 
 # tests/rolldown/function/format/iife/iife_with_name
 
@@ -4279,15 +4279,15 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/umd/external_modules
 
-- main-!~{000}~.js => main-uX-RzQoj.js
+- main-!~{000}~.js => main-Xme1arO1.js
 
 # tests/rolldown/function/format/umd/external_modules_with_complex_globals
 
-- main-!~{000}~.js => main-WZbsVwLx.js
+- main-!~{000}~.js => main-WqqFouH5.js
 
 # tests/rolldown/function/format/umd/external_modules_with_globals
 
-- main-!~{000}~.js => main-pDG-KOOK.js
+- main-!~{000}~.js => main-0_ALPhgh.js
 
 # tests/rolldown/function/format/umd/missing_name_option
 
@@ -4310,7 +4310,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.js => main-pWXQHGwy.js
+- main-!~{000}~.js => main-AD7NgHY-.js
 
 # tests/rolldown/function/intro/cjs
 
@@ -4435,11 +4435,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-rNYcy1fv.js
+- main-!~{000}~.js => main-jkoniX1_.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-zP-y6uht.js
+- main-!~{000}~.js => main-NVuuWGmk.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 
@@ -4914,7 +4914,7 @@ snapshot_kind: text
 
 # tests/rolldown/warnings/missing_global_name
 
-- main-!~{000}~.js => main-FBdzUKI2.js
+- main-!~{000}~.js => main-cIFzQd2y.js
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 

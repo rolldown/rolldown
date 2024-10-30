@@ -24,6 +24,7 @@ var global;
 const all the stuff = __foo;
 const { some import: someImport } = __foo;
 
+
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
   get: function () {
@@ -39,7 +40,7 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,15 @@
+@@ -1,11 +1,16 @@
 -var global;
 -(global ||= {}).name = (() => {
 -    var entry_exports = {};
@@ -56,6 +57,7 @@ return exports;
 +"use strict";
 +const all the stuff = __foo;
 +const { some import: someImport } = __foo;
++
 +
 +Object.defineProperty(exports, 'all the stuff', {
 +  enumerable: true,

@@ -20,6 +20,7 @@ let exported;
 import a from "pkg";
 import b from "./file";
 
+
 //#region entry.js
 console.log(a, b, require("pkg2"), require("./file2"), import("./dynamic"));
 let exported;

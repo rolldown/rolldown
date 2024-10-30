@@ -22,6 +22,18 @@ impl OutputFormat {
   pub fn requires_scope_hoisting(&self) -> bool {
     matches!(self, Self::Esm | Self::Cjs | Self::Iife | Self::Umd)
   }
+
+  #[inline]
+  pub fn keep_esm_import_export(&self) -> bool {
+    matches!(self, Self::Esm)
+  }
+
+  #[inline]
+  /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/config/config.go#L664-L666
+  /// Since we have different implementation for `IIFE` and extra implementation of `UMD` and `App` omit them as well
+  pub fn should_call_runtime_require(&self) -> bool {
+    !matches!(self, Self::Cjs | Self::Umd | Self::Iife | Self::App)
+  }
 }
 
 impl Display for OutputFormat {

@@ -1,9 +1,12 @@
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ImportKind {
+  /// import foo from 'foo'
   Import,
+  /// `import('foo')`
   DynamicImport,
+  /// `require('foo')`
   Require,
   AtImport,
 }

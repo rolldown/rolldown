@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -37,7 +38,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;
-	let bar_ = require("xyz").bar_;
+	let bar_ = __require("xyz").bar_;
 } });
 
 //#endregion

@@ -1,5 +1,6 @@
 # Reason
 1. comments codegen
+2. for `__require` diff, we don't have `ModePassThrough`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -358,6 +359,7 @@ switch (
 ### rolldown
 ```js
 
+
 //#region entry.js
 console.log(import(
 	/* before */
@@ -383,13 +385,13 @@ console.log(import(
 console.log(require(
 	/* before */
 	foo
-), require(
+), __require(
 	/* before */
 	"foo"
 ), require(
 	foo
 	/* after */
-), require(
+), __require(
 	"foo"
 	/* after */
 ));
@@ -479,7 +481,8 @@ switch (a) {}
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,116 @@
+@@ -1,350 +1,117 @@
++
 +
 +//#region entry.js
 +console.log(import(
@@ -506,13 +509,13 @@ switch (a) {}
 +console.log(require(
 +	/* before */
 +	foo
-+), require(
++), __require(
 +	/* before */
 +	"foo"
 +), require(
 +	foo
 +	/* after */
-+), require(
++), __require(
 +	"foo"
 +	/* after */
 +));

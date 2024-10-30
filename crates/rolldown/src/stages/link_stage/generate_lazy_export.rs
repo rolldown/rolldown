@@ -12,7 +12,6 @@ use super::LinkStage;
 impl<'link> LinkStage<'link> {
   pub fn generate_lazy_export(&mut self) {
     let module_idx_to_exports_kind = append_only_vec::AppendOnlyVec::new();
-    // let mut ast_table = std::mem::take(&mut self.ast_table);
     self.module_table.modules.par_iter_mut().for_each(|module| {
       let Module::Normal(module) = module else {
         return;

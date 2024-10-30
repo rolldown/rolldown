@@ -108,11 +108,6 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
-## should rewrite `require`
-- crates/rolldown/tests/esbuild/default/nested_require_without_call
-- crates/rolldown/tests/esbuild/default/require_with_call_inside_try
-- crates/rolldown/tests/esbuild/default/require_without_call
-- crates/rolldown/tests/esbuild/default/require_without_call_inside_try
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
@@ -125,6 +120,10 @@
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_from_css
 - crates/rolldown/tests/esbuild/loader/loader_data_url_text_css
+## should rewrite `require`
+- crates/rolldown/tests/esbuild/default/nested_require_without_call
+- crates/rolldown/tests/esbuild/default/require_without_call
+- crates/rolldown/tests/esbuild/default/require_without_call_inside_try
 ## different iife impl
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
@@ -207,6 +206,8 @@
 - crates/rolldown/tests/esbuild/default/auto_external_node
 ## `node:path` is side effects free
 - crates/rolldown/tests/esbuild/default/auto_external_node
+## for `__require` diff, we don't have `ModePassThrough`
+- crates/rolldown/tests/esbuild/default/comment_preservation
 ## not support `jsx.preserve`
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## not support conditional import
@@ -271,7 +272,7 @@
 - crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 ## not support invalid template
 - crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template
-## should rewrite when bad arg count
+## `__require` rewrite
 - crates/rolldown/tests/esbuild/default/require_bad_argument_count
 ## require json should not wrapped in `__esm`
 - crates/rolldown/tests/esbuild/default/require_json

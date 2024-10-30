@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -80,7 +81,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#region entry.js
 var import_file = __toESM(require_file());
 var import_copy = __toESM(require_copy());
-console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
 
 //#endregion

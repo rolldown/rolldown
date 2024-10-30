@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -153,6 +154,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
 //#region entry.js
 console.log(import(
 	/* before */
@@ -178,13 +180,13 @@ console.log(import(
 console.log(require(
 	/* before */
 	foo
-), require(
+), __require(
 	/* before */
 	"foo"
 ), require(
 	foo
 	/* after */
-), require(
+), __require(
 	"foo"
 	/* after */
 ));

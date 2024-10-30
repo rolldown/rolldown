@@ -1,5 +1,5 @@
 # Reason
-1. should rewrite `require`
+1. oxc codegen remove the block
 # Diff
 ## /out.js
 ### esbuild
@@ -25,7 +25,7 @@ export default require_entry();
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	try {
-		const supportsColor = require("supports-color");
+		const supportsColor = __require("supports-color");
 		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) exports.colors = [];
 	} catch (error) {}
 } });
@@ -43,11 +43,10 @@ export default require_entry();
  var require_entry = __commonJS({
      "entry.js"(exports) {
          try {
--            const supportsColor = __require("supports-color");
+             const supportsColor = __require("supports-color");
 -            if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
 -                exports.colors = [];
 -            }
-+            const supportsColor = require("supports-color");
 +            if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) exports.colors = [];
          } catch (error) {}
      }

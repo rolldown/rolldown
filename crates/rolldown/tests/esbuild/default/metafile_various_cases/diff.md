@@ -115,7 +115,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#region entry.js
 var import_file = __toESM(require_file());
 var import_copy = __toESM(require_copy());
-console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
 
 //#endregion
@@ -155,7 +155,7 @@ export { exported };
 -console.log(a, esm_default, json_2_default, file_default, e, __require("extern-cjs"), require_cjs(), import("./dynamic-Q2DWDUFV.js"));
 +var import_file = __toESM(require_file());
 +var import_copy = __toESM(require_copy());
-+console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
++console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
  var exported;
  export {exported};
 

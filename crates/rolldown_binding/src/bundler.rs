@@ -108,10 +108,7 @@ impl Bundler {
 impl Bundler {
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<()> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
-
+    let mut bundler_core = self.inner.lock().await;
     let output = handle_result(bundler_core.scan().await)?;
 
     match output {
@@ -128,9 +125,7 @@ impl Bundler {
 
   #[allow(clippy::significant_drop_tightening)]
   pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
+    let mut bundler_core = self.inner.lock().await;
 
     let outputs = handle_result(bundler_core.write().await)?;
 
@@ -145,9 +140,7 @@ impl Bundler {
 
   #[allow(clippy::significant_drop_tightening)]
   pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
+    let mut bundler_core = self.inner.lock().await;
 
     let outputs = handle_result(bundler_core.generate().await)?;
 
@@ -162,9 +155,7 @@ impl Bundler {
 
   #[allow(clippy::significant_drop_tightening)]
   pub async fn close_impl(&self) -> napi::Result<()> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
+    let mut bundler_core = self.inner.lock().await;
 
     handle_result(bundler_core.close().await)?;
 

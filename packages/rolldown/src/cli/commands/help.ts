@@ -65,7 +65,7 @@ export function showHelp() {
         return a.localeCompare(b)
       })
       .map(([option, { type, short, hint, description }]) => {
-        let optionStr = `--${option} `
+        let optionStr = `  --${option} `
         option = camelCaseToKebabCase(option)
         if (short) {
           optionStr += `-${short}, `

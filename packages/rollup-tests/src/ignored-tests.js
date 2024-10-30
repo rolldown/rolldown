@@ -56,6 +56,9 @@ const ignoreTests = [
   "rollup@function@non-js-extensions: non .js extensions are preserved",
   "rollup@function@no-external-live-bindings: Allows omitting the code that handles external live bindings",
   "rollup@function@no-external-live-bindings-compact: Allows omitting the code that handles external live bindings",
+  "rollup@function@namespace-member-side-effects@unknown-access: respects side effects when accessing unknown namespace members",
+  "rollup@function@namespace-member-side-effects@assignment: checks side effects when reassigning namespace members",
+  "rollup@function@name-conflict-promise: avoids name conflicts with local variables named Promise",
 
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
@@ -63,6 +66,9 @@ const ignoreTests = [
 
   // The output plugins hooks is not working as expected
   "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
+
+  // Nested plugin is not supported
+  "rollup@function@nested-and-async-plugin: works when nested plugin",
 
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
@@ -157,6 +163,7 @@ const ignoreTests = [
   "rollup@function@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces",
   "rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag",
   "rollup@function@namespace-tostring@property-descriptor: namespace export should have @@toStringTag with correct property descriptors #4336",
+  "rollup@function@name-conflict-symbol: avoids name conflicts with local variables named Symbol", // the `Symbol` need to deconflict
   // PluginContext.cache is not supported
   "rollup@function@plugin-cache@anonymous-delete: throws for anonymous plugins deleting from the cache",
   "rollup@function@plugin-cache@anonymous-get: throws for anonymous plugins reading the cache",
@@ -292,6 +299,9 @@ const ignoreTests = [
   "rollup@function@recursive-reexports: handles recursive namespace reexports",
   "rollup@function@paths-are-case-sensitive: insists on correct casing for imports",
   "rollup@function@no-relative-external: missing relative imports are an error, not a warning",
+  "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
+  "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
+  "rollup@function@namespace-missing-export: replaces missing namespace members with undefined and warns about them",
 
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
@@ -303,6 +313,11 @@ const ignoreTests = [
 
   // Give warns when input hooks are used in output plugins
   "rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins",
+
+  // The namespace object is not compatible with rollup
+  "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
+  "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
+  "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
 
 ]
 

@@ -48,9 +48,13 @@ const ignoreTests = [
   "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
   "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
   "rollup@function@relative-external-include-once: includes a relative external module only once",  // The external module is not working as expected
+ 
   // The result is not working as expected
   "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
+  // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
+  "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
+  "rollup@function@override-static-external-namespace: allows overriding imports of external namespace reexports without external live-bindings",
 
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",

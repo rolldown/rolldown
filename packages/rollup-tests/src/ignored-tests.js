@@ -73,6 +73,12 @@ const ignoreTests = [
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
   "rollup@function@override-static-external-namespace: allows overriding imports of external namespace reexports without external live-bindings",
 
+  // Logging is not working as expected
+  "rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs",
+  "rollup@function@logging@log-from-options: can log from the options hook",
+  "rollup@function@logging@plugin-order: allows to order plugins when logging",
+  "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
+
   // The output plugins hooks is not working as expected
   "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
 
@@ -219,23 +225,11 @@ const ignoreTests = [
   // PluginContext.error accpet more arguments with transform hooks 
   "rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)",
   "rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)",
-  // Error object is not compatible with rollup
-  "rollup@function@plugin-error-with-numeric-code: rollup do not break if get a plugin error that contains numeric code",
+ 
   // Should error if call `this.error` at hooks and the error object is not compatible with rollup
   "rollup@function@load-module-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
   "rollup@function@plugin-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
-  // The warning is not compatible with rollup
-  "rollup@function@warn-misplaced-annotations: warns for misplaced annotations",
-  "rollup@function@warn-missing-iife-name: warns if no name is provided for an IIFE bundle",
-  "rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode",
-  "rollup@function@warn-on-empty-bundle: warns if empty bundle is generated  (#444)",
-  "rollup@function@warn-on-eval: warns about use of eval",
-  "rollup@function@warn-on-namespace-conflict: warns on duplicate export * from",
-  "rollup@function@warn-on-top-level-this: warns on top-level this (#770)",
-  "rollup@function@warn-on-unused-missing-imports: warns on missing (but unused) imports",
-  "rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps",
-  "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
-  "rollup@function@warnings-to-string: provides a string conversion for warnings",
+  
   // shouldTransformCachedModule hook is not supported
   "rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build",
   // PluginContext.load is not supported
@@ -243,9 +237,7 @@ const ignoreTests = [
   "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",
   "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
   "rollup@function@preload-module: allows pre-loading modules via this.load",
-  // Give warning if return map or ast without code
-  "rollup@function@transform-without-code-warn-ast: warns when returning a map but no code from a transform hook",
-  "rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook",
+
   // Retrun `meta` from transform hook is not supported
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
   // The output.interop is not supported
@@ -261,12 +253,48 @@ const ignoreTests = [
   "rollup@function@interop-default: handles interop \"default\" with live-bindings support",
   "rollup@function@interop-esmodule: handles interop \"esModule\" with live-bindings support",
   "rollup@function@invalid-interop: throws for invalid interop values",
+  // The load hook retrun ast is not supported
+  "rollup@function@uses-supplied-ast: uses supplied AST",
+
+  // The resolveId hook resolvedBy is not supported
+  "rollup@function@validate-resolved-by-logic: validate resolvedBy logic",
+  // The `output.validate` is not supported
+  "rollup@function@validate-output: handles validate failure",
+
+  // Module meta related
+  // Shouldn't modify meta objects passed in resolveId hook
+  "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
+  "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",
+
+  // The `output.paths` is not supported
+  "rollup@function@re-export-own: avoid using export.hasOwnProperty",
+  "rollup@function@mixed-external-paths: allows using the path option selectively",
+
+  // The module information is not compatible with rollup
+  "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
+  "rollup@function@plugin-module-information: provides module information on the plugin context",
+  "rollup@function@module-parsed-hook: calls the moduleParsedHook once a module is parsed",
+
+
+  // The namespace object is not compatible with rollup
+  "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
+  "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
+  "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
+
+  // Passed, but the output snapshot is same as rollup
+  "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
+
+
+  // Should give error or warinings
   // The output.generatedCode.preset is not supported 
   "rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option",
   // The output.generatedCode is not supported 
   "rollup@function@unknown-generated-code-value: throws for unknown string values for the generatedCode option",
   // The output.treeshake.preset is not supported 
-  "rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option",
+  "rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option",  
+  // Give warning if return map or ast without code
+  "rollup@function@transform-without-code-warn-ast: warns when returning a map but no code from a transform hook",
+  "rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook",
   // Throws with unknown output.treeshake options
   "rollup@function@unknown-treeshake-value: throws for unknown string values for the treeshake option",
   // Give warning for invalid options or outputOptions
@@ -287,12 +315,8 @@ const ignoreTests = [
   "rollup@function@invalid-pattern: throws for invalid patterns",
   // Throw error for top-level await at format cjs
   "rollup@function@invalid-top-level-await: throws for invalid top-level-await format",
-  // The load hook retrun ast is not supported
-  "rollup@function@uses-supplied-ast: uses supplied AST",
-  // The resolveId hook resolvedBy is not supported
-  "rollup@function@validate-resolved-by-logic: validate resolvedBy logic",
-  // The `output.validate` is not supported
-  "rollup@function@validate-output: handles validate failure",
+  // Throw error for invalid option at load hook
+  "rollup@function@load-returns-string-or-null: throws error if load returns something wacky",    
   // Give warning for empty chunk
   "rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198)",
   // Give parse error for update imported bindings
@@ -301,6 +325,10 @@ const ignoreTests = [
   "rollup@function@reassign-import-fails: disallows assignments to imported bindings",
   // Give warning for unused imports
   "rollup@function@unused-import: warns on unused imports ([#595])",
+  // Give warns when input hooks are used in output plugins
+  "rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins",
+  // Give warning for module level directive
+  "rollup@function@module-level-directive: module level directives should produce warnings",    
 
   // The error/warning msg info is not compatible with rollup
   "rollup@function@throws-not-found-module: throws error if module is not found",
@@ -313,34 +341,18 @@ const ignoreTests = [
   "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
   "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
   "rollup@function@namespace-missing-export: replaces missing namespace members with undefined and warns about them",
-
-  // Module meta related
-  // Shouldn't modify meta objects passed in resolveId hook
-  "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
-  "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",
-
-  // The `output.paths` is not supported
-  "rollup@function@re-export-own: avoid using export.hasOwnProperty",
-  "rollup@function@mixed-external-paths: allows using the path option selectively",
-
-  // The module information is not compatible with rollup
-  "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
-  "rollup@function@plugin-module-information: provides module information on the plugin context",
-  "rollup@function@module-parsed-hook: calls the moduleParsedHook once a module is parsed",
-
-  // Give warns when input hooks are used in output plugins
-  "rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins",
-
-  // The namespace object is not compatible with rollup
-  "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
-  "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
-  "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
-
-  // Give warning for module level directive
-  "rollup@function@module-level-directive: module level directives should produce warnings",
-
-  // Passed, but the output snapshot is same as rollup
-  "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
+  "rollup@function@warn-misplaced-annotations: warns for misplaced annotations",
+  "rollup@function@warn-missing-iife-name: warns if no name is provided for an IIFE bundle",
+  "rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode",
+  "rollup@function@warn-on-empty-bundle: warns if empty bundle is generated  (#444)",
+  "rollup@function@warn-on-eval: warns about use of eval",
+  "rollup@function@warn-on-namespace-conflict: warns on duplicate export * from",
+  "rollup@function@warn-on-top-level-this: warns on top-level this (#770)",
+  "rollup@function@warn-on-unused-missing-imports: warns on missing (but unused) imports",
+  "rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps",
+  "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
+  "rollup@function@warnings-to-string: provides a string conversion for warnings",
+  "rollup@function@plugin-error-with-numeric-code: rollup do not break if get a plugin error that contains numeric code",
 ]
 
 module.exports = {

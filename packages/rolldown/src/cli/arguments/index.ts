@@ -32,14 +32,18 @@ export const options = Object.fromEntries(
       short?: string
       default?: boolean | string | string[]
       hint?: string
-      description?: string
+      description: string
     }
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
     // add `do not` prefix for need reverse options description
     if (config && config.reverse) {
-      result.description = `do not ${result.description}`
+      if (result.description.startsWith('enable')) {
+        result.description = result.description.replace('enable', 'disable')
+      } else {
+        result.description = `disable ${result.description}`
+      }
     }
     key = camelCaseToKebabCase(key)
     // add 'no-' prefix for need reverse options

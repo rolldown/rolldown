@@ -2,7 +2,7 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
-  "packageManager": "pnpm@9.9.0",
+  "packageManager": "pnpm@9.12.3",
   "engines": {
     "node": ">=18.20.3"
   },
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "22.5.2",
+    "@types/node": "22.8.4",
     "cjs-module-lexer": "^1.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",
@@ -39,7 +39,7 @@
     "lint-staged": "^15.2.5",
     "npm-rolldown": "npm:rolldown@0.12.2",
     "npm-run-all": "^4.1.5",
-    "oxlint": "0.9.2",
+    "oxlint": "0.10.3",
     "prettier": "^3.3.1",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"

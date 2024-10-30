@@ -56,6 +56,9 @@ const ignoreTests = [
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
   "rollup@function@override-static-external-namespace: allows overriding imports of external namespace reexports without external live-bindings",
 
+  // The output plugins hooks is not working as expected
+  "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
+
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",

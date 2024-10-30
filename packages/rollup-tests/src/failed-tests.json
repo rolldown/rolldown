@@ -174,7 +174,6 @@
   "rollup@function@no-external-live-bindings: Allows omitting the code that handles external live bindings",
   "rollup@function@no-relative-external: missing relative imports are an error, not a warning",
   "rollup@function@non-js-extensions: non .js extensions are preserved",
-  "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
   "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",

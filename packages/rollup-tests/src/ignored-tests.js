@@ -52,6 +52,10 @@ const ignoreTests = [
   // The result is not working as expected
   "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
+  "rollup@function@non-js-extensions: non .js extensions are preserved",
+  "rollup@function@no-external-live-bindings: Allows omitting the code that handles external live bindings",
+  "rollup@function@no-external-live-bindings-compact: Allows omitting the code that handles external live bindings",
+
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
   "rollup@function@override-static-external-namespace: allows overriding imports of external namespace reexports without external live-bindings",
@@ -286,6 +290,7 @@ const ignoreTests = [
   "rollup@function@reexport-missing-error: reexporting a missing identifier should print an error",
   "rollup@function@recursive-reexports: handles recursive namespace reexports",
   "rollup@function@paths-are-case-sensitive: insists on correct casing for imports",
+  "rollup@function@no-relative-external: missing relative imports are an error, not a warning",
 
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",

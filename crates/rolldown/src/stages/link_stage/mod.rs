@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, ImporterRecord, Module, ModuleIdx,
+  EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
   ModuleTable, OutputFormat, ResolvedImportRecord, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
@@ -264,12 +264,13 @@ impl<'a> LinkStage<'a> {
     });
   }
 
+  #[allow(clippy::collapsible_if)]
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    let record_meta_update_pending_vecs = AppendOnlyVec::new();
+    let record_meta_update_pending_pairs_list = AppendOnlyVec::new();
     self.module_table.modules.par_iter().filter_map(Module::as_normal).for_each(|importer| {
-      let mut record_meta_pairs = vec![];
+      let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
       let importer_idx = importer.idx;
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
@@ -457,11 +458,11 @@ impl<'a> LinkStage<'a> {
       for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
         stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
       }
-      record_meta_update_pending_vecs.push((importer_idx, record_meta_pairs));
+      record_meta_update_pending_pairs_list.push((importer_idx, record_meta_pairs));
     });
 
     // merge import_record.meta
-    for (module_idx, record_meta_pairs) in record_meta_update_pending_vecs {
+    for (module_idx, record_meta_pairs) in record_meta_update_pending_pairs_list {
       let Some(module) = self.module_table.modules[module_idx].as_normal_mut() else {
         continue;
       };
@@ -590,10 +591,7 @@ fn is_external_dynamic_import(
   module_idx: ModuleIdx,
 ) -> bool {
   record.kind == ImportKind::DynamicImport
-    && table.modules[module_idx]
-      .as_normal()
-      .map(|module| module.is_user_defined_entry)
-      .unwrap_or_default()
+    && table.modules[module_idx].as_normal().is_some_and(|module| module.is_user_defined_entry)
     && record.resolved_module != module_idx
 }
 

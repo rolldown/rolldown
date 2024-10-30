@@ -4177,7 +4177,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/export-all
 
-- main-!~{000}~.js => main-uCLfMLLY.js
+- main-!~{000}~.js => main--pSlkPVu.js
 
 # tests/rolldown/function/format/app/export-default-class
 
@@ -4197,7 +4197,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/export-named-from
 
-- main-!~{000}~.js => main-Lc25utDA.js
+- main-!~{000}~.js => main-h6vOV3uK.js
 
 # tests/rolldown/function/format/app/import
 

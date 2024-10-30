@@ -5,7 +5,6 @@ import {
 } from '../../../package.json' assert { type: 'json' }
 import { bold, cyan, gray, underline } from '../colors'
 import { options } from '../arguments'
-import { alias, OptionConfig } from '../arguments/alias'
 import { camelCaseToKebabCase } from '../arguments/utils'
 
 const introduction = `${gray(`${description} (rolldown v${version})`)}
@@ -66,20 +65,8 @@ export function showHelp() {
         return a.localeCompare(b)
       })
       .map(([option, { type, short, hint, description }]) => {
-        let optionStr = '  '
-        const config = ((Object.getOwnPropertyDescriptor(alias, option) ?? {})
-          .value ?? {}) as OptionConfig
+        let optionStr = `  --${option} `
         option = camelCaseToKebabCase(option)
-        if (
-          typeof config.default === 'boolean' &&
-          type === 'boolean' &&
-          config.default
-        ) {
-          optionStr += `--no-${option}`
-          description = `Do not ${description}`
-        } else {
-          optionStr += `--${option} `
-        }
         if (short) {
           optionStr += `-${short}, `
         }

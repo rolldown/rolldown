@@ -75,7 +75,7 @@ const outputOptionsSchema = z.strictObject({
     .optional(),
   externalLiveBindings: z
     .boolean()
-    .describe('use external live bindings')
+    .describe('external live bindings')
     .default(true)
     .optional(),
   inlineDynamicImports: z

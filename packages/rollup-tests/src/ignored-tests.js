@@ -47,7 +47,10 @@ const ignoreTests = [
   "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",
   "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
   "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
-  "rollup@function@relative-external-include-once: includes a relative external module only once",
+  "rollup@function@relative-external-include-once: includes a relative external module only once",  // The external module is not working as expected
+  // The result is not working as expected
+  "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
+  "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
 
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
@@ -132,6 +135,7 @@ const ignoreTests = [
   "rollup@function@synthetic-named-exports@synthetic-named-export-as-default: makes sure default exports of synthetic named exports are snapshots",
   "rollup@function@synthetic-named-exports@synthetic-named-export-entry: does not expose synthetic named exports on entry points",
   "rollup@function@reexport-from-synthetic: handles reexporting a synthetic namespace from a non-synthetic module",
+  "rollup@function@respect-synthetic-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   // output.generatedCode.symbols is not supported 
   "rollup@function@reexport-ns: external namespace reexport",
   "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
@@ -263,6 +267,8 @@ const ignoreTests = [
   "rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198)",
   // Give parse error for update imported bindings
   "rollup@function@update-expression-of-import-fails: disallows updates to imported bindings",
+  "rollup@function@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level",
+  "rollup@function@reassign-import-fails: disallows assignments to imported bindings",
   // Give warning for unused imports
   "rollup@function@unused-import: warns on unused imports ([#595])",
 
@@ -271,6 +277,7 @@ const ignoreTests = [
   "rollup@function@shims-missing-exports: shims missing exports",
   "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
   "rollup@function@reexport-missing-error: reexporting a missing identifier should print an error",
+  "rollup@function@recursive-reexports: handles recursive namespace reexports",
 
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",

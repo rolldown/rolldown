@@ -70,6 +70,12 @@ const ignoreTests = [
   "rollup@function@module-side-effects@array: supports setting module side effects via an array",
   "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",
   "rollup@function@module-parsed-imported-ids: provides full importedIds and dynamicallyImportedIds in the moduleParsed hook",
+  "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",
+  "rollup@function@facade-reexports: handles reexports when creating a facade chunk and transitive dependencies are not hoisted",
+  "rollup@function@external-resolved: passes both unresolved and resolved ids to the external option",
+  "rollup@function@external-resolve-false: includes an external module with a false resolve return",
+  "rollup@function@external-normalization: external paths from custom resolver remain external (#633)",
+  "rollup@function@external-conflict: external paths from custom resolver remain external (#633)",
 
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
@@ -147,7 +153,7 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL",
   // import.meta.ROLLUP_FILE_URL_<referenceId> throw error if asset source is not set
   "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
-  
+
   // PluginContext.emitFile is not supported emit chunk
   "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
   "rollup@function@resolveid-is-entry: sends correct isEntry information to resolveId hooks",
@@ -198,11 +204,14 @@ const ignoreTests = [
   "rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache",
   // Bundle.cache is not supported
   "rollup@function@module-tree: bundle.modules includes dependencies (#903)",
+  "rollup@function@has-modules-array: user-facing bundle has modules array",
+
   // PluginContext.parse is deprecated
   "rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method",
   "rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options",
   "rollup@function@plugin-parse: plugin transform hooks can use `this.parse(code, options)`",
   "rollup@function@call-marked-pure-with-plugin-parse-ast: external function calls marked with pure comment do not have effects and should be removed even if parsed by PluginContext.parse method",
+  "rollup@function@handle-missing-export-source: does not fail if a pre-generated AST is omitting the source property of an unused named export (#3210)",
   // Should check the hook typing is correct
   "rollup@function@non-function-hook-async: throws when providing a value for an async function hook",
   "rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook",
@@ -278,6 +287,9 @@ const ignoreTests = [
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
   "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",
 
+  // The `output.file` is not supported
+  "rollup@function@file-and-dir: throws when using both the file and the dir option",
+
   // The `output.paths` is not supported
   "rollup@function@re-export-own: avoid using export.hasOwnProperty",
   "rollup@function@mixed-external-paths: allows using the path option selectively",
@@ -288,10 +300,14 @@ const ignoreTests = [
   "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
   "rollup@function@import-meta-url: resolves import.meta.url",
 
+  // Should delete use strict from function body
+  "rollup@function@function-use-strict-directive-removed: should delete use strict from function body",
+
   // The module information is not compatible with rollup
   "rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled",
   "rollup@function@plugin-module-information: provides module information on the plugin context",
   "rollup@function@module-parsed-hook: calls the moduleParsedHook once a module is parsed",
+  "rollup@function@has-default-export: reports if a module has a default export", // hasDefaultExport is not support
 
 
   // The namespace object is not compatible with rollup
@@ -350,6 +366,11 @@ const ignoreTests = [
   "rollup@function@module-level-directive: module level directives should produce warnings",    
   // Give parse error for non-top-level imports
   "rollup@function@import-not-at-top-level-fails: disallows non-top-level imports",
+  // Give error for invalid hash length
+  "rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded",
+  "rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded",
+  // Give error for placeholder length for non-hash placeholder
+  "rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than \"hash\"",
 
   // The error/warning msg info is not compatible with rollup
   "rollup@function@throws-not-found-module: throws error if module is not found",
@@ -378,6 +399,7 @@ const ignoreTests = [
   "rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports",
   "rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports",
   "rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw",
+  "rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build",
 ]
 
 module.exports = {

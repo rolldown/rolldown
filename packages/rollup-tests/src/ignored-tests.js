@@ -103,6 +103,7 @@ const ignoreTests = [
   "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
   // PluginContext.emitFile is not supported emit chunk
   "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
+  "rollup@function@resolveid-is-entry: sends correct isEntry information to resolveId hooks",
   // Should throw error if input option key is `./path` or `/path` or `../path`
   "rollup@function@input-name-validation2: throws for relative paths as input names",
   "rollup@function@input-name-validation3: throws for relative paths as input names",
@@ -259,6 +260,9 @@ const ignoreTests = [
   "rollup@function@throws-not-found-module: throws error if module is not found",
   "rollup@function@shims-missing-exports: shims missing exports",
   "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
+
+  // Shouldn't modify meta objects passed in resolveId hook
+  "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
 ]
 
 module.exports = {

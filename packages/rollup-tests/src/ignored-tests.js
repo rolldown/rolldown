@@ -59,6 +59,14 @@ const ignoreTests = [
   "rollup@function@namespace-member-side-effects@unknown-access: respects side effects when accessing unknown namespace members",
   "rollup@function@namespace-member-side-effects@assignment: checks side effects when reassigning namespace members",
   "rollup@function@name-conflict-promise: avoids name conflicts with local variables named Promise",
+  "rollup@function@module-side-effects@writable: ModuleInfo.moduleSideEffects should be writable during build time",
+  "rollup@function@module-side-effects@transform: handles setting moduleSideEffects in the transform hook",
+  "rollup@function@module-side-effects@resolve-id-external: does not include modules without used exports if moduleSideEffect is false",
+  "rollup@function@module-side-effects@resolve-id: does not include modules without used exports if moduleSideEffect is false",
+  "rollup@function@module-side-effects@load: handles setting moduleSideEffects in the load hook",
+  "rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules",
+  "rollup@function@module-side-effects@array: supports setting module side effects via an array",
+  "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",
 
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",

@@ -37,7 +37,6 @@ export const options = Object.fromEntries(
     if (config && config?.abbreviation) {
       result.short = config?.abbreviation
     }
-    // add `do not` prefix for need reverse options description
     if (config && config.reverse) {
       if (result.description.startsWith('enable')) {
         result.description = result.description.replace('enable', 'disable')

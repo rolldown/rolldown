@@ -207,6 +207,7 @@ const ignoreTests = [
   "rollup@function@interop-default-only: handles interop \"defaultOnly\"",
   "rollup@function@interop-default: handles interop \"default\" with live-bindings support",
   "rollup@function@interop-esmodule: handles interop \"esModule\" with live-bindings support",
+  "rollup@function@invalid-interop: throws for invalid interop values",
   // The output.generatedCode.preset is not supported 
   "rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option",
   // The output.generatedCode is not supported 
@@ -217,6 +218,22 @@ const ignoreTests = [
   "rollup@function@unknown-treeshake-value: throws for unknown string values for the treeshake option",
   // Give warning for invalid options or outputOptions
   "rollup@function@warns-for-invalid-options: warns for invalid options",
+  // Give warning for invalid treeshake.moduleSideEffects option
+  "rollup@function@module-side-effects@invalid-option: warns for invalid options",
+  // Throw error for invalid addhook value
+  "rollup@function@invalid-addon-hook: throws when providing a non-string value for an addon hook",
+  // Throw error for unexpected output exports
+  "rollup@function@invalid-default-export-mode: throw for invalid default export mode",
+  // Throw error if output.sourcemapIgnoreList return non-boolean value
+  "rollup@function@invalid-ignore-list-function: throw descriptive error if sourcemapIgnoreList-function does not return a boolean",
+  // Throw error if output.sourcemapPathTransform return non-string value
+  "rollup@function@invalid-transform-source-function: throw descriptive error if sourcemapPathTransform-function does not return a string (#3484)",
+  // Throw error for invalid placeholder in filename options
+  "rollup@function@invalid-pattern-replacement: throws for invalid placeholders in patterns",
+  // Throw error for `../xxx` in filename options
+  "rollup@function@invalid-pattern: throws for invalid patterns",
+  // Throw error for top-level await at format cjs
+  "rollup@function@invalid-top-level-await: throws for invalid top-level-await format",
 ]
 
 module.exports = {

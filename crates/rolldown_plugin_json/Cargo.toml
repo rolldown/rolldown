@@ -15,7 +15,6 @@ doctest = false
 workspace = true
 
 [dependencies]
-lazy_static     = { workspace = true }
 memchr          = { workspace = true }
 regex           = { workspace = true }
 rolldown_common = { workspace = true }

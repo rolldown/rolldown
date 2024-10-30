@@ -2649,7 +2649,6 @@ dependencies = [
 name = "rolldown_plugin_json"
 version = "0.1.0"
 dependencies = [
- "lazy_static",
  "memchr",
  "regex",
  "rolldown_common",

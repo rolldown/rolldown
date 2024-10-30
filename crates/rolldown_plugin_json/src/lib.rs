@@ -1,23 +1,14 @@
-use lazy_static::lazy_static;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookTransformOutput, Plugin};
 use serde_json::Value;
 use std::borrow::Cow;
+use std::collections::HashSet;
+use std::sync::OnceLock;
 
 const RESERVED_WORDS: &str =
   "break case class catch const continue debugger default delete do else export extends finally for function if import in instanceof let new return super switch this throw try typeof var void while with yield enum await implements package protected static interface private public";
 const BUILTINS: &str =
   "arguments Infinity NaN undefined null true false eval uneval isFinite isNaN parseFloat parseInt decodeURI decodeURIComponent encodeURI encodeURIComponent escape unescape Object Function Boolean Symbol Error EvalError InternalError RangeError ReferenceError SyntaxError TypeError URIError Number Math Date String RegExp Array Int8Array Uint8Array Uint8ClampedArray Int16Array Uint16Array Int32Array Uint32Array Float32Array Float64Array Map Set WeakMap WeakSet SIMD ArrayBuffer DataView JSON Promise Generator GeneratorFunction Reflect Proxy Intl";
-
-lazy_static! {
-  static ref FORBIDDEN_IDENTIFIERS: std::collections::HashSet<&'static str> = {
-    let mut set = std::collections::HashSet::from_iter(
-      RESERVED_WORDS.split_whitespace().chain(BUILTINS.split_whitespace()),
-    );
-    set.insert("");
-    set
-  };
-}
 
 #[derive(Debug, Default)]
 pub struct JsonPlugin {
@@ -115,7 +106,20 @@ fn is_special_query(ext: &str) -> bool {
   false
 }
 
+fn get_forbidden_identifiers() -> &'static HashSet<&'static str> {
+  static FORBIDDEN_IDENTIFIERS: OnceLock<HashSet<&'static str>> = OnceLock::new();
+  FORBIDDEN_IDENTIFIERS.get_or_init(|| {
+    let mut set = std::collections::HashSet::from_iter(
+      RESERVED_WORDS.split_whitespace().chain(BUILTINS.split_whitespace()),
+    );
+    set.insert("");
+    set
+  })
+}
+
 fn make_legal_identifier(ident: &str) -> String {
+  let forbidden_identifiers = get_forbidden_identifiers();
+
   // convert hyphenated word to camel case
   let hyphen_re = regex::Regex::new(r"-(\w)").unwrap();
   let ident =
@@ -123,6 +127,12 @@ fn make_legal_identifier(ident: &str) -> String {
   // convert invalid ch to underline
   let invalid_chars_re = regex::Regex::new(r"[^$_a-zA-Z0-9]").unwrap();
   let ident = invalid_chars_re.replace_all(&ident, "_");
+
+  if ident.chars().nth(0).map_or(true, |ch| ch.is_ascii_digit())
+    || forbidden_identifiers.contains(ident.as_ref())
+  {
+    return format!("_{ident}");
+  }
 
   ident.to_string()
 }
@@ -183,5 +193,11 @@ mod test {
   fn to_esm_named_exports_literal() {
     let data = serde_json::json!(1);
     assert_eq!("export default 1;\n", to_esm(data, true));
+  }
+
+  #[test]
+  fn to_esm_named_exports_forbidden_ident() {
+    let data = serde_json::json!({"true": true});
+    assert_eq!("export default {\n\"true\": true,\n\n};\n", to_esm(data, true));
   }
 }

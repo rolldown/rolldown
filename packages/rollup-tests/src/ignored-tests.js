@@ -207,6 +207,14 @@ const ignoreTests = [
   "rollup@function@interop-default-only: handles interop \"defaultOnly\"",
   "rollup@function@interop-default: handles interop \"default\" with live-bindings support",
   "rollup@function@interop-esmodule: handles interop \"esModule\" with live-bindings support",
+  // The output.generatedCode.preset is not supported 
+  "rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option",
+  // The output.generatedCode is not supported 
+  "rollup@function@unknown-generated-code-value: throws for unknown string values for the generatedCode option",
+  // The output.treeshake.preset is not supported 
+  "rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option",
+  // Throws with unknown output.treeshake options
+  "rollup@function@unknown-treeshake-value: throws for unknown string values for the treeshake option",
 ]
 
 module.exports = {

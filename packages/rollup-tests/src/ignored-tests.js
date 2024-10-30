@@ -97,6 +97,9 @@ const ignoreTests = [
   "rollup@function@logging@plugin-order: allows to order plugins when logging",
   "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
 
+  // The plugin sequential is not supported
+  "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",
+
   // The output plugins hooks is not working as expected
   "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
 
@@ -145,26 +148,36 @@ const ignoreTests = [
   "rollup@function@emit-chunk-manual-asset-source: supports setting asset sources as side effect of the manual chunks option",
   "rollup@function@emit-chunk-manual: supports emitting chunks as side effect of the manual chunks option",
   "rollup@function@inline-imports-with-manual: Manual chunks are not supported when inlining dynamic imports",
+
   // PluginContext.setAssetSource is not supported
   // Should throw error if asset source is null
   "rollup@function@emit-file@asset-source-invalid2: throws when setting an empty asset source",
   "rollup@function@emit-file@asset-source-invalid3: throws when setting an empty asset source",
   "rollup@function@emit-file@asset-source-invalid4: throws when setting an empty asset source",
+  // Cannot emit files or set asset sources in the "outputOptions/transform" hook
+  "rollup@function@emit-file@set-asset-source-transform: throws when setting the asset source in the transform hook",
+  "rollup@function@emit-file@set-source-in-output-options: throws when trying to set file sources in  the outputOptions hook",
   //  Should throw error if PluginContext.setAssetSource set asset source twice
   "rollup@function@emit-file@set-asset-source-twice2: throws when setting the asset source twice",
   "rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice",
   // Should throw error if PluginContext.emitFile asset source is null
   "rollup@function@emit-file@asset-source-invalid: throws when setting an empty asset source",
+  // Should throw error if asset source id is invalid
+  "rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids",
   // PluginContext.getFilename throw error if asset source is not set
   "rollup@function@emit-file@asset-source-missing3: throws when accessing the file name before the asset source is set",
   "rollup@function@emit-file@asset-source-missing4: throws when accessing the file name before the asset source is set",
   // Should throw error if asset source is not set at generate stage
   "rollup@function@emit-file@asset-source-missing2: throws when not setting the asset source",
   "rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL",
+  // import.meta.ROLLUP_FILE_URL_<referenceId> is not supported
+  "rollup@function@emit-file@file-references-in-bundle: lists referenced files in the bundle",
   // import.meta.ROLLUP_FILE_URL_<referenceId> throw error if asset source is not set
   "rollup@function@emit-file@asset-source-missing: throws when not setting the asset source",
+  // import.meta.ROLLUP_FILE_URL_<referenceId> throw error if invalid reference id
+  "rollup@function@emit-file@invalid-reference-id: throws for invalid reference ids",
 
-  // PluginContext.emitFile is not supported emit chunk
+  // PluginContext.emitFile emit chunk is not supported 
   "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle",
   "rollup@function@resolveid-is-entry: sends correct isEntry information to resolveId hooks",
   "rollup@function@inline-dynamic-no-treeshake: handles inlining dynamic imports when treeshaking is disabled for modules (#4098)",
@@ -173,6 +186,19 @@ const ignoreTests = [
   "rollup@function@implicit-dependencies@dependant-not-part-of-graph: throws when a module that is loaded before an emitted chunk is not part of the module graph",
   "rollup@function@implicit-dependencies@external-dependant: throws when a module that is loaded before an emitted chunk does not exist",
   "rollup@function@implicit-dependencies@missing-dependant: throws when a module that is loaded before an emitted chunk is external",
+  "rollup@function@emit-file@set-asset-source-chunk: throws when trying to set the asset source of a chunk",
+  "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
+  "rollup@function@emit-file@modules-loaded: Throws when adding a chunk after the modules have finished loading",
+  "rollup@function@emit-file@invalid-chunk-id: throws for invalid chunk ids",
+  "rollup@function@emit-file@chunk-not-found: Throws if an emitted entry chunk cannot be resolved",
+  "rollup@function@emit-file@chunk-filename-not-available-buildEnd: Throws when accessing the filename before it has been generated in buildEnd",
+  "rollup@function@emit-file@chunk-filename-not-available-renderStart: Throws when accessing the filename before it has been generated in renderStart",
+  "rollup@function@emit-file@chunk-filename-not-available: Throws when accessing the filename before it has been generated",
+  
+  // PluginContext.emitFile emit prebuilt chunk is not supported 
+  "rollup@function@emit-file@prebuilt-chunk: get right prebuilt chunks",
+  "rollup@function@emit-file@invalid-prebuilt-chunk-filename: throws for invalid prebuilt chunks filename",
+  "rollup@function@emit-file@invalid-prebuit-chunk-code: throws for invalid prebuilt chunks code",
 
   // Should throw error if input option key is `./path` or `/path` or `../path`
   "rollup@function@input-name-validation2: throws for relative paths as input names",
@@ -377,13 +403,22 @@ const ignoreTests = [
   "rollup@function@module-level-directive: module level directives should produce warnings",    
   // Give parse error for non-top-level imports
   "rollup@function@import-not-at-top-level-fails: disallows non-top-level imports",
-    // Give parse error for non-top-level exports
+  // Give parse error for non-top-level exports
   "rollup@function@export-not-at-top-level-fails: disallows non-top-level exports",
   // Give error for invalid hash length
   "rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded",
   "rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded",
   // Give error for placeholder length for non-hash placeholder
   "rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than \"hash\"",
+  // Give error for invalid emit file type
+  "rollup@function@emit-file@invalid-file-type: throws for invalid file types",
+  // Give error for invalid asset name
+  "rollup@function@emit-file@invalid-asset-name3: throws for invalid asset names with absolute path on Windows OS",
+  "rollup@function@emit-file@invalid-asset-name: throws for invalid asset names",
+  // Give warns if multiple files with the same name are emitted
+  "rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted",
+  "rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook",
+
 
   // The error/warning msg info is not compatible with rollup
   // TODO check the error is not break bundle

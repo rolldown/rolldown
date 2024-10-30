@@ -82,6 +82,7 @@ const ignoreTests = [
   "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
   "rollup@function@external-alias-parent: includes an external module included dynamically by an alias",
   "rollup@function@external-alias: includes an external module included dynamically by an alias",
+  "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   // TODO to check external require content to be true
   "rollup@function@external-ids-not-resolved: does not attempt to resolve external IDs",
   "rollup@function@external-function-always-true: Does not call external for entry point",
@@ -139,6 +140,12 @@ const ignoreTests = [
   "rollup@function@preserve-modules@virtual-modules: Generates actual files for virtual modules when preserving modules",
   "rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode",
   "rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules",
+  // output.preserveEntrySignatures is not supported
+  "rollup@function@dynamic-imports-shared-exports: allows sharing imports between dynamic chunks",
+  // output.dynamicImportInCjs is not supported
+  "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",
+  "rollup@function@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions",
+  "rollup@function@dynamic-import-expression: Dynamic import expression replacement",
   // output.manualChunks is not supported
   "rollup@function@manual-chunks-conflict: Throws for conflicts between manual chunks",
   "rollup@function@manual-chunks-include-external-modules3: throws an error EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES for manualChunks' modules that are resolved as an external module by the 'external' option",
@@ -194,7 +201,7 @@ const ignoreTests = [
   "rollup@function@emit-file@chunk-filename-not-available-buildEnd: Throws when accessing the filename before it has been generated in buildEnd",
   "rollup@function@emit-file@chunk-filename-not-available-renderStart: Throws when accessing the filename before it has been generated in renderStart",
   "rollup@function@emit-file@chunk-filename-not-available: Throws when accessing the filename before it has been generated",
-  
+
   // PluginContext.emitFile emit prebuilt chunk is not supported 
   "rollup@function@emit-file@prebuilt-chunk: get right prebuilt chunks",
   "rollup@function@emit-file@invalid-prebuilt-chunk-filename: throws for invalid prebuilt chunks filename",
@@ -352,6 +359,8 @@ const ignoreTests = [
   "rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones",
   "rollup@function@keep-cjs-dynamic-import: keeps dynamic imports in CJS output by default",
   "rollup@function@escape-arguments: does not use \"arguments\" as a placeholder variable for a default export",
+  "rollup@function@dynamic-import-only-default: correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks",
+  "rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode",
 
   // Passed, but the output snapshot is same as rollup
   "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
@@ -418,7 +427,11 @@ const ignoreTests = [
   // Give warns if multiple files with the same name are emitted
   "rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted",
   "rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook",
-
+  "rollup@function@duplicate-import-specifier-fails: disallows duplicate import specifiers",
+  "rollup@function@duplicate-import-fails: disallows duplicate imports",
+  "rollup@function@double-named-export: throws on duplicate named exports",
+  "rollup@function@double-named-reexport: throws on duplicate named exports",
+  "rollup@function@double-default-export: throws on double default exports",
 
   // The error/warning msg info is not compatible with rollup
   // TODO check the error is not break bundle
@@ -456,7 +469,10 @@ const ignoreTests = [
   "rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with \".json\" extension",
   "rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension",
   "rollup@function@error-missing-umd-name: throws an error if no name is provided for a UMD bundle",
-  "rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file"
+  "rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file",
+  "rollup@function@dynamic-import-relative-not-found: throws if a dynamic relative import is not found",
+  "rollup@function@dynamic-import-not-found: warns if a dynamic import is not found",
+  "rollup@function@does-not-hang-on-missing-module: does not hang on missing module (#53)",
 ]
 
 module.exports = {

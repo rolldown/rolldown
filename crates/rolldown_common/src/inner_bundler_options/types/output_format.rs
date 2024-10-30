@@ -22,6 +22,16 @@ impl OutputFormat {
   pub fn requires_scope_hoisting(&self) -> bool {
     matches!(self, Self::Esm | Self::Cjs | Self::Iife | Self::Umd)
   }
+
+  #[inline]
+  pub fn keep_esm_import_export(&self) -> bool {
+    matches!(self, Self::Esm)
+  }
+
+  #[inline]
+  pub fn should_call_runtime_require(&self) -> bool {
+    !matches!(self, Self::Cjs)
+  }
 }
 
 impl Display for OutputFormat {

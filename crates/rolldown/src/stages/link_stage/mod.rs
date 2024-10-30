@@ -1,5 +1,6 @@
 use std::{ptr::addr_of, sync::Mutex};
 
+use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
@@ -8,7 +9,7 @@ use rolldown_common::{
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
-  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 use rustc_hash::FxHashSet;
 
@@ -266,7 +267,9 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
+    let record_meta_update_pending_vecs = AppendOnlyVec::new();
     self.module_table.modules.par_iter().filter_map(Module::as_normal).for_each(|importer| {
+      let mut record_meta_pairs = vec![];
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
@@ -275,7 +278,7 @@ impl<'a> LinkStage<'a> {
       // store the symbol reference to the declared statement index
       let mut declared_symbol_for_stmt_pairs = vec![];
       stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
-        stmt_info.import_records.iter_mut().for_each(|rec_id| {
+        stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
           match &self.module_table.modules[rec.resolved_module] {
             Module::External(importee) => {
@@ -289,7 +292,6 @@ impl<'a> LinkStage<'a> {
                       &mut symbols.lock().unwrap(),
                       &format!("import_{}", legitimize_identifier_name(&importee.name)),
                     );
-                    // rec.meta.insert(ImportRecordMeta::all());
                   } else {
                     // import ... from 'external' or export ... from 'external'
                     let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
@@ -298,6 +300,14 @@ impl<'a> LinkStage<'a> {
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
                     }
+                  }
+                }
+                ImportKind::Require if self.options.format.keep_esm_import_export() => {
+                  if self.options.format.should_call_runtime_require() {
+                    // stmt_info
+                    //   .referenced_symbols
+                    //   .push(self.runtime.resolve_symbol("__require").into());
+                    record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
                   }
                 }
                 _ => {}
@@ -441,7 +451,18 @@ impl<'a> LinkStage<'a> {
       for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
         stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
       }
+      record_meta_update_pending_vecs.push((importer.idx, record_meta_pairs));
     });
+
+    // merge import_record.meta
+    for (module_idx, record_meta_pairs) in record_meta_update_pending_vecs {
+      let Some(module) = self.module_table.modules[module_idx].as_normal_mut() else {
+        continue;
+      };
+      for (rec_id, meta) in record_meta_pairs {
+        module.import_records[rec_id].meta |= meta;
+      }
+    }
   }
 
   fn create_exports_for_ecma_modules(&mut self) {

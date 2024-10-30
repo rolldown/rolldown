@@ -4201,7 +4201,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-e_nkWxMO.js
+- main-!~{000}~.js => main-r4V64q5u.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
@@ -4211,7 +4211,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.js => main-VZQir6Vm.js
+- main-!~{000}~.js => main-gFBfIluz.js
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -4625,7 +4625,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
-- main-!~{000}~.js => main-RgoOM5-k.js
+- main-!~{000}~.js => main-YHa9W7p5.js
 
 # tests/rolldown/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 

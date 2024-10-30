@@ -278,6 +278,7 @@ const ignoreTests = [
   "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
   "rollup@function@reexport-missing-error: reexporting a missing identifier should print an error",
   "rollup@function@recursive-reexports: handles recursive namespace reexports",
+  "rollup@function@paths-are-case-sensitive: insists on correct casing for imports",
 
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",

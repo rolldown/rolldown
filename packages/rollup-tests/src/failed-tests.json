@@ -177,7 +177,6 @@
   "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
   "rollup@function@override-static-external-namespace: allows overriding imports of external namespace reexports without external live-bindings",
-  "rollup@function@paths-are-case-sensitive: insists on correct casing for imports",
   "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",

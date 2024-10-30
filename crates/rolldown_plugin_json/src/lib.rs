@@ -139,7 +139,7 @@ fn make_legal_identifier(ident: &str) -> String {
 
 fn to_esm(data: Value, named_exports: bool) -> String {
   if !named_exports || !data.is_object() {
-    return format!("export default {}", data);
+    return format!("export default {};\n", data);
   }
 
   let mut default_export_rows = vec![];

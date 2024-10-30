@@ -49,13 +49,13 @@ impl Plugin for JsonPlugin {
       }));
     }
 
-    let output = to_esm(value, self.named_exports);
+    let output = to_esm(&value, self.named_exports);
 
-    return Ok(Some(HookTransformOutput {
+    Ok(Some(HookTransformOutput {
       code: Some(output),
       module_type: Some(ModuleType::Js),
       ..Default::default()
-    }));
+    }))
   }
 }
 
@@ -109,9 +109,8 @@ fn is_special_query(ext: &str) -> bool {
 fn get_forbidden_identifiers() -> &'static HashSet<&'static str> {
   static FORBIDDEN_IDENTIFIERS: OnceLock<HashSet<&'static str>> = OnceLock::new();
   FORBIDDEN_IDENTIFIERS.get_or_init(|| {
-    let mut set = std::collections::HashSet::from_iter(
-      RESERVED_WORDS.split_whitespace().chain(BUILTINS.split_whitespace()),
-    );
+    let mut set: HashSet<&'static str> =
+      RESERVED_WORDS.split_whitespace().chain(BUILTINS.split_whitespace()).collect();
     set.insert("");
     set
   })
@@ -128,7 +127,7 @@ fn make_legal_identifier(ident: &str) -> String {
   let invalid_chars_re = regex::Regex::new(r"[^$_a-zA-Z0-9]").unwrap();
   let ident = invalid_chars_re.replace_all(&ident, "_");
 
-  if ident.chars().nth(0).map_or(true, |ch| ch.is_ascii_digit())
+  if ident.chars().next().map_or(true, |ch| ch.is_ascii_digit())
     || forbidden_identifiers.contains(ident.as_ref())
   {
     return format!("_{ident}");
@@ -137,9 +136,9 @@ fn make_legal_identifier(ident: &str) -> String {
   ident.to_string()
 }
 
-fn to_esm(data: Value, named_exports: bool) -> String {
+fn to_esm(data: &Value, named_exports: bool) -> String {
   if !named_exports || !data.is_object() {
-    return format!("export default {};\n", data);
+    return format!("export default {data};\n");
   }
 
   let mut default_export_rows = vec![];
@@ -186,18 +185,18 @@ mod test {
   #[test]
   fn to_esm_named_exports_object() {
     let data = serde_json::json!({"name": "name"});
-    assert_eq!("export const name = \"name\";\nexport default {\nname\n};\n", to_esm(data, true));
+    assert_eq!("export const name = \"name\";\nexport default {\nname\n};\n", to_esm(&data, true));
   }
 
   #[test]
   fn to_esm_named_exports_literal() {
     let data = serde_json::json!(1);
-    assert_eq!("export default 1;\n", to_esm(data, true));
+    assert_eq!("export default 1;\n", to_esm(&data, true));
   }
 
   #[test]
   fn to_esm_named_exports_forbidden_ident() {
     let data = serde_json::json!({"true": true});
-    assert_eq!("export default {\n\"true\": true,\n\n};\n", to_esm(data, true));
+    assert_eq!("export default {\n\"true\": true,\n\n};\n", to_esm(&data, true));
   }
 }

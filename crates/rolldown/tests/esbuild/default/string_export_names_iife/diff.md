@@ -18,11 +18,11 @@ var global;
 ```
 ### rolldown
 ```js
-(function(exports, __foo, __foo) {
+(function(exports, ___foo, ___foo) {
 
 "use strict";
-const all the stuff = __foo;
-const { some import: someImport } = __foo;
+const all the stuff = ___foo;
+const { some import: someImport } = ___foo;
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
@@ -32,7 +32,7 @@ Object.defineProperty(exports, 'all the stuff', {
 });
 exports["some export"] = someImport
 return exports;
-})({}, __foo, __foo);
+})({}, ___foo, ___foo);
 ```
 ### diff
 ```diff
@@ -51,11 +51,11 @@ return exports;
 -    var all_the_stuff = __toESM(require("./foo"));
 -    return __toCommonJS(entry_exports);
 -})();
-+(function(exports, __foo, __foo) {
++(function(exports, ___foo, ___foo) {
 +
 +"use strict";
-+const all the stuff = __foo;
-+const { some import: someImport } = __foo;
++const all the stuff = ___foo;
++const { some import: someImport } = ___foo;
 +
 +Object.defineProperty(exports, 'all the stuff', {
 +  enumerable: true,
@@ -65,7 +65,7 @@ return exports;
 +});
 +exports["some export"] = someImport
 +return exports;
-+})({}, __foo, __foo);
++})({}, ___foo, ___foo);
 \ No newline at end of file
 
 ```

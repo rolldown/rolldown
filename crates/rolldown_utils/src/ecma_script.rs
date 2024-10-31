@@ -16,9 +16,7 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
   let mut first_invalid_char_index = None;
 
   if let Some((idx, first_char)) = chars_indices.next() {
-    if identifier::is_identifier_start(first_char) {
-      // Nothing we need to do
-    } else {
+    if !identifier::is_identifier_start(first_char) {
       first_invalid_char_index = Some(idx);
     }
   }
@@ -28,27 +26,24 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
       chars_indices.find(|(_idx, char)| !identifier::is_identifier_part(*char)).map(|(idx, _)| idx);
   }
 
-  if let Some(first_invalid_char_index) = first_invalid_char_index {
-    let (first_valid_part, rest_part) = name.split_at(first_invalid_char_index);
-    legitimized.push_str(first_valid_part);
-    let skip_count = if first_invalid_char_index == 0 {
-      legitimized.push('_');
-      1
-    } else {
-      0
-    };
-    for char in rest_part.chars().skip(skip_count) {
-      if identifier::is_identifier_part(char) {
-        legitimized.push(char);
-      } else {
-        legitimized.push('_');
-      }
-    }
+  let Some(first_invalid_char_index) = first_invalid_char_index else {
+    return Cow::Borrowed(name);
+  };
 
-    return Cow::Owned(legitimized);
+  let (first_valid_part, rest_part) = name.split_at(first_invalid_char_index);
+  legitimized.push_str(first_valid_part);
+  if first_invalid_char_index == 0 {
+    legitimized.push('_');
+  }
+  for char in rest_part.chars() {
+    if identifier::is_identifier_part(char) {
+      legitimized.push(char);
+    } else {
+      legitimized.push('_');
+    }
   }
 
-  Cow::Borrowed(name)
+  Cow::Owned(legitimized)
 }
 
 pub fn property_access_str(obj: &str, prop: &str) -> String {
@@ -71,5 +66,5 @@ fn test_legitimize_identifier_name() {
   assert_eq!(legitimize_identifier_name("foo"), "foo");
   assert_eq!(legitimize_identifier_name("$foo$"), "$foo$");
   assert_eq!(legitimize_identifier_name("react-dom"), "react_dom");
-  assert_eq!(legitimize_identifier_name("111a"), "_11a");
+  assert_eq!(legitimize_identifier_name("111a"), "_111a");
 }

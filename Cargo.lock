@@ -2650,9 +2650,9 @@ name = "rolldown_plugin_json"
 version = "0.1.0"
 dependencies = [
  "memchr",
- "regex",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_utils",
  "serde_json",
 ]
 

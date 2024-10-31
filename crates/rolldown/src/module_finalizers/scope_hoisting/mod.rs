@@ -3,7 +3,9 @@ use oxc::{
   ast::ast::{self, IdentifierReference, Statement},
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{
+  AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, SymbolRef, WrapKind,
+};
 use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
@@ -71,8 +73,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         );
         return false;
       }
-      // Replace the statement with something like `init_foo()`
+      // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
+      // or the importee have side effects.
       WrapKind::Esm => {
+        if rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+          && !importee.side_effects.has_side_effects()
+        {
+          return true;
+        };
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         *stmt = self.snippet.call_expr_stmt(wrapper_ref_name);
         return false;

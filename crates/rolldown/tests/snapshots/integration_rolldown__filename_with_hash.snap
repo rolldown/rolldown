@@ -345,7 +345,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
-- src_entry-!~{000}~.js => src_entry-UmvfoDyv.js
+- src_entry-!~{000}~.js => src_entry-mgeRO2N6.js
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
 
@@ -1700,11 +1700,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-ZElAHxCw.js
+- entry-!~{000}~.js => entry-3qm8mbke.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-bq0esxb_.js
+- entry-!~{000}~.js => entry-YKsu5RIe.js
 
 # tests/esbuild/default/top_level_await_iife
 

@@ -43,7 +43,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.canonical_name_for(sym_ref)
   }
 
-  fn should_remove_import_export_stmt(
+  fn transform_or_remove_import_export_stmt(
     &self,
     stmt: &mut Statement<'ast>,
     rec_id: ImportRecordIdx,

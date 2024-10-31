@@ -29,7 +29,6 @@ impl PathExt for std::path::Path {
   fn representative_file_name(&self) -> Cow<str> {
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
-    dbg!(&file_name);
 
     let file_name = match &*file_name {
       // "index": Node.js use `index` as a special name for directory import.
@@ -45,7 +44,6 @@ impl PathExt for std::path::Path {
       }
       _ => file_name,
     };
-    dbg!(&file_name);
 
     file_name
   }

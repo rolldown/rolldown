@@ -154,7 +154,7 @@ impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
           None
         }
       }
-      // transpose `imoprt(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
+      // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
       ast::Expression::ImportExpression(expr) if expr.arguments.is_empty() => {
         let source = &mut expr.source;
         match source {

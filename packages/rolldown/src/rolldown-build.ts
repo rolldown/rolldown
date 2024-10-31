@@ -1,59 +1,49 @@
-import { Bundler } from './binding'
 import type { OutputOptions } from './options/output-options'
 import { transformToRollupOutput } from './utils/transform-to-rollup-output'
-import { createBundler } from './utils/create-bundler'
+import { BundlerWithStopWorker, createBundler } from './utils/create-bundler'
 
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
 import type { InputOptions } from './options/input-options'
-import { Watcher } from './watcher'
 
 export class RolldownBuild {
   #inputOptions: InputOptions
-  #bundler?: Bundler
-  #stopWorkers?: () => Promise<void>
+  #bundler?: BundlerWithStopWorker
 
   constructor(inputOptions: InputOptions) {
     // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
     this.#inputOptions = inputOptions
   }
 
-  async #getBundler(outputOptions: OutputOptions): Promise<Bundler> {
-    if (typeof this.#bundler === 'undefined') {
-      const { bundler, stopWorkers } = await createBundler(
-        this.#inputOptions,
-        outputOptions,
-      )
-      this.#bundler = bundler
-      this.#stopWorkers = stopWorkers
+  // Create bundler for each `bundle.write/generate`
+  async #getBundlerWithStopWorker(
+    outputOptions: OutputOptions,
+  ): Promise<BundlerWithStopWorker> {
+    if (this.#bundler) {
+      this.#bundler.stopWorkers?.()
     }
-    return this.#bundler
+    return (this.#bundler = await createBundler(
+      this.#inputOptions,
+      outputOptions,
+    ))
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bundler = await this.#getBundler(outputOptions)
+    const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
     const output = await bundler.generate()
     return transformToRollupOutput(output)
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bundler = await this.#getBundler(outputOptions)
+    const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
     const output = await bundler.write()
     return transformToRollupOutput(output)
   }
 
   async close(): Promise<void> {
-    const bundler = await this.#getBundler({})
-    await this.#stopWorkers?.()
+    const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker({})
+    await stopWorkers?.()
     await bundler.close()
-  }
-
-  async watch(outputOptions: OutputOptions = {}): Promise<Watcher> {
-    const bundler = await this.#getBundler(outputOptions)
-    const bindingWatcher = await bundler.watch()
-    const watcher = new Watcher(bindingWatcher)
-    watcher.watch()
-    return watcher
   }
 }
 

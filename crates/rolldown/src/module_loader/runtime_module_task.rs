@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
-use oxc::index::IndexVec;
 use oxc::span::SourceType;
+use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaView, EcmaViewMeta, ExportsKind,
   ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
@@ -13,7 +13,7 @@ use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
-  utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
+  utils::tweak_ast_for_scanning::PreProcessor,
 };
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
@@ -140,7 +140,11 @@ impl RuntimeModuleTask {
 
     let mut ast = EcmaCompiler::parse(filename, source, source_type)?;
 
-    tweak_ast_for_scanning(&mut ast, false);
+    ast.program.with_mut(|fields| {
+      let mut pre_processor = PreProcessor::new(fields.allocator, false);
+      pre_processor.visit_program(fields.program);
+      ast.contains_use_strict = pre_processor.contains_use_strict;
+    });
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScopes::new(

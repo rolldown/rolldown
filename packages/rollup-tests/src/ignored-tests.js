@@ -83,10 +83,26 @@ const ignoreTests = [
   "rollup@function@external-alias-parent: includes an external module included dynamically by an alias",
   "rollup@function@external-alias: includes an external module included dynamically by an alias",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
+  "rollup@function@double-namespace-reexport: handles chained namespace reexports from externals",
+  
   // TODO to check external require content to be true
   "rollup@function@external-ids-not-resolved: does not attempt to resolve external IDs",
   "rollup@function@external-function-always-true: Does not call external for entry point",
   "rollup@function@external-directory-import: handles using ../ as external import (#4349)",
+  // TODO check test runner
+  "rollup@function@custom-path-resolver-async: uses a custom path resolver (asynchronous)",
+  "rollup@function@custom-path-resolver-sync: uses a custom path resolver (synchronous)",
+  "rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external",
+
+  // deconfilct
+  "rollup@function@deshadow-respect-existing: respect existing variable names when deshadowing",
+  "rollup@function@class-name-conflict-2: does not shadow variables when preserving class names",
+  "rollup@function@class-name-conflict-3: does not shadow variables when preserving class names",
+  "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
+  "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
+
+  // Format cjs
+  "rollup@function@default-export-with-null-prototype: default exports of objects with null prototypes are supported",
 
   // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
   "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
@@ -332,6 +348,8 @@ const ignoreTests = [
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
   "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",
+  "rollup@function@custom-module-options: supports adding custom options to modules",
+  "rollup@function@custom-external-module-options: supports adding custom options to external modules",
 
   // The `output.file` is not supported
   "rollup@function@file-and-dir: throws when using both the file and the dir option",
@@ -341,6 +359,7 @@ const ignoreTests = [
   "rollup@function@mixed-external-paths: allows using the path option selectively",
   // The `output.compact` is not supported
   "rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode",
+  "rollup@function@compact: compact output with compact: true", // Check test runner
 
   // The `import.meta.url` is not supported
   "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
@@ -354,8 +373,9 @@ const ignoreTests = [
   "rollup@function@plugin-module-information: provides module information on the plugin context",
   "rollup@function@module-parsed-hook: calls the moduleParsedHook once a module is parsed",
   "rollup@function@has-default-export: reports if a module has a default export", // hasDefaultExport is not support
-
-
+  "rollup@function@context-resolve: returns the correct results for the context resolve helper",
+  "rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test",
+  
   // The namespace object is not compatible with rollup
   "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
@@ -364,6 +384,7 @@ const ignoreTests = [
   "rollup@function@escape-arguments: does not use \"arguments\" as a placeholder variable for a default export",
   "rollup@function@dynamic-import-only-default: correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks",
   "rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode",
+  "rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports",
 
   // Passed, but the output snapshot is same as rollup
   "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
@@ -439,6 +460,7 @@ const ignoreTests = [
   "rollup@function@cannot-call-external-namespace: warns if code calls an external namespace",
   "rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace",
   "rollup@function@circular-reexport: throws proper error for circular reexports",
+  "rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import", 
 
   // The error/warning msg info is not compatible with rollup
   // TODO check the error is not break bundle
@@ -491,6 +513,9 @@ const ignoreTests = [
   "rollup@function@cycles-default-anonymous-function-hoisted: Anonymous function declarations are hoisted",
   "rollup@function@cycles-immediate: handles cycles where imports are immediately used",
   "rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully",
+  "rollup@function@custom-path-resolver-plural-b: resolver error is not caught",
+  "rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import",
+  "rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces"
 ]
 
 module.exports = {

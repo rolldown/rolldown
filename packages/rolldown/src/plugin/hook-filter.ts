@@ -1,10 +1,13 @@
+import type { MaybeArray } from '../types/utils'
 import type { StringOrRegExp } from '../constants/types'
 import type { ModuleType } from '../index'
 
-interface StringFilter {
-  include?: StringOrRegExp[]
-  exclude?: StringOrRegExp[]
-}
+export type StringFilter =
+  | MaybeArray<StringOrRegExp>
+  | {
+      include?: MaybeArray<StringOrRegExp>
+      exclude?: MaybeArray<StringOrRegExp>
+    }
 
 interface FormalModuleTypeFilter {
   include?: ModuleType[]

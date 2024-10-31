@@ -29,6 +29,7 @@ impl PathExt for std::path::Path {
   fn representative_file_name(&self) -> Cow<str> {
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
+    dbg!(&file_name);
 
     let file_name = match &*file_name {
       // "index": Node.js use `index` as a special name for directory import.
@@ -37,13 +38,14 @@ impl PathExt for std::path::Path {
         if let Some(parent_dir_name) =
           self.parent().and_then(Path::file_stem).map(OsStr::to_string_lossy)
         {
-          Cow::Owned([&*parent_dir_name, "_", &*file_name].concat())
+          parent_dir_name
         } else {
           file_name
         }
       }
       _ => file_name,
     };
+    dbg!(&file_name);
 
     file_name
   }
@@ -56,10 +58,10 @@ fn test_representative_file_name() {
   assert_eq!(path.representative_file_name(), "vue");
 
   let path = cwd.join("vue").join("index.js");
-  assert_eq!(path.representative_file_name(), "vue_index");
+  assert_eq!(path.representative_file_name(), "vue");
 
   let path = cwd.join("vue").join("mod.ts");
-  assert_eq!(path.representative_file_name(), "vue_mod");
+  assert_eq!(path.representative_file_name(), "vue");
 }
 
 #[inline]

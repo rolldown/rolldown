@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_index_default = exprWithSideEffects();
+var demo_pkg_default = exprWithSideEffects();
 
 //#endregion
 //#region src/entry.js
-console.log(demo_pkg_index_default);
+console.log(demo_pkg_default);
 
 //#endregion
 ```

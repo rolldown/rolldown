@@ -21,13 +21,13 @@ import assert from "node:assert";
 
 
 //#region index.js
-var require_require_parent_dir_common_js_index = __commonJS({ "index.js"(exports, module) {
+var require_require_parent_dir_common_js = __commonJS({ "index.js"(exports, module) {
 	module.exports = 123;
 } });
 
 //#endregion
 //#region dir/entry.js
-assert.deepEqual(require_require_parent_dir_common_js_index(), 123);
+assert.deepEqual(require_require_parent_dir_common_js(), 123);
 
 //#endregion
 ```
@@ -39,12 +39,12 @@ assert.deepEqual(require_require_parent_dir_common_js_index(), 123);
 @@ -1,6 +1,6 @@
 -var require_src = __commonJS({
 -    "Users/user/project/src/index.js"(exports, module) {
-+var require_require_parent_dir_common_js_index = __commonJS({
++var require_require_parent_dir_common_js = __commonJS({
 +    "index.js"(exports, module) {
          module.exports = 123;
      }
  });
 -console.log(require_src());
-+console.log(require_require_parent_dir_common_js_index());
++console.log(require_require_parent_dir_common_js());
 
 ```

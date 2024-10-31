@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -13,12 +14,12 @@ const foo = () => "hi there";
 
 //#endregion
 //#region folders/index.js
-var folders_index_exports = {};
-__export(folders_index_exports, { foo: () => foo });
+var folders_exports = {};
+__export(folders_exports, { foo: () => foo });
 
 //#endregion
 //#region entry.js
-console.log(JSON.stringify(folders_index_exports));
+console.log(JSON.stringify(folders_exports));
 
 //#endregion
 ```

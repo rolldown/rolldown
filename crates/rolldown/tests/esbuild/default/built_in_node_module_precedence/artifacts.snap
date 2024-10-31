@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -15,7 +16,7 @@ var require_abc = __commonJS({ "node_modules/fs/abc.js"() {
 
 //#endregion
 //#region node_modules/fs/index.js
-var require_fs_index = __commonJS({ "node_modules/fs/index.js"() {
+var require_fs = __commonJS({ "node_modules/fs/index.js"() {
 	console.log("include this too");
 } });
 
@@ -26,7 +27,7 @@ console.log([
 	require("fs/promises"),
 	require("node:foo"),
 	require_abc(),
-	require_fs_index()
+	require_fs()
 ]);
 
 //#endregion

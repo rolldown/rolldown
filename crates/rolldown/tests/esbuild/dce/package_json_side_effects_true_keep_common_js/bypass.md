@@ -21,14 +21,14 @@ console.log("unused import");
 
 
 //#region node_modules/demo-pkg/index.js
-var require_demo_pkg_index = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
+var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	exports.foo = 123;
 	console.log("hello");
 } });
 
 //#endregion
 //#region src/entry.js
-var import_demo_pkg_index = __toESM(require_demo_pkg_index());
+var import_demo_pkg = __toESM(require_demo_pkg());
 console.log("unused import");
 
 //#endregion
@@ -38,17 +38,13 @@ console.log("unused import");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,8 +1,8 @@
--var require_demo_pkg = __commonJS({
+@@ -1,6 +1,6 @@
+ var require_demo_pkg = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
-+var require_demo_pkg_index = __commonJS({
 +    "node_modules/demo-pkg/index.js"(exports) {
          exports.foo = 123;
          console.log("hello");
      }
  });
--var import_demo_pkg = __toESM(require_demo_pkg());
-+var import_demo_pkg_index = __toESM(require_demo_pkg_index());
- console.log("unused import");
 
 ```

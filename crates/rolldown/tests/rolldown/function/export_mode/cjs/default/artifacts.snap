@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,12 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region mod.js
-var default_mod_exports = {};
-__export(default_mod_exports, { default: () => example });
+var default_exports = {};
+__export(default_exports, { default: () => example });
 function example() {
 	return "default";
 }
 
 //#endregion
-module.exports = default_mod_exports;
+module.exports = default_exports;
 ```

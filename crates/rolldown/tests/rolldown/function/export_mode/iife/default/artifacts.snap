@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -12,8 +13,8 @@ var module = (function() {
 
 
 //#region mod.js
-var default_mod_exports = {};
-__export(default_mod_exports, {
+var default_exports = {};
+__export(default_exports, {
 	add: () => add,
 	subtract: () => subtract
 });
@@ -25,6 +26,6 @@ function subtract(a, b) {
 }
 
 //#endregion
-return default_mod_exports;
+return default_exports;
 })();
 ```

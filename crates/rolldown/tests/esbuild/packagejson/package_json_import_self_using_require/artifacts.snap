@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -15,12 +16,12 @@ var require_foo_require = __commonJS({ "src/foo-require.js"(exports, module) {
 
 //#endregion
 //#region src/index.js
-var require_src_index = __commonJS({ "src/index.js"(exports, module) {
+var require_src = __commonJS({ "src/index.js"(exports, module) {
 	module.exports = "index";
-	console.log(require_src_index(), require_foo_require());
+	console.log(require_src(), require_foo_require());
 } });
 
 //#endregion
-export default require_src_index();
+export default require_src();
 
 ```

@@ -201,8 +201,6 @@
   diff
 ## [require_bad_argument_count](../../../crates/rolldown/tests/esbuild/default/require_bad_argument_count/diff.md)
   diff
-## [require_child_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_child_dir_es6/diff.md)
-  diff
 ## [require_json](../../../crates/rolldown/tests/esbuild/default/require_json/diff.md)
   diff
 ## [require_shim_substitution](../../../crates/rolldown/tests/esbuild/default/require_shim_substitution/diff.md)
@@ -259,6 +257,7 @@
 ## [ambiguous_reexport_msg](../../../crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg)
 ## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external)
 ## [await_import_inside_try](../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
+## [built_in_node_module_precedence](../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence)
 ## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)
 ## [const_with_let_no_mangle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
@@ -288,6 +287,7 @@
 ## [re_export_default_internal](../../../crates/rolldown/tests/esbuild/default/re_export_default_internal)
 ## [re_export_fs_node](../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
 ## [rename_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)
+## [require_child_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_child_dir_es6)
 ## [require_fs_node](../../../crates/rolldown/tests/esbuild/default/require_fs_node)
 ## [require_fs_node_minify](../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
 ## [require_property_access_common_js](../../../crates/rolldown/tests/esbuild/default/require_property_access_common_js)
@@ -307,7 +307,6 @@
 # Bypassed Cases
 ## [avoid_tdz](../../../crates/rolldown/tests/esbuild/default/avoid_tdz/bypass.md)
 ## [avoid_tdz_no_bundle](../../../crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle/bypass.md)
-## [built_in_node_module_precedence](../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence/bypass.md)
 ## [char_freq_ignore_comments](../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments/bypass.md)
 ## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/bypass.md)
 ## [const_with_let](../../../crates/rolldown/tests/esbuild/default/const_with_let/bypass.md)

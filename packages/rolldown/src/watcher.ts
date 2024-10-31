@@ -6,14 +6,17 @@ export class Watcher {
   closed: boolean
   controller: AbortController
   inner: BindingWatcher
-  constructor(inner: BindingWatcher) {
+  stopWorkers?: () => Promise<void>
+  constructor(inner: BindingWatcher, stopWorkers?: () => Promise<void>) {
     this.closed = false
     this.controller = new AbortController()
     this.inner = inner
+    this.stopWorkers = stopWorkers
   }
 
   async close() {
     this.closed = true
+    await this.stopWorkers?.()
     await this.inner.close()
     this.controller.abort()
   }

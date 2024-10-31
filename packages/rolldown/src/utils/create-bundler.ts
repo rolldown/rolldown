@@ -11,10 +11,7 @@ import { PluginDriver } from '../plugin/plugin-driver'
 export async function createBundler(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
-): Promise<{
-  bundler: Bundler
-  stopWorkers?: () => Promise<void>
-}> {
+): Promise<BundlerWithStopWorkers> {
   const pluginDriver = new PluginDriver()
   inputOptions = await pluginDriver.callOptionsHook(inputOptions)
   // Convert `InputOptions` to `NormalizedInputOptions`.
@@ -49,4 +46,9 @@ export async function createBundler(
     await parallelPluginInitResult?.stopWorkers()
     throw e
   }
+}
+
+export interface BundlerWithStopWorkers {
+  bundler: Bundler
+  stopWorkers?: () => Promise<void>
 }

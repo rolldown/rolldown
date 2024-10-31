@@ -1,33 +1,29 @@
 import { Bundler } from './binding'
 import type { OutputOptions } from './options/output-options'
 import { transformToRollupOutput } from './utils/transform-to-rollup-output'
-import { createBundler } from './utils/create-bundler'
+import { BundlerWithStopWorkers, createBundler } from './utils/create-bundler'
 
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
 import type { InputOptions } from './options/input-options'
-import { Watcher } from './watcher'
 
 export class RolldownBuild {
   #inputOptions: InputOptions
-  #bundler?: Bundler
-  #stopWorkers?: () => Promise<void>
+  #bundlers: BundlerWithStopWorkers[] = []
 
   constructor(inputOptions: InputOptions) {
     // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
     this.#inputOptions = inputOptions
   }
 
+  // Create bundler for each `bundle.write/generate`
   async #getBundler(outputOptions: OutputOptions): Promise<Bundler> {
-    if (typeof this.#bundler === 'undefined') {
-      const { bundler, stopWorkers } = await createBundler(
-        this.#inputOptions,
-        outputOptions,
-      )
-      this.#bundler = bundler
-      this.#stopWorkers = stopWorkers
-    }
-    return this.#bundler
+    const { bundler, stopWorkers } = await createBundler(
+      this.#inputOptions,
+      outputOptions,
+    )
+    this.#bundlers.push({ bundler, stopWorkers })
+    return bundler
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
@@ -43,17 +39,15 @@ export class RolldownBuild {
   }
 
   async close(): Promise<void> {
-    const bundler = await this.#getBundler({})
-    await this.#stopWorkers?.()
-    await bundler.close()
-  }
-
-  async watch(outputOptions: OutputOptions = {}): Promise<Watcher> {
-    const bundler = await this.#getBundler(outputOptions)
-    const bindingWatcher = await bundler.watch()
-    const watcher = new Watcher(bindingWatcher)
-    watcher.watch()
-    return watcher
+    // If the bundler not create, create one to make close related things(eg. hooks) could be work.
+    if (this.#bundlers.length === 0) {
+      await this.#getBundler({})
+    }
+    // Different with rollup: her need to close all bundlers.
+    for (const { bundler, stopWorkers } of this.#bundlers) {
+      await stopWorkers?.()
+      await bundler.close()
+    }
   }
 }
 

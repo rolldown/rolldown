@@ -384,6 +384,14 @@ const ignoreTests = [
   "rollup@function@context-resolve: returns the correct results for the context resolve helper",
   "rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test",
 
+  // The sourcemap related
+  "rollup@function@handles-stringified-sourcemaps: handles transforms that return stringified source maps (#377)",
+  "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
+  "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
+  "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
+  "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
+  "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",
+
   // The namespace object is not compatible with rollup
   "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",

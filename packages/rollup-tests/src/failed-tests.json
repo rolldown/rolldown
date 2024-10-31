@@ -1,8 +1,1 @@
-[
-  "rollup@function@handles-stringified-sourcemaps: handles transforms that return stringified source maps (#377)",
-  "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",
-  "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
-  "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
-  "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
-  "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es"
-]
+[]

@@ -77,7 +77,13 @@ test.sequential('watch event', async () => {
 
   const events: any[] = []
   watcher.on('event', (event) => {
-    events.push(event)
+    if (event.code === 'BUNDLE_END') {
+      expect(event.output).toEqual([path.join(import.meta.dirname, './dist')])
+      expect(event.duration).toBeTypeOf('number')
+      events.push({ code: 'BUNDLE_END' })
+    } else {
+      events.push(event)
+    }
   })
   const restartFn = vi.fn()
   watcher.on('restart', restartFn)

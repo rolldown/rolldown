@@ -37,7 +37,7 @@ impl From<WatcherChange> for WatcherEventData {
 pub enum BundleEventKind {
   Start,
   BundleStart,
-  BundleEnd,
+  BundleEnd(BundleEndEventData),
   End,
 }
 
@@ -46,7 +46,7 @@ impl Display for BundleEventKind {
     match self {
       BundleEventKind::Start => write!(f, "START"),
       BundleEventKind::BundleStart => write!(f, "BUNDLE_START"),
-      BundleEventKind::BundleEnd => write!(f, "BUNDLE_END"),
+      BundleEventKind::BundleEnd(_) => write!(f, "BUNDLE_END"),
       BundleEventKind::End => write!(f, "END"),
     }
   }
@@ -56,8 +56,17 @@ impl From<BundleEventKind> for WatcherEventData {
   fn from(kind: BundleEventKind) -> Self {
     let mut map = HashMap::default();
     map.insert("code".to_string(), kind.to_string());
+    if let BundleEventKind::BundleEnd(data) = kind {
+      map.insert("output".to_string(), data.output);
+      map.insert("duration".to_string(), data.duration);
+    }
     Self(Some(map))
   }
+}
+
+pub struct BundleEndEventData {
+  pub output: String,
+  pub duration: String,
 }
 
 #[derive(Copy, Clone)]

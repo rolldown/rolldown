@@ -20,31 +20,30 @@ export class RolldownBuild {
     outputOptions: OutputOptions,
   ): Promise<BundlerWithStopWorker> {
     if (this.#bundler) {
-      return this.#bundler
+      this.#bundler.stopWorkers?.()
     }
-    return createBundler(this.#inputOptions, outputOptions)
+    return (this.#bundler = await createBundler(
+      this.#inputOptions,
+      outputOptions,
+    ))
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bundler = await createBundler(this.#inputOptions, outputOptions)
-    const output = await bundler.bundler.generate()
-    await bundler.stopWorkers?.()
-    await bundler.bundler.close()
+    const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
+    const output = await bundler.generate()
     return transformToRollupOutput(output)
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bundler = await createBundler(this.#inputOptions, outputOptions)
-    const output = await bundler.bundler.write()
-    await bundler.stopWorkers?.()
-    await bundler.bundler.close()
+    const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
+    const output = await bundler.write()
     return transformToRollupOutput(output)
   }
 
   async close(): Promise<void> {
-    const bundler = await this.#getBundlerWithStopWorker({})
-    await bundler.stopWorkers?.()
-    await bundler.bundler.close()
+    const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker({})
+    await stopWorkers?.()
+    await bundler.close()
   }
 }
 

@@ -210,7 +210,7 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation
 ## not support `jsx.preserve`
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
-## not support conditional import
+## esbuild will wrap `Promise.resolve().then() for original specifier`
 - crates/rolldown/tests/esbuild/default/conditional_import
 ## rewrite `require`
 - crates/rolldown/tests/esbuild/default/conditional_require

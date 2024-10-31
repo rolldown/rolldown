@@ -2,7 +2,7 @@ use itertools::Itertools;
 use oxc::allocator::{Allocator, Box};
 use oxc::ast::ast::{self, BindingPatternKind, Declaration, ExpressionStatement, Statement};
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{AstBuilder, VisitMut, NONE};
+use oxc::ast::{VisitMut, NONE};
 use oxc::span::SPAN;
 use rolldown_ecmascript::{AstSnippet, StatementExt, TakeIn};
 
@@ -119,46 +119,43 @@ impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {
     let to_replaced = match it {
       // transpose `require(test ? 'a' : 'b')` into `test ? require('a') : require('b')`
-      ast::Expression::CallExpression(expr) => {
-        if expr.callee.is_specific_id("require") && expr.arguments.len() == 1 {
-          // SAFETY: assert above
-          let arg = expr.arguments.get_mut(0).unwrap();
-          if let Some(cond_expr) = arg.as_expression_mut().and_then(|item| match item {
-            ast::Expression::ConditionalExpression(cond) => Some(cond),
-            _ => None,
-          }) {
-            let test = cond_expr.test.take_in(self.snippet.alloc());
-            let consequent = cond_expr.consequent.take_in(self.snippet.alloc());
-            let alternative = cond_expr.alternate.take_in(self.snippet.alloc());
-            let new_cond_expr = self.snippet.builder.alloc_conditional_expression(
+      ast::Expression::CallExpression(expr)
+        if expr.callee.is_specific_id("require") && expr.arguments.len() == 1 =>
+      {
+        let arg = expr.arguments.get_mut(0).unwrap();
+        if let Some(cond_expr) = arg.as_expression_mut().and_then(|item| match item {
+          ast::Expression::ConditionalExpression(cond) => Some(cond),
+          _ => None,
+        }) {
+          let test = cond_expr.test.take_in(self.snippet.alloc());
+          let consequent = cond_expr.consequent.take_in(self.snippet.alloc());
+          let alternative = cond_expr.alternate.take_in(self.snippet.alloc());
+          let new_cond_expr = self.snippet.builder.alloc_conditional_expression(
+            SPAN,
+            test,
+            self.snippet.builder.expression_call(
               SPAN,
-              test,
-              self.snippet.builder.expression_call(
-                SPAN,
-                self.snippet.builder.expression_identifier_reference(SPAN, "require"),
-                NONE,
-                self.snippet.builder.vec1(self.snippet.builder.argument_expression(consequent)),
-                false,
-              ),
-              self.snippet.builder.expression_call(
-                SPAN,
-                self.snippet.builder.expression_identifier_reference(SPAN, "require"),
-                NONE,
-                self.snippet.builder.vec1(self.snippet.builder.argument_expression(alternative)),
-                false,
-              ),
-            );
+              self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+              NONE,
+              self.snippet.builder.vec1(self.snippet.builder.argument_expression(consequent)),
+              false,
+            ),
+            self.snippet.builder.expression_call(
+              SPAN,
+              self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+              NONE,
+              self.snippet.builder.vec1(self.snippet.builder.argument_expression(alternative)),
+              false,
+            ),
+          );
 
-            Some(self.snippet.builder.expression_from_conditional(new_cond_expr))
-          } else {
-            None
-          }
+          Some(self.snippet.builder.expression_from_conditional(new_cond_expr))
         } else {
           None
         }
       }
+      // transpose `imoprt(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
       ast::Expression::ImportExpression(expr) if expr.arguments.is_empty() => {
-        // SAFETY: assert above
         let source = &mut expr.source;
         match source {
           ast::Expression::ConditionalExpression(cond_expr) => {

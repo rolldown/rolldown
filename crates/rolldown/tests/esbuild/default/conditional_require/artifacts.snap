@@ -2,44 +2,6 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in a.js
-   ╭─[a.js:1:13]
-   │
- 1 │ require(x ? 'a' : y ? './b' : 'c')
-   │             ─┬─  
-   │              ╰─── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in a.js
-   ╭─[a.js:2:17]
-   │
- 2 │ require(x ? y ? 'a' : './b' : c)
-   │                 ─┬─  
-   │                  ╰─── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in a.js
-   ╭─[a.js:1:31]
-   │
- 1 │ require(x ? 'a' : y ? './b' : 'c')
-   │                               ─┬─  
-   │                                ╰─── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## a.js

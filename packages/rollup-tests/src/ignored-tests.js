@@ -35,6 +35,8 @@ const ignoreTests = [
 
   // The threeshake is not working as expected
   "rollup@function@tree-shake-variable-declarations-2: remove unused variables from declarations (#1831)",
+  "rollup@function@can-import-self-treeshake: direct self import", // check chunk why is empty
+  "rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable",// check chunk why is empty
 
   // The dyanmic import inline is not compatible with rollup
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
@@ -84,7 +86,8 @@ const ignoreTests = [
   "rollup@function@external-alias: includes an external module included dynamically by an alias",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@function@double-namespace-reexport: handles chained namespace reexports from externals",
-  
+  "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
+
   // TODO to check external require content to be true
   "rollup@function@external-ids-not-resolved: does not attempt to resolve external IDs",
   "rollup@function@external-function-always-true: Does not call external for entry point",
@@ -93,6 +96,7 @@ const ignoreTests = [
   "rollup@function@custom-path-resolver-async: uses a custom path resolver (asynchronous)",
   "rollup@function@custom-path-resolver-sync: uses a custom path resolver (synchronous)",
   "rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external",
+  "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
 
   // deconfilct
   "rollup@function@deshadow-respect-existing: respect existing variable names when deshadowing",
@@ -354,6 +358,10 @@ const ignoreTests = [
   // The `output.file` is not supported
   "rollup@function@file-and-dir: throws when using both the file and the dir option",
 
+  // The `input.perf` and `bundle.getTimings()` is not supported
+  "rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true",
+  "rollup@function@adds-timings-to-bundle: Adds timing information to bundle when bundling with perf=true",
+
   // The `output.paths` is not supported
   "rollup@function@re-export-own: avoid using export.hasOwnProperty",
   "rollup@function@mixed-external-paths: allows using the path option selectively",
@@ -375,7 +383,7 @@ const ignoreTests = [
   "rollup@function@has-default-export: reports if a module has a default export", // hasDefaultExport is not support
   "rollup@function@context-resolve: returns the correct results for the context resolve helper",
   "rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test",
-  
+
   // The namespace object is not compatible with rollup
   "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
   "rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable",
@@ -461,6 +469,9 @@ const ignoreTests = [
   "rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace",
   "rollup@function@circular-reexport: throws proper error for circular reexports",
   "rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import", 
+  "rollup@function@cannot-resolve-sourcemap-warning: handles when a sourcemap cannot be resolved in a warning",
+  "rollup@function@adds-json-hint-for-missing-export-if-is-json-file: should provide json hint when importing a no export json file",
+  "rollup@function@add-watch-file-generate: throws when adding watch files during generate",
 
   // The error/warning msg info is not compatible with rollup
   // TODO check the error is not break bundle
@@ -515,7 +526,9 @@ const ignoreTests = [
   "rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully",
   "rollup@function@custom-path-resolver-plural-b: resolver error is not caught",
   "rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import",
-  "rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces"
+  "rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces",
+  "rollup@function@can-import-self: a module importing its own bindings",
+  "rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed",
 ]
 
 module.exports = {

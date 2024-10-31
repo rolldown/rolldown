@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,9 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
+//#region b.js
+var require_b = __commonJS({ "b.js"(exports) {
+	exports.foo = 213;
+} });
+
+//#endregion
 //#region a.js
-require(x ? "a" : y ? "./b" : "c");
-require(x ? y ? "a" : "./b" : c);
+x ? __require("a") : y ? require_b() : __require("c");
+x ? y ? __require("a") : require_b() : require(c);
 
 //#endregion
 ```

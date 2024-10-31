@@ -365,7 +365,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   #[allow(clippy::collapsible_else_if, clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
-      if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
+      if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_unspanned() {
         //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NomralModule#imports`.
         //  we just keep these `require` calls as it is
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {

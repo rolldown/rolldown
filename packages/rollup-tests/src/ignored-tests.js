@@ -80,8 +80,6 @@ const ignoreTests = [
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
 
   // TODO to check external require content to be true
-  "rollup@function@external-ids-not-resolved: does not attempt to resolve external IDs",
-  "rollup@function@external-function-always-true: Does not call external for entry point",
   "rollup@function@external-directory-import: handles using ../ as external import (#4349)",
   // TODO check test runner
   "rollup@function@custom-path-resolver-async: uses a custom path resolver (asynchronous)",
@@ -108,7 +106,7 @@ const ignoreTests = [
   "rollup@function@logging@log-from-options: can log from the options hook",
   "rollup@function@logging@plugin-order: allows to order plugins when logging",
   "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
-  
+
   // `makeAbsoluteExternalsRelative` is not supported
   "rollup@function@resolve-relative-external-id: resolves relative external ids",
   "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",

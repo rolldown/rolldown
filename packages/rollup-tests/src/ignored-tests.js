@@ -44,15 +44,6 @@ const ignoreTests = [
   "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
-
-  // `makeAbsoluteExternalsRelative` is not supported
-  "rollup@function@resolve-relative-external-id: resolves relative external ids",
-
-  // The external module is not working as expected
-  "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",
-  "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
-  "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
-  "rollup@function@relative-external-include-once: includes a relative external module only once",  // The external module is not working as expected
  
   // The result is not working as expected
   "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
@@ -117,6 +108,13 @@ const ignoreTests = [
   "rollup@function@logging@log-from-options: can log from the options hook",
   "rollup@function@logging@plugin-order: allows to order plugins when logging",
   "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
+  
+  // `makeAbsoluteExternalsRelative` is not supported
+  "rollup@function@resolve-relative-external-id: resolves relative external ids",
+  "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",
+  "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
+  "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
+  "rollup@function@relative-external-include-once: includes a relative external module only once",
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",

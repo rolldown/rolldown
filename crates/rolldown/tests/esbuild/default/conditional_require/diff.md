@@ -1,5 +1,5 @@
 # Reason
-1. We don't consider `require($expr)` as a record
+1. We don't consider `require($expr)` as a import record
 # Diff
 ## /out.js
 ### esbuild

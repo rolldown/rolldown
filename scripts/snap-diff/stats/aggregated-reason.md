@@ -212,7 +212,7 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## esbuild will wrap `Promise.resolve().then() for original specifier`
 - crates/rolldown/tests/esbuild/default/conditional_import
-## rewrite `require`
+## We don't consider `require($expr)` as a import record
 - crates/rolldown/tests/esbuild/default/conditional_require
 ## not support conditional `require.resolve`
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve

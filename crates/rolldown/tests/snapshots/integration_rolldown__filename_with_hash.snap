@@ -644,7 +644,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/conditional_require
 
-- a-!~{000}~.js => a-rdaxiryE.js
+- a-!~{000}~.js => a-VhRd__Xx.js
 
 # tests/esbuild/default/conditional_require_resolve
 

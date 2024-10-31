@@ -361,7 +361,7 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
       }
       Module::External(external_module) => {
         // TODO need to generate one symbol and deconflict it
-        legitimize_identifier_name(&external_module.name).to_string().into()
+        legitimize_identifier_name(&external_module.name).into()
       }
     }
   }

@@ -1,6 +1,6 @@
 use oxc::{
   ast::{visit::walk_mut, VisitMut},
-  span::{GetSpanMut, Span},
+  span::{GetSpanMut, Span, SPAN},
 };
 use rustc_hash::FxHashSet;
 
@@ -27,11 +27,18 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
     self.ensure_uniqueness(it.span_mut());
     walk_mut::walk_import_expression(self, it);
   }
+
+  fn visit_call_expression(&mut self, it: &mut oxc::ast::ast::CallExpression<'a>) {
+    if it.callee.is_specific_id("require") && it.arguments.len() == 1 {
+      self.ensure_uniqueness(it.span_mut());
+    }
+    walk_mut::walk_call_expression(self, it);
+  }
 }
 
 impl EnsureSpanUniqueness {
   pub fn new() -> Self {
-    Self { visited_spans: FxHashSet::default(), next_unique_span_start: 1 }
+    Self { visited_spans: FxHashSet::from_iter([SPAN]), next_unique_span_start: 1 }
   }
 
   fn ensure_uniqueness(&mut self, span: &mut Span) {

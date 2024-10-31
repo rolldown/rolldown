@@ -26,8 +26,8 @@ var require_b = __commonJS({ "b.js"(exports) {
 
 //#endregion
 //#region a.js
-x ? require("a") : y ? require("./b") : require("c");
-x ? y ? require("a") : require("./b") : require(c);
+x ? __require("a") : y ? require_b() : __require("c");
+x ? y ? __require("a") : require_b() : require(c);
 
 //#endregion
 ```
@@ -36,14 +36,12 @@ x ? y ? require("a") : require("./b") : require(c);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	a.js
-@@ -2,6 +2,6 @@
-     "b.js"(exports) {
+@@ -3,5 +3,5 @@
          exports.foo = 213;
      }
  });
--x ? __require("a") : y ? require_b() : __require("c");
+ x ? __require("a") : y ? require_b() : __require("c");
 -x ? y ? __require("a") : require_b() : __require(c);
-+x ? require("a") : y ? require("./b") : require("c");
-+x ? y ? require("a") : require("./b") : require(c);
++x ? y ? __require("a") : require_b() : require(c);
 
 ```

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -19,7 +20,6 @@ var init_demo_pkg_index = __esm({ "node_modules/demo-pkg/index.js"() {
 
 //#endregion
 //#region src/entry.js
-init_demo_pkg_index();
 init_demo_pkg_index(), __toCommonJS(demo_pkg_index_exports);
 console.log("unused import");
 

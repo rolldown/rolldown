@@ -4,7 +4,8 @@ use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
 use rolldown_common::{
-  BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
+  BundleEndEventData, BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent,
+  WatcherEventData,
 };
 use rolldown_utils::pattern_filter;
 use std::{
@@ -14,6 +15,7 @@ use std::{
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
+  time::Instant,
 };
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -104,6 +106,7 @@ impl Watcher {
   }
 
   pub async fn run(&self) -> Result<()> {
+    let start_time = Instant::now();
     let mut bundler = self.bundler.lock().await;
     self.emitter.emit(WatcherEvent::ReStart, WatcherEventData::default()).await?;
 
@@ -143,7 +146,18 @@ impl Watcher {
     }
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
     std::mem::drop(inner);
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleEnd.into()).await?;
+
+    self
+      .emitter
+      .emit(
+        WatcherEvent::Event,
+        BundleEventKind::BundleEnd(BundleEndEventData {
+          output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
+          duration: start_time.elapsed().as_millis().to_string(),
+        })
+        .into(),
+      )
+      .await?;
 
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::End.into()).await?;

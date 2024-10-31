@@ -4,10 +4,10 @@ use arcstr::ArcStr;
 
 #[allow(dead_code)]
 #[derive(Default)]
-pub struct WatcherEventData(Option<HashMap<String, String>>);
+pub struct WatcherEventData(Option<HashMap<&'static str, String>>);
 
 impl WatcherEventData {
-  pub fn inner(&self) -> &Option<HashMap<String, String>> {
+  pub fn inner(&self) -> &Option<HashMap<&'static str, String>> {
     &self.0
   }
 }
@@ -28,8 +28,8 @@ pub struct WatcherChange {
 impl From<WatcherChange> for WatcherEventData {
   fn from(event: WatcherChange) -> Self {
     let mut map = HashMap::default();
-    map.insert("id".to_string(), event.path.to_string());
-    map.insert("kind".to_string(), event.kind.to_string());
+    map.insert("id", event.path.to_string());
+    map.insert("kind", event.kind.to_string());
     Self(Some(map))
   }
 }
@@ -37,7 +37,7 @@ impl From<WatcherChange> for WatcherEventData {
 pub enum BundleEventKind {
   Start,
   BundleStart,
-  BundleEnd,
+  BundleEnd(BundleEndEventData),
   End,
 }
 
@@ -46,7 +46,7 @@ impl Display for BundleEventKind {
     match self {
       BundleEventKind::Start => write!(f, "START"),
       BundleEventKind::BundleStart => write!(f, "BUNDLE_START"),
-      BundleEventKind::BundleEnd => write!(f, "BUNDLE_END"),
+      BundleEventKind::BundleEnd(_) => write!(f, "BUNDLE_END"),
       BundleEventKind::End => write!(f, "END"),
     }
   }
@@ -55,9 +55,18 @@ impl Display for BundleEventKind {
 impl From<BundleEventKind> for WatcherEventData {
   fn from(kind: BundleEventKind) -> Self {
     let mut map = HashMap::default();
-    map.insert("code".to_string(), kind.to_string());
+    map.insert("code", kind.to_string());
+    if let BundleEventKind::BundleEnd(data) = kind {
+      map.insert("output", data.output);
+      map.insert("duration", data.duration);
+    }
     Self(Some(map))
   }
+}
+
+pub struct BundleEndEventData {
+  pub output: String,
+  pub duration: String,
 }
 
 #[derive(Copy, Clone)]

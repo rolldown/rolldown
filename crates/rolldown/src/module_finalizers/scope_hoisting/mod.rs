@@ -43,6 +43,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.canonical_name_for(sym_ref)
   }
 
+  /// If return true the import stmt should be removed,
+  /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
     &self,
     stmt: &mut Statement<'ast>,

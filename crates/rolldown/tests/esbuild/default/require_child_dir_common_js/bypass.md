@@ -19,13 +19,13 @@ console.log(require_dir());
 
 
 //#region dir/index.js
-var require_dir_index = __commonJS({ "dir/index.js"(exports, module) {
+var require_dir = __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;
 } });
 
 //#endregion
 //#region entry.js
-console.log(require_dir_index());
+console.log(require_dir());
 
 //#endregion
 ```
@@ -35,14 +35,12 @@ console.log(require_dir_index());
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,6 +1,6 @@
--var require_dir = __commonJS({
+ var require_dir = __commonJS({
 -    "Users/user/project/src/dir/index.js"(exports, module) {
-+var require_dir_index = __commonJS({
 +    "dir/index.js"(exports, module) {
          module.exports = 123;
      }
  });
--console.log(require_dir());
-+console.log(require_dir_index());
+ console.log(require_dir());
 
 ```

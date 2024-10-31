@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,14 +10,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region src/node_modules/sub/index.js
-var require_sub_index = __commonJS({ "src/node_modules/sub/index.js"() {
+var require_sub = __commonJS({ "src/node_modules/sub/index.js"() {
 	works();
 } });
 
 //#endregion
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
-	require_sub_index();
+	require_sub();
 } });
 
 //#endregion

@@ -23,19 +23,19 @@ console.log(loose_default, strict_default);
 ```js
 
 //#region loose/index.js
-var loose_index_default = class {
+var loose_default = class {
 	foo;
 };
 
 //#endregion
 //#region strict/index.js
-var strict_index_default = class {
+var strict_default = class {
 	foo;
 };
 
 //#endregion
 //#region entry.js
-console.log(loose_index_default, strict_index_default);
+console.log(loose_default, strict_default);
 
 //#endregion
 ```
@@ -45,21 +45,18 @@ console.log(loose_index_default, strict_index_default);
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,11 +1,7 @@
--var loose_default = class {
+ var loose_default = class {
 -    constructor() {
 -        __publicField(this, "foo");
 -    }
-+var loose_index_default = class {
 +    foo;
  };
--var strict_default = class {
+ var strict_default = class {
 -    constructor() {
 -        __publicField(this, "foo");
 -    }
-+var strict_index_default = class {
 +    foo;
  };
--console.log(loose_default, strict_default);
-+console.log(loose_index_default, strict_index_default);
+ console.log(loose_default, strict_default);
 
 ```

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region node_modules/component-indexof/index.js
-var require_component_indexof_index = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
+var require_component_indexof = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
 	module.exports = function() {
 		return 234;
 	};
@@ -18,9 +19,9 @@ var require_component_indexof_index = __commonJS({ "node_modules/component-index
 //#endregion
 //#region node_modules/component-classes/index.js
 try {
-	var index = require_component_indexof_index();
+	var index = require_component_indexof();
 } catch (err) {
-	var index = require_component_indexof_index();
+	var index = require_component_indexof();
 }
 
 //#endregion

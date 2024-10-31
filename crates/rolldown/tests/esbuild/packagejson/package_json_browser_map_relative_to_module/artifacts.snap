@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,14 +11,14 @@ import assert from "node:assert";
 
 
 //#region node_modules/util-browser/index.js
-var require_util_browser_index = __commonJS({ "node_modules/util-browser/index.js"(exports, module) {
+var require_util_browser = __commonJS({ "node_modules/util-browser/index.js"(exports, module) {
 	module.exports = "util-browser";
 } });
 
 //#endregion
 //#region node_modules/demo-pkg/main.js
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
-	const util = require_util_browser_index();
+	const util = require_util_browser();
 	module.exports = function() {
 		return ["main", util];
 	};

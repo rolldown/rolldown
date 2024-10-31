@@ -94,7 +94,7 @@ return exports;
 
 exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
 "<DIR>/index.js.map  asset │ size: 0.22 kB
-<DIR>/index.js      chunk │ size: 0.21 kB
+<DIR>/index.js      chunk │ size: 0.19 kB
 
 "
 `;
@@ -106,13 +106,13 @@ exports[`cli options for bundling > should handle single array options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.12 kB
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;
@@ -124,13 +124,13 @@ exports[`cli options for bundling > should handle single object options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.15 kB
+"<DIR>/index.js  chunk │ size: 0.14 kB
 
 "
 `;
 
 exports[`config > no package.json > should bundle in ext-js-syntax-cjs 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.13 kB
 
 "
 `;

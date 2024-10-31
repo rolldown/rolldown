@@ -25,12 +25,12 @@ const foo = () => "hi there";
 
 //#endregion
 //#region folders/index.js
-var folders_index_exports = {};
-__export(folders_index_exports, { foo: () => foo });
+var folders_exports = {};
+__export(folders_exports, { foo: () => foo });
 
 //#endregion
 //#region entry.js
-console.log(JSON.stringify(folders_index_exports));
+console.log(JSON.stringify(folders_exports));
 
 //#endregion
 ```
@@ -40,15 +40,12 @@ console.log(JSON.stringify(folders_index_exports));
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,6 +1,6 @@
--var folders_exports = {};
--__export(folders_exports, {
 +var foo = () => "hi there";
-+var folders_index_exports = {};
-+__export(folders_index_exports, {
+ var folders_exports = {};
+ __export(folders_exports, {
      foo: () => foo
  });
 -var foo = () => "hi there";
--console.log(JSON.stringify(folders_exports));
-+console.log(JSON.stringify(folders_index_exports));
+ console.log(JSON.stringify(folders_exports));
 
 ```

@@ -10,17 +10,17 @@ snapshot_kind: text
 
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_index_exports = {};
-__export(demo_pkg_index_exports, { foo: () => foo });
+var demo_pkg_exports = {};
+__export(demo_pkg_exports, { foo: () => foo });
 var foo;
-var init_demo_pkg_index = __esm({ "node_modules/demo-pkg/index.js"() {
+var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
 	foo = 123;
 	console.log("hello");
 } });
 
 //#endregion
 //#region src/entry.js
-init_demo_pkg_index(), __toCommonJS(demo_pkg_index_exports);
+init_demo_pkg(), __toCommonJS(demo_pkg_exports);
 console.log("unused import");
 
 //#endregion

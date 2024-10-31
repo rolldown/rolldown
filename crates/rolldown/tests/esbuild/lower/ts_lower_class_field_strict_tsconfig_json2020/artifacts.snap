@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,19 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region loose/index.ts
-var loose_index_default = class {
+var loose_default = class {
 	foo;
 };
 
 //#endregion
 //#region strict/index.ts
-var strict_index_default = class {
+var strict_default = class {
 	foo;
 };
 
 //#endregion
 //#region entry.js
-console.log(loose_index_default, strict_index_default);
+console.log(loose_default, strict_default);
 
 //#endregion
 ```

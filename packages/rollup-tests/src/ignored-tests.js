@@ -45,7 +45,7 @@ const ignoreTests = [
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
 
-  // `PluginContext.resolve` is not working as expected
+  // `makeAbsoluteExternalsRelative` is not supported
   "rollup@function@resolve-relative-external-id: resolves relative external ids",
 
   // The external module is not working as expected

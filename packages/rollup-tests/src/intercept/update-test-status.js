@@ -3,20 +3,21 @@ const {
   calcTestId,
   updateFailedTestsJson,
   loadIgnoredTests,
-  loadOnlyTests,
+  // loadOnlyTests,
 } = require('./utils')
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const alreadyFailedTests = new Set(loadFailedTests())
-const onlyTests = loadOnlyTests()
+// const onlyTests = loadOnlyTests()
 const ignoredTests = loadIgnoredTests()
 
+// The windows has special test, so here total is different at different platform.
 const status = {
   // total: 0,
   failed: 0,
   skipFailed: 0,
-  // ignored: 0,
+  ignored: ignoredTests.size,
   skipped: 0,
   passed: 0,
 }

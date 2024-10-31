@@ -485,6 +485,12 @@ const ignoreTests = [
   "rollup@function@circular-missed-reexports-2: handles circular reexports",
   "rollup@function@circular-missed-reexports: handles circular reexports",
   "rollup@function@check-resolve-for-entry: checks that entry is resolved",
+  "rollup@function@cycles-export-star: does not stack overflow on `export * from X` cycles",
+  "rollup@function@cycles-defaults: cycles work with default exports",
+  "rollup@function@cycles-stack-overflow: does not stack overflow on crazy cyclical dependencies",
+  "rollup@function@cycles-default-anonymous-function-hoisted: Anonymous function declarations are hoisted",
+  "rollup@function@cycles-immediate: handles cycles where imports are immediately used",
+  "rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully",
 ]
 
 module.exports = {

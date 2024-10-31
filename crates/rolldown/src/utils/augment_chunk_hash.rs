@@ -11,7 +11,7 @@ pub async fn augment_chunk_hash<'a>(
   assets: &mut IndexInstantiatedChunks,
 ) -> Result<()> {
   try_join_all(assets.iter_mut().map(|asset| async move {
-    if let InstantiationKind::Ecma(ecma_meta) = &asset.meta {
+    if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
       let augment_chunk_hash = plugin_driver.augment_chunk_hash(&ecma_meta.rendered_chunk).await?;
       if let Some(augment_chunk_hash) = augment_chunk_hash {
         asset.augment_chunk_hash = Some(augment_chunk_hash);

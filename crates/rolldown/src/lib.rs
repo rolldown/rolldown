@@ -1,3 +1,4 @@
+mod asset;
 mod ast_scanner;
 mod bundler;
 mod bundler_builder;

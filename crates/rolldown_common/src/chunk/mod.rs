@@ -8,7 +8,7 @@ pub mod types;
 
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
-use rolldown_utils::{path_ext::PathExt, BitSet};
+use rolldown_utils::{indexmap::FxIndexMap, path_ext::PathExt, BitSet};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -27,6 +27,8 @@ pub struct Chunk {
   pub absolute_preliminary_filename: Option<String>,
   pub css_preliminary_filename: Option<PreliminaryFilename>,
   pub css_absolute_preliminary_filename: Option<String>,
+  pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
+  pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
   pub canonical_name_by_token: FxHashMap<SymbolNameRefToken, Rstr>,
   // Sorted by Module#stable_id of modules in the chunk

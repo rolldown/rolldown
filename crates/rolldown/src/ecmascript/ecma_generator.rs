@@ -156,7 +156,7 @@ impl Generator for EcmaGenerator {
         origin_chunk: ctx.chunk_idx,
         content,
         map,
-        meta: InstantiationKind::from(EcmaAssetMeta { rendered_chunk }),
+        kind: InstantiationKind::from(EcmaAssetMeta { rendered_chunk }),
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx

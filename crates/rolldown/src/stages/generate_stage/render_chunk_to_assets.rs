@@ -10,6 +10,7 @@ use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use sugar_path::SugarPath;
 
 use crate::{
+  asset::asset_generator::AssetGenerator,
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
@@ -218,7 +219,24 @@ impl<'a> GenerateStage<'a> {
           };
           let css_chunks = CssGenerator::instantiate_chunk(&mut ctx).await;
 
-          ecma_chunks.and_then(|ecma_chunks| css_chunks.map(|css_chunks| [ecma_chunks, css_chunks]))
+          let mut ctx = GenerateContext {
+            chunk_idx,
+            chunk,
+            options: self.options,
+            link_output: self.link_output,
+            chunk_graph,
+            plugin_driver: self.plugin_driver,
+            warnings: vec![],
+            // FIXME: module_id_to_codegen_ret is currently not used in AssetGenerator. But we need to pass it to satisfy the args.
+            module_id_to_codegen_ret: vec![],
+          };
+          let asset_chunks = AssetGenerator::instantiate_chunk(&mut ctx).await;
+
+          ecma_chunks.and_then(|ecma_chunks| {
+            css_chunks.and_then(|css_chunks| {
+              asset_chunks.map(|asset_chunks| [ecma_chunks, css_chunks, asset_chunks])
+            })
+          })
         },
       ),
     )

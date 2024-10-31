@@ -120,6 +120,7 @@ impl RuntimeModuleTask {
         },
       },
       css_view: None,
+      asset_view: None,
     };
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {

@@ -2,8 +2,8 @@ use std::fmt::Debug;
 
 use crate::css::css_view::CssView;
 use crate::{
-  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
-  ModuleInfo, StmtInfo,
+  AssetView, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId,
+  ModuleIdx, ModuleInfo, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -25,6 +25,7 @@ pub struct NormalModule {
   pub module_type: ModuleType,
   pub ecma_view: EcmaView,
   pub css_view: Option<CssView>,
+  pub asset_view: Option<AssetView>,
 }
 
 impl NormalModule {

@@ -732,9 +732,9 @@ snapshot_kind: text
 
 - entries_entry1-!~{000}~.js => entries_entry1-9HAZStut.js
 - entries_entry1.css
-- entries_entry2-!~{001}~.js => entries_entry2-h9ppWVqN.js
+- entries_entry2-!~{001}~.js => entries_entry2-J0QD7eZ0.js
 - entries_entry2.css
-- shared-!~{002}~.js => shared-J0QD7eZ0.js
+- shared-!~{002}~.js => shared-85foh69q.js
 
 # tests/esbuild/default/errors_for_assert_type_json
 
@@ -1335,7 +1335,7 @@ snapshot_kind: text
 - entry-!~{000}~.js => entry-CtcGwjNP.js
 - entry2-!~{001}~.js => entry2-AX3jMTeb.js
 - entry2.css
-- dynamic-!~{002}~.js => dynamic-Z535ifNq.js
+- dynamic-!~{002}~.js => dynamic-hx382zUK.js
 
 # tests/esbuild/default/metafile_very_long_external_paths
 
@@ -2342,8 +2342,8 @@ snapshot_kind: text
 - src_entry-!~{000}~.js => src_entry-ioDHherq.js
 - src_entry2-!~{001}~.js => src_entry2-04Duh52x.js
 - src_entry2.css
-- assets_some-!~{002}~.js => assets_some-QMqViNSg.js
-- some-!~{003}~.js => some-W0fyymA3.js
+- assets_some-!~{002}~.js => assets_some-W0fyymA3.js
+- some-!~{003}~.js => some-3vTMswRN.js
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
@@ -2438,10 +2438,10 @@ snapshot_kind: text
 
 - entries_entry-!~{000}~.js => entries_entry-2vyhQpop.js
 - entries_entry.css
-- entries_other_entry-!~{001}~.js => entries_other_entry-dPdXM_6m.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-QV0jCcba.js
 - entries_other_entry.css
-- common-!~{002}~.js => common-QV0jCcba.js
-- common-QV0jCcba.css
+- common-!~{002}~.js => common-qY6_Q_4n.js
+- common-qY6_Q_4n.css
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
@@ -4334,6 +4334,11 @@ snapshot_kind: text
 - main-!~{000}~.js => main-Iris9oIZ.js
 - main-Iris9oIZ.js.map
 
+# tests/rolldown/function/module_types/asset
+
+- main-!~{000}~.js => main-cfphM5Km.js
+- assets/foo-_dWZoP6n.txt
+
 # tests/rolldown/function/module_types/base64/binary
 
 - main-!~{000}~.js => main-OD_tENCu.js
@@ -4692,10 +4697,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-6o6OfP3k.js
 - entry-a-!~{003}~.js => entry-a-28M3Od9p.js
 - entry-a-28M3Od9p.css
-- entry-b-!~{005}~.js => entry-b-gaydqbTS.js
-- entry-b-gaydqbTS.css
-- common-imported-by-js-!~{001}~.js => common-imported-by-js-3rOg4Zu0.js
-- common-imported-by-js-3rOg4Zu0.css
+- entry-b-!~{005}~.js => entry-b-3rOg4Zu0.js
+- entry-b-3rOg4Zu0.css
+- common-imported-by-js-!~{001}~.js => common-imported-by-js-7GYix6i6.js
+- common-imported-by-js-7GYix6i6.css
 
 # tests/rolldown/topics/css/basic
 

@@ -638,12 +638,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/conditional_import
 
-- a-!~{000}~.js => a-Gm0VQwA0.js
-- b-!~{001}~.js => b-m4mplO_z.js
+- a-!~{000}~.js => a-RH2Gmyc4.js
+- b-!~{001}~.js => b-klfwtmUC.js
+- import-!~{002}~.js => import-MoOCV9do.js
 
 # tests/esbuild/default/conditional_require
 
-- a-!~{000}~.js => a-yB-3-iny.js
+- a-!~{000}~.js => a-rdaxiryE.js
 
 # tests/esbuild/default/conditional_require_resolve
 

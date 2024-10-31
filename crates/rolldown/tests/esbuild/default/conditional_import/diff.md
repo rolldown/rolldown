@@ -1,5 +1,5 @@
 # Reason
-1. not support conditional import
+1. esbuild will wrap `Promise.resolve().then() for original specifier`
 # Diff
 ## /out/a.js
 ### esbuild
@@ -18,7 +18,7 @@ x ? import("a") : y ? Promise.resolve().then(() => __toESM(require_import())) : 
 ```js
 
 //#region a.js
-import(x ? "a" : y ? "./import" : "c");
+x ? import("a") : y ? import("./import.js") : import("c");
 
 //#endregion
 ```
@@ -34,7 +34,7 @@ import(x ? "a" : y ? "./import" : "c");
 -    }
 -});
 -x ? import("a") : y ? Promise.resolve().then(() => __toESM(require_import())) : import("c");
-+import(x ? "a" : y ? "./import" : "c");
++x ? import("a") : y ? import("./import.js") : import("c");
 
 ```
 ## /out/b.js
@@ -54,7 +54,7 @@ x ? y ? import("a") : Promise.resolve().then(() => __toESM(require_import())) : 
 ```js
 
 //#region b.js
-import(x ? y ? "a" : "./import" : c);
+x ? y ? import("a") : import("./import.js") : import(c);
 
 //#endregion
 ```
@@ -70,6 +70,6 @@ import(x ? y ? "a" : "./import" : c);
 -    }
 -});
 -x ? y ? import("a") : Promise.resolve().then(() => __toESM(require_import())) : import(c);
-+import(x ? y ? "a" : "./import" : c);
++x ? y ? import("a") : import("./import.js") : import(c);
 
 ```

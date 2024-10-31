@@ -212,7 +212,7 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## not support conditional import
 - crates/rolldown/tests/esbuild/default/conditional_import
-## not support conditional require
+## rewrite `require`
 - crates/rolldown/tests/esbuild/default/conditional_require
 ## not support conditional `require.resolve`
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve

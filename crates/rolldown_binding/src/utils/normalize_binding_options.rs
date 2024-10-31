@@ -150,6 +150,7 @@ pub fn normalize_binding_options(
     outro: normalize_addon_option(output_options.outro),
     sourcemap_ignore_list,
     sourcemap_path_transform,
+    sourcemap_debug_ids: output_options.sourcemap_debug_ids,
     exports: output_options.exports.map(|format_str| match format_str.as_str() {
       "auto" => OutputExports::Auto,
       "default" => OutputExports::Default,

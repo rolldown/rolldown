@@ -4664,6 +4664,11 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-1eONmh0M.js
 
+# tests/rolldown/sourcemap/debug_ids
+
+- assets/main.js => assets/main.js
+- assets/main.js.map
+
 # tests/rolldown/sourcemap/inline_url_relative_to_file
 
 - assets/main.js => assets/main.js

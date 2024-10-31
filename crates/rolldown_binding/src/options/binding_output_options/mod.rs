@@ -91,6 +91,7 @@ pub struct BindingOutputOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
   pub sourcemap_ignore_list: Option<JsCallback<(String, String), bool>>,
+  pub sourcemap_debug_ids: Option<bool>,
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]

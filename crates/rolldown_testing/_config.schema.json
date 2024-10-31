@@ -344,6 +344,12 @@
             }
           ]
         },
+        "sourcemapDebugIds": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"
         },

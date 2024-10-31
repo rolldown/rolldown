@@ -4,10 +4,10 @@ use arcstr::ArcStr;
 
 #[allow(dead_code)]
 #[derive(Default)]
-pub struct WatcherEventData(Option<HashMap<String, String>>);
+pub struct WatcherEventData(Option<HashMap<&'static str, String>>);
 
 impl WatcherEventData {
-  pub fn inner(&self) -> &Option<HashMap<String, String>> {
+  pub fn inner(&self) -> &Option<HashMap<&'static str, String>> {
     &self.0
   }
 }
@@ -28,8 +28,8 @@ pub struct WatcherChange {
 impl From<WatcherChange> for WatcherEventData {
   fn from(event: WatcherChange) -> Self {
     let mut map = HashMap::default();
-    map.insert("id".to_string(), event.path.to_string());
-    map.insert("kind".to_string(), event.kind.to_string());
+    map.insert("id", event.path.to_string());
+    map.insert("kind", event.kind.to_string());
     Self(Some(map))
   }
 }
@@ -55,10 +55,10 @@ impl Display for BundleEventKind {
 impl From<BundleEventKind> for WatcherEventData {
   fn from(kind: BundleEventKind) -> Self {
     let mut map = HashMap::default();
-    map.insert("code".to_string(), kind.to_string());
+    map.insert("code", kind.to_string());
     if let BundleEventKind::BundleEnd(data) = kind {
-      map.insert("output".to_string(), data.output);
-      map.insert("duration".to_string(), data.duration);
+      map.insert("output", data.output);
+      map.insert("duration", data.duration);
     }
     Self(Some(map))
   }

@@ -1,3 +1,5 @@
+# Reason
+1. different deconflict order
 # Diff
 ## /Users/user/project/out.js
 ### esbuild
@@ -19,20 +21,43 @@ console.log(browser2);
 ```
 ### rolldown
 ```js
+import assert from "node:assert";
 
+//#region src/demo-pkg/no-ext-browser/index.js
+let browser$1 = "browser";
+
+//#endregion
+//#region src/demo-pkg/no-ext/index.js
+let node = "node";
+
+//#endregion
+//#region src/demo-pkg/ext-browser/index.js
+let browser = "browser";
+
+//#endregion
+//#region src/entry.js
+assert.equal(browser$1, "browser");
+assert.equal(node, "node");
+assert.equal(browser, "browser");
+assert.equal(browser, "browser");
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/Users/user/project/out.js
-+++ rolldown	
-@@ -1,7 +0,0 @@
++++ rolldown	entry.js
+@@ -1,7 +1,4 @@
 -var browser = "browser";
--var node = "node";
++var browser$1 = "browser";
+ var node = "node";
 -var browser2 = "browser";
 -console.log(browser);
 -console.log(node);
 -console.log(browser2);
 -console.log(browser2);
++var browser = "browser";
++console.log(browser$1, node, browser, browser);
 
 ```

@@ -1,3 +1,5 @@
+# Reason
+1. `sub` is not resolved
 # Diff
 ## /Users/user/project/out.js
 ### esbuild
@@ -22,23 +24,36 @@ require_foo();
 ### rolldown
 ```js
 
+
+//#region src/node_modules/pkg/sub/foo.js
+var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
+	__require("sub");
+} });
+
+//#endregion
+//#region src/entry.js
+require_foo();
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/Users/user/project/out.js
-+++ rolldown	
-@@ -1,11 +0,0 @@
++++ rolldown	entry.js
+@@ -1,11 +1,6 @@
 -var require_bar = __commonJS({
 -    "Users/user/project/src/node_modules/pkg/sub/bar.js"() {
 -        works();
 -    }
 -});
--var require_foo = __commonJS({
+ var require_foo = __commonJS({
 -    "Users/user/project/src/node_modules/pkg/sub/foo.js"() {
 -        require_bar();
--    }
--});
--require_foo();
++    "src/node_modules/pkg/sub/foo.js"() {
++        __require("sub");
+     }
+ });
+ require_foo();
 
 ```

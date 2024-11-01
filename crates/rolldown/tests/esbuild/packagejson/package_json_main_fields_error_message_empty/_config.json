@@ -5,7 +5,10 @@
         "name": "entry",
         "import": "./src/entry.js"
       }
-    ]
+    ],
+    "resolve": {
+      "mainFields": []
+    }
   },
   "expectExecuted": false
 }

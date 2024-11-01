@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -17,7 +18,6 @@ var require_a = __commonJS({ "node_modules/demo-pkg/a.js"(exports, module) {
 //#endregion
 //#region src/entry.js
 var import_a = __toESM(require_a());
-console.log(import_a.default);
 assert.equal(import_a.default, "a");
 
 //#endregion

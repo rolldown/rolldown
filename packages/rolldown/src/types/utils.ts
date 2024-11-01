@@ -18,3 +18,5 @@ export type MakeAsync<Function_> = Function_ extends (
 ) => infer Return
   ? (this: This, ...parameters: Arguments) => Return | Promise<Return>
   : never
+
+export type MaybeArray<T> = T | T[]

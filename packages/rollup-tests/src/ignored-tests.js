@@ -77,7 +77,6 @@ const ignoreTests = [
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
 
   // TODO check test runner
-  "rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external",
   "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
 
   // deconfilct
@@ -107,6 +106,7 @@ const ignoreTests = [
   "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
   "rollup@function@relative-external-include-once: includes a relative external module only once",
   "rollup@function@external-directory-import: handles using ../ as external import (#4349)", // makeAbsoluteExternalsRelative normlized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51
+  "rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external",
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",

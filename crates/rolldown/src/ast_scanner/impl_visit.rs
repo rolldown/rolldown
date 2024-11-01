@@ -6,7 +6,7 @@ use oxc::{
   },
   span::{GetSpan, Span},
 };
-use rolldown_common::ImportKind;
+use rolldown_common::{ImportKind, ImportRecordMeta};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
@@ -107,7 +107,11 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         request.value.as_str(),
         ImportKind::DynamicImport,
         expr.source.span().start,
-        expr.source.span().is_empty(),
+        if expr.source.span().is_empty() {
+          ImportRecordMeta::IS_UNSPANNED_IMPORT
+        } else {
+          ImportRecordMeta::empty()
+        },
       );
       self.result.imports.insert(expr.span, id);
     }
@@ -177,7 +181,11 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           request.value.as_str(),
           ImportKind::Require,
           request.span().start,
-          request.span().is_empty(),
+          if request.span().is_empty() {
+            ImportRecordMeta::IS_UNSPANNED_IMPORT
+          } else {
+            ImportRecordMeta::empty()
+          },
         );
         self.result.imports.insert(expr.span, id);
       }

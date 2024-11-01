@@ -92,6 +92,11 @@ impl RawImportRecord {
     }
   }
 
+  pub fn with_meta(mut self, meta: ImportRecordMeta) -> Self {
+    self.meta = meta;
+    self
+  }
+
   #[allow(clippy::cast_possible_truncation)]
   pub fn module_request_end(&self) -> u32 {
     self.module_request_start + self.module_request.len() as u32 + 2u32 // +2 for quotes

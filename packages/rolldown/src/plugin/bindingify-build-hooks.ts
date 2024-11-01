@@ -170,8 +170,14 @@ export function bindingifyResolveDynamicImport(
         specifier,
         importer ?? undefined,
       )
-      if (ret == false || ret == null) {
+      if (ret == null) {
         return
+      }
+      if (ret === false) {
+        return {
+          id: specifier,
+          external: true,
+        }
       }
       if (typeof ret === 'string') {
         return {

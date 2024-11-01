@@ -2,9 +2,6 @@
 const ignoreTests = [
   // The giving code is not valid JavaScript.
   'rollup@function@circular-default-exports: handles circular default exports',
-  // Panic: TODO: supports
-  'rollup@function@dynamic-import-rewriting: Dynamic import string specifier resolving',
-  'rollup@function@deprecated@dynamic-import-name-warn: warns when specifying a custom importer function for formats other than "es"',
 
   // --- following tests will hang forever ---
 
@@ -38,10 +35,17 @@ const ignoreTests = [
   "rollup@function@can-import-self-treeshake: direct self import", // check chunk why is empty
   "rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable",// check chunk why is empty
 
-  // The dyanmic import inline is not compatible with rollup
+  // The dyanmic import at format cjs is not compatible with rollup
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
+  'rollup@function@dynamic-import-rewriting: Dynamic import string specifier resolving',
+  "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
+  // output.dynamicImportInCjs is not supported
+  "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",
+  "rollup@function@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions",
+  "rollup@function@dynamic-import-expression: Dynamic import expression replacement",
+
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
  
@@ -75,9 +79,6 @@ const ignoreTests = [
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@function@double-namespace-reexport: handles chained namespace reexports from externals",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
-
-  // TODO check test runner
-  "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
 
   // deconfilct
   "rollup@function@deshadow-respect-existing: respect existing variable names when deshadowing",
@@ -152,10 +153,7 @@ const ignoreTests = [
   "rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules",
   // output.preserveEntrySignatures is not supported
   "rollup@function@dynamic-imports-shared-exports: allows sharing imports between dynamic chunks",
-  // output.dynamicImportInCjs is not supported
-  "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",
-  "rollup@function@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions",
-  "rollup@function@dynamic-import-expression: Dynamic import expression replacement",
+
   // output.manualChunks is not supported
   "rollup@function@manual-chunks-conflict: Throws for conflicts between manual chunks",
   "rollup@function@manual-chunks-include-external-modules3: throws an error EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES for manualChunks' modules that are resolved as an external module by the 'external' option",

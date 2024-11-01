@@ -65,8 +65,8 @@ var init_a = __esm({ "a.js"() {} });
 //#endregion
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
-	init_a(), __toCommonJS(a_exports);
-	init_b(), __toCommonJS(b_exports);
+	init_a();
+	init_b();
 	require_c();
 	require_entry();
 } });
@@ -108,13 +108,11 @@ var require_entry = __commonJS({ "entry.js"() {
 -    var init_entry = __esm({
 +    var require_entry = __commonJS({
          "entry.js"() {
--            init_a();
--            init_b();
+             init_a();
+             init_b();
 -            init_c();
 -            init_entry();
 -            if (false) for (let x of y) ;
-+            (init_a(), __toCommonJS(a_exports));
-+            (init_b(), __toCommonJS(b_exports));
 +            require_c();
 +            require_entry();
          }

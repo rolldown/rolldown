@@ -39,6 +39,8 @@ bitflags::bitflags! {
     const IS_EXPORT_START = 1 << 4;
     ///  Tell the finalizer to use the runtime "__require()" instead of "require()"
     const CALL_RUNTIME_REQUIRE = 1 << 5;
+    ///  `require('mod')` is used to load the module only
+    const IS_REQUIRE_UNUSED = 1 << 6;
   }
 }
 

@@ -20,7 +20,7 @@ var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
 
 //#endregion
 //#region src/entry.js
-init_demo_pkg(), __toCommonJS(demo_pkg_exports);
+init_demo_pkg();
 console.log("unused import");
 
 //#endregion

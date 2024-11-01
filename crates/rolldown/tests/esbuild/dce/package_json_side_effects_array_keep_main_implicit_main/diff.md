@@ -41,7 +41,7 @@ var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
 
 //#endregion
 //#region src/require-demo-pkg.js
-init_index_module(), __toCommonJS(index_module_exports);
+init_index_module();
 
 //#endregion
 //#region src/entry.js
@@ -74,7 +74,7 @@ console.log("unused import");
  });
 -init_index_main();
 -init_index_main();
-+(init_index_module(), __toCommonJS(index_module_exports));
++init_index_module();
 +init_index_module();
  console.log("unused import");
 

@@ -237,13 +237,13 @@ var init_h = __esm({ "h.js"() {
 
 //#endregion
 //#region entry.js
-init_commonjs(), __toCommonJS(commonjs_exports);
-init_c(), __toCommonJS(c_exports);
-init_d(), __toCommonJS(d_exports);
-init_e(), __toCommonJS(e_exports);
-init_f(), __toCommonJS(f_exports);
-init_g(), __toCommonJS(g_exports);
-init_h(), __toCommonJS(h_exports);
+init_commonjs();
+init_c();
+init_d();
+init_e();
+init_f();
+init_g();
+init_h();
 
 //#endregion
 ```
@@ -280,7 +280,7 @@ init_h(), __toCommonJS(h_exports);
  });
  var g_exports = {};
  __export(g_exports, {
-@@ -87,19 +87,19 @@
+@@ -87,14 +87,14 @@
      "g.js"() {}
  });
  var h_exports = {};
@@ -296,19 +296,7 @@ init_h(), __toCommonJS(h_exports);
 +        foo.prop = 123;
      }
  });
--init_commonjs();
--init_c();
--init_d();
--init_e();
--init_f();
--init_g();
--init_h();
-+(init_commonjs(), __toCommonJS(commonjs_exports));
-+(init_c(), __toCommonJS(c_exports));
-+(init_d(), __toCommonJS(d_exports));
-+(init_e(), __toCommonJS(e_exports));
-+(init_f(), __toCommonJS(f_exports));
-+(init_g(), __toCommonJS(g_exports));
-+(init_h(), __toCommonJS(h_exports));
+ init_commonjs();
+ init_c();
 
 ```

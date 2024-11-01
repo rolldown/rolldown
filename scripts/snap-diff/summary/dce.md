@@ -47,8 +47,6 @@
   diff
 ## [package_json_side_effects_false_intermediate_files_used](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used/diff.md)
   diff
-## [package_json_side_effects_false_keep_bare_import_and_require_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6/diff.md)
-  diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread/diff.md)
@@ -143,6 +141,7 @@
 ## [multiple_declaration_tree_shaking_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax/bypass.md)
 ## [nested_function_inlining_with_spread](../../../crates/rolldown/tests/esbuild/dce/nested_function_inlining_with_spread/bypass.md)
 ## [package_json_side_effects_false_keep_bare_import_and_require_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js/bypass.md)
+## [package_json_side_effects_false_keep_bare_import_and_require_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6/bypass.md)
 ## [package_json_side_effects_false_keep_named_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js/bypass.md)
 ## [package_json_side_effects_false_keep_star_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js/bypass.md)
 ## [package_json_side_effects_true_keep_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_true_keep_common_js/bypass.md)

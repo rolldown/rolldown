@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -35,7 +36,7 @@ var init_button = __esm({ "node_modules/pkg/button.css"() {} });
 
 //#endregion
 //#region node_modules/pkg/components.jsx
-init_button(), __toCommonJS(button_exports);
+init_button();
 const Button = () => _jsx$1("button", {});
 
 //#endregion

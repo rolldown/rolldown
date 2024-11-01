@@ -29,7 +29,7 @@ var init_button = __esm({ "node_modules/pkg/button.css"() {} });
 
 //#endregion
 //#region node_modules/pkg/components.jsx
-init_button(), __toCommonJS(button_exports);
+init_button();
 const Button = () => _jsx$1("button", {});
 
 //#endregion
@@ -57,7 +57,7 @@ render(_jsx(Button, {}));
 -require_button();
 -var Button = () => React.createElement("button", null);
 -render(React.createElement(Button, null));
-+(init_button(), __toCommonJS(button_exports));
++init_button();
 +var Button = () => _jsx$1("button", {});
 +render(_jsx(Button, {}));
 

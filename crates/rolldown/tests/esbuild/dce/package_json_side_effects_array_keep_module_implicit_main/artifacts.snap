@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -19,7 +20,7 @@ var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
 
 //#endregion
 //#region src/require-demo-pkg.js
-init_index_module(), __toCommonJS(index_module_exports);
+init_index_module();
 
 //#endregion
 //#region src/entry.js

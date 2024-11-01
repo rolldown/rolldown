@@ -414,12 +414,16 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   if matches!(importee.exports_kind, ExportsKind::CommonJs) {
                     *expr = self.snippet.call_expr_expr(wrap_ref_name);
                   } else {
-                    let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-                    let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-                    *expr = self.snippet.seq2_in_paren_expr(
-                      self.snippet.call_expr_expr(wrap_ref_name),
-                      self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
-                    );
+                    if rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
+                      *expr = self.snippet.call_expr_expr(wrap_ref_name);
+                    } else {
+                      let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                      let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                      *expr = self.snippet.seq2_in_paren_expr(
+                        self.snippet.call_expr_expr(wrap_ref_name),
+                        self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                      );
+                    }
                   }
                 }
               }

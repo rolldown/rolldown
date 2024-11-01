@@ -413,15 +413,18 @@ impl<'a> LinkStage<'a> {
                       .push(importee_linking_info.wrapper_ref.unwrap().into());
                   }
                   WrapKind::Esm => {
-                    // something like `(init_foo(), toCommonJS(foo_exports))`
-                    // Reference to `init_foo`
+                    // convert require record into `(init_foo(), __toCommonJS(foo_exports))` if
+                    // `require('xxx)` is used, else convert it to `init_foo()`
                     stmt_info
                       .referenced_symbols
                       .push(importee_linking_info.wrapper_ref.unwrap().into());
-                    stmt_info
-                      .referenced_symbols
-                      .push(self.runtime.resolve_symbol("__toCommonJS").into());
                     stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+
+                    if !rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__toCommonJS").into());
+                    }
                   }
                 },
                 ImportKind::DynamicImport => {

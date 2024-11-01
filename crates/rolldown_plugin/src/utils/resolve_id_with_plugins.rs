@@ -59,7 +59,7 @@ pub async fn resolve_id_check_external(
       if !resolved_id.is_external {
         // Check external with resolved path
         if let Some(is_external) = bundle_options.external.as_ref() {
-          resolved_id.is_external = is_external(request, importer, true).await?;
+          resolved_id.is_external = is_external(resolved_id.id.as_str(), importer, true).await?;
         }
       }
       Ok(Ok(resolved_id))

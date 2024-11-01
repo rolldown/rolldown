@@ -11,15 +11,21 @@ snapshot_kind: text
 
 //#region esm.js
 var esm_exports = {};
-__export(esm_exports, { default: () => esm_default });
-var esm_default;
+__export(esm_exports, { a: () => a$1 });
+var a$1;
 var init_esm = __esm({ "esm.js"() {
-	esm_default = "esm";
+	a$1 = 100;
 } });
 
 //#endregion
 //#region main.js
 init_esm();
+1, init_esm();
+var a = (1, init_esm(), __toCommonJS(esm_exports));
+(init_esm(), __toCommonJS(esm_exports)).default;
+function foo() {
+	return init_esm(), __toCommonJS(esm_exports);
+}
 
 //#endregion
 ```

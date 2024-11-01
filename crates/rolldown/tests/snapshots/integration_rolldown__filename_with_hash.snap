@@ -276,7 +276,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 
-- src_entry-!~{000}~.js => src_entry-bXR-mQSu.js
+- src_entry-!~{000}~.js => src_entry-7ZSq8M-X.js
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module
 
@@ -292,7 +292,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
 
-- src_entry-!~{000}~.js => src_entry-bXR-mQSu.js
+- src_entry-!~{000}~.js => src_entry-7ZSq8M-X.js
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module
 
@@ -345,7 +345,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
-- src_entry-!~{000}~.js => src_entry-xFhaH9Us.js
+- src_entry-!~{000}~.js => src_entry-iS1C-6ik.js
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
 
@@ -496,23 +496,23 @@ snapshot_kind: text
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
 
-- test-!~{000}~.js => test-anEgNndy.js
+- test-!~{000}~.js => test-GiQqw0Rc.js
 - test.css
-- test-anEgNndy.js.map
+- test-GiQqw0Rc.js.map
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
 
-- test-!~{000}~.js => test-anEgNndy.js
+- test-!~{000}~.js => test-GiQqw0Rc.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
 
-- test-!~{000}~.js => test-anEgNndy.js
+- test-!~{000}~.js => test-GiQqw0Rc.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 
-- test-!~{000}~.js => test-anEgNndy.js
+- test-!~{000}~.js => test-GiQqw0Rc.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
@@ -752,7 +752,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/export_forms_common_js
 
-- entry-!~{000}~.js => entry-yLS2uCyQ.js
+- entry-!~{000}~.js => entry-x_Vr2eT2.js
 
 # tests/esbuild/default/export_forms_es6
 
@@ -809,7 +809,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
-- entry-!~{000}~.js => entry-nKeclh5H.js
+- entry-!~{000}~.js => entry-Zg5LI-EP.js
 
 # tests/esbuild/default/external_module_exclusion_package
 
@@ -1700,11 +1700,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-3qm8mbke.js
+- entry-!~{000}~.js => entry-_U0aM875.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-YKsu5RIe.js
+- entry-!~{000}~.js => entry-S0r_hR4N.js
 
 # tests/esbuild/default/top_level_await_iife
 
@@ -3796,7 +3796,7 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/esm_require_esm_unused
 
-- main-!~{000}~.js => main-8xsjWCm4.js
+- main-!~{000}~.js => main-3ZCERtsI.js
 
 # tests/rolldown/cjs_compat/exoprt_star_of_cjs
 
@@ -3862,8 +3862,12 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/require/require_esm
 
-- main-!~{000}~.js => main-V4GNbUh6.js
-- main-V4GNbUh6.js.map
+- main-!~{000}~.js => main-yj-9jT2S.js
+- main-yj-9jT2S.js.map
+
+# tests/rolldown/cjs_compat/require_call_expr_unused
+
+- main-!~{000}~.js => main-6qc2lsBr.js
 
 # tests/rolldown/code_splitting/basic
 
@@ -4468,7 +4472,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/shim_missing_exports/basic_wrapped_esm
 
-- main-!~{000}~.js => main-sFlj_-w5.js
+- main-!~{000}~.js => main-_lDRZbJ7.js
 
 # tests/rolldown/function/shim_missing_exports/shake_unused_shimmed_exports
 
@@ -4638,8 +4642,8 @@ snapshot_kind: text
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.js => main-C7qpmxS2.js
-- main-C7qpmxS2.js.map
+- main-!~{000}~.js => main-muea_9_K.js
+- main-muea_9_K.js.map
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
@@ -4747,13 +4751,13 @@ snapshot_kind: text
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.js => main-7eEJ6hiU.js
-- main-7eEJ6hiU.js.map
+- main-!~{000}~.js => main-EEJeog8f.js
+- main-EEJeog8f.js.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_export_named_function
 
-- main-!~{000}~.js => main-6Bfknxp0.js
-- main-6Bfknxp0.js.map
+- main-!~{000}~.js => main-T2XGgYGO.js
+- main-T2XGgYGO.js.map
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

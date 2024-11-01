@@ -105,11 +105,11 @@ var init_e = __esm({ "e.js"() {} });
 
 //#endregion
 //#region entry.js
-init_a(), __toCommonJS(a_exports);
-init_b(), __toCommonJS(b_exports);
-init_c(), __toCommonJS(c_exports);
-init_d(), __toCommonJS(d_exports);
-init_e(), __toCommonJS(e_exports);
+init_a();
+init_b();
+init_c();
+init_d();
+init_e();
 
 //#endregion
 ```
@@ -118,7 +118,7 @@ init_e(), __toCommonJS(e_exports);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,44 +1,43 @@
+@@ -1,42 +1,41 @@
 +import * as ns$3 from "x";
 +import * as ns$2 from "x";
 +import * as ns$1 from "x";
@@ -169,15 +169,8 @@ init_e(), __toCommonJS(e_exports);
 -    }
 +    "e.js"() {}
  });
--init_a();
--init_b();
--init_c();
--init_d();
--init_e();
-+(init_a(), __toCommonJS(a_exports));
-+(init_b(), __toCommonJS(b_exports));
-+(init_c(), __toCommonJS(c_exports));
-+(init_d(), __toCommonJS(d_exports));
-+(init_e(), __toCommonJS(e_exports));
+ init_a();
+ init_b();
+ init_c();
 
 ```

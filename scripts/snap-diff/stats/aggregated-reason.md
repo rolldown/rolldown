@@ -108,10 +108,6 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
-## double module initialization
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 ## not support import attributes
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
@@ -141,6 +137,9 @@
 ## low priority
 - crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 - crates/rolldown/tests/esbuild/dce/drop_labels
+## double module initialization
+- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
+- crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
 ## comments codegen
 - crates/rolldown/tests/esbuild/default/comment_preservation
 - crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx

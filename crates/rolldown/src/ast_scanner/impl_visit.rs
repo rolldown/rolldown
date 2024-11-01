@@ -2,7 +2,7 @@ use oxc::{
   ast::{
     ast::{self, Expression, IdentifierReference, MemberExpression},
     visit::walk,
-    Visit,
+    AstKind, Visit,
   },
   span::{GetSpan, Span},
 };
@@ -15,7 +15,14 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
-impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
+impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
+  fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
+    self.visit_path.push(kind);
+  }
+
+  fn leave_node(&mut self, _: oxc::ast::AstKind<'ast>) {
+    self.visit_path.pop();
+  }
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
@@ -124,6 +131,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     }
     walk::walk_declaration(self, it);
   }
+
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
       ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
@@ -184,7 +192,19 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           if request.span().is_empty() {
             ImportRecordMeta::IS_UNSPANNED_IMPORT
           } else {
-            ImportRecordMeta::empty()
+            let mut meta = ImportRecordMeta::empty();
+            // traverse nearest ExpressionStatement and check if there are potential used
+            for ancestor in self.visit_path.iter().rev() {
+              match ancestor {
+                AstKind::ParenthesizedExpression(_) | AstKind::SequenceExpression(_) => {}
+                AstKind::ExpressionStatement(_) => {
+                  meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
+                  break;
+                }
+                _ => break,
+              }
+            }
+            meta
           },
         );
         self.result.imports.insert(expr.span, id);
@@ -195,9 +215,9 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 }
 
-impl<'me> AstScanner<'me> {
+impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// visit `Class` of declaration
-  pub fn scan_class_declaration(&mut self, class: &ast::Class<'_>) {
+  pub fn scan_class_declaration(&mut self, class: &ast::Class<'ast>) {
     let Some(id) = class.id.as_ref() else {
       return;
     };

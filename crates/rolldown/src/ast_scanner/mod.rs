@@ -2,7 +2,7 @@ pub mod impl_visit;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use oxc::ast::ast;
+use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
 use oxc::semantic::{Reference, ReferenceId, SymbolTable};
 use oxc::{
@@ -51,7 +51,7 @@ pub struct ScanResult {
   pub has_star_exports: bool,
 }
 
-pub struct AstScanner<'me> {
+pub struct AstScanner<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
   module_type: ModuleDefFormat,
@@ -74,9 +74,10 @@ pub struct AstScanner<'me> {
   /// lhs of AssignmentExpression
   ast_usage: EcmaModuleAstUsage,
   cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
+  visit_path: Vec<AstKind<'ast>>,
 }
 
-impl<'me> AstScanner<'me> {
+impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
@@ -135,10 +136,11 @@ impl<'me> AstScanner<'me> {
       comments,
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
+      visit_path: vec![],
     }
   }
 
-  pub fn scan(mut self, program: &Program<'_>) -> BuildResult<ScanResult> {
+  pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -549,7 +551,7 @@ impl<'me> AstScanner<'me> {
       }
     });
   }
-  fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
+  fn scan_module_decl(&mut self, decl: &ModuleDeclaration<'ast>) {
     match decl {
       ast::ModuleDeclaration::ImportDeclaration(decl) => {
         self.esm_import_keyword.get_or_insert(Span::new(decl.span.start, decl.span.start + 6));

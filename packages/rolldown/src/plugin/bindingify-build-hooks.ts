@@ -114,8 +114,14 @@ export function bindingifyResolveId(
         importer ?? undefined,
         newExtraOptions,
       )
-      if (ret == false || ret == null) {
+      if (ret == null) {
         return
+      }
+      if (ret == false) {
+        return {
+          id: specifier,
+          external: true,
+        }
       }
       if (typeof ret === 'string') {
         return {

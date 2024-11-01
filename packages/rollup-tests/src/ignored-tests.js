@@ -66,7 +66,6 @@ const ignoreTests = [
   "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",
   "rollup@function@facade-reexports: handles reexports when creating a facade chunk and transitive dependencies are not hoisted",
   "rollup@function@external-resolved: passes both unresolved and resolved ids to the external option",
-  "rollup@function@external-resolve-false: includes an external module with a false resolve return",
   "rollup@function@external-conflict: external paths from custom resolver remain external (#633)",
   "rollup@function@external-live-binding-compact: handles external live-bindings",
   "rollup@function@external-live-binding: handles external live-bindings",
@@ -78,8 +77,6 @@ const ignoreTests = [
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
 
   // TODO check test runner
-  "rollup@function@custom-path-resolver-async: uses a custom path resolver (asynchronous)",
-  "rollup@function@custom-path-resolver-sync: uses a custom path resolver (synchronous)",
   "rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external",
   "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
 

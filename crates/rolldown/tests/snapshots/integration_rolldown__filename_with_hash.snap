@@ -3867,7 +3867,7 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/require_call_expr_unused
 
-- main-!~{000}~.js => main-6qc2lsBr.js
+- main-!~{000}~.js => main-oei2Xjj9.js
 
 # tests/rolldown/code_splitting/basic
 

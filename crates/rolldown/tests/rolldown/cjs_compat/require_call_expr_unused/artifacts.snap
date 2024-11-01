@@ -26,6 +26,9 @@ var a = (1, init_esm(), __toCommonJS(esm_exports));
 function foo() {
 	return init_esm(), __toCommonJS(esm_exports);
 }
+console.log((1, init_esm(), 1));
+console.log((1, init_esm(), __toCommonJS(esm_exports)));
+console.log((1, (init_esm(), __toCommonJS(esm_exports)) + 1, 200));
 
 //#endregion
 ```

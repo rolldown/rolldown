@@ -23,6 +23,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn leave_node(&mut self, _: oxc::ast::AstKind<'ast>) {
     self.visit_path.pop();
   }
+
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
@@ -192,16 +193,36 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           if request.span().is_empty() {
             ImportRecordMeta::IS_UNSPANNED_IMPORT
           } else {
+            let mut is_require_used = true;
             let mut meta = ImportRecordMeta::empty();
             // traverse nearest ExpressionStatement and check if there are potential used
             for ancestor in self.visit_path.iter().rev() {
               match ancestor {
-                AstKind::ParenthesizedExpression(_) | AstKind::SequenceExpression(_) => {}
+                AstKind::ParenthesizedExpression(_) => {}
                 AstKind::ExpressionStatement(_) => {
                   meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
                   break;
                 }
-                _ => break,
+                AstKind::SequenceExpression(seq_expr) => {
+                  // the child node has require and it is potential used
+                  // the state may changed according to the child node position
+                  // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
+                  //    in the last position, it is still used if it meant any other astKind
+                  // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
+                  //    not in the last position, the state should change to unused
+                  let last = seq_expr.expressions.last().expect("should have at least one child");
+
+                  if !last.span().is_empty() && !expr.span.is_empty() {
+                    is_require_used = last.span().contains_inclusive(expr.span);
+                  } else {
+                    is_require_used = true;
+                  }
+                }
+                _ => {
+                  if is_require_used {
+                    break;
+                  }
+                }
               }
             }
             meta

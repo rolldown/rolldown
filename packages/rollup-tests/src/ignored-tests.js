@@ -40,7 +40,6 @@ const ignoreTests = [
   "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
   "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
   'rollup@function@dynamic-import-rewriting: Dynamic import string specifier resolving',
-  'rollup@function@deprecated@dynamic-import-name-warn: warns when specifying a custom importer function for formats other than "es"',
   "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
   // output.dynamicImportInCjs is not supported
   "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",

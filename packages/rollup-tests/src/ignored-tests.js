@@ -44,15 +44,6 @@ const ignoreTests = [
   "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
-
-  // `PluginContext.resolve` is not working as expected
-  "rollup@function@resolve-relative-external-id: resolves relative external ids",
-
-  // The external module is not working as expected
-  "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",
-  "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
-  "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
-  "rollup@function@relative-external-include-once: includes a relative external module only once",  // The external module is not working as expected
  
   // The result is not working as expected
   "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
@@ -76,22 +67,16 @@ const ignoreTests = [
   "rollup@function@facade-reexports: handles reexports when creating a facade chunk and transitive dependencies are not hoisted",
   "rollup@function@external-resolved: passes both unresolved and resolved ids to the external option",
   "rollup@function@external-resolve-false: includes an external module with a false resolve return",
-  "rollup@function@external-normalization: external paths from custom resolver remain external (#633)",
   "rollup@function@external-conflict: external paths from custom resolver remain external (#633)",
   "rollup@function@external-live-binding-compact: handles external live-bindings",
   "rollup@function@external-live-binding: handles external live-bindings",
   "rollup@function@external-dynamic-import-live-binding-compact: supports external dynamic imports with live bindings in compact mode",
   "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
   "rollup@function@external-alias-parent: includes an external module included dynamically by an alias",
-  "rollup@function@external-alias: includes an external module included dynamically by an alias",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@function@double-namespace-reexport: handles chained namespace reexports from externals",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
 
-  // TODO to check external require content to be true
-  "rollup@function@external-ids-not-resolved: does not attempt to resolve external IDs",
-  "rollup@function@external-function-always-true: Does not call external for entry point",
-  "rollup@function@external-directory-import: handles using ../ as external import (#4349)",
   // TODO check test runner
   "rollup@function@custom-path-resolver-async: uses a custom path resolver (asynchronous)",
   "rollup@function@custom-path-resolver-sync: uses a custom path resolver (synchronous)",
@@ -117,6 +102,14 @@ const ignoreTests = [
   "rollup@function@logging@log-from-options: can log from the options hook",
   "rollup@function@logging@plugin-order: allows to order plugins when logging",
   "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
+
+  // `makeAbsoluteExternalsRelative` is not supported
+  "rollup@function@resolve-relative-external-id: resolves relative external ids",
+  "rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)",
+  "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
+  "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
+  "rollup@function@relative-external-include-once: includes a relative external module only once",
+  "rollup@function@external-directory-import: handles using ../ as external import (#4349)", // makeAbsoluteExternalsRelative normlized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",

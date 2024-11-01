@@ -117,7 +117,7 @@ export function bindingifyResolveId(
       if (ret == null) {
         return
       }
-      if (ret == false) {
+      if (ret === false) {
         return {
           id: specifier,
           external: true,

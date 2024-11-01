@@ -101,7 +101,8 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "signal-exit": "4.1.0"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.60",

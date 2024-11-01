@@ -6,6 +6,7 @@ import { ensureConfig, logger } from '../utils'
 import * as colors from '../colors'
 import { NormalizedCliOptions } from '../arguments/normalize'
 import path from 'node:path'
+import { onExit } from 'signal-exit'
 
 export async function bundleWithConfig(
   configPath: string,
@@ -60,6 +61,13 @@ async function watchInner(
   const watcher = await rolldownWatch({
     ...options,
     ...cliOptions.input,
+  })
+
+  onExit((code: number | null | undefined) => {
+    Promise.resolve(watcher.close()).finally(() => {
+      process.exit(typeof code === 'number' ? code : 0)
+    })
+    return true
   })
 
   const changedFile: string[] = []

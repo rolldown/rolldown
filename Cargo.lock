@@ -2972,6 +2972,7 @@ dependencies = [
  "memchr",
  "mime",
  "oxc",
+ "oxc_index",
  "phf 0.11.2",
  "rayon",
  "regex",

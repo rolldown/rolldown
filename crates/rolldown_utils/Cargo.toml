@@ -25,6 +25,7 @@ infer              = { workspace = true }
 memchr             = { workspace = true }
 mime               = { workspace = true }
 oxc                = { workspace = true }
+oxc_index          = { workspace = true }
 phf                = { workspace = true }
 regex              = { workspace = true }
 regress            = { workspace = true }

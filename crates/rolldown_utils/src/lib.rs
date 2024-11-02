@@ -19,6 +19,7 @@ pub mod sanitize_file_name;
 pub mod xxhash;
 pub use bitset::BitSet;
 pub mod extract_hash_pattern;
+pub mod index_vec_ext;
 pub mod js_regex;
 pub mod pattern_filter;
 pub mod unique_arc;

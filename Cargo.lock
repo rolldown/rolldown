@@ -2582,7 +2582,6 @@ dependencies = [
  "memchr",
  "notify",
  "oxc",
- "regex",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_error",
@@ -2963,6 +2962,7 @@ name = "rolldown_utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "async-scoped",
  "base64-simd 0.8.0",
  "futures",

@@ -2,9 +2,10 @@ use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use regex::{Captures, Regex};
-use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
 use std::sync::LazyLock;
+
+use crate::indexmap::FxIndexSet;
 
 const HASH_PLACEHOLDER_LEFT: &str = "!~{";
 const HASH_PLACEHOLDER_RIGHT: &str = "}~";
@@ -76,6 +77,7 @@ impl HashPlaceholderGenerator {
 /// ```js
 /// import { foo } from "foo.xx__hash.js";
 /// ```
+#[expect(clippy::implicit_hasher)]
 pub fn replace_placeholder_with_hash<'a>(
   source: impl Into<Cow<'a, str>>,
   final_hashes_by_placeholder: &FxHashMap<ArcStr, &'a str>,

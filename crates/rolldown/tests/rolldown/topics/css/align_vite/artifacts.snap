@@ -1,9 +1,10 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
-## common-imported-by-js-[hash].css
+## common-imported-by-js-Vgk26GTt.css
 
 ```css
 body {
@@ -19,7 +20,7 @@ body {
 ```js
 
 ```
-## entry-a-[hash].css
+## entry-a-q4WTqDTG.css
 
 ```css
 
@@ -42,7 +43,7 @@ console.log("entry-a");
 
 //#endregion
 ```
-## entry-b-[hash].css
+## entry-b-H6QOhB-3.css
 
 ```css
 

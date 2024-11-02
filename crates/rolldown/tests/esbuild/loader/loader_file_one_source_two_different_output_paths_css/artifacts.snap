@@ -1,9 +1,10 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
-## common-[hash].css
+## common-YiR-P8G6.css
 
 ```css
 div {

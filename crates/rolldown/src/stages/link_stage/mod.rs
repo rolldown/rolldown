@@ -9,6 +9,7 @@ use rolldown_common::{
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
+  index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 use rustc_hash::FxHashSet;
@@ -546,7 +547,7 @@ impl<'a> LinkStage<'a> {
   }
 
   fn patch_module_dependencies(&mut self) {
-    self.metas.iter_mut_enumerated().for_each(|(module_idx, meta)| {
+    self.metas.par_iter_mut_enumerated().for_each(|(module_idx, meta)| {
       // Symbols from runtime are referenced by bundler not import statements.
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         let canonical_ref = self.symbols.canonical_ref_for(*symbol_ref);
@@ -557,11 +558,7 @@ impl<'a> LinkStage<'a> {
         return;
       };
 
-      module.stmt_infos.iter().for_each(|stmt_info| {
-        if !stmt_info.is_included {
-          return;
-        }
-
+      module.stmt_infos.iter().filter(|stmt_info| stmt_info.is_included).for_each(|stmt_info| {
         // We need this step to include the runtime module, if there are symbols of it.
         // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
         stmt_info.referenced_symbols.iter().for_each(|reference_ref| {

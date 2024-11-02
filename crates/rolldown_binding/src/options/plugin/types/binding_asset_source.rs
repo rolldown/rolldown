@@ -35,20 +35,20 @@ impl std::fmt::Debug for BindingAssetSource {
   }
 }
 
-impl From<BindingAssetSource> for rolldown_common::AssetSource {
+impl From<BindingAssetSource> for rolldown_common::StrOrBytes {
   fn from(value: BindingAssetSource) -> Self {
     match value.inner {
-      Either::A(s) => Self::String(s),
-      Either::B(buff) => Self::Buffer(buff.to_vec()),
+      Either::A(s) => Self::Str(s),
+      Either::B(buff) => Self::Bytes(buff.to_vec()),
     }
   }
 }
 
-impl From<rolldown_common::AssetSource> for BindingAssetSource {
-  fn from(value: rolldown_common::AssetSource) -> Self {
+impl From<rolldown_common::StrOrBytes> for BindingAssetSource {
+  fn from(value: rolldown_common::StrOrBytes) -> Self {
     match value {
-      rolldown_common::AssetSource::String(s) => Self { inner: Either::A(s) },
-      rolldown_common::AssetSource::Buffer(buff) => Self { inner: Either::B(buff.into()) },
+      rolldown_common::StrOrBytes::Str(s) => Self { inner: Either::A(s) },
+      rolldown_common::StrOrBytes::Bytes(buff) => Self { inner: Either::B(buff.into()) },
     }
   }
 }

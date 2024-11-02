@@ -213,9 +213,9 @@ impl IntegrationTest {
           let content = match asset {
             Output::Chunk(inner) => &inner.code,
             Output::Asset(inner) => match &inner.source {
-              rolldown_common::AssetSource::String(inner) => inner,
+              rolldown_common::StrOrBytes::Str(inner) => inner,
               // Snapshot buffer is meaningless
-              rolldown_common::AssetSource::Buffer(_) => return None,
+              rolldown_common::StrOrBytes::Bytes(_) => return None,
             },
           };
           let content = if self.test_meta.hidden_runtime_module {

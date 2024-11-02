@@ -1,19 +1,11 @@
 # Failed Cases
 ## [common_js_variable_in_esm_type_module](../../../crates/rolldown/tests/esbuild/packagejson/common_js_variable_in_esm_type_module/diff.md)
   diff
-## [package_json_browser_index_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_index_no_ext/diff.md)
-  diff
 ## [package_json_browser_issue2002_b](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_b/diff.md)
   diff
 ## [package_json_browser_map_module_disabled](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_module_disabled/diff.md)
   diff
 ## [package_json_browser_map_native_module_disabled](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_native_module_disabled/diff.md)
-  diff
-## [package_json_browser_map_relative_disabled](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_relative_disabled/diff.md)
-  diff
-## [package_json_browser_node_modules_index_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_node_modules_index_no_ext/diff.md)
-  diff
-## [package_json_browser_node_modules_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_node_modules_no_ext/diff.md)
   diff
 ## [package_json_disabled_type_module_issue3367](../../../crates/rolldown/tests/esbuild/packagejson/package_json_disabled_type_module_issue3367/diff.md)
   diff
@@ -28,8 +20,6 @@
 ## [package_json_dual_package_hazard_require_only](../../../crates/rolldown/tests/esbuild/packagejson/package_json_dual_package_hazard_require_only/diff.md)
   diff
 ## [package_json_exports_import_over_require](../../../crates/rolldown/tests/esbuild/packagejson/package_json_exports_import_over_require/diff.md)
-  diff
-## [package_json_import_self_using_import_scoped](../../../crates/rolldown/tests/esbuild/packagejson/package_json_import_self_using_import_scoped/diff.md)
   diff
 ## package_json_node_paths_issue2752
   missing
@@ -57,14 +47,18 @@
 ## [package_json_type_should_be_types](../../../crates/rolldown/tests/esbuild/packagejson/package_json_type_should_be_types)
 # Bypassed Cases
 ## [package_json_bad_main](../../../crates/rolldown/tests/esbuild/packagejson/package_json_bad_main/bypass.md)
+## [package_json_browser_index_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_index_no_ext/bypass.md)
 ## [package_json_browser_issue2002_a](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_a/bypass.md)
 ## [package_json_browser_issue2002_c](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_c/bypass.md)
 ## [package_json_browser_map_avoid_missing](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_avoid_missing/bypass.md)
 ## [package_json_browser_map_module_to_module](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_module_to_module/bypass.md)
 ## [package_json_browser_map_module_to_relative](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_module_to_relative/bypass.md)
+## [package_json_browser_map_relative_disabled](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_relative_disabled/bypass.md)
 ## [package_json_browser_map_relative_to_module](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_relative_to_module/bypass.md)
 ## [package_json_browser_map_relative_to_relative](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_relative_to_relative/bypass.md)
 ## [package_json_browser_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_no_ext/bypass.md)
+## [package_json_browser_node_modules_index_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_node_modules_index_no_ext/bypass.md)
+## [package_json_browser_node_modules_no_ext](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_node_modules_no_ext/bypass.md)
 ## [package_json_browser_over_main_node](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_over_main_node/bypass.md)
 ## [package_json_browser_over_module_browser](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_over_module_browser/bypass.md)
 ## [package_json_browser_string](../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_string/bypass.md)
@@ -72,6 +66,7 @@
 ## [package_json_dual_package_hazard_import_and_require_force_module_before_main](../../../crates/rolldown/tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_force_module_before_main/bypass.md)
 ## [package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main](../../../crates/rolldown/tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main/bypass.md)
 ## [package_json_exports_require_over_import](../../../crates/rolldown/tests/esbuild/packagejson/package_json_exports_require_over_import/bypass.md)
+## [package_json_import_self_using_import_scoped](../../../crates/rolldown/tests/esbuild/packagejson/package_json_import_self_using_import_scoped/bypass.md)
 ## [package_json_import_self_using_require](../../../crates/rolldown/tests/esbuild/packagejson/package_json_import_self_using_require/bypass.md)
 ## [package_json_import_self_using_require_scoped](../../../crates/rolldown/tests/esbuild/packagejson/package_json_import_self_using_require_scoped/bypass.md)
 ## [package_json_main](../../../crates/rolldown/tests/esbuild/packagejson/package_json_main/bypass.md)

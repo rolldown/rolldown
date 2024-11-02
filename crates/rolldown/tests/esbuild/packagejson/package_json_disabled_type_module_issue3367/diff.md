@@ -1,3 +1,5 @@
+# Reason
+1. ignored module debug name seems not correct
 # Diff
 ## /out.js
 ### esbuild

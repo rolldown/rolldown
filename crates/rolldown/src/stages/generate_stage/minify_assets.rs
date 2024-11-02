@@ -14,7 +14,7 @@ impl<'a> GenerateStage<'a> {
           rolldown_common::InstantiationKind::Ecma(_) => {
             // TODO: Do we need to ensure `asset.filename` to be absolute path?
             let (minified_content, new_map) = EcmaCompiler::minify(
-              asset.content.try_to_str()?,
+              asset.content.try_as_inner_str()?,
               asset.map.is_some(),
               &asset.filename,
             )?;

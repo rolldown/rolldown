@@ -18,7 +18,7 @@ pub async fn render_chunks<'a>(
     if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
       let render_chunk_ret = plugin_driver
         .render_chunk(HookRenderChunkArgs {
-          code: asset.content.clone().try_into_string()?,
+          code: asset.content.clone().try_into_inner_string()?,
           chunk: &ecma_meta.rendered_chunk,
         })
         .await?;

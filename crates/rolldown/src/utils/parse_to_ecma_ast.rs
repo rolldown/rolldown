@@ -65,20 +65,20 @@ pub fn parse_to_ecma_ast(
       (content, OxcParseType::Js)
     }
     ModuleType::Base64 => {
-      let source = source.try_into_bytes()?;
+      let source = source.into_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
       has_lazy_export = true;
       (text_to_string_literal(&encoded)?, OxcParseType::Js)
     }
     ModuleType::Dataurl => {
-      let data = source.try_into_bytes()?;
+      let data = source.into_bytes();
       let guessed_mime = guess_mime(path, &data)?;
       let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
       has_lazy_export = true;
       (text_to_string_literal(&dataurl)?, OxcParseType::Js)
     }
     ModuleType::Binary => {
-      let source = source.try_into_bytes()?;
+      let source = source.into_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
       (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
     }

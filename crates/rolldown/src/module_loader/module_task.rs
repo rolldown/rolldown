@@ -143,7 +143,7 @@ impl ModuleTask {
     let mut raw_import_records = IndexVec::default();
 
     let asset_view = if matches!(module_type, ModuleType::Asset) {
-      let asset_source = source.try_into_bytes()?;
+      let asset_source = source.into_bytes();
       source = StrOrBytes::Str(String::new());
       Some(create_asset_view(asset_source.into()))
     } else {

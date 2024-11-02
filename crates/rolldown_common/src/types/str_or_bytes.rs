@@ -11,19 +11,19 @@ impl Default for StrOrBytes {
     Self::Str(String::default())
   }
 }
-
+// Methods contain `inner` word won't do implicit conversion.
 impl StrOrBytes {
+  pub fn try_into_inner_string(self) -> anyhow::Result<String> {
+    match self {
+      Self::Str(s) => Ok(s),
+      Self::Bytes(_) => Err(anyhow::format_err!("Expected Str, found Bytes")),
+    }
+  }
+
   pub fn try_into_string(self) -> anyhow::Result<String> {
     match self {
       Self::Str(s) => Ok(s),
       Self::Bytes(b) => Ok(String::from_utf8(b)?),
-    }
-  }
-
-  pub fn try_into_bytes(self) -> anyhow::Result<Vec<u8>> {
-    match self {
-      Self::Str(s) => Ok(s.into_bytes()),
-      Self::Bytes(b) => Ok(b),
     }
   }
 
@@ -41,10 +41,10 @@ impl StrOrBytes {
     }
   }
 
-  pub fn try_to_str(&self) -> anyhow::Result<&str> {
+  pub fn try_as_inner_str(&self) -> anyhow::Result<&str> {
     match self {
       Self::Str(s) => Ok(s.as_str()),
-      Self::Bytes(b) => Ok(std::str::from_utf8(b.as_slice())?),
+      Self::Bytes(_) => Err(anyhow::format_err!("Expected Str, found Bytes")),
     }
   }
 }

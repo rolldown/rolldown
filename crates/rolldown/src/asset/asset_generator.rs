@@ -31,7 +31,6 @@ impl Generator for AssetGenerator {
       let file_dir = file_path.parent().expect("chunk file name should have a parent");
       instantiated_chunks.push(InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,
-        // TODO: should support buffer here
         content: StrOrBytes::Bytes(asset_view.source.to_vec()),
         map: None,
         kind: InstantiationKind::None,

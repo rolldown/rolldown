@@ -63,7 +63,6 @@ pub use crate::{
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,
-  types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,

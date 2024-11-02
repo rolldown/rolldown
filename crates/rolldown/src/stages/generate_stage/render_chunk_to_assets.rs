@@ -3,9 +3,7 @@ use std::path::Path;
 use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{
-  Asset, AssetSource, InstantiationKind, Output, OutputAsset, OutputChunk, SourceMapType,
-};
+use rolldown_common::{Asset, InstantiationKind, Output, OutputAsset, OutputChunk, SourceMapType};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -154,10 +152,7 @@ impl<'a> GenerateStage<'a> {
       } else {
         output.push(Output::Asset(Box::new(OutputAsset {
           filename: filename.clone().into(),
-          source: match code {
-            rolldown_common::StrOrBytes::Str(inner) => AssetSource::String(inner),
-            rolldown_common::StrOrBytes::Bytes(inner) => AssetSource::Buffer(inner),
-          },
+          source: code,
           original_file_name: None,
           name: None,
         })));

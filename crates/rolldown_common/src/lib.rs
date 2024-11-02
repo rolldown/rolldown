@@ -1,3 +1,4 @@
+mod asset;
 mod chunk;
 mod css;
 mod ecmascript;
@@ -39,6 +40,7 @@ pub mod bundler_options {
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
+  asset::asset_view::AssetView,
   chunk::{
     chunk_table::ChunkTable,
     types::{

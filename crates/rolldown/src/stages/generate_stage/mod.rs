@@ -4,6 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
+use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
@@ -192,9 +193,11 @@ impl<'a> GenerateStage<'a> {
       let filename_template = chunk.filename_template(self.options, &pre_rendered_chunk).await?;
       let css_filename_template =
         chunk.css_filename_template(self.options, &pre_rendered_chunk).await?;
+      let asset_filename_template = &self.options.asset_filenames;
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
       let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
+      let extracted_asset_hash_pattern = extract_hash_pattern(asset_filename_template.template());
 
       let need_to_ensure_unique =
         extracted_hash_pattern.is_none() || extracted_css_hash_pattern.is_none();
@@ -231,6 +234,30 @@ impl<'a> GenerateStage<'a> {
 
       let css_hash_placeholder =
         extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+      chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()).for_each(|module| {
+        if module.asset_view.is_some() {
+          let hash_placeholder = extracted_asset_hash_pattern
+            .as_ref()
+            .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+          let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack();
+          let preliminary = asset_filename_template.render(&FileNameRenderOptions {
+            name: Some(name),
+            hash: hash_placeholder.as_deref(),
+            ext: module.id.as_path().extension().and_then(|s| s.to_str()),
+          });
+
+          chunk.asset_absolute_preliminary_filenames.insert(
+            module.idx,
+            preliminary
+              .absolutize_with(self.options.cwd.join(&self.options.dir))
+              .expect_into_string(),
+          );
+          chunk
+            .asset_preliminary_filenames
+            .insert(module.idx, PreliminaryFilename::new(preliminary, hash_placeholder));
+        }
+      });
 
       let preliminary = filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),

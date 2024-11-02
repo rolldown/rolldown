@@ -85,15 +85,12 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let final_hashes_by_placeholder = chunk_graph
-    .chunk_table
-    .iter()
-    .zip(&index_final_hashes)
-    .filter_map(|(chunk, (hash, _))| {
-      chunk
+  let final_hashes_by_placeholder = index_final_hashes
+    .iter_enumerated()
+    .filter_map(|(idx, (hash, _))| {
+      let asset = &preliminary_assets[idx];
+      asset
         .preliminary_filename
-        .as_ref()
-        .unwrap()
         .hash_placeholder()
         .map(|hash_placeholder| (hash_placeholder.into(), &hash[..hash_placeholder.len()]))
     })
@@ -106,11 +103,13 @@ pub fn finalize_assets(
       let asset_idx = AssetIdx::from(asset_idx);
 
       let preliminary_filename_raw = asset.preliminary_filename.to_string();
-      let filename: ModuleId =
-        replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
-          .into();
+      let filename: ModuleId = replace_facade_hash_replacement(
+        preliminary_filename_raw.clone(),
+        &final_hashes_by_placeholder,
+      )
+      .into();
 
-      if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
+      if let InstantiationKind::Ecma(ecma_meta) = &mut asset.kind {
         ecma_meta.rendered_chunk.filename = filename.clone();
         let (_, debug_id) = index_final_hashes[asset_idx];
         ecma_meta.rendered_chunk.debug_id = debug_id;

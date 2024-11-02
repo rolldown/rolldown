@@ -57,7 +57,7 @@ impl Generator for CssGenerator {
         origin_chunk: ctx.chunk_idx,
         content,
         map: None,
-        meta: InstantiationKind::None,
+        kind: InstantiationKind::None,
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx

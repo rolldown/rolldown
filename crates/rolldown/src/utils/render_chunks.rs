@@ -15,7 +15,7 @@ pub async fn render_chunks<'a>(
     // TODO(hyf0): To be refactor:
     // - content should use ArcStr
     // - plugin_driver.render_chunk should return Option<...> to be able to see if there is a return value by the plugin
-    if let InstantiationKind::Ecma(ecma_meta) = &asset.meta {
+    if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
       let render_chunk_ret = plugin_driver
         .render_chunk(HookRenderChunkArgs {
           code: asset.content.clone(),

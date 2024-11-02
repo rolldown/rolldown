@@ -18,6 +18,7 @@ use rolldown_error::{
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
+  asset::create_asset_view,
   css::create_css_view,
   ecmascript::ecma_module_view_factory::{create_ecma_view, CreateEcmaViewReturn},
   module_loader::NormalModuleTaskResult,
@@ -141,6 +142,14 @@ impl ModuleTask {
 
     let mut raw_import_records = IndexVec::default();
 
+    let asset_view = if matches!(module_type, ModuleType::Asset) {
+      let asset_source = source.try_into_bytes()?;
+      source = StrOrBytes::Str(String::new());
+      Some(create_asset_view(asset_source.into()))
+    } else {
+      None
+    };
+
     let css_view = if matches!(module_type, ModuleType::Css) {
       let css_source: ArcStr = source.try_into_string()?.into();
       // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
@@ -212,6 +221,7 @@ impl ModuleTask {
       module_type: module_type.clone(),
       ecma_view,
       css_view,
+      asset_view,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

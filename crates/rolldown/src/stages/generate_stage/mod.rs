@@ -194,7 +194,6 @@ impl<'a> GenerateStage<'a> {
       let css_filename_template =
         chunk.css_filename_template(self.options, &pre_rendered_chunk).await?;
       let asset_filename_template = &self.options.asset_filenames;
-      chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
       let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
       let extracted_asset_hash_pattern = extract_hash_pattern(asset_filename_template.template());
@@ -259,29 +258,40 @@ impl<'a> GenerateStage<'a> {
         }
       });
 
-      let preliminary = filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
-        hash: hash_placeholder.as_deref(),
-        ..Default::default()
-      });
+      let ecma_preliminary_filename = chunk
+        .generate_preliminary_filename(
+          self.options,
+          &pre_rendered_chunk,
+          &chunk_name,
+          hash_placeholder.as_deref(),
+        )
+        .await?;
 
-      let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
-        hash: hash_placeholder.as_deref(),
-        ..Default::default()
-      });
+      let css_preliminary_filename = chunk
+        .generate_css_preliminary_filename(
+          self.options,
+          &pre_rendered_chunk,
+          &chunk_name,
+          hash_placeholder.as_deref(),
+        )
+        .await?;
+
+      chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
 
       chunk.absolute_preliminary_filename = Some(
-        preliminary.absolutize_with(self.options.cwd.join(&self.options.dir)).expect_into_string(),
-      );
-      chunk.css_absolute_preliminary_filename = Some(
-        css_preliminary
+        ecma_preliminary_filename
           .absolutize_with(self.options.cwd.join(&self.options.dir))
           .expect_into_string(),
       );
-      chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
+      chunk.css_absolute_preliminary_filename = Some(
+        css_preliminary_filename
+          .absolutize_with(self.options.cwd.join(&self.options.dir))
+          .expect_into_string(),
+      );
+      chunk.preliminary_filename =
+        Some(PreliminaryFilename::new(ecma_preliminary_filename, hash_placeholder));
       chunk.css_preliminary_filename =
-        Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
+        Some(PreliminaryFilename::new(css_preliminary_filename, css_hash_placeholder));
     }
     Ok(index_chunk_id_to_name)
   }

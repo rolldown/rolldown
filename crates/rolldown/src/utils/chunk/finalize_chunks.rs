@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::{hash::Hash, mem};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -119,11 +119,13 @@ pub fn finalize_assets(
       }
 
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
-      asset.content = replace_facade_hash_replacement(
-        std::mem::take(&mut asset.content).try_into_string().unwrap(),
-        &final_hashes_by_placeholder,
-      )
-      .into();
+      match &mut asset.content {
+        StrOrBytes::Str(content) => {
+          *content =
+            replace_facade_hash_replacement(mem::take(content), &final_hashes_by_placeholder);
+        }
+        StrOrBytes::Bytes(_content) => {}
+      }
 
       asset.finalize(filename.to_string())
     })

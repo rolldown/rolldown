@@ -4,11 +4,6 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/foo-vpuLoj-k.txt
-
-```txt
-hello, world
-```
 ## main.js
 
 ```js

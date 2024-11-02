@@ -4180,6 +4180,20 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-FoLZ3qBB.js
 
+# tests/rolldown/function/file/css
+
+- out.css => out.css
+- out.css
+
+# tests/rolldown/function/file/js
+
+- out.js => out.js
+
+# tests/rolldown/function/file/js_css
+
+- out.js => out.js
+- out.css
+
 # tests/rolldown/function/format/app/export-all
 
 - main-!~{000}~.js => main--pSlkPVu.js

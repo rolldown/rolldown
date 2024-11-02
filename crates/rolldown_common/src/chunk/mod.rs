@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::PathBuf};
 
 // cSpell:disable
 use crate::{
@@ -121,6 +121,9 @@ impl Chunk {
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
   ) -> anyhow::Result<PreliminaryFilename> {
+    if let Some(file) = &options.file {
+      return Ok(PreliminaryFilename::new(file.clone(), None));
+    }
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
     let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
 
@@ -152,6 +155,11 @@ impl Chunk {
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
   ) -> anyhow::Result<PreliminaryFilename> {
+    if let Some(file) = &options.file {
+      let mut file = PathBuf::from(file);
+      file.set_extension("css");
+      return Ok(PreliminaryFilename::new(file.into_os_string().into_string().unwrap(), None));
+    }
     let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
 
     let extracted_hash_pattern = extract_hash_pattern(filename_template.template());

@@ -27,7 +27,10 @@ use crate::{
   },
   stages::link_stage::LinkStageOutput,
   utils::{
-    chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
+    chunk::{
+      deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
+      validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
+    },
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
   },
@@ -57,6 +60,9 @@ impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks().await?;
+    if chunk_graph.chunk_table.len() > 1 {
+      validate_options_for_multi_chunk_output(self.options)?;
+    }
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 

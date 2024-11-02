@@ -71,6 +71,7 @@ pub struct BundlerOptions {
   pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
   pub asset_filenames: Option<String>,
   pub dir: Option<String>,
+  pub file: Option<String>,
   pub format: Option<OutputFormat>,
   pub exports: Option<OutputExports>,
   pub globals: Option<HashMap<String, String>>,

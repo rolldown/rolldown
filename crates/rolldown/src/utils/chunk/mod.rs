@@ -15,6 +15,7 @@ pub mod determine_use_strict;
 pub mod finalize_chunks;
 pub mod namespace_marker;
 pub mod render_chunk_exports;
+pub mod validate_options_for_multi_chunk_output;
 
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.css"
+      }
+    ],
+    "file": "out.css"
+  },
+  "expectExecuted": false
+}

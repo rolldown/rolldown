@@ -103,6 +103,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     outro: raw_options.outro,
     es_module: raw_options.es_module.unwrap_or_default(),
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
+    file: raw_options.file,
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     globals,

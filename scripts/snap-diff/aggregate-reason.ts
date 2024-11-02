@@ -44,7 +44,7 @@ export function extractReason(source: string) {
   return ret
 }
 
-const workspaceDir = path.join(import.meta.dirname, '../..')
+export const workspaceDir = path.join(import.meta.dirname, '../..')
 
 export type AggregateReasonEntries = [string, string[]][]
 

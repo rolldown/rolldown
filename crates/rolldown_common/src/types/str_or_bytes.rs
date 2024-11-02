@@ -1,7 +1,15 @@
-#[derive(Clone)]
+use std::fmt::Debug;
+
+#[derive(Clone, Debug)]
 pub enum StrOrBytes {
   Str(String),
   Bytes(Vec<u8>),
+}
+
+impl Default for StrOrBytes {
+  fn default() -> Self {
+    Self::Str(String::default())
+  }
 }
 
 impl StrOrBytes {
@@ -16,6 +24,27 @@ impl StrOrBytes {
     match self {
       Self::Str(s) => Ok(s.into_bytes()),
       Self::Bytes(b) => Ok(b),
+    }
+  }
+
+  pub fn into_bytes(self) -> Vec<u8> {
+    match self {
+      Self::Str(s) => s.into_bytes(),
+      Self::Bytes(b) => b,
+    }
+  }
+
+  pub fn as_bytes(&self) -> &[u8] {
+    match self {
+      Self::Str(s) => s.as_bytes(),
+      Self::Bytes(b) => b.as_slice(),
+    }
+  }
+
+  pub fn try_to_str(&self) -> anyhow::Result<&str> {
+    match self {
+      Self::Str(s) => Ok(s.as_str()),
+      Self::Bytes(b) => Ok(std::str::from_utf8(b.as_slice())?),
     }
   }
 }

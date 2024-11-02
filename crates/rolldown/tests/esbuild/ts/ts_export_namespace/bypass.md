@@ -1,3 +1,5 @@
+# Reason
+1. the extra `let foo` could be stripped by minifier
 # Diff
 ## /out.js
 ### esbuild

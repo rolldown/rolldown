@@ -5,7 +5,8 @@
         "name": "index",
         "import": "index.js"
       }
-    ]
+    ],
+    "external": ["aws-sdk"]
   },
   "expectExecuted": false
 }

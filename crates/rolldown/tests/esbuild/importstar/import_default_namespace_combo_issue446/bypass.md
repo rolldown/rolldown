@@ -1,5 +1,5 @@
 # Reason
-1. Wrong default import linking output
+1. Rolldown extract common chunk
 # Diff
 ## /out/external-ns.js
 ### esbuild

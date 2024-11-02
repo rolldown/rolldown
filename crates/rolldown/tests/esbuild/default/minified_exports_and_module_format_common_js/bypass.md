@@ -1,3 +1,6 @@
+# Reason
+1. we generate same output when minify is disabled 
+2. could be done in `minifier`
 # Diff
 ## /out.js
 ### esbuild

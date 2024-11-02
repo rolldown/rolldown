@@ -1,5 +1,5 @@
 # Reason 
-1. Wrong self iife
+1. Rolldown iife impl follow rollup
 # Diff
 ## /out.js
 ### esbuild

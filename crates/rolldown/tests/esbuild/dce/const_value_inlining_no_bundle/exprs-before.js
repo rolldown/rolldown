@@ -5,3 +5,5 @@ function nested() {
 		return y_REMOVE
 	}
 }
+
+assert(nested() !== undefined) // ensure this is not removed by DCE

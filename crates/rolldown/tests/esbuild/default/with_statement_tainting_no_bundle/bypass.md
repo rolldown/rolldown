@@ -1,3 +1,5 @@
+# Reason
+1. esbuild enable minify syntax this could be done in minifier, rest part should be same
 # Diff
 ## /out.js
 ### esbuild
@@ -35,9 +37,10 @@
 		let local$1 = 5;
 		hoisted++;
 		local$1++;
-		outer++;
+		if (1) outer++;
+		if (0) outerDead++;
 	}
-	{
+	if (1) {
 		hoisted++;
 		local++;
 		outer++;
@@ -52,7 +55,7 @@
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,19 +1,22 @@
+@@ -1,19 +1,23 @@
 +
 +//#region entry.js
  (() => {
@@ -83,9 +86,10 @@
 +		let local$1 = 5;
 +		hoisted++;
 +		local$1++;
-+		outer++;
++		if (1) outer++;
++		if (0) outerDead++;
 +	}
-+	{
++	if (1) {
 +		hoisted++;
 +		local++;
 +		outer++;

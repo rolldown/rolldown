@@ -1,3 +1,5 @@
+# Reason
+1. enum inline
 # Diff
 ## /out/number.js
 ### esbuild

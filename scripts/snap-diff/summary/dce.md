@@ -1,6 +1,4 @@
 # Failed Cases
-## [const_value_inlining_no_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_no_bundle/diff.md)
-  diff
 ## [cross_module_constant_folding_number](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number/diff.md)
   diff
 ## [cross_module_constant_folding_string](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string/diff.md)
@@ -73,8 +71,6 @@
   diff
 ## [tree_shaking_lowered_class_static_field_minified](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified/diff.md)
   diff
-## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property/diff.md)
-  diff
 ## [tree_shaking_react_elements](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
   diff
 ## [tree_shaking_unary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators/diff.md)
@@ -121,9 +117,11 @@
 ## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
 ## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
+## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property)
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)
 ## [const_value_inlining_direct_eval](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_direct_eval/bypass.md)
+## [const_value_inlining_no_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_no_bundle/bypass.md)
 ## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/bypass.md)
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)

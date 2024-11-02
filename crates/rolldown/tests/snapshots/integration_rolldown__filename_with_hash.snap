@@ -39,18 +39,18 @@ snapshot_kind: text
 
 - top-level-!~{000}~.js => top-level-zJDsNC3A.js
 - nested-block-!~{001}~.js => nested-block-NgejE1ik.js
-- nested-function-!~{002}~.js => nested-function-cC_m_h0m.js
+- nested-function-!~{002}~.js => nested-function-UPUwvlST.js
 - namespace-export-!~{003}~.js => namespace-export-Jiy3V9eu.js
 - comment-before-!~{004}~.js => comment-before-wIU7AQ0c.js
-- directive-before-!~{005}~.js => directive-before-3o2ZBWLu.js
+- directive-before-!~{005}~.js => directive-before-KLB5yIGx.js
 - semicolon-before-!~{006}~.js => semicolon-before-CH7Hg_YA.js
 - debugger-before-!~{007}~.js => debugger-before-_kspBENU.js
 - type-before-!~{008}~.js => type-before-tig9Oh-8.js
-- exprs-before-!~{009}~.js => exprs-before-DYnmoQWo.js
+- exprs-before-!~{009}~.js => exprs-before-OFyXHkX-.js
 - disabled-tdz-!~{00a}~.js => disabled-tdz-OnGPQYG1.js
 - backwards-reference-top-level-!~{00b}~.js => backwards-reference-top-level-BVULa1cu.js
-- backwards-reference-nested-function-!~{00c}~.js => backwards-reference-nested-function-8vtGv60k.js
-- issue-3125-!~{00d}~.js => issue-3125-tdhDm1z9.js
+- backwards-reference-nested-function-!~{00c}~.js => backwards-reference-nested-function-FseOull6.js
+- issue-3125-!~{00d}~.js => issue-3125-QSqZ-jNd.js
 
 # tests/esbuild/dce/cross_module_constant_folding_number
 
@@ -553,11 +553,11 @@ snapshot_kind: text
 
 # tests/esbuild/dce/tree_shaking_react_elements
 
-- entry-!~{000}~.js => entry-CrqTuQw0.js
+- entry-!~{000}~.js => entry-NkFjVhQq.js
 
 # tests/esbuild/dce/tree_shaking_unary_operators
 
-- entry-!~{000}~.js => entry-ONPMnauy.js
+- entry-!~{000}~.js => entry-ePc8lYtd.js
 
 # tests/esbuild/default/ambiguous_reexport_msg
 
@@ -1667,7 +1667,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
-- entry-!~{000}~.js => entry-3dGLquFW.js
+- entry-!~{000}~.js => entry-Ooqx9vdN.js
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
@@ -1744,7 +1744,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 
-- entry-!~{000}~.js => entry-oqFOgXef.js
+- entry-!~{000}~.js => entry-2jMdEfYq.js
 
 # tests/esbuild/default/top_level_return_forbidden_export
 
@@ -1802,19 +1802,17 @@ snapshot_kind: text
 
 # tests/esbuild/default/warn_common_js_exports_in_esm_convert
 
-- cjs-in-esm-!~{000}~.js => cjs-in-esm-4iP8eELE.js
-- cjs-in-esm2-!~{001}~.js => cjs-in-esm2-Z6AppWU1.js
-- import-in-cjs-!~{002}~.js => import-in-cjs-pjJzmRoB.js
-- no-warnings-here-!~{003}~.js => no-warnings-here-HkGEA0wZ.js
-- chunk-!~{004}~.js => chunk-HIKDqyFJ.js
+- cjs-in-esm-!~{000}~.js => cjs-in-esm-IX_luP1_.js
+- cjs-in-esm2-!~{001}~.js => cjs-in-esm2-knNjaxHU.js
+- import-in-cjs-!~{002}~.js => import-in-cjs-L4iT_W2L.js
+- no-warnings-here-!~{003}~.js => no-warnings-here-PN6xRTrR.js
 
 # tests/esbuild/default/warnings_inside_node_modules
 
-- entry-!~{000}~.js => entry-9q9aIAEq.js
 
 # tests/esbuild/default/with_statement_tainting_no_bundle
 
-- entry-!~{000}~.js => entry-Cpeu1eIv.js
+- entry-!~{000}~.js => entry-q6s18f_X.js
 
 # tests/esbuild/glob/glob_basic_no_bundle
 

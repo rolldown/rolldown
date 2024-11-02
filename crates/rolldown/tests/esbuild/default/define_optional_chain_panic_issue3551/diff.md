@@ -1,3 +1,5 @@
+# Reason
+1. define expr with optional chain
 # Diff
 ## /out/dot-define.js
 ### esbuild

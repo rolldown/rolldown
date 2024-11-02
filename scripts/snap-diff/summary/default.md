@@ -41,8 +41,6 @@
   diff
 ## [define_this](../../../crates/rolldown/tests/esbuild/default/define_this/diff.md)
   diff
-## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs/diff.md)
-  diff
 ## entry_names_no_slash_after_dir
   missing
 ## entry_names_non_portable_character
@@ -58,8 +56,6 @@
 ## [export_wildcard_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6/diff.md)
   diff
 ## [external_es6_converted_to_common_js](../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
-  diff
-## [external_module_exclusion_package](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_package/diff.md)
   diff
 ## [false_require](../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
   diff
@@ -169,8 +165,6 @@
   diff
 ## [metafile_very_long_external_paths](../../../crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths/diff.md)
   diff
-## [minified_exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/minified_exports_and_module_format_common_js/diff.md)
-  diff
 ## [minified_jsx_preserve_with_object_spread](../../../crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread/diff.md)
   diff
 ## minify_nested_labels_no_bundle
@@ -243,15 +237,7 @@
   diff
 ## [use_strict_directive_minify_no_bundle](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_minify_no_bundle/diff.md)
   diff
-## [var_relocating_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_bundle/diff.md)
-  diff
-## [var_relocating_no_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_no_bundle/diff.md)
-  diff
-## [warn_common_js_exports_in_esm_convert](../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_convert/diff.md)
-  diff
 ## [warnings_inside_node_modules](../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules/diff.md)
-  diff
-## [with_statement_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/with_statement_tainting_no_bundle/diff.md)
   diff
 # Passed Cases
 ## [ambiguous_reexport_msg](../../../crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg)
@@ -262,11 +248,13 @@
 ## [const_with_let_no_mangle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
+## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
 ## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_fs_node](../../../crates/rolldown/tests/esbuild/default/export_fs_node)
 ## [export_fs_node_in_common_js_module](../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module)
+## [external_module_exclusion_package](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_package)
 ## [external_packages](../../../crates/rolldown/tests/esbuild/default/external_packages)
 ## [external_wildcard_does_not_match_entry_point](../../../crates/rolldown/tests/esbuild/default/external_wildcard_does_not_match_entry_point)
 ## [iife_es5](../../../crates/rolldown/tests/esbuild/default/iife_es5)
@@ -355,6 +343,7 @@
 ## [minified_bundle_ending_with_important_semicolon](../../../crates/rolldown/tests/esbuild/default/minified_bundle_ending_with_important_semicolon/bypass.md)
 ## [minified_bundle_es6](../../../crates/rolldown/tests/esbuild/default/minified_bundle_es6/bypass.md)
 ## [minified_dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/minified_dynamic_import_with_expression_cjs/bypass.md)
+## [minified_exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/minified_exports_and_module_format_common_js/bypass.md)
 ## [minify_arguments](../../../crates/rolldown/tests/esbuild/default/minify_arguments/bypass.md)
 ## [minify_identifiers_import_path_frequency_analysis](../../../crates/rolldown/tests/esbuild/default/minify_identifiers_import_path_frequency_analysis/bypass.md)
 ## [minify_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_private_identifiers_no_bundle/bypass.md)
@@ -381,4 +370,8 @@
 ## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)
 ## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/bypass.md)
 ## [use_strict_directive_bundle_cjs_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264/bypass.md)
+## [var_relocating_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_bundle/bypass.md)
+## [var_relocating_no_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_no_bundle/bypass.md)
 ## [warn_common_js_exports_in_esm_bundle](../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_bundle/bypass.md)
+## [warn_common_js_exports_in_esm_convert](../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_convert/bypass.md)
+## [with_statement_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/with_statement_tainting_no_bundle/bypass.md)

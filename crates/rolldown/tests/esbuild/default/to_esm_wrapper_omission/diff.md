@@ -1,3 +1,5 @@
+# Reason
+1. redundant `require`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -54,7 +56,7 @@ f();
 g();
 x = h;
 i.x();
-j.x` + "``" + `;
+j.x``;
 x = import("k_WRAP");
 
 //#endregion
@@ -103,9 +105,8 @@ x = import("k_WRAP");
 +g();
  x = h;
  i.x();
--(j.x)``;
+ (j.x)``;
 -x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
-+(j.x)` + "``" + `;
 +x = import("k_WRAP");
 
 ```

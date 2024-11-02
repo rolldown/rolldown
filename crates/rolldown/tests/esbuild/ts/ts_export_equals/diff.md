@@ -1,3 +1,5 @@
+# Reason
+1. require `oxc-transformer` support `module type`
 # Diff
 ## /out.js
 ### esbuild

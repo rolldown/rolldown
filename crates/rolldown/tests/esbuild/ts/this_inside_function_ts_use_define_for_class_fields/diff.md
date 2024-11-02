@@ -1,3 +1,5 @@
+# Reason
+1. should convert `FunctionDeclaration` to `FunctionExpr`
 # Diff
 ## /out.js
 ### esbuild

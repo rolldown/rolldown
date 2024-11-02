@@ -3,7 +3,9 @@ use std::path::Path;
 use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{Asset, InstantiationKind, Output, OutputAsset, OutputChunk, SourceMapType};
+use rolldown_common::{
+  Asset, AssetSource, InstantiationKind, Output, OutputAsset, OutputChunk, SourceMapType,
+};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -49,7 +51,7 @@ impl<'a> GenerateStage<'a> {
     for Asset {
       mut map,
       meta: rendered_chunk,
-      content: mut code,
+      content: code,
       file_dir,
       preliminary_filename,
       filename,
@@ -57,6 +59,7 @@ impl<'a> GenerateStage<'a> {
     } in assets
     {
       if let InstantiationKind::Ecma(ecma_meta) = rendered_chunk {
+        let mut code = code.try_into_string()?;
         let rendered_chunk = ecma_meta.rendered_chunk;
         if let Some(map) = map.as_mut() {
           map.set_file(&rendered_chunk.filename);
@@ -151,7 +154,10 @@ impl<'a> GenerateStage<'a> {
       } else {
         output.push(Output::Asset(Box::new(OutputAsset {
           filename: filename.clone().into(),
-          source: code.into(),
+          source: match code {
+            rolldown_common::StrOrBytes::Str(inner) => AssetSource::String(inner),
+            rolldown_common::StrOrBytes::Bytes(inner) => AssetSource::Buffer(inner),
+          },
           original_file_name: None,
           name: None,
         })));

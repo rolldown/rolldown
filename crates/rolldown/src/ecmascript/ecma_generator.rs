@@ -154,7 +154,7 @@ impl Generator for EcmaGenerator {
     Ok(Ok(GenerateOutput {
       chunks: vec![InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,
-        content,
+        content: content.into(),
         map,
         kind: InstantiationKind::from(EcmaAssetMeta { rendered_chunk }),
         augment_chunk_hash: None,

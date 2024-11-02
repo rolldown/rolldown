@@ -13,9 +13,12 @@ impl<'a> GenerateStage<'a> {
         match asset.meta {
           rolldown_common::InstantiationKind::Ecma(_) => {
             // TODO: Do we need to ensure `asset.filename` to be absolute path?
-            let (minified_content, new_map) =
-              EcmaCompiler::minify(&asset.content, asset.map.is_some(), &asset.filename)?;
-            asset.content = minified_content;
+            let (minified_content, new_map) = EcmaCompiler::minify(
+              asset.content.try_to_str()?,
+              asset.map.is_some(),
+              &asset.filename,
+            )?;
+            asset.content = minified_content.into();
             match (&asset.map, &new_map) {
               (Some(origin_map), Some(new_map)) => {
                 asset.map = Some(collapse_sourcemaps(vec![origin_map, new_map]));

@@ -3,7 +3,7 @@ use std::hash::Hash;
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{AssetIdx, InstantiationKind, ModuleId};
+use rolldown_common::{AssetIdx, InstantiationKind, ModuleId, StrOrBytes};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -40,11 +40,14 @@ pub fn finalize_assets(
 
   let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
     .par_iter()
-    .map(|asset| {
-      extract_hash_placeholders(&asset.content)
+    .map(|asset| match &asset.content {
+      StrOrBytes::Str(content) => extract_hash_placeholders(content)
         .iter()
         .filter_map(|placeholder| asset_idx_by_placeholder.get(placeholder).copied())
-        .collect_vec()
+        .collect_vec(),
+      StrOrBytes::Bytes(_content) => {
+        vec![]
+      }
     })
     .collect::<Vec<_>>()
     .into();
@@ -117,9 +120,10 @@ pub fn finalize_assets(
 
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
       asset.content = replace_facade_hash_replacement(
-        std::mem::take(&mut asset.content),
+        std::mem::take(&mut asset.content).try_into_string().unwrap(),
         &final_hashes_by_placeholder,
-      );
+      )
+      .into();
 
       asset.finalize(filename.to_string())
     })

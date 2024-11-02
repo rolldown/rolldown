@@ -2,14 +2,14 @@ use std::path::PathBuf;
 
 use rolldown_sourcemap::SourceMap;
 
-use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename};
+use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
 
 /// `InstantiatedChunk`s are derived from `Chunk`s. Different `InstantiatedChunk`s can be derived from the same `Chunk`
 /// by different `Generator`s.
 #[derive(Debug)]
 pub struct InstantiatedChunk {
   pub origin_chunk: ChunkIdx,
-  pub content: String,
+  pub content: StrOrBytes,
   pub map: Option<SourceMap>,
   pub kind: InstantiationKind,
   pub augment_chunk_hash: Option<String>,

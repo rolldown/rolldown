@@ -112,6 +112,10 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
+## different naming style
+- crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
+- crates/rolldown/tests/esbuild/packagejson/package_json_browser_node_modules_index_no_ext
+- crates/rolldown/tests/esbuild/packagejson/package_json_browser_node_modules_no_ext
 ## css stabilization
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_from_css
@@ -253,8 +257,6 @@
 - crates/rolldown/tests/esbuild/default/import_meta_common_js
 ## rolldown extract common module
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
-## different naming style
-- crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result
 - crates/rolldown/tests/esbuild/default/mangle_no_quoted_props
 ## not support file loader
@@ -317,6 +319,14 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
+## redundant `__commonJS` wrapper
+- crates/rolldown/tests/esbuild/packagejson/common_js_variable_in_esm_type_module
+## different deconflict order
+- crates/rolldown/tests/esbuild/packagejson/package_json_browser_index_no_ext
+## `sub` is not resolved
+- crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_b
+## trivial rewrite tool diff
+- crates/rolldown/tests/esbuild/packagejson/package_json_import_self_using_import_scoped
 ## dynamic import with cycle reference
 - crates/rolldown/tests/esbuild/splitting/edge_case_issue2793_without_splitting
 ## should convert missing property to `void 0`

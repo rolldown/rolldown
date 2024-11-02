@@ -3215,7 +3215,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_main_fields_a
 
-- entry-!~{000}~.js => entry-3DnUlZC-.js
+- entry-!~{000}~.js => entry-02m-9xlA.js
 
 # tests/esbuild/packagejson/package_json_main_fields_b
 

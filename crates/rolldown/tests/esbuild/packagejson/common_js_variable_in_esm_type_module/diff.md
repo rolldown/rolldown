@@ -1,3 +1,5 @@
+# Reason
+1. redundant `__commonJS` wrapper
 # Diff
 ## /out.js
 ### esbuild

@@ -5,6 +5,12 @@
         "name": "entry",
         "import": "./src/entry.js"
       }
-    ]
+    ],
+    "resolve": {
+      "mainFields": [
+        "module",
+        "main"
+      ]
+    }
   }
 }

@@ -68,21 +68,38 @@ impl HashPlaceholderGenerator {
   }
 }
 
-pub fn replace_facade_hash_replacement(
-  source: String,
-  final_hashes_by_placeholder: &FxHashMap<ArcStr, &str>,
-) -> String {
+/// This function would replace the facade hash placeholder in the given input
+/// ```js
+/// import { foo } from "foo.!~{000}~.js";
+/// ```
+/// to
+/// ```js
+/// import { foo } from "foo.xx__hash.js";
+/// ```
+pub fn replace_placeholder_with_hash<'a>(
+  source: impl Into<Cow<'a, str>>,
+  final_hashes_by_placeholder: &FxHashMap<ArcStr, &'a str>,
+) -> Cow<'a, str> {
+  let source = source.into();
   let replaced = REPLACER_REGEX.replace_all(&source, |captures: &Captures<'_>| -> ArcStr {
     debug_assert!(captures.len() == 1);
-    let facade = captures.get(0).unwrap().as_str();
-    // If content hasn't the placeholder using placeholder, ref https://github.com/rollup/rollup/blob/master/src/utils/hashPlaceholders.ts#L52
-    let real_hash = final_hashes_by_placeholder.get(facade).unwrap_or(&facade);
-    (*real_hash).into()
+    // Eg. `!~{000}~`
+    let captured_hash_placeholder = captures.get(0).unwrap().as_str();
+    // If this is a unknown hash placeholder, we just keep it as is as rollup did in
+    // https://github.com/rollup/rollup/blob/master/src/utils/hashPlaceholders.ts#L52
+
+    let replacement = final_hashes_by_placeholder
+      .get(captured_hash_placeholder)
+      .unwrap_or(&captured_hash_placeholder);
+    (*replacement).into()
   });
 
-  match replaced {
-    Cow::Borrowed(_) => source,
-    Cow::Owned(s) => s,
+  if let Cow::Owned(owned) = replaced {
+    // Due to the rustc's borrow checker, we can't return `replaced` directly
+    owned.into()
+  } else {
+    // No replacement happened, return the original source
+    source
   }
 }
 

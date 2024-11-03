@@ -83,7 +83,8 @@ pub fn parse_to_ecma_ast(
       (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
     }
     ModuleType::Asset => {
-      let content = "export default 'TODO: should be file path'".to_string();
+      let content = "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string();
+      has_lazy_export = true;
       (content, OxcParseType::Js)
     }
     ModuleType::Empty => (String::new(), OxcParseType::Js),

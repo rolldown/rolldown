@@ -11,7 +11,7 @@ snapshot_kind: text
 ```js
 
 //#region foo.txt
-var foo_default = "TODO: should be file path";
+var foo_default = "assets/foo-vpuLoj-k.txt";
 
 //#endregion
 //#region main.js

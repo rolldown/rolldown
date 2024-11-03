@@ -7,7 +7,10 @@ use rolldown_ecmascript::AstSnippet;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
+use rolldown_common::{
+  ChunkIdx, ChunkKind, FileNameRenderOptions, ImportMetaRolldownAssetReplacer, Module,
+  PreliminaryFilename,
+};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   extract_hash_pattern::extract_hash_pattern,
@@ -68,6 +71,7 @@ impl<'a> GenerateStage<'a> {
 
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
+    self.patch_asset_modules(&chunk_graph);
 
     chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
       deconflict_chunk_symbols(
@@ -285,5 +289,18 @@ impl<'a> GenerateStage<'a> {
       chunk.css_preliminary_filename = Some(css_preliminary_filename);
     }
     Ok(index_chunk_id_to_name)
+  }
+
+  pub fn patch_asset_modules(&mut self, chunk_graph: &ChunkGraph) {
+    chunk_graph.chunk_table.iter().for_each(|chunk| {
+      chunk.asset_preliminary_filenames.iter().for_each(|(module_idx, preliminary)| {
+        let Module::Normal(module) = &mut self.link_output.module_table.modules[*module_idx] else {
+          return;
+        };
+        module.ecma_view.mutations.push(Box::new(ImportMetaRolldownAssetReplacer {
+          asset_filename: preliminary.to_string(),
+        }));
+      });
+    });
   }
 }

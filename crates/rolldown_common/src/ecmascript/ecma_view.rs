@@ -5,8 +5,9 @@ use rolldown_rstr::Rstr;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaAstIdx, ExportsKind, ImportRecordIdx,
-  LocalExport, ModuleDefFormat, ModuleId, NamedImport, ResolvedImportRecord, StmtInfos, SymbolRef,
+  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopes,
+  EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
+  ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
 };
 
 bitflags! {
@@ -102,6 +103,7 @@ pub struct EcmaView {
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   pub meta: EcmaViewMeta,
+  pub mutations: Vec<BoxedSourceMutation>,
 }
 
 bitflags! {
@@ -111,4 +113,21 @@ bitflags! {
         const ExportsRef = 1 << 1;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
+}
+
+#[derive(Debug, Default)]
+pub struct ImportMetaRolldownAssetReplacer {
+  pub asset_filename: String,
+}
+
+impl SourceMutation for ImportMetaRolldownAssetReplacer {
+  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
+    // TODO: should use replace method instead of this
+    let code = magic_string.to_string();
+
+    *magic_string = string_wizard::MagicString::new(
+      code
+        .replace("import.meta.__ROLLDOWN_ASSET_FILENAME", &format!("\"{}\"", self.asset_filename)),
+    );
+  }
 }

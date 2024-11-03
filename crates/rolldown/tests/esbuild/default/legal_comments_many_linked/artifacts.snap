@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -25,14 +26,22 @@ console.log("in b");
 //#endregion
 //#region c.js
 function foo() {
-	console.log("in c");
+/*
+	* @license
+	* Copyright notice 2
+	*/
+		console.log("in c");
 }
 foo();
 
 //#endregion
 //#region node_modules/some-other-pkg/js/index.js
 function bar() {
-	console.log("some-other-pkg");
+/*
+	* @preserve
+	* (c) Evil Software Corp
+	*/
+		console.log("some-other-pkg");
 }
 bar();
 

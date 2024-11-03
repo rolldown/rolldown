@@ -6,7 +6,9 @@ pub fn validate_options_for_multi_chunk_output(
   // TODO: use `BuildResult`
 
   if options.file.is_some() {
-    return Err(anyhow::format_err!("`file` option is not supported for multi-chunk output"));
+    return Err(anyhow::format_err!(
+      r#"When building multiple chunks, the `dir` option must be used, not `file`. To inline dynamic imports, set the `inlineDynamicImports` option"#
+    ));
   }
 
   Ok(())

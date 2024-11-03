@@ -51,7 +51,7 @@ jobs:
           token: ${{ secrets.METRIC_SECRET_KEY }}
 
       - name: Setup Pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 8.10.5
 

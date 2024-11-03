@@ -1,8 +1,8 @@
 use oxc::{
   ast::{
     ast::{
-      Atom, Expression, FormalParameterKind, PropertyKind, VariableDeclarationKind,
-      VariableDeclarator,
+      Argument, Atom, Expression, FormalParameterKind, PropertyKind, Statement,
+      VariableDeclarationKind, VariableDeclarator,
     },
     AstBuilder, NONE,
   },
@@ -67,7 +67,7 @@ fn construct_vite_preload_call<'a>(
     NONE,
     {
       let mut items = ast_builder.vec();
-      items.push(ast_builder.argument_expression(ast_builder.expression_arrow_function(
+      items.push(Argument::from(ast_builder.expression_arrow_function(
         SPAN,
         false,
         true,
@@ -81,7 +81,7 @@ fn construct_vite_preload_call<'a>(
         NONE,
         ast_builder.function_body(SPAN, ast_builder.vec(), {
           let mut items = ast_builder.vec();
-          items.push(ast_builder.statement_declaration(ast_builder.declaration_variable(
+          items.push(Statement::from(ast_builder.declaration_variable(
             SPAN,
             decl_kind,
             ast_builder.vec1(ast_builder.variable_declarator(
@@ -142,25 +142,23 @@ fn construct_vite_preload_call<'a>(
           items
         }),
       )));
-      items.push(ast_builder.argument_expression(ast_builder.expression_conditional(
+      items.push(Argument::from(ast_builder.expression_conditional(
         SPAN,
         ast_builder.expression_identifier_reference(SPAN, IS_MODERN_FLAG),
         ast_builder.expression_identifier_reference(SPAN, "__VITE_PRELOAD__"),
         ast_builder.void_0(SPAN),
       )));
       if append_import_meta_url {
-        items.push(ast_builder.argument_expression(ast_builder.expression_member(
-          ast_builder.member_expression_static(
+        items.push(Argument::from(Expression::from(ast_builder.member_expression_static(
+          SPAN,
+          ast_builder.expression_meta_property(
             SPAN,
-            ast_builder.expression_meta_property(
-              SPAN,
-              ast_builder.identifier_name(SPAN, "import"),
-              ast_builder.identifier_name(SPAN, "meta"),
-            ),
-            ast_builder.identifier_name(SPAN, "url"),
-            false,
+            ast_builder.identifier_name(SPAN, "import"),
+            ast_builder.identifier_name(SPAN, "meta"),
           ),
-        )));
+          ast_builder.identifier_name(SPAN, "url"),
+          false,
+        ))));
       }
       items
     },

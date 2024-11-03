@@ -19,7 +19,7 @@ use xxhash_rust::xxh3::Xxh3;
 use crate::{
   chunk_graph::ChunkGraph,
   type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
-  utils::hash_placeholder::{extract_hash_placeholders, replace_facade_hash_replacement},
+  utils::hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -105,11 +105,11 @@ pub fn finalize_assets(
     .map(|(asset_idx, mut asset)| {
       let asset_idx = AssetIdx::from(asset_idx);
 
-      let preliminary_filename_raw = asset.preliminary_filename.to_string();
-      let filename: ModuleId = replace_facade_hash_replacement(
-        preliminary_filename_raw.clone(),
+      let filename: ModuleId = replace_placeholder_with_hash(
+        asset.preliminary_filename.as_str(),
         &final_hashes_by_placeholder,
       )
+      .into_owned()
       .into();
 
       if let InstantiationKind::Ecma(ecma_meta) = &mut asset.kind {
@@ -122,7 +122,8 @@ pub fn finalize_assets(
       match &mut asset.content {
         StrOrBytes::Str(content) => {
           *content =
-            replace_facade_hash_replacement(mem::take(content), &final_hashes_by_placeholder);
+            replace_placeholder_with_hash(mem::take(content), &final_hashes_by_placeholder)
+              .into_owned();
         }
         StrOrBytes::Bytes(_content) => {}
       }

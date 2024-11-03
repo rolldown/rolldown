@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## out.css
+
+```css
+
+```
+## out.css
+
+```css
+body {
+  background-color: #f0f0f0;
+}
+
+```

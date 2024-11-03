@@ -139,6 +139,7 @@ pub fn normalize_binding_options(
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
     asset_filenames: output_options.asset_file_names,
     dir: output_options.dir,
+    file: None,
     sourcemap: output_options.sourcemap.map(Into::into),
     es_module: output_options.es_module.map(|es_module| match es_module {
       Either::A(es_module_bool) => es_module_bool.into(),

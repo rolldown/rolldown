@@ -210,6 +210,12 @@
             "null"
           ]
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "footer": {
           "type": [
             "string",

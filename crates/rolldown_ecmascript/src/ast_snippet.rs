@@ -168,7 +168,10 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       self.builder.expression_identifier_reference(SPAN, name),
       NONE,
-      self.builder.vec_from_iter([Argument::from(arg1), Argument::from(arg2)]),
+      self.builder.vec_from_iter([
+        self.builder.argument_expression(arg1),
+        self.builder.argument_expression(arg2),
+      ]),
       false,
     )
   }
@@ -250,7 +253,7 @@ impl<'ast> AstSnippet<'ast> {
     names.iter().for_each(|(imported, local)| {
       properties.push(self.builder.binding_property(
         SPAN,
-        self.builder.property_key_identifier_name(SPAN, *imported),
+        self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
           NONE,
@@ -338,28 +341,32 @@ impl<'ast> AstSnippet<'ast> {
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
         SPAN,
-        self.builder.vec1(self.builder.object_property_kind_object_property(
-          SPAN,
-          PropertyKind::Init,
-          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id)),
-          self.builder.expression_function(
-            FunctionType::FunctionExpression,
+        self.builder.vec1(
+          self.builder.object_property_kind_object_property(
             SPAN,
+            PropertyKind::Init,
+            self
+              .builder
+              .property_key_expression(self.builder.expression_string_literal(SPAN, stable_id)),
+            self.builder.expression_function(
+              FunctionType::FunctionExpression,
+              SPAN,
+              None,
+              false,
+              false,
+              false,
+              NONE,
+              NONE,
+              params,
+              NONE,
+              Some(body),
+            ),
             None,
+            true,
             false,
             false,
-            false,
-            NONE,
-            NONE,
-            params,
-            NONE,
-            Some(body),
           ),
-          None,
-          true,
-          false,
-          false,
-        )),
+        ),
         None,
       );
       commonjs_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
@@ -404,28 +411,32 @@ impl<'ast> AstSnippet<'ast> {
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
         SPAN,
-        self.builder.vec1(self.builder.object_property_kind_object_property(
-          SPAN,
-          PropertyKind::Init,
-          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id)),
-          self.builder.expression_function(
-            FunctionType::FunctionExpression,
+        self.builder.vec1(
+          self.builder.object_property_kind_object_property(
             SPAN,
+            PropertyKind::Init,
+            self
+              .builder
+              .property_key_expression(self.builder.expression_string_literal(SPAN, stable_id)),
+            self.builder.expression_function(
+              FunctionType::FunctionExpression,
+              SPAN,
+              None,
+              false,
+              false,
+              false,
+              NONE,
+              NONE,
+              params,
+              NONE,
+              Some(body),
+            ),
             None,
+            true,
             false,
             false,
-            false,
-            NONE,
-            NONE,
-            params,
-            NONE,
-            Some(body),
           ),
-          None,
-          true,
-          false,
-          false,
-        )),
+        ),
         None,
       );
       commonjs_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
@@ -578,7 +589,7 @@ impl<'ast> AstSnippet<'ast> {
     names.iter().for_each(|(imported, local)| {
       properties.push(self.builder.binding_property(
         SPAN,
-        self.builder.property_key_identifier_name(SPAN, *imported),
+        self.builder.property_key_from_identifier_name(self.id_name(imported, SPAN)),
         self.builder.binding_pattern(
           self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
           NONE,
@@ -617,7 +628,9 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       self.builder.expression_identifier_reference(SPAN, "require"),
       NONE,
-      self.builder.vec1(Argument::from(self.builder.expression_string_literal(SPAN, source))),
+      self.builder.vec1(
+        self.builder.argument_expression(self.builder.expression_string_literal(SPAN, source)),
+      ),
       false,
     )
   }
@@ -629,7 +642,7 @@ impl<'ast> AstSnippet<'ast> {
     init: ast::Expression<'ast>,
     span: Span,
   ) -> Statement<'ast> {
-    Statement::from(self.builder.declaration_variable(
+    self.builder.statement_declaration(self.builder.declaration_variable(
       span,
       VariableDeclarationKind::Var,
       self.builder.vec1(self.builder.variable_declarator(
@@ -714,7 +727,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       PropertyKind::Init,
       if computed {
-        ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, key))
+        self.builder.property_key_expression(self.builder.expression_string_literal(SPAN, key))
       } else {
         self.builder.property_key_identifier_name(SPAN, key)
       },
@@ -742,7 +755,12 @@ impl<'ast> AstSnippet<'ast> {
       Some(Interop::Node) => self.alloc_call_expr_with_2arg_expr_expr(
         to_esm_fn_name,
         call_expr,
-        self.builder.expression_numeric_literal(SPAN, 1.0, "1", NumberBase::Decimal),
+        self.builder.expression_from_numeric_literal(self.builder.numeric_literal(
+          SPAN,
+          1.0,
+          "1",
+          NumberBase::Decimal,
+        )),
       ),
     }
   }
@@ -751,11 +769,13 @@ impl<'ast> AstSnippet<'ast> {
   /// export default ${Expression}
   pub fn export_default_expr_stmt(&self, expr: Expression<'ast>) -> Statement<'ast> {
     let ast_builder = &self.builder;
-    Statement::from(ast_builder.module_declaration_export_default_declaration(
-      SPAN,
-      ast::ExportDefaultDeclarationKind::from(expr),
-      ast_builder.module_export_name_identifier_name(SPAN, "default"),
-    ))
+    ast_builder.statement_module_declaration(
+      ast_builder.module_declaration_export_default_declaration(
+        SPAN,
+        ast_builder.export_default_declaration_kind_expression(expr),
+        ast_builder.module_export_name_identifier_name(SPAN, "default"),
+      ),
+    )
   }
 
   /// convert `Expression` to
@@ -767,14 +787,16 @@ impl<'ast> AstSnippet<'ast> {
       ast_builder.expression_assignment(
         SPAN,
         ast::AssignmentOperator::Assign,
-        ast::AssignmentTarget::from(ast::SimpleAssignmentTarget::from(
-          ast_builder.member_expression_static(
-            SPAN,
-            ast_builder.expression_identifier_reference(SPAN, "module"),
-            ast_builder.identifier_name(SPAN, "exports"),
-            false,
+        ast_builder.assignment_target_simple(
+          ast_builder.simple_assignment_target_member_expression(
+            ast_builder.member_expression_static(
+              SPAN,
+              ast_builder.expression_identifier_reference(SPAN, "module"),
+              ast_builder.identifier_name(SPAN, "exports"),
+              false,
+            ),
           ),
-        )),
+        ),
         expr,
       ),
     )

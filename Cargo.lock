@@ -1109,12 +1109,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "index_vec"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44faf5bb8861a9c72e20d3fb0fdbd59233e43056e2b80475ab0aacdc2e781355"
-
-[[package]]
 name = "indexmap"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1713,7 +1707,7 @@ dependencies = [
  "oxc_span",
  "oxc_syntax",
  "oxc_transformer",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1723,7 +1717,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50b5ad390a7cf69d5f574ea41eada88a7c0947272647703fe1ec6ce23bfe1714"
 dependencies = [
  "nom",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "serde",
  "serde_json",
  "thiserror",
@@ -1779,7 +1773,7 @@ dependencies = [
  "oxc_index",
  "oxc_syntax",
  "petgraph",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1801,7 +1795,7 @@ dependencies = [
  "oxc_sourcemap",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1821,7 +1815,7 @@ checksum = "980c673834c9b2fa15eb2692d418df45c84294771fd364ab53f9abdf4d3e874b"
 dependencies = [
  "miette",
  "owo-colors",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "textwrap",
  "unicode-width 0.2.0",
 ]
@@ -1867,7 +1861,7 @@ dependencies = [
  "oxc_ecmascript",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1921,7 +1915,7 @@ dependencies = [
  "oxc_regular_expression",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "seq-macro",
 ]
 
@@ -1937,7 +1931,7 @@ dependencies = [
  "oxc_estree",
  "oxc_span",
  "phf",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "unicode-id-start",
 ]
 
@@ -1953,7 +1947,7 @@ dependencies = [
  "indexmap",
  "json-strip-comments",
  "once_cell",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "serde",
  "serde_json",
  "simdutf8",
@@ -1979,7 +1973,7 @@ dependencies = [
  "oxc_span",
  "oxc_syntax",
  "phf",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1992,7 +1986,7 @@ dependencies = [
  "cfg-if",
  "cow-utils",
  "rayon",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "serde",
  "serde_json",
 ]
@@ -2026,7 +2020,7 @@ dependencies = [
  "oxc_index",
  "oxc_span",
  "phf",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "ryu-js",
  "unicode-id-start",
 ]
@@ -2067,7 +2061,7 @@ dependencies = [
  "oxc_syntax",
  "oxc_traverse",
  "ropey",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "serde",
  "serde_json",
  "sha1",
@@ -2089,7 +2083,7 @@ dependencies = [
  "oxc_semantic",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -2104,7 +2098,7 @@ dependencies = [
  "phf",
  "phf_codegen",
  "precomputed-hash",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "smallvec",
  "static-self",
 ]
@@ -2538,7 +2532,7 @@ dependencies = [
  "rolldown_testing",
  "rolldown_tracing",
  "rolldown_utils",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "string_wizard",
  "sugar_path",
  "testing_macros",
@@ -2581,7 +2575,7 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_tracing",
  "rolldown_utils",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "serde",
  "tracing",
 ]
@@ -2603,7 +2597,7 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_std_utils",
  "rolldown_utils",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "schemars",
  "serde",
  "serde_json",
@@ -2700,7 +2694,7 @@ dependencies = [
  "anyhow",
  "oxc",
  "rolldown_plugin",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -2712,7 +2706,7 @@ dependencies = [
  "regex",
  "rolldown_common",
  "rolldown_plugin",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "urlencoding",
 ]
 
@@ -2736,7 +2730,7 @@ dependencies = [
  "itoa",
  "oxc",
  "rolldown_plugin",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "sugar_path",
 ]
 
@@ -2765,7 +2759,7 @@ version = "0.1.0"
 dependencies = [
  "rolldown_common",
  "rolldown_plugin",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "serde",
  "serde_json",
 ]
@@ -2787,7 +2781,7 @@ dependencies = [
  "rolldown",
  "rolldown_plugin",
  "rolldown_testing",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "string_wizard",
  "tokio",
 ]
@@ -2849,7 +2843,7 @@ dependencies = [
  "memchr",
  "oxc",
  "rolldown_utils",
- "rustc-hash 2.0.0",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -2920,7 +2914,7 @@ dependencies = [
  "regex",
  "regress",
  "rolldown_std_utils",
- "rustc-hash 2.0.0",
+ "rustc-hash",
  "sugar_path",
  "xxhash-rust",
 ]
@@ -2940,12 +2934,6 @@ name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "719b953e2095829ee67db738b3bfa9fa368c94900df327b3f07fe6e794d2fe1f"
-
-[[package]]
-name = "rustc-hash"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc-hash"
@@ -3207,11 +3195,10 @@ checksum = "e9557cb6521e8d009c51a8666f09356f4b817ba9ba0981a305bd86aee47bd35c"
 [[package]]
 name = "string_wizard"
 version = "0.0.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dda97f92b3c192214daba2a9d2e6c046edec247901234636159f2169ee7150a"
 dependencies = [
- "index_vec",
- "rustc-hash 1.1.0",
+ "oxc_index",
+ "oxc_sourcemap",
+ "rustc-hash",
 ]
 
 [[package]]

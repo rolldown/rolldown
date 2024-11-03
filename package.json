@@ -31,15 +31,15 @@
   "devDependencies": {
     "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "22.8.4",
+    "@types/node": "22.8.7",
     "cjs-module-lexer": "^1.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.5",
-    "npm-rolldown": "npm:rolldown@0.12.2",
+    "npm-rolldown": "npm:rolldown@0.13.2",
     "npm-run-all": "^4.1.5",
-    "oxlint": "0.10.3",
+    "oxlint": "0.11.0",
     "prettier": "^3.3.1",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"

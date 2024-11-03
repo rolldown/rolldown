@@ -1,7 +1,7 @@
 // cSpell:disable
 use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
-  RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
+  ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, ModuleIdx, NamedImport,
+  NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
 };
 pub mod chunk_table;
 pub mod types;
@@ -79,7 +79,7 @@ impl Chunk {
   }
 
   pub async fn filename_template<'a>(
-    &mut self,
+    &self,
     options: &'a NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
@@ -94,7 +94,7 @@ impl Chunk {
   }
 
   pub async fn css_filename_template<'a>(
-    &mut self,
+    &self,
     options: &'a NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
@@ -106,5 +106,41 @@ impl Chunk {
     };
 
     Ok(FilenameTemplate::new(ret))
+  }
+
+  pub async fn generate_preliminary_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &str,
+    hash_placeholder: Option<&str>,
+  ) -> anyhow::Result<String> {
+    let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
+
+    let preliminary = filename_template.render(&FileNameRenderOptions {
+      name: Some(chunk_name),
+      hash: hash_placeholder,
+      ..Default::default()
+    });
+
+    Ok(preliminary)
+  }
+
+  pub async fn generate_css_preliminary_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &str,
+    hash_placeholder: Option<&str>,
+  ) -> anyhow::Result<String> {
+    let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
+
+    let preliminary = filename_template.render(&FileNameRenderOptions {
+      name: Some(chunk_name),
+      hash: hash_placeholder,
+      ..Default::default()
+    });
+
+    Ok(preliminary)
   }
 }

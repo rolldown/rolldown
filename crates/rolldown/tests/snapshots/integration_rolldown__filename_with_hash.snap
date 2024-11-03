@@ -1102,91 +1102,91 @@ snapshot_kind: text
 # tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 
 - entry-!~{000}~.js => entry-RtPgLOy2.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_external
 
 - entry-!~{000}~.js => entry-RtPgLOy2.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_inline
 
 - entry-!~{000}~.js => entry-RtPgLOy2.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_end_of_file
 
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_external
 
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_inline
 
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_linked
 
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_many_end_of_file
 
 - entry-!~{000}~.js => entry-0KABFbSF.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_many_linked
 
 - entry-!~{000}~.js => entry-0KABFbSF.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_modify_indent
 
 - entry-!~{000}~.js => entry-O9DPNVPI.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_none
 
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/mangle_no_quoted_props
@@ -1327,13 +1327,13 @@ snapshot_kind: text
 # tests/esbuild/default/metafile_no_bundle
 
 - entry-!~{000}~.js => entry-aGukXlqQ.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
 - entry-!~{000}~.js => entry-CtcGwjNP.js
-- entry2-!~{001}~.js => entry2-AX3jMTeb.js
+- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 - dynamic-!~{002}~.js => dynamic-hx382zUK.js
 
@@ -2340,7 +2340,7 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_copy_with_bundle_entry_point
 
 - src_entry-!~{000}~.js => src_entry-ioDHherq.js
-- src_entry2-!~{001}~.js => src_entry2-04Duh52x.js
+- src_entry-!~{001}~.js => src_entry-ER1HhN-W.js
 - src_entry2.css
 - assets_some-!~{002}~.js => assets_some-W0fyymA3.js
 - some-!~{003}~.js => some-3vTMswRN.js
@@ -2441,7 +2441,7 @@ snapshot_kind: text
 - entries_other_entry-!~{001}~.js => entries_other_entry-QV0jCcba.js
 - entries_other_entry.css
 - common-!~{002}~.js => common-qY6_Q_4n.js
-- common-qY6_Q_4n.css
+- common-6iTYFrj-.css
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
@@ -4696,11 +4696,11 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-6o6OfP3k.js
 - entry-a-!~{003}~.js => entry-a-28M3Od9p.js
-- entry-a-28M3Od9p.css
+- entry-a-PDikT8S0.css
 - entry-b-!~{005}~.js => entry-b-3rOg4Zu0.js
-- entry-b-3rOg4Zu0.css
+- entry-b-nsNNDpQm.css
 - common-imported-by-js-!~{001}~.js => common-imported-by-js-7GYix6i6.js
-- common-imported-by-js-7GYix6i6.css
+- common-imported-by-js-N1DCKFms.css
 
 # tests/rolldown/topics/css/basic
 

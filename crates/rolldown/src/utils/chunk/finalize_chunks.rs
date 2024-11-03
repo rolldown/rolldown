@@ -8,6 +8,7 @@ use rolldown_common::{AssetIdx, InstantiationKind, ModuleId, StrOrBytes};
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
+  hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
@@ -19,7 +20,6 @@ use xxhash_rust::xxh3::Xxh3;
 use crate::{
   chunk_graph::ChunkGraph,
   type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
-  utils::hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]

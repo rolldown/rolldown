@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 // cSpell:disable
 use crate::{
   ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, ModuleIdx, NamedImport,
@@ -8,7 +10,10 @@ pub mod types;
 
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
-use rolldown_utils::{indexmap::FxIndexMap, path_ext::PathExt, BitSet};
+use rolldown_utils::{
+  extract_hash_pattern::extract_hash_pattern, hash_placeholder::HashPlaceholderGenerator,
+  indexmap::FxIndexMap, path_ext::PathExt, BitSet,
+};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -109,38 +114,64 @@ impl Chunk {
   }
 
   pub async fn generate_preliminary_filename(
-    &self,
+    &mut self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-    chunk_name: &str,
-    hash_placeholder: Option<&str>,
-  ) -> anyhow::Result<String> {
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
+  ) -> anyhow::Result<PreliminaryFilename> {
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
+    let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
 
-    let preliminary = filename_template.render(&FileNameRenderOptions {
-      name: Some(chunk_name),
-      hash: hash_placeholder,
+    let hash_placeholder =
+      extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+    let name = if hash_placeholder.is_some() {
+      make_unique_name(chunk_name);
+      Cow::Borrowed(chunk_name)
+    } else {
+      let unique = make_unique_name(chunk_name);
+      Cow::Owned(unique)
+    };
+
+    let rendered = filename_template.render(&FileNameRenderOptions {
+      name: Some(&name),
+      hash: hash_placeholder.as_deref(),
       ..Default::default()
     });
 
-    Ok(preliminary)
+    Ok(PreliminaryFilename::new(rendered, hash_placeholder))
   }
 
   pub async fn generate_css_preliminary_filename(
     &self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-    chunk_name: &str,
-    hash_placeholder: Option<&str>,
-  ) -> anyhow::Result<String> {
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
+  ) -> anyhow::Result<PreliminaryFilename> {
     let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
 
-    let preliminary = filename_template.render(&FileNameRenderOptions {
-      name: Some(chunk_name),
-      hash: hash_placeholder,
+    let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+
+    let hash_placeholder =
+      extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+    let name = if hash_placeholder.is_some() {
+      make_unique_name(chunk_name);
+      Cow::Borrowed(chunk_name)
+    } else {
+      let unique = make_unique_name(chunk_name);
+      Cow::Owned(unique)
+    };
+    let rendered = filename_template.render(&FileNameRenderOptions {
+      name: Some(&name),
+      hash: hash_placeholder.as_deref(),
       ..Default::default()
     });
 
-    Ok(preliminary)
+    Ok(PreliminaryFilename::new(rendered, hash_placeholder))
   }
 }

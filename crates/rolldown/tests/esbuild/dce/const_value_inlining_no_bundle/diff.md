@@ -210,7 +210,8 @@ let ns;
 
 //#region comment-before.js
 {
-	const REMOVE = 1;
+//! comment
+		const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
 

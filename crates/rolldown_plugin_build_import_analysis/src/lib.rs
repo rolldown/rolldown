@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use anyhow::Ok;
 use oxc::ast::ast::{
   Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ImportOrExportKind,
-  PropertyKey, Statement, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
+  PropertyKey, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{AstBuilder, VisitMut, NONE};
@@ -216,18 +216,20 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
     walk_mut::walk_program(self, it);
     if self.need_prepend_helper && self.insert_preload && !self.has_inserted_helper {
-      let helper_stmt = Statement::from(self.builder.module_declaration_import_declaration(
-        SPAN,
-        Some(self.builder.vec1(self.builder.import_declaration_specifier_import_specifier(
+      let helper_stmt = self.builder.statement_module_declaration(
+        self.builder.module_declaration_import_declaration(
           SPAN,
-          self.builder.module_export_name_identifier_name(SPAN, PRELOAD_METHOD),
-          self.builder.binding_identifier(SPAN, PRELOAD_METHOD),
+          Some(self.builder.vec1(self.builder.import_declaration_specifier_import_specifier(
+            SPAN,
+            self.builder.module_export_name_identifier_name(SPAN, PRELOAD_METHOD),
+            self.builder.binding_identifier(SPAN, PRELOAD_METHOD),
+            ImportOrExportKind::Value,
+          ))),
+          self.builder.string_literal(SPAN, PRELOAD_HELPER_ID),
+          NONE,
           ImportOrExportKind::Value,
-        ))),
-        self.builder.string_literal(SPAN, PRELOAD_HELPER_ID),
-        NONE,
-        ImportOrExportKind::Value,
-      ));
+        ),
+      );
       it.body.push(helper_stmt);
     }
   }

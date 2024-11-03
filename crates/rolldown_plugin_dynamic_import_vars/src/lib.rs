@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
+    ast::{Expression, ImportOrExportKind, PropertyKind, Statement},
     AstBuilder, VisitMut, NONE,
   },
   span::{Span, SPAN},
@@ -120,69 +120,77 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
       NONE,
       {
         let mut items = self.ast_builder.vec();
-        items.push(Argument::from(self.ast_builder.expression_parenthesized(
-          SPAN,
-          self.ast_builder.expression_call(
+        items.push(self.ast_builder.argument_expression(
+          self.ast_builder.expression_parenthesized(
             SPAN,
-            Expression::from(self.ast_builder.member_expression_static(
+            self.ast_builder.expression_call(
               SPAN,
-              self.ast_builder.expression_meta_property(
+              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
                 SPAN,
-                self.ast_builder.identifier_name(SPAN, "import"),
-                self.ast_builder.identifier_name(SPAN, "meta"),
-              ),
-              self.ast_builder.identifier_name(SPAN, "glob"),
-              false,
-            )),
-            NONE,
-            {
-              let mut arguments = self
-                .ast_builder
-                .vec1(Argument::from(self.ast_builder.expression_string_literal(SPAN, pattern)));
-              if let Some(params) = params {
-                arguments.push(Argument::from(self.ast_builder.expression_object(
+                self.ast_builder.expression_meta_property(
                   SPAN,
-                  {
-                    let mut items =
-                      self.ast_builder.vec1(self.ast_builder.object_property_kind_object_property(
-                        SPAN,
-                        PropertyKind::Init,
-                        self.ast_builder.property_key_identifier_name(SPAN, "query"),
-                        self.ast_builder.expression_string_literal(SPAN, params.query),
-                        None,
-                        false,
-                        false,
-                        false,
-                      ));
-                    if params.import {
-                      items.push(self.ast_builder.object_property_kind_object_property(
-                        SPAN,
-                        PropertyKind::Init,
-                        self.ast_builder.property_key_identifier_name(SPAN, "import"),
-                        self.ast_builder.expression_string_literal(SPAN, "*"),
-                        None,
-                        false,
-                        false,
-                        false,
-                      ));
-                    }
-                    items
-                  },
-                  None,
-                )));
-              }
-              arguments
-            },
-            false,
+                  self.ast_builder.identifier_name(SPAN, "import"),
+                  self.ast_builder.identifier_name(SPAN, "meta"),
+                ),
+                self.ast_builder.identifier_name(SPAN, "glob"),
+                false,
+              )),
+              NONE,
+              {
+                let mut arguments =
+                  self.ast_builder.vec1(self.ast_builder.argument_expression(
+                    self.ast_builder.expression_string_literal(SPAN, pattern),
+                  ));
+                if let Some(params) = params {
+                  arguments.push(self.ast_builder.argument_expression(
+                    self.ast_builder.expression_object(
+                      SPAN,
+                      {
+                        let mut items = self.ast_builder.vec1(
+                          self.ast_builder.object_property_kind_object_property(
+                            SPAN,
+                            PropertyKind::Init,
+                            self.ast_builder.property_key_identifier_name(SPAN, "query"),
+                            self.ast_builder.expression_string_literal(SPAN, params.query),
+                            None,
+                            false,
+                            false,
+                            false,
+                          ),
+                        );
+                        if params.import {
+                          items.push(self.ast_builder.object_property_kind_object_property(
+                            SPAN,
+                            PropertyKind::Init,
+                            self.ast_builder.property_key_identifier_name(SPAN, "import"),
+                            self.ast_builder.expression_string_literal(SPAN, "*"),
+                            None,
+                            false,
+                            false,
+                            false,
+                          ));
+                        }
+                        items
+                      },
+                      None,
+                    ),
+                  ));
+                }
+                arguments
+              },
+              false,
+            ),
           ),
-        )));
-        items.push(Argument::from(expr));
-        items.push(Argument::from(self.ast_builder.expression_numeric_literal(
-          SPAN,
-          segments as f64,
-          segments.to_string(),
-          NumberBase::Decimal,
-        )));
+        ));
+        items.push(self.ast_builder.argument_expression(expr));
+        items.push(self.ast_builder.argument_expression(
+          self.ast_builder.expression_numeric_literal(
+            SPAN,
+            segments as f64,
+            segments.to_string(),
+            NumberBase::Decimal,
+          ),
+        ));
         items
       },
       false,
@@ -194,17 +202,19 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
   /// import __variableDynamicImportRuntimeHelper from "${dynamicImportHelperId}";
   /// ```
   fn import_helper(&self) -> Statement<'ast> {
-    Statement::from(self.ast_builder.module_declaration_import_declaration(
-      SPAN,
-      Some(self.ast_builder.vec1(
-        self.ast_builder.import_declaration_specifier_import_default_specifier(
-          SPAN,
-          self.ast_builder.binding_identifier(SPAN, "__variableDynamicImportRuntimeHelper"),
-        ),
-      )),
-      self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER),
-      NONE,
-      ImportOrExportKind::Value,
-    ))
+    self.ast_builder.statement_module_declaration(
+      self.ast_builder.module_declaration_import_declaration(
+        SPAN,
+        Some(self.ast_builder.vec1(
+          self.ast_builder.import_declaration_specifier_import_default_specifier(
+            SPAN,
+            self.ast_builder.binding_identifier(SPAN, "__variableDynamicImportRuntimeHelper"),
+          ),
+        )),
+        self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER),
+        NONE,
+        ImportOrExportKind::Value,
+      ),
+    )
   }
 }

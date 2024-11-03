@@ -7,7 +7,7 @@ use oxc::{
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 
-use oxc::transformer::EnvOptions;
+use oxc::transformer::{EnvOptions, Targets};
 use rolldown_plugin::Plugin;
 use rolldown_utils::pattern_filter::{self, StringOrRegex};
 use std::borrow::Cow;
@@ -59,11 +59,11 @@ impl Plugin for TransformPlugin {
     };
     let ret = ast.program.with_mut(move |fields| {
       let mut transformer_options = if let Some(targets) = &self.targets {
-        TransformOptions {
-          env: EnvOptions::from_browserslist_query(targets)
-            .expect("Failed to create transform options"),
-          ..TransformOptions::default()
-        }
+        TransformOptions::from_preset_env(&EnvOptions {
+          targets: Targets::from_query(targets),
+          ..EnvOptions::default()
+        })
+        .expect("Failed to create transform options")
       } else {
         TransformOptions::default()
       };
@@ -86,7 +86,7 @@ impl Plugin for TransformPlugin {
       // TODO: better error handling
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
-    let CodegenReturn { code, map, .. } = CodeGenerator::new()
+    let CodegenReturn { code, map } = CodeGenerator::new()
       .with_options(CodegenOptions {
         source_map_path: Some(args.id.into()),
         ..CodegenOptions::default()

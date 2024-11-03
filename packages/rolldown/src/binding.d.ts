@@ -696,6 +696,8 @@ export interface TransformOptions {
   typescript?: TypeScriptOptions
   /** Configure how TSX and JSX are transformed. */
   jsx?: JsxOptions
+  /** Enable ES2015 transformations. */
+  es2015?: Es2015Options
   /** Define Plugin */
   define?: Record<string, string>
   /** Inject Plugin */

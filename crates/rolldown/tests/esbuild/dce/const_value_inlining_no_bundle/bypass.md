@@ -242,6 +242,7 @@ let ns;
 
 //#region comment-before.js
 {
+	//! comment
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }

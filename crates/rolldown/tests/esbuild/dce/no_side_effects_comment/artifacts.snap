@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region expr-arrow.js
+//! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ (y) => y,
 	/* #__NO_SIDE_EFFECTS__ */ () => {},
@@ -24,6 +26,7 @@ x([
 ```js
 
 //#region expr-fn.js
+//! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ function() {},
 	/* #__NO_SIDE_EFFECTS__ */ function y() {},

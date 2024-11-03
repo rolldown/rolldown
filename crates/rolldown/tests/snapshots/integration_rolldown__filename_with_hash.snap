@@ -41,7 +41,7 @@ snapshot_kind: text
 - nested-block-!~{001}~.js => nested-block-NgejE1ik.js
 - nested-function-!~{002}~.js => nested-function-UPUwvlST.js
 - namespace-export-!~{003}~.js => namespace-export-Jiy3V9eu.js
-- comment-before-!~{004}~.js => comment-before-wIU7AQ0c.js
+- comment-before-!~{004}~.js => comment-before--Gz-a5lE.js
 - directive-before-!~{005}~.js => directive-before-KLB5yIGx.js
 - semicolon-before-!~{006}~.js => semicolon-before-CH7Hg_YA.js
 - debugger-before-!~{007}~.js => debugger-before-_kspBENU.js
@@ -232,8 +232,8 @@ snapshot_kind: text
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-fn-!~{000}~.js => expr-fn-SX0oZXbX.js
-- expr-arrow-!~{001}~.js => expr-arrow-ifm4T8lD.js
+- expr-fn-!~{000}~.js => expr-fn-rrLIXd_1.js
+- expr-arrow-!~{001}~.js => expr-arrow-rKobZ2Fw.js
 - stmt-fn-!~{002}~.js => stmt-fn-5_tdFffm.js
 - stmt-export-fn-!~{003}~.js => stmt-export-fn-ytVJYPqG.js
 - stmt-local-!~{004}~.js => stmt-local-y5jW5PzJ.js
@@ -1155,13 +1155,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/legal_comments_many_end_of_file
 
-- entry-!~{000}~.js => entry-0KABFbSF.js
+- entry-!~{000}~.js => entry-0S0mHayt.js
 - entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_many_linked
 
-- entry-!~{000}~.js => entry-0KABFbSF.js
+- entry-!~{000}~.js => entry-Oor2mIWp.js
 - entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
@@ -3732,7 +3732,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_print_non_finite_number_inside_with
 
-- entry-!~{000}~.js => entry-mQ9uVY6s.js
+- entry-!~{000}~.js => entry-0tVH--kU.js
 
 # tests/esbuild/ts/ts_sibling_enum
 
@@ -4838,7 +4838,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 
-- main-!~{000}~.js => main-rVlgr34S.js
+- main-!~{000}~.js => main-aWwy50Fh.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 

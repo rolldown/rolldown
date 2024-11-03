@@ -35,6 +35,7 @@ console.log(x, x, y, y);
 
 //#region comment-before.js
 {
+	//! comment
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }

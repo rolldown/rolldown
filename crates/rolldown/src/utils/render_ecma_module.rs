@@ -1,11 +1,12 @@
-use oxc::codegen::CodegenReturn;
 use rolldown_common::{NormalModule, NormalizedBundlerOptions};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
+
+use crate::types::generator::CodegenArtifact;
 
 pub fn render_ecma_module(
   module: &NormalModule,
   options: &NormalizedBundlerOptions,
-  render_output: CodegenReturn,
+  render_output: CodegenArtifact,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
   if render_output.code.is_empty() {
     None

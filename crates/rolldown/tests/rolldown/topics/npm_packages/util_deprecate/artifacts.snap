@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -12,10 +13,10 @@ const { deprecate } = __toESM(require("node:util"));
 
 //#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
 var require_node = __commonJS({ "../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js"(exports, module) {
-/**
+	/**
 	* For Node.js, simply re-export the core `util.deprecate` function.
 	*/
-		module.exports = require("util").deprecate;
+	module.exports = require("util").deprecate;
 } });
 
 //#endregion

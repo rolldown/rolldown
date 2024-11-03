@@ -64,7 +64,25 @@ pub async fn resolve_id_check_external(
       }
       Ok(Ok(resolved_id))
     }
-    Err(e) => Ok(Err(e)),
+    Err(e) => {
+      if let ResolveError::NotFound(_) = &e {
+        // If module can't resolve, check external with unresolved path with `isResolved: true`
+        // ref https://github.com/rollup/rollup/blob/master/src/ModuleLoader.ts#L555
+        if let Some(is_external) = bundle_options.external.as_ref() {
+          if is_external(request, importer, true).await? {
+            return Ok(Ok(ResolvedId {
+              id: request.to_string().into(),
+              ignored: false,
+              module_def_format: ModuleDefFormat::Unknown,
+              is_external: true,
+              package_json: None,
+              side_effects: None,
+            }));
+          }
+        }
+      }
+      Ok(Err(e))
+    }
   }
 }
 

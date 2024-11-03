@@ -18,9 +18,11 @@ export function normalizeOutputOptions(
     assetFileNames,
     name,
     esModule,
+    file,
   } = opts
   return {
     dir: dir,
+    file,
     format: getFormat(format),
     exports: exports ?? 'auto',
     sourcemap: sourcemap ?? false,

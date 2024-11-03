@@ -523,6 +523,14 @@ const ignoreTests = [
   "rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces",
   "rollup@function@can-import-self: a module importing its own bindings",
   "rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed",
+  // https://github.com/rolldown/rolldown/issues/2569
+  "rollup@sourcemaps@ignore-list-default: defaults to adding files within node_modules to the ignore list@generates es",
+  "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
+  "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
+  "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
+  "rollup@sourcemaps@relative-paths: source paths are relative with relative dest (#344)@generates es",
+  "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
+  "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es"
 ]
 
 module.exports = {

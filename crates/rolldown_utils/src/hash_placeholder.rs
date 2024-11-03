@@ -79,11 +79,10 @@ impl HashPlaceholderGenerator {
 /// ```
 #[expect(clippy::implicit_hasher)]
 pub fn replace_placeholder_with_hash<'a>(
-  source: impl Into<Cow<'a, str>>,
+  source: &'a str,
   final_hashes_by_placeholder: &FxHashMap<ArcStr, &'a str>,
 ) -> Cow<'a, str> {
-  let source = source.into();
-  let replaced = REPLACER_REGEX.replace_all(&source, |captures: &Captures<'_>| -> ArcStr {
+  let replaced = REPLACER_REGEX.replace_all(source, |captures: &Captures<'_>| -> ArcStr {
     debug_assert!(captures.len() == 1);
     // Eg. `!~{000}~`
     let captured_hash_placeholder = captures.get(0).unwrap().as_str();
@@ -95,14 +94,7 @@ pub fn replace_placeholder_with_hash<'a>(
       .unwrap_or(&captured_hash_placeholder);
     (*replacement).into()
   });
-
-  if let Cow::Owned(owned) = replaced {
-    // Due to the rustc's borrow checker, we can't return `replaced` directly
-    owned.into()
-  } else {
-    // No replacement happened, return the original source
-    source
-  }
+  replaced
 }
 
 pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {

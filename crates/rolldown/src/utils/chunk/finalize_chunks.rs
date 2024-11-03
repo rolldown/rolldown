@@ -1,4 +1,4 @@
-use std::{hash::Hash, mem};
+use std::hash::Hash;
 
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -121,9 +121,11 @@ pub fn finalize_assets(
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
       match &mut asset.content {
         StrOrBytes::Str(content) => {
-          *content =
-            replace_placeholder_with_hash(mem::take(content), &final_hashes_by_placeholder)
-              .into_owned();
+          if let std::borrow::Cow::Owned(str) =
+            replace_placeholder_with_hash(content, &final_hashes_by_placeholder)
+          {
+            *content = str;
+          }
         }
         StrOrBytes::Bytes(_content) => {}
       }

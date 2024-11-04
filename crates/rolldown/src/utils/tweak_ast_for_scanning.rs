@@ -4,7 +4,7 @@ use oxc::ast::ast::{self, BindingPatternKind, Declaration, ExpressionStatement, 
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{VisitMut, NONE};
 use oxc::span::SPAN;
-use rolldown_ecmascript::{AstSnippet, StatementExt, TakeIn};
+use rolldown_ecmascript_utils::{AstSnippet, StatementExt, TakeIn};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 pub struct PreProcessor<'a, 'ast> {

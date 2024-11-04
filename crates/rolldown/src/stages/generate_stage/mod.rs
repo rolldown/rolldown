@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 use anyhow::Result;
 use arcstr::ArcStr;
 use oxc::{ast::VisitMut, index::IndexVec};
-use rolldown_ecmascript::AstSnippet;
+use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 

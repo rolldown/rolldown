@@ -4,7 +4,7 @@ use oxc::{
   span::CompactStr,
 };
 use rolldown_common::{AstScopes, IndexModules, NormalModule, SymbolRefDb};
-use rolldown_ecmascript::AstSnippet;
+use rolldown_ecmascript_utils::AstSnippet;
 use rustc_hash::FxHashSet;
 
 mod impl_visit_mut;

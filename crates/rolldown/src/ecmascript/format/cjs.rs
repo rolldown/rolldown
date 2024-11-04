@@ -25,7 +25,7 @@ pub fn render_cjs(
   intro: Option<String>,
   outro: Option<String>,
   hashbang: Option<&str>,
-) -> BuildResult<SourceJoiner> {
+) -> BuildResult<SourceJoiner<'static>> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {

@@ -22,7 +22,7 @@ pub fn render_esm(
   intro: Option<String>,
   outro: Option<String>,
   hashbang: Option<&str>,
-) -> SourceJoiner {
+) -> SourceJoiner<'static> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {

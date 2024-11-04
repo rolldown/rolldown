@@ -24,7 +24,7 @@ pub struct MagicStringOptions {
 
 #[derive(Debug, Clone)]
 pub struct MagicString<'s> {
-  pub filename: Option<String>,
+  filename: Option<String>,
   intro: VecDeque<CowStr<'s>>,
   outro: VecDeque<CowStr<'s>>,
   source: CowStr<'s>,
@@ -70,6 +70,10 @@ impl<'text> MagicString<'text> {
     magic_string.chunk_by_end.insert(source_len, initial_chunk_idx);
 
     magic_string
+  }
+
+  pub fn filename(&self) -> Option<&str> {
+    self.filename.as_deref()
   }
 
   pub fn len(&self) -> usize {

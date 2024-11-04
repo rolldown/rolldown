@@ -27,8 +27,7 @@
     {
       "groupName": "npm-rolldown",
       "matchManagers": ["npm"],
-      "automerge": false,
-      "automergeType": "pr"
+      "enabled": false
     }
   ]
 }

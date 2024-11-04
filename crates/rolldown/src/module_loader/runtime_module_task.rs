@@ -73,6 +73,7 @@ impl RuntimeModuleTask {
       ast_usage,
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: _,
+      hashbang_range: _,
       has_star_exports,
     } = scan_result;
 
@@ -110,6 +111,7 @@ impl RuntimeModuleTask {
         def_format: ModuleDefFormat::EsmMjs,
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
+        hashbang_range: None,
         meta: {
           let mut meta = EcmaViewMeta::default();
           meta.set_included(false);

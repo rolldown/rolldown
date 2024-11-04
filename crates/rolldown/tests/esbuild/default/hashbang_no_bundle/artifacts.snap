@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+#!/usr/bin/env node
 
 //#region entry.js
-#!/usr/bin/env node
 process.exit(0);
 
 //#endregion

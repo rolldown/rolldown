@@ -865,15 +865,15 @@ snapshot_kind: text
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
-- entry-!~{000}~.js => entry-V5n4DZth.js
+- entry-!~{000}~.js => entry-lJykAK8l.js
 
 # tests/esbuild/default/hashbang_bundle
 
-- entry-!~{000}~.js => entry-r3KoK-PI.js
+- entry-!~{000}~.js => entry--LXH52Wv.js
 
 # tests/esbuild/default/hashbang_no_bundle
 
-- entry-!~{000}~.js => entry-qFhT4RW4.js
+- entry-!~{000}~.js => entry-mSmZIi2z.js
 
 # tests/esbuild/default/iife_es5
 

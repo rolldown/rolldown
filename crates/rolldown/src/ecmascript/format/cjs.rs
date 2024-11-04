@@ -16,6 +16,7 @@ use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
+#[allow(clippy::too_many_lines)]
 pub fn render_cjs(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -23,9 +24,13 @@ pub fn render_cjs(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
+  hashbang: Option<&str>,
 ) -> BuildResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
+  if let Some(hashbang) = hashbang {
+    concat_source.add_source(Box::new(RawSource::new(hashbang.to_string())));
+  }
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }

@@ -5,7 +5,9 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "format": "iife",
+    "banner": "#! from banner"
   },
   "expectExecuted": false
 }

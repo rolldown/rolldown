@@ -137,9 +137,9 @@ impl<'a> GenerateStage<'a> {
     self.render_chunk_to_assets(&mut chunk_graph).await
   }
 
-  // Notices:
-  // - Should generate filenames that are stable cross builds and os.
-  // #[tracing::instrument(level = "debug", skip_all)]
+  /// Notices:
+  /// - Should generate filenames that are stable cross builds and os.
+  #[tracing::instrument(level = "debug", skip_all)]
   #[allow(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,

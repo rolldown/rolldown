@@ -166,9 +166,6 @@
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
-## hashban not align
-- crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order
-- crates/rolldown/tests/esbuild/default/hashbang_bundle
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision

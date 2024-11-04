@@ -103,6 +103,7 @@ pub async fn create_ecma_view<'any>(
     ast_usage,
     symbol_ref_db,
     self_referenced_class_decl_symbol_ids,
+    hashbang_range,
     has_star_exports,
   } = scan_result;
   if !errors.is_empty() {
@@ -182,6 +183,7 @@ pub async fn create_ecma_view<'any>(
     side_effects,
     ast_usage,
     self_referenced_class_decl_symbol_ids,
+    hashbang_range,
     meta: {
       let mut meta = EcmaViewMeta::default();
       meta.set_included(false);

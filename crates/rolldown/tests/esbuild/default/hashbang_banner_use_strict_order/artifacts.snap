@@ -6,10 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+#! in file
+#! from banner
+(function() {
+
+"use strict";
 
 //#region entry.js
-#! in file
 foo();
 
 //#endregion
+})();
 ```

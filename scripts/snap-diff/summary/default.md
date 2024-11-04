@@ -59,10 +59,6 @@
   diff
 ## [false_require](../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
   diff
-## [hashbang_banner_use_strict_order](../../../crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order/diff.md)
-  diff
-## [hashbang_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_bundle/diff.md)
-  diff
 ## [import_abs_path_with_query_parameter](../../../crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter/diff.md)
   diff
 ## [import_meta_common_js](../../../crates/rolldown/tests/esbuild/default/import_meta_common_js/diff.md)
@@ -257,6 +253,8 @@
 ## [external_module_exclusion_package](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_package)
 ## [external_packages](../../../crates/rolldown/tests/esbuild/default/external_packages)
 ## [external_wildcard_does_not_match_entry_point](../../../crates/rolldown/tests/esbuild/default/external_wildcard_does_not_match_entry_point)
+## [hashbang_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_bundle)
+## [hashbang_no_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_no_bundle)
 ## [iife_es5](../../../crates/rolldown/tests/esbuild/default/iife_es5)
 ## [import_meta_es6](../../../crates/rolldown/tests/esbuild/default/import_meta_es6)
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
@@ -307,7 +305,7 @@
 ## [export_forms_es6](../../../crates/rolldown/tests/esbuild/default/export_forms_es6/bypass.md)
 ## [exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js/bypass.md)
 ## [external_module_exclusion_relative_path](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_relative_path/bypass.md)
-## [hashbang_no_bundle](../../../crates/rolldown/tests/esbuild/default/hashbang_no_bundle/bypass.md)
+## [hashbang_banner_use_strict_order](../../../crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order/bypass.md)
 ## [import_abs_path_as_dir](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_dir/bypass.md)
 ## [import_abs_path_as_file](../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_file/bypass.md)
 ## [import_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle/bypass.md)

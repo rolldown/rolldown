@@ -102,6 +102,8 @@ pub struct EcmaView {
   pub side_effects: DeterminedSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
+  // the range of hashbang in source
+  pub hashbang_range: Option<Span>,
   pub meta: EcmaViewMeta,
   pub mutations: Vec<BoxedSourceMutation>,
 }

@@ -1,22 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
+
+## assets/common-h8VKzHVD.png
 
 ## common.js
 
 ```js
 
-
 //#region shared/common.png
-var require_common = __commonJS({ "shared/common.png"() {
-	x;
-} });
+var common_default = "assets/common-h8VKzHVD.png";
 
 //#endregion
 //#region shared/common.js
-var import_common = __toESM(require_common());
-console.log(import_common.default);
+console.log(common_default);
 
 //#endregion
 ```

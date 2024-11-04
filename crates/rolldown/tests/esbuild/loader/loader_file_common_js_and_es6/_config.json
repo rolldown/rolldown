@@ -5,6 +5,10 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
-  }
+    ],
+    "moduleTypes": {
+      ".txt": "asset"
+    }
+  },
+  "snapshotBytes": true
 }

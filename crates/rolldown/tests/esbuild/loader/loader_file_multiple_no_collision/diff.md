@@ -1,24 +1,7 @@
 # Reason
-1. Not support file loader
+1. Different hash asset name
+2. Same content has different name
 # Diff
-## /dist/test-J7OMUXO3.txt
-### esbuild
-```js
-test
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/dist/test-J7OMUXO3.txt
-+++ rolldown	
-@@ -1,1 +0,0 @@
--test;
-
-```
 ## /dist/out.js
 ### esbuild
 ```js
@@ -45,23 +28,45 @@ console.log(
 ### rolldown
 ```js
 
+
+//#region a/test.txt
+var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
+	module.exports = "assets/test-axxhOgr8.txt";
+} });
+
+//#endregion
+//#region b/test.txt
+var require_test = __commonJS({ "b/test.txt"(exports, module) {
+	module.exports = "assets/test-NT_ktVcT.txt";
+} });
+
+//#endregion
+//#region entry.js
+console.log(require_test$1(), require_test());
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/dist/out.js
-+++ rolldown	
-@@ -1,11 +0,0 @@
++++ rolldown	entry.js
+@@ -1,11 +1,11 @@
 -var require_test = __commonJS({
--    "a/test.txt"(exports, module) {
++var require_test$1 = __commonJS({
+     "a/test.txt"(exports, module) {
 -        module.exports = "./test-J7OMUXO3.txt";
--    }
--});
++        module.exports = "assets/test-axxhOgr8.txt";
+     }
+ });
 -var require_test2 = __commonJS({
--    "b/test.txt"(exports, module) {
++var require_test = __commonJS({
+     "b/test.txt"(exports, module) {
 -        module.exports = "./test-J7OMUXO3.txt";
--    }
--});
++        module.exports = "assets/test-NT_ktVcT.txt";
+     }
+ });
 -console.log(require_test(), require_test2());
++console.log(require_test$1(), require_test());
 
 ```

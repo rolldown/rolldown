@@ -2514,6 +2514,7 @@ dependencies = [
  "oxc",
  "rolldown_common",
  "rolldown_ecmascript",
+ "rolldown_ecmascript_utils",
  "rolldown_error",
  "rolldown_fs",
  "rolldown_loader_utils",
@@ -2614,9 +2615,16 @@ dependencies = [
  "anyhow",
  "arcstr",
  "oxc",
- "rolldown_common",
  "rolldown_error",
  "self_cell",
+]
+
+[[package]]
+name = "rolldown_ecmascript_utils"
+version = "0.1.0"
+dependencies = [
+ "oxc",
+ "rolldown_common",
  "smallvec",
 ]
 

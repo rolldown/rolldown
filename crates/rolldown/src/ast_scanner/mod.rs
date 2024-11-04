@@ -21,7 +21,7 @@ use rolldown_common::{
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
   Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
 };
-use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
+use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
@@ -504,11 +504,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
         .id
         .as_ref()
-        .map(|id| (rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id(id), id.span)),
+        .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => cls_decl
         .id
         .as_ref()
-        .map(|id| (rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id(id), id.span)),
+        .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };
 

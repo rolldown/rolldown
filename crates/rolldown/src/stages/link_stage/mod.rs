@@ -8,7 +8,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
-  ecma_script::legitimize_identifier_name,
+  ecmascript::legitimize_identifier_name,
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };

@@ -1,5 +1,5 @@
 use anyhow::Ok;
-use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
+use rolldown_utils::ecmascript::is_validate_assignee_identifier_name;
 use serde_json::Value;
 // TODO: handling https://github.com/tc39/proposal-json-superset
 

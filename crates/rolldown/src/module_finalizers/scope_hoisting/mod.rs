@@ -12,7 +12,7 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
-use rolldown_utils::ecma_script::is_validate_identifier_name;
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 mod rename;
 

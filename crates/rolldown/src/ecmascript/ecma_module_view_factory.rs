@@ -10,7 +10,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
+use rolldown_utils::{ecmascript::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
 use crate::{

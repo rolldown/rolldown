@@ -19,7 +19,7 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::ecma_script::legitimize_identifier_name;
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;

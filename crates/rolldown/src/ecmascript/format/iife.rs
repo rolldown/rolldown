@@ -38,7 +38,7 @@ use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
-use rolldown_utils::ecma_script::legitimize_identifier_name;
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use super::utils::{render_chunk_external_imports, render_factory_parameters};
 

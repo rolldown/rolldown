@@ -348,6 +348,7 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                          stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                         }
                       }
                     }

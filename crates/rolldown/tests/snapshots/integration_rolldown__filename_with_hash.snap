@@ -1339,11 +1339,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_very_long_external_paths
 
-- bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-BypkH1nb.js
-- bytesInOutput should be at least 99 (2)-!~{001}~.js => bytesInOutput should be at least 99 (2)-qvSFAiev.js
-- bytesInOutput should be at least 99 (3)-!~{002}~.js => bytesInOutput should be at least 99 (3)-PxxXCWfl.js
-- bytesInOutput should be at least 99-!~{003}~.js => bytesInOutput should be at least 99-zt_O_N0Q.js
+- bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-Gc3LJ5gu.js
+- assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-58oIsL55.file
+- bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-kT9H8Apa.js
+- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-0S9SNfkd.js
+- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-YX6i_RZN.js
 - bytesInOutput should be at least 99.css
+- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{005}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-P9oMOlgh.js
 
 # tests/esbuild/default/minified_bundle_common_js
 

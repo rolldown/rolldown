@@ -1,42 +1,6 @@
 # Reason
-1. Not support file loader
+1. different hash algorithm
 # Diff
-## /y-YE5AYNFB.txt
-### esbuild
-```js
-y
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/y-YE5AYNFB.txt
-+++ rolldown	
-@@ -1,1 +0,0 @@
--y;
-
-```
-## /x-LSAMBFUD.txt
-### esbuild
-```js
-x
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/x-LSAMBFUD.txt
-+++ rolldown	
-@@ -1,1 +0,0 @@
--x;
-
-```
 ## /out.js
 ### esbuild
 ```js
@@ -59,12 +23,12 @@ console.log(x_url, y_default);
 
 
 //#region y.txt
-var y_default = "y";
+var y_default = "assets/y-wSWe67SA.txt";
 
 //#endregion
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
-	module.exports = "x";
+	module.exports = "assets/x-QPVb1P9U.txt";
 } });
 
 //#endregion
@@ -80,11 +44,11 @@ console.log(x_url, y_default);
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,8 +1,8 @@
-+var y_default = "y";
++var y_default = "assets/y-wSWe67SA.txt";
  var require_x = __commonJS({
      "x.txt"(exports, module) {
 -        module.exports = "./x-LSAMBFUD.txt";
-+        module.exports = "x";
++        module.exports = "assets/x-QPVb1P9U.txt";
      }
  });
 -var y_default = "./y-YE5AYNFB.txt";

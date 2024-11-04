@@ -31,6 +31,11 @@
       "default": true,
       "type": "boolean"
     },
+    "snapshotBytes": {
+      "description": "If `true`, bytes source will be snapshot.",
+      "default": false,
+      "type": "boolean"
+    },
     "snapshotOutputStats": {
       "description": "If `true`, the fixture output stats will be snapshot.",
       "default": false,

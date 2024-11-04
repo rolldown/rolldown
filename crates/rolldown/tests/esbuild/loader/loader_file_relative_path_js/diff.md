@@ -1,24 +1,6 @@
 # Reason
-1. Not support file loader
+1. abs output base
 # Diff
-## /out/image-LSAMBFUD.png
-### esbuild
-```js
-x
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/image-LSAMBFUD.png
-+++ rolldown	
-@@ -1,1 +0,0 @@
--x;
-
-```
 ## /out/entries/entry.js
 ### esbuild
 ```js
@@ -31,14 +13,23 @@ console.log(image_default);
 ### rolldown
 ```js
 
+//#region images/image.png
+var image_default = "assets/image-6tcw8vpN.png";
+
+//#endregion
+//#region entries/entry.js
+console.log(image_default);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entries/entry.js
-+++ rolldown	
-@@ -1,2 +0,0 @@
++++ rolldown	entries_entry.js
+@@ -1,2 +1,2 @@
 -var image_default = "../image-LSAMBFUD.png";
--console.log(image_default);
++var image_default = "assets/image-6tcw8vpN.png";
+ console.log(image_default);
 
 ```

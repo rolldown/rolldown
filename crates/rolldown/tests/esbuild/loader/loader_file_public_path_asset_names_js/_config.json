@@ -5,7 +5,11 @@
         "name": "entries_entry",
         "import": "entries/entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".png": "asset"
+    }
   },
   "expectExecuted": false
 }

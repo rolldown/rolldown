@@ -30,6 +30,9 @@ pub struct TestMeta {
   #[serde(default)]
   /// If `true`, the sourcemap visualizer will be snapshot.
   pub visualize_sourcemap: bool,
+  #[serde(default)]
+  /// If `true`, bytes source will be snapshot.
+  pub snapshot_bytes: bool,
   #[serde(default = "true_by_default")]
   /// Default is `true`. If `false`, the runtime module will not be hidden.
   pub hidden_runtime_module: bool,

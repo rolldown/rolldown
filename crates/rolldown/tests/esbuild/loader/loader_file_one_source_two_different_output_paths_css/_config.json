@@ -9,6 +9,10 @@
         "name": "entries_other_entry",
         "import": "entries/other/entry.css"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".png": "asset"
+    }
   }
 }

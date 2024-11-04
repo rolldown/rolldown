@@ -1,20 +1,31 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
+## assets/x-QPVb1P9U.txt
+
+```txt
+x
+```
+## assets/y-wSWe67SA.txt
+
+```txt
+y
+```
 ## entry.js
 
 ```js
 
 
 //#region y.txt
-var y_default = "y";
+var y_default = "assets/y-wSWe67SA.txt";
 
 //#endregion
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
-	module.exports = "x";
+	module.exports = "assets/x-QPVb1P9U.txt";
 } });
 
 //#endregion

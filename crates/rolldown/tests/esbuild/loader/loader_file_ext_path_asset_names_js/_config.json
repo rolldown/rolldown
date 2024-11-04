@@ -5,7 +5,13 @@
         "name": "entries_entry",
         "import": "entries/entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".txt": "asset",
+      ".png": "asset"
+    }
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "snapshotBytes": true
 }
+

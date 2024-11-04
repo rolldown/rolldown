@@ -1,0 +1,17 @@
+[package]
+description = "manipulate string like a wizard"
+edition     = "2021"
+license     = "MIT"
+name        = "string_wizard"
+version     = "0.0.22"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+oxc_index     = { workspace = true }
+oxc_sourcemap = { workspace = true, optional = true }
+rustc-hash    = { workspace = true }
+
+[features]
+default   = ["sourcemap"]
+sourcemap = ["dep:oxc_sourcemap"]

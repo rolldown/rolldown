@@ -149,7 +149,7 @@ serde               = { version = "1.0.203", features = ["derive"] }
 serde_json          = "1.0.117"
 simdutf8            = { version = "0.1.4", features = ["aarch64_neon"] }
 smallvec            = "1.13.2"
-string_wizard       = "0.0.22"
+string_wizard       = { path = "./crates/string_wizard" }
 sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
 testing_macros      = "1.0.0"
 tokio               = { version = "1.38.0", default-features = false }
@@ -164,6 +164,7 @@ xxhash-rust         = "0.8.10"
 # oxc crates share the same version
 oxc                = { version = "0.34.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
 oxc_index          = { version = "0.34.0", features = ["rayon"] }
+oxc_sourcemap      = { version = "0.34.0" }
 oxc_transform_napi = { version = "0.34.0" }
 
 [profile.release]

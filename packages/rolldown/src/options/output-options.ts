@@ -27,7 +27,11 @@ const chunkFileNamesFunctionSchema = z
   .returns(z.string())
 
 const outputOptionsSchema = z.strictObject({
-  dir: z.string().describe('Output directory, defaults to `dist`.').optional(),
+  dir: z
+    .string()
+    .describe('Output directory, defaults to `dist` if `file` is not set.')
+    .optional(),
+  file: z.string().describe('Single output file').optional(),
   exports: z
     .literal('auto')
     .or(z.literal('named'))

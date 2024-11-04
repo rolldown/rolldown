@@ -8,7 +8,7 @@ USAGE rolldown -c <config> or rolldown <input> <options>
 OPTIONS
 
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
-  --dir -d, <dir>             Output directory, defaults to \`dist\`.
+  --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
@@ -30,6 +30,7 @@ OPTIONS
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
+  --file <file>               Single output file.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.

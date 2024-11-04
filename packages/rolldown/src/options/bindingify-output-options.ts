@@ -21,9 +21,12 @@ export function bindingifyOutputOptions(
     outro,
     esModule,
     globals,
+    file,
   } = outputOptions
   return {
     dir,
+    // Handle case: rollup/test/sourcemaps/samples/sourcemap-file-hashed/_config.js
+    file: file == null ? undefined : file,
     format: (function () {
       switch (format) {
         case 'es':

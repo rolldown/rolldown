@@ -5,7 +5,7 @@ use super::BuildDiagnostic;
 use arcstr::ArcStr;
 use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
-use rolldown_resolver::ResolveError;
+use oxc_resolver::ResolveError;
 
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;

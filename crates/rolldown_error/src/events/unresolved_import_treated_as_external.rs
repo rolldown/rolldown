@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use rolldown_resolver::ResolveError;
+use oxc_resolver::ResolveError;
 
 use crate::EventKind;
 

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import "external";
+
+
+//#region second.js
+var second_exports = {};
+import * as import_external from "external";
+__reExport(second_exports, import_external);
+
+//#endregion
+//#region first.js
+var first_exports = {};
+__reExport(first_exports, second_exports);
+
+//#endregion
+var foo = first_exports.foo;
+export { foo };
+```

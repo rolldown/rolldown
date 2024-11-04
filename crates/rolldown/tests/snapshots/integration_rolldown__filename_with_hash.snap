@@ -4154,6 +4154,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-A5Q5Yjqc.js
 
+# tests/rolldown/function/external/double-namespace-reexport
+
+- main-!~{000}~.js => main-xa80lM6G.js
+
 # tests/rolldown/function/external/export_external
 
 - main-!~{000}~.js => main-G26Bv4ip.js

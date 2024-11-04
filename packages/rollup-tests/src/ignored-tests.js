@@ -76,7 +76,6 @@ const ignoreTests = [
   "rollup@function@external-dynamic-import-live-binding-compact: supports external dynamic imports with live bindings in compact mode",
   "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
-  "rollup@function@double-namespace-reexport: handles chained namespace reexports from externals",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
 
   // deconfilct

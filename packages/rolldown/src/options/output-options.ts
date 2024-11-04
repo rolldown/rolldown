@@ -10,6 +10,7 @@ const ModuleFormatSchema = z
   .or(z.literal('module'))
   .or(z.literal('commonjs'))
   .or(z.literal('iife'))
+  .or(z.literal('umd'))
   .describe(
     `output format of the generated bundle (supports ${underline('esm')}, cjs, and iife).`,
   )
@@ -74,7 +75,7 @@ const outputOptionsSchema = z.strictObject({
     .optional(),
   externalLiveBindings: z
     .boolean()
-    .describe('use external live bindings')
+    .describe('external live bindings')
     .default(true)
     .optional(),
   inlineDynamicImports: z
@@ -90,7 +91,7 @@ const outputOptionsSchema = z.strictObject({
         .array(
           z.strictObject({
             name: z.string(),
-            test: z.string().optional(),
+            test: z.string().or(z.instanceof(RegExp)).optional(),
             priority: z.number().optional(),
             minSize: z.number().optional(),
             minShareCount: z.number().optional(),

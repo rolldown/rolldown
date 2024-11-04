@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.js
+
+```js
+import { foo } from "./foo2.js";
+
+export { foo };
+```
+## foo2.js
+
+```js
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo });
+const foo = 1;
+
+//#endregion
+export { foo, foo_exports };
+```
+## main.js
+
+```js
+import { foo_exports } from "./foo2.js";
+
+//#region main.js
+import("./foo.js");
+console.log(foo_exports);
+
+//#endregion
+```
+## Output Stats
+
+- foo.js, is_entry false, is_dynamic_entry true, exports ["foo"]
+- foo2.js, is_entry false, is_dynamic_entry false, exports ["foo", "foo_exports"]
+- main.js, is_entry true, is_dynamic_entry false, exports []

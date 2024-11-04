@@ -1,18 +1,19 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "aws-sdk" is imported by "index.js", but could not be resolved – treating it as an external dependency.
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "aws-sdk/clients/dynamodb" is imported by "index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'aws-sdk/clients/dynamodb' in index.js
+   ╭─[index.js:2:32]
+   │
+ 2 │ import { DocumentClient } from 'aws-sdk/clients/dynamodb';
+   │                                ─────────────┬────────────  
+   │                                             ╰────────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

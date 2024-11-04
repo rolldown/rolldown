@@ -24,6 +24,6 @@ import * as i from 'i_WRAP'
 i.x()
 
 import * as j from 'j_WRAP'
-j.x` + "``" + `
+j.x``
 
 x = import("k_WRAP")

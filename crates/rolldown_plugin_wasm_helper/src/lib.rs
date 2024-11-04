@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fs, path::Path};
 
-use rolldown_common::{AssetSource, EmittedAsset};
+use rolldown_common::{EmittedAsset, StrOrBytes};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
@@ -42,7 +42,7 @@ impl Plugin for WasmHelperPlugin {
       let reference_id = ctx.emit_file(EmittedAsset {
         name: file_path.file_name().map(|x| x.to_string_lossy().to_string()),
         original_file_name: None,
-        source: AssetSource::Buffer(fs::read(file_path)?),
+        source: StrOrBytes::Bytes(fs::read(file_path)?),
         file_name: None,
       });
       let url = ctx.get_file_name(&reference_id);

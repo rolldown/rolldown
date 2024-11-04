@@ -37,7 +37,7 @@ impl PathExt for std::path::Path {
         if let Some(parent_dir_name) =
           self.parent().and_then(Path::file_stem).map(OsStr::to_string_lossy)
         {
-          Cow::Owned([&*parent_dir_name, "_", &*file_name].concat())
+          parent_dir_name
         } else {
           file_name
         }
@@ -56,10 +56,10 @@ fn test_representative_file_name() {
   assert_eq!(path.representative_file_name(), "vue");
 
   let path = cwd.join("vue").join("index.js");
-  assert_eq!(path.representative_file_name(), "vue_index");
+  assert_eq!(path.representative_file_name(), "vue");
 
   let path = cwd.join("vue").join("mod.ts");
-  assert_eq!(path.representative_file_name(), "vue_mod");
+  assert_eq!(path.representative_file_name(), "vue");
 }
 
 #[inline]

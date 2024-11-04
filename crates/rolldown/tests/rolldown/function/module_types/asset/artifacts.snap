@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## assets/foo-vpuLoj-k.txt
+
+## main.js
+
+```js
+
+//#region foo.txt
+var foo_default = "assets/foo-vpuLoj-k.txt";
+
+//#endregion
+//#region main.js
+var main_default = foo_default;
+
+//#endregion
+export { main_default as default };
+```
+## Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports ["default"]

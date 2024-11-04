@@ -1,6 +1,4 @@
 # Failed Cases
-## [const_value_inlining_no_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_no_bundle/diff.md)
-  diff
 ## [cross_module_constant_folding_number](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number/diff.md)
   diff
 ## [cross_module_constant_folding_string](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string/diff.md)
@@ -47,8 +45,6 @@
   diff
 ## [package_json_side_effects_false_intermediate_files_used](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used/diff.md)
   diff
-## [package_json_side_effects_false_keep_bare_import_and_require_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6/diff.md)
-  diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread/diff.md)
@@ -75,8 +71,6 @@
   diff
 ## [tree_shaking_lowered_class_static_field_minified](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified/diff.md)
   diff
-## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property/diff.md)
-  diff
 ## [tree_shaking_react_elements](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
   diff
 ## [tree_shaking_unary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators/diff.md)
@@ -101,6 +95,7 @@
 ## [package_json_side_effects_false_cross_platform_slash](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash)
 ## [package_json_side_effects_false_intermediate_files_unused](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused)
 ## [package_json_side_effects_false_keep_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6)
+## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6)
 ## [package_json_side_effects_false_no_warning_in_node_modules_issue999](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999)
 ## [package_json_side_effects_false_remove_bare_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js)
 ## [package_json_side_effects_false_remove_bare_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6)
@@ -108,6 +103,7 @@
 ## [package_json_side_effects_false_remove_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_named_import_es6)
 ## [package_json_side_effects_false_remove_star_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_star_import_common_js)
 ## [package_json_side_effects_false_remove_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_star_import_es6)
+## [package_json_side_effects_keep_export_default_expr](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_keep_export_default_expr)
 ## [package_json_side_effects_nested_directory_remove](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_nested_directory_remove)
 ## [package_json_side_effects_true_keep_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_true_keep_es6)
 ## [preserve_directives_minify_pass_through](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_pass_through)
@@ -121,9 +117,11 @@
 ## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
 ## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
+## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property)
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)
 ## [const_value_inlining_direct_eval](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_direct_eval/bypass.md)
+## [const_value_inlining_no_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_no_bundle/bypass.md)
 ## [dce_class_static_blocks_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/bypass.md)
 ## [dce_of_expr_after_keep_names_issue3195](../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/bypass.md)
 ## [dce_of_using_declarations](../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/bypass.md)
@@ -141,10 +139,9 @@
 ## [multiple_declaration_tree_shaking_minify_syntax](../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax/bypass.md)
 ## [nested_function_inlining_with_spread](../../../crates/rolldown/tests/esbuild/dce/nested_function_inlining_with_spread/bypass.md)
 ## [package_json_side_effects_false_keep_bare_import_and_require_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js/bypass.md)
+## [package_json_side_effects_false_keep_bare_import_and_require_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6/bypass.md)
 ## [package_json_side_effects_false_keep_named_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js/bypass.md)
 ## [package_json_side_effects_false_keep_star_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js/bypass.md)
-## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6/bypass.md)
-## [package_json_side_effects_keep_export_default_expr](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_keep_export_default_expr/bypass.md)
 ## [package_json_side_effects_true_keep_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_true_keep_common_js/bypass.md)
 ## [preserve_directives_minify_bundle](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_bundle/bypass.md)
 ## [preserve_directives_minify_iife](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_iife/bypass.md)

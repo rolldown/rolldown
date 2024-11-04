@@ -95,16 +95,14 @@ for (let i = 0; i < 3; i++) {
 ```js
 
 //#region entry.js
-for (let i = 0; i < 3; i++) {
-	objs.push({
-		__proto__: { foo() {
-			return i;
-		} },
-		async bar() {
-			return super.foo();
-		}
-	});
-}
+for (let i = 0; i < 3; i++) objs.push({
+	__proto__: { foo() {
+		return i;
+	} },
+	async bar() {
+		return super.foo();
+	}
+});
 
 //#endregion
 ```
@@ -113,7 +111,7 @@ for (let i = 0; i < 3; i++) {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,61 +1,12 @@
+@@ -1,61 +1,10 @@
 -class Derived extends Base {
 -    test(key) {
 -        return __async(this, null, function* () {
@@ -128,7 +126,11 @@ for (let i = 0; i < 3; i++) {
 -            super(...arguments);
 -            __publicField(this, "a", super.a);
 -            __publicField(this, "b", () => super.b);
--        }
++for (let i = 0; i < 3; i++) objs.push({
++    __proto__: {
++        foo() {
++            return i;
+         }
 -        c() {
 -            return super.c;
 -        }
@@ -148,7 +150,10 @@ for (let i = 0; i < 3; i++) {
 -                }
 -            });
 -        }));
--    }
++    },
++    async bar() {
++        return super.foo();
+     }
 -    a() {
 -        return __async(this, null, function* () {
 -            var _a;
@@ -160,23 +165,21 @@ for (let i = 0; i < 3; i++) {
 -        });
 -    }
 -}
- for (let i = 0; i < 3; i++) {
+-for (let i = 0; i < 3; i++) {
 -    let _a;
 -    objs.push(_a = {
-+    objs.push({
-         __proto__: {
-             foo() {
-                 return i;
-             }
-         },
+-        __proto__: {
+-            foo() {
+-                return i;
+-            }
+-        },
 -        bar() {
 -            return __async(this, null, function* () {
 -                return __superGet(_a, this, "foo").call(this);
 -            });
-+        async bar() {
-+            return super.foo();
-         }
-     });
- }
+-        }
+-    });
+-}
++});
 
 ```

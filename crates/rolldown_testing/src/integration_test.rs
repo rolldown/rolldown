@@ -210,22 +210,7 @@ impl IntegrationTest {
       let artifacts = assets
         .iter()
         .filter_map(|asset| {
-          let content = match asset {
-            Output::Chunk(inner) => &inner.code,
-            Output::Asset(inner) => match &inner.source {
-              rolldown_common::AssetSource::String(inner) => inner,
-              // Snapshot buffer is meaningless
-              rolldown_common::AssetSource::Buffer(_) => return None,
-            },
-          };
-          let content = if self.test_meta.hidden_runtime_module {
-            RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
-          } else {
-            Cow::Borrowed(content.as_str())
-          };
-
           let filename = asset.filename();
-
           let file_ext = filename.as_path().extension().and_then(OsStr::to_str).map_or(
             "unknown",
             |ext| match ext {
@@ -234,17 +219,40 @@ impl IntegrationTest {
             },
           );
 
-          if file_ext == "map" {
-            // Skip sourcemap for now
-            return None;
-          }
+          match asset {
+            Output::Chunk(output_chunk) => {
+              let content = &output_chunk.code;
+              let content = if self.test_meta.hidden_runtime_module {
+                RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
+              } else {
+                Cow::Borrowed(content.as_str())
+              };
 
-          Some([
-            Cow::Owned(format!("## {}\n", asset.filename())),
-            Cow::Owned(format!("```{file_ext}")),
-            content,
-            "```".into(),
-          ])
+              Some(vec![
+                Cow::Owned(format!("## {}\n", asset.filename())),
+                Cow::Owned(format!("```{file_ext}")),
+                content,
+                "```".into(),
+              ])
+            }
+            Output::Asset(output_asset) => {
+              if file_ext == "map" {
+                // Skip sourcemap for now
+                return None;
+              }
+              match &output_asset.source {
+                rolldown_common::StrOrBytes::Str(content) => Some(vec![
+                  Cow::Owned(format!("## {}\n", asset.filename())),
+                  Cow::Owned(format!("```{file_ext}")),
+                  Cow::Borrowed(content),
+                  "```".into(),
+                ]),
+                rolldown_common::StrOrBytes::Bytes(_) => {
+                  Some(vec![Cow::Owned(format!("## {}\n", asset.filename()))])
+                }
+              }
+            }
+          }
         })
         .flatten()
         .collect::<Vec<_>>()

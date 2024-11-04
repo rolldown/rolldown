@@ -8,13 +8,30 @@ console.log("SUCCESS");
 ### rolldown
 ```js
 
+
+//#region node_modules/pkg/require.js
+var require_require = __commonJS({ "node_modules/pkg/require.js"() {
+	console.log("FAILURE");
+} });
+
+//#endregion
+//#region src/entry.js
+require_require();
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/Users/user/project/out.js
-+++ rolldown	
-@@ -1,1 +0,0 @@
++++ rolldown	entry.js
+@@ -1,1 +1,6 @@
 -console.log("SUCCESS");
++var require_require = __commonJS({
++    "node_modules/pkg/require.js"() {
++        console.log("FAILURE");
++    }
++});
++require_require();
 
 ```

@@ -1,3 +1,5 @@
+# Reason
+1. not support glob
 # Diff
 ## /out.js
 ### esbuild
@@ -45,7 +47,7 @@ console.log({
 ```js
 
 //#region entry.ts
-const ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+const ab = Math.random() < .5 ? "a.ts" : "b.ts";
 console.log({
 	concat: {
 		require: require("./src/" + ab),
@@ -83,7 +85,8 @@ console.log({
 -    "./src/a.ts": () => Promise.resolve().then(() => __toESM(require_a())),
 -    "./src/b.ts": () => Promise.resolve().then(() => __toESM(require_b()))
 -});
- var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+-var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
++var ab = Math.random() < .5 ? "a.ts" : "b.ts";
  console.log({
      concat: {
 -        require: globRequire_src("./src/" + ab),

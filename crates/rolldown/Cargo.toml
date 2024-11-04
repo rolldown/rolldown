@@ -29,7 +29,6 @@ itoa                     = { workspace = true }
 memchr                   = { workspace = true }
 notify                   = { workspace = true }
 oxc                      = { workspace = true }
-regex                    = { workspace = true }
 rolldown_common          = { workspace = true }
 rolldown_ecmascript      = { workspace = true }
 rolldown_error           = { workspace = true }

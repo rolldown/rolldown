@@ -1,4 +1,4 @@
-use crate::{AssetSource, FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset};
+use crate::{FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes};
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
@@ -14,7 +14,7 @@ pub struct EmittedAsset {
   pub name: Option<String>,
   pub original_file_name: Option<String>,
   pub file_name: Option<ArcStr>,
-  pub source: AssetSource,
+  pub source: StrOrBytes,
 }
 
 #[derive(Debug)]

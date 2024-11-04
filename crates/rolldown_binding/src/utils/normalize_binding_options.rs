@@ -15,7 +15,6 @@ use rolldown::{
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
-use rolldown_utils::js_regex::HybridRegex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -140,6 +139,7 @@ pub fn normalize_binding_options(
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
     asset_filenames: output_options.asset_file_names,
     dir: output_options.dir,
+    file: None,
     sourcemap: output_options.sourcemap.map(Into::into),
     es_module: output_options.es_module.map(|es_module| match es_module {
       Either::A(es_module_bool) => es_module_bool.into(),
@@ -151,6 +151,7 @@ pub fn normalize_binding_options(
     outro: normalize_addon_option(output_options.outro),
     sourcemap_ignore_list,
     sourcemap_path_transform,
+    sourcemap_debug_ids: output_options.sourcemap_debug_ids,
     exports: output_options.exports.map(|format_str| match format_str.as_str() {
       "auto" => OutputExports::Auto,
       "default" => OutputExports::Default,
@@ -163,6 +164,7 @@ pub fn normalize_binding_options(
       "cjs" => OutputFormat::Cjs,
       "app" => OutputFormat::App,
       "iife" => OutputFormat::Iife,
+      "umd" => OutputFormat::Umd,
       _ => panic!("Invalid format: {format_str}"),
     }),
     globals: output_options.globals,
@@ -189,9 +191,7 @@ pub fn normalize_binding_options(
           .into_iter()
           .map(|item| MatchGroup {
             name: item.name,
-            test: item
-              .test
-              .map(|inner| HybridRegex::new(&inner).expect("Invalid regex pass to test")),
+            test: item.test.map(|inner| inner.try_into().expect("Invalid regex pass to test")),
             priority: item.priority,
             min_size: item.min_size,
             min_share_count: item.min_share_count,
@@ -202,7 +202,7 @@ pub fn normalize_binding_options(
     checks: None,
     profiler_names: input_options.profiler_names,
     jsx: input_options.jsx.map(Into::into),
-    watch: input_options.watch.map(Into::into),
+    watch: input_options.watch.map(TryInto::try_into).transpose()?,
   };
 
   #[cfg(not(target_family = "wasm"))]

@@ -1,15 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-import "node:fs";
+import "fs";
+
 
 //#region main.js
-require("node:fs");
+__require("fs");
 
 //#endregion
 ```

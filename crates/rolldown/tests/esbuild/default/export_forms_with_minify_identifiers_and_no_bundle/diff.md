@@ -1,5 +1,5 @@
 # Reason
-1. needs to disable split chunks
+1. should not generate duplicate export binding
 # Diff
 ## /out/a.js
 ### esbuild

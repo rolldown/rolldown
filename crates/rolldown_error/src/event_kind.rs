@@ -8,6 +8,7 @@ pub enum EventKind {
   MixedExport,
   MissingGlobalName,
   MissingNameOptionForIifeExport,
+  MissingNameOptionForUmdExport,
   IllegalIdentifierAsName,
   ParseError,
   InvalidOption,
@@ -20,7 +21,7 @@ pub enum EventKind {
   // --- These kinds are rolldown specific
   IllegalReassignment,
   UnloadableDependency,
-  DiagnosableResolveError,
+  ResolveError(Option<&'static str>),
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // TODO remove following kinds
@@ -30,6 +31,8 @@ pub enum EventKind {
   CommonJsVariableInEsm,
   ExportUndefinedVariable,
   ImportIsUndefined,
+
+  UnhandleableError,
 }
 
 impl Display for EventKind {
@@ -47,6 +50,7 @@ impl Display for EventKind {
       EventKind::MixedExport => write!(f, "MIXED_EXPORT"),
       EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
       EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),
+      EventKind::MissingNameOptionForUmdExport => write!(f, "MISSING_NAME_OPTION_FOR_UMD_EXPORT"),
       EventKind::IllegalIdentifierAsName => write!(f, "ILLEGAL_IDENTIFIER_AS_NAME"),
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::MissingExport => write!(f, "MISSING_EXPORT"),
@@ -57,8 +61,12 @@ impl Display for EventKind {
       EventKind::IoError => write!(f, "IO_ERROR"),
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
       EventKind::ExportUndefinedVariable => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
-      EventKind::DiagnosableResolveError => write!(f, "DIAGNOSABLE_RESOLVE_ERROR"),
+      EventKind::ResolveError(title) => match title {
+        Some(title) => write!(f, "{title}"),
+        None => write!(f, "RESOLVE_ERROR"),
+      },
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
+      EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
     }
   }
 }

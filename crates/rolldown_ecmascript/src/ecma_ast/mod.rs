@@ -2,8 +2,11 @@ use std::fmt::Debug;
 
 use crate::EcmaCompiler;
 use arcstr::ArcStr;
-use oxc::ast::Trivias;
-use oxc::{allocator::Allocator, ast::ast::Program, span::SourceType};
+use oxc::{
+  allocator::Allocator,
+  ast::ast::{Comment, Program},
+  span::SourceType,
+};
 
 use self::program_cell::ProgramCell;
 
@@ -16,7 +19,6 @@ pub use gen::ToSourceString;
 
 pub struct EcmaAst {
   pub program: ProgramCell,
-  pub trivias: Trivias,
   pub source_type: SourceType,
   pub contains_use_strict: bool,
 }
@@ -32,6 +34,10 @@ impl EcmaAst {
 
   pub fn program(&self) -> &Program {
     &self.program.borrow_dependent().program
+  }
+
+  pub fn comments(&self) -> &oxc::allocator::Vec<'_, Comment> {
+    &self.program.borrow_dependent().program.comments
   }
 }
 

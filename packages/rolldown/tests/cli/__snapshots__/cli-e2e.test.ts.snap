@@ -43,8 +43,8 @@ OPTIONS
   --jsx.refresh               React refresh transformation.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Use external live bindings.
-  --no-treeshake              Enable treeshaking.
+  --no-external-live-bindings Disable external live bindings.
+  --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --shim-missing-exports      .
 
@@ -92,6 +92,13 @@ return exports;
 })({}, node_fs);"
 `;
 
+exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
+"<DIR>/index.js.map  asset │ size: 0.22 kB
+<DIR>/index.js      chunk │ size: 0.19 kB
+
+"
+`;
+
 exports[`cli options for bundling > should handle single array options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
 
@@ -99,13 +106,13 @@ exports[`cli options for bundling > should handle single array options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.12 kB
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;
@@ -117,13 +124,13 @@ exports[`cli options for bundling > should handle single object options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.15 kB
+"<DIR>/index.js  chunk │ size: 0.14 kB
 
 "
 `;
 
 exports[`config > no package.json > should bundle in ext-js-syntax-cjs 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.13 kB
 
 "
 `;

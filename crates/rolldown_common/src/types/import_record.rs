@@ -33,6 +33,14 @@ bitflags::bitflags! {
     const CONTAINS_IMPORT_DEFAULT = 1 << 1;
     /// If it is `import {} from '...'` or `import '...'`
     const IS_PLAIN_IMPORT = 1 << 2;
+    /// the import is inserted during ast transformation, can't get source slice from the original source file
+    const IS_UNSPANNED_IMPORT = 1 << 3;
+    /// `export * from 'mod'` only
+    const IS_EXPORT_START = 1 << 4;
+    ///  Tell the finalizer to use the runtime "__require()" instead of "require()"
+    const CALL_RUNTIME_REQUIRE = 1 << 5;
+    ///  `require('mod')` is used to load the module only
+    const IS_REQUIRE_UNUSED = 1 << 6;
   }
 }
 
@@ -46,6 +54,12 @@ pub struct ImportRecord<State: Debug> {
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
   pub meta: ImportRecordMeta,
+}
+
+impl<State: Debug> ImportRecord<State> {
+  pub fn is_unspanned(&self) -> bool {
+    self.meta.contains(ImportRecordMeta::IS_UNSPANNED_IMPORT)
+  }
 }
 
 impl<T: Debug> Deref for ImportRecord<T> {
@@ -78,6 +92,11 @@ impl RawImportRecord {
       meta: ImportRecordMeta::empty(),
       state: ImportRecordStateStart { module_request_start },
     }
+  }
+
+  pub fn with_meta(mut self, meta: ImportRecordMeta) -> Self {
+    self.meta = meta;
+    self
   }
 
   #[allow(clippy::cast_possible_truncation)]

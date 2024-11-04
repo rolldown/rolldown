@@ -1,3 +1,4 @@
+mod asset;
 mod chunk;
 mod css;
 mod ecmascript;
@@ -39,6 +40,7 @@ pub mod bundler_options {
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
+  asset::asset_view::AssetView,
   chunk::{
     chunk_table::ChunkTable,
     types::{
@@ -53,7 +55,7 @@ pub use crate::{
   },
   ecmascript::{
     ecma_asset_meta::EcmaAssetMeta,
-    ecma_view::{EcmaModuleAstUsage, EcmaView},
+    ecma_view::{EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer},
     module_idx::ModuleIdx,
   },
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
@@ -61,7 +63,6 @@ pub use crate::{
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,
-  types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
@@ -104,7 +105,8 @@ pub use crate::{
   types::symbol_ref::SymbolRef,
   types::symbol_ref_db::{SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
   types::watch::{
-    BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent, WatcherEventData,
+    BundleEndEventData, BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent,
+    WatcherEventData,
   },
   types::wrap_kind::WrapKind,
 };

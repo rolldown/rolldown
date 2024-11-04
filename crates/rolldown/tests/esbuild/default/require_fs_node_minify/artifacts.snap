@@ -1,14 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "fs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry.js

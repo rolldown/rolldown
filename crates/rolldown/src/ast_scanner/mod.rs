@@ -2,7 +2,7 @@ pub mod impl_visit;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use oxc::ast::ast;
+use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
 use oxc::semantic::{Reference, ReferenceId, SymbolTable};
 use oxc::{
@@ -11,7 +11,7 @@ use oxc::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration, Program,
     },
-    Trivias, Visit,
+    Comment, Visit,
   },
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
@@ -22,7 +22,7 @@ use rolldown_common::{
   Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
-use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -35,7 +35,6 @@ pub struct ScanResult {
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
-  pub star_exports: Vec<ImportRecordIdx>,
   pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
@@ -53,15 +52,16 @@ pub struct ScanResult {
   /// level rather than module level, or a syntax error will be raised if there are multi modules
   /// has hashbang. Storing the span of hashbang used for hashbang codegen in chunk level
   pub hashbang_range: Option<Span>,
+  pub has_star_exports: bool,
 }
 
-pub struct AstScanner<'me> {
+pub struct AstScanner<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
   module_type: ModuleDefFormat,
   file_path: &'me ModuleId,
   scopes: &'me AstScopes,
-  trivias: &'me Trivias,
+  comments: &'me oxc::allocator::Vec<'me, Comment>,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -78,9 +78,10 @@ pub struct AstScanner<'me> {
   /// lhs of AssignmentExpression
   ast_usage: EcmaModuleAstUsage,
   cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
+  visit_path: Vec<AstKind<'ast>>,
 }
 
-impl<'me> AstScanner<'me> {
+impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
@@ -90,7 +91,7 @@ impl<'me> AstScanner<'me> {
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
     file_path: &'me ModuleId,
-    trivias: &'me Trivias,
+    comments: &'me oxc::allocator::Vec<'me, Comment>,
   ) -> Self {
     let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, idx, scope.root_scope_id());
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
@@ -111,7 +112,6 @@ impl<'me> AstScanner<'me> {
         stmt_infos
       },
       import_records: IndexVec::new(),
-      star_exports: Vec::new(),
       default_export_ref,
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
@@ -122,6 +122,7 @@ impl<'me> AstScanner<'me> {
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
+      has_star_exports: false,
     };
 
     Self {
@@ -137,13 +138,14 @@ impl<'me> AstScanner<'me> {
       cjs_exports_ident: None,
       source,
       file_path,
-      trivias,
+      comments,
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
+      visit_path: vec![],
     }
   }
 
-  pub fn scan(mut self, program: &Program<'_>) -> UnhandleableResult<ScanResult> {
+  pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -208,7 +210,7 @@ impl<'me> AstScanner<'me> {
         if !scanned_symbols_in_root_scope.remove(&symbol_ref) {
           return Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
-          ));
+          ))?;
         }
       }
       // if !scanned_top_level_symbols.is_empty() {
@@ -233,11 +235,13 @@ impl<'me> AstScanner<'me> {
     self.scopes.get_root_binding(name)
   }
 
+  /// `is_dummy` means if it the import record is created during ast transformation.
   fn add_import_record(
     &mut self,
     module_request: &str,
     kind: ImportKind,
     module_request_start: u32,
+    init_meta: ImportRecordMeta,
   ) -> ImportRecordIdx {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
@@ -250,7 +254,8 @@ impl<'me> AstScanner<'me> {
       .into(),
     );
     let rec =
-      RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, module_request_start);
+      RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, module_request_start)
+        .with_meta(init_meta);
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);
@@ -404,21 +409,35 @@ impl<'me> AstScanner<'me> {
       decl.source.value.as_str(),
       ImportKind::Import,
       decl.source.span().start,
+      if decl.source.span().is_empty() {
+        ImportRecordMeta::IS_UNSPANNED_IMPORT
+      } else {
+        ImportRecordMeta::empty()
+      },
     );
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
     } else {
       // export * from '...'
-      self.result.star_exports.push(id);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_START);
+      self.result.has_star_exports = true;
     }
     self.result.imports.insert(decl.span, id);
   }
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
     if let Some(source) = &decl.source {
-      let record_id =
-        self.add_import_record(source.value.as_str(), ImportKind::Import, source.span().start);
+      let record_id = self.add_import_record(
+        source.value.as_str(),
+        ImportKind::Import,
+        source.span().start,
+        if source.span().is_empty() {
+          ImportRecordMeta::IS_UNSPANNED_IMPORT
+        } else {
+          ImportRecordMeta::empty()
+        },
+      );
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(
           spec.exported.name().as_str(),
@@ -505,6 +524,11 @@ impl<'me> AstScanner<'me> {
       decl.source.value.as_str(),
       ImportKind::Import,
       decl.source.span().start,
+      if decl.source.span().is_empty() {
+        ImportRecordMeta::IS_UNSPANNED_IMPORT
+      } else {
+        ImportRecordMeta::empty()
+      },
     );
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
@@ -532,7 +556,7 @@ impl<'me> AstScanner<'me> {
       }
     });
   }
-  fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
+  fn scan_module_decl(&mut self, decl: &ModuleDeclaration<'ast>) {
     match decl {
       ast::ModuleDeclaration::ImportDeclaration(decl) => {
         self.esm_import_keyword.get_or_insert(Span::new(decl.span.start, decl.span.start + 6));

@@ -1,18 +1,19 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "__foo".
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "___foo".
 
 ```
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "__foo".
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "___foo".
 
 ```
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
@@ -24,13 +25,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "./foo" in entry.js
+   ╭─[entry.js:1:45]
+   │
+ 1 │ import { "some import" as someImport } from "./foo"
+   │                                             ───┬───  
+   │                                                ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "./foo" in entry.js
+   ╭─[entry.js:3:34]
+   │
+ 3 │ export * as "all the stuff" from "./foo"
+   │                                  ───┬───  
+   │                                     ╰───── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets
@@ -38,11 +51,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-(function(exports, __foo, __foo) {
+(function(exports, ___foo, ___foo) {
 
 "use strict";
-const all the stuff = __foo;
-const { some import: someImport } = __foo;
+const all the stuff = ___foo;
+const { some import: someImport } = ___foo;
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
@@ -52,5 +65,5 @@ Object.defineProperty(exports, 'all the stuff', {
 });
 exports["some export"] = someImport
 return exports;
-})({}, __foo, __foo);
+})({}, ___foo, ___foo);
 ```

@@ -71,9 +71,11 @@ export async function diffCase(
     let customResolver: Resolver | undefined
     let configPath = path.join(caseDir, 'diff.config.js')
     if (fs.existsSync(configPath)) {
-      const mod = (await import(configPath)).default
-      rewriteConfig = mod.rewrite ?? {}
-      customResolver = mod.resolver
+      try {
+        const mod = (await import(configPath)).default
+        rewriteConfig = mod.rewrite ?? {}
+        customResolver = mod.resolver
+      } catch {}
     }
     let matchedSource = rolldownSnap.find((rolldownSource) => {
       if (

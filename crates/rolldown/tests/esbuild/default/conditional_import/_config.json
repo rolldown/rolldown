@@ -10,6 +10,7 @@
         "name": "b",
         "import": "b.js"
       }
-    ]
+    ],
+    "external": ["a", "c"]
   }
 }

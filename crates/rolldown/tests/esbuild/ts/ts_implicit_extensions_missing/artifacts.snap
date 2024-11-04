@@ -6,25 +6,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./cjs.cjs" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './cjs.cjs' in entry.ts
+   ╭─[entry.ts:2:8]
+   │
+ 2 │ import './cjs.cjs'
+   │        ─────┬─────  
+   │             ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './js.js' in entry.ts
+   ╭─[entry.ts:3:8]
+   │
+ 3 │ import './js.js'
+   │        ────┬────  
+   │            ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './jsx.jsx' in entry.ts
+   ╭─[entry.ts:4:8]
+   │
+ 4 │ import './jsx.jsx'
+   │        ─────┬─────  
+   │             ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./mjs.mjs" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './mjs.mjs' in entry.ts
+   ╭─[entry.ts:1:8]
+   │
+ 1 │ import './mjs.mjs'
+   │        ─────┬─────  
+   │             ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

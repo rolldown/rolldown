@@ -14,6 +14,7 @@ import {
   BuiltinPlugin,
 } from '../plugin/builtin-plugin'
 import { PluginContextData } from '../plugin/plugin-context-data'
+import { normalizedStringOrRegex } from './utils'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,
@@ -196,6 +197,8 @@ function bindingifyWatch(
   if (watch) {
     let value = {
       skipWrite: watch.skipWrite,
+      include: normalizedStringOrRegex(watch.include),
+      exclude: normalizedStringOrRegex(watch.exclude),
     } as BindingWatchOption
     if (watch.notify) {
       value.notify = {

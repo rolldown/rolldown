@@ -1,3 +1,5 @@
+# Reason
+1. oxc transform strip type decl but did not remove related `ExportDecl`, this woulcause rolldown assume it export a global variable, which has side effects.
 # Diff
 ## /out.js
 ### esbuild

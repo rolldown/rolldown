@@ -3,7 +3,9 @@ use oxc::{
   ast::ast::{self, IdentifierReference, Statement},
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordIdx, Module, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{
+  AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, SymbolRef, WrapKind,
+};
 use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
@@ -41,7 +43,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.canonical_name_for(sym_ref)
   }
 
-  fn should_remove_import_export_stmt(
+  /// If return true the import stmt should be removed,
+  /// or transform the import stmt to target form.
+  fn transform_or_remove_import_export_stmt(
     &self,
     stmt: &mut Statement<'ast>,
     rec_id: ImportRecordIdx,
@@ -71,8 +75,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         );
         return false;
       }
-      // Replace the statement with something like `init_foo()`
+      // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
+      // or the importee have side effects.
       WrapKind::Esm => {
+        if rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+          && !importee.side_effects.has_side_effects()
+        {
+          return true;
+        };
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         *stmt = self.snippet.call_expr_stmt(wrapper_ref_name);
         return false;
@@ -229,7 +239,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
         }
-        OutputFormat::Cjs | OutputFormat::Iife => {
+        OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
           let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
             // Insert `__reExport(exports, require('ext'))`
             let importer_namespace_name =

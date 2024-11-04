@@ -1,3 +1,5 @@
+# Reason
+1. Strip `await` when format don't support top level await
 # Diff
 ## /out.js
 ### esbuild
@@ -9,24 +11,35 @@
 ```
 ### rolldown
 ```js
+(function() {
+
 
 //#region entry.js
 if (false) await foo;
 if (false) for await (foo of bar);
 
 //#endregion
+})();
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,2 @@
+@@ -1,4 +1,9 @@
 -(() => {
 -    if (false) foo;
 -    if (false) for (foo of bar) ;
 -})();
++(function() {
++
++
++//#region entry.js
 +if (false) await foo;
-+if (false) for await (foo of bar) ;
++if (false) for await (foo of bar);
++
++//#endregion
++})();
+\ No newline at end of file
 
 ```

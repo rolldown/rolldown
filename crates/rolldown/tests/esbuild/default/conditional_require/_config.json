@@ -6,6 +6,7 @@
         "name": "a",
         "import": "a.js"
       }
-    ]
+    ],
+    "external": ["a", "c"]
   }
 }

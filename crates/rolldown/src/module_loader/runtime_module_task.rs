@@ -1,19 +1,19 @@
 use arcstr::ArcStr;
-use oxc::index::IndexVec;
 use oxc::span::SourceType;
+use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaView, ExportsKind, ModuleDefFormat, ModuleId,
-  ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaView, EcmaViewMeta, ExportsKind,
+  ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rustc_hash::FxHashSet;
 
 use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
-  utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
+  utils::tweak_ast_for_scanning::PreProcessor,
 };
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
@@ -45,12 +45,12 @@ impl RuntimeModuleTask {
   pub fn run(mut self) -> anyhow::Result<()> {
     let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-without-comments.js"));
 
-    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
+    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
 
     let ecma_ast_result = match ecma_ast_result {
       Ok(ecma_ast_result) => ecma_ast_result,
       Err(errs) => {
-        self.errors.extend(errs);
+        self.errors.extend(errs.into_vec());
         return Ok(());
       }
     };
@@ -63,7 +63,6 @@ impl RuntimeModuleTask {
       named_imports,
       named_exports,
       stmt_infos,
-      star_exports,
       default_export_ref,
       imports,
       import_records: _,
@@ -75,6 +74,7 @@ impl RuntimeModuleTask {
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: _,
       hashbang_range: _,
+      has_star_exports,
     } = scan_result;
 
     let module = NormalModule {
@@ -93,7 +93,6 @@ impl RuntimeModuleTask {
         source,
 
         import_records: IndexVec::default(),
-        is_included: false,
         sourcemap_chain: vec![],
         // The internal runtime module `importers/imported` should be skip.
         importers: vec![],
@@ -101,12 +100,10 @@ impl RuntimeModuleTask {
         imported_ids: vec![],
         dynamically_imported_ids: vec![],
         side_effects: DeterminedSideEffects::Analyzed(false),
-        has_eval,
         named_imports,
         named_exports,
         stmt_infos,
         imports,
-        star_exports,
         default_export_ref,
         scope: ast_scope,
         exports_kind: ExportsKind::Esm,
@@ -115,8 +112,18 @@ impl RuntimeModuleTask {
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
         hashbang_range: None,
+        meta: {
+          let mut meta = EcmaViewMeta::default();
+          meta.set_included(false);
+          meta.set_eval(has_eval);
+          meta.set_has_lazy_export(false);
+          meta.set_has_star_exports(has_star_exports);
+          meta
+        },
+        mutations: vec![],
       },
       css_view: None,
+      asset_view: None,
     };
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
@@ -132,22 +139,16 @@ impl RuntimeModuleTask {
     Ok(())
   }
 
-  fn make_ecma_ast(
-    &mut self,
-    filename: &str,
-    source: &ArcStr,
-  ) -> UnhandleableResult<DiagnosableResult<MakeEcmaAstResult>> {
+  fn make_ecma_ast(&mut self, filename: &str, source: &ArcStr) -> BuildResult<MakeEcmaAstResult> {
     let source_type = SourceType::default();
 
-    let parse_result = EcmaCompiler::parse(filename, source, source_type);
+    let mut ast = EcmaCompiler::parse(filename, source, source_type)?;
 
-    let mut ast = match parse_result {
-      Ok(ast) => ast,
-      Err(errs) => {
-        return Ok(Err(errs));
-      }
-    };
-    tweak_ast_for_scanning(&mut ast);
+    ast.program.with_mut(|fields| {
+      let mut pre_processor = PreProcessor::new(fields.allocator, false);
+      pre_processor.visit_program(fields.program);
+      ast.contains_use_strict = pre_processor.contains_use_strict;
+    });
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScopes::new(
@@ -164,11 +165,11 @@ impl RuntimeModuleTask {
       ModuleDefFormat::EsmMjs,
       source,
       &facade_path,
-      &ast.trivias,
+      ast.comments(),
     );
     let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program())?;
 
-    Ok(Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref }))
+    Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref })
   }
 }

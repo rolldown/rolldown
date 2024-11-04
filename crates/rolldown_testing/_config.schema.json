@@ -210,6 +210,12 @@
             "null"
           ]
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "footer": {
           "type": [
             "string",
@@ -342,6 +348,12 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "sourcemapDebugIds": {
+          "type": [
+            "boolean",
+            "null"
           ]
         },
         "treeshake": {
@@ -578,7 +590,8 @@
             "dataurl",
             "binary",
             "empty",
-            "css"
+            "css",
+            "asset"
           ]
         },
         {
@@ -632,7 +645,8 @@
         "esm",
         "cjs",
         "app",
-        "iife"
+        "iife",
+        "umd"
       ]
     },
     "Platform": {
@@ -809,6 +823,24 @@
         "skipWrite"
       ],
       "properties": {
+        "exclude": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "include": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "notify": {
           "anyOf": [
             {

@@ -15,15 +15,15 @@ pub async fn render_chunks<'a>(
     // TODO(hyf0): To be refactor:
     // - content should use ArcStr
     // - plugin_driver.render_chunk should return Option<...> to be able to see if there is a return value by the plugin
-    if let InstantiationKind::Ecma(ecma_meta) = &asset.meta {
+    if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
       let render_chunk_ret = plugin_driver
         .render_chunk(HookRenderChunkArgs {
-          code: asset.content.clone(),
+          code: asset.content.clone().try_into_inner_string()?,
           chunk: &ecma_meta.rendered_chunk,
         })
         .await?;
 
-      asset.content = render_chunk_ret.0;
+      asset.content = render_chunk_ret.0.into();
       if let Some(asset_map) = &asset.map {
         if !render_chunk_ret.1.is_empty() {
           let mut sourcemap_chain = Vec::with_capacity(render_chunk_ret.1.len() + 1);

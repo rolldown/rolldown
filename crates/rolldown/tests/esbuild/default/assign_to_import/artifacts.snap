@@ -1,0 +1,111 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region node_modules/foo/index.js
+var require_foo = __commonJS({ "node_modules/foo/index.js"() {} });
+
+//#endregion
+//#region bad0.js
+var import_foo$18 = __toESM(require_foo());
+import_foo$18.default = 1;
+
+//#endregion
+//#region bad1.js
+var import_foo$17 = __toESM(require_foo());
+import_foo$17.default++;
+
+//#endregion
+//#region bad2.js
+var import_foo$16 = __toESM(require_foo());
+[import_foo$16.default] = 1;
+
+//#endregion
+//#region bad3.js
+var import_foo$15 = __toESM(require_foo());
+({x: import_foo$15.default} = 1);
+
+//#endregion
+//#region bad4.js
+var import_foo$14 = __toESM(require_foo());
+({y: import_foo$14.default} = 1);
+
+//#endregion
+//#region bad5.js
+var import_foo$13 = __toESM(require_foo());
+import_foo$13.x++;
+
+//#endregion
+//#region bad6.js
+var import_foo$12 = __toESM(require_foo());
+import_foo$12++;
+
+//#endregion
+//#region bad7.js
+var import_foo$11 = __toESM(require_foo());
+import_foo$11.y = 1;
+
+//#endregion
+//#region bad8.js
+var import_foo$10 = __toESM(require_foo());
+import_foo$10[y] = 1;
+
+//#endregion
+//#region bad9.js
+var import_foo$9 = __toESM(require_foo());
+import_foo$9["y"] = 1;
+
+//#endregion
+//#region bad10.js
+var import_foo$8 = __toESM(require_foo());
+import_foo$8["y z"] = 1;
+
+//#endregion
+//#region bad13.js
+var import_foo$7 = __toESM(require_foo());
+delete import_foo$7.y;
+
+//#endregion
+//#region bad14.js
+var import_foo$6 = __toESM(require_foo());
+delete import_foo$6["y"];
+
+//#endregion
+//#region bad15.js
+var import_foo$5 = __toESM(require_foo());
+delete import_foo$5[y];
+
+//#endregion
+//#region good0.js
+var import_foo$4 = __toESM(require_foo());
+({y = import_foo$4.default} = 1);
+
+//#endregion
+//#region good1.js
+var import_foo$3 = __toESM(require_foo());
+({[import_foo$3.default]: y} = 1);
+
+//#endregion
+//#region good2.js
+var import_foo$2 = __toESM(require_foo());
+import_foo$2.default.y = 1;
+
+//#endregion
+//#region good3.js
+var import_foo$1 = __toESM(require_foo());
+import_foo$1.default[y] = 1;
+
+//#endregion
+//#region good4.js
+var import_foo = __toESM(require_foo());
+import_foo.default["y"] = 1;
+
+//#endregion
+```

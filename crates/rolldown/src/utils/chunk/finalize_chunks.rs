@@ -1,13 +1,14 @@
-use std::hash::Hash;
+use std::{hash::Hash, mem};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{AssetIdx, InstantiationKind, ModuleId};
+use rolldown_common::{AssetIdx, InstantiationKind, ModuleId, StrOrBytes};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
+  hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
@@ -19,7 +20,6 @@ use xxhash_rust::xxh3::Xxh3;
 use crate::{
   chunk_graph::ChunkGraph,
   type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
-  utils::hash_placeholder::{extract_hash_placeholders, replace_facade_hash_replacement},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -39,19 +39,20 @@ pub fn finalize_assets(
     .collect::<FxHashMap<ArcStr, _>>();
 
   let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
-    .as_vec()
     .par_iter()
-    .map(|asset| {
-      extract_hash_placeholders(&asset.content)
+    .map(|asset| match &asset.content {
+      StrOrBytes::Str(content) => extract_hash_placeholders(content)
         .iter()
         .filter_map(|placeholder| asset_idx_by_placeholder.get(placeholder).copied())
-        .collect_vec()
+        .collect_vec(),
+      StrOrBytes::Bytes(_content) => {
+        vec![]
+      }
     })
     .collect::<Vec<_>>()
     .into();
 
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
-    .as_vec()
     .par_iter()
     .map(|chunk| xxhash_base64_url(chunk.content.as_bytes()))
     .collect::<Vec<_>>()
@@ -60,7 +61,7 @@ pub fn finalize_assets(
   let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
     index_vec![Xxh3::default(); preliminary_assets.len()];
 
-  let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
+  let index_final_hashes: IndexVec<AssetIdx, (String, u128)> = index_asset_hashers
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut hasher)| {
@@ -82,20 +83,17 @@ pub fn finalize_assets(
       }
 
       let digested = hasher.digest128();
-      to_url_safe_base64(digested.to_le_bytes())
+      (to_url_safe_base64(digested.to_le_bytes()), digested)
     })
     .collect::<Vec<_>>()
     .into();
 
-  let final_hashes_by_placeholder = chunk_graph
-    .chunk_table
-    .iter()
-    .zip(&index_final_hashes)
-    .filter_map(|(chunk, hash)| {
-      chunk
+  let final_hashes_by_placeholder = index_final_hashes
+    .iter_enumerated()
+    .filter_map(|(idx, (hash, _))| {
+      let asset = &preliminary_assets[idx];
+      asset
         .preliminary_filename
-        .as_ref()
-        .unwrap()
         .hash_placeholder()
         .map(|hash_placeholder| (hash_placeholder.into(), &hash[..hash_placeholder.len()]))
     })
@@ -103,21 +101,32 @@ pub fn finalize_assets(
 
   let mut assets: IndexAssets = preliminary_assets
     .into_par_iter()
-    .map(|mut asset| {
-      let preliminary_filename_raw = asset.preliminary_filename.to_string();
-      let filename: ModuleId =
-        replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
-          .into();
+    .enumerate()
+    .map(|(asset_idx, mut asset)| {
+      let asset_idx = AssetIdx::from(asset_idx);
 
-      if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
+      let filename: ModuleId = replace_placeholder_with_hash(
+        asset.preliminary_filename.as_str(),
+        &final_hashes_by_placeholder,
+      )
+      .into_owned()
+      .into();
+
+      if let InstantiationKind::Ecma(ecma_meta) = &mut asset.kind {
         ecma_meta.rendered_chunk.filename = filename.clone();
+        let (_, debug_id) = index_final_hashes[asset_idx];
+        ecma_meta.rendered_chunk.debug_id = debug_id;
       }
 
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
-      asset.content = replace_facade_hash_replacement(
-        std::mem::take(&mut asset.content),
-        &final_hashes_by_placeholder,
-      );
+      match &mut asset.content {
+        StrOrBytes::Str(content) => {
+          *content =
+            replace_placeholder_with_hash(mem::take(content), &final_hashes_by_placeholder)
+              .into_owned();
+        }
+        StrOrBytes::Bytes(_content) => {}
+      }
 
       asset.finalize(filename.to_string())
     })

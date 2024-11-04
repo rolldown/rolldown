@@ -2,10 +2,10 @@ use rolldown::ModuleType;
 use rolldown_plugin::{GeneralHookFilter, ResolvedIdHookFilter, TransformHookFilter};
 use serde::Deserialize;
 
-use super::binding_js_or_regex::BindingStringOrRegex;
+use super::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Default, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingGeneralHookFilter {
   pub include: Option<Vec<BindingStringOrRegex>>,
@@ -16,22 +16,10 @@ impl TryFrom<BindingGeneralHookFilter> for GeneralHookFilter {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingGeneralHookFilter) -> Result<Self, Self::Error> {
-    let mut ret = Self::default();
-    if let Some(binding_include) = value.include {
-      let mut include = Vec::with_capacity(binding_include.len());
-      for i in binding_include {
-        include.push(i.try_into()?);
-      }
-      ret.include = Some(include);
-    }
-    if let Some(binding_exclude) = value.exclude {
-      let mut exclude = vec![];
-      for i in binding_exclude {
-        exclude.push(i.try_into()?);
-      }
-      ret.exclude = Some(exclude);
-    }
-    Ok(ret)
+    Ok(Self {
+      include: value.include.map(bindingify_string_or_regex_array).transpose()?,
+      exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?,
+    })
   }
 }
 

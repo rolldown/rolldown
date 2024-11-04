@@ -25,6 +25,7 @@ import { ParallelPlugin } from './parallel-plugin'
 import type { DefinedHookNames } from '../constants/plugin'
 import { DEFINED_HOOK_NAMES } from '../constants/plugin'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
+import { HookFilter } from './hook-filter'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
@@ -261,25 +262,11 @@ export type ParallelPluginHooks = Exclude<
 >
 export type hookFilterExtension<K extends keyof FunctionPluginHooks> =
   K extends 'transform'
-    ? { filter?: BaseHookFilter }
+    ? { filter?: HookFilter }
     : K extends 'load' | 'resolveId'
-      ? { filter?: Omit<BaseHookFilter, 'code' | 'moduleType'> }
+      ? { filter?: Pick<HookFilter, 'id'> }
       : {}
-export type BaseHookFilter = {
-  id?: {
-    include?: (string | RegExp)[]
-    exclude?: (string | RegExp)[]
-  }
-  moduleType?:
-    | ModuleType[]
-    | {
-        include?: ModuleType[]
-      }
-  code?: {
-    include?: (string | RegExp)[]
-    exclude?: (string | RegExp)[]
-  }
-}
+
 export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<
     K extends AsyncPluginHooks

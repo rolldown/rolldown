@@ -22,6 +22,7 @@ arcstr             = { workspace = true }
 bitflags           = { workspace = true }
 dashmap            = { workspace = true }
 glob-match         = { workspace = true }
+itertools          = { workspace = true }
 lightningcss       = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 rolldown_fs        = { workspace = true }

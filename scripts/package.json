@@ -24,17 +24,17 @@
     "semver": "^7.6.2",
     "zx": "^8.1.2",
     "remark-parse": "^11.0.0",
-    "tree-sitter": "^0.21.1",
+    "tree-sitter": "^0.22.0",
     "unified": "^11.0.5"
   },
   "devDependencies": {
     "@oxc-node/core": "^0.0.15",
-    "@types/diff": "^5.2.2",
+    "@types/diff": "^6.0.0",
     "@types/lodash-es": "^4.17.12",
     "acorn": "^8.12.1",
     "astring": "^1.9.0",
     "diff": "^7.0.0",
     "estree-toolkit": "^1.7.8",
-    "web-tree-sitter": "^0.23.0"
+    "web-tree-sitter": "^0.24.0"
   }
 }

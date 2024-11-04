@@ -16,11 +16,11 @@ console.log(src_default);
 import assert from "node:assert";
 
 //#region index.js
-var require_parent_dir_es6_index_default = 123;
+var require_parent_dir_es6_default = 123;
 
 //#endregion
 //#region dir/entry.js
-assert.equal(require_parent_dir_es6_index_default, 123);
+assert.equal(require_parent_dir_es6_default, 123);
 
 //#endregion
 ```
@@ -32,7 +32,7 @@ assert.equal(require_parent_dir_es6_index_default, 123);
 @@ -1,2 +1,2 @@
 -var src_default = 123;
 -console.log(src_default);
-+var require_parent_dir_es6_index_default = 123;
-+console.log(require_parent_dir_es6_index_default);
++var require_parent_dir_es6_default = 123;
++console.log(require_parent_dir_es6_default);
 
 ```

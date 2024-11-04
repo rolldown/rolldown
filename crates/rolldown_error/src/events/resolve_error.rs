@@ -1,30 +1,28 @@
 use crate::types::diagnostic_options::DiagnosticOptions;
 use arcstr::ArcStr;
-use oxc::span::Span;
 
-use super::BuildEvent;
+use super::{BuildEvent, DiagnosableArcstr};
 
 #[derive(Debug)]
 pub struct DiagnosableResolveError {
   pub source: ArcStr,
   pub importer_id: ArcStr,
-  pub importee_span: Span,
+  pub importee: DiagnosableArcstr,
   pub reason: String,
+  pub title: Option<&'static str>,
 }
 
 impl BuildEvent for DiagnosableResolveError {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::DiagnosableResolveError
+    crate::event_kind::EventKind::ResolveError(self.title)
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
-    let start = self.importee_span.start as usize;
-    let end = self.importee_span.end as usize;
-    format!(
-      "Could not resolve {} in {}",
-      &self.source[start..end],
-      opts.stabilize_path(self.importer_id.as_str())
-    )
+    let importee = match &self.importee {
+      DiagnosableArcstr::String(str) => str.as_str(),
+      DiagnosableArcstr::Span(span) => &self.source.as_str()[*span],
+    };
+    format!("Could not resolve {} in {}", importee, opts.stabilize_path(self.importer_id.as_str()))
   }
 
   fn on_diagnostic(
@@ -35,11 +33,12 @@ impl BuildEvent for DiagnosableResolveError {
     let stable_id = opts.stabilize_path(self.importer_id.as_str());
     let importer_file = diagnostic.add_file(stable_id, self.source.clone());
 
-    diagnostic.add_label(
-      &importer_file,
-      self.importee_span.start..self.importee_span.end,
-      self.reason.clone(),
-    );
+    match self.importee {
+      DiagnosableArcstr::Span(span) if !span.is_unspanned() => {
+        diagnostic.add_label(&importer_file, span.start..span.end, self.reason.clone());
+      }
+      _ => {}
+    };
     diagnostic.title = self.message(opts);
   }
 }

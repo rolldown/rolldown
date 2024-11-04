@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:path" in "output.globals" – guessing "node_path".
+
+```
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(require('node:path')) :
+  typeof define === 'function' && define.amd ? define(['node:path'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.node_path));
+})(this, function(node_path) {
+"use strict";
+const { default: nodePath } = node_path;
+
+//#region main.js
+console.log(nodePath);
+
+//#endregion
+});
+```

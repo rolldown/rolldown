@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -13,10 +14,10 @@ var foo_import_default = "foo";
 
 //#endregion
 //#region src/index.js
-var src_index_default = "index";
-assert.equal(src_index_default, "index");
+var src_default = "index";
+assert.equal(src_default, "index");
 assert.equal(foo_import_default, "foo");
 
 //#endregion
-export { src_index_default as default };
+export { src_default as default };
 ```

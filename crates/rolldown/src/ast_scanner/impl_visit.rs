@@ -2,11 +2,11 @@ use oxc::{
   ast::{
     ast::{self, Expression, IdentifierReference, MemberExpression},
     visit::walk,
-    Visit,
+    AstKind, Visit,
   },
   span::{GetSpan, Span},
 };
-use rolldown_common::ImportKind;
+use rolldown_common::{ImportKind, ImportRecordMeta};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
@@ -15,12 +15,20 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
-impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
+impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
+  fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
+    self.visit_path.push(kind);
+  }
+
+  fn leave_node(&mut self, _: oxc::ast::AstKind<'ast>) {
+    self.visit_path.pop();
+  }
+
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
-        SideEffectDetector::new(self.scopes, self.source, self.trivias)
+        SideEffectDetector::new(self.scopes, self.source, self.comments)
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
@@ -108,6 +116,11 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         request.value.as_str(),
         ImportKind::DynamicImport,
         expr.source.span().start,
+        if expr.source.span().is_empty() {
+          ImportRecordMeta::IS_UNSPANNED_IMPORT
+        } else {
+          ImportRecordMeta::empty()
+        },
       );
       self.result.imports.insert(expr.span, id);
     }
@@ -120,6 +133,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     }
     walk::walk_declaration(self, it);
   }
+
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
       ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
@@ -173,8 +187,48 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     }
     if expr.is_global_require_call(self.scopes) {
       if let Some(ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
-        let id =
-          self.add_import_record(request.value.as_str(), ImportKind::Require, request.span().start);
+        let id = self.add_import_record(
+          request.value.as_str(),
+          ImportKind::Require,
+          request.span().start,
+          if request.span().is_empty() {
+            ImportRecordMeta::IS_UNSPANNED_IMPORT
+          } else {
+            let mut is_require_used = true;
+            let mut meta = ImportRecordMeta::empty();
+            // traverse nearest ExpressionStatement and check if there are potential used
+            for ancestor in self.visit_path.iter().rev() {
+              match ancestor {
+                AstKind::ParenthesizedExpression(_) => {}
+                AstKind::ExpressionStatement(_) => {
+                  meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
+                  break;
+                }
+                AstKind::SequenceExpression(seq_expr) => {
+                  // the child node has require and it is potential used
+                  // the state may changed according to the child node position
+                  // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
+                  //    in the last position, it is still used if it meant any other astKind
+                  // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
+                  //    not in the last position, the state should change to unused
+                  let last = seq_expr.expressions.last().expect("should have at least one child");
+
+                  if !last.span().is_empty() && !expr.span.is_empty() {
+                    is_require_used = last.span().contains_inclusive(expr.span);
+                  } else {
+                    is_require_used = true;
+                  }
+                }
+                _ => {
+                  if is_require_used {
+                    break;
+                  }
+                }
+              }
+            }
+            meta
+          },
+        );
         self.result.imports.insert(expr.span, id);
       }
     }
@@ -183,9 +237,9 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 }
 
-impl<'me> AstScanner<'me> {
+impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// visit `Class` of declaration
-  pub fn scan_class_declaration(&mut self, class: &ast::Class<'_>) {
+  pub fn scan_class_declaration(&mut self, class: &ast::Class<'ast>) {
     let Some(id) = class.id.as_ref() else {
       return;
     };

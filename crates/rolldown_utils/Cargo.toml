@@ -17,6 +17,7 @@ workspace = true
 
 [dependencies]
 anyhow             = { workspace = true }
+arcstr             = { workspace = true }
 base64-simd        = { workspace = true }
 futures            = { workspace = true }
 glob-match         = { workspace = true }
@@ -25,6 +26,7 @@ infer              = { workspace = true }
 memchr             = { workspace = true }
 mime               = { workspace = true }
 oxc                = { workspace = true }
+oxc_index          = { workspace = true }
 phf                = { workspace = true }
 regex              = { workspace = true }
 regress            = { workspace = true }

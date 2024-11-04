@@ -44,7 +44,7 @@ Promise.resolve().then(() => (init_a(), a_exports)).then((x) => assert(x.foo ===
 ```js
 
 //#region src/entry.js
-import("./a_index.js").then((x) => assert(x.foo === "foo"));
+import("./a.js").then((x) => assert(x.foo === "foo"));
 
 //#endregion
 ```
@@ -79,6 +79,6 @@ import("./a_index.js").then((x) => assert(x.foo === "foo"));
 -    }
 -});
 -Promise.resolve().then(() => (init_a(), a_exports)).then(x => assert(x.foo === "foo"));
-+import("./a_index.js").then(x => assert(x.foo === "foo"));
++import("./a.js").then(x => assert(x.foo === "foo"));
 
 ```

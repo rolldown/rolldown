@@ -1,3 +1,6 @@
+# Reason
+1. static class field lowering
+2. transform `FunctionDeclaration` to `FunctionExpr`
 # Diff
 ## /out.js
 ### esbuild

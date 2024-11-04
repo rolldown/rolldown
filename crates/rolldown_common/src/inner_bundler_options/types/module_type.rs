@@ -23,6 +23,7 @@ pub enum ModuleType {
   Binary,
   Empty,
   Css,
+  Asset,
   Custom(String),
 }
 
@@ -76,6 +77,7 @@ impl Display for ModuleType {
       ModuleType::Binary => write!(f, "binary"),
       ModuleType::Empty => write!(f, "empty"),
       ModuleType::Css => write!(f, "css"),
+      ModuleType::Asset => write!(f, "asset"),
       ModuleType::Custom(custom_type) => write!(f, "{custom_type}"),
     }
   }

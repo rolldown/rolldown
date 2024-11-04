@@ -79,6 +79,13 @@ describe('cli options for bundling', () => {
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+
+  it('should handle pass `-s` options', async () => {
+    const cwd = cliFixturesDir('cli-option-sourcemap')
+    const status = await $({ cwd })`rolldown index.ts -d dist -s`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
 })
 
 describe('config', () => {

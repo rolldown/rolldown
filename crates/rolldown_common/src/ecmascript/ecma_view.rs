@@ -5,15 +5,77 @@ use rolldown_rstr::Rstr;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaAstIdx, ExportsKind, ImportRecordIdx,
-  LocalExport, ModuleDefFormat, ModuleId, NamedImport, ResolvedImportRecord, StmtInfos, SymbolRef,
+  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopes,
+  EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
+  ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
 };
+
+bitflags! {
+    #[derive(Debug, Default)]
+    pub struct EcmaViewMeta: u8 {
+        const EVAL = 1;
+        const INCLUDED = 1 << 1;
+        const HAS_LAZY_EXPORT = 1 << 2;
+        const HAS_STAR_EXPORT = 1 << 3;
+    }
+}
+
+impl EcmaViewMeta {
+  #[inline]
+  pub fn has_eval(&self) -> bool {
+    self.contains(Self::EVAL)
+  }
+  #[inline]
+  pub fn is_included(&self) -> bool {
+    self.contains(Self::INCLUDED)
+  }
+  #[inline]
+  pub fn has_lazy_export(&self) -> bool {
+    self.contains(Self::HAS_LAZY_EXPORT)
+  }
+  #[inline]
+  pub fn has_star_export(&self) -> bool {
+    self.contains(Self::HAS_STAR_EXPORT)
+  }
+
+  #[inline]
+  pub fn set_eval(&mut self, value: bool) {
+    if value {
+      self.insert(Self::EVAL);
+    } else {
+      self.remove(Self::EVAL);
+    }
+  }
+  #[inline]
+  pub fn set_included(&mut self, value: bool) {
+    if value {
+      self.insert(Self::INCLUDED);
+    } else {
+      self.remove(Self::INCLUDED);
+    }
+  }
+  #[inline]
+  pub fn set_has_lazy_export(&mut self, value: bool) {
+    if value {
+      self.insert(Self::HAS_LAZY_EXPORT);
+    } else {
+      self.remove(Self::HAS_LAZY_EXPORT);
+    }
+  }
+  #[inline]
+  pub fn set_has_star_exports(&mut self, value: bool) {
+    if value {
+      self.insert(Self::HAS_STAR_EXPORT);
+    } else {
+      self.remove(Self::HAS_STAR_EXPORT);
+    }
+  }
+}
 
 #[derive(Debug)]
 pub struct EcmaView {
   pub source: ArcStr,
   pub ecma_ast_idx: Option<EcmaAstIdx>,
-  pub has_eval: bool,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
@@ -25,13 +87,10 @@ pub struct EcmaView {
   /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
   /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<Span, ImportRecordIdx>,
-  // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
-  pub star_exports: Vec<ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub scope: AstScopes,
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
-  pub is_included: bool,
   // the ids of all modules that statically import this module
   pub importers: Vec<ModuleId>,
   // the ids of all modules that import this module via dynamic import()
@@ -45,6 +104,8 @@ pub struct EcmaView {
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   // the range of hashbang in source
   pub hashbang_range: Option<Span>,
+  pub meta: EcmaViewMeta,
+  pub mutations: Vec<BoxedSourceMutation>,
 }
 
 bitflags! {
@@ -54,4 +115,21 @@ bitflags! {
         const ExportsRef = 1 << 1;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
+}
+
+#[derive(Debug, Default)]
+pub struct ImportMetaRolldownAssetReplacer {
+  pub asset_filename: String,
+}
+
+impl SourceMutation for ImportMetaRolldownAssetReplacer {
+  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
+    // TODO: should use replace method instead of this
+    let code = magic_string.to_string();
+
+    *magic_string = string_wizard::MagicString::new(
+      code
+        .replace("import.meta.__ROLLDOWN_ASSET_FILENAME", &format!("\"{}\"", self.asset_filename)),
+    );
+  }
 }

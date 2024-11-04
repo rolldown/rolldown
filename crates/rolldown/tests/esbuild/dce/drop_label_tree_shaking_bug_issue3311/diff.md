@@ -19,9 +19,7 @@ export {
 
 //#region entry.js
 const myFunc = () => {
-	DROP: {
-		console.log("drop");
-	}
+	DROP: console.log("drop");
 	console.log("keep");
 };
 var entry_default = myFunc;
@@ -34,11 +32,9 @@ export { entry_default as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,8 @@
+@@ -1,5 +1,6 @@
  var myFunc = () => {
-+    DROP: {
-+        console.log("drop");
-+    }
++    DROP: console.log("drop");
      console.log("keep");
  };
  var entry_default = myFunc;

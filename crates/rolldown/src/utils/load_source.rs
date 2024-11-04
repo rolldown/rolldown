@@ -41,15 +41,17 @@ pub async fn load_source(
           Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), ModuleType::Js))
         }
         (source, Some(guessed)) => match &guessed {
-          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
-            StrOrBytes::Bytes({
-              source
-                .map(String::into_bytes)
-                .ok_or(())
-                .or_else(|()| fs.read(resolved_id.id.as_path()))?
-            }),
-            guessed,
-          )),
+          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
+            Ok((
+              StrOrBytes::Bytes({
+                source
+                  .map(String::into_bytes)
+                  .ok_or(())
+                  .or_else(|()| fs.read(resolved_id.id.as_path()))?
+              }),
+              guessed,
+            ))
+          }
           ModuleType::Js
           | ModuleType::Jsx
           | ModuleType::Ts

@@ -6,3 +6,5 @@ function foo() {
 		y, y,
 	)
 }
+
+assert(foo() !== undefined) // ensure this is not removed by DCE

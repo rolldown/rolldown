@@ -29,7 +29,7 @@ impl BindingWatcher {
   pub fn on(
     &self,
     event: BindingWatcherEvent,
-    listener: MaybeAsyncJsCallback<Option<HashMap<String, String>>, ()>,
+    listener: MaybeAsyncJsCallback<Option<HashMap<&'static str, String>>, ()>,
   ) -> napi::Result<()> {
     self.inner.emitter.on(
       event.into(),

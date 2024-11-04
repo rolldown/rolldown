@@ -1,13 +1,15 @@
 use std::{ptr::addr_of, sync::Mutex};
 
+use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
+  ModuleTable, OutputFormat, ResolvedImportRecord, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
+  index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 use rustc_hash::FxHashSet;
@@ -24,6 +26,7 @@ use self::wrapping::create_wrapper;
 use super::scan_stage::ScanStageOutput;
 
 mod bind_imports_and_exports;
+mod generate_lazy_export;
 mod sort_modules;
 pub(crate) mod tree_shaking;
 mod wrapping;
@@ -103,6 +106,7 @@ impl<'a> LinkStage<'a> {
 
     self.determine_module_exports_kind();
     self.wrap_modules();
+    self.generate_lazy_export();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
@@ -139,7 +143,9 @@ impl<'a> LinkStage<'a> {
 
         match rec.kind {
           ImportKind::Import => {
-            if matches!(importee.exports_kind, ExportsKind::None) {
+            if matches!(importee.exports_kind, ExportsKind::None)
+              && !importee.meta.has_lazy_export()
+            {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
                 if rec.meta.intersects(
@@ -232,33 +238,41 @@ impl<'a> LinkStage<'a> {
       }
 
       // TODO: should have a better place to put this
-      if is_entry && matches!(self.options.format, OutputFormat::Cjs) {
-        importer.star_exports.iter().for_each(|rec_idx| {
-          let rec = &importer.import_records[*rec_idx];
-          match &self.module_table.modules[rec.resolved_module] {
-            Module::Normal(_) => {}
-            Module::External(ext) => {
-              self.metas[importer.idx]
-                .require_bindings_for_star_exports
-                .entry(rec.resolved_module)
-                .or_insert_with(|| {
-                  // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
-                  self.symbols.create_facade_root_symbol_ref(
-                    importer.idx,
-                    legitimize_identifier_name(&ext.name).into_owned().into(),
-                  )
-                });
+      if is_entry && matches!(self.options.format, OutputFormat::Cjs) && importer.has_star_export()
+      {
+        importer
+          .import_records
+          .iter()
+          .filter(|rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+          .for_each(|rec| {
+            match &self.module_table.modules[rec.resolved_module] {
+              Module::Normal(_) => {}
+              Module::External(ext) => {
+                self.metas[importer.idx]
+                  .require_bindings_for_star_exports
+                  .entry(rec.resolved_module)
+                  .or_insert_with(|| {
+                    // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
+                    self.symbols.create_facade_root_symbol_ref(
+                      importer.idx,
+                      legitimize_identifier_name(&ext.name).into_owned().into(),
+                    )
+                  });
+              }
             }
-          }
-        });
+          });
       };
     });
   }
 
+  #[allow(clippy::collapsible_if)]
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
+    let record_meta_update_pending_pairs_list = AppendOnlyVec::new();
     self.module_table.modules.par_iter().filter_map(Module::as_normal).for_each(|importer| {
+      let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
+      let importer_idx = importer.idx;
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
@@ -269,12 +283,25 @@ impl<'a> LinkStage<'a> {
       stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
-          match &self.module_table.modules[rec.resolved_module] {
+          let rec_resolved_module = &self.module_table.modules[rec.resolved_module];
+          if !rec_resolved_module.is_normal()
+            || is_external_dynamic_import(&self.module_table, rec, importer_idx)
+          {
+            if matches!(rec.kind, ImportKind::Require)
+              || !self.options.format.keep_esm_import_export()
+            {
+              if self.options.format.should_call_runtime_require() {
+                stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
+                record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
+              }
+            }
+          }
+          match rec_resolved_module {
             Module::External(importee) => {
               // Make sure symbols from external modules are included and de_conflicted
               match rec.kind {
                 ImportKind::Import => {
-                  let is_reexport_all = importer.star_exports.contains(rec_id);
+                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_START);
                   if is_reexport_all {
                     // export * from 'external' would be just removed. So it references nothing.
                     rec.namespace_ref.set_name(
@@ -298,7 +325,7 @@ impl<'a> LinkStage<'a> {
               let importee_linking_info = &self.metas[importee.idx];
               match rec.kind {
                 ImportKind::Import => {
-                  let is_reexport_all = importer.star_exports.contains(rec_id);
+                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_START);
                   match importee_linking_info.wrap_kind {
                     WrapKind::None => {
                       // for case:
@@ -321,6 +348,7 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                          stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                         }
                       }
                     }
@@ -387,15 +415,18 @@ impl<'a> LinkStage<'a> {
                       .push(importee_linking_info.wrapper_ref.unwrap().into());
                   }
                   WrapKind::Esm => {
-                    // something like `(init_foo(), toCommonJS(foo_exports))`
-                    // Reference to `init_foo`
+                    // convert require record into `(init_foo(), __toCommonJS(foo_exports))` if
+                    // `require('xxx)` is used, else convert it to `init_foo()`
                     stmt_info
                       .referenced_symbols
                       .push(importee_linking_info.wrapper_ref.unwrap().into());
-                    stmt_info
-                      .referenced_symbols
-                      .push(self.runtime.resolve_symbol("__toCommonJS").into());
                     stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+
+                    if !rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__toCommonJS").into());
+                    }
                   }
                 },
                 ImportKind::DynamicImport => {
@@ -432,7 +463,18 @@ impl<'a> LinkStage<'a> {
       for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
         stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
       }
+      record_meta_update_pending_pairs_list.push((importer_idx, record_meta_pairs));
     });
+
+    // merge import_record.meta
+    for (module_idx, record_meta_pairs) in record_meta_update_pending_pairs_list {
+      let Some(module) = self.module_table.modules[module_idx].as_normal_mut() else {
+        continue;
+      };
+      for (rec_id, meta) in record_meta_pairs {
+        module.import_records[rec_id].meta |= meta;
+      }
+    }
   }
 
   fn create_exports_for_ecma_modules(&mut self) {
@@ -484,7 +526,7 @@ impl<'a> LinkStage<'a> {
                   declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
                 });
               }
-              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::App => {}
+              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::App => {}
             }
           };
           // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
@@ -506,7 +548,7 @@ impl<'a> LinkStage<'a> {
   }
 
   fn patch_module_dependencies(&mut self) {
-    self.metas.iter_mut_enumerated().for_each(|(module_idx, meta)| {
+    self.metas.par_iter_mut_enumerated().for_each(|(module_idx, meta)| {
       // Symbols from runtime are referenced by bundler not import statements.
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         let canonical_ref = self.symbols.canonical_ref_for(*symbol_ref);
@@ -517,11 +559,7 @@ impl<'a> LinkStage<'a> {
         return;
       };
 
-      module.stmt_infos.iter().for_each(|stmt_info| {
-        if !stmt_info.is_included {
-          return;
-        }
-
+      module.stmt_infos.iter().filter(|stmt_info| stmt_info.is_included).for_each(|stmt_info| {
         // We need this step to include the runtime module, if there are symbols of it.
         // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
         stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
@@ -546,6 +584,16 @@ impl<'a> LinkStage<'a> {
       });
     });
   }
+}
+
+fn is_external_dynamic_import(
+  table: &ModuleTable,
+  record: &ResolvedImportRecord,
+  module_idx: ModuleIdx,
+) -> bool {
+  record.kind == ImportKind::DynamicImport
+    && table.modules[module_idx].as_normal().is_some_and(|module| module.is_user_defined_entry)
+    && record.resolved_module != module_idx
 }
 
 pub fn init_entry_point_stmt_info(meta: &mut LinkingMetadata) {

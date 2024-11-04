@@ -1,14 +1,18 @@
+use std::{borrow::Cow, path::PathBuf};
+
 // cSpell:disable
 use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
-  RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
+  ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, ModuleIdx, NamedImport,
+  NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
 };
 pub mod chunk_table;
 pub mod types;
 
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
-use rolldown_utils::{path_ext::PathExt, BitSet};
+use rolldown_utils::{
+  extract_hash_pattern::extract_hash_pattern, indexmap::FxIndexMap, path_ext::PathExt, BitSet,
+};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -27,6 +31,8 @@ pub struct Chunk {
   pub absolute_preliminary_filename: Option<String>,
   pub css_preliminary_filename: Option<PreliminaryFilename>,
   pub css_absolute_preliminary_filename: Option<String>,
+  pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
+  pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
   pub canonical_name_by_token: FxHashMap<SymbolNameRefToken, Rstr>,
   // Sorted by Module#stable_id of modules in the chunk
@@ -77,7 +83,7 @@ impl Chunk {
   }
 
   pub async fn filename_template<'a>(
-    &mut self,
+    &self,
     options: &'a NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
@@ -92,7 +98,7 @@ impl Chunk {
   }
 
   pub async fn css_filename_template<'a>(
-    &mut self,
+    &self,
     options: &'a NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
@@ -104,5 +110,75 @@ impl Chunk {
     };
 
     Ok(FilenameTemplate::new(ret))
+  }
+
+  pub async fn generate_preliminary_filename(
+    &mut self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
+  ) -> anyhow::Result<PreliminaryFilename> {
+    if let Some(file) = &options.file {
+      return Ok(PreliminaryFilename::new(file.clone(), None));
+    }
+    let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
+    let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+
+    let hash_placeholder =
+      extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+    let name = if hash_placeholder.is_some() {
+      make_unique_name(chunk_name);
+      Cow::Borrowed(chunk_name)
+    } else {
+      let unique = make_unique_name(chunk_name);
+      Cow::Owned(unique)
+    };
+
+    let rendered = filename_template.render(&FileNameRenderOptions {
+      name: Some(&name),
+      hash: hash_placeholder.as_deref(),
+      ..Default::default()
+    });
+
+    Ok(PreliminaryFilename::new(rendered, hash_placeholder))
+  }
+
+  pub async fn generate_css_preliminary_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
+  ) -> anyhow::Result<PreliminaryFilename> {
+    if let Some(file) = &options.file {
+      let mut file = PathBuf::from(file);
+      file.set_extension("css");
+      return Ok(PreliminaryFilename::new(file.into_os_string().into_string().unwrap(), None));
+    }
+    let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
+
+    let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+
+    let hash_placeholder =
+      extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+    let name = if hash_placeholder.is_some() {
+      make_unique_name(chunk_name);
+      Cow::Borrowed(chunk_name)
+    } else {
+      let unique = make_unique_name(chunk_name);
+      Cow::Owned(unique)
+    };
+    let rendered = filename_template.render(&FileNameRenderOptions {
+      name: Some(&name),
+      hash: hash_placeholder.as_deref(),
+      ..Default::default()
+    });
+
+    Ok(PreliminaryFilename::new(rendered, hash_placeholder))
   }
 }

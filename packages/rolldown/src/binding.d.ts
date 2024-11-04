@@ -1,6 +1,8 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
+export type BindingStringOrRegex = string | RegExp
+
 export declare class BindingLog {
   code: string
   message: string
@@ -267,7 +269,7 @@ export interface BindingManifestPluginConfig {
 
 export interface BindingMatchGroup {
   name: string
-  test?: string
+  test?: BindingStringOrRegex
   priority?: number
   minSize?: number
   minShareCount?: number
@@ -294,7 +296,7 @@ export interface BindingOutputOptions {
   extend?: boolean
   externalLiveBindings?: boolean
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'es' | 'cjs' | 'iife'
+  format?: 'es' | 'cjs' | 'iife' | 'umd'
   globals?: Record<string, string>
   inlineDynamicImports?: boolean
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
@@ -302,6 +304,7 @@ export interface BindingOutputOptions {
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
+  sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean
   advancedChunks?: BindingAdvancedChunksOptions
@@ -408,20 +411,6 @@ export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
 
-/**
- * For String, value is the string content, flag is the `None`
- * For Regex, value is the regular expression, flag is the `Some()`.
- * Make sure put a `Some("")` in flag even there is no flag in regexp.
- */
-export interface BindingStringOrRegex {
-  value: string
-  /**
-   * There is a more compact way to represent this, `Option<u8>` with bitflags, but it will be hard
-   * to use(in js side), since construct a `JsRegex` is not used frequently. Optimize it when it is needed.
-   */
-  flag?: string
-}
-
 export interface BindingTransformHookExtraArgs {
   moduleType: string
 }
@@ -453,6 +442,8 @@ export declare enum BindingWatcherEvent {
 export interface BindingWatchOption {
   skipWrite?: boolean
   notify?: BindingNotifyOption
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
 }
 
 export interface Es2015Options {

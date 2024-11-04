@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -18,7 +19,7 @@ var init_foo = __esm({ "foo.js"() {
 //#endregion
 //#region main.js
 init_foo();
-init_foo(), __toCommonJS(foo_exports);
+init_foo();
 
 //#endregion
 export { missing };

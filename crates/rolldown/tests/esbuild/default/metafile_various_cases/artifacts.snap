@@ -1,24 +1,37 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "extern-cjs" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'extern-cjs' in entry.js
+    ╭─[entry.js:12:10]
+    │
+ 12 │     require('extern-cjs'),
+    │             ──────┬─────  
+    │                   ╰─────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "extern-esm" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'extern-esm' in entry.js
+   ╭─[entry.js:1:15]
+   │
+ 1 │ import a from 'extern-esm'
+   │               ──────┬─────  
+   │                     ╰─────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "extern.css" is imported by "entry.css", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve extern.css in entry.css
 
 ```
 # Assets
@@ -68,7 +81,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#region entry.js
 var import_file = __toESM(require_file());
 var import_copy = __toESM(require_copy());
-console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
 
 //#endregion

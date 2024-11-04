@@ -13,10 +13,9 @@ use crate::{
   },
 };
 use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::BuildResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
-#[allow(clippy::too_many_lines)]
 pub fn render_cjs(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -25,7 +24,7 @@ pub fn render_cjs(
   intro: Option<String>,
   outro: Option<String>,
   hashbang: Option<&str>,
-) -> DiagnosableResult<ConcatSource> {
+) -> BuildResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(hashbang) = hashbang {

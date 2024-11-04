@@ -1,10 +1,25 @@
-#[derive(Clone)]
+use std::fmt::Debug;
+
+#[derive(Clone, Debug)]
 pub enum StrOrBytes {
   Str(String),
   Bytes(Vec<u8>),
 }
 
+impl Default for StrOrBytes {
+  fn default() -> Self {
+    Self::Str(String::default())
+  }
+}
+// Methods contain `inner` word won't do implicit conversion.
 impl StrOrBytes {
+  pub fn try_into_inner_string(self) -> anyhow::Result<String> {
+    match self {
+      Self::Str(s) => Ok(s),
+      Self::Bytes(_) => Err(anyhow::format_err!("Expected Str, found Bytes")),
+    }
+  }
+
   pub fn try_into_string(self) -> anyhow::Result<String> {
     match self {
       Self::Str(s) => Ok(s),
@@ -12,10 +27,24 @@ impl StrOrBytes {
     }
   }
 
-  pub fn try_into_bytes(self) -> anyhow::Result<Vec<u8>> {
+  pub fn into_bytes(self) -> Vec<u8> {
     match self {
-      Self::Str(s) => Ok(s.into_bytes()),
-      Self::Bytes(b) => Ok(b),
+      Self::Str(s) => s.into_bytes(),
+      Self::Bytes(b) => b,
+    }
+  }
+
+  pub fn as_bytes(&self) -> &[u8] {
+    match self {
+      Self::Str(s) => s.as_bytes(),
+      Self::Bytes(b) => b.as_slice(),
+    }
+  }
+
+  pub fn try_as_inner_str(&self) -> anyhow::Result<&str> {
+    match self {
+      Self::Str(s) => Ok(s.as_str()),
+      Self::Bytes(_) => Err(anyhow::format_err!("Expected Str, found Bytes")),
     }
   }
 }

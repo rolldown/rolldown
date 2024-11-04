@@ -1,3 +1,5 @@
+# Reason
+1. unary operator side effects
 # Diff
 ## /out.js
 ### esbuild
@@ -17,6 +19,8 @@
 ```
 ### rolldown
 ```js
+(function() {
+
 
 //#region entry.js
 let keep;
@@ -26,13 +30,14 @@ keep++;
 keep--;
 
 //#endregion
+})();
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,12 +1,9 @@
+@@ -1,12 +1,12 @@
 -(() => {
 -  // entry.js
 -  var keep;
@@ -44,8 +49,8 @@ keep--;
 -  --keep;
 -  keep++;
 -  keep--;
--})();
-\ No newline at end of file
++(function() {
++
 +
 +//#region entry.js
 +let keep;
@@ -55,6 +60,7 @@ keep--;
 +keep--;
 +
 +//#endregion
+ })();
 \ No newline at end of file
 
 ```

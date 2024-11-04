@@ -6,85 +6,169 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "#bar/foo-js.js" is imported by "node_modules/pkg-imports/index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "#bar/foo-js.js" in node_modules/pkg-imports/index.js
+   ╭─[node_modules/pkg-imports/index.js:3:8]
+   │
+ 3 │ import "#bar/foo-js.js"
+   │        ────────┬───────  
+   │                ╰───────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "#bar/foo-jsx.jsx" is imported by "node_modules/pkg-imports/index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "#bar/foo-jsx.jsx" in node_modules/pkg-imports/index.js
+   ╭─[node_modules/pkg-imports/index.js:4:8]
+   │
+ 4 │ import "#bar/foo-jsx.jsx"
+   │        ─────────┬────────  
+   │                 ╰────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "#xyz-js" is imported by "node_modules/pkg-imports/index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "#xyz-js" in node_modules/pkg-imports/index.js
+   ╭─[node_modules/pkg-imports/index.js:1:8]
+   │
+ 1 │ import "#xyz-js"
+   │        ────┬────  
+   │            ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "#xyz-jsx" is imported by "node_modules/pkg-imports/index.js", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve "#xyz-jsx" in node_modules/pkg-imports/index.js
+   ╭─[node_modules/pkg-imports/index.js:2:8]
+   │
+ 2 │ import "#xyz-jsx"
+   │        ─────┬────  
+   │             ╰────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./order-js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './order-js.js' in entry.ts
+   ╭─[entry.ts:5:8]
+   │
+ 5 │ import './order-js.js'
+   │        ───────┬───────  
+   │               ╰───────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./order-jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './order-jsx.jsx' in entry.ts
+   ╭─[entry.ts:6:8]
+   │
+ 6 │ import './order-jsx.jsx'
+   │        ────────┬────────  
+   │                ╰────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./pick-ts.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './pick-ts.js' in entry.ts
+   ╭─[entry.ts:2:8]
+   │
+ 2 │ import './pick-ts.js'
+   │        ───────┬──────  
+   │               ╰──────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "./pick-tsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve './pick-tsx.jsx' in entry.ts
+   ╭─[entry.ts:4:8]
+   │
+ 4 │ import './pick-tsx.jsx'
+   │        ────────┬───────  
+   │                ╰───────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg-exports/foo-js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg-exports/foo-js.js' in entry.ts
+    ╭─[entry.ts:12:8]
+    │
+ 12 │ import 'pkg-exports/foo-js.js'
+    │        ───────────┬───────────  
+    │                   ╰───────────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg-exports/foo-jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg-exports/foo-jsx.jsx' in entry.ts
+    ╭─[entry.ts:13:8]
+    │
+ 13 │ import 'pkg-exports/foo-jsx.jsx'
+    │        ────────────┬────────────  
+    │                    ╰────────────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg-exports/xyz-js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg-exports/xyz-js' in entry.ts
+    ╭─[entry.ts:10:8]
+    │
+ 10 │ import 'pkg-exports/xyz-js'
+    │        ──────────┬─────────  
+    │                  ╰─────────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg-exports/xyz-jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg-exports/xyz-jsx' in entry.ts
+    ╭─[entry.ts:11:8]
+    │
+ 11 │ import 'pkg-exports/xyz-jsx'
+    │        ──────────┬──────────  
+    │                  ╰──────────── Module not found, treating it as an external dependency
+────╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo-js.js" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg/foo-js.js' in entry.ts
+   ╭─[entry.ts:8:8]
+   │
+ 8 │ import 'pkg/foo-js.js'
+   │        ───────┬───────  
+   │               ╰───────── Module not found, treating it as an external dependency
+───╯
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: "pkg/foo-jsx.jsx" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg/foo-jsx.jsx' in entry.ts
+   ╭─[entry.ts:9:8]
+   │
+ 9 │ import 'pkg/foo-jsx.jsx'
+   │        ────────┬────────  
+   │                ╰────────── Module not found, treating it as an external dependency
+───╯
 
 ```
 # Assets

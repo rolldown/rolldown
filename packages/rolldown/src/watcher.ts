@@ -6,14 +6,17 @@ export class Watcher {
   closed: boolean
   controller: AbortController
   inner: BindingWatcher
-  constructor(inner: BindingWatcher) {
+  stopWorkers?: () => Promise<void>
+  constructor(inner: BindingWatcher, stopWorkers?: () => Promise<void>) {
     this.closed = false
     this.controller = new AbortController()
     this.inner = inner
+    this.stopWorkers = stopWorkers
   }
 
   async close() {
     this.closed = true
+    await this.stopWorkers?.()
     await this.inner.close()
     this.controller.abort()
   }
@@ -42,7 +45,15 @@ export class Watcher {
         break
       case 'event':
         this.inner.on(BindingWatcherEvent.Event, async (data) => {
-          await listener(data)
+          if (data!.code === 'BUNDLE_END') {
+            await listener({
+              code: 'BUNDLE_END',
+              duration: Number(data!.duration),
+              output: [data!.output], // rolldown doesn't support arraying configure output
+            })
+          } else {
+            await listener(data)
+          }
         })
         break
 
@@ -87,9 +98,9 @@ export type RollupWatcherEvent =
     }
   | {
       code: 'BUNDLE_END'
-      // duration: number
+      duration: number
       // input?: InputOption
-      // output: readonly string[]
+      output: readonly string[]
       // result: RollupBuild
     }
   | { code: 'END' }

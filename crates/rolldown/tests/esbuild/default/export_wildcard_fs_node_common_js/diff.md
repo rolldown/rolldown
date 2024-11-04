@@ -28,21 +28,21 @@ __reExport(entry_exports, require("./external"), module.exports);
 ### rolldown
 ```js
 "use strict";
-var __external = require("./external");
-Object.keys(__external).forEach(function (k) {
+var ___external = require("./external");
+Object.keys(___external).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return __external[k]; }
+    get: function () { return ___external[k]; }
   });
 });
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
+var fs = require("fs");
+Object.keys(fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return node_fs[k]; }
+    get: function () { return fs[k]; }
   });
 });
-require("node:fs");
+require("fs");
 require("./external");
 
 //#region internal.js
@@ -60,12 +60,12 @@ exports.foo = foo
 -var entry_exports = {};
 -__export(entry_exports, {
 -    foo: () => foo
-+var __external = require("./external");
-+Object.keys(__external).forEach(function (k) {
++var ___external = require("./external");
++Object.keys(___external).forEach(function (k) {
 +    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 +        enumerable: true,
 +        get: function () {
-+            return __external[k];
++            return ___external[k];
 +        }
 +    });
  });
@@ -77,16 +77,16 @@ exports.foo = foo
 -    foo,
 -    ...require("fs"),
 -    ...require("./external")
-+var node_fs = require("node:fs");
-+Object.keys(node_fs).forEach(function (k) {
++var fs = require("fs");
++Object.keys(fs).forEach(function (k) {
 +    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 +        enumerable: true,
 +        get: function () {
-+            return node_fs[k];
++            return fs[k];
 +        }
 +    });
  });
-+require("node:fs");
++require("fs");
 +require("./external");
 +var foo = 123;
 +exports.foo = foo;

@@ -1,3 +1,5 @@
+# Reason
+1. not support glob
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -41,7 +43,7 @@ console.log({
 ```js
 
 //#region entry.ts
-const ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+const ab = Math.random() < .5 ? "a.ts" : "b.ts";
 console.log({
 	concat: {
 		require: require("./src/" + ab),
@@ -72,7 +74,8 @@ console.log({
 -    "./src/a.ts": () => import("./a-YXM4MR7E.js"),
 -    "./src/b.ts": () => import("./b-IPMBSSGN.js")
 -});
- var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
+-var ab = Math.random() < 0.5 ? "a.ts" : "b.ts";
++var ab = Math.random() < .5 ? "a.ts" : "b.ts";
  console.log({
      concat: {
 -        require: globRequire_src("./src/" + ab),

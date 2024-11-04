@@ -1,0 +1,13 @@
+{
+  "config": {
+    "format": "umd",
+    "external": [
+      "node:path"
+    ],
+    "globals": {
+      "node:path": "path"
+    },
+    "name": "module"
+  },
+  "expectExecuted": false
+}

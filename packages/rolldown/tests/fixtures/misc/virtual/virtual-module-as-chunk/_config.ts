@@ -28,7 +28,7 @@ export default defineTest({
     expect(getOutputChunkNames(output)).toStrictEqual([
       'main.js',
       'entry.js',
-      '_module-KtCeJTRH.js',
+      '_module-IFF5elLO.js',
     ])
   },
 })

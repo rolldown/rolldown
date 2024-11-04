@@ -59,12 +59,30 @@ pub async fn resolve_id_check_external(
       if !resolved_id.is_external {
         // Check external with resolved path
         if let Some(is_external) = bundle_options.external.as_ref() {
-          resolved_id.is_external = is_external(request, importer, true).await?;
+          resolved_id.is_external = is_external(resolved_id.id.as_str(), importer, true).await?;
         }
       }
       Ok(Ok(resolved_id))
     }
-    Err(e) => Ok(Err(e)),
+    Err(e) => {
+      if let ResolveError::NotFound(_) = &e {
+        // If module can't resolve, check external with unresolved path with `isResolved: true`
+        // ref https://github.com/rollup/rollup/blob/master/src/ModuleLoader.ts#L555
+        if let Some(is_external) = bundle_options.external.as_ref() {
+          if is_external(request, importer, true).await? {
+            return Ok(Ok(ResolvedId {
+              id: request.to_string().into(),
+              ignored: false,
+              module_def_format: ModuleDefFormat::Unknown,
+              is_external: true,
+              package_json: None,
+              side_effects: None,
+            }));
+          }
+        }
+      }
+      Ok(Err(e))
+    }
   }
 }
 
@@ -155,8 +173,14 @@ fn resolve_id(
 
   if let Err(err) = resolved {
     match err {
-      ResolveError::Builtin(specifier) => Ok(Ok(ResolvedId {
-        id: specifier.into(),
+      ResolveError::Builtin { resolved, is_runtime_module } => Ok(Ok(ResolvedId {
+        // `resolved` is always prefixed with "node:" in compliance with the ESM specification.
+        // we needs to use `is_runtime_module` to get the original specifier
+        id: if resolved.starts_with("node:") && !is_runtime_module {
+          resolved[5..].to_string().into()
+        } else {
+          resolved.into()
+        },
         ignored: false,
         is_external: true,
         module_def_format: ModuleDefFormat::Unknown,

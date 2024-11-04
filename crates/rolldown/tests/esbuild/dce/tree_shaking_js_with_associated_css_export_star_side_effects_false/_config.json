@@ -5,7 +5,8 @@
         "name": "test",
         "import": "test.jsx"
       }
-    ]
+    ],
+    "sourcemap": "File"
   },
   "expectExecuted": false
 }

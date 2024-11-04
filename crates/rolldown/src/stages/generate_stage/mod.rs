@@ -4,12 +4,17 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
+use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
+use rolldown_common::{
+  ChunkIdx, ChunkKind, FileNameRenderOptions, ImportMetaRolldownAssetReplacer, Module,
+  PreliminaryFilename,
+};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   extract_hash_pattern::extract_hash_pattern,
+  hash_placeholder::HashPlaceholderGenerator,
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
@@ -25,10 +30,12 @@ use crate::{
   },
   stages::link_stage::LinkStageOutput,
   utils::{
-    chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
+    chunk::{
+      deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
+      validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
+    },
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
-    hash_placeholder::HashPlaceholderGenerator,
   },
   BundleOutput, SharedOptions,
 };
@@ -56,19 +63,31 @@ impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks().await?;
-
-    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
+    if chunk_graph.chunk_table.len() > 1 {
+      validate_options_for_multi_chunk_output(self.options)?;
+    }
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
+    let index_chunk_id_to_name =
+      self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
+    self.patch_asset_modules(&chunk_graph);
+
     chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
-      deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
+      deconflict_chunk_symbols(
+        chunk,
+        self.link_output,
+        &self.options.format,
+        &index_chunk_id_to_name,
+      );
     });
 
     let ast_table_iter = self.link_output.ast_table.par_iter_mut();
     ast_table_iter
       .filter(|(_ast, owner)| {
-        self.link_output.module_table.modules[*owner].as_normal().map_or(false, |m| m.is_included)
+        self.link_output.module_table.modules[*owner]
+          .as_normal()
+          .map_or(false, |m| m.meta.is_included())
       })
       .for_each(|(ast, owner)| {
         let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {
@@ -125,12 +144,12 @@ impl<'a> GenerateStage<'a> {
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<FxHashMap<ChunkIdx, ArcStr>> {
     let modules = &self.link_output.module_table.modules;
 
+    let mut index_chunk_id_to_name = FxHashMap::default();
     let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> = chunk_graph
       .chunk_table
-      .as_vec()
       .par_iter()
       .map(|chunk| {
         if let Some(name) = &chunk.name {
@@ -167,43 +186,18 @@ impl<'a> GenerateStage<'a> {
       .into();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
-    let mut used_name_counts: FxHashMap<ArcStr, u32> = FxHashMap::default();
-    for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
-      let chunk = &mut chunk_graph.chunk_table[*chunk_id];
-      if chunk.preliminary_filename.is_some() {
-        // Already generated
-        continue;
-      }
 
-      let pre_generated_name = &mut index_pre_generated_names[*chunk_id];
-      // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
-      chunk.name = Some(pre_generated_name.clone());
-
-      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
-
-      let filename_template = chunk.filename_template(self.options, &pre_rendered_chunk).await?;
-      let css_filename_template =
-        chunk.css_filename_template(self.options, &pre_rendered_chunk).await?;
-      chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
-      let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
-      let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
-
-      let need_to_ensure_unique =
-        extracted_hash_pattern.is_none() || extracted_css_hash_pattern.is_none();
-      let chunk_name = if need_to_ensure_unique {
-        let original_name = &pre_generated_name;
-        let mut candidate = pre_generated_name.clone();
+    let create_make_unique_name = |mut used_name_counts: FxHashMap<ArcStr, u32>| {
+      move |name: &ArcStr| {
+        let mut candidate = name.clone();
         loop {
           match used_name_counts.entry(candidate.clone()) {
             Entry::Occupied(mut occ) => {
               // This name is already used
               let next_count = *occ.get();
               occ.insert(next_count + 1);
-              candidate = ArcStr::from(format!(
-                "{}{}",
-                original_name,
-                itoa::Buffer::new().format(next_count)
-              ));
+              candidate =
+                ArcStr::from(format!("{}{}", name, itoa::Buffer::new().format(next_count)));
             }
             Entry::Vacant(vac) => {
               // This is the first time we see this name
@@ -213,41 +207,100 @@ impl<'a> GenerateStage<'a> {
             }
           };
         }
-      } else {
-        used_name_counts.insert(pre_generated_name.clone(), 2);
-        pre_generated_name.clone()
-      };
+      }
+    };
+    let mut make_unique_name_for_ecma_chunk = create_make_unique_name(FxHashMap::default());
+    let mut make_unique_name_for_css_chunk = create_make_unique_name(FxHashMap::default());
 
-      let hash_placeholder =
-        extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+    for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
+      let chunk = &mut chunk_graph.chunk_table[*chunk_id];
+      if chunk.preliminary_filename.is_some() {
+        // Already generated
+        continue;
+      }
 
-      let css_hash_placeholder =
-        extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+      let pre_generated_chunk_name = &mut index_pre_generated_names[*chunk_id];
+      // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
+      chunk.name = Some(pre_generated_chunk_name.clone());
+      index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.clone());
+      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
-      let preliminary = filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
-        hash: hash_placeholder.as_deref(),
-        ..Default::default()
+      let asset_filename_template = &self.options.asset_filenames;
+      let extracted_asset_hash_pattern = extract_hash_pattern(asset_filename_template.template());
+
+      let preliminary_filename = chunk
+        .generate_preliminary_filename(
+          self.options,
+          &pre_rendered_chunk,
+          pre_generated_chunk_name,
+          &mut hash_placeholder_generator,
+          &mut make_unique_name_for_ecma_chunk,
+        )
+        .await?;
+
+      let css_preliminary_filename = chunk
+        .generate_css_preliminary_filename(
+          self.options,
+          &pre_rendered_chunk,
+          pre_generated_chunk_name,
+          &mut hash_placeholder_generator,
+          &mut make_unique_name_for_css_chunk,
+        )
+        .await?;
+
+      chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()).for_each(|module| {
+        if module.asset_view.is_some() {
+          let hash_placeholder = extracted_asset_hash_pattern
+            .as_ref()
+            .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+          let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack();
+          let preliminary = PreliminaryFilename::new(
+            asset_filename_template.render(&FileNameRenderOptions {
+              name: Some(name),
+              hash: hash_placeholder.as_deref(),
+              ext: module.id.as_path().extension().and_then(|s| s.to_str()),
+            }),
+            hash_placeholder,
+          );
+
+          chunk.asset_absolute_preliminary_filenames.insert(
+            module.idx,
+            preliminary
+              .absolutize_with(self.options.cwd.join(&self.options.dir))
+              .expect_into_string(),
+          );
+          chunk.asset_preliminary_filenames.insert(module.idx, preliminary);
+        }
       });
 
-      let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
-        hash: hash_placeholder.as_deref(),
-        ..Default::default()
-      });
+      chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
 
       chunk.absolute_preliminary_filename = Some(
-        preliminary.absolutize_with(self.options.cwd.join(&self.options.dir)).expect_into_string(),
-      );
-      chunk.css_absolute_preliminary_filename = Some(
-        css_preliminary
+        preliminary_filename
           .absolutize_with(self.options.cwd.join(&self.options.dir))
           .expect_into_string(),
       );
-      chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
-      chunk.css_preliminary_filename =
-        Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
+      chunk.css_absolute_preliminary_filename = Some(
+        css_preliminary_filename
+          .absolutize_with(self.options.cwd.join(&self.options.dir))
+          .expect_into_string(),
+      );
+      chunk.preliminary_filename = Some(preliminary_filename);
+      chunk.css_preliminary_filename = Some(css_preliminary_filename);
     }
-    Ok(())
+    Ok(index_chunk_id_to_name)
+  }
+
+  pub fn patch_asset_modules(&mut self, chunk_graph: &ChunkGraph) {
+    chunk_graph.chunk_table.iter().for_each(|chunk| {
+      chunk.asset_preliminary_filenames.iter().for_each(|(module_idx, preliminary)| {
+        let Module::Normal(module) = &mut self.link_output.module_table.modules[*module_idx] else {
+          return;
+        };
+        module.ecma_view.mutations.push(Box::new(ImportMetaRolldownAssetReplacer {
+          asset_filename: preliminary.to_string(),
+        }));
+      });
+    });
   }
 }

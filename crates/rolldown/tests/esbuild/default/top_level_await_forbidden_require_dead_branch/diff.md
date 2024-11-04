@@ -60,15 +60,13 @@ var init_b = __esm({ "b.js"() {} });
 //#endregion
 //#region a.js
 var a_exports = {};
-var init_a = __esm({ "a.js"() {
-	init_b();
-} });
+var init_a = __esm({ "a.js"() {} });
 
 //#endregion
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
-	init_a(), __toCommonJS(a_exports);
-	init_b(), __toCommonJS(b_exports);
+	init_a();
+	init_b();
 	require_c();
 	require_entry();
 } });
@@ -81,7 +79,7 @@ var require_entry = __commonJS({ "entry.js"() {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,23 @@
+@@ -1,31 +1,21 @@
 -(() => {
 -    var c_exports = {};
 -    var init_c = __esm({
@@ -101,21 +99,20 @@ var require_entry = __commonJS({ "entry.js"() {
      });
      var a_exports = {};
      var init_a = __esm({
-         "a.js"() {
-             init_b();
-         }
+-        "a.js"() {
+-            init_b();
+-        }
++        "a.js"() {}
      });
 -    var entry_exports = {};
 -    var init_entry = __esm({
 +    var require_entry = __commonJS({
          "entry.js"() {
--            init_a();
--            init_b();
+             init_a();
+             init_b();
 -            init_c();
 -            init_entry();
 -            if (false) for (let x of y) ;
-+            (init_a(), __toCommonJS(a_exports));
-+            (init_b(), __toCommonJS(b_exports));
 +            require_c();
 +            require_entry();
          }

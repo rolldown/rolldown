@@ -2,7 +2,7 @@ use crate::types::generator::{GenerateContext, GenerateOutput, Generator};
 
 use anyhow::Result;
 use rolldown_common::{InstantiatedChunk, InstantiationKind};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::BuildResult;
 
 pub struct CssGenerator;
 
@@ -10,7 +10,7 @@ impl Generator for CssGenerator {
   #[allow(clippy::too_many_lines)]
   async fn instantiate_chunk<'a>(
     ctx: &mut GenerateContext<'a>,
-  ) -> Result<DiagnosableResult<GenerateOutput>> {
+  ) -> Result<BuildResult<GenerateOutput>> {
     let mut ordered_css_modules = ctx
       .chunk
       .modules
@@ -55,9 +55,9 @@ impl Generator for CssGenerator {
     Ok(Ok(GenerateOutput {
       chunks: vec![InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,
-        content,
+        content: content.into(),
         map: None,
-        meta: InstantiationKind::None,
+        kind: InstantiationKind::None,
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx

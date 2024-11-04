@@ -88,9 +88,6 @@
 	function foo(x = arguments) {
 		return arguments;
 	}
-	(function(x = arguments) {
-		return arguments;
-	});
 	({ foo(x = arguments) {
 		return arguments;
 	} });
@@ -108,10 +105,6 @@
 		var arguments$1;
 		return arguments$1;
 	}
-	(function(x = arguments) {
-		var arguments$1;
-		return arguments$1;
-	});
 	({ foo(x = arguments) {
 		var arguments$1;
 		return arguments$1;
@@ -165,7 +158,7 @@
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,74 +1,78 @@
+@@ -1,74 +1,71 @@
 -/* @__PURE__ */ (() => {
 -  var r;
 -  function t(n = arguments) {
@@ -248,9 +241,6 @@
 +	function foo(x = arguments) {
 +		return arguments;
 +	}
-+	(function(x = arguments) {
-+		return arguments;
-+	});
 +	({ foo(x = arguments) {
 +		return arguments;
 +	} });
@@ -268,10 +258,6 @@
 +		var arguments$1;
 +		return arguments$1;
 +	}
-+	(function(x = arguments) {
-+		var arguments$1;
-+		return arguments$1;
-+	});
 +	({ foo(x = arguments) {
 +		var arguments$1;
 +		return arguments$1;

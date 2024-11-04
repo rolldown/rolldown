@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## DIAGNOSABLE_RESOLVE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg1' in src/entry.js
+[RESOLVE_ERROR] Error: Could not resolve 'pkg1' in src/entry.js
    ╭─[src/entry.js:1:9]
    │
  1 │ require('pkg1')
@@ -15,10 +15,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
-## DIAGNOSABLE_RESOLVE_ERROR
+## RESOLVE_ERROR
 
 ```text
-[DIAGNOSABLE_RESOLVE_ERROR] Error: Could not resolve 'pkg1/foo.js' in src/entry.js
+[RESOLVE_ERROR] Error: Could not resolve 'pkg1/foo.js' in src/entry.js
    ╭─[src/entry.js:2:9]
    │
  2 │ require('pkg1/foo.js')

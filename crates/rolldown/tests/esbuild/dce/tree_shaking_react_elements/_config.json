@@ -8,7 +8,10 @@
     ],
     "external": [
       "react"
-    ]
+    ],
+    "jsx": {
+      "runtime": "classic"
+    }
   },
   "expectExecuted": false
 }

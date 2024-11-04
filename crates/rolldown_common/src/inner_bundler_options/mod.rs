@@ -71,6 +71,7 @@ pub struct BundlerOptions {
   pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
   pub asset_filenames: Option<String>,
   pub dir: Option<String>,
+  pub file: Option<String>,
   pub format: Option<OutputFormat>,
   pub exports: Option<OutputExports>,
   pub globals: Option<HashMap<String, String>>,
@@ -112,6 +113,7 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+  pub sourcemap_debug_ids: Option<bool>,
 
   /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
   pub module_types: Option<HashMap<String, ModuleType>>,

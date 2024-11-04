@@ -5,6 +5,8 @@ import { arraify } from '../../utils/misc'
 import { ensureConfig, logger } from '../utils'
 import * as colors from '../colors'
 import { NormalizedCliOptions } from '../arguments/normalize'
+import path from 'node:path'
+import { onExit } from 'signal-exit'
 
 export async function bundleWithConfig(
   configPath: string,
@@ -56,10 +58,44 @@ async function watchInner(
 ) {
   // Only if watch is true in CLI can we use watch mode.
   // We should not make it `await`, as it never ends.
-  await rolldownWatch({
+  const watcher = await rolldownWatch({
     ...options,
     ...cliOptions.input,
   })
+
+  onExit((code: number | null | undefined) => {
+    Promise.resolve(watcher.close()).finally(() => {
+      process.exit(typeof code === 'number' ? code : 0)
+    })
+    return true
+  })
+
+  const changedFile: string[] = []
+  watcher.on('change', (id, event) => {
+    if (event.event === 'update') {
+      changedFile.push(id)
+    }
+  })
+  watcher.on('event', (event) => {
+    switch (event.code) {
+      case 'BUNDLE_START':
+        logger.log(
+          `Found ${colors.bold(changedFile.map(relativeId).join(', '))} changed, rebuilding...`,
+        )
+        changedFile.length = 0
+        break
+
+      case 'BUNDLE_END':
+        logger.success(
+          `Rebuilt ${colors.bold(relativeId(event.output[0]))} in ${colors.bold(ms(event.duration))}.`,
+        )
+        break
+
+      default:
+        break
+    }
+  })
+
   logger.log(`Waiting for changes...`)
 }
 
@@ -82,11 +118,7 @@ async function bundleInner(
   logger.log(``)
   const duration = endTime - startTime
   // If the build time is more than 1s, we should display it in seconds.
-  const spent =
-    duration < 1000
-      ? `${duration.toFixed(2)} ms`
-      : `${(duration / 1000).toFixed(2)} s`
-  logger.success(`Finished in ${colors.bold(spent)}`)
+  logger.success(`Finished in ${colors.bold(ms(duration))}`)
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {
@@ -175,4 +207,15 @@ function withTrailingSlash(path: string): string {
     return `${path}/`
   }
   return path
+}
+
+function ms(duration: number) {
+  return duration < 1000
+    ? `${duration.toFixed(2)} ms`
+    : `${(duration / 1000).toFixed(2)} s`
+}
+
+function relativeId(id: string): string {
+  if (!path.isAbsolute(id)) return id
+  return path.relative(path.resolve(), id)
 }

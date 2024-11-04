@@ -67,8 +67,7 @@ impl Diagnostic {
         Severity::Error => ReportKind::Error,
         Severity::Warning => ReportKind::Warning,
       },
-      "",
-      0,
+      (ArcStr::default(), 0..0),
     )
     .with_code(self.kind.clone())
     .with_message(self.title.clone());

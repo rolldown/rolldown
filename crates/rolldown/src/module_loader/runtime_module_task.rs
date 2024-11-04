@@ -118,6 +118,7 @@ impl RuntimeModuleTask {
           meta.set_has_star_exports(has_star_exports);
           meta
         },
+        mutations: vec![],
       },
       css_view: None,
       asset_view: None,

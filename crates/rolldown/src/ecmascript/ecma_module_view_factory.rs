@@ -190,6 +190,7 @@ pub async fn create_ecma_view<'any>(
       meta.set_has_star_exports(has_star_exports);
       meta
     },
+    mutations: vec![],
   };
 
   Ok(CreateEcmaViewReturn { view, raw_import_records: import_records, ast, symbols: symbol_ref_db })

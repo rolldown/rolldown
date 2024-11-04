@@ -4350,7 +4350,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/asset
 
-- main-!~{000}~.js => main-cfphM5Km.js
+- main-!~{000}~.js => main-zkFAJ_Ip.js
 - assets/foo-_dWZoP6n.txt
 
 # tests/rolldown/function/module_types/base64/binary

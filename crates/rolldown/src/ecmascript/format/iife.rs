@@ -37,7 +37,7 @@ use crate::{
 use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use super::utils::{render_chunk_external_imports, render_factory_parameters};
@@ -51,15 +51,15 @@ pub fn render_iife(
   intro: Option<String>,
   outro: Option<String>,
   hashbang: Option<&str>,
-) -> BuildResult<ConcatSource> {
-  let mut concat_source = ConcatSource::default();
+) -> BuildResult<SourceJoiner> {
+  let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    concat_source.add_source(Box::new(RawSource::new(hashbang.to_string())));
+    source_joiner.append_source(hashbang.to_string());
   }
 
   if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
+    source_joiner.append_source(banner);
   }
 
   // iife wrapper start
@@ -106,7 +106,7 @@ pub fn render_iife(
   // The function argument and the external imports are passed as arguments to the wrapper function.
   let factory_parameters = render_factory_parameters(ctx, &externals, exports_prefix.is_some());
 
-  concat_source.add_source(Box::new(RawSource::new(format!(
+  source_joiner.append_source(format!(
     "{definition}{}(function({factory_parameters}) {{\n",
     if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
       // If facing following situations, there shouldn't an assignment for the wrapper function:
@@ -117,59 +117,59 @@ pub fn render_iife(
     } else {
       format!("{assignment} = ")
     }
-  ))));
+  ));
 
   if determine_use_strict(ctx) {
-    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
+    source_joiner.append_source("\"use strict\";");
   }
 
   if let Some(intro) = intro {
-    concat_source.add_source(Box::new(RawSource::new(intro)));
+    source_joiner.append_source(intro);
   }
 
   if named_exports {
     if let Some(marker) =
       render_namespace_markers(&ctx.options.es_module, has_default_export, false)
     {
-      concat_source.add_source(Box::new(RawSource::new(marker.into())));
+      source_joiner.append_source(marker.to_string());
     }
   }
 
-  concat_source.add_source(Box::new(RawSource::new(import_code)));
+  source_joiner.append_source(import_code);
 
   // chunk content
   // TODO indent chunk content for iife format
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
-        concat_source.add_source(source);
+        source_joiner.append_source(source);
       }
     }
   });
 
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
-    concat_source.add_source(Box::new(RawSource::new(exports)));
+    source_joiner.append_source(exports);
   }
 
   if let Some(outro) = outro {
-    concat_source.add_source(Box::new(RawSource::new(outro)));
+    source_joiner.append_source(outro);
   }
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+    source_joiner.append_source("return exports;".to_string());
   }
 
   // iife wrapper end
   let factory_arguments = render_iife_factory_arguments(ctx, &externals, exports_prefix);
-  concat_source.add_source(Box::new(RawSource::new(format!("}})({factory_arguments});"))));
+  source_joiner.append_source(format!("}})({factory_arguments});"));
 
   if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
+    source_joiner.append_source(footer);
   }
 
-  Ok(concat_source)
+  Ok(source_joiner)
 }
 
 fn render_iife_factory_arguments(

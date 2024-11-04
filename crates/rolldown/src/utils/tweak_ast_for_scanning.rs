@@ -137,19 +137,19 @@ impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
               SPAN,
               self.snippet.builder.expression_identifier_reference(SPAN, "require"),
               NONE,
-              self.snippet.builder.vec1(self.snippet.builder.argument_expression(consequent)),
+              self.snippet.builder.vec1(ast::Argument::from(consequent)),
               false,
             ),
             self.snippet.builder.expression_call(
               SPAN,
               self.snippet.builder.expression_identifier_reference(SPAN, "require"),
               NONE,
-              self.snippet.builder.vec1(self.snippet.builder.argument_expression(alternative)),
+              self.snippet.builder.vec1(ast::Argument::from(alternative)),
               false,
             ),
           );
 
-          Some(self.snippet.builder.expression_from_conditional(new_cond_expr))
+          Some(ast::Expression::ConditionalExpression(new_cond_expr))
         } else {
           None
         }

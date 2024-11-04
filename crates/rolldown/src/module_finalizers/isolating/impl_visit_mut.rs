@@ -210,8 +210,8 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
                   self.snippet.builder.alloc_computed_member_expression(
                     SPAN,
                     self.snippet.id_ref_expr(&namespace_object_ref, SPAN),
-                    self.snippet.builder.expression_from_string_literal(
-                      self.snippet.builder.string_literal(SPAN, str.value.as_str()),
+                    self.snippet.builder.expression_string_literal(
+                      SPAN, str.value.as_str()
                     ),
                     false,
                   ),
@@ -242,14 +242,12 @@ impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
                 })
               }));
 
-              return Some(self.snippet.builder.statement_declaration(
-                self.snippet.builder.declaration_from_variable(
-                  self.snippet.builder.variable_declaration(
-                    SPAN,
-                    var_decl.kind,
-                    var_decl.declarations.take_in(self.alloc),
-                    false,
-                  ),
+              return Some(ast::Statement::VariableDeclaration(
+                self.snippet.builder.alloc_variable_declaration(
+                  SPAN,
+                  var_decl.kind,
+                  var_decl.declarations.take_in(self.alloc),
+                  false,
                 ),
               ));
             }

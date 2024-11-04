@@ -294,7 +294,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           ),
         };
 
-        self.import_decls.push(self.ast_builder.statement_module_declaration(
+        self.import_decls.push(Statement::from(
           self.ast_builder.module_declaration_import_declaration(
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
@@ -317,7 +317,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           if import != "*" {
             import_expression = self.ast_builder.expression_call(
               SPAN,
-              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
+              Expression::from(self.ast_builder.member_expression_static(
                 SPAN,
                 import_expression,
                 self.ast_builder.identifier_name(SPAN, "then"),
@@ -355,14 +355,12 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
                       self.ast_builder.vec(),
                       self.ast_builder.vec1(self.ast_builder.statement_expression(
                         SPAN,
-                        self.ast_builder.expression_member(
-                          self.ast_builder.member_expression_static(
-                            SPAN,
-                            self.ast_builder.expression_identifier_reference(SPAN, "m"),
-                            self.ast_builder.identifier_name(SPAN, import),
-                            false,
-                          ),
-                        ),
+                        Expression::from(self.ast_builder.member_expression_static(
+                          SPAN,
+                          self.ast_builder.expression_identifier_reference(SPAN, "m"),
+                          self.ast_builder.identifier_name(SPAN, import),
+                          false,
+                        )),
                       )),
                     ),
                   )
@@ -397,9 +395,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
       self.ast_builder.object_property_kind_object_property(
         SPAN,
         PropertyKind::Init,
-        self.ast_builder.property_key_expression(
-          self.ast_builder.expression_string_literal(Span::default(), file),
-        ),
+        PropertyKey::from(self.ast_builder.expression_string_literal(Span::default(), file)),
         value,
         None,
         false,

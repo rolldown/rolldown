@@ -1,3 +1,5 @@
+# Reason
+1. not support glob
 # Diff
 ## /out.js
 ### esbuild

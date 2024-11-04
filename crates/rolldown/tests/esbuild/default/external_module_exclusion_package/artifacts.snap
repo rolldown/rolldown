@@ -1,20 +1,9 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'aws-sdk' in index.js
-   ╭─[index.js:1:20]
-   │
- 1 │ import { S3 } from 'aws-sdk';
-   │                    ────┬────  
-   │                        ╰────── Module not found, treating it as an external dependency
-───╯
-
-```
 ## UNRESOLVED_IMPORT
 
 ```text

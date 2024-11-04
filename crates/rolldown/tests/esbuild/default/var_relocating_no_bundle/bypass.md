@@ -1,3 +1,7 @@
+# Reason
+1. relocating is not necessary for rolldown, since oxc semantic analyze will handle this 
+esbuild using this trick to improve scanning performance, we don't need this trick due to different arch.
+2. ref https://github.com/evanw/esbuild/commit/d512014bce9c24b5b8fa32467b5aa3afa1724a27#diff-e20508c4ae566a2d8a60274ff05e408d81c9758a27d84318feecdfbf9e24af5eR8539
 # Diff
 ## /out/top-level.js
 ### esbuild

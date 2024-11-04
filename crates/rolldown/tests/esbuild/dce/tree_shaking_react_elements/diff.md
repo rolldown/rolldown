@@ -1,3 +1,5 @@
+# Reason
+1. jsx element don't have pure annotation
 # Diff
 ## /out.js
 ### esbuild
@@ -12,16 +14,15 @@ console.log(f);
 ```
 ### rolldown
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 function Foo() {}
-let a = _jsx("div", {});
-let b = _jsx(Foo, { children: a });
-let c = _jsx(_Fragment, { children: b });
-let d = _jsx("div", {});
-let e = _jsx(Foo, { children: d });
-let f = _jsx(_Fragment, { children: e });
+let a = React.createElement("div", null);
+let b = React.createElement(Foo, null, a);
+let c = React.createElement(React.Fragment, null, b);
+let d = React.createElement("div", null);
+let e = React.createElement(Foo, null, d);
+let f = React.createElement(React.Fragment, null, e);
 console.log(f);
 
 //#endregion
@@ -31,26 +32,14 @@ console.log(f);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,17 @@
-+import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
+@@ -1,5 +1,8 @@
  function Foo() {}
--var d = React.createElement("div", null);
--var e = React.createElement(Foo, null, d);
--var f = React.createElement(React.Fragment, null, e);
-+var a = _jsx("div", {});
-+var b = _jsx(Foo, {
-+    children: a
-+});
-+var c = _jsx(_Fragment, {
-+    children: b
-+});
-+var d = _jsx("div", {});
-+var e = _jsx(Foo, {
-+    children: d
-+});
-+var f = _jsx(_Fragment, {
-+    children: e
-+});
++var a = React.createElement("div", null);
++var b = React.createElement(Foo, null, a);
++var c = React.createElement(React.Fragment, null, b);
+ var d = React.createElement("div", null);
+ var e = React.createElement(Foo, null, d);
+ var f = React.createElement(React.Fragment, null, e);
  console.log(f);
 
 ```

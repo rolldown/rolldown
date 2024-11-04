@@ -13,3 +13,5 @@ function nested() {
 		s_keep, s_keep,
 	)
 }
+
+assert(nested() !== undefined) // ensure this is not removed by DCE

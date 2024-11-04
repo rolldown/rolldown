@@ -1,3 +1,5 @@
+# Reason
+1. should not convert `ClassDeclaration` to `ClassExpr`
 # Diff
 ## /out.js
 ### esbuild

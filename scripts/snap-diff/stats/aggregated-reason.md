@@ -29,6 +29,7 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
 ## const enum inline
+- crates/rolldown/tests/esbuild/ts/enum_rules_from_type_script_5_0
 - crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
 - crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access
 - crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
@@ -41,6 +42,17 @@
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names
 - crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
+## different inject implementation
+- crates/rolldown/tests/esbuild/default/inject
+- crates/rolldown/tests/esbuild/default/inject_duplicate
+- crates/rolldown/tests/esbuild/default/inject_import_meta
+- crates/rolldown/tests/esbuild/default/inject_import_order
+- crates/rolldown/tests/esbuild/default/inject_import_ts
+- crates/rolldown/tests/esbuild/default/inject_jsx
+- crates/rolldown/tests/esbuild/default/inject_jsx_dot_names
+- crates/rolldown/tests/esbuild/default/inject_no_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## not align
 - crates/rolldown/tests/esbuild/dce/dead_code_following_jump
 - crates/rolldown/tests/esbuild/default/indirect_require_message
@@ -83,6 +95,14 @@
 - crates/rolldown/tests/esbuild/default/jsx_this_property_esm
 - crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
 - crates/rolldown/tests/esbuild/default/jsx_this_value_esm
+## not support glob
+- crates/rolldown/tests/esbuild/glob/glob_basic_no_splitting
+- crates/rolldown/tests/esbuild/glob/glob_basic_splitting
+- crates/rolldown/tests/esbuild/glob/glob_no_matches
+- crates/rolldown/tests/esbuild/glob/glob_wildcard_no_slash
+- crates/rolldown/tests/esbuild/glob/glob_wildcard_slash
+- crates/rolldown/tests/esbuild/glob/ts_glob_basic_no_splitting
+- crates/rolldown/tests/esbuild/glob/ts_glob_basic_splitting
 ## lowering ts experimental decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_keep_names
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
@@ -164,6 +184,15 @@
 ## should inline variable
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
+## static class field lowering
+- crates/rolldown/tests/esbuild/ts/this_inside_function_ts
+- crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
+## should not convert `ClassDeclaration` to `ClassExpr`
+- crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields
+- crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define
+## sub optimal
+- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
+- crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## lowering decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
@@ -195,6 +224,10 @@
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
+## jsx element don't have pure annotation
+- crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements
+## unary operator side effects
+- crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators
 ## class field lowering
 - crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
 ## related to minifier
@@ -229,6 +262,8 @@
 - crates/rolldown/tests/esbuild/default/define_optional_chain_lowered
 ## oxc define do not support  optional chain
 - crates/rolldown/tests/esbuild/default/define_optional_chain_lowered
+## define expr with optional chain
+- crates/rolldown/tests/esbuild/default/define_optional_chain_panic_issue3551
 ## oxc define dont support this expr
 - crates/rolldown/tests/esbuild/default/define_this
 ## redundant `__toCommonJS`
@@ -253,6 +288,8 @@
 - crates/rolldown/tests/esbuild/default/import_meta_common_js
 ## rolldown extract common module
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
+## Different inject impl
+- crates/rolldown/tests/esbuild/default/inject_with_define
 ## different naming style
 - crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result
@@ -285,20 +322,26 @@
 - crates/rolldown/tests/esbuild/default/this_inside_function
 ## this undefined
 - crates/rolldown/tests/esbuild/default/this_undefined_warning_esm
+## redundant `require`
+- crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission
+## there should not exist empty chunk
+- crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
+## import('./entry.js') should be rewrite to `require_entry`
+- crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## should not appear top level `await` in cjs
 - crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch
 ## should not appear `__commonJS`
 - crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
+## Strip `await` when format don't support top level await
+- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 ## inject path
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
 ## should not drop `'use strict'`
 - crates/rolldown/tests/esbuild/default/use_strict_directive_minify_no_bundle
+## alias
+- crates/rolldown/tests/esbuild/default/warnings_inside_node_modules
 ## Wrong impl when module.exports self
 - crates/rolldown/tests/esbuild/importstar/export_self_common_js_minified
-## Wrong self iife
-- crates/rolldown/tests/esbuild/importstar/export_self_iife
-## Wrong default import linking output
-- crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446
 ## Format cjs should not appear `export`
 - crates/rolldown/tests/esbuild/importstar/import_self_common_js
 ## esbuild did not needs `__toESM`
@@ -309,6 +352,8 @@
 - crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 ## import record with attributes
 - crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes
+## mime type should be `data:text/plain`
+- crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 ## Wrong wrapkind, when json is imported by `require`
 - crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking
@@ -329,18 +374,34 @@
 - crates/rolldown/tests/esbuild/splitting/splitting_missing_lazy_export
 ## rolldown is not ts aware after ts transformation, We can't aware that `Test` is just a type
 - crates/rolldown/tests/esbuild/ts/export_type_issue379
-## sub optimal
-- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
+## transform `FunctionDeclaration` to `FunctionExpr`
+- crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
+## should convert `FunctionDeclaration` to `FunctionExpr`
+- crates/rolldown/tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields
 ## redundant wrap function
 - crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
 ## enum side effects
 - crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_tree_shaking
+## not support enum inline
+- crates/rolldown/tests/esbuild/ts/ts_enum_jsx
 ## pure annotation for enum
 - crates/rolldown/tests/esbuild/ts/ts_enum_same_module_inlining_access
 ## enum tree shaking
 - crates/rolldown/tests/esbuild/ts/ts_enum_tree_shaking
+## ts experimental decorator
+- crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_no_config
+## oxc transform strip type decl but did not remove related `ExportDecl`, this woulcause rolldown assume it export a global variable, which has side effects.
+- crates/rolldown/tests/esbuild/ts/ts_export_default_type_issue316
+## require `oxc-transformer` support `module type`
+- crates/rolldown/tests/esbuild/ts/ts_export_equals
 ## export missing es6
 - crates/rolldown/tests/esbuild/ts/ts_export_missing_es6
+## ts implicit extension
+- crates/rolldown/tests/esbuild/ts/ts_implicit_extensions
+## rolldown don't insert debug comments in css
+- crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
+## resolve `mts` in ts
+- crates/rolldown/tests/esbuild/ts/ts_import_mts
 ## commonjs json bundle
 - crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js
 ## needs support target
@@ -349,5 +410,7 @@
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
 ## we have similar output as webpack but different with esbuild, because of https://github.com/evanw/esbuild/commit/54ae9962ba18eafc0fc3f1c8c76641def9b08aa0
 - crates/rolldown/tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
+## enum inline
+- crates/rolldown/tests/esbuild/ts/ts_sibling_enum
 ## rewrite this when it is undefined
 - crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning

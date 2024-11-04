@@ -1,3 +1,5 @@
+# Reason
+1. the extra `let` binding could be stripped by minifier, the trivial diff caused by `oxc-transformer` followed babel behavior
 # Diff
 ## /out/let.js
 ### esbuild

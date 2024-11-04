@@ -1,3 +1,5 @@
+# Reason
+1. not support enum inline
 # Diff
 ## /out/element.js
 ### esbuild

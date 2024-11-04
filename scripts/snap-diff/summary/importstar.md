@@ -1,10 +1,6 @@
 # Failed Cases
 ## [export_self_common_js_minified](../../../crates/rolldown/tests/esbuild/importstar/export_self_common_js_minified/diff.md)
   diff
-## [export_self_iife](../../../crates/rolldown/tests/esbuild/importstar/export_self_iife/diff.md)
-  diff
-## [import_default_namespace_combo_issue446](../../../crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446/diff.md)
-  diff
 ## [import_namespace_undefined_property_empty_file](../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file/diff.md)
   diff
 ## [import_namespace_undefined_property_side_effect_free_file](../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file/diff.md)
@@ -67,8 +63,10 @@
 ## [export_self_and_require_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_and_require_self_common_js/bypass.md)
 ## [export_self_as_namespace_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_as_namespace_common_js/bypass.md)
 ## [export_self_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_self_common_js/bypass.md)
+## [export_self_iife](../../../crates/rolldown/tests/esbuild/importstar/export_self_iife/bypass.md)
 ## [export_self_iife_with_name](../../../crates/rolldown/tests/esbuild/importstar/export_self_iife_with_name/bypass.md)
 ## [export_star_default_export_common_js](../../../crates/rolldown/tests/esbuild/importstar/export_star_default_export_common_js/bypass.md)
+## [import_default_namespace_combo_issue446](../../../crates/rolldown/tests/esbuild/importstar/import_default_namespace_combo_issue446/bypass.md)
 ## [import_export_other_as_namespace_common_js](../../../crates/rolldown/tests/esbuild/importstar/import_export_other_as_namespace_common_js/bypass.md)
 ## [import_star_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_capture/bypass.md)
 ## [import_star_common_js_capture](../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_capture/bypass.md)

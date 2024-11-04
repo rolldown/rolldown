@@ -1,11 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
+(function() {
+
 
 //#region entry.js
 let keep;
@@ -15,4 +18,5 @@ keep++;
 keep--;
 
 //#endregion
+})();
 ```

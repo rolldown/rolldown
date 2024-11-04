@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -17,9 +18,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 		let local$1 = 5;
 		hoisted++;
 		local$1++;
-		outer++;
+		if (1) outer++;
+		if (0) outerDead++;
 	}
-	{
+	if (1) {
 		hoisted++;
 		local++;
 		outer++;

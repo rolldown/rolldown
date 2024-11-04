@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -168,7 +169,7 @@ f();
 g();
 x = h;
 i.x();
-j.x` + "``" + `;
+j.x``;
 x = import("k_WRAP");
 
 //#endregion

@@ -1,3 +1,6 @@
+# Reason
+1. there should not exist empty chunk
+2. import('./entry.js') should be rewrite to `require_entry`
 # Diff
 ## /out/entry.js
 ### esbuild

@@ -1,3 +1,5 @@
+# Reason
+1. const inline could be done in minifier
 # Diff
 ## /out/top-level.js
 ### esbuild
@@ -145,17 +147,47 @@ function nested() {
 ### rolldown
 ```js
 
+//#region nested-function.js
+function nested() {
+	const REMOVE_n = null;
+	const REMOVE_u = undefined;
+	const REMOVE_i = 1234567;
+	const REMOVE_f = 123.456;
+	const s_keep = "";
+	console.log(
+		// These are doubled to avoid the "inline const/let into next statement if used once" optimization
+		REMOVE_n,
+		REMOVE_n,
+		REMOVE_u,
+		REMOVE_u,
+		REMOVE_i,
+		REMOVE_i,
+		REMOVE_f,
+		REMOVE_f,
+		s_keep,
+		s_keep
+);
+}
+assert(nested() !== undefined);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/nested-function.js
 +++ rolldown	nested-function.js
-@@ -1,4 +0,0 @@
--function nested() {
--    const s_keep = "";
+@@ -1,4 +1,9 @@
+ function nested() {
++    const REMOVE_n = null;
++    const REMOVE_u = undefined;
++    const REMOVE_i = 1234567;
++    const REMOVE_f = 123.456;
+     const s_keep = "";
 -    console.log(null, null, void 0, void 0, 1234567, 1234567, 123.456, 123.456, s_keep, s_keep);
--}
++    console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
+ }
++assert(nested() !== undefined);
 
 ```
 ## /out/namespace-export.js
@@ -240,17 +272,29 @@ function nested() {
 ### rolldown
 ```js
 
+//#region directive-before.js
+function nested() {
+	"directive";
+	const REMOVE = 1;
+	x = [REMOVE, REMOVE];
+}
+assert(nested() !== undefined);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/directive-before.js
 +++ rolldown	directive-before.js
-@@ -1,4 +0,0 @@
--function nested() {
--    "directive";
+@@ -1,4 +1,6 @@
+ function nested() {
+     "directive";
 -    x = [1, 1];
--}
++    const REMOVE = 1;
++    x = [REMOVE, REMOVE];
+ }
++assert(nested() !== undefined);
 
 ```
 ## /out/semicolon-before.js
@@ -360,19 +404,41 @@ function nested() {
 ### rolldown
 ```js
 
+//#region exprs-before.js
+function nested() {
+	const x = [
+		,
+		"",
+		{},
+		0n,
+		/./,
+		function() {},
+		() => {}
+	];
+	const y_REMOVE = 1;
+	function foo() {
+		return y_REMOVE;
+	}
+}
+assert(nested() !== undefined);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/exprs-before.js
 +++ rolldown	exprs-before.js
-@@ -1,6 +0,0 @@
--function nested() {
--    const x = [, "", {}, 0n, /./, function () {}, () => {}];
--    function foo() {
+@@ -1,6 +1,8 @@
+ function nested() {
+     const x = [, "", {}, 0n, /./, function () {}, () => {}];
++    const y_REMOVE = 1;
+     function foo() {
 -        return 1;
--    }
--}
++        return y_REMOVE;
+     }
+ }
++assert(nested() !== undefined);
 
 ```
 ## /out/disabled-tdz.js
@@ -459,17 +525,29 @@ function foo() {
 ### rolldown
 ```js
 
+//#region backwards-reference-nested-function.js
+function foo() {
+	const x = y;
+	const y = 1;
+	console.log(x, x, y, y);
+}
+assert(foo() !== undefined);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/backwards-reference-nested-function.js
 +++ rolldown	backwards-reference-nested-function.js
-@@ -1,4 +0,0 @@
--function foo() {
+@@ -1,4 +1,6 @@
+ function foo() {
 -    const x = y, y = 1;
--    console.log(x, x, y, y);
--}
++    const x = y;
++    const y = 1;
+     console.log(x, x, y, y);
+ }
++assert(foo() !== undefined);
 
 ```
 ## /out/issue-3125.js
@@ -483,16 +561,28 @@ function foo() {
 ### rolldown
 ```js
 
+//#region issue-3125.js
+function foo() {
+	const f = () => x;
+	const x = 0;
+	return f();
+}
+assert(foo() !== undefined);
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/issue-3125.js
 +++ rolldown	issue-3125.js
-@@ -1,4 +0,0 @@
--function foo() {
+@@ -1,4 +1,6 @@
+ function foo() {
 -    const f = () => x, x = 0;
--    return f();
--}
++    const f = () => x;
++    const x = 0;
+     return f();
+ }
++assert(foo() !== undefined);
 
 ```

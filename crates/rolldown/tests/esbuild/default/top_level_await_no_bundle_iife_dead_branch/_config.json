@@ -6,7 +6,8 @@
         "import": "entry.js"
       }
     ],
-    "treeshake": false
+    "treeshake": false,
+    "format": "iife"
   },
   "expectExecuted": false
 }

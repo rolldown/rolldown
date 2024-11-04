@@ -1,3 +1,5 @@
+# Reason
+1. mime type should be `data:text/plain`
 # Diff
 ## /out.js
 ### esbuild

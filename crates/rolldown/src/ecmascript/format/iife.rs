@@ -43,19 +43,19 @@ use rolldown_utils::ecmascript::legitimize_identifier_name;
 use super::utils::{render_chunk_external_imports, render_factory_parameters};
 
 /// The main function for rendering the IIFE format chunks.
-pub fn render_iife(
+pub fn render_iife<'code>(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  banner: Option<String>,
-  footer: Option<String>,
-  intro: Option<String>,
-  outro: Option<String>,
-  hashbang: Option<&str>,
-) -> BuildResult<SourceJoiner<'static>> {
+  banner: Option<&'code str>,
+  footer: Option<&'code str>,
+  intro: Option<&'code str>,
+  outro: Option<&'code str>,
+  hashbang: Option<&'code str>,
+) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    source_joiner.append_source(hashbang.to_string());
+    source_joiner.append_source(hashbang);
   }
 
   if let Some(banner) = banner {
@@ -131,7 +131,7 @@ pub fn render_iife(
     if let Some(marker) =
       render_namespace_markers(&ctx.options.es_module, has_default_export, false)
     {
-      source_joiner.append_source(marker.to_string());
+      source_joiner.append_source(marker);
     }
   }
 
@@ -158,7 +158,7 @@ pub fn render_iife(
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-    source_joiner.append_source("return exports;".to_string());
+    source_joiner.append_source("return exports;");
   }
 
   // iife wrapper end

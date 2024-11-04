@@ -22,14 +22,14 @@ use super::utils::{
   namespace::render_property_access, render_chunk_external_imports, render_factory_parameters,
 };
 
-pub fn render_umd(
+pub fn render_umd<'code>(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  banner: Option<String>,
-  footer: Option<String>,
-  intro: Option<String>,
-  outro: Option<String>,
-) -> BuildResult<SourceJoiner<'static>> {
+  banner: Option<&'code str>,
+  footer: Option<&'code str>,
+  intro: Option<&'code str>,
+  outro: Option<&'code str>,
+) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(banner) = banner {

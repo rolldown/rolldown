@@ -45,7 +45,7 @@ use super::utils::{render_chunk_external_imports, render_factory_parameters};
 /// The main function for rendering the IIFE format chunks.
 pub fn render_iife<'code>(
   ctx: &mut GenerateContext<'_>,
-  module_sources: RenderedModuleSources,
+  module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
   footer: Option<&'code str>,
   intro: Option<&'code str>,
@@ -139,7 +139,7 @@ pub fn render_iife<'code>(
 
   // chunk content
   // TODO indent chunk content for iife format
-  module_sources.into_iter().for_each(|(_, _, module_render_output)| {
+  module_sources.iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
         source_joiner.append_source(source);

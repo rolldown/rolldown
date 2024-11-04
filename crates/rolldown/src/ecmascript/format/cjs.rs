@@ -19,7 +19,7 @@ use rolldown_sourcemap::SourceJoiner;
 #[allow(clippy::too_many_lines)]
 pub fn render_cjs<'code>(
   ctx: &mut GenerateContext<'_>,
-  module_sources: RenderedModuleSources,
+  module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
   footer: Option<&'code str>,
   intro: Option<&'code str>,
@@ -91,7 +91,7 @@ pub fn render_cjs<'code>(
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
-  let mut module_sources_peekable = module_sources.into_iter().peekable();
+  let mut module_sources_peekable = module_sources.iter().peekable();
   match module_sources_peekable.peek() {
     Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
       if let (_, _module_id, Some(emitted_sources)) =

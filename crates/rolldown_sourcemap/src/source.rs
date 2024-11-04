@@ -100,7 +100,7 @@ impl Source for SourceMapSource {
   }
 }
 
-impl Source for Box<dyn Source + Send> {
+impl<'a> Source for &'a Box<dyn Source + Send> {
   fn sourcemap(&self) -> Option<&SourceMap> {
     self.as_ref().sourcemap()
   }

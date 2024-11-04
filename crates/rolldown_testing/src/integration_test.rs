@@ -247,8 +247,16 @@ impl IntegrationTest {
                   Cow::Borrowed(content),
                   "```".into(),
                 ]),
-                rolldown_common::StrOrBytes::Bytes(_) => {
-                  Some(vec![Cow::Owned(format!("## {}\n", asset.filename()))])
+                rolldown_common::StrOrBytes::Bytes(bytes) => {
+                  let mut ret = vec![Cow::Owned(format!("## {}\n", asset.filename()))];
+                  if self.test_meta.snapshot_bytes {
+                    ret.extend([
+                      Cow::Owned(format!("```{file_ext}")),
+                      String::from_utf8_lossy(bytes),
+                      "```".into(),
+                    ]);
+                  }
+                  Some(ret)
                 }
               }
             }

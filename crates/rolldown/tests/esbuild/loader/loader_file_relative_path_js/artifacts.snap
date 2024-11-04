@@ -1,22 +1,24 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
+## assets/image-6tcw8vpN.png
+
+```png
+x
+```
 ## entries_entry.js
 
 ```js
 
-
 //#region images/image.png
-var require_image = __commonJS({ "images/image.png"() {
-	x;
-} });
+var image_default = "assets/image-6tcw8vpN.png";
 
 //#endregion
 //#region entries/entry.js
-var import_image = __toESM(require_image());
-console.log(import_image.default);
+console.log(image_default);
 
 //#endregion
 ```

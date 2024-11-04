@@ -1,5 +1,5 @@
 # Reason
-1. Not support file loader
+1. not support asset path template
 # Diff
 ## /out/png/image-LSAMBFUD.png
 ### esbuild

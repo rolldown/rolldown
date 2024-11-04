@@ -14,20 +14,6 @@
 - crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_none
-## Not support file loader
-- crates/rolldown/tests/esbuild/loader/loader_file_common_js_and_es6
-- crates/rolldown/tests/esbuild/loader/loader_file_ext_path_asset_names_js
-- crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
-- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
-- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_css
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_js
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_js
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_js
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
 ## const enum inline
 - crates/rolldown/tests/esbuild/ts/enum_rules_from_type_script_5_0
 - crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
@@ -103,6 +89,14 @@
 - crates/rolldown/tests/esbuild/glob/glob_wildcard_slash
 - crates/rolldown/tests/esbuild/glob/ts_glob_basic_no_splitting
 - crates/rolldown/tests/esbuild/glob/ts_glob_basic_splitting
+## not support asset path template
+- crates/rolldown/tests/esbuild/loader/loader_file_ext_path_asset_names_js
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_css
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_js
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_js
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_js
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 ## lowering ts experimental decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_keep_names
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
@@ -117,6 +111,12 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
 - crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
+## css reference .png
+- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_css
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 ## not support ts import equal
 - crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle
 - crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test
@@ -178,6 +178,9 @@
 ## Wrong impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle
+## not support public path
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
+- crates/rolldown/tests/esbuild/loader/loader_file_public_path_js
 ## should inline variable
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype
 - crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
@@ -351,6 +354,14 @@
 - crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes
 ## mime type should be `data:text/plain`
 - crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8
+## Different hash asset name
+- crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
+## Same content has different name
+- crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
+## immediate js file reference `.png` file
+- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
+## abs output base
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
 ## Wrong wrapkind, when json is imported by `require`
 - crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking

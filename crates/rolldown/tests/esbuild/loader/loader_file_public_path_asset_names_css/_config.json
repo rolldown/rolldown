@@ -5,6 +5,10 @@
         "name": "entries_entry",
         "import": "entries/entry.css"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".png": "asset"
+    }
   }
 }

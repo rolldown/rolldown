@@ -1,5 +1,5 @@
 # Reason
-1. Not support file loader
+1. immediate js file reference `.png` file
 # Diff
 ## /out/common-LSAMBFUD.png
 ### esbuild

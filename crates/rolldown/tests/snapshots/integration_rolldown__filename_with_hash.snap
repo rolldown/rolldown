@@ -2422,15 +2422,21 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_common_js_and_es6
 
-- entry-!~{000}~.js => entry-UoZnabaC.js
+- entry-!~{000}~.js => entry-WHuKXsO3.js
+- assets/y-dWO-UPT9.txt
+- assets/x-9aE0F9t9.txt
 
 # tests/esbuild/loader/loader_file_ext_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-78J8pO1u.js
+- entries_entry-!~{000}~.js => entries_entry-Rta0dnZR.js
+- assets/image-O0edW_WI.png
+- assets/file-2-DomwQe.txt
 
 # tests/esbuild/loader/loader_file_multiple_no_collision
 
-- entry-!~{000}~.js => entry-dViSj6DC.js
+- entry-!~{000}~.js => entry-IAVe4cHA.js
+- assets/test-NT_ktVcT.txt
+- assets/test-ZJ133Cfy.txt
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
@@ -2443,9 +2449,10 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
-- entries_entry-!~{000}~.js => entries_entry-1BLJrgya.js
-- entries_other_entry-!~{001}~.js => entries_other_entry-9hC8EOfq.js
-- common-!~{002}~.js => common-Cx07bcdU.js
+- entries_entry-!~{000}~.js => entries_entry-2Ad1kvA_.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-ly_KaTG-.js
+- common-!~{002}~.js => common-Qhbzlz_R.js
+- assets/common-0ZsPsUov.png
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_css
 
@@ -2454,7 +2461,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-mNufcf5A.js
+- entries_entry-!~{000}~.js => entries_entry-lNSXxWnu.js
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_public_path_css
 
@@ -2463,7 +2471,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_public_path_js
 
-- entries_entry-!~{000}~.js => entries_entry-mNufcf5A.js
+- entries_entry-!~{000}~.js => entries_entry-lNSXxWnu.js
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_css
 
@@ -2472,7 +2481,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-mNufcf5A.js
+- entries_entry-!~{000}~.js => entries_entry-lNSXxWnu.js
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_relative_path_css
 
@@ -2481,7 +2491,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
-- entries_entry-!~{000}~.js => entries_entry-mNufcf5A.js
+- entries_entry-!~{000}~.js => entries_entry-lNSXxWnu.js
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 

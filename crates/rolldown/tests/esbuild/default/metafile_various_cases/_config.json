@@ -9,7 +9,12 @@
         "name": "entry",
         "import": "entry.css"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".file": "asset",
+      ".svg": "dataurl"
+    }
   },
   "expectExecuted": false
 }

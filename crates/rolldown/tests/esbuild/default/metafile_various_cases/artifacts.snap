@@ -34,8 +34,33 @@ snapshot_kind: text
 [UNRESOLVED_IMPORT] Warning: Could not resolve extern.css in entry.css
 
 ```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve extern.png in entry.css
+
+```
 # Assets
 
+## assets/file-JEFwJEkD.file
+
+## copy.js
+
+```js
+
+
+//#region file.file
+var file_default = "assets/file-JEFwJEkD.file";
+
+//#endregion
+//#region copy.copy
+var require_copy = __commonJS({ "copy.copy"() {
+	copy;
+} });
+
+//#endregion
+export { __commonJS, __require, __toESM, file_default, require_copy };
+```
 ## dynamic.js
 
 ```js
@@ -49,8 +74,8 @@ export { dynamic_default as default };
 ## entry.js
 
 ```js
+import { __commonJS, __require, __toESM, file_default, require_copy } from "./copy.js";
 import a from "extern-esm";
-
 
 //#region esm.js
 var esm_default = 1;
@@ -60,18 +85,6 @@ var esm_default = 1;
 var json_2_default = 2;
 
 //#endregion
-//#region file.file
-var require_file = __commonJS({ "file.file"() {
-	file;
-} });
-
-//#endregion
-//#region copy.copy
-var require_copy = __commonJS({ "copy.copy"() {
-	copy;
-} });
-
-//#endregion
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 4;
@@ -79,9 +92,8 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 
 //#endregion
 //#region entry.js
-var import_file = __toESM(require_file());
 var import_copy = __toESM(require_copy());
-console.log(a, esm_default, json_2_default, import_file.default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+console.log(a, esm_default, json_2_default, file_default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
 
 //#endregion
@@ -99,5 +111,6 @@ d { background: url(extern.png) }
 ## entry2.js
 
 ```js
+import "./copy.js";
 
 ```

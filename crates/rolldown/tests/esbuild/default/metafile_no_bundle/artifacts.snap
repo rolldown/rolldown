@@ -73,7 +73,19 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve ./file2 in entry.css
+
+```
+## UNRESOLVED_IMPORT
+
+```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve pkg in entry.css
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve pkg2 in entry.css
 
 ```
 # Assets

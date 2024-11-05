@@ -9,6 +9,8 @@ pub enum ImportKind {
   /// `require('foo')`
   Require,
   AtImport,
+  /// css url import, e.g. `url(foo.png)`
+  UrlImport,
 }
 
 impl ImportKind {
@@ -26,6 +28,7 @@ impl TryFrom<&str> for ImportKind {
       "dynamic-import" => Ok(Self::DynamicImport),
       "require-call" => Ok(Self::Require),
       "import-rule" => Ok(Self::AtImport),
+      "url-import" => Ok(Self::UrlImport),
       _ => Err(format!("Invalid import kind: {value:?}")),
     }
   }
@@ -40,6 +43,7 @@ impl Display for ImportKind {
       Self::Require => write!(f, "require-call"),
       // TODO(hyf0): check if this literal is the same as esbuild's
       Self::AtImport => write!(f, "import-rule"),
+      ImportKind::UrlImport => write!(f, "url-import"),
     }
   }
 }

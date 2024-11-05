@@ -3,6 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
+use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
 use crate::{ImportKind, ModuleIdx, SymbolRef};
@@ -12,11 +13,8 @@ oxc::index::define_index_type! {
 }
 
 #[derive(Debug)]
-pub struct ImportRecordStateStart {
-  /// Why use start_offset instead of `Span`? Cause, directly pass `Span` will increase the type
-  /// size from `40` to `48`(8 bytes alignment). Since the `RawImportRecord` will be created multiple time,
-  /// Using this trick could save some memory.
-  pub module_request_start: u32,
+pub struct ImportRecordStateSpan {
+  pub span: Span,
 }
 
 #[derive(Debug)]
@@ -76,32 +74,27 @@ impl<T: Debug> DerefMut for ImportRecord<T> {
   }
 }
 
-pub type RawImportRecord = ImportRecord<ImportRecordStateStart>;
+pub type RawImportRecord = ImportRecord<ImportRecordStateSpan>;
 
 impl RawImportRecord {
   pub fn new(
     specifier: Rstr,
     kind: ImportKind,
     namespace_ref: SymbolRef,
-    module_request_start: u32,
+    span: Span,
   ) -> RawImportRecord {
     RawImportRecord {
       module_request: specifier,
       kind,
       namespace_ref,
       meta: ImportRecordMeta::empty(),
-      state: ImportRecordStateStart { module_request_start },
+      state: ImportRecordStateSpan { span },
     }
   }
 
   pub fn with_meta(mut self, meta: ImportRecordMeta) -> Self {
     self.meta = meta;
     self
-  }
-
-  #[allow(clippy::cast_possible_truncation)]
-  pub fn module_request_end(&self) -> u32 {
-    self.module_request_start + self.module_request.len() as u32 + 2u32 // +2 for quotes
   }
 
   pub fn into_resolved(self, resolved_module: ModuleIdx) -> ResolvedImportRecord {

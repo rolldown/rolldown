@@ -51,7 +51,7 @@ pub use crate::{
   css::{
     css_module::CssModule,
     css_module_idx::CssModuleIdx,
-    css_view::{CssRenderer, CssView},
+    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
     ecma_asset_meta::EcmaAssetMeta,

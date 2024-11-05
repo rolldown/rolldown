@@ -227,6 +227,9 @@ impl<'a> LinkStage<'a> {
           ImportKind::AtImport => {
             unreachable!("A Js module would never import a CSS module via `@import`");
           }
+          ImportKind::UrlImport => {
+            unreachable!("A Js module would never import a CSS module via `url()`");
+          }
         }
       });
 
@@ -454,6 +457,9 @@ impl<'a> LinkStage<'a> {
                 }
                 ImportKind::AtImport => {
                   unreachable!("A Js module would never import a CSS module via `@import`");
+                }
+                ImportKind::UrlImport => {
+                  unreachable!("A Js module would never import a CSS module via `url()`");
                 }
               }
             }

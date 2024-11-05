@@ -9,7 +9,6 @@ use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::type_alias::IndexEcmaAst;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
-use oxc::span::Span;
 use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
@@ -261,7 +260,7 @@ impl ModuleLoader {
                 let owner = ModuleTaskOwner::new(
                   normal_module.source.clone(),
                   normal_module.stable_id.as_str().into(),
-                  Span::new(raw_rec.module_request_start, raw_rec.module_request_end()),
+                  raw_rec.span,
                 );
                 let id = self.try_spawn_new_task(info, Some(owner));
                 // Dynamic imported module will be considered as an entry

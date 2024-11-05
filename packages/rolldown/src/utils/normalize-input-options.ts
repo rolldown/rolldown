@@ -1,7 +1,7 @@
 import { getObjectPlugins } from '../plugin/plugin-driver'
 import { getLogger, getOnLog } from '../log/logger'
 import { LOG_LEVEL_INFO } from '../log/logging'
-import type { InputOptions } from '../options/input-options'
+import type { InputOptions } from '../types/input-options'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { normalizePluginOption } from './normalize-plugin-option'
 import { normalizeTreeshakeOptions } from './normalize-tree-shake'

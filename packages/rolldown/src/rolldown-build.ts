@@ -4,7 +4,7 @@ import { BundlerWithStopWorker, createBundler } from './utils/create-bundler'
 
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
-import type { InputOptions } from './options/input-options'
+import type { InputOptions } from './types/input-options'
 
 export class RolldownBuild {
   #inputOptions: InputOptions

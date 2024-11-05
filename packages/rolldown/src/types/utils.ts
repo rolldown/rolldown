@@ -20,3 +20,5 @@ export type MakeAsync<Function_> = Function_ extends (
   : never
 
 export type MaybeArray<T> = T | T[]
+
+export type StringOrRegExp = string | RegExp

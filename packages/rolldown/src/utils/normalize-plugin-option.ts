@@ -1,5 +1,5 @@
 import type { OutputOptions, OutputPlugin } from '../rollup-types'
-import type { InputOptions } from '../options/input-options'
+import type { InputOptions } from '../types/input-options'
 import { asyncFlatten } from './async-flatten'
 import type { RolldownPlugin } from '../plugin'
 

@@ -2,10 +2,8 @@
  * @description This file is used for normalize the options.
  * In CLI, the input options and output options are mixed together. We need to tell them apart.
  */
-import {
-  inputCliOptionsSchema,
-  InputOptions,
-} from '../../options/input-options'
+import { InputOptions } from '../../types/input-options'
+import { inputCliOptionsSchema } from '../../options/input-options'
 import {
   outputCliOptionsSchema,
   OutputOptions,

@@ -10,11 +10,21 @@ import {
 } from '../log/logging'
 import { TreeshakingOptions } from '../treeshake'
 import { underline, gray, yellow, dim } from '../cli/colors'
+import {
+  ExternalOption,
+  InputCliOptions,
+  InputOption,
+  JsxOptions,
+  ModuleTypes,
+  RawInputOptions,
+  WatchOptions,
+} from '../types/input-options'
+import { StringOrRegExp } from '../types/utils'
 
 const inputOptionSchema = z
   .string()
   .or(z.string().array())
-  .or(z.record(z.string()))
+  .or(z.record(z.string())) satisfies z.ZodType<InputOption>
 
 const externalSchema = zodExt
   .stringOrRegExp()
@@ -24,7 +34,7 @@ const externalSchema = zodExt
       .function()
       .args(z.string(), z.string().optional(), z.boolean())
       .returns(zodExt.voidNullableWith(z.boolean())),
-  )
+  ) satisfies z.ZodType<ExternalOption>
 
 const moduleTypesSchema = z.record(
   z
@@ -39,7 +49,7 @@ const moduleTypesSchema = z.record(
     .or(z.literal('binary'))
     .or(z.literal('empty'))
     .or(z.literal('css')),
-)
+) satisfies z.ZodType<ModuleTypes>
 
 const jsxOptionsSchema = z.strictObject({
   mode: z
@@ -63,11 +73,13 @@ const jsxOptionsSchema = z.strictObject({
     .describe('Development specific information')
     .optional(),
   // The rollup preset is not supported at now
-})
+}) satisfies z.ZodType<JsxOptions>
 
 const stringOrRegExpSchema = zodExt
   .stringOrRegExp()
-  .or(zodExt.stringOrRegExp().array())
+  .or(zodExt.stringOrRegExp().array()) satisfies z.ZodType<
+  StringOrRegExp | StringOrRegExp[]
+>
 
 const watchOptionsSchema = z.strictObject({
   skipWrite: z.boolean().describe('Skip the bundle.write() step').optional(),
@@ -81,7 +93,7 @@ const watchOptionsSchema = z.strictObject({
   include: stringOrRegExpSchema.optional(),
   exclude: stringOrRegExpSchema.optional(),
   chokidar: z.any().optional(),
-})
+}) satisfies z.ZodType<WatchOptions>
 
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
@@ -153,7 +165,7 @@ export const inputOptionsSchema = z.strictObject({
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
   watch: watchOptionsSchema.or(z.literal(false)).optional(),
-})
+}) satisfies z.ZodType<RawInputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema
   .extend({
@@ -182,42 +194,4 @@ export const inputCliOptionsSchema = inputOptionsSchema
     experimental: true,
     profilerNames: true,
     watch: true,
-  })
-
-type RawInputOptions = z.infer<typeof inputOptionsSchema>
-interface OverwriteInputOptionsWithDoc {
-  /**
-   * Inject import statements on demand.
-   *
-   * ## Supported patterns
-   * ```js
-   * {
-   *   // import { Promise } from 'es6-promise'
-   *   Promise: ['es6-promise', 'Promise'],
-   *
-   *   // import { Promise as P } from 'es6-promise'
-   *   P: ['es6-promise', 'Promise'],
-   *
-   *   // import $ from 'jquery'
-   *   $: 'jquery',
-   *
-   *   // import * as fs from 'node:fs'
-   *   fs: ['node:fs', '*'],
-   *
-   *   // Inject shims for property access pattern
-   *   'Object.assign': path.resolve( 'src/helpers/object-assign.js' ),
-   * }
-   * ```
-   */
-  inject?: RawInputOptions['inject']
-}
-
-export type InputOption = z.infer<typeof inputOptionSchema>
-export type InputOptions = Omit<
-  RawInputOptions,
-  keyof OverwriteInputOptionsWithDoc
-> &
-  OverwriteInputOptionsWithDoc
-export type ExternalOption = z.infer<typeof externalSchema>
-
-export type JsxOptions = z.infer<typeof jsxOptionsSchema>
+  }) satisfies z.ZodType<InputCliOptions>

@@ -5,11 +5,11 @@ import {
   SourceMap,
 } from './types/rolldown-output'
 import type {
-  ExternalOption,
-  InputOption,
   InputOptions,
+  InputOption,
+  ExternalOption,
   JsxOptions,
-} from './options/input-options'
+} from './types/input-options'
 import type { ModuleFormat, OutputOptions } from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {

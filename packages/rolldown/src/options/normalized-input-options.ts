@@ -3,7 +3,7 @@ import type {
   RollupLog,
   NormalizedInputOptions as RollupNormalizedInputOptions,
 } from '../rollup'
-import type { InputOptions } from './input-options'
+import type { InputOptions } from '../types/input-options'
 import type { RolldownPlugin } from '../plugin'
 import type { LogLevel } from '../log/logging'
 import { NormalizedTreeshakingOptions } from '../treeshake'

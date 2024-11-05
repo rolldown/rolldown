@@ -12,7 +12,10 @@ use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
 };
-use utils::{can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref};
+use utils::{
+  can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref,
+  maybe_side_effect_free_global_constructor,
+};
 
 use self::utils::{known_primitive_type, PrimitiveType};
 
@@ -335,7 +338,8 @@ impl<'a> SideEffectDetector<'a> {
         }
       }),
       Expression::NewExpression(expr) => {
-        let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+        let is_pure = maybe_side_effect_free_global_constructor(self.scope, expr)
+          || self.is_pure_function_or_constructor_call(expr.span);
         if is_pure {
           expr.arguments.iter().any(|arg| match arg {
             Argument::SpreadElement(_) => true,
@@ -809,6 +813,17 @@ mod test {
     assert!(get_statements_side_effect("import('foo')"));
     assert!(get_statements_side_effect("let a; a``"));
     assert!(get_statements_side_effect("let a; a++"));
+  }
+
+  #[test]
+  fn test_new_expr() {
+    assert!(!get_statements_side_effect("new Map()"));
+    assert!(!get_statements_side_effect("new Set()"));
+    assert!(!get_statements_side_effect("new Map([[1, 2], [3, 4]]);"));
+    assert!(get_statements_side_effect("new Regex()"));
+    assert!(!get_statements_side_effect(
+      "new Date(); new Date(''); new Date(null); new Date(false); new Date(undefined)"
+    ));
   }
 
   #[test]

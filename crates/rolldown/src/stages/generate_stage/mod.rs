@@ -8,8 +8,8 @@ use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
-  ChunkIdx, ChunkKind, FileNameRenderOptions, ImportMetaRolldownAssetReplacer, Module,
-  PreliminaryFilename,
+  ChunkIdx, ChunkKind, CssAssetNameReplacer, FileNameRenderOptions,
+  ImportMetaRolldownAssetReplacer, Module, PreliminaryFilename,
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
@@ -293,13 +293,33 @@ impl<'a> GenerateStage<'a> {
 
   pub fn patch_asset_modules(&mut self, chunk_graph: &ChunkGraph) {
     chunk_graph.chunk_table.iter().for_each(|chunk| {
+      let mut module_idx_to_filenames = FxHashMap::default();
+      // replace asset name in ecma view
       chunk.asset_preliminary_filenames.iter().for_each(|(module_idx, preliminary)| {
         let Module::Normal(module) = &mut self.link_output.module_table.modules[*module_idx] else {
           return;
         };
+        let asset_filename: ArcStr = preliminary.as_str().into();
         module.ecma_view.mutations.push(Box::new(ImportMetaRolldownAssetReplacer {
-          asset_filename: preliminary.to_string(),
+          asset_filename: asset_filename.clone(),
         }));
+        module_idx_to_filenames.insert(module_idx, asset_filename);
+      });
+      // replace asset name in css view
+      chunk.modules.iter().for_each(|module_idx| {
+        let module = &mut self.link_output.module_table.modules[*module_idx];
+        if let Some(css_view) =
+          module.as_normal_mut().and_then(|normal_module| normal_module.css_view.as_mut())
+        {
+          for (idx, record) in css_view.import_records.iter_enumerated() {
+            if let Some(asset_filename) = module_idx_to_filenames.get(&record.resolved_module) {
+              let span = css_view.record_idx_to_span[idx];
+              css_view
+                .mutations
+                .push(Box::new(CssAssetNameReplacer { span, asset_name: asset_filename.clone() }));
+            }
+          }
+        }
       });
     });
   }

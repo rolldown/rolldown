@@ -6,5 +6,6 @@
         "import": "src/entry.css"
       }
     ]
-  }
+  },
+  "expectExecuted": false
 }

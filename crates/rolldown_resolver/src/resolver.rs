@@ -165,7 +165,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::Require => &self.require_resolver,
-      ImportKind::AtImport => &self.css_resolver,
+      ImportKind::AtImport | ImportKind::UrlImport => &self.css_resolver,
     };
 
     let importer_dir = importer.and_then(|importer| importer.parent()).and_then(|inner| {

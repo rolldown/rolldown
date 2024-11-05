@@ -1,1 +1,8 @@
-{}
+{
+  "config": {
+    "moduleTypes": {
+      ".css": "css",
+      ".png": "asset"
+    }
+  }
+}

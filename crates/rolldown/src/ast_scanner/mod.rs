@@ -240,7 +240,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     module_request: &str,
     kind: ImportKind,
-    module_request_start: u32,
+    span: Span,
     init_meta: ImportRecordMeta,
   ) -> ImportRecordIdx {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
@@ -253,9 +253,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )
       .into(),
     );
-    let rec =
-      RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, module_request_start)
-        .with_meta(init_meta);
+    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, span)
+      .with_meta(init_meta);
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);
@@ -408,7 +407,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let id = self.add_import_record(
       decl.source.value.as_str(),
       ImportKind::Import,
-      decl.source.span().start,
+      decl.source.span(),
       if decl.source.span().is_empty() {
         ImportRecordMeta::IS_UNSPANNED_IMPORT
       } else {
@@ -431,7 +430,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       let record_id = self.add_import_record(
         source.value.as_str(),
         ImportKind::Import,
-        source.span().start,
+        source.span(),
         if source.span().is_empty() {
           ImportRecordMeta::IS_UNSPANNED_IMPORT
         } else {
@@ -523,7 +522,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let rec_id = self.add_import_record(
       decl.source.value.as_str(),
       ImportKind::Import,
-      decl.source.span().start,
+      decl.source.span(),
       if decl.source.span().is_empty() {
         ImportRecordMeta::IS_UNSPANNED_IMPORT
       } else {

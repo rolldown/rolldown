@@ -115,7 +115,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       let id = self.add_import_record(
         request.value.as_str(),
         ImportKind::DynamicImport,
-        expr.source.span().start,
+        expr.source.span(),
         if expr.source.span().is_empty() {
           ImportRecordMeta::IS_UNSPANNED_IMPORT
         } else {
@@ -190,7 +190,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         let id = self.add_import_record(
           request.value.as_str(),
           ImportKind::Require,
-          request.span().start,
+          request.span(),
           if request.span().is_empty() {
             ImportRecordMeta::IS_UNSPANNED_IMPORT
           } else {

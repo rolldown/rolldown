@@ -1332,20 +1332,23 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-CtcGwjNP.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{000}~.js => entry-ZTpsjvJq.js
+- entry-!~{001}~.js => entry-257bMV5q.js
 - entry2.css
-- dynamic-!~{002}~.js => dynamic-hx382zUK.js
+- copy-!~{002}~.js => copy-4V_reils.js
+- dynamic-!~{005}~.js => dynamic-mVVzGI22.js
+- assets/file-trxDDe4-.file
 
 # tests/esbuild/default/metafile_very_long_external_paths
 
 - bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-Gc3LJ5gu.js
 - assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-58oIsL55.file
 - bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-kT9H8Apa.js
-- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-0S9SNfkd.js
-- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-YX6i_RZN.js
+- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-mWz0mrRU.js
+- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-Ew8bSuBT.js
 - bytesInOutput should be at least 99.css
-- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{005}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-P9oMOlgh.js
+- assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-Q7SZEdLs.file
+- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-U-FEU7gY.js
 
 # tests/esbuild/default/minified_bundle_common_js
 
@@ -2340,14 +2343,14 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_copy_with_bundle_entry_point
 
 - src_entry-!~{000}~.js => src_entry-ioDHherq.js
-- src_entry-!~{001}~.js => src_entry-ER1HhN-W.js
+- src_entry-!~{001}~.js => src_entry-MXnb0dC3.js
 - src_entry2.css
 - assets_some-!~{002}~.js => assets_some-W0fyymA3.js
 - some-!~{003}~.js => some-3vTMswRN.js
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
-- src_entry-!~{000}~.js => src_entry-XooeNjMT.js
+- src_entry-!~{000}~.js => src_entry-TBxm50nK.js
 - src_entry.css
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_js
@@ -2442,12 +2445,13 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
-- entries_entry-!~{000}~.js => entries_entry-2vyhQpop.js
+- entries_entry-!~{000}~.js => entries_entry-94pXRTKc.js
 - entries_entry.css
-- entries_other_entry-!~{001}~.js => entries_other_entry-QV0jCcba.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-oVYa1arr.js
 - entries_other_entry.css
-- common-!~{002}~.js => common-qY6_Q_4n.js
-- common-6iTYFrj-.css
+- common-!~{002}~.js => common-mjvhjVPl.js
+- common-mAkN8zfC.css
+- assets/common-0ZsPsUov.png
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
@@ -2458,8 +2462,9 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_css
 
-- entries_entry-!~{000}~.js => entries_entry-AH_ZcV_w.js
+- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
 - entries_entry.css
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
 
@@ -2468,8 +2473,9 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_public_path_css
 
-- entries_entry-!~{000}~.js => entries_entry-AH_ZcV_w.js
+- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
 - entries_entry.css
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_public_path_js
 
@@ -2478,8 +2484,9 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_css
 
-- entries_entry-!~{000}~.js => entries_entry-AH_ZcV_w.js
+- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
 - entries_entry.css
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
 
@@ -2488,8 +2495,9 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_relative_path_css
 
-- entries_entry-!~{000}~.js => entries_entry-AH_ZcV_w.js
+- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
 - entries_entry.css
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
@@ -4733,8 +4741,9 @@ snapshot_kind: text
 
 # tests/rolldown/topics/css/basic
 
-- main-!~{000}~.js => main-Bb-L2J7W.js
+- main-!~{000}~.js => main-v1VwRIxk.js
 - main.css
+- assets/test-xOd17Yrt.png
 
 # tests/rolldown/topics/css/css_entries
 

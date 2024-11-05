@@ -200,13 +200,17 @@ impl ModuleTask {
         return Ok(());
       }
     };
-
     if !matches!(module_type, ModuleType::Css) {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
-        if record.kind.is_static() {
-          ecma_view.imported_ids.push(ArcStr::clone(&info.id).into());
-        } else {
-          ecma_view.dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
+        match record.kind {
+          ImportKind::Import | ImportKind::Require => {
+            ecma_view.imported_ids.push(ArcStr::clone(&info.id).into());
+          }
+          ImportKind::DynamicImport => {
+            ecma_view.dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
+          }
+          // for a none css module, we should not have `at-import` or `url-import`
+          ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
         }
       }
     }
@@ -326,10 +330,7 @@ impl ModuleTask {
                   if dep.is_unspanned() || is_css_module {
                     DiagnosableArcstr::String(specifier.as_str().into())
                   } else {
-                    DiagnosableArcstr::Span(Span::new(
-                      dep.module_request_start,
-                      dep.module_request_end(),
-                    ))
+                    DiagnosableArcstr::Span(dep.state.span)
                   },
                   "Module not found, treating it as an external dependency".into(),
                   Some("UNRESOLVED_IMPORT"),
@@ -353,10 +354,7 @@ impl ModuleTask {
                 if dep.is_unspanned() || is_css_module {
                   DiagnosableArcstr::String(specifier.as_str().into())
                 } else {
-                  DiagnosableArcstr::Span(Span::new(
-                    dep.module_request_start,
-                    dep.module_request_end(),
-                  ))
+                  DiagnosableArcstr::Span(dep.state.span)
                 },
                 reason,
                 None,

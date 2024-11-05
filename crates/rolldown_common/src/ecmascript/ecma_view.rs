@@ -119,7 +119,7 @@ bitflags! {
 
 #[derive(Debug, Default)]
 pub struct ImportMetaRolldownAssetReplacer {
-  pub asset_filename: String,
+  pub asset_filename: ArcStr,
 }
 
 impl SourceMutation for ImportMetaRolldownAssetReplacer {

@@ -1,7 +1,10 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
+
+## assets/test-N5MDk2yf.png
 
 ## main.css
 
@@ -12,11 +15,17 @@ body {
 
 body {
   background-color: #f0f0f0;
+  background-image: url(assets/test-N5MDk2yf.png);
 }
+
 
 ```
 ## main.js
 
 ```js
 
+//#region test.png
+var test_default = "assets/test-N5MDk2yf.png";
+
+//#endregion
 ```

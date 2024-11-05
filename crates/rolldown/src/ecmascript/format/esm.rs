@@ -16,7 +16,7 @@ use crate::{
 
 pub fn render_esm<'code>(
   ctx: &mut GenerateContext<'_>,
-  module_sources: RenderedModuleSources,
+  module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
   footer: Option<&'code str>,
   intro: Option<&'code str>,
@@ -61,7 +61,7 @@ pub fn render_esm<'code>(
   }
 
   // chunk content
-  module_sources.into_iter().for_each(|(_, _, module_render_output)| {
+  module_sources.iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
         source_joiner.append_source(source);

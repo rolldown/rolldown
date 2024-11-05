@@ -1,5 +1,6 @@
 # Aggregate Reason
 ## not support legal comments
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
 - crates/rolldown/tests/esbuild/default/legal_comments_end_of_file
@@ -48,14 +49,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_format
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_injected_file_bundle
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_transform
-## needs css stable
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 ## lowering class
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
@@ -119,14 +112,15 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
+## css module should be wrapped with `__commonJS`
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 ## not support import attributes
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
-## css stabilization
-- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
-- crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_from_css
-- crates/rolldown/tests/esbuild/loader/loader_data_url_text_css
 ## should rewrite `require`
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call
@@ -213,6 +207,10 @@
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
+## Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the sub tree should be eliminated
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
+## Our side effects normalization is not right
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 ## jsx element don't have pure annotation

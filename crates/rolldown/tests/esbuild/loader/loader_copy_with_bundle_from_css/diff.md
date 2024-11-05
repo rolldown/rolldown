@@ -1,6 +1,5 @@
 # Reason
-1. css stabilization
-2. not support copy loader
+1. not support copy loader
 # Diff
 ## /out/some-BYATPJRB.file
 ### esbuild

@@ -2,20 +2,6 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in node_modules/pkg/components.jsx
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in test.jsx
-
-```
 # Assets
 
 ## test.css
@@ -27,7 +13,6 @@ button { color: red }
 ## test.js
 
 ```js
-import { jsx as _jsx, jsx as _jsx$1 } from "react/jsx-runtime";
 
 
 //#region node_modules/pkg/button.css
@@ -37,11 +22,11 @@ var init_button = __esm({ "node_modules/pkg/button.css"() {} });
 //#endregion
 //#region node_modules/pkg/components.jsx
 init_button();
-const Button = () => _jsx$1("button", {});
+const Button = () => React.createElement("button", null);
 
 //#endregion
 //#region test.jsx
-render(_jsx(Button, {}));
+render(React.createElement(Button, null));
 
 //#endregion
 ```

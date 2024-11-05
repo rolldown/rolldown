@@ -14,4 +14,6 @@ pub enum Comments {
   None,
   /// Keep comments as much as possible
   Preserve,
+  /// Keep legal comments only
+  PreserveLegalComments,
 }

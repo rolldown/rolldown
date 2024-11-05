@@ -2583,6 +2583,7 @@ dependencies = [
  "arcstr",
  "bitflags 2.6.0",
  "dashmap 6.1.0",
+ "either",
  "glob-match",
  "itertools 0.13.0",
  "lightningcss",
@@ -2615,6 +2616,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "either",
  "oxc",
  "rolldown_error",
  "self_cell",

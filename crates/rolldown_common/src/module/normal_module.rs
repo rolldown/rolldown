@@ -9,6 +9,8 @@ use crate::{
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
+use either::Either;
+use oxc::codegen::LegalComment;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashSet;
@@ -174,9 +176,10 @@ impl NormalModule {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
-        let enable_comments = match options.comments {
-          Comments::None => false,
-          Comments::Preserve => true,
+        let comments = match options.comments {
+          Comments::None => Either::Left(false),
+          Comments::Preserve => Either::Left(true),
+          Comments::PreserveLegalComments => Either::Right(LegalComment::Inline),
         };
 
         // Because oxc codegen sourcemap is last of sourcemap chain,
@@ -184,11 +187,7 @@ impl NormalModule {
         // So here make sure using correct `source_name` and `source_content.
         let render_output = EcmaCompiler::print_with(
           ast,
-          PrintOptions {
-            sourcemap: enable_sourcemap,
-            filename: self.id.to_string(),
-            comments: enable_comments,
-          },
+          PrintOptions { sourcemap: enable_sourcemap, filename: self.id.to_string(), comments },
         );
         if !self.ecma_view.mutations.is_empty() {
           let mut magic_string = string_wizard::MagicString::new(&render_output.code);

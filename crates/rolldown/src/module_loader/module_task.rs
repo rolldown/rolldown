@@ -4,7 +4,7 @@ use oxc::{index::IndexVec, span::Span};
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
-use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
+use rolldown_utils::{ecmascript::legitimize_identifier_name, path_ext::PathExt};
 use std::sync::Arc;
 use sugar_path::SugarPath;
 

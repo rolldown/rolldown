@@ -6,7 +6,7 @@ use rolldown_common::{
   OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
-use rolldown_utils::ecma_script::{is_validate_identifier_name, property_access_str};
+use rolldown_utils::ecmascript::{is_validate_identifier_name, property_access_str};
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(

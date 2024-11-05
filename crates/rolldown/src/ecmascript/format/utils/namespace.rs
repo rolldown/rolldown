@@ -8,7 +8,7 @@ use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
+use rolldown_utils::ecmascript::is_validate_assignee_identifier_name;
 
 /// According to the amount of `.` in the name (levels),
 /// it generates the initialization code and the final code.

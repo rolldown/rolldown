@@ -4,7 +4,7 @@ pub mod base64;
 mod bitset;
 pub mod dataurl;
 pub mod debug;
-pub mod ecma_script;
+pub mod ecmascript;
 pub mod futures;
 pub mod global_reference;
 pub mod indexmap;

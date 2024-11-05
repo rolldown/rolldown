@@ -2637,7 +2637,7 @@ dependencies = [
  "ariadne",
  "napi",
  "oxc",
- "rolldown_resolver",
+ "oxc_resolver",
  "sugar_path",
 ]
 

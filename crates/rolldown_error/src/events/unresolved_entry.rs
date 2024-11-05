@@ -1,4 +1,4 @@
-use rolldown_resolver::ResolveError;
+use oxc_resolver::ResolveError;
 
 use super::BuildEvent;
 use crate::types::diagnostic_options::DiagnosticOptions;

@@ -38,7 +38,7 @@ mod options {
   fn stores_source_file_information() {
     let s =
       MagicString::with_options("abc", MagicStringOptions { filename: Some("foo.js".to_string()) });
-    assert_eq!(s.filename, Some("foo.js".to_string()))
+    assert_eq!(s.filename(), Some("foo.js"))
   }
 }
 

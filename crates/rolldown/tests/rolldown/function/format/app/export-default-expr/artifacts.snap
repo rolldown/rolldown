@@ -1,15 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
+
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 __toCommonJS(exports);
 __export(exports, { default: () => main_default });
 var main_default = 1;
 
 //#endregion
+});
+rolldown_runtime.require('main.js');
 ```

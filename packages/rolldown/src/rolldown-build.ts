@@ -44,11 +44,8 @@ export class RolldownBuild {
   async experimental_hmr_rebuild(
     changedFiles: string[],
   ): Promise<[string, AssetSource]> {
-    const output = await this.#bundler!.hmrRebuild(changedFiles)
-    return [
-      output.assets[0].fileName,
-      transformAssetSource(output.assets[0].source),
-    ]
+    const { assets } = await this.#bundler!.bundler.hmrRebuild(changedFiles)
+    return [assets[0].fileName, transformAssetSource(assets[0].source)]
   }
 
   async close(): Promise<void> {

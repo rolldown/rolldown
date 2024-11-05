@@ -4,18 +4,19 @@ use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
-use crate::types::symbols::Symbols;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
-use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
+use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   ExternalModule, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx, ModuleTable, ResolvedId,
+  SymbolNameRefToken, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -34,8 +35,7 @@ impl HmrIntermediateNormalModules {
     }
   }
 
-  pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> ModuleIdx {
-    symbols.alloc_one();
+  pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
     self.modules.push(None)
   }
 }
@@ -47,7 +47,7 @@ pub struct HmrModuleLoader {
   visited: FxHashMap<ArcStr, ModuleIdx>,
   remaining: u32,
   intermediate_normal_modules: HmrIntermediateNormalModules,
-  symbols: Symbols,
+  symbol_ref_db: SymbolRefDb,
 }
 
 pub struct HmrModuleLoaderOutput {
@@ -55,7 +55,7 @@ pub struct HmrModuleLoaderOutput {
   pub module_table: ModuleTable,
   pub module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub index_ecma_ast: IndexEcmaAst,
-  pub symbols: Symbols,
+  pub symbol_ref_db: SymbolRefDb,
   pub warnings: Vec<BuildDiagnostic>,
   pub changed_modules: Vec<ModuleIdx>,
   pub diff_modules: Vec<ModuleIdx>,
@@ -71,7 +71,7 @@ impl HmrModuleLoader {
     previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
     previous_module_table: ModuleTable,
     pervious_index_ecma_ast: IndexEcmaAst,
-    pervious_symbols: Symbols,
+    pervious_symbols: SymbolRefDb,
   ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -111,7 +111,7 @@ impl HmrModuleLoader {
       visited: previous_module_id_to_modules,
       remaining: 0,
       intermediate_normal_modules,
-      symbols: pervious_symbols,
+      symbol_ref_db: pervious_symbols,
     })
   }
 
@@ -124,7 +124,7 @@ impl HmrModuleLoader {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if resolved_id.is_external {
-          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
           not_visited.insert(idx);
           let external_module_side_effects = if let Some(hook_side_effects) =
             resolved_id.side_effects
@@ -148,12 +148,16 @@ impl HmrModuleLoader {
               },
             }
           };
-          let ext =
-            ExternalModule::new(idx, ArcStr::clone(&resolved_id.id), external_module_side_effects);
+          let ext = ExternalModule::new(
+            idx,
+            ArcStr::clone(&resolved_id.id),
+            external_module_side_effects,
+            SymbolNameRefToken::new(idx, legitimize_identifier_name(&resolved_id.id).into()),
+          );
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx
         } else {
-          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
           not_visited.insert(idx);
           self.remaining += 1;
 
@@ -178,7 +182,7 @@ impl HmrModuleLoader {
   pub async fn fetch_changed_files(
     mut self,
     changed_files: Vec<String>,
-  ) -> anyhow::Result<DiagnosableResult<HmrModuleLoaderOutput>> {
+  ) -> anyhow::Result<BuildResult<HmrModuleLoaderOutput>> {
     if self.options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
@@ -237,19 +241,19 @@ impl HmrModuleLoader {
           } = task_result;
           all_warnings.extend(warnings);
 
-          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ImportRecord> =
+          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
               .into_iter()
               .zip(resolved_deps)
               .map(|(raw_rec, info)| {
-                let ecma_module = module.as_ecma().unwrap();
+                let ecma_module = module.as_normal().unwrap();
                 let owner = ModuleTaskOwner::new(
                   ecma_module.source.clone(),
                   ecma_module.stable_id.as_str().into(),
                   Span::new(raw_rec.module_request_start, raw_rec.module_request_end()),
                 );
                 let id = self.try_spawn_new_task(info, Some(owner));
-                raw_rec.into_import_record(id)
+                raw_rec.into_resolved(id)
               })
               .collect::<IndexVec<ImportRecordIdx, _>>();
 
@@ -258,7 +262,7 @@ impl HmrModuleLoader {
             if module_idx < self.intermediate_normal_modules.modules.len() {
               if let Some(ast_idx) = self.intermediate_normal_modules.modules[module_idx]
                 .as_ref()
-                .and_then(|m| m.as_ecma())
+                .and_then(|m| m.as_normal())
                 .and_then(|m| m.ecma_ast_idx)
               {
                 self.intermediate_normal_modules.index_ecma_ast[ast_idx] = (ast, module_idx);
@@ -268,7 +272,7 @@ impl HmrModuleLoader {
               let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module_idx));
               module.set_ecma_ast_idx(ast_idx);
             }
-            self.symbols.add_ast_symbols(module_idx, ast_symbol);
+            self.symbol_ref_db.store_local_db(module_idx, ast_symbol);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
           diff_modules.push(module_idx);
@@ -279,26 +283,12 @@ impl HmrModuleLoader {
         Msg::BuildErrors(e) => {
           errors.extend(e);
         }
-        // Expect cast to u32, since we are not going to have more than 2^32 tasks, or the
-        // `remaining` will overflow
-        #[allow(clippy::cast_possible_truncation)]
-        Msg::Panics(err) => {
-          // `self.remaining -1` for the panic task it self
-          self.remaining -= 1;
-          // gracefully shutdown all working thread, only receive and do not spawn
-          while self.remaining > 0 {
-            let mut task = Vec::with_capacity(self.remaining as usize);
-            let received = self.rx.recv_many(&mut task, self.remaining as usize).await;
-            self.remaining -= received as u32;
-          }
-          return Err(err);
-        }
       }
       self.remaining -= 1;
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors));
+      return Ok(Err(errors.into()));
     }
 
     let modules: IndexVec<ModuleIdx, Module> =
@@ -307,7 +297,7 @@ impl HmrModuleLoader {
     Ok(Ok(HmrModuleLoaderOutput {
       module_table: ModuleTable { modules },
       module_id_to_modules: self.visited,
-      symbols: self.symbols,
+      symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       warnings: all_warnings,
       changed_modules,

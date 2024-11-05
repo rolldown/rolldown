@@ -10,15 +10,16 @@ use crate::{
     scan_stage::ScanStage,
   },
   type_alias::IndexEcmaAst,
-  types::{bundle_output::BundleOutput, symbols::Symbols},
+  types::bundle_output::BundleOutput,
   watcher::watcher::{wait_for_change, Watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
 use arcstr::ArcStr;
 
-use arcstr::ArcStr;
-use rolldown_common::{ModuleIdx, ModuleTable, NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{
+  ModuleIdx, ModuleTable, NormalizedBundlerOptions, SharedFileEmitter, SymbolRefDb,
+};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -40,7 +41,7 @@ pub struct Bundler {
   pub(crate) previous_module_table: ModuleTable,
   pub(crate) previous_module_id_to_modules: FxHashMap<ArcStr, ModuleIdx>,
   pub(crate) pervious_index_ecma_ast: IndexEcmaAst,
-  pub(crate) pervious_symbols: Symbols,
+  pub(crate) pervious_symbols: SymbolRefDb,
 }
 
 impl Bundler {
@@ -149,7 +150,12 @@ impl Bundler {
       match hmr_module_loader.fetch_changed_files(changed_files).await? {
         Ok(output) => output,
         Err(errors) => {
-          return Ok(BundleOutput { warnings: vec![], errors, assets: vec![] });
+          return Ok(BundleOutput {
+            warnings: vec![],
+            errors: errors.into_vec(),
+            assets: vec![],
+            watch_files: vec![],
+          });
         }
       };
 
@@ -161,7 +167,7 @@ impl Bundler {
     self.previous_module_table = hmr_module_loader_output.module_table;
     self.previous_module_id_to_modules = hmr_module_loader_output.module_id_to_modules;
     self.pervious_index_ecma_ast = hmr_module_loader_output.index_ecma_ast;
-    self.pervious_symbols = hmr_module_loader_output.symbols;
+    self.pervious_symbols = hmr_module_loader_output.symbol_ref_db;
 
     Ok(output)
   }
@@ -245,12 +251,6 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
-    // store last build modules info
-    self.previous_module_table = link_stage_output.module_table;
-    self.previous_module_id_to_modules = link_stage_output.module_id_to_modules;
-    self.pervious_index_ecma_ast = link_stage_output.ast_table;
-    self.pervious_symbols = link_stage_output.symbols;
-
     output.watch_files = {
       let mut files = link_stage_output
         .module_table
@@ -261,6 +261,12 @@ impl Bundler {
       files.extend(self.plugin_driver.watch_files.iter().map(|f| f.clone()));
       files
     };
+
+    // store last build modules info
+    self.previous_module_table = link_stage_output.module_table;
+    self.previous_module_id_to_modules = link_stage_output.module_id_to_modules;
+    self.pervious_index_ecma_ast = link_stage_output.ast_table;
+    self.pervious_symbols = link_stage_output.symbol_db;
 
     Ok(output)
   }

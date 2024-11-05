@@ -487,7 +487,7 @@ impl<'a> LinkStage<'a> {
         if module.idx() == self.runtime.id() {
           continue;
         }
-        if let Some(module) = module.as_ecma_mut() {
+        if let Some(module) = module.as_normal_mut() {
           module.stmt_infos.iter_mut().for_each(|stmt_info| {
             stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__commonJS").into());
           });

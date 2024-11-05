@@ -72,7 +72,7 @@ impl Plugin for TransformPlugin {
         ModuleType::Jsx | ModuleType::Tsx => {
           transformer_options.jsx.jsx_plugin = true;
           if self.react_refresh {
-            transformer_options.react.refresh = Some(ReactRefreshOptions::default());
+            transformer_options.jsx.refresh = Some(ReactRefreshOptions::default());
           }
         }
         ModuleType::Ts => {}

@@ -2933,15 +2933,7 @@ snapshot_kind: text
 
 # tests/esbuild/lower/ts_lower_private_field_optional_chain2015_no_bundle
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 - entry-!~{000}~.js => entry-jF2aLy7c.js
-=======
-- entry-!~{000}~.mjs => entry-NqLgVvPa.mjs
->>>>>>> b6bdba8f3 (feat: implement hmr runtime (#2172))
-=======
-- entry-!~{000}~.mjs => entry-Jxn77t-m.mjs
->>>>>>> c5604e468 (fix: diff modules ast should be mutate by IsolatingModuleFinalizer (#2184))
 
 # tests/esbuild/lower/ts_lower_private_static_members2015_no_bundle
 
@@ -4217,101 +4209,41 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/export-all
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-- main-!~{000}~.js => main--pSlkPVu.js
+- main-!~{000}~.js => main-IPUuuR8j.js
 
 # tests/rolldown/function/format/app/export-default-class
 
-- main-!~{000}~.js => main-jZKaO735.js
+- main-!~{000}~.js => main-pd7fSnBf.js
 
 # tests/rolldown/function/format/app/export-default-expr
 
-- main-!~{000}~.js => main-wvsh7GLY.js
+- main-!~{000}~.js => main-h9KZwL3x.js
 
 # tests/rolldown/function/format/app/export-default-fn
 
-- main-!~{000}~.js => main-J64SEDW3.js
+- main-!~{000}~.js => main--YEtBw2s.js
 
 # tests/rolldown/function/format/app/export-named
 
-- main-!~{000}~.js => main-3GQsjccL.js
+- main-!~{000}~.js => main-Eu0Fh2AG.js
 
 # tests/rolldown/function/format/app/export-named-from
 
-- main-!~{000}~.js => main-h6vOV3uK.js
+- main-!~{000}~.js => main-2eny-KQl.js
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-r4V64q5u.js
+- main-!~{000}~.js => main-JF6gVBKt.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-- main-!~{000}~.js => main-gMSufccO.js
-- other-entry-!~{001}~.js => other-entry-_m87DosR.js
-- cube-!~{002}~.js => cube-VxKWZvg0.js
+- main-!~{000}~.js => main-0_MRuli3.js
+- other-entry-!~{001}~.js => other-entry-E_yUc6bK.js
+- cube-!~{002}~.js => cube-cP_XiW0A.js
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.js => main-gFBfIluz.js
-=======
-=======
->>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
-=======
->>>>>>> 332ebbe1d (feat: implement rolldown_runtime and fix react-refresh make react-example run (#2159))
-<<<<<<< HEAD
-- main-!~{000}~.mjs => main-OEIxNKs9.mjs
-- other-entry-!~{001}~.mjs => other-entry-WSMhxqR9.mjs
-- cube-!~{002}~.mjs => cube-r9ltmWJC.mjs
-=======
-- main-!~{000}~.mjs => main-uX480VUe.mjs
-- other-entry-!~{001}~.mjs => other-entry-rTdGOMZR.mjs
-- cube-!~{002}~.mjs => cube-loSBOAvt.mjs
->>>>>>> 4992f66d (chore: disable IsolatingModuleFinalizer (#2149))
-<<<<<<< HEAD
->>>>>>> ebd1b0c55 (chore: disable IsolatingModuleFinalizer (#2149))
-=======
-=======
-- main-!~{000}~.mjs => main-lE-CsZar.mjs
-- other-entry-!~{001}~.mjs => other-entry-cL10WWA7.mjs
-=======
-- main-!~{000}~.mjs => main-ASwzPJTD.mjs
-- other-entry-!~{001}~.mjs => other-entry-8oGJqUMX.mjs
->>>>>>> 5c89389e (feat: implement rolldown_runtime and fix react-refresh make react-example run (#2159))
-- cube-!~{002}~.mjs => cube-ql8lOQly.mjs
->>>>>>> ebc7a043 (feat: render app chunk and replace require module id to stable id (#2156))
->>>>>>> 582c2f393 (feat: render app chunk and replace require module id to stable id (#2156))
-=======
-- main-!~{000}~.mjs => main-K6QmF0kO.mjs
-=======
-- main-!~{000}~.mjs => main-vhtY9kYB.mjs
->>>>>>> 5616e0dcb (fix: make sure rolldown inject runtime at vue (#2292))
-=======
-- main-!~{000}~.mjs => main-9HBv82R7.mjs
->>>>>>> e70060b24 (feat: support hot accept callback (#2294))
-
-# tests/rolldown/function/format/app/export-named
-
-- main-!~{000}~.mjs => main-BpWBfuBT.mjs
-
-# tests/rolldown/function/format/app/export-named-from
-
-- main-!~{000}~.mjs => main-vHKD1O4a.mjs
-
-# tests/rolldown/function/format/app/import
-
-- main-!~{000}~.mjs => main-YXBHhXtu.mjs
-
-# tests/rolldown/function/format/app/multiple_entry_modules
-
-- main-!~{000}~.mjs => main-uDhpRUC1.mjs
-- other-entry-!~{001}~.mjs => other-entry-EZYP3cGv.mjs
-- cube-!~{002}~.mjs => cube-bpLihKnj.mjs
->>>>>>> d901ab068 (chore(hmr): rebase main branch)
+- main-!~{000}~.js => main-0yHXnpiT.js
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -4448,35 +4380,19 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/binary/binary
 
-<<<<<<< HEAD
-- main-!~{000}~.js => main-pg5mPdJr.js
+- main-!~{000}~.js => main-k-UOs9U5.js
 
 # tests/rolldown/function/module_types/binary/empty
 
-- main-!~{000}~.js => main-YLA1OVTV.js
+- main-!~{000}~.js => main-LCE6_dG2.js
 
 # tests/rolldown/function/module_types/binary/node
 
-- main-!~{000}~.js => main--wpapQxr.js
+- main-!~{000}~.js => main-mIOyK4YT.js
 
 # tests/rolldown/function/module_types/binary/text
 
-- main-!~{000}~.js => main-iMUtSuao.js
-=======
-- main-!~{000}~.mjs => main-djVHgm4n.mjs
-
-# tests/rolldown/function/module_types/binary/empty
-
-- main-!~{000}~.mjs => main-R6tM0dYc.mjs
-
-# tests/rolldown/function/module_types/binary/node
-
-- main-!~{000}~.mjs => main-_4kHFcFC.mjs
-
-# tests/rolldown/function/module_types/binary/text
-
-- main-!~{000}~.mjs => main-LFadhsZS.mjs
->>>>>>> a98e60069 (fix: using simple react refresh and make serve work (#2158))
+- main-!~{000}~.js => main-VS-ROKoL.js
 
 # tests/rolldown/function/module_types/dataurl/binary
 

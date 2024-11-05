@@ -94,7 +94,7 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn hmr_rebuild(&self, changed_files: Vec<String>) -> napi::Result<FinalBindingOutputs> {
+  pub async fn hmr_rebuild(&self, changed_files: Vec<String>) -> napi::Result<BindingOutputs> {
     self.hmr_rebuild_impl(changed_files).await
   }
 
@@ -174,13 +174,8 @@ impl Bundler {
     Ok(BindingWatcher::new(watcher))
   }
 
-  pub async fn hmr_rebuild_impl(
-    &self,
-    changed_files: Vec<String>,
-  ) -> napi::Result<FinalBindingOutputs> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
+  pub async fn hmr_rebuild_impl(&self, changed_files: Vec<String>) -> napi::Result<BindingOutputs> {
+    let mut bundler_core = self.inner.lock().await;
 
     let output = bundler_core.hmr_rebuild(changed_files).await?;
 
@@ -189,18 +184,7 @@ impl Bundler {
     }
 
     self.handle_warnings(output.warnings).await;
-    Ok(FinalBindingOutputs::new(output.assets))
-  }
-
-  #[allow(clippy::significant_drop_tightening)]
-  pub async fn close_impl(&self) -> napi::Result<()> {
-    let mut bundler_core = self.inner.try_lock().map_err(|_| {
-      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
-    })?;
-
-    Self::handle_result(bundler_core.close().await)?;
-
-    Ok(())
+    Ok(output.assets.into())
   }
 
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {

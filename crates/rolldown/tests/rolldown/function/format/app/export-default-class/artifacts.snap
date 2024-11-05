@@ -1,17 +1,24 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
+
+rolldown_runtime.define('foo.js',function(require, module, exports){
+
 //#region foo.js
 __toCommonJS(exports);
 __export(exports, { default: () => foo_default });
 class {};
 
 //#endregion
+});
+rolldown_runtime.define('main.js',function(require, module, exports){
+
 //#region main.js
 __toCommonJS(exports);
 __export(exports, { default: () => A });
@@ -19,4 +26,6 @@ var foo_exports = require("foo.js");
 class A {};
 
 //#endregion
+});
+rolldown_runtime.require('main.js');
 ```

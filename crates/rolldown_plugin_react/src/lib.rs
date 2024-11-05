@@ -90,7 +90,7 @@ impl Plugin for ReactPlugin {
   #[allow(clippy::case_sensitive_file_extension_comparisons)]
   async fn transform(
     &self,
-    _ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    _ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if args.id.ends_with(".jsx") || args.id.ends_with(".tsx") {

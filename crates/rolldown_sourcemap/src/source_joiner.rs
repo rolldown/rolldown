@@ -3,9 +3,9 @@ use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
 use crate::source::Source;
 
 #[derive(Default)]
-pub struct SourceJoiner {
-  inner: Vec<Box<dyn Source>>,
-  prepend_source: Vec<Box<dyn Source>>,
+pub struct SourceJoiner<'source> {
+  inner: Vec<Box<dyn Source + 'source>>,
+  prepend_source: Vec<Box<dyn Source + 'source>>,
   enable_sourcemap: bool,
   names_len: usize,
   sources_len: usize,
@@ -13,15 +13,15 @@ pub struct SourceJoiner {
   token_chunks_len: usize,
 }
 
-impl SourceJoiner {
-  pub fn append_source<T: Source + 'static>(&mut self, source: T) {
+impl<'source> SourceJoiner<'source> {
+  pub fn append_source<T: Source + 'source>(&mut self, source: T) {
     if let Some(sourcemap) = source.sourcemap() {
       self.accumulate_sourcemap_data_size(sourcemap);
     }
     self.inner.push(Box::new(source));
   }
 
-  pub fn prepend_source(&mut self, source: Box<dyn Source>) {
+  pub fn prepend_source(&mut self, source: Box<dyn Source + 'source>) {
     if let Some(sourcemap) = source.sourcemap() {
       self.accumulate_sourcemap_data_size(sourcemap);
     }

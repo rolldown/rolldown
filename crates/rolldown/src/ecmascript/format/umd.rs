@@ -29,7 +29,7 @@ pub fn render_umd(
   footer: Option<String>,
   intro: Option<String>,
   outro: Option<String>,
-) -> BuildResult<SourceJoiner> {
+) -> BuildResult<SourceJoiner<'static>> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(banner) = banner {

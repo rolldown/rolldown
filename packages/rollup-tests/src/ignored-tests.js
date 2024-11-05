@@ -36,11 +36,8 @@ const ignoreTests = [
   "rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable",// check chunk why is empty
 
   // The dyanmic import at format cjs is not compatible with rollup
+  // The test passed, but the snapshot is same with rollup
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
-  "rollup@function@dynamic-import-existing: Dynamic import inlining when resolution id is a module in the bundle",
-  "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
-  'rollup@function@dynamic-import-rewriting: Dynamic import string specifier resolving',
-  "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
   // output.dynamicImportInCjs is not supported
   "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",
   "rollup@function@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions",
@@ -84,6 +81,15 @@ const ignoreTests = [
   "rollup@function@class-name-conflict-3: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
+
+  // https://github.com/rolldown/rolldown/issues/2569
+  "rollup@sourcemaps@ignore-list-default: defaults to adding files within node_modules to the ignore list@generates es",
+  "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
+  "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
+  "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
+  "rollup@sourcemaps@relative-paths: source paths are relative with relative dest (#344)@generates es",
+  "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
+  "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es",
 
   // Format cjs
   "rollup@function@default-export-with-null-prototype: default exports of objects with null prototypes are supported",
@@ -523,14 +529,7 @@ const ignoreTests = [
   "rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces",
   "rollup@function@can-import-self: a module importing its own bindings",
   "rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed",
-  // https://github.com/rolldown/rolldown/issues/2569
-  "rollup@sourcemaps@ignore-list-default: defaults to adding files within node_modules to the ignore list@generates es",
-  "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
-  "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
-  "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
-  "rollup@sourcemaps@relative-paths: source paths are relative with relative dest (#344)@generates es",
-  "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
-  "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es"
+  "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
 ]
 
 module.exports = {

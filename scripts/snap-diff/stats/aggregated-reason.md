@@ -294,8 +294,6 @@
 - crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result
 - crates/rolldown/tests/esbuild/default/mangle_no_quoted_props
-## not support file loader
-- crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
 ## not support preserve `jsx`
 - crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread
 ## don't rewrite top level binding

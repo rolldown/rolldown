@@ -17,7 +17,11 @@
         "name": "bytesInOutput should be at least 99",
         "import": "bytesInOutput should be at least 99.css"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".file": "asset"
+    }
   },
   "expectExecuted": false
 }

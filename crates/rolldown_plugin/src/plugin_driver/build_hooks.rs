@@ -12,41 +12,46 @@ use crate::{
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::{futures::block_on_spawn_all, unique_arc::UniqueArc};
+use rolldown_utils::unique_arc::UniqueArc;
 
 use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self) -> HookNoopReturn {
-    let ret = {
-      #[cfg(not(target_arch = "wasm32"))]
-      {
-        block_on_spawn_all(
-          self
-            .iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
-            .map(|(_, plugin, ctx)| plugin.call_build_start(ctx)),
-        )
-        .await
-      }
-      #[cfg(target_arch = "wasm32")]
-      {
-        // FIXME(hyf0): This is a workaround for wasm32 target, it's wired that
-        // `block_on_spawn_all(self.plugins.iter().map(|(plugin, ctx)| plugin.build_start(ctx))).await;` will emit compile errors like
-        // `implementation of `std::marker::Send` is not general enough`. It seems to be the problem related to HRTB, async and iterator.
-        // I guess we need some rust experts here.
-        let mut futures = vec![];
-        for (_, plugin, ctx) in
-          self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
-        {
-          futures.push(plugin.call_build_start(ctx));
-        }
-        block_on_spawn_all(futures.into_iter()).await
-      }
-    };
+    // let ret = {
+    //   #[cfg(not(target_arch = "wasm32"))]
+    //   {
+    //     block_on_spawn_all(
+    //       self
+    //         .iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
+    //         .map(|(_, plugin, ctx)| plugin.call_build_start(ctx)),
+    //     )
+    //     .await
+    //   }
+    //   #[cfg(target_arch = "wasm32")]
+    //   {
+    //     // FIXME(hyf0): This is a workaround for wasm32 target, it's wired that
+    //     // `block_on_spawn_all(self.plugins.iter().map(|(plugin, ctx)| plugin.build_start(ctx))).await;` will emit compile errors like
+    //     // `implementation of `std::marker::Send` is not general enough`. It seems to be the problem related to HRTB, async and iterator.
+    //     // I guess we need some rust experts here.
+    //     let mut futures = vec![];
+    //     for (_, plugin, ctx) in
+    //       self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
+    //     {
+    //       futures.push(plugin.call_build_start(ctx));
+    //     }
+    //     block_on_spawn_all(futures.into_iter()).await
+    //   }
+    // };
 
-    for r in ret {
-      r?;
+    // for r in ret {
+    //   r?;
+    // }
+
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
+    {
+      plugin.call_build_start(ctx).await?;
     }
 
     Ok(())

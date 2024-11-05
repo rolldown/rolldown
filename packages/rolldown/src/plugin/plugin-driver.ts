@@ -14,7 +14,10 @@ export class PluginDriver {
     inputOptions: InputOptions,
   ): Promise<InputOptions> {
     const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
-    const plugins = getObjectPlugins(inputOptions.plugins ?? [])
+    const plugins = getSortedPlugins(
+      'options',
+      getObjectPlugins(inputOptions.plugins ?? []),
+    )
     const logger = getLogger(
       plugins,
       getOnLog(inputOptions, logLevel),
@@ -73,7 +76,10 @@ export class PluginDriver {
     inputOptions: NormalizedInputOptions,
     outputOptions: OutputOptions,
   ): OutputOptions {
-    const plugins = getObjectPlugins(inputOptions.plugins)
+    const plugins = getSortedPlugins(
+      'outputOptions',
+      getObjectPlugins(inputOptions.plugins),
+    )
 
     for (const plugin of plugins) {
       const options = plugin.outputOptions
@@ -101,4 +107,30 @@ export function getObjectPlugins(plugins: RolldownPluginRec[]): Plugin[] {
     }
     return plugin
   }) as Plugin[]
+}
+
+export function getSortedPlugins(
+  hookName: 'options' | 'outputOptions' | 'onLog',
+  plugins: readonly Plugin[],
+): Plugin[] {
+  const pre: Plugin[] = []
+  const normal: Plugin[] = []
+  const post: Plugin[] = []
+  for (const plugin of plugins) {
+    const hook = plugin[hookName]
+    if (hook) {
+      if (typeof hook === 'object') {
+        if (hook.order === 'pre') {
+          pre.push(plugin)
+          continue
+        }
+        if (hook.order === 'post') {
+          post.push(plugin)
+          continue
+        }
+      }
+      normal.push(plugin)
+    }
+  }
+  return [...pre, ...normal, ...post]
 }

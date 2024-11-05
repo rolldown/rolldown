@@ -16,9 +16,6 @@ const ignoreTests = [
   // Need to investigate
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks',
 
-  // Not supported
-  'rollup@function@enforce-plugin-order: allows to enforce plugin hook order',
- 
   // The test case import test.js from rollup package, it's dependencies can't be resolved.
   "rollup@function@relative-outside-external: correctly resolves relative external imports from outside directories",
   // Ignore skipIfWindows test avoid test status error
@@ -115,6 +112,10 @@ const ignoreTests = [
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",
+
+
+  // `renderDynamicImport/resolveFileUrl/resolveImportMeta/shouldTransformCachedModule` hooks not supported
+  'rollup@function@enforce-plugin-order: allows to enforce plugin hook order',
 
   // The output plugins hooks is not working as expected
   "rollup@function@options-in-renderstart: makes input and output options available in renderStart",

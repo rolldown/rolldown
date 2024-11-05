@@ -9,3 +9,5 @@ export interface TestConfig {
   afterTest?: (output: RolldownOutput) => Promise<void> | void
   catchError?: (err: unknown) => Promise<void> | void
 }
+
+export type { Plugin } from 'rolldown'

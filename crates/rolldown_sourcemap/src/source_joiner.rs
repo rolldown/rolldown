@@ -4,8 +4,8 @@ use crate::source::Source;
 
 #[derive(Default)]
 pub struct SourceJoiner {
-  inner: Vec<Box<dyn Source + Send>>,
-  prepend_source: Vec<Box<dyn Source + Send>>,
+  inner: Vec<Box<dyn Source>>,
+  prepend_source: Vec<Box<dyn Source>>,
   enable_sourcemap: bool,
   names_len: usize,
   sources_len: usize,
@@ -14,14 +14,14 @@ pub struct SourceJoiner {
 }
 
 impl SourceJoiner {
-  pub fn append_source<T: Source + 'static + Send>(&mut self, source: T) {
+  pub fn append_source<T: Source + 'static>(&mut self, source: T) {
     if let Some(sourcemap) = source.sourcemap() {
       self.accumulate_sourcemap_data_size(sourcemap);
     }
     self.inner.push(Box::new(source));
   }
 
-  pub fn prepend_source(&mut self, source: Box<dyn Source + Send>) {
+  pub fn prepend_source(&mut self, source: Box<dyn Source>) {
     if let Some(sourcemap) = source.sourcemap() {
       self.accumulate_sourcemap_data_size(sourcemap);
     }

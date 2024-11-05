@@ -266,6 +266,7 @@ impl ModuleTask {
         is_external: false,
         package_json: None,
         side_effects: None,
+        is_external_without_side_effects: false,
       }));
     }
 
@@ -344,6 +345,7 @@ impl ModuleTask {
                 is_external: true,
                 package_json: None,
                 side_effects: None,
+                is_external_without_side_effects: false,
               });
             }
             e => {

@@ -166,7 +166,13 @@ impl ModuleLoader {
                 rolldown_common::ModuleSideEffects::Boolean(false) => {
                   DeterminedSideEffects::UserDefined(false)
                 }
-                _ => DeterminedSideEffects::NoTreeshake,
+                _ => {
+                  if resolved_id.is_external_without_side_effects {
+                    DeterminedSideEffects::UserDefined(false)
+                  } else {
+                    DeterminedSideEffects::NoTreeshake
+                  }
+                }
               },
             }
           };

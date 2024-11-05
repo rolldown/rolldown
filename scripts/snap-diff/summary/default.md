@@ -5,8 +5,6 @@
   diff
 ## [arrow_fn_scope](../../../crates/rolldown/tests/esbuild/default/arrow_fn_scope/diff.md)
   diff
-## [auto_external_node](../../../crates/rolldown/tests/esbuild/default/auto_external_node/diff.md)
-  diff
 ## call_import_namespace_warning
   missing
 ## [comment_preservation](../../../crates/rolldown/tests/esbuild/default/comment_preservation/diff.md)
@@ -238,6 +236,7 @@
 # Passed Cases
 ## [ambiguous_reexport_msg](../../../crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg)
 ## [auto_external](../../../crates/rolldown/tests/esbuild/default/auto_external)
+## [auto_external_node](../../../crates/rolldown/tests/esbuild/default/auto_external_node)
 ## [await_import_inside_try](../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
 ## [built_in_node_module_precedence](../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence)
 ## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)

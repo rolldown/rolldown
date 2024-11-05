@@ -18,7 +18,6 @@ export {
 ```
 ### rolldown
 ```js
-import "fs";
 import "./external";
 
 export * from "fs"
@@ -36,8 +35,7 @@ export { foo };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,6 @@
-+import "fs";
+@@ -1,4 +1,5 @@
 +import "./external";
  export * from "fs";
 -var foo = 123;

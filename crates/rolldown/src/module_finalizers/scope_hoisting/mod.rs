@@ -6,7 +6,7 @@ use oxc::{
 use rolldown_common::{
   AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, SymbolRef, WrapKind,
 };
-use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
+use rolldown_ecmascript_utils::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut;

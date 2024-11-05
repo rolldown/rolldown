@@ -3,7 +3,7 @@ use oxc::{
   span::SPAN,
 };
 use rolldown_common::{EcmaModuleAstUsage, ExportsKind, LocalExport, Module, StmtInfoIdx};
-use rolldown_ecmascript::{AstSnippet, TakeIn};
+use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 

@@ -3,7 +3,7 @@ use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
 use oxc::span::{CompactStr, Span, SPAN};
 use rolldown_common::{Interop, Module};
-use rolldown_ecmascript::TakeIn;
+use rolldown_ecmascript_utils::TakeIn;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use crate::utils::call_expression_ext::CallExpressionExt;

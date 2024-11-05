@@ -12,7 +12,7 @@ use oxc::{
 use rolldown_common::{
   ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind,
 };
-use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
+use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 

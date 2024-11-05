@@ -8,7 +8,7 @@ use oxc::{
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
-use rolldown_ecmascript::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::SideEffectDetector;
 

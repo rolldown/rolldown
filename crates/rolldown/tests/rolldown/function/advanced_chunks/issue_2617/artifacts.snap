@@ -7,20 +7,33 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import { lib_default } from "./splited_lib.js";
+import { __esm, init_lib, lib_default } from "./splited_lib.js";
 
 //#region main.js
-console.log("lib", lib_default);
+var init_main = __esm({ "main.js"() {
+	init_lib();
+	console.log("lib", lib_default);
+} });
 
 //#endregion
+init_main();
 ```
 ## splited_lib.js
 
 ```js
 
-//#region lib.js
-var lib_default = "hello, world";
+
+//#region shaked.js
+var init_shaked = __esm({ "shaked.js"() {} });
 
 //#endregion
-export { lib_default };
+//#region lib.js
+var lib_default;
+var init_lib = __esm({ "lib.js"() {
+	init_shaked();
+	lib_default = "hello, world";
+} });
+
+//#endregion
+export { __esm, init_lib, lib_default };
 ```

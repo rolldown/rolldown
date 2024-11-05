@@ -3969,44 +3969,46 @@ snapshot_kind: text
 
 # tests/rolldown/function/advanced_chunks/basic
 
-- a-!~{000}~.js => a-Gc3RCe8z.js
-- b-!~{001}~.js => b-ciKZWB-E.js
-- common-!~{002}~.js => common-T_VCDCyi.js
+- a-!~{000}~.js => a-iPvF0waU.js
+- b-!~{001}~.js => b-kNLRw9bW.js
+- common-!~{002}~.js => common-FKgMT7M6.js
 
 # tests/rolldown/function/advanced_chunks/issue_2617
 
-- main-!~{000}~.js => main-E-fmbbqI.js
-- splited_lib-!~{001}~.js => splited_lib-Kx9zOnUj.js
+- main-!~{000}~.js => main-MwpttXv9.js
+- splited_lib-!~{001}~.js => splited_lib-wMcOykoC.js
 
 # tests/rolldown/function/advanced_chunks/min_share_count
 
-- a-!~{000}~.js => a-JEB9hCjS.js
-- b-!~{001}~.js => b-foIGvLwE.js
-- c-!~{002}~.js => c-GEgXWIw2.js
-- at_least_share_by_2-!~{003}~.js => at_least_share_by_2-xjEyqHGr.js
+- a-!~{000}~.js => a-Gjqk4IOD.js
+- b-!~{001}~.js => b-JLGg-KST.js
+- c-!~{002}~.js => c-aNfJ2qqM.js
+- at_least_share_by_2-!~{003}~.js => at_least_share_by_2-8km74K7r.js
 
 # tests/rolldown/function/advanced_chunks/min_share_count_fallback
 
-- a-!~{000}~.js => a-JEB9hCjS.js
-- b-!~{001}~.js => b-foIGvLwE.js
-- c-!~{002}~.js => c-GEgXWIw2.js
-- at_least_share_by_2-!~{003}~.js => at_least_share_by_2-xjEyqHGr.js
+- a-!~{000}~.js => a-Gjqk4IOD.js
+- b-!~{001}~.js => b-JLGg-KST.js
+- c-!~{002}~.js => c-aNfJ2qqM.js
+- at_least_share_by_2-!~{003}~.js => at_least_share_by_2-8km74K7r.js
 
 # tests/rolldown/function/advanced_chunks/min_size
 
-- main-!~{000}~.js => main-_0FSihZg.js
-- common_b-!~{001}~.js => common_b-KIhKluJt.js
+- main-!~{000}~.js => main-UCLuV77l.js
+- common_a-!~{001}~.js => common_a-QRMxqdUU.js
+- common_b-!~{003}~.js => common_b-f41mhxXx.js
 
 # tests/rolldown/function/advanced_chunks/min_size_fallback
 
-- main-!~{000}~.js => main-_0FSihZg.js
-- common_b-!~{001}~.js => common_b-KIhKluJt.js
+- main-!~{000}~.js => main-UCLuV77l.js
+- common_a-!~{001}~.js => common_a-QRMxqdUU.js
+- common_b-!~{003}~.js => common_b-f41mhxXx.js
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.js => main-Ug6AdkmR.js
-- other-libs-!~{003}~.js => other-libs-y1JszJk0.js
-- ui-!~{001}~.js => ui-H_NLoFET.js
+- main-!~{000}~.js => main-T5qpCYQ4.js
+- other-libs-!~{003}~.js => other-libs-PGND--Ix.js
+- ui-!~{001}~.js => ui--gqUjycK.js
 
 # tests/rolldown/function/define/node_env
 

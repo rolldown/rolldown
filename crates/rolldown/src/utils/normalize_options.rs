@@ -74,6 +74,15 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_default(),
   );
 
+  let mut experimental = raw_options.experimental.unwrap_or_default();
+  let is_advanced_chunks_enabled = raw_options
+    .advanced_chunks
+    .as_ref()
+    .is_some_and(|inner| inner.groups.as_ref().is_some_and(|inner| !inner.is_empty()));
+  if experimental.strict_execution_order.is_none() && is_advanced_chunks_enabled {
+    experimental.strict_execution_order = Some(true);
+  }
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -113,7 +122,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap_debug_ids: raw_options.sourcemap_debug_ids.unwrap_or(false),
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
-    experimental: raw_options.experimental.unwrap_or_default(),
+    experimental,
     minify: raw_options.minify.unwrap_or(false),
     define: raw_options.define.map(|inner| inner.into_iter().collect()).unwrap_or_default(),
     inject: raw_options.inject.unwrap_or_default(),

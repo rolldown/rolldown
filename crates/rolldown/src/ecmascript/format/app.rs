@@ -1,4 +1,4 @@
-use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_sourcemap::SourceJoiner;
 
 use crate::{ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext};
 
@@ -10,36 +10,36 @@ pub fn render_app(
   intro: Option<String>,
   outro: Option<String>,
   hashbang: Option<&str>,
-) -> ConcatSource {
-  let mut concat_source = ConcatSource::default();
+) -> SourceJoiner {
+  let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    concat_source.add_source(Box::new(RawSource::new(hashbang.to_string())));
+    source_joiner.append_source(hashbang.to_string());
   }
   if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
+    source_joiner.append_source(banner);
   }
 
   if let Some(intro) = intro {
-    concat_source.add_source(Box::new(RawSource::new(intro)));
+    source_joiner.append_source(intro);
   }
 
   // chunk content
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
-        concat_source.add_source(source);
+        source_joiner.append_source(source);
       }
     }
   });
 
   if let Some(outro) = outro {
-    concat_source.add_source(Box::new(RawSource::new(outro)));
+    source_joiner.append_source(outro);
   }
 
   if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
+    source_joiner.append_source(footer);
   }
 
-  concat_source
+  source_joiner
 }

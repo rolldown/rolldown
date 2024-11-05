@@ -5,7 +5,7 @@ use oxc::{
   parser::Parser,
   span::SourceType,
 };
-use rolldown_sourcemap::{collapse_sourcemaps, ConcatSource, SourceMapSource};
+use rolldown_sourcemap::{collapse_sourcemaps, SourceJoiner, SourceMapSource};
 use rolldown_testing::workspace::root_dir;
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -42,17 +42,17 @@ fn criterion_benchmark(c: &mut Criterion) {
   // simulate render-chunk-remapping
   let mut sourcemap_chain = vec![];
   let line = code.matches('\n').count() as u32;
-  let mut concat_source = ConcatSource::default();
+  let mut source_joiner = SourceJoiner::default();
   let mut sources = vec![];
   for i in 0..3 {
     sources.push(format!("{i}.js"));
-    concat_source.add_source(Box::new(SourceMapSource::new(
+    source_joiner.append_source(SourceMapSource::new(
       code.clone(),
       map.as_ref().unwrap().clone(),
       line,
-    )));
+    ));
   }
-  let (source_text, mut source_map) = concat_source.content_and_sourcemap();
+  let (source_text, mut source_map) = source_joiner.join();
   // The sources should be different at common case.
   source_map.as_mut().unwrap().set_sources(sources.iter().map(|s| s.as_str()).collect());
   sourcemap_chain.push(source_map.as_ref().unwrap());

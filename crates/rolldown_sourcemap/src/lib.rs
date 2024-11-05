@@ -1,13 +1,16 @@
 // cSpell:disable
-pub use concat_sourcemap::{ConcatSource, RawSource, Source, SourceMapSource};
 pub use oxc::sourcemap::SourceMapBuilder;
 use oxc::sourcemap::Token;
 pub use oxc::sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
+pub use source_joiner::SourceJoiner;
 mod lines_count;
 pub use lines_count::lines_count;
-mod concat_sourcemap;
+mod source_joiner;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
+mod source;
+
+pub use crate::source::{Source, SourceMapSource};
 
 #[allow(clippy::from_iter_instead_of_collect, clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
@@ -73,7 +76,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
 
 #[test]
 fn test_collapse_sourcemaps() {
-  use crate::{collapse_sourcemaps, ConcatSource, SourceMapSource};
+  use crate::{collapse_sourcemaps, SourceJoiner, SourceMapSource};
   use oxc::{
     allocator::Allocator,
     codegen::{CodeGenerator, CodegenReturn},
@@ -84,7 +87,7 @@ fn test_collapse_sourcemaps() {
 
   let allocator = Allocator::default();
 
-  let mut concat_source = ConcatSource::default();
+  let mut source_joiner = SourceJoiner::default();
 
   let filename = "foo.js".to_string();
   let source_text = "const foo = 1; console.log(foo);\n".to_string();
@@ -92,7 +95,7 @@ fn test_collapse_sourcemaps() {
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { source_map, source_text } =
     CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
-  concat_source.add_source(Box::new(SourceMapSource::new(
+  source_joiner.append_source(Box::new(SourceMapSource::new(
     source_text.clone(),
     source_map.unwrap(),
     source_text.matches('\n').count() as u32,
@@ -103,13 +106,13 @@ fn test_collapse_sourcemaps() {
   let ret2: oxc::parser::ParserReturn = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { source_map, source_text } =
     CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret2.program);
-  concat_source.add_source(Box::new(SourceMapSource::new(
+  source_joiner.append_source(Box::new(SourceMapSource::new(
     source_text.clone(),
     source_map.unwrap(),
     source_text.matches('\n').count() as u32,
   )));
 
-  let (source_text, source_map) = concat_source.content_and_sourcemap();
+  let (source_text, source_map) = source_joiner.join();
 
   let mut sourcemap_chain = vec![];
 

@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
-use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_sourcemap::SourceJoiner;
 
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
@@ -22,22 +22,22 @@ pub fn render_esm(
   intro: Option<String>,
   outro: Option<String>,
   hashbang: Option<&str>,
-) -> ConcatSource {
-  let mut concat_source = ConcatSource::default();
+) -> SourceJoiner {
+  let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    concat_source.add_source(Box::new(RawSource::new(hashbang.to_string())));
+    source_joiner.append_source(hashbang.to_string());
   }
 
   if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
+    source_joiner.append_source(banner);
   }
 
   if let Some(intro) = intro {
-    concat_source.add_source(Box::new(RawSource::new(intro)));
+    source_joiner.append_source(intro);
   }
 
-  concat_source.add_source(Box::new(RawSource::new(render_esm_chunk_imports(ctx))));
+  source_joiner.append_source(render_esm_chunk_imports(ctx));
 
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Normal(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
@@ -54,7 +54,7 @@ pub fn render_esm(
           .dedup()
           .for_each(|ext_name| {
             let import_stmt = format!("export * from \"{}\"\n", &ext_name);
-            concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+            source_joiner.append_source(import_stmt);
           });
       }
     }
@@ -64,7 +64,7 @@ pub fn render_esm(
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
-        concat_source.add_source(source);
+        source_joiner.append_source(source);
       }
     }
   });
@@ -77,15 +77,14 @@ pub fn render_esm(
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
+        source_joiner.append_source(format!("{wrapper_ref_name}();",));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        concat_source
-          .add_source(Box::new(RawSource::new(format!("export default {wrapper_ref_name}();\n"))));
+        source_joiner.append_source(format!("export default {wrapper_ref_name}();\n"));
       }
       WrapKind::None => {}
     }
@@ -93,19 +92,19 @@ pub fn render_esm(
 
   if let Some(exports) = render_chunk_exports(ctx, None) {
     if !exports.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(exports)));
+      source_joiner.append_source(exports);
     }
   }
 
   if let Some(outro) = outro {
-    concat_source.add_source(Box::new(RawSource::new(outro)));
+    source_joiner.append_source(outro);
   }
 
   if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
+    source_joiner.append_source(footer);
   }
 
-  concat_source
+  source_joiner
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {

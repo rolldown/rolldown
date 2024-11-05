@@ -3973,6 +3973,11 @@ snapshot_kind: text
 - b-!~{001}~.js => b-ciKZWB-E.js
 - common-!~{002}~.js => common-T_VCDCyi.js
 
+# tests/rolldown/function/advanced_chunks/issue_2617
+
+- main-!~{000}~.js => main-E-fmbbqI.js
+- splited_lib-!~{001}~.js => splited_lib-Kx9zOnUj.js
+
 # tests/rolldown/function/advanced_chunks/min_share_count
 
 - a-!~{000}~.js => a-JEB9hCjS.js

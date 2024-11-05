@@ -3,13 +3,13 @@ use std::fmt::Debug;
 use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  AssetView, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId,
-  ModuleIdx, ModuleInfo, NormalizedBundlerOptions, StmtInfo,
+  AssetView, Comments, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashSet;
 
@@ -174,10 +174,22 @@ impl NormalModule {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
+        let enable_comments = match options.comments {
+          Comments::None => false,
+          Comments::Preserve => true,
+        };
+
         // Because oxc codegen sourcemap is last of sourcemap chain,
         // If here no extra sourcemap need remapping, we using it as final module sourcemap.
         // So here make sure using correct `source_name` and `source_content.
-        let render_output = EcmaCompiler::print(ast, &self.id, enable_sourcemap);
+        let render_output = EcmaCompiler::print_with(
+          ast,
+          PrintOptions {
+            sourcemap: enable_sourcemap,
+            filename: self.id.to_string(),
+            comments: enable_comments,
+          },
+        );
         if !self.ecma_view.mutations.is_empty() {
           let mut magic_string = string_wizard::MagicString::new(&render_output.code);
           for mutation in &self.ecma_view.mutations {

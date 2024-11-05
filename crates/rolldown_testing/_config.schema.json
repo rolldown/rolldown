@@ -125,6 +125,16 @@
             "null"
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Comments"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cssChunkFilenames": {
           "type": [
             "string",
@@ -388,6 +398,24 @@
         }
       },
       "additionalProperties": false
+    },
+    "Comments": {
+      "oneOf": [
+        {
+          "description": "Don't preserve any comment",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "description": "Keep comments as much as possible",
+          "type": "string",
+          "enum": [
+            "preserve"
+          ]
+        }
+      ]
     },
     "Duration": {
       "type": "object",

@@ -4003,6 +4003,14 @@ snapshot_kind: text
 - other-libs-!~{003}~.js => other-libs-y1JszJk0.js
 - ui-!~{001}~.js => ui-H_NLoFET.js
 
+# tests/rolldown/function/comments/none
+
+- main-!~{000}~.js => main-TEEZnbpv.js
+
+# tests/rolldown/function/comments/preserve
+
+- main-!~{000}~.js => main-TEEZnbpv.js
+
 # tests/rolldown/function/define/node_env
 
 - main-!~{000}~.js => main-281Y6vFN.js

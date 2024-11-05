@@ -3,6 +3,7 @@ use rolldown_utils::indexmap::FxIndexMap;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::checks_options::ChecksOptions;
+use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::watch_option::WatchOption;
 
@@ -145,6 +146,7 @@ pub struct BundlerOptions {
   )]
   pub jsx: Option<JsxOptions>,
   pub watch: Option<WatchOption>,
+  pub comments: Option<Comments>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

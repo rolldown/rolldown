@@ -10,7 +10,7 @@ import type {
   ExternalOption,
   JsxOptions,
 } from './types/input-options'
-import type { ModuleFormat, OutputOptions } from './options/output-options'
+import type { ModuleFormat, OutputOptions } from './types/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {
   AsyncPluginHooks,

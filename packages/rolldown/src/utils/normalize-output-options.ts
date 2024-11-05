@@ -1,5 +1,5 @@
-import type { OutputOptions } from '../options/output-options'
 import { unimplemented } from './misc'
+import type { OutputOptions } from '../types/output-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 
 export function normalizeOutputOptions(

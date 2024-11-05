@@ -2,7 +2,7 @@ import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../rollup'
-import type { OutputOptions } from './output-options'
+import type { OutputOptions } from '../types/output-options'
 import type { RolldownPlugin } from '../plugin'
 import type { PreRenderedChunk, RenderedChunk } from '../binding'
 

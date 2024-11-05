@@ -1,6 +1,6 @@
-import type { RolldownPluginRec } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
+import { underline, gray, yellow, dim } from '../cli/colors'
 import {
   LogLevelOptionSchema,
   LogLevelSchema,
@@ -8,9 +8,9 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
-import { TreeshakingOptions } from '../treeshake'
-import { underline, gray, yellow, dim } from '../cli/colors'
-import {
+import type { RolldownPluginRec } from '../plugin'
+import type { TreeshakingOptions } from '../treeshake'
+import type {
   ExternalOption,
   InputCliOptions,
   InputOption,
@@ -19,7 +19,7 @@ import {
   RawInputOptions,
   WatchOptions,
 } from '../types/input-options'
-import { StringOrRegExp } from '../types/utils'
+import type { StringOrRegExp } from '../types/utils'
 
 const inputOptionSchema = z
   .string()

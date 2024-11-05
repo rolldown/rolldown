@@ -105,8 +105,15 @@ export interface RawInputOptions {
   watch?: WatchOptions | false
 }
 
+interface OverwriteInputOptionsForCli {
+  external?: string[]
+  inject?: Record<string, string>
+  treeshake?: boolean
+}
+
 export type InputCliOptions = Omit<
   RawInputOptions,
+  | keyof OverwriteInputOptionsForCli
   | 'input'
   | 'plugins'
   | 'onwarn'
@@ -115,14 +122,8 @@ export type InputCliOptions = Omit<
   | 'experimental'
   | 'profilerNames'
   | 'watch'
-  | 'external'
-  | 'inject'
-  | 'treeshake'
-> & {
-  external?: string[]
-  inject?: Record<string, string>
-  treeshake?: boolean
-}
+> &
+  OverwriteInputOptionsForCli
 
 interface OverwriteInputOptionsWithDoc {
   /**

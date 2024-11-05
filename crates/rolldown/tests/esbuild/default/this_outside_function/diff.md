@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. this outside function behavior not align
 # Diff
 ## /out.js
 ### esbuild

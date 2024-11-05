@@ -169,10 +169,6 @@
   diff
 ## [nested_require_without_call](../../../crates/rolldown/tests/esbuild/default/nested_require_without_call/diff.md)
   diff
-## [no_warn_common_js_exports_in_esm_pass_through](../../../crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through/diff.md)
-  diff
-## [node_annotation_false_positive_issue3544](../../../crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544/diff.md)
-  diff
 ## [non_determinism_issue2537](../../../crates/rolldown/tests/esbuild/default/non_determinism_issue2537/diff.md)
   diff
 ## [output_for_assert_type_json](../../../crates/rolldown/tests/esbuild/default/output_for_assert_type_json/diff.md)
@@ -180,8 +176,6 @@
 ## [package_alias](../../../crates/rolldown/tests/esbuild/default/package_alias/diff.md)
   diff
 ## [package_alias_match_longest](../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest/diff.md)
-  diff
-## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/diff.md)
   diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
   diff
@@ -347,9 +341,12 @@
 ## [minify_sibling_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_sibling_labels_no_bundle/bypass.md)
 ## [nested_common_js](../../../crates/rolldown/tests/esbuild/default/nested_common_js/bypass.md)
 ## [nested_es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/nested_es6_from_common_js/bypass.md)
+## [no_warn_common_js_exports_in_esm_pass_through](../../../crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through/bypass.md)
+## [node_annotation_false_positive_issue3544](../../../crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544/bypass.md)
 ## [node_modules](../../../crates/rolldown/tests/esbuild/default/node_modules/bypass.md)
 ## [object_literal_proto_setter_edge_cases](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases/bypass.md)
 ## [object_literal_proto_setter_edge_cases_minify_syntax](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax/bypass.md)
+## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/bypass.md)
 ## [re_export_common_js_as_es6](../../../crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6/bypass.md)
 ## [re_export_default_external_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_common_js/bypass.md)
 ## [re_export_default_external_es6](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_es6/bypass.md)

@@ -1,5 +1,6 @@
 # Reason
-1. not align
+1. Currently there is no way to control *quoted* behavior, since we use `oxc` to convert ast to string
+2. we just generate same output as esbuild if disable `MinifySyntax`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -10,7 +11,9 @@ console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
 ```
 ### rolldown
 ```js
-import * as ns from "ext";
+"use strict";
+
+const ns = __toESM(require("ext"));
 
 //#region entry.js
 console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
@@ -23,9 +26,8 @@ console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
 @@ -1,2 +1,2 @@
--var ns = __toESM(require("ext"));
+ var ns = __toESM(require("ext"));
 -console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
-+import * as ns from "ext";
 +console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
 
 ```

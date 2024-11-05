@@ -39,15 +39,6 @@
 - crates/rolldown/tests/esbuild/default/inject_no_bundle
 - crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
 - crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
-## not align
-- crates/rolldown/tests/esbuild/dce/dead_code_following_jump
-- crates/rolldown/tests/esbuild/default/indirect_require_message
-- crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through
-- crates/rolldown/tests/esbuild/default/node_annotation_false_positive_issue3544
-- crates/rolldown/tests/esbuild/default/package_alias
-- crates/rolldown/tests/esbuild/default/quoted_property_mangle
-- crates/rolldown/tests/esbuild/default/this_outside_function
-- crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -284,6 +275,8 @@
 - crates/rolldown/tests/esbuild/default/import_meta_common_js
 ## rolldown extract common module
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
+## not align
+- crates/rolldown/tests/esbuild/default/indirect_require_message
 ## Different inject impl
 - crates/rolldown/tests/esbuild/default/inject_with_define
 ## different naming style
@@ -296,6 +289,8 @@
 - crates/rolldown/tests/esbuild/default/named_function_expression_argument_collision
 ## should read `tsconfig.json`
 - crates/rolldown/tests/esbuild/default/non_determinism_issue2537
+## resolve alias
+- crates/rolldown/tests/esbuild/default/package_alias
 ## alias not align
 - crates/rolldown/tests/esbuild/default/package_alias_match_longest
 ## rename private identifier
@@ -314,6 +309,8 @@
 - crates/rolldown/tests/esbuild/default/string_export_names_iife
 ## lowering not align
 - crates/rolldown/tests/esbuild/default/this_inside_function
+## this outside function behavior not align
+- crates/rolldown/tests/esbuild/default/this_outside_function
 ## this undefined
 - crates/rolldown/tests/esbuild/default/this_undefined_warning_esm
 ## redundant `require`
@@ -322,6 +319,8 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## import('./entry.js') should be rewrite to `require_entry`
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
+## Can't disable bundle splitting
+- crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 ## should not appear top level `await` in cjs
 - crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch
 ## should not appear `__commonJS`

@@ -1493,7 +1493,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/quoted_property_mangle
 
-- entry-!~{000}~.js => entry-3PeABpq2.js
+- entry-!~{000}~.js => entry-qlYBPrHz.js
 
 # tests/esbuild/default/re_export_common_js_as_es6
 

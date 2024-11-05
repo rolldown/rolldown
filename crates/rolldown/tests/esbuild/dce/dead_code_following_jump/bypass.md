@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. rolldown tree shaking is not control flow aware, this part could be done in minifier
 # Diff
 ## /out.js
 ### esbuild

@@ -2,11 +2,11 @@
   "config": {
     "input": [
       {
-        "name": "script",
+        "name": "script_jsx",
         "import": "script.jsx"
       },
       {
-        "name": "style",
+        "name": "style_css",
         "import": "style.css"
       }
     ]

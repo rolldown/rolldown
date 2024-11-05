@@ -1,0 +1,98 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in script.jsx
+
+```
+# Assets
+
+## assets/x-NeT-34Xd.file
+
+## assets/x-jQo5yQfp.copy
+
+## script_jsx.js
+
+```js
+import { x_default, x_default$1, x_default$2 } from "./x.js";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+
+//#region script.jsx
+const SignUpForm = (props) => {
+	return _jsxs("p", {
+		class: "signup",
+		children: [
+			_jsxs("label", { children: ["Username: ", _jsx("input", {
+				class: "username",
+				type: "text"
+			})] }),
+			_jsxs("label", { children: ["Password: ", _jsx("input", {
+				class: "password",
+				type: "password"
+			})] }),
+			_jsx("div", {
+				class: "primary disabled",
+				children: props.buttonText
+			}),
+			_jsxs("small", { children: [
+				"By signing up, you are agreeing to our ",
+				_jsx("a", {
+					href: "/tos/",
+					children: "terms of service"
+				}),
+				"."
+			] }),
+			_jsx("img", { src: x_default }),
+			_jsx("img", { src: x_default$2 }),
+			_jsx("img", { src: x_default$1 })
+		]
+	});
+};
+
+//#endregion
+export { SignUpForm };
+```
+## style_css.css
+
+```css
+body.light-mode.new-user-segment:not(.logged-in) .signup,
+body.light-mode.new-user-segment:not(.logged-in) .login {
+	font: 10px/12px 'Font 1', 'Font 2', 'Font 3', 'Font 4', sans-serif;
+	user-select: none;
+	color: var(--fg, rgba(11, 22, 33, 0.5));
+	background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjEwMCIgZmlsbD0iI0ZGQ0YwMCIvPgogIDxwYXRoIGQ9Ik00Ny41IDUyLjVMOTUgMTAwbC00Ny41IDQ3LjVtNjAtOTVMMTU1IDEwMGwtNDcuNSA0Ny41IiBmaWxsPSJub25lIiBzdHJva2U9IiMxOTE5MTkiIHN0cm9rZS13aWR0aD0iMjQiLz4KPC9zdmc+Cg==);
+	cursor: url(x.file);
+	cursor: url(x.copy);
+	cursor: url(x.data);
+}
+
+```
+## style_css.js
+
+```js
+import "./x.js";
+
+```
+## x.js
+
+```js
+
+//#region x.file
+var x_default$2 = "assets/x-NeT-34Xd.file";
+
+//#endregion
+//#region x.copy
+var x_default$1 = "assets/x-jQo5yQfp.copy";
+
+//#endregion
+//#region x.data
+var x_default = "data:text/plain;charset=utf-8,...lots of long data...lots of long data...";
+
+//#endregion
+export { x_default$2 as x_default, x_default as x_default$1, x_default$1 as x_default$2 };
+```

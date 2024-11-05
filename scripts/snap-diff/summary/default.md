@@ -143,10 +143,6 @@
   diff
 ## [legal_comments_none](../../../crates/rolldown/tests/esbuild/default/legal_comments_none/diff.md)
   diff
-## line_limit_minified
-  missing
-## line_limit_not_minified
-  missing
 ## [mangle_no_quoted_props](../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props/diff.md)
   diff
 ## mangle_props_jsx_transform_namespace
@@ -315,6 +311,8 @@
 ## [keep_names_all_forms](../../../crates/rolldown/tests/esbuild/default/keep_names_all_forms/bypass.md)
 ## [keep_names_class_static_name](../../../crates/rolldown/tests/esbuild/default/keep_names_class_static_name/bypass.md)
 ## [keep_names_tree_shaking](../../../crates/rolldown/tests/esbuild/default/keep_names_tree_shaking/bypass.md)
+## [line_limit_minified](../../../crates/rolldown/tests/esbuild/default/line_limit_minified/bypass.md)
+## [line_limit_not_minified](../../../crates/rolldown/tests/esbuild/default/line_limit_not_minified/bypass.md)
 ## [mangle_no_quoted_props_minify_syntax](../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props_minify_syntax/bypass.md)
 ## [mangle_props](../../../crates/rolldown/tests/esbuild/default/mangle_props/bypass.md)
 ## [mangle_props_avoid_collisions](../../../crates/rolldown/tests/esbuild/default/mangle_props_avoid_collisions/bypass.md)

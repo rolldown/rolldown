@@ -1189,6 +1189,21 @@ snapshot_kind: text
 - entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
+# tests/esbuild/default/line_limit_minified
+
+- script_jsx-!~{000}~.js => script_jsx-eqFUMm8M.js
+- style_css-!~{001}~.js => style_css-RIhsLp81.js
+- style_css.css
+
+# tests/esbuild/default/line_limit_not_minified
+
+- script_jsx-!~{000}~.js => script_jsx-bNl2woJc.js
+- style_css-!~{001}~.js => style_css-5HNleKsC.js
+- style_css.css
+- x-!~{002}~.js => x-lNIehWJQ.js
+- assets/x-NyKLJ61U.file
+- assets/x-2KC_mc2E.copy
+
 # tests/esbuild/default/mangle_no_quoted_props
 
 - entry-!~{000}~.js => entry-OkEe9WtI.js

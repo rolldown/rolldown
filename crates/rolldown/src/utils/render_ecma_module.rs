@@ -1,12 +1,10 @@
-use rolldown_common::{NormalModule, NormalizedBundlerOptions};
+use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, Source, SourceMapSource};
-
-use crate::types::generator::CodegenArtifact;
 
 pub fn render_ecma_module(
   module: &NormalModule,
   options: &NormalizedBundlerOptions,
-  render_output: CodegenArtifact,
+  render_output: ModuleRenderOutput,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
   if render_output.code.is_empty() {
     None

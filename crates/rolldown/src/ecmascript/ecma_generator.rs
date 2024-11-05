@@ -123,26 +123,61 @@ impl Generator for EcmaGenerator {
     };
 
     let source_joiner = match ctx.options.format {
-      OutputFormat::Esm => {
-        render_esm(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang)
-      }
+      OutputFormat::Esm => render_esm(
+        ctx,
+        rendered_module_sources,
+        banner.as_deref(),
+        footer.as_deref(),
+        intro.as_deref(),
+        outro.as_deref(),
+        hashbang,
+      ),
       OutputFormat::Cjs => {
-        match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang) {
+        match render_cjs(
+          ctx,
+          rendered_module_sources,
+          banner.as_deref(),
+          footer.as_deref(),
+          intro.as_deref(),
+          outro.as_deref(),
+          hashbang,
+        ) {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
-      OutputFormat::App => {
-        render_app(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang)
-      }
+      OutputFormat::App => render_app(
+        ctx,
+        rendered_module_sources,
+        banner.as_deref(),
+        footer.as_deref(),
+        intro.as_deref(),
+        outro.as_deref(),
+        hashbang,
+      ),
       OutputFormat::Iife => {
-        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro, hashbang) {
+        match render_iife(
+          ctx,
+          rendered_module_sources,
+          banner.as_deref(),
+          footer.as_deref(),
+          intro.as_deref(),
+          outro.as_deref(),
+          hashbang,
+        ) {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
       OutputFormat::Umd => {
-        match render_umd(ctx, rendered_module_sources, banner, footer, intro, outro) {
+        match render_umd(
+          ctx,
+          rendered_module_sources,
+          banner.as_deref(),
+          footer.as_deref(),
+          intro.as_deref(),
+          outro.as_deref(),
+        ) {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }

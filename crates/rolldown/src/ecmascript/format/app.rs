@@ -2,19 +2,19 @@ use rolldown_sourcemap::SourceJoiner;
 
 use crate::{ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext};
 
-pub fn render_app(
+pub fn render_app<'code>(
   _ctx: &GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  banner: Option<String>,
-  footer: Option<String>,
-  intro: Option<String>,
-  outro: Option<String>,
-  hashbang: Option<&str>,
-) -> SourceJoiner<'static> {
+  banner: Option<&'code str>,
+  footer: Option<&'code str>,
+  intro: Option<&'code str>,
+  outro: Option<&'code str>,
+  hashbang: Option<&'code str>,
+) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    source_joiner.append_source(hashbang.to_string());
+    source_joiner.append_source(hashbang);
   }
   if let Some(banner) = banner {
     source_joiner.append_source(banner);

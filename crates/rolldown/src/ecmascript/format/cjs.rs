@@ -17,19 +17,19 @@ use rolldown_error::BuildResult;
 use rolldown_sourcemap::SourceJoiner;
 
 #[allow(clippy::too_many_lines)]
-pub fn render_cjs(
+pub fn render_cjs<'code>(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  banner: Option<String>,
-  footer: Option<String>,
-  intro: Option<String>,
-  outro: Option<String>,
-  hashbang: Option<&str>,
-) -> BuildResult<SourceJoiner<'static>> {
+  banner: Option<&'code str>,
+  footer: Option<&'code str>,
+  intro: Option<&'code str>,
+  outro: Option<&'code str>,
+  hashbang: Option<&'code str>,
+) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    source_joiner.append_source(hashbang.to_string());
+    source_joiner.append_source(hashbang);
   }
   if let Some(banner) = banner {
     source_joiner.append_source(banner);

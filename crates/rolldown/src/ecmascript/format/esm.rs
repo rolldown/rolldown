@@ -14,19 +14,19 @@ use crate::{
   },
 };
 
-pub fn render_esm(
+pub fn render_esm<'code>(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
-  banner: Option<String>,
-  footer: Option<String>,
-  intro: Option<String>,
-  outro: Option<String>,
-  hashbang: Option<&str>,
-) -> SourceJoiner<'static> {
+  banner: Option<&'code str>,
+  footer: Option<&'code str>,
+  intro: Option<&'code str>,
+  outro: Option<&'code str>,
+  hashbang: Option<&'code str>,
+) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
 
   if let Some(hashbang) = hashbang {
-    source_joiner.append_source(hashbang.to_string());
+    source_joiner.append_source(hashbang);
   }
 
   if let Some(banner) = banner {

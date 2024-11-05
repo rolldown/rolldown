@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`basic arguments > should render help message for empty args 1`] = `
-"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.13.2)
+"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown v0.14.0)
 
 USAGE rolldown -c <config> or rolldown <input> <options>
 

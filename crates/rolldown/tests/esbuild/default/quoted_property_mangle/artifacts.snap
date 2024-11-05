@@ -1,26 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'ext' in entry.js
-   ╭─[entry.js:1:21]
-   │
- 1 │ import * as ns from 'ext'
-   │                     ──┬──  
-   │                       ╰──── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-import * as ns from "ext";
+"use strict";
+
+const ns = __toESM(require("ext"));
 
 //#region entry.js
 console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);

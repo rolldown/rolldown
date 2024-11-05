@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. resolve alias
 # Diff
 ## /out.js
 ### esbuild

@@ -1,5 +1,6 @@
 # Reason
-1. not align
+1. We don't have pass through mode, we just have same output as esbuild if 
+in `bundle + esm`, https://hyrious.me/esbuild-repl/?version=0.23.0&b=e%00entry.js%00import+%7B+foo+%7D+from+%27bar%27%0Aexports.foo+%3D+foo%0Amodule.exports+%3D+foo%0A&b=%00%2Ffoo%2Ftest.js%00export+let+foo+%3D+123&b=%00%2Fbar%2Ftest.js%00export+let+bar+%3D+123&o=%7B%0A++treeShaking%3A+true%2C%0A++bundle%3A+true%2C%0A++format%3A+%22esm%22%2C%0A%0A++external%3A+%5B%27*%27%5D%0A+%0A%7D
 # Diff
 ## /out/cjs-in-esm.js
 ### esbuild

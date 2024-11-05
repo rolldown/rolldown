@@ -1,5 +1,5 @@
 # Reason
-1. not align
+1. Can't disable bundle splitting
 # Diff
 ## /out.js
 ### esbuild

@@ -22,7 +22,6 @@ Object.keys(fs).forEach(function (k) {
     get: function () { return fs[k]; }
   });
 });
-require("fs");
 require("./external");
 
 //#region internal.js

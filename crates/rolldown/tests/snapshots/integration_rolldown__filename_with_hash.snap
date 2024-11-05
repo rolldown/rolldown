@@ -585,7 +585,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/auto_external_node
 
-- entry-!~{000}~.js => entry-xp8yChP3.js
+- entry-!~{000}~.js => entry-m6rfhLuf.js
 
 # tests/esbuild/default/avoid_tdz
 
@@ -797,11 +797,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
-- entry-!~{000}~.js => entry--DZvCBxy.js
+- entry-!~{000}~.js => entry-mL6PmQhL.js
 
 # tests/esbuild/default/export_wildcard_fs_node_es6
 
-- entry-!~{000}~.js => entry-jT6V7H-q.js
+- entry-!~{000}~.js => entry-fJ662R0Y.js
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
@@ -4486,7 +4486,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-VyZqKp3n.js
+- main-!~{000}~.js => main-dF9vhpKL.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 

@@ -234,10 +234,6 @@
 - crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
 ## the deconflict of no top level is sub optimal
 - crates/rolldown/tests/esbuild/default/arrow_fn_scope
-## should not transform `{default as fs}`
-- crates/rolldown/tests/esbuild/default/auto_external_node
-## `node:path` is side effects free
-- crates/rolldown/tests/esbuild/default/auto_external_node
 ## for `__require` diff, we don't have `ModePassThrough`
 - crates/rolldown/tests/esbuild/default/comment_preservation
 ## not support `jsx.preserve`

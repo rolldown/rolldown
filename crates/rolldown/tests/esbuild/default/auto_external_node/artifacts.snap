@@ -1,51 +1,13 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "node:fs/promises" in entry.js
-   ╭─[entry.js:2:16]
-   │
- 2 │ import fs from "node:fs/promises";
-   │                ─────────┬────────  
-   │                         ╰────────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "node:path" in entry.js
-   ╭─[entry.js:6:8]
-   │
- 6 │ import "node:path";
-   │        ─────┬─────  
-   │             ╰─────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "node:what-is-this" in entry.js
-   ╭─[entry.js:9:8]
-   │
- 9 │ import "node:what-is-this";
-   │        ─────────┬─────────  
-   │                 ╰─────────── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js
 
 ```js
 import fs from "node:fs/promises";
-import "node:path";
 import "node:what-is-this";
 
 //#region entry.js

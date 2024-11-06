@@ -111,8 +111,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             self.source.clone(),
             it.span(),
             format!(
-              "Top-level await is currently not supported with the '{}' output format",
-              format
+              "Top-level await is currently not supported with the '{format}' output format",
             ),
           ));
         }
@@ -129,7 +128,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           self.file_path.as_str().into(),
           self.source.clone(),
           it.span(),
-          format!("Top-level await is currently not supported with the '{}' output format", format),
+          format!("Top-level await is currently not supported with the '{format}' output format",),
         ));
       }
     }

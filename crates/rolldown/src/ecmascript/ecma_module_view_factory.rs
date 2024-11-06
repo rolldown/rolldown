@@ -90,7 +90,7 @@ pub async fn create_ecma_view<'any>(
     symbol_table,
     scope_tree,
     ctx.resolved_id.module_def_format,
-    &ctx.options,
+    ctx.options,
   )?;
 
   let ScanResult {

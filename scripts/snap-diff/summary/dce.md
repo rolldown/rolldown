@@ -49,8 +49,6 @@
   diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
   diff
-## [tree_shaking_js_with_associated_css](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css/diff.md)
-  diff
 ## [tree_shaking_js_with_associated_css_export_star_side_effects_false](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false/diff.md)
   diff
 ## [tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js/diff.md)
@@ -148,6 +146,7 @@
 ## [remove_trailing_return](../../../crates/rolldown/tests/esbuild/dce/remove_trailing_return/bypass.md)
 ## [top_level_function_inlining_with_spread](../../../crates/rolldown/tests/esbuild/dce/top_level_function_inlining_with_spread/bypass.md)
 ## [tree_shaking_binary_operators](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators/bypass.md)
+## [tree_shaking_js_with_associated_css](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css/bypass.md)
 ## [tree_shaking_no_bundle_cjs](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_cjs/bypass.md)
 ## [tree_shaking_no_bundle_esm](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_esm/bypass.md)
 ## [tree_shaking_no_bundle_iife](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_iife/bypass.md)

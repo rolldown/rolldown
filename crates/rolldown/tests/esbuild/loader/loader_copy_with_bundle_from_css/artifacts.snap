@@ -4,11 +4,13 @@ snapshot_kind: text
 ---
 # Assets
 
+## assets/some-Ln4qaDhZ.file
+
 ## src_entry.css
 
 ```css
 body {
-	background: url(../assets/some.file);
+	background: url(assets/some-Ln4qaDhZ.file);
 }
 
 ```
@@ -17,7 +19,7 @@ body {
 ```js
 
 //#region assets/some.file
-stuff;
+var some_default = "assets/some-Ln4qaDhZ.file";
 
 //#endregion
 ```

@@ -491,37 +491,36 @@ snapshot_kind: text
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css
 
-- test-!~{000}~.js => test-Xy99OrwX.js
+- test-!~{000}~.js => test-pC5podzv.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
 
-- test-!~{000}~.js => test-GiQqw0Rc.js
+- test-!~{000}~.js => test-gRPufaRa.js
 - test.css
-- test-GiQqw0Rc.js.map
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
 
-- test-!~{000}~.js => test-GiQqw0Rc.js
+- test-!~{000}~.js => test-gRPufaRa.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
 
-- test-!~{000}~.js => test-GiQqw0Rc.js
+- test-!~{000}~.js => test-gRPufaRa.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 
-- test-!~{000}~.js => test-GiQqw0Rc.js
+- test-!~{000}~.js => test-gRPufaRa.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
 
-- test-!~{000}~.js => test-YPP-aDmW.js
+- test-!~{000}~.js => test-k9kj_bT8.js
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 
-- test-!~{000}~.js => test-YPP-aDmW.js
+- test-!~{000}~.js => test-k9kj_bT8.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
@@ -2350,8 +2349,9 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
-- src_entry-!~{000}~.js => src_entry-TBxm50nK.js
+- src_entry-!~{000}~.js => src_entry--Tejsu7Y.js
 - src_entry.css
+- assets/some-v1x9u-L8.file
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_js
 

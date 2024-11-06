@@ -5,7 +5,11 @@
         "name": "src_entry",
         "import": "src/entry.css"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".file": "asset"
+    }
   },
   "expectExecuted": false
 }

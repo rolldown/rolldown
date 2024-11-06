@@ -1,5 +1,6 @@
 # Reason
-1. css stabilization
+1. esbuild generate debug id for each css file
+2. sub optimal
 # Diff
 ## /out/entry.css
 ### esbuild

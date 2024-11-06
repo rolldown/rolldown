@@ -79,15 +79,6 @@ const ignoreTests = [
   "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
 
-  // https://github.com/rolldown/rolldown/issues/2569
-  "rollup@sourcemaps@ignore-list-default: defaults to adding files within node_modules to the ignore list@generates es",
-  "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
-  "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
-  "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
-  "rollup@sourcemaps@relative-paths: source paths are relative with relative dest (#344)@generates es",
-  "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
-  "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es",
-
   // Format cjs
   "rollup@function@default-export-with-null-prototype: default exports of objects with null prototypes are supported",
 

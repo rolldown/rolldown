@@ -1688,11 +1688,10 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_cjs
 
-- entry-!~{000}~.js => entry-VXzlnig-.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
-- entry-!~{000}~.js => entry-oqFOgXef.js
+- entry-!~{000}~.js => entry-jF2aLy7c.js
 
 # tests/esbuild/default/top_level_await_esm
 
@@ -1712,11 +1711,10 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_iife
 
-- entry-!~{000}~.js => entry-VXzlnig-.js
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 
-- entry-!~{000}~.js => entry-2jMdEfYq.js
+- entry-!~{000}~.js => entry-gy9jBlL5.js
 
 # tests/esbuild/default/top_level_await_no_bundle
 
@@ -1748,7 +1746,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 
-- entry-!~{000}~.js => entry-2jMdEfYq.js
+- entry-!~{000}~.js => entry-gy9jBlL5.js
 
 # tests/esbuild/default/top_level_return_forbidden_export
 

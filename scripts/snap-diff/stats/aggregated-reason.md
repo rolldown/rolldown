@@ -154,9 +154,6 @@
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
-## should not appear `await`
-- crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch
-- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
@@ -323,6 +320,8 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch
 ## should not appear `__commonJS`
 - crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
+## should not appear `await`
+- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
 ## Strip `await` when format don't support top level await
 - crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 ## inject path

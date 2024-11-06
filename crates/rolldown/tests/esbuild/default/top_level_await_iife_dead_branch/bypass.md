@@ -1,5 +1,6 @@
 # Reason
-1. should not appear `await`
+1. this is expected, since we don't support `convertMode`
+2. the diff is because oxc elimincated the dead branch
 # Diff
 ## /out.js
 ### esbuild
@@ -15,11 +16,6 @@
 (function() {
 
 
-//#region entry.js
-if (false) await foo;
-if (false) for await (foo of bar);
-
-//#endregion
 })();
 ```
 ### diff
@@ -27,20 +23,11 @@ if (false) for await (foo of bar);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,9 @@
+@@ -1,4 +1,1 @@
 -(() => {
 -    if (false) foo;
 -    if (false) for (foo of bar) ;
 -})();
-+(function() {
-+
-+
-+//#region entry.js
-+if (false) await foo;
-+if (false) for await (foo of bar);
-+
-+//#endregion
-+})();
-\ No newline at end of file
++(function () {})();
 
 ```

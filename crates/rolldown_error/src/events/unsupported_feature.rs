@@ -18,10 +18,11 @@ impl BuildEvent for UnsupportedFeature {
     crate::event_kind::EventKind::UnsupportedFeature
   }
 
-  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {
+  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
     diagnostic.title.clone_from(&self.error_message);
 
-    let file_id = diagnostic.add_file(self.filename.clone(), self.source.clone());
+    let file_id =
+      diagnostic.add_file(opts.stabilize_path(self.filename.as_str()), self.source.clone());
     diagnostic.add_label(&file_id, self.span.start..self.span.end, "".to_string());
   }
 

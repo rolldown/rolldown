@@ -29,19 +29,6 @@ impl<'a, 'ast> PreProcessor<'a, 'ast> {
 
 impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
-    if self.has_lazy_export {
-      program.body.extend(program.directives.take_in(self.snippet.alloc()).into_iter().map(|d| {
-        let expr_stmt = ExpressionStatement {
-          span: d.expression.span,
-          expression: ast::Expression::StringLiteral(Box::new_in(
-            d.expression,
-            self.snippet.alloc(),
-          )),
-        };
-        Statement::ExpressionStatement(Box::new_in(expr_stmt, self.snippet.alloc()))
-      }));
-    }
-
     program.directives.retain(|directive| {
       let is_use_strict = directive.is_use_strict();
       if is_use_strict {

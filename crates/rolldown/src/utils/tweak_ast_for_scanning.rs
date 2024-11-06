@@ -1,6 +1,6 @@
 use itertools::Itertools;
-use oxc::allocator::{Allocator, Box};
-use oxc::ast::ast::{self, BindingPatternKind, Declaration, ExpressionStatement, Statement};
+use oxc::allocator::Allocator;
+use oxc::ast::ast::{self, BindingPatternKind, Declaration, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{VisitMut, NONE};
 use oxc::span::SPAN;
@@ -8,7 +8,6 @@ use rolldown_ecmascript_utils::{AstSnippet, StatementExt, TakeIn};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 pub struct PreProcessor<'a, 'ast> {
-  has_lazy_export: bool,
   snippet: AstSnippet<'a>,
   pub contains_use_strict: bool,
   none_hosted_stmts: Vec<Statement<'ast>>,
@@ -16,9 +15,8 @@ pub struct PreProcessor<'a, 'ast> {
 }
 
 impl<'a, 'ast> PreProcessor<'a, 'ast> {
-  pub fn new(alloc: &'a Allocator, has_lazy_export: bool) -> Self {
+  pub fn new(alloc: &'a Allocator) -> Self {
     Self {
-      has_lazy_export,
       snippet: AstSnippet::new(alloc),
       contains_use_strict: false,
       none_hosted_stmts: vec![],

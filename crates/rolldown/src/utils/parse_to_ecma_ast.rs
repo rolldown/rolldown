@@ -35,6 +35,7 @@ pub struct ParseToEcmaAstResult {
   pub warning: Vec<BuildDiagnostic>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,

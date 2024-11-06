@@ -90,6 +90,40 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_member_expression(self, expr);
   }
 
+  fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
+    if it.r#await {
+      if let Some(format) = self.options.as_ref().map(|option| &option.format) {
+        if !format.keep_esm_import_export() {
+          self.result.errors.push(BuildDiagnostic::unsupported_feature(
+            self.file_path.as_str().into(),
+            self.source.clone(),
+            it.span(),
+            format!(
+              "Top-level await is currently not supported with the '{}' output format",
+              format
+            ),
+          ));
+        }
+      }
+    }
+
+    walk::walk_for_of_statement(self, it);
+  }
+
+  fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
+    if let Some(format) = self.options.as_ref().map(|option| &option.format) {
+      if !format.keep_esm_import_export() {
+        self.result.errors.push(BuildDiagnostic::unsupported_feature(
+          self.file_path.as_str().into(),
+          self.source.clone(),
+          it.span(),
+          format!("Top-level await is currently not supported with the '{}' output format", format),
+        ));
+      }
+    }
+    walk::walk_await_expression(self, it);
+  }
+
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
     if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
       self.add_referenced_symbol(root_symbol_id);

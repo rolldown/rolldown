@@ -1,15 +1,30 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# Assets
+# Errors
 
-## entry.js
+## UNSUPPORTED_FEATURE
 
-```js
+```text
+[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
+   ╭─[/home/victor/Documents/rolldown-rs/rolldown/crates/rolldown/tests/esbuild/default/top_level_await_cjs/entry.js:1:1]
+   │
+ 1 │ await foo;
+   │ ────┬────  
+   │     ╰────── 
+───╯
 
-//#region entry.js
-await foo;
-for await (foo of bar);
+```
+## UNSUPPORTED_FEATURE
 
-//#endregion
+```text
+[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
+   ╭─[/home/victor/Documents/rolldown-rs/rolldown/crates/rolldown/tests/esbuild/default/top_level_await_cjs/entry.js:2:1]
+   │
+ 2 │ for await (foo of bar) ;
+   │ ────────────┬───────────  
+   │             ╰───────────── 
+───╯
+
 ```

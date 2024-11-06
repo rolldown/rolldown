@@ -29,6 +29,8 @@ use rolldown_utils::path_ext::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
+use crate::SharedOptions;
+
 #[derive(Debug)]
 pub struct ScanResult {
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
@@ -79,6 +81,7 @@ pub struct AstScanner<'me, 'ast> {
   ast_usage: EcmaModuleAstUsage,
   cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
   visit_path: Vec<AstKind<'ast>>,
+  options: Option<&'me SharedOptions>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -92,6 +95,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     source: &'me ArcStr,
     file_path: &'me ModuleId,
     comments: &'me oxc::allocator::Vec<'me, Comment>,
+    options: Option<&'me SharedOptions>,
   ) -> Self {
     let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, idx, scope.root_scope_id());
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
@@ -142,6 +146,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
       visit_path: vec![],
+      options,
     }
   }
 

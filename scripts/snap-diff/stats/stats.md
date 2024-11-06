@@ -1,7 +1,7 @@
 # Compatibility metric
 - total: 784
-- passed: 431
-- passed ratio: 54.97%
+- passed: 435
+- passed ratio: 55.48%
 # Compatibility metric details
 ## dce
 - total: 113

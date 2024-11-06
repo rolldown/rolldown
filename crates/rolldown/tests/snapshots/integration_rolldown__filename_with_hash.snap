@@ -496,22 +496,22 @@ snapshot_kind: text
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
@@ -1100,92 +1100,92 @@ snapshot_kind: text
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-RtPgLOy2.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_external
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-RtPgLOy2.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_inline
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-RtPgLOy2.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_end_of_file
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_external
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_inline
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_linked
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_many_end_of_file
 
 - entry-!~{000}~.js => entry-0S0mHayt.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_many_linked
 
 - entry-!~{000}~.js => entry-Oor2mIWp.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_modify_indent
 
 - entry-!~{000}~.js => entry-O9DPNVPI.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 
 - entry-!~{000}~.js => entry-OEGDqerq.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_none
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-vqlQgaqL.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/mangle_no_quoted_props
@@ -1325,13 +1325,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_no_bundle
 
+- entry-!~{001}~.js => entry-PFDDaPri.js
 - entry-!~{000}~.js => entry-aGukXlqQ.js
-- entry-!~{001}~.js => entry-wuCqC14M.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{001}~.js => entry-257bMV5q.js
+- entry-!~{001}~.js => entry-HnpxAh3c.js
 - entry-!~{000}~.js => entry-ZTpsjvJq.js
 - copy-!~{002}~.js => copy-4V_reils.js
 - dynamic-!~{005}~.js => dynamic-mVVzGI22.js
@@ -1343,7 +1343,7 @@ snapshot_kind: text
 - bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-Gc3LJ5gu.js
 - bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-kT9H8Apa.js
 - bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-mWz0mrRU.js
-- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-Ew8bSuBT.js
+- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-Tb9nJqp_.js
 - 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-U-FEU7gY.js
 - assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-58oIsL55.file
 - assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-Q7SZEdLs.file
@@ -2340,14 +2340,14 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_copy_with_bundle_entry_point
 
 - assets_some-!~{002}~.js => assets_some-W0fyymA3.js
-- src_entry-!~{001}~.js => src_entry-MXnb0dC3.js
+- src_entry-!~{001}~.js => src_entry-Pa_Jl64c.js
 - src_entry-!~{000}~.js => src_entry-ioDHherq.js
 - some-!~{003}~.js => some-3vTMswRN.js
 - src_entry2.css
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
-- src_entry-!~{000}~.js => src_entry--Tejsu7Y.js
+- src_entry-!~{000}~.js => src_entry-fibHKOV2.js
 - assets/some-v1x9u-L8.file
 - src_entry.css
 
@@ -2399,12 +2399,12 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_data_url_text_css
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-NyOEWoWT.js
 - entry.css
 
 # tests/esbuild/loader/loader_data_url_text_css_cannot_import
 
-- entry-!~{000}~.js => entry-jF2aLy7c.js
+- entry-!~{000}~.js => entry-NyOEWoWT.js
 - entry.css
 
 # tests/esbuild/loader/loader_data_url_text_java_script
@@ -2443,8 +2443,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
-- entries_entry-!~{000}~.js => entries_entry-94pXRTKc.js
-- entries_other_entry-!~{001}~.js => entries_other_entry-oVYa1arr.js
+- entries_entry-!~{000}~.js => entries_entry-CCxmxEHp.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-cKBi4byg.js
 - common-!~{002}~.js => common-mjvhjVPl.js
 - assets/common-0ZsPsUov.png
 - common-mAkN8zfC.css
@@ -2460,7 +2460,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_css
 
-- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
+- entries_entry-!~{000}~.js => entries_entry-PsySxCtN.js
 - assets/image-O0edW_WI.png
 - entries_entry.css
 
@@ -2471,7 +2471,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_public_path_css
 
-- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
+- entries_entry-!~{000}~.js => entries_entry-PsySxCtN.js
 - assets/image-O0edW_WI.png
 - entries_entry.css
 
@@ -2482,7 +2482,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_css
 
-- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
+- entries_entry-!~{000}~.js => entries_entry-PsySxCtN.js
 - assets/image-O0edW_WI.png
 - entries_entry.css
 
@@ -2493,7 +2493,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_relative_path_css
 
-- entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
+- entries_entry-!~{000}~.js => entries_entry-PsySxCtN.js
 - assets/image-O0edW_WI.png
 - entries_entry.css
 
@@ -4764,7 +4764,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/css/css_entries
 
-- main-!~{000}~.js => main-Bb-L2J7W.js
+- main-!~{000}~.js => main-K-PVockW.js
 - main.css
 
 # tests/rolldown/topics/deconflict/basic

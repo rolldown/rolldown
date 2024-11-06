@@ -1,5 +1,5 @@
 # Reason
-1. css module should be wrapped with `__commonJS`
+1. different fs
 # Diff
 ## /out/test.js
 ### esbuild
@@ -23,12 +23,13 @@ render(/* @__PURE__ */ React.createElement(Button, null));
 
 
 //#region node_modules/pkg/button.css
-var button_exports = {};
-var init_button = __esm({ "node_modules/pkg/button.css"() {} });
+var require_button = __commonJS({ "node_modules/pkg/button.css"(exports, module) {
+	module.exports = {};
+} });
 
 //#endregion
 //#region node_modules/pkg/components.jsx
-init_button();
+require_button();
 const Button = () => React.createElement("button", null);
 
 //#endregion
@@ -42,19 +43,14 @@ render(React.createElement(Button, null));
 ===================================================================
 --- esbuild	/out/test.js
 +++ rolldown	test.js
-@@ -1,8 +1,7 @@
--var require_button = __commonJS({
+@@ -1,6 +1,6 @@
+ var require_button = __commonJS({
 -    "project/node_modules/pkg/button.css"(exports, module) {
--        module.exports = {};
--    }
-+var button_exports = {};
-+var init_button = __esm({
-+    "node_modules/pkg/button.css"() {}
++    "node_modules/pkg/button.css"(exports, module) {
+         module.exports = {};
+     }
  });
--require_button();
-+init_button();
- var Button = () => React.createElement("button", null);
- render(React.createElement(Button, null));
+ require_button();
 
 ```
 ## /out/test.css

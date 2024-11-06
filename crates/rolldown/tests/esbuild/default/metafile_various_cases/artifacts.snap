@@ -113,4 +113,9 @@ d { background: url(extern.png) }
 ```js
 import "./copy.js";
 
+//#region entry.css
+var entry_default = {};
+
+//#endregion
+export { entry_default as default };
 ```

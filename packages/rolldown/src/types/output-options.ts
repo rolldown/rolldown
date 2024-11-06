@@ -1,5 +1,9 @@
+import type { StringOrRegExp } from './utils'
 import type { RenderedChunk, PreRenderedChunk } from '../binding'
-import { StringOrRegExp } from './utils'
+import {
+  SourcemapIgnoreListOption,
+  SourcemapPathTransformOption,
+} from '../rollup'
 
 export type ModuleFormat =
   | 'es'
@@ -13,16 +17,6 @@ export type ModuleFormat =
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
-
-export type SourcemapIgnoreListOption = (
-  relativeSourcePath: string,
-  sourcemapPath: string,
-) => boolean
-
-export type SourcemapPathTransformOption = (
-  relativeSourcePath: string,
-  sourcemapPath: string,
-) => string
 
 export interface OutputOptions {
   dir?: string

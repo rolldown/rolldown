@@ -3,13 +3,15 @@ import * as zodExt from '../utils/zod-ext'
 import { bold, underline } from '../cli/colors'
 import type { RenderedChunk, PreRenderedChunk } from '../binding'
 import type {
+  SourcemapIgnoreListOption,
+  SourcemapPathTransformOption,
+} from '../rollup'
+import type {
   AddonFunction,
   ChunkFileNamesFunction,
   ModuleFormat,
   OutputCliOptions,
   OutputOptions,
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
 } from '../types/output-options'
 
 const ModuleFormatSchema = z

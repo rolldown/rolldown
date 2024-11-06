@@ -16,6 +16,7 @@ pub struct CreateModuleContext<'a> {
   pub module_type: ModuleType,
   pub warnings: &'a mut Vec<BuildDiagnostic>,
   pub replace_global_define_config: Option<ReplaceGlobalDefinesConfig>,
+  pub is_user_defined_entry: bool,
 }
 
 pub struct CreateModuleViewArgs {

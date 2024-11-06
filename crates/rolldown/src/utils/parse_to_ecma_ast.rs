@@ -43,6 +43,7 @@ pub fn parse_to_ecma_ast(
   module_type: &ModuleType,
   source: StrOrBytes,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
+  is_user_defined_entry: bool,
 ) -> BuildResult<ParseToEcmaAstResult> {
   let mut has_lazy_export = false;
   // 1. Transform the source to the type that rolldown supported.
@@ -52,8 +53,12 @@ pub fn parse_to_ecma_ast(
     ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
     ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
     ModuleType::Css => {
-      has_lazy_export = true;
-      ("({})".to_owned(), OxcParseType::Js)
+      if is_user_defined_entry {
+        ("export {}".to_owned(), OxcParseType::Js)
+      } else {
+        has_lazy_export = true;
+        ("({})".to_owned(), OxcParseType::Js)
+      }
     }
     ModuleType::Json => {
       let content = json_to_esm(&source.try_into_string()?)?;

@@ -18,13 +18,8 @@ body {
 
 ```js
 
-//#region src/entry.css
-var entry_default = {};
-
-//#endregion
 //#region assets/some.file
 var some_default = "assets/some-Ln4qaDhZ.file";
 
 //#endregion
-export { entry_default as default };
 ```

@@ -13,7 +13,7 @@ use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
+  ModuleId, ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -272,7 +272,7 @@ impl ModuleLoader {
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
-                  importer_path: module.id().to_string().into(),
+                  importer_path: ModuleId::new(module.id()),
                 });
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)

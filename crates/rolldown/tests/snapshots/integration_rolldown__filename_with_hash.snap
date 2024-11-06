@@ -15,53 +15,53 @@ snapshot_kind: text
 
 # tests/esbuild/dce/const_value_inlining_bundle
 
-- exported-entry-!~{000}~.js => exported-entry-qcoNb46n.js
-- re-exported-entry-!~{001}~.js => re-exported-entry-Mp-WeEf3.js
-- re-exported-2-entry-!~{002}~.js => re-exported-2-entry-scueDzug.js
-- re-exported-star-entry-!~{003}~.js => re-exported-star-entry-2_7phJvP.js
-- cross-module-entry-!~{004}~.js => cross-module-entry-p5GbT4vF.js
-- print-shorthand-entry-!~{005}~.js => print-shorthand-entry-KNAz4ZWh.js
 - circular-import-entry-!~{006}~.js => circular-import-entry-3Y0WF-eY.js
 - circular-re-export-entry-!~{007}~.js => circular-re-export-entry-AuviSXu9.js
 - circular-re-export-star-entry-!~{008}~.js => circular-re-export-star-entry-40fFqOZ2.js
+- cross-module-entry-!~{004}~.js => cross-module-entry-p5GbT4vF.js
+- exported-entry-!~{000}~.js => exported-entry-qcoNb46n.js
 - non-circular-export-entry-!~{009}~.js => non-circular-export-entry--s5C3-BU.js
+- print-shorthand-entry-!~{005}~.js => print-shorthand-entry-KNAz4ZWh.js
+- re-exported-2-entry-!~{002}~.js => re-exported-2-entry-scueDzug.js
+- re-exported-entry-!~{001}~.js => re-exported-entry-Mp-WeEf3.js
+- re-exported-star-entry-!~{003}~.js => re-exported-star-entry-2_7phJvP.js
 
 # tests/esbuild/dce/const_value_inlining_direct_eval
 
-- top-level-no-eval-!~{000}~.js => top-level-no-eval-bOPYPlIP.js
-- top-level-eval-!~{001}~.js => top-level-eval-gmnmffFp.js
-- nested-no-eval-!~{002}~.js => nested-no-eval-GLgc4umu.js
 - nested-eval-!~{003}~.js => nested-eval-kyom4AIr.js
-- ts-namespace-no-eval-!~{004}~.js => ts-namespace-no-eval-j6_P5FAR.js
+- nested-no-eval-!~{002}~.js => nested-no-eval-GLgc4umu.js
+- top-level-eval-!~{001}~.js => top-level-eval-gmnmffFp.js
+- top-level-no-eval-!~{000}~.js => top-level-no-eval-bOPYPlIP.js
 - ts-namespace-eval-!~{005}~.js => ts-namespace-eval-B23hvxLt.js
+- ts-namespace-no-eval-!~{004}~.js => ts-namespace-no-eval-j6_P5FAR.js
 
 # tests/esbuild/dce/const_value_inlining_no_bundle
 
-- top-level-!~{000}~.js => top-level-zJDsNC3A.js
+- backwards-reference-nested-function-!~{00c}~.js => backwards-reference-nested-function-FseOull6.js
+- backwards-reference-top-level-!~{00b}~.js => backwards-reference-top-level-BVULa1cu.js
+- comment-before-!~{004}~.js => comment-before--Gz-a5lE.js
+- debugger-before-!~{007}~.js => debugger-before-_kspBENU.js
+- directive-before-!~{005}~.js => directive-before-KLB5yIGx.js
+- disabled-tdz-!~{00a}~.js => disabled-tdz-OnGPQYG1.js
+- exprs-before-!~{009}~.js => exprs-before-OFyXHkX-.js
+- issue-3125-!~{00d}~.js => issue-3125-QSqZ-jNd.js
+- namespace-export-!~{003}~.js => namespace-export-Jiy3V9eu.js
 - nested-block-!~{001}~.js => nested-block-NgejE1ik.js
 - nested-function-!~{002}~.js => nested-function-UPUwvlST.js
-- namespace-export-!~{003}~.js => namespace-export-Jiy3V9eu.js
-- comment-before-!~{004}~.js => comment-before--Gz-a5lE.js
-- directive-before-!~{005}~.js => directive-before-KLB5yIGx.js
 - semicolon-before-!~{006}~.js => semicolon-before-CH7Hg_YA.js
-- debugger-before-!~{007}~.js => debugger-before-_kspBENU.js
+- top-level-!~{000}~.js => top-level-zJDsNC3A.js
 - type-before-!~{008}~.js => type-before-tig9Oh-8.js
-- exprs-before-!~{009}~.js => exprs-before-OFyXHkX-.js
-- disabled-tdz-!~{00a}~.js => disabled-tdz-OnGPQYG1.js
-- backwards-reference-top-level-!~{00b}~.js => backwards-reference-top-level-BVULa1cu.js
-- backwards-reference-nested-function-!~{00c}~.js => backwards-reference-nested-function-FseOull6.js
-- issue-3125-!~{00d}~.js => issue-3125-QSqZ-jNd.js
 
 # tests/esbuild/dce/cross_module_constant_folding_number
 
-- enum-entry-!~{000}~.js => enum-entry-zuei9XNc.js
 - const-entry-!~{001}~.js => const-entry-ZJd19HNf.js
+- enum-entry-!~{000}~.js => enum-entry-zuei9XNc.js
 - nested-entry-!~{002}~.js => nested-entry-aIOnWJ01.js
 
 # tests/esbuild/dce/cross_module_constant_folding_string
 
-- enum-entry-!~{000}~.js => enum-entry-2VWn4j4I.js
 - const-entry-!~{001}~.js => const-entry-wUq2AhFL.js
+- enum-entry-!~{000}~.js => enum-entry-2VWn4j4I.js
 - nested-entry-!~{002}~.js => nested-entry-3jd9ic0Q.js
 
 # tests/esbuild/dce/data_url_loader_remove_unused
@@ -94,8 +94,8 @@ snapshot_kind: text
 
 # tests/esbuild/dce/dce_of_iife
 
-- remove-these-!~{000}~.js => remove-these-bE56An5q.js
 - keep-these-!~{001}~.js => keep-these-Wo74zxOj.js
+- remove-these-!~{000}~.js => remove-these-bE56An5q.js
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -164,17 +164,17 @@ snapshot_kind: text
 # tests/esbuild/dce/inline_empty_function_calls
 
 - empty-!~{000}~.js => empty-3ak2GDEu.js
+- empty-async-!~{007}~.js => empty-async-L2zNZBl4.js
 - empty-comma-!~{001}~.js => empty-comma-1kW0aYCQ.js
-- empty-if-else-!~{002}~.js => empty-if-else-e5UJfBZX.js
-- empty-last-!~{003}~.js => empty-last-wwDwBbzc.js
 - empty-cross-module-!~{004}~.js => empty-cross-module-HAE9rJhF.js
 - empty-first-!~{005}~.js => empty-first-Brhetamh.js
 - empty-generator-!~{006}~.js => empty-generator-vN4eGOtU.js
-- empty-async-!~{007}~.js => empty-async-L2zNZBl4.js
+- empty-if-else-!~{002}~.js => empty-if-else-e5UJfBZX.js
+- empty-last-!~{003}~.js => empty-last-wwDwBbzc.js
 - reassign-!~{008}~.js => reassign-GlJaSYKO.js
-- reassign-inc-!~{009}~.js => reassign-inc-1QterEeq.js
-- reassign-div-!~{00a}~.js => reassign-div-lMycSalg.js
 - reassign-array-!~{00b}~.js => reassign-array-8L5k6Vp3.js
+- reassign-div-!~{00a}~.js => reassign-div-lMycSalg.js
+- reassign-inc-!~{009}~.js => reassign-inc-1QterEeq.js
 - reassign-object-!~{00c}~.js => reassign-object-SHmfo4U6.js
 
 # tests/esbuild/dce/inline_function_call_behavior_changes
@@ -188,24 +188,24 @@ snapshot_kind: text
 # tests/esbuild/dce/inline_identity_function_calls
 
 - identity-!~{000}~.js => identity-6TBY-JaD.js
-- identity-last-!~{001}~.js => identity-last-PfrbER0W.js
-- identity-first-!~{002}~.js => identity-first-q8WHK-xa.js
-- identity-generator-!~{003}~.js => identity-generator-xIia6auH.js
 - identity-async-!~{004}~.js => identity-async-glL61QD0.js
 - identity-cross-module-!~{005}~.js => identity-cross-module-cWTpyVeh.js
+- identity-first-!~{002}~.js => identity-first-q8WHK-xa.js
+- identity-generator-!~{003}~.js => identity-generator-xIia6auH.js
+- identity-last-!~{001}~.js => identity-last-PfrbER0W.js
 - identity-no-args-!~{006}~.js => identity-no-args-uajLgJkU.js
 - identity-two-args-!~{007}~.js => identity-two-args-WTAwq5Y_.js
-- reassign-!~{008}~.js => reassign-xA1iN1gF.js
-- reassign-inc-!~{009}~.js => reassign-inc-CPPVmFxu.js
-- reassign-div-!~{00a}~.js => reassign-div-FL543foZ.js
-- reassign-array-!~{00b}~.js => reassign-array-xv-nvKjK.js
-- reassign-object-!~{00c}~.js => reassign-object-3Uun8IY_.js
-- not-identity-two-args-!~{00d}~.js => not-identity-two-args-w4qvo-wK.js
-- not-identity-default-!~{00e}~.js => not-identity-default-Iwf5M00H.js
 - not-identity-array-!~{00f}~.js => not-identity-array-2Kx4zQ7_.js
+- not-identity-default-!~{00e}~.js => not-identity-default-Iwf5M00H.js
 - not-identity-object-!~{00g}~.js => not-identity-object-3NuHxvNm.js
 - not-identity-rest-!~{00h}~.js => not-identity-rest-Rt3MKZxq.js
 - not-identity-return-!~{00i}~.js => not-identity-return-16DdmCYN.js
+- not-identity-two-args-!~{00d}~.js => not-identity-two-args-w4qvo-wK.js
+- reassign-array-!~{00b}~.js => reassign-array-xv-nvKjK.js
+- reassign-div-!~{00a}~.js => reassign-div-FL543foZ.js
+- reassign-inc-!~{009}~.js => reassign-inc-CPPVmFxu.js
+- reassign-object-!~{00c}~.js => reassign-object-3Uun8IY_.js
+- reassign-!~{008}~.js => reassign-xA1iN1gF.js
 
 # tests/esbuild/dce/json_loader_remove_unused
 
@@ -213,17 +213,17 @@ snapshot_kind: text
 
 # tests/esbuild/dce/multiple_declaration_tree_shaking
 
-- var2-!~{000}~.js => var2-Vi2Pkvb2.js
-- var3-!~{001}~.js => var3-HUidPe4n.js
 - function2-!~{002}~.js => function2-O7OTpV9_.js
 - function3-!~{003}~.js => function3-VvtIniZn.js
+- var2-!~{000}~.js => var2-Vi2Pkvb2.js
+- var3-!~{001}~.js => var3-HUidPe4n.js
 
 # tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax
 
-- var2-!~{000}~.js => var2-Vi2Pkvb2.js
-- var3-!~{001}~.js => var3-HUidPe4n.js
 - function2-!~{002}~.js => function2-O7OTpV9_.js
 - function3-!~{003}~.js => function3-VvtIniZn.js
+- var2-!~{000}~.js => var2-Vi2Pkvb2.js
+- var3-!~{001}~.js => var3-HUidPe4n.js
 
 # tests/esbuild/dce/nested_function_inlining_with_spread
 
@@ -232,28 +232,28 @@ snapshot_kind: text
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-fn-!~{000}~.js => expr-fn-rrLIXd_1.js
 - expr-arrow-!~{001}~.js => expr-arrow-rKobZ2Fw.js
-- stmt-fn-!~{002}~.js => stmt-fn-5_tdFffm.js
-- stmt-export-fn-!~{003}~.js => stmt-export-fn-ytVJYPqG.js
-- stmt-local-!~{004}~.js => stmt-local-y5jW5PzJ.js
-- stmt-export-local-!~{005}~.js => stmt-export-local-eGL0Zf02.js
-- stmt-export-default-before-fn-anon-!~{006}~.js => stmt-export-default-before-fn-anon-4W-bzQY_.js
-- stmt-export-default-before-fn-name-!~{007}~.js => stmt-export-default-before-fn-name-SH9cErEg.js
-- stmt-export-default-before-gen-fn-anon-!~{008}~.js => stmt-export-default-before-gen-fn-anon-ZrKWr9jg.js
-- stmt-export-default-before-gen-fn-name-!~{009}~.js => stmt-export-default-before-gen-fn-name-nmudrHqg.js
-- stmt-export-default-before-async-fn-anon-!~{00a}~.js => stmt-export-default-before-async-fn-anon-dkrXddl7.js
-- stmt-export-default-before-async-fn-name-!~{00b}~.js => stmt-export-default-before-async-fn-name-AeRs3cIJ.js
-- stmt-export-default-before-async-gen-fn-anon-!~{00c}~.js => stmt-export-default-before-async-gen-fn-anon-sEwRE6hs.js
-- stmt-export-default-before-async-gen-fn-name-!~{00d}~.js => stmt-export-default-before-async-gen-fn-name-a8a9YAzK.js
-- stmt-export-default-after-fn-anon-!~{00e}~.js => stmt-export-default-after-fn-anon-WhPG1JcU.js
-- stmt-export-default-after-fn-name-!~{00f}~.js => stmt-export-default-after-fn-name-lChVtLKt.js
-- stmt-export-default-after-gen-fn-anon-!~{00g}~.js => stmt-export-default-after-gen-fn-anon-dEpmbEj_.js
-- stmt-export-default-after-gen-fn-name-!~{00h}~.js => stmt-export-default-after-gen-fn-name-zW9fZ5I8.js
+- expr-fn-!~{000}~.js => expr-fn-rrLIXd_1.js
 - stmt-export-default-after-async-fn-anon-!~{00i}~.js => stmt-export-default-after-async-fn-anon-opjlWaDJ.js
 - stmt-export-default-after-async-fn-name-!~{00j}~.js => stmt-export-default-after-async-fn-name-_Jsw7qPS.js
 - stmt-export-default-after-async-gen-fn-anon-!~{00k}~.js => stmt-export-default-after-async-gen-fn-anon-Hu5Y3TWd.js
 - stmt-export-default-after-async-gen-fn-name-!~{00l}~.js => stmt-export-default-after-async-gen-fn-name-sBjYUbqH.js
+- stmt-export-default-after-fn-anon-!~{00e}~.js => stmt-export-default-after-fn-anon-WhPG1JcU.js
+- stmt-export-default-after-fn-name-!~{00f}~.js => stmt-export-default-after-fn-name-lChVtLKt.js
+- stmt-export-default-after-gen-fn-anon-!~{00g}~.js => stmt-export-default-after-gen-fn-anon-dEpmbEj_.js
+- stmt-export-default-after-gen-fn-name-!~{00h}~.js => stmt-export-default-after-gen-fn-name-zW9fZ5I8.js
+- stmt-export-default-before-async-fn-anon-!~{00a}~.js => stmt-export-default-before-async-fn-anon-dkrXddl7.js
+- stmt-export-default-before-async-fn-name-!~{00b}~.js => stmt-export-default-before-async-fn-name-AeRs3cIJ.js
+- stmt-export-default-before-async-gen-fn-anon-!~{00c}~.js => stmt-export-default-before-async-gen-fn-anon-sEwRE6hs.js
+- stmt-export-default-before-async-gen-fn-name-!~{00d}~.js => stmt-export-default-before-async-gen-fn-name-a8a9YAzK.js
+- stmt-export-default-before-fn-anon-!~{006}~.js => stmt-export-default-before-fn-anon-4W-bzQY_.js
+- stmt-export-default-before-fn-name-!~{007}~.js => stmt-export-default-before-fn-name-SH9cErEg.js
+- stmt-export-default-before-gen-fn-anon-!~{008}~.js => stmt-export-default-before-gen-fn-anon-ZrKWr9jg.js
+- stmt-export-default-before-gen-fn-name-!~{009}~.js => stmt-export-default-before-gen-fn-name-nmudrHqg.js
+- stmt-export-fn-!~{003}~.js => stmt-export-fn-ytVJYPqG.js
+- stmt-export-local-!~{005}~.js => stmt-export-local-eGL0Zf02.js
+- stmt-fn-!~{002}~.js => stmt-fn-5_tdFffm.js
+- stmt-local-!~{004}~.js => stmt-local-y5jW5PzJ.js
 
 # tests/esbuild/dce/no_side_effects_comment_type_script_declare
 
@@ -261,10 +261,10 @@ snapshot_kind: text
 
 # tests/esbuild/dce/no_side_effects_comment_unused_calls
 
-- stmt-fn-!~{000}~.js => stmt-fn-9QT941qd.js
-- stmt-local-!~{001}~.js => stmt-local-XooBNX7w.js
 - expr-fn-!~{002}~.js => expr-fn-YwlFclyq.js
 - stmt-export-default-fn-!~{003}~.js => stmt-export-default-fn-fPRIuS0V.js
+- stmt-fn-!~{000}~.js => stmt-fn-9QT941qd.js
+- stmt-local-!~{001}~.js => stmt-local-XooBNX7w.js
 
 # tests/esbuild/dce/package_json_side_effects_array_glob
 
@@ -466,8 +466,8 @@ snapshot_kind: text
 
 # tests/esbuild/dce/top_level_function_inlining_with_spread
 
-- entry-!~{000}~.js => entry-rhgqC_xp.js
 - entry-outer-!~{001}~.js => entry-outer-v32bPLLE.js
+- entry-!~{000}~.js => entry-rhgqC_xp.js
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
@@ -672,9 +672,9 @@ snapshot_kind: text
 
 # tests/esbuild/default/define_import_meta_es5
 
-- replaced-!~{000}~.js => replaced-a8dnE1dp.js
-- kept-!~{001}~.js => kept-iI3989Fx.js
 - dead-code-!~{002}~.js => dead-code-uosdmmvD.js
+- kept-!~{001}~.js => kept-iI3989Fx.js
+- replaced-!~{000}~.js => replaced-a8dnE1dp.js
 
 # tests/esbuild/default/define_infinite_loop_issue2407
 
@@ -690,8 +690,8 @@ snapshot_kind: text
 
 # tests/esbuild/default/define_optional_chain_panic_issue3551
 
-- id-define-!~{000}~.js => id-define-qYAMbG2i.js
 - dot-define-!~{001}~.js => dot-define-vQx57Vh3.js
+- id-define-!~{000}~.js => id-define-qYAMbG2i.js
 
 # tests/esbuild/default/define_this
 
@@ -730,10 +730,10 @@ snapshot_kind: text
 # tests/esbuild/default/entry_names_chunk_names_ext_placeholder
 
 - entries_entry1-!~{000}~.js => entries_entry1-9HAZStut.js
-- entries_entry1.css
 - entries_entry2-!~{001}~.js => entries_entry2-J0QD7eZ0.js
-- entries_entry2.css
 - shared-!~{002}~.js => shared-85foh69q.js
+- entries_entry1.css
+- entries_entry2.css
 
 # tests/esbuild/default/errors_for_assert_type_json
 
@@ -936,12 +936,12 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_missing_neither_es6_nor_common_js
 
-- named-!~{002}~.js => named-nyvOS9Pe.js
-- star-!~{003}~.js => star-itIZ2Zp0.js
-- star-capture-!~{004}~.js => star-capture-6tiM03oS.js
 - bare-!~{005}~.js => bare-NxXkKW3E.js
-- require-!~{006}~.js => require-aE6iJhZq.js
 - import-!~{007}~.js => import-raG5GqaA.js
+- named-!~{002}~.js => named-nyvOS9Pe.js
+- require-!~{006}~.js => require-aE6iJhZq.js
+- star-capture-!~{004}~.js => star-capture-6tiM03oS.js
+- star-!~{003}~.js => star-itIZ2Zp0.js
 - foo-!~{008}~.js => foo-4D1KBq5Q.js
 - foo-!~{000}~.js => foo-hQRONFHh.js
 
@@ -1087,8 +1087,8 @@ snapshot_kind: text
 
 # tests/esbuild/default/keep_names_all_forms
 
-- keep-!~{000}~.js => keep-WJM3zxO4.js
 - do-not-keep-!~{001}~.js => do-not-keep-7yjIup5I.js
+- keep-!~{000}~.js => keep-WJM3zxO4.js
 
 # tests/esbuild/default/keep_names_class_static_name
 
@@ -1207,13 +1207,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_props_import_export
 
-- esm-!~{000}~.js => esm-vob9d93d.js
 - cjs-!~{001}~.js => cjs-eTIztEs_.js
+- esm-!~{000}~.js => esm-vob9d93d.js
 
 # tests/esbuild/default/mangle_props_import_export_bundled
 
-- entry-esm-!~{000}~.js => entry-esm-Ro4Gp9LP.js
 - entry-cjs-!~{001}~.js => entry-cjs-IlDiW315.js
+- entry-esm-!~{000}~.js => entry-esm-Ro4Gp9LP.js
 - cjs-!~{002}~.js => cjs-N7qruUdz.js
 
 # tests/esbuild/default/mangle_props_jsx_preserve
@@ -1331,23 +1331,23 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-ZTpsjvJq.js
 - entry-!~{001}~.js => entry-257bMV5q.js
-- entry2.css
+- entry-!~{000}~.js => entry-ZTpsjvJq.js
 - copy-!~{002}~.js => copy-4V_reils.js
 - dynamic-!~{005}~.js => dynamic-mVVzGI22.js
 - assets/file-trxDDe4-.file
+- entry2.css
 
 # tests/esbuild/default/metafile_very_long_external_paths
 
 - bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-Gc3LJ5gu.js
-- assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-58oIsL55.file
 - bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-kT9H8Apa.js
 - bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-mWz0mrRU.js
 - bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-Ew8bSuBT.js
-- bytesInOutput should be at least 99.css
-- assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-Q7SZEdLs.file
 - 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-U-FEU7gY.js
+- assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-58oIsL55.file
+- assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-Q7SZEdLs.file
+- bytesInOutput should be at least 99.css
 
 # tests/esbuild/default/minified_bundle_common_js
 
@@ -1445,10 +1445,10 @@ snapshot_kind: text
 
 # tests/esbuild/default/object_literal_proto_setter_edge_cases
 
-- import-shorthand-!~{000}~.js => import-shorthand-Vn6_D_CC.js
 - import-normal-!~{001}~.js => import-normal-69o9Y4XB.js
-- local-shorthand-!~{002}~.js => local-shorthand-PZLfB0pY.js
+- import-shorthand-!~{000}~.js => import-shorthand-Vn6_D_CC.js
 - local-normal-!~{003}~.js => local-normal-0xwEVfH9.js
+- local-shorthand-!~{002}~.js => local-shorthand-PZLfB0pY.js
 
 # tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax
 
@@ -1784,19 +1784,19 @@ snapshot_kind: text
 
 # tests/esbuild/default/var_relocating_bundle
 
-- top-level-!~{000}~.js => top-level-GNt5dJoE.js
-- nested-!~{001}~.js => nested-D3a51Wh2.js
-- let-!~{002}~.js => let-0EGk8KVe.js
-- function-!~{003}~.js => function-x0EBYVgI.js
 - function-nested-!~{004}~.js => function-nested-isj1wJMY.js
+- function-!~{003}~.js => function-x0EBYVgI.js
+- let-!~{002}~.js => let-0EGk8KVe.js
+- nested-!~{001}~.js => nested-D3a51Wh2.js
+- top-level-!~{000}~.js => top-level-GNt5dJoE.js
 
 # tests/esbuild/default/var_relocating_no_bundle
 
-- top-level-!~{000}~.js => top-level-bqWlhvnv.js
-- nested-!~{001}~.js => nested-NWlKyjjN.js
-- let-!~{002}~.js => let-0EGk8KVe.js
 - function-!~{003}~.js => function-QMqJvG4t.js
 - function-nested-!~{004}~.js => function-nested-qRuC6usJ.js
+- let-!~{002}~.js => let-0EGk8KVe.js
+- nested-!~{001}~.js => nested-NWlKyjjN.js
+- top-level-!~{000}~.js => top-level-bqWlhvnv.js
 
 # tests/esbuild/default/warn_common_js_exports_in_esm_bundle
 
@@ -1908,28 +1908,28 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_default_namespace_combo_issue446
 
+- external-def-!~{005}~.js => external-def-zFkTWAtf.js
+- external-default-!~{004}~.js => external-default-nmmbfNcA.js
 - external-default2-!~{000}~.js => external-default2-MStbYXeS.js
 - external-ns-!~{001}~.js => external-ns-GpZdixYW.js
-- external-ns-default-!~{002}~.js => external-ns-default-m6n_HiLI.js
 - external-ns-def-!~{003}~.js => external-ns-def-j655hlZw.js
-- external-default-!~{004}~.js => external-default-nmmbfNcA.js
-- external-def-!~{005}~.js => external-def-zFkTWAtf.js
+- external-ns-default-!~{002}~.js => external-ns-default-m6n_HiLI.js
+- internal-def-!~{00b}~.js => internal-def-38iLySZX.js
+- internal-default-!~{00a}~.js => internal-default-4kuFl9KW.js
 - internal-default2-!~{006}~.js => internal-default2-lgVRkw_h.js
 - internal-ns-!~{007}~.js => internal-ns-OxoDuB5h.js
-- internal-ns-default-!~{008}~.js => internal-ns-default-CTctCqNs.js
 - internal-ns-def-!~{009}~.js => internal-ns-def-KYj1ObLL.js
-- internal-default-!~{00a}~.js => internal-default-4kuFl9KW.js
-- internal-def-!~{00b}~.js => internal-def-38iLySZX.js
+- internal-ns-default-!~{008}~.js => internal-ns-default-CTctCqNs.js
 - internal-!~{00c}~.js => internal-wPmdZyoe.js
 
 # tests/esbuild/importstar/import_default_namespace_combo_no_default
 
-- entry-default-ns-prop-!~{000}~.js => entry-default-ns-prop-4iAVnNsJ.js
-- entry-default-ns-!~{001}~.js => entry-default-ns-FrKtbC3c.js
-- entry-default-prop-!~{002}~.js => entry-default-prop-FC1nUV9Y.js
-- entry-default-!~{003}~.js => entry-default-bmDtwZYA.js
-- entry-prop-!~{004}~.js => entry-prop-NUn5s2Xe.js
 - entry-dead-!~{005}~.js => entry-dead-wI0m9vaL.js
+- entry-default-!~{003}~.js => entry-default-bmDtwZYA.js
+- entry-default-ns-!~{001}~.js => entry-default-ns-FrKtbC3c.js
+- entry-default-ns-prop-!~{000}~.js => entry-default-ns-prop-4iAVnNsJ.js
+- entry-default-prop-!~{002}~.js => entry-default-prop-FC1nUV9Y.js
+- entry-prop-!~{004}~.js => entry-prop-NUn5s2Xe.js
 - entry-typo-!~{006}~.js => entry-typo-Z8Fj6wie.js
 - entry-typo-indirect-!~{007}~.js => entry-typo-indirect-FJb1Dx4P.js
 - foo-!~{008}~.js => foo-pMB2-Eqv.js
@@ -1952,14 +1952,14 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 
-- entry-nope-!~{000}~.js => entry-nope-pdmjBiub.js
 - entry-default-!~{001}~.js => entry-default-cXTHeRcC.js
+- entry-nope-!~{000}~.js => entry-nope-pdmjBiub.js
 - empty-!~{002}~.js => empty-1ZlTYZmR.js
 
 # tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 
-- entry-nope-!~{000}~.js => entry-nope-Ertf0Sia.js
 - entry-default-!~{001}~.js => entry-default-WQOhJJpo.js
+- entry-nope-!~{000}~.js => entry-nope-Ertf0Sia.js
 - no-side-effects-!~{002}~.js => no-side-effects-IG6voDGf.js
 
 # tests/esbuild/importstar/import_of_export_star
@@ -2341,17 +2341,17 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_copy_with_bundle_entry_point
 
-- src_entry-!~{000}~.js => src_entry-ioDHherq.js
-- src_entry-!~{001}~.js => src_entry-MXnb0dC3.js
-- src_entry2.css
 - assets_some-!~{002}~.js => assets_some-W0fyymA3.js
+- src_entry-!~{001}~.js => src_entry-MXnb0dC3.js
+- src_entry-!~{000}~.js => src_entry-ioDHherq.js
 - some-!~{003}~.js => some-3vTMswRN.js
+- src_entry2.css
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
 - src_entry-!~{000}~.js => src_entry--Tejsu7Y.js
-- src_entry.css
 - assets/some-v1x9u-L8.file
+- src_entry.css
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_js
 
@@ -2359,8 +2359,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_copy_with_format
 
-- src_entry-!~{000}~.js => src_entry-Ll4ZFY1V.js
 - assets_some-!~{001}~.js => assets_some-3x3Q-fab.js
+- src_entry-!~{000}~.js => src_entry-Ll4ZFY1V.js
 
 # tests/esbuild/loader/loader_copy_with_injected_file_bundle
 
@@ -2372,8 +2372,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_copy_with_transform
 
-- src_entry-!~{000}~.js => src_entry-Ll4ZFY1V.js
 - assets_some-!~{001}~.js => assets_some-3x3Q-fab.js
+- src_entry-!~{000}~.js => src_entry-Ll4ZFY1V.js
 
 # tests/esbuild/loader/loader_data_url_application_json
 
@@ -2428,14 +2428,14 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_file_common_js_and_es6
 
 - entry-!~{000}~.js => entry-WHuKXsO3.js
-- assets/y-dWO-UPT9.txt
 - assets/x-9aE0F9t9.txt
+- assets/y-dWO-UPT9.txt
 
 # tests/esbuild/loader/loader_file_ext_path_asset_names_js
 
 - entries_entry-!~{000}~.js => entries_entry-Rta0dnZR.js
-- assets/image-O0edW_WI.png
 - assets/file-2-DomwQe.txt
+- assets/image-O0edW_WI.png
 
 # tests/esbuild/loader/loader_file_multiple_no_collision
 
@@ -2446,12 +2446,12 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
 - entries_entry-!~{000}~.js => entries_entry-94pXRTKc.js
-- entries_entry.css
 - entries_other_entry-!~{001}~.js => entries_other_entry-oVYa1arr.js
-- entries_other_entry.css
 - common-!~{002}~.js => common-mjvhjVPl.js
-- common-mAkN8zfC.css
 - assets/common-0ZsPsUov.png
+- common-mAkN8zfC.css
+- entries_entry.css
+- entries_other_entry.css
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
@@ -2463,8 +2463,8 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_file_public_path_asset_names_css
 
 - entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
-- entries_entry.css
 - assets/image-O0edW_WI.png
+- entries_entry.css
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
 
@@ -2474,8 +2474,8 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_file_public_path_css
 
 - entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
-- entries_entry.css
 - assets/image-O0edW_WI.png
+- entries_entry.css
 
 # tests/esbuild/loader/loader_file_public_path_js
 
@@ -2485,8 +2485,8 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_file_relative_path_asset_names_css
 
 - entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
-- entries_entry.css
 - assets/image-O0edW_WI.png
+- entries_entry.css
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
 
@@ -2496,8 +2496,8 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_file_relative_path_css
 
 - entries_entry-!~{000}~.js => entries_entry-jgQCYzsD.js
-- entries_entry.css
 - assets/image-O0edW_WI.png
+- entries_entry.css
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
@@ -2580,35 +2580,35 @@ snapshot_kind: text
 # tests/esbuild/lower/java_script_auto_accessor_es2021
 
 - js-define-!~{000}~.js => js-define-aXyK_Xwq.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
 - ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-kZpcceii.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es2022
 
 - js-define-!~{000}~.js => js-define-aXyK_Xwq.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
 - ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-kZpcceii.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es_next
 
 - js-define-!~{000}~.js => js-define-aXyK_Xwq.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
 - ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-kZpcceii.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define--xwfO3Yd.js
 
 # tests/esbuild/lower/java_script_decorators_bundle_issue3768
 
-- base-instance-method-!~{000}~.js => base-instance-method-TOUlI-gg.js
-- base-instance-field-!~{001}~.js => base-instance-field-9WUpMusJ.js
 - base-instance-accessor-!~{002}~.js => base-instance-accessor-zfdJig88.js
-- base-static-method-!~{003}~.js => base-static-method-dubSmZAG.js
-- base-static-field-!~{004}~.js => base-static-field-zO7zpUGv.js
+- base-instance-field-!~{001}~.js => base-instance-field-9WUpMusJ.js
+- base-instance-method-!~{000}~.js => base-instance-method-TOUlI-gg.js
 - base-static-accessor-!~{005}~.js => base-static-accessor-WB7tiHMm.js
-- derived-instance-method-!~{006}~.js => derived-instance-method-JbD8OG7c.js
-- derived-instance-field-!~{007}~.js => derived-instance-field-FMd8NxBx.js
+- base-static-field-!~{004}~.js => base-static-field-zO7zpUGv.js
+- base-static-method-!~{003}~.js => base-static-method-dubSmZAG.js
 - derived-instance-accessor-!~{008}~.js => derived-instance-accessor-XlS0wVAn.js
-- derived-static-method-!~{009}~.js => derived-static-method-mtkOzFK_.js
-- derived-static-field-!~{00a}~.js => derived-static-field-KCg03J3T.js
+- derived-instance-field-!~{007}~.js => derived-instance-field-FMd8NxBx.js
+- derived-instance-method-!~{006}~.js => derived-instance-method-JbD8OG7c.js
 - derived-static-accessor-!~{00b}~.js => derived-static-accessor-JXovLVER.js
+- derived-static-field-!~{00a}~.js => derived-static-field-KCg03J3T.js
+- derived-static-method-!~{009}~.js => derived-static-method-mtkOzFK_.js
 
 # tests/esbuild/lower/java_script_decorators_es_next
 
@@ -2873,25 +2873,25 @@ snapshot_kind: text
 
 # tests/esbuild/lower/lower_using_hoisting
 
-- hoist-use-strict-!~{000}~.js => hoist-use-strict-A--xttob.js
 - hoist-directive-!~{001}~.js => hoist-directive-9tBMF46I.js
-- hoist-import-!~{002}~.js => hoist-import-WMVvHfUW.js
-- hoist-export-star-!~{003}~.js => hoist-export-star-Q0aJz6nO.js
-- hoist-export-from-!~{004}~.js => hoist-export-from-OAEK7Hvv.js
-- hoist-export-clause-!~{005}~.js => hoist-export-clause-_USK_I--.js
-- hoist-export-local-direct-!~{006}~.js => hoist-export-local-direct-grFamSzS.js
-- hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-j7hlmGVc.js
 - hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-GYMTQzne.js
 - hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-DYqkN_7-.js
-- hoist-export-function-direct-!~{00a}~.js => hoist-export-function-direct-hl6f48kH.js
-- hoist-export-function-indirect-!~{00b}~.js => hoist-export-function-indirect-QyGH-kT1.js
+- hoist-export-clause-!~{005}~.js => hoist-export-clause-_USK_I--.js
+- hoist-export-default-class-anonymous-!~{00e}~.js => hoist-export-default-class-anonymous-zKZuREwe.js
 - hoist-export-default-class-name-unused-!~{00c}~.js => hoist-export-default-class-name-unused-lpeDZBzT.js
 - hoist-export-default-class-name-used-!~{00d}~.js => hoist-export-default-class-name-used-XwDgTlTn.js
-- hoist-export-default-class-anonymous-!~{00e}~.js => hoist-export-default-class-anonymous-zKZuREwe.js
+- hoist-export-default-expr-!~{00i}~.js => hoist-export-default-expr-dRJ7pKP8.js
+- hoist-export-default-function-anonymous-!~{00h}~.js => hoist-export-default-function-anonymous-UVtUFena.js
 - hoist-export-default-function-name-unused-!~{00f}~.js => hoist-export-default-function-name-unused-lqeCNVHP.js
 - hoist-export-default-function-name-used-!~{00g}~.js => hoist-export-default-function-name-used-rOLkP3gc.js
-- hoist-export-default-function-anonymous-!~{00h}~.js => hoist-export-default-function-anonymous-UVtUFena.js
-- hoist-export-default-expr-!~{00i}~.js => hoist-export-default-expr-dRJ7pKP8.js
+- hoist-export-from-!~{004}~.js => hoist-export-from-OAEK7Hvv.js
+- hoist-export-function-direct-!~{00a}~.js => hoist-export-function-direct-hl6f48kH.js
+- hoist-export-function-indirect-!~{00b}~.js => hoist-export-function-indirect-QyGH-kT1.js
+- hoist-export-local-direct-!~{006}~.js => hoist-export-local-direct-grFamSzS.js
+- hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-j7hlmGVc.js
+- hoist-export-star-!~{003}~.js => hoist-export-star-Q0aJz6nO.js
+- hoist-import-!~{002}~.js => hoist-import-WMVvHfUW.js
+- hoist-use-strict-!~{000}~.js => hoist-use-strict-A--xttob.js
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
@@ -3419,8 +3419,8 @@ snapshot_kind: text
 
 # tests/esbuild/ts/enum_rules_from_type_script_5_0
 
-- supported-!~{000}~.js => supported-ESM2IFWu.js
 - not-supported-!~{001}~.js => not-supported-zSQ88y8v.js
+- supported-!~{000}~.js => supported-ESM2IFWu.js
 
 # tests/esbuild/ts/export_type_issue379
 
@@ -3547,14 +3547,14 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_enum_tree_shaking
 
-- simple-member-!~{000}~.js => simple-member-61X4xtGZ.js
-- simple-enum-!~{001}~.js => simple-enum-VHOISmHb.js
-- sibling-member-!~{002}~.js => sibling-member-9vctnqRB.js
+- namespace-after-!~{007}~.js => namespace-after-2aXlfCUd.js
+- namespace-before-!~{006}~.js => namespace-before-ktnRzOqG.js
+- sibling-enum-after-!~{005}~.js => sibling-enum-after-xlSl1MJd.js
 - sibling-enum-before-!~{003}~.js => sibling-enum-before-CZDPvMmU.js
 - sibling-enum-middle-!~{004}~.js => sibling-enum-middle-W6GfCTNW.js
-- sibling-enum-after-!~{005}~.js => sibling-enum-after-xlSl1MJd.js
-- namespace-before-!~{006}~.js => namespace-before-ktnRzOqG.js
-- namespace-after-!~{007}~.js => namespace-after-2aXlfCUd.js
+- sibling-member-!~{002}~.js => sibling-member-9vctnqRB.js
+- simple-enum-!~{001}~.js => simple-enum-VHOISmHb.js
+- simple-member-!~{000}~.js => simple-member-61X4xtGZ.js
 
 # tests/esbuild/ts/ts_enum_use_before_declare
 
@@ -3757,20 +3757,20 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_sibling_enum
 
-- number-!~{000}~.js => number-C3vZgNIl.js
-- string-!~{001}~.js => string-Naxsxd1D.js
-- propagation-!~{002}~.js => propagation-_G32_cpC.js
 - nested-number-!~{003}~.js => nested-number-6iNscR6T.js
-- nested-string-!~{004}~.js => nested-string-CeGGaoJj.js
 - nested-propagation-!~{005}~.js => nested-propagation-GdzPmiF-.js
+- nested-string-!~{004}~.js => nested-string-CeGGaoJj.js
+- number-!~{000}~.js => number-C3vZgNIl.js
+- propagation-!~{002}~.js => propagation-_G32_cpC.js
+- string-!~{001}~.js => string-Naxsxd1D.js
 
 # tests/esbuild/ts/ts_sibling_namespace
 
-- let-!~{000}~.js => let-XhNC6XdS.js
-- function-!~{001}~.js => function-zPY_ciEM.js
 - class-!~{002}~.js => class-LGwl8VPG.js
-- namespace-!~{003}~.js => namespace-iV2BYbi2.js
 - enum-!~{004}~.js => enum-_Olhv5xP.js
+- function-!~{001}~.js => function-zPY_ciEM.js
+- let-!~{000}~.js => let-XhNC6XdS.js
+- namespace-!~{003}~.js => namespace-iV2BYbi2.js
 
 # tests/esbuild/ts/ts_side_effects_false_warning_type_declarations
 
@@ -3778,11 +3778,11 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_this_is_undefined_warning
 
+- silent1-!~{003}~.js => silent1-MZTWkd18.js
+- silent2-!~{004}~.js => silent2-NAOTlVZ4.js
 - warning1-!~{000}~.js => warning1-IbHY-6XB.js
 - warning2-!~{001}~.js => warning2-DZbBf5GL.js
 - warning3-!~{002}~.js => warning3-4e0KJqFN.js
-- silent1-!~{003}~.js => silent1-MZTWkd18.js
-- silent2-!~{004}~.js => silent2-NAOTlVZ4.js
 
 # tests/rolldown/cjs_compat/basic_commonjs
 
@@ -3862,8 +3862,8 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/node_module_commonjs
 
-- main-!~{000}~.js => main-xvTfRmFV.js
 - entry-!~{001}~.js => entry-7Tk60b4_.js
+- main-!~{000}~.js => main-xvTfRmFV.js
 - commonjs-!~{002}~.js => commonjs-kgSZg0sc.js
 
 # tests/rolldown/cjs_compat/reexport_commonjs
@@ -3903,8 +3903,8 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
-- entry_js-!~{000}~.js => entry_js-2jgRP-V5.js
 - entry2_js-!~{001}~.js => entry2_js-c02Y5jcR.js
+- entry_js-!~{000}~.js => entry_js-2jgRP-V5.js
 - entry-!~{002}~.js => entry-m0cJfs5h.js
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed2
@@ -4202,8 +4202,8 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/splitting_with_external_module
 
-- main-!~{000}~.js => main-rrdTSd-K.js
 - entry-!~{001}~.js => entry-56OxOt8E.js
+- main-!~{000}~.js => main-rrdTSd-K.js
 - share-!~{002}~.js => share-vGSrQ9sA.js
 
 # tests/rolldown/function/external_live_bindings
@@ -4553,8 +4553,8 @@ snapshot_kind: text
 
 # tests/rolldown/issues/1722/1
 
-- main-!~{000}~.js => main-uMEUPdF2.js
 - foo-!~{001}~.js => foo-lYeXccqD.js
+- main-!~{000}~.js => main-uMEUPdF2.js
 - main-!~{002}~.js => main-poUTX8a4.js
 
 # tests/rolldown/issues/1722/2
@@ -4602,8 +4602,8 @@ snapshot_kind: text
 
 # tests/rolldown/misc/assign_chunk_name_order
 
-- main-!~{000}~.js => main-fLmogeVQ.js
 - file-!~{001}~.js => file-QAb9AYqt.js
+- main-!~{000}~.js => main-fLmogeVQ.js
 - file-!~{008}~.js => file-A_qMsXx8.js
 - file-!~{006}~.js => file-DuObY5Lu.js
 - file-!~{002}~.js => file-FAR_qOns.js
@@ -4669,8 +4669,8 @@ snapshot_kind: text
 
 # tests/rolldown/misc/reexport_star
 
-- main-!~{000}~.js => main-qSjd4iRb.js
 - entry-!~{001}~.js => entry--AvsQmDl.js
+- main-!~{000}~.js => main-qSjd4iRb.js
 - a-!~{002}~.js => a-cHsxHO4h.js
 
 # tests/rolldown/misc/reexport_star_from_local_named_export
@@ -4739,18 +4739,18 @@ snapshot_kind: text
 # tests/rolldown/topics/css/align_vite
 
 - main-!~{000}~.js => main-6o6OfP3k.js
-- entry-a-!~{003}~.js => entry-a-28M3Od9p.js
-- entry-a-PDikT8S0.css
-- entry-b-!~{005}~.js => entry-b-3rOg4Zu0.js
-- entry-b-nsNNDpQm.css
 - common-imported-by-js-!~{001}~.js => common-imported-by-js-7GYix6i6.js
+- entry-a-!~{003}~.js => entry-a-28M3Od9p.js
+- entry-b-!~{005}~.js => entry-b-3rOg4Zu0.js
 - common-imported-by-js-N1DCKFms.css
+- entry-a-PDikT8S0.css
+- entry-b-nsNNDpQm.css
 
 # tests/rolldown/topics/css/basic
 
 - main-!~{000}~.js => main-v1VwRIxk.js
-- main.css
 - assets/test-xOd17Yrt.png
+- main.css
 
 # tests/rolldown/topics/css/css_entries
 

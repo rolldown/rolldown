@@ -78,9 +78,11 @@ const outputOptionsSchema = z.strictObject({
     .describe('extend global variable defined by name in IIFE / UMD formats')
     .optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
+  assetFileNames: z.string().optional(),
   entryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
   chunkFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
-  assetFileNames: z.string().optional(),
+  cssEntryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
+  cssChunkFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
   minify: z.boolean().describe('minify the bundled file.').optional(),
   name: z.string().describe('name for UMD / IIFE format outputs').optional(),
   globals: z

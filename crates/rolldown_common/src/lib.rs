@@ -15,6 +15,7 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup},
+      comments::Comments,
       es_module_flag::EsModuleFlag,
       experimental_options::ExperimentalOptions,
       filename_template::{FileNameRenderOptions, FilenameTemplate},

@@ -62,6 +62,16 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
+  pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
+    CodeGenerator::new()
+      .with_options(CodegenOptions {
+        comments: options.comments,
+        source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
+        ..CodegenOptions::default()
+      })
+      .build(ast.program())
+  }
+
   pub fn minify(
     source_text: &str,
     enable_sourcemap: bool,
@@ -89,4 +99,10 @@ fn basic_test() {
   let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
   let code = EcmaCompiler::print(&ast, "", false).code;
   assert_eq!(code, "const a = 1;\n");
+}
+
+pub struct PrintOptions {
+  pub comments: bool,
+  pub filename: String,
+  pub sourcemap: bool,
 }

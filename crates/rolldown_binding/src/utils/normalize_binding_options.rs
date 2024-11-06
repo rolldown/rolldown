@@ -203,6 +203,7 @@ pub fn normalize_binding_options(
     profiler_names: input_options.profiler_names,
     jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
+    comments: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

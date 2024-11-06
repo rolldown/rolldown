@@ -9,6 +9,7 @@ use rustc_hash::FxHashMap;
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::checks_options::ChecksOptions;
+use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::output_option::ChunkFilenamesOutputOption;
 use super::treeshake::TreeshakeOptions;
@@ -68,6 +69,7 @@ pub struct NormalizedBundlerOptions {
   pub profiler_names: bool,
   pub jsx: Option<JsxOptions>,
   pub watch: WatchOption,
+  pub comments: Comments,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

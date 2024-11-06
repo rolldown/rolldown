@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import { lib_default } from "./splited_lib.js";
+
+//#region main.js
+console.log("lib", lib_default);
+
+//#endregion
+```
+## splited_lib.js
+
+```js
+
+//#region lib.js
+var lib_default = "hello, world";
+
+//#endregion
+export { lib_default };
+```

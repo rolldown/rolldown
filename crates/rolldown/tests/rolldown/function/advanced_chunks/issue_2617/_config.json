@@ -1,0 +1,13 @@
+{
+  // Should not process trreeshaked modules
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "test": "lib\\.js",
+          "name": "splited_lib"
+        }
+      ]
+    }
+  }
+}

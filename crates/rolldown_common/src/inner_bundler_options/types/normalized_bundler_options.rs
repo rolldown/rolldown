@@ -73,3 +73,9 @@ pub struct NormalizedBundlerOptions {
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;
+
+impl NormalizedBundlerOptions {
+  pub fn is_sourcemap_enabled(&self) -> bool {
+    self.sourcemap.is_some()
+  }
+}

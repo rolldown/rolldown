@@ -41,16 +41,14 @@ fn criterion_benchmark(c: &mut Criterion) {
 
   // simulate render-chunk-remapping
   let mut sourcemap_chain = vec![];
-  let line = code.matches('\n').count() as u32;
   let mut source_joiner = SourceJoiner::default();
   let mut sources = vec![];
   for i in 0..3 {
     sources.push(format!("{i}.js"));
-    source_joiner.append_source(SourceMapSource::new(
-      code.clone(),
-      map.as_ref().unwrap().clone(),
-      line,
-    ));
+    source_joiner.append_source(
+      SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone())
+        .with_pre_compute_sourcemap_data(true),
+    );
   }
   let (source_text, mut source_map) = source_joiner.join();
   // The sources should be different at common case.

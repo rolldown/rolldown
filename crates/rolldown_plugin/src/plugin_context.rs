@@ -1,12 +1,12 @@
 use std::{
   ops::Deref,
   path::PathBuf,
-  sync::{Arc, Mutex, Weak},
+  sync::{Arc, Weak},
 };
 
 use arcstr::ArcStr;
-use dashmap::DashSet;
-use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions};
+use dashmap::{DashMap, DashSet};
+use rolldown_common::{ModuleInfo, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -33,9 +33,9 @@ impl PluginContext {
       plugin_driver: Weak::clone(&self.plugin_driver),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
-      module_table: Arc::clone(&self.module_table),
       options: Arc::clone(&self.options),
       watch_files: Arc::clone(&self.watch_files),
+      modules: Arc::clone(&self.modules),
     }))
   }
 }
@@ -55,10 +55,9 @@ pub struct PluginContextImpl {
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
-  #[allow(clippy::redundant_allocation)]
-  pub(crate) module_table: Arc<Mutex<&'static ModuleTable>>,
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<DashSet<ArcStr>>,
+  pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -121,27 +120,14 @@ impl PluginContextImpl {
     self.file_emitter.get_file_name(reference_id)
   }
 
-  pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
-    let module_table = self.module_table.lock().unwrap();
-    for normal_module in &module_table.modules {
-      if let Some(ecma_module) = normal_module.as_normal() {
-        if ecma_module.id.as_str() == module_id {
-          return Some(ecma_module.to_module_info());
-        }
-      }
-    }
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
     // TODO external module
-    None
+    self.modules.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
   }
-  #[allow(clippy::unnecessary_wraps)]
-  pub fn get_module_ids(&self) -> Option<Vec<String>> {
-    let module_table = self.module_table.lock().unwrap();
-    let mut ids = Vec::with_capacity(module_table.modules.len());
-    for normal_module in &module_table.modules {
-      ids.push(normal_module.id().to_string());
-    }
+
+  pub fn get_module_ids(&self) -> Vec<String> {
     // TODO external module
-    Some(ids)
+    self.modules.iter().map(|v| v.key().to_string()).collect()
   }
 
   pub fn cwd(&self) -> &PathBuf {

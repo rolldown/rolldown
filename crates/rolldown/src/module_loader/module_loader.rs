@@ -323,12 +323,19 @@ impl ModuleLoader {
         if let Some(module) = module.as_normal_mut() {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-          for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
+          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
+          for importer in &importers {
             if importer.kind.is_static() {
-              module.importers.push(importer.importer_path);
+              module.importers.push(importer.importer_path.clone());
             } else {
-              module.dynamic_importers.push(importer.importer_path);
+              module.dynamic_importers.push(importer.importer_path.clone());
             }
+          }
+          if !importers.is_empty() {
+            self
+              .shared_context
+              .plugin_driver
+              .set_module_info(&module.id, Arc::new(module.to_module_info()));
           }
         }
         module

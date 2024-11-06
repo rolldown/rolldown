@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use napi_derive::napi;
 
 use rolldown_plugin::PluginContext;
@@ -53,11 +51,11 @@ impl BindingPluginContext {
 
   #[napi]
   pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(|info| BindingModuleInfo::new(Arc::new(info)))
+    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
   }
 
   #[napi]
-  pub fn get_module_ids(&self) -> Option<Vec<String>> {
+  pub fn get_module_ids(&self) -> Vec<String> {
     self.inner.get_module_ids()
   }
 

@@ -166,14 +166,6 @@ impl Bundler {
       }
     };
 
-    self.plugin_driver.set_module_table(unsafe {
-      // Can't ensure the safety here. It's only a temporary solution.
-      // - We won't mutate the `module_table` in the generate stage.
-      // - We transmute the stacked reference to a static lifetime and it haven't met errors due to we happen
-      // to only need to access the `module_table` during this function call.
-      std::mem::transmute(&link_stage_output.module_table)
-    });
-
     self.plugin_driver.render_start().await?;
 
     let mut output = {

@@ -114,8 +114,8 @@ impl Watcher {
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::Start.into()).await?;
 
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleStart.into()).await?;
-    bundler.plugin_driver = bundler.plugin_driver.new_shared_from_self();
-    bundler.file_emitter.clear();
+
+    bundler.plugin_driver.clear();
 
     let output = {
       if bundler.options.watch.skip_write {

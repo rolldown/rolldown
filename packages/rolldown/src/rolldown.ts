@@ -1,4 +1,4 @@
-import type { InputOptions } from './options/input-options'
+import type { InputOptions } from './types/input-options'
 import { RolldownBuild } from './rolldown-build'
 import { Watcher } from './watcher'
 import { createBundler } from './utils/create-bundler'

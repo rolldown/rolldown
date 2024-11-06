@@ -1,4 +1,4 @@
-import type { InputOptions } from '../options/input-options'
+import type { InputOptions } from '../types/input-options'
 import { NormalizedTreeshakingOptions } from '../treeshake'
 import { isRegExp } from 'node:util/types'
 

@@ -1,7 +1,18 @@
-import type { PreRenderedChunk, RenderedChunk } from '../binding'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import { bold, underline } from '../cli/colors'
+import type { RenderedChunk, PreRenderedChunk } from '../binding'
+import type {
+  SourcemapIgnoreListOption,
+  SourcemapPathTransformOption,
+} from '../rollup'
+import type {
+  AddonFunction,
+  ChunkFileNamesFunction,
+  ModuleFormat,
+  OutputCliOptions,
+  OutputOptions,
+} from '../types/output-options'
 
 const ModuleFormatSchema = z
   .literal('es')
@@ -13,18 +24,19 @@ const ModuleFormatSchema = z
   .or(z.literal('umd'))
   .describe(
     `output format of the generated bundle (supports ${underline('esm')}, cjs, and iife).`,
-  )
-  .optional()
+  ) satisfies z.ZodType<ModuleFormat>
 
 const addonFunctionSchema = z
   .function()
   .args(zodExt.phantom<RenderedChunk>())
-  .returns(z.string().or(z.promise(z.string())))
+  .returns(
+    z.string().or(z.promise(z.string())),
+  ) satisfies z.ZodType<AddonFunction>
 
 const chunkFileNamesFunctionSchema = z
   .function()
   .args(zodExt.phantom<PreRenderedChunk>())
-  .returns(z.string())
+  .returns(z.string()) satisfies z.ZodType<ChunkFileNamesFunction>
 
 const outputOptionsSchema = z.strictObject({
   dir: z
@@ -41,7 +53,7 @@ const outputOptionsSchema = z.strictObject({
       `specify a export mode (${underline('auto')}, named, default, none)`,
     )
     .optional(),
-  format: ModuleFormatSchema,
+  format: ModuleFormatSchema.optional(),
   sourcemap: z
     .boolean()
     .or(z.literal('inline'))
@@ -104,7 +116,7 @@ const outputOptionsSchema = z.strictObject({
         .optional(),
     })
     .optional(),
-})
+}) satisfies z.ZodType<OutputOptions>
 
 const getAddonDescription = (
   placement: 'bottom' | 'top',
@@ -149,18 +161,4 @@ export const outputCliOptionsSchema = outputOptionsSchema
   .omit({
     sourcemapPathTransform: true,
     sourcemapIgnoreList: true,
-  })
-
-export type OutputOptions = z.infer<typeof outputOptionsSchema>
-
-export type SourcemapIgnoreListOption = (
-  relativeSourcePath: string,
-  sourcemapPath: string,
-) => boolean
-
-export type SourcemapPathTransformOption = (
-  relativeSourcePath: string,
-  sourcemapPath: string,
-) => string
-
-export type ModuleFormat = z.infer<typeof ModuleFormatSchema>
+  }) satisfies z.ZodType<OutputCliOptions>

@@ -17,7 +17,9 @@ export default defineTest({
           }
         },
         renderStart() {
+          let count = 0
           for (const id of this.getModuleIds()) {
+            count++
             const moduleInfo = this.getModuleInfo(id)!
             switch (moduleInfo.id) {
               case path.join(import.meta.dirname, 'main.js'):
@@ -49,6 +51,7 @@ export default defineTest({
                 break
             }
           }
+          expect(count).toBe(3)
         },
       },
     ],

@@ -64,7 +64,7 @@ impl<'a> GenerateStage<'a> {
         if let Some(map) = map.as_mut() {
           let file_base_name =
             Path::new(rendered_chunk.filename.as_str()).file_name().expect("should have file name");
-          map.set_file(&file_base_name.to_string_lossy().as_ref());
+          map.set_file(file_base_name.to_string_lossy().as_ref());
 
           let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
           let map_path = file_dir.join(&map_filename);

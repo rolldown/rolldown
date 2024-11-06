@@ -34,11 +34,6 @@ var common_default = "assets/common-h8VKzHVD.png";
 ```js
 import "./common.js";
 
-//#region entries/entry.css
-var entry_default = {};
-
-//#endregion
-export { entry_default as default };
 ```
 ## entries_other_entry.css
 
@@ -51,9 +46,4 @@ export { entry_default as default };
 ```js
 import "./common.js";
 
-//#region entries/other/entry.css
-var entry_default = {};
-
-//#endregion
-export { entry_default as default };
 ```

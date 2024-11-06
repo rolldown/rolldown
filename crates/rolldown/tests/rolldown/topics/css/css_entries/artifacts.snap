@@ -16,9 +16,4 @@ body {
 
 ```js
 
-//#region main.css
-var main_default = {};
-
-//#endregion
-export { main_default as default };
 ```

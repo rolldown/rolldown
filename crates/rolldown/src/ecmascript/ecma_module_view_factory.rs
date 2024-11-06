@@ -73,6 +73,7 @@ pub async fn create_ecma_view<'any>(
     &ctx.module_type,
     args.source.clone(),
     ctx.replace_global_define_config.as_ref(),
+    ctx.is_user_defined_entry,
   )?;
 
   let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export, warning } =

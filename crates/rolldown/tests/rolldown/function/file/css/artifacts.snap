@@ -8,11 +8,6 @@ snapshot_kind: text
 
 ```css
 
-//#region main.css
-var main_default = {};
-
-//#endregion
-export { main_default as default };
 ```
 ## out.css
 

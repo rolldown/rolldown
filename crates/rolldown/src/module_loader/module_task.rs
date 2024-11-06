@@ -170,6 +170,7 @@ impl ModuleTask {
         warnings: &mut warnings,
         module_type: module_type.clone(),
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
+        is_user_defined_entry: self.is_user_defined_entry,
       },
       CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
     )

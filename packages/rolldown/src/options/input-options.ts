@@ -16,7 +16,7 @@ import type {
   InputOption,
   JsxOptions,
   ModuleTypes,
-  RawInputOptions,
+  InputOptions,
   WatchOptions,
 } from '../types/input-options'
 import type { StringOrRegExp } from '../types/utils'
@@ -165,7 +165,7 @@ export const inputOptionsSchema = z.strictObject({
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
   watch: watchOptionsSchema.or(z.literal(false)).optional(),
-}) satisfies z.ZodType<RawInputOptions>
+}) satisfies z.ZodType<InputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema
   .extend({

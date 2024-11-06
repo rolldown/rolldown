@@ -56,7 +56,7 @@ export interface WatchOptions {
   chokidar?: any
 }
 
-export interface RawInputOptions {
+export interface InputOptions {
   input?: InputOption
   plugins?: RolldownPluginRec[]
   external?: ExternalOption
@@ -99,33 +99,6 @@ export interface RawInputOptions {
     disableLiveBindings?: boolean
   }
   define?: Record<string, string>
-  inject?: Record<string, string | [string, string]>
-  profilerNames?: boolean
-  jsx?: JsxOptions
-  watch?: WatchOptions | false
-}
-
-interface OverwriteInputOptionsForCli {
-  external?: string[]
-  inject?: Record<string, string>
-  treeshake?: boolean
-}
-
-export type InputCliOptions = Omit<
-  RawInputOptions,
-  | keyof OverwriteInputOptionsForCli
-  | 'input'
-  | 'plugins'
-  | 'onwarn'
-  | 'onLog'
-  | 'resolve'
-  | 'experimental'
-  | 'profilerNames'
-  | 'watch'
-> &
-  OverwriteInputOptionsForCli
-
-interface OverwriteInputOptionsWithDoc {
   /**
    * Inject import statements on demand.
    *
@@ -149,11 +122,28 @@ interface OverwriteInputOptionsWithDoc {
    * }
    * ```
    */
-  inject?: RawInputOptions['inject']
+  inject?: Record<string, string | [string, string]>
+  profilerNames?: boolean
+  jsx?: JsxOptions
+  watch?: WatchOptions | false
 }
 
-export type InputOptions = Omit<
-  RawInputOptions,
-  keyof OverwriteInputOptionsWithDoc
+interface OverwriteInputOptionsForCli {
+  external?: string[]
+  inject?: Record<string, string>
+  treeshake?: boolean
+}
+
+export type InputCliOptions = Omit<
+  InputOptions,
+  | keyof OverwriteInputOptionsForCli
+  | 'input'
+  | 'plugins'
+  | 'onwarn'
+  | 'onLog'
+  | 'resolve'
+  | 'experimental'
+  | 'profilerNames'
+  | 'watch'
 > &
-  OverwriteInputOptionsWithDoc
+  OverwriteInputOptionsForCli

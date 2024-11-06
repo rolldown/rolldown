@@ -7,6 +7,6 @@ export default defineTest({
     input: ['main.js', 'entry.js'],
   },
   afterTest: function (output) {
-    expect(getOutputChunkNames(output)).toStrictEqual(['main.js', 'entry.js'])
+    expect(getOutputChunkNames(output)).toStrictEqual(['entry.js', 'main.js'])
   },
 })

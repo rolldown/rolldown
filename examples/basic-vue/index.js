@@ -1,3 +1,3 @@
-import { createApp } from 'vue'
+import Graphic from '@arcgis/core/Graphic'
 
-export default createApp({})
+console.log(`Graphic: `, Graphic)

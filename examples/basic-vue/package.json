@@ -9,6 +9,7 @@
     "rolldown": "workspace:*"
   },
   "dependencies": {
+    "@arcgis/core": "^4.30.9",
     "vue": "^3.4.21"
   }
 }

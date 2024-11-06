@@ -166,15 +166,13 @@ impl<'a> GenerateStage<'a> {
     output_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
 
     // The chunks order make sure the entry chunk at first, the assets at last, see https://github.com/rollup/rollup/blob/master/src/rollup/rollup.ts#L266
-    output.sort_unstable_by(|a, b| match (a, b) {
-      (Output::Chunk(a), Output::Chunk(b)) => {
-        if a.is_entry || b.is_entry {
-          std::cmp::Ordering::Greater
-        } else {
-          a.filename.cmp(&b.filename)
-        }
+    output.sort_by(|a, b| {
+      let a_type = get_sorting_file_type(a) as u8;
+      let b_type = get_sorting_file_type(b) as u8;
+      if a_type == b_type {
+        return a.filename().cmp(b.filename());
       }
-      _ => std::cmp::Ordering::Equal,
+      a_type.cmp(&b_type)
     });
 
     output.extend(output_assets);
@@ -298,5 +296,25 @@ impl<'a> GenerateStage<'a> {
       })
       .collect::<Vec<_>>();
     chunk_to_codegen_ret
+  }
+}
+
+enum SortingFileType {
+  EntryChunk = 0,
+  SecondaryChunk = 1,
+  Asset = 2,
+}
+
+#[inline]
+fn get_sorting_file_type(output: &Output) -> SortingFileType {
+  match output {
+    Output::Asset(_) => SortingFileType::Asset,
+    Output::Chunk(chunk) => {
+      if chunk.is_entry {
+        SortingFileType::EntryChunk
+      } else {
+        SortingFileType::SecondaryChunk
+      }
+    }
   }
 }

@@ -24,7 +24,7 @@ impl OutputFormat {
   }
 
   #[inline]
-  pub fn keep_esm_import_export(&self) -> bool {
+  pub fn keep_esm_import_export_syntax(&self) -> bool {
     matches!(self, Self::Esm)
   }
 

@@ -1,5 +1,5 @@
 use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
-use rolldown_sourcemap::{collapse_sourcemaps, lines_count, Source, SourceMapSource};
+use rolldown_sourcemap::{collapse_sourcemaps, Source, SourceMapSource};
 
 pub fn render_ecma_module(
   module: &NormalModule,
@@ -31,8 +31,10 @@ pub fn render_ecma_module(
       };
 
       if let Some(sourcemap) = sourcemap {
-        let lines_count = lines_count(&render_output.code);
-        sources.push(Box::new(SourceMapSource::new(render_output.code, sourcemap, lines_count)));
+        sources.push(Box::new(
+          SourceMapSource::new(render_output.code, sourcemap)
+            .with_pre_compute_sourcemap_data(options.is_sourcemap_enabled()),
+        ));
       } else {
         sources.push(Box::new(render_output.code));
       }

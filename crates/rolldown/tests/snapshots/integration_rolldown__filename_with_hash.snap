@@ -1726,7 +1726,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
 
-- entry-!~{000}~.js => entry-oqFOgXef.js
+- entry-!~{000}~.js => entry-jF2aLy7c.js
 
 # tests/esbuild/default/top_level_await_no_bundle_dead_branch
 

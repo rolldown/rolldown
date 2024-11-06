@@ -1,5 +1,6 @@
 # Reason
-1. Strip `await` when format don't support top level await
+1. this is expected, since we don't support `convertMode`
+2. the diff is because oxc eliminated the dead branch
 # Diff
 ## /out.js
 ### esbuild

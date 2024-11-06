@@ -1,5 +1,6 @@
 # Reason
-1. should not appear top level `await` in cjs
+1. this is expected, since we don't support `convertMode`
+2. the diff is because oxc eliminated the dead branch
 # Diff
 ## /out.js
 ### esbuild

@@ -209,13 +209,7 @@
   diff
 ## [top_level_await_allowed_import_without_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting/diff.md)
   diff
-## [top_level_await_cjs_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch/diff.md)
-  diff
 ## [top_level_await_forbidden_require_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch/diff.md)
-  diff
-## [top_level_await_no_bundle_common_js_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch/diff.md)
-  diff
-## [top_level_await_no_bundle_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch/diff.md)
   diff
 ## [use_strict_directive_bundle_iife_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_iife_issue2264/diff.md)
   diff
@@ -361,7 +355,10 @@
 ## [source_map](../../../crates/rolldown/tests/esbuild/default/source_map/bypass.md)
 ## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)
 ## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/bypass.md)
+## [top_level_await_cjs_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch/bypass.md)
 ## [top_level_await_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch/bypass.md)
+## [top_level_await_no_bundle_common_js_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch/bypass.md)
+## [top_level_await_no_bundle_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch/bypass.md)
 ## [use_strict_directive_bundle_cjs_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264/bypass.md)
 ## [var_relocating_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_bundle/bypass.md)
 ## [var_relocating_no_bundle](../../../crates/rolldown/tests/esbuild/default/var_relocating_no_bundle/bypass.md)

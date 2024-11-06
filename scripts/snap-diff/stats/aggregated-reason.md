@@ -316,14 +316,8 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## Can't disable bundle splitting
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
-## should not appear top level `await` in cjs
-- crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch
 ## should not appear `__commonJS`
 - crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
-## should not appear `await`
-- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
-## Strip `await` when format don't support top level await
-- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 ## inject path
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
 ## should not drop `'use strict'`

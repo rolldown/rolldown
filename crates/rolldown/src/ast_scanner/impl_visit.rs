@@ -93,7 +93,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
     if it.r#await {
       if let Some(format) = self.options.as_ref().map(|option| &option.format) {
-        if !format.keep_esm_import_export() {
+        if !format.keep_esm_import_export_syntax() {
           self.result.errors.push(BuildDiagnostic::unsupported_feature(
             self.file_path.as_str().into(),
             self.source.clone(),
@@ -112,7 +112,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
     if let Some(format) = self.options.as_ref().map(|option| &option.format) {
-      if !format.keep_esm_import_export() {
+      if !format.keep_esm_import_export_syntax() {
         self.result.errors.push(BuildDiagnostic::unsupported_feature(
           self.file_path.as_str().into(),
           self.source.clone(),

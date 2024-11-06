@@ -1,6 +1,6 @@
 # Reason
 1. this is expected, since we don't support `convertMode`
-2. the diff is because oxc elimincated the dead branch
+2. the diff is because oxc eliminated the dead branch
 # Diff
 ## /out.js
 ### esbuild

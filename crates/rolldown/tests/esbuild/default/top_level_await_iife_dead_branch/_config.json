@@ -7,7 +7,7 @@
       }
     ],
     "format": "iife",
-    "treeshake": false
+    "treeshake": true
   },
   "expectExecuted": false
 }

@@ -291,7 +291,7 @@ impl<'a> LinkStage<'a> {
             || is_external_dynamic_import(&self.module_table, rec, importer_idx)
           {
             if matches!(rec.kind, ImportKind::Require)
-              || !self.options.format.keep_esm_import_export()
+              || !self.options.format.keep_esm_import_export_syntax()
             {
               if self.options.format.should_call_runtime_require() {
                 stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());

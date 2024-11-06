@@ -16,6 +16,18 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
+  fn enter_scope(
+    &mut self,
+    _flags: oxc::semantic::ScopeFlags,
+    scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
+  ) {
+    self.scope_stack.push(scope_id.get());
+  }
+
+  fn leave_scope(&mut self) {
+    self.scope_stack.pop();
+  }
+
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
     self.visit_path.push(kind);
   }
@@ -88,6 +100,39 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       _ => {}
     };
     walk::walk_member_expression(self, expr);
+  }
+
+  fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
+    if it.r#await && self.is_top_level() {
+      if let Some(format) = self.options.as_ref().map(|option| &option.format) {
+        if !format.keep_esm_import_export_syntax() {
+          self.result.errors.push(BuildDiagnostic::unsupported_feature(
+            self.file_path.as_str().into(),
+            self.source.clone(),
+            it.span(),
+            format!(
+              "Top-level await is currently not supported with the '{format}' output format",
+            ),
+          ));
+        }
+      }
+    }
+
+    walk::walk_for_of_statement(self, it);
+  }
+
+  fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
+    if let Some(format) = self.options.as_ref().map(|option| &option.format) {
+      if !format.keep_esm_import_export_syntax() && self.is_top_level() {
+        self.result.errors.push(BuildDiagnostic::unsupported_feature(
+          self.file_path.as_str().into(),
+          self.source.clone(),
+          it.span(),
+          format!("Top-level await is currently not supported with the '{format}' output format",),
+        ));
+      }
+    }
+    walk::walk_await_expression(self, it);
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {

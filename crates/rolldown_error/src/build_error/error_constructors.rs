@@ -17,6 +17,7 @@ use crate::events::missing_name_option_for_umd_export::MissingNameOptionForUmdEx
 use crate::events::resolve_error::DiagnosableResolveError;
 use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
+use crate::events::unsupported_feature::UnsupportedFeature;
 use crate::events::DiagnosableArcstr;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
@@ -174,6 +175,15 @@ impl BuildDiagnostic {
     stable_importer: String,
   ) -> Self {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
+  }
+
+  pub fn unsupported_feature(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    error_message: String,
+  ) -> Self {
+    Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
   }
 
   // --- Rolldown related

@@ -166,6 +166,7 @@ impl RuntimeModuleTask {
       source,
       &facade_path,
       ast.comments(),
+      None,
     );
     let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program())?;

@@ -4,7 +4,7 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
-use oxc::semantic::{Reference, ReferenceId, SymbolTable};
+use oxc::semantic::{Reference, ReferenceId, ScopeId, SymbolTable};
 use oxc::{
   ast::{
     ast::{
@@ -28,6 +28,8 @@ use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
+
+use crate::SharedOptions;
 
 #[derive(Debug)]
 pub struct ScanResult {
@@ -79,6 +81,8 @@ pub struct AstScanner<'me, 'ast> {
   ast_usage: EcmaModuleAstUsage,
   cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
   visit_path: Vec<AstKind<'ast>>,
+  scope_stack: Vec<Option<ScopeId>>,
+  options: Option<&'me SharedOptions>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -92,6 +96,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     source: &'me ArcStr,
     file_path: &'me ModuleId,
     comments: &'me oxc::allocator::Vec<'me, Comment>,
+    options: Option<&'me SharedOptions>,
   ) -> Self {
     let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, idx, scope.root_scope_id());
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
@@ -142,7 +147,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
       visit_path: vec![],
+      options,
+      scope_stack: vec![],
     }
+  }
+
+  /// if current visit path is top level
+  pub fn is_top_level(&self) -> bool {
+    self
+      .scope_stack
+      .iter()
+      .filter_map(|item| *item)
+      .all(|scope| self.scopes.get_flags(scope).is_top())
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {

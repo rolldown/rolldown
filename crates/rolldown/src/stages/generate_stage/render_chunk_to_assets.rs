@@ -62,7 +62,9 @@ impl<'a> GenerateStage<'a> {
         let mut code = code.try_into_string()?;
         let rendered_chunk = ecma_meta.rendered_chunk;
         if let Some(map) = map.as_mut() {
-          map.set_file(&rendered_chunk.filename);
+          let file_base_name =
+            Path::new(rendered_chunk.filename.as_str()).file_name().expect("should have file name");
+          map.set_file(file_base_name.to_string_lossy().as_ref());
 
           let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
           let map_path = file_dir.join(&map_filename);

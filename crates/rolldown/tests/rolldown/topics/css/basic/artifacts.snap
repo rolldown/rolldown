@@ -24,14 +24,6 @@ body {
 
 ```js
 
-//#region main.css
-var main_default = {};
-
-//#endregion
-//#region main.js
-console.log(`test: `, main_default);
-
-//#endregion
 //#region test.png
 var test_default = "assets/test-N5MDk2yf.png";
 

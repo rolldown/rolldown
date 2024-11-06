@@ -9,10 +9,7 @@
         "name": "entry",
         "import": "entry.css"
       }
-    ],
-    "moduleTypes": {
-      ".css": "css"
-    }
+    ]
   },
   "expectExecuted": false
 }

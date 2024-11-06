@@ -414,6 +414,13 @@
           "enum": [
             "preserve"
           ]
+        },
+        {
+          "description": "Keep legal comments only",
+          "type": "string",
+          "enum": [
+            "preserveLegalComments"
+          ]
         }
       ]
     },

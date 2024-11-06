@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region main.js
+//! Some comments1
+/*! Some comments2 */
+foo;
+bar;
+
+//#endregion
+```

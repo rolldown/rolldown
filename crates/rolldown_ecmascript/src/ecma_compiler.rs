@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
 use arcstr::ArcStr;
+use either::Either;
 use oxc::{
   allocator::Allocator,
-  codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn},
+  codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
   minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
   sourcemap::SourceMap,
@@ -63,10 +64,15 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
+    let (is_print_full_comments, legal_comments) = match options.comments {
+      Either::Left(value) => (value, LegalComment::None),
+      Either::Right(value) => (false, value),
+    };
     CodeGenerator::new()
       .with_options(CodegenOptions {
-        comments: options.comments,
+        comments: is_print_full_comments,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
+        legal_comments,
         ..CodegenOptions::default()
       })
       .build(ast.program())
@@ -102,7 +108,7 @@ fn basic_test() {
 }
 
 pub struct PrintOptions {
-  pub comments: bool,
+  pub comments: Either</* is print full comments */ bool, LegalComment>,
   pub filename: String,
   pub sourcemap: bool,
 }

@@ -4018,6 +4018,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-TEEZnbpv.js
 
+# tests/rolldown/function/comments/preserve_legal_comments
+
+- main-!~{000}~.js => main-v1eqisai.js
+
 # tests/rolldown/function/define/node_env
 
 - main-!~{000}~.js => main-281Y6vFN.js

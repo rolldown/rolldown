@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -15,4 +16,9 @@ body {
 
 ```js
 
+//#region main.css
+var main_default = {};
+
+//#endregion
+export { main_default as default };
 ```

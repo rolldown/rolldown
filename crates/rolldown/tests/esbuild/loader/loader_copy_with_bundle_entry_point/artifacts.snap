@@ -49,4 +49,9 @@ body {
 ```js
 import "./some.js";
 
+//#region src/entry.css
+var entry_default = {};
+
+//#endregion
+export { entry_default as default };
 ```

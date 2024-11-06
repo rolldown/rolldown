@@ -18,8 +18,13 @@ div {
 
 ```js
 
+//#region entries/entry.css
+var entry_default = {};
+
+//#endregion
 //#region images/image.png
 var image_default = "assets/image-6tcw8vpN.png";
 
 //#endregion
+export { entry_default as default };
 ```

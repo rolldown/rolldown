@@ -2350,8 +2350,8 @@ snapshot_kind: text
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
 - src_entry-!~{000}~.js => src_entry--Tejsu7Y.js
-- src_entry.css
 - assets/some-v1x9u-L8.file
+- src_entry.css
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_js
 

@@ -166,7 +166,7 @@ impl<'a> GenerateStage<'a> {
     output_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
 
     // The chunks order make sure the entry chunk at first, the assets at last, see https://github.com/rollup/rollup/blob/master/src/rollup/rollup.ts#L266
-    output.sort_by(|a, b| {
+    output.sort_unstable_by(|a, b| {
       let a_type = get_sorting_file_type(a) as u8;
       let b_type = get_sorting_file_type(b) as u8;
       if a_type == b_type {

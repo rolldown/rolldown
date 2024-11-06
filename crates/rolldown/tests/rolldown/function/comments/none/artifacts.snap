@@ -11,6 +11,9 @@ snapshot_kind: text
 //#region main.js
 foo;
 bar;
+foo;
+bar;
+foo(a, b);
 
 //#endregion
 ```

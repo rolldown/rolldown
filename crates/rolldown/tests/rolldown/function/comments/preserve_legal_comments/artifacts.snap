@@ -9,10 +9,13 @@ snapshot_kind: text
 ```js
 
 //#region main.js
-//! Some comments1
-/*! Some comments2 */
 foo;
 bar;
+//! Legal comments1
+/*! Legal comments2 */
+foo;
+bar;
+foo(a, b);
 
 //#endregion
 ```

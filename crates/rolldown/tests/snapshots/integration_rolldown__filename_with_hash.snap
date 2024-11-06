@@ -4012,15 +4012,15 @@ snapshot_kind: text
 
 # tests/rolldown/function/comments/none
 
-- main-!~{000}~.js => main-TEEZnbpv.js
+- main-!~{000}~.js => main-94jYIZVx.js
 
 # tests/rolldown/function/comments/preserve
 
-- main-!~{000}~.js => main-TEEZnbpv.js
+- main-!~{000}~.js => main-aQcdQkzB.js
 
 # tests/rolldown/function/comments/preserve_legal_comments
 
-- main-!~{000}~.js => main-v1eqisai.js
+- main-!~{000}~.js => main-aQcdQkzB.js
 
 # tests/rolldown/function/define/node_env
 

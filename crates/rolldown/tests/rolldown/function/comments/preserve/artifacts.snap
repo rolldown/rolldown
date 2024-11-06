@@ -11,6 +11,11 @@ snapshot_kind: text
 //#region main.js
 foo;
 bar;
+//! Legal comments1
+/*! Legal comments2 */
+foo;
+bar;
+foo(a, b);
 
 //#endregion
 ```

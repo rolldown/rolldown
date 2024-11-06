@@ -52,7 +52,7 @@ export declare class BindingPluginContext {
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
-  getModuleIds(): Array<string> | null
+  getModuleIds(): Array<string>
   addWatchFile(file: string): void
 }
 

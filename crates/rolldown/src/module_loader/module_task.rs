@@ -229,7 +229,9 @@ impl ModuleTask {
       asset_view,
     };
 
-    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+    let module_info = Arc::new(module.to_module_info());
+    self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
+    self.ctx.plugin_driver.module_parsed(module_info).await?;
 
     if let Err(_err) = self
       .ctx

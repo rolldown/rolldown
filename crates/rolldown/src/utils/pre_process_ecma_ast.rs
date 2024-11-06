@@ -115,7 +115,8 @@ impl PreProcessEcmaAst {
         self.ast_changed = true;
       }
 
-      if bundle_options.treeshake.enabled() {
+      // avoid DCE for lazy export
+      if bundle_options.treeshake.enabled() && !has_lazy_export {
         // Perform dead code elimination.
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
         let compressor = Compressor::new(allocator, CompressOptions::dead_code_elimination());

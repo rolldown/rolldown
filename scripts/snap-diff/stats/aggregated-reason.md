@@ -112,11 +112,6 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
-## css module should be wrapped with `__commonJS`
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 ## not support import attributes
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json

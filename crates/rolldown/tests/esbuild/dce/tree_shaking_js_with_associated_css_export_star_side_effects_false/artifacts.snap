@@ -16,12 +16,13 @@ button { color: red }
 
 
 //#region node_modules/pkg/button.css
-var button_exports = {};
-var init_button = __esm({ "node_modules/pkg/button.css"() {} });
+var require_button = __commonJS({ "node_modules/pkg/button.css"(exports, module) {
+	module.exports = {};
+} });
 
 //#endregion
 //#region node_modules/pkg/components.jsx
-init_button();
+require_button();
 const Button = () => React.createElement("button", null);
 
 //#endregion

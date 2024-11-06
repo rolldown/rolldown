@@ -496,22 +496,22 @@ snapshot_kind: text
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
 
-- test-!~{000}~.js => test-gRPufaRa.js
+- test-!~{000}~.js => test-Ml2vn6He.js
 - test.css
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false

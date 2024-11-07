@@ -9,8 +9,8 @@ async fn main() {
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![
       "./entry.js".to_string().into(),
-      // InputItem { import: "./other-entry.js".to_string(), ..Default::default() },
-      // InputItem { name: Some("third-entry".to_string()), import: "./third-entry.js".to_string() },
+      InputItem { import: "./other-entry.js".to_string(), ..Default::default() },
+      InputItem { name: Some("third-entry".to_string()), import: "./third-entry.js".to_string() },
     ]),
     cwd: Some(workspace::crate_dir("rolldown").join("./examples/basic").normalize()),
     sourcemap: Some(SourceMapType::File),
@@ -19,9 +19,6 @@ async fn main() {
 
   let result = bundler.write().await.unwrap();
   assert!(result.errors.is_empty(), "failed to bundle: {:?}", result.errors);
-  dbg!(&result.warnings);
-  let source = include_str!("./basic/entry.js");
-  println!("{}", &source[32..38]);
 }
 
 // trigger

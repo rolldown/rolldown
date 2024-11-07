@@ -44,7 +44,6 @@
       "require": "./dist/cjs/parallel-plugin.cjs",
       "import": "./dist/esm/parallel-plugin.mjs"
     },
-    "./watcher-worker": "./dist/shared/watcher-worker.js",
     "./package.json": "./package.json"
   },
   "imports": {

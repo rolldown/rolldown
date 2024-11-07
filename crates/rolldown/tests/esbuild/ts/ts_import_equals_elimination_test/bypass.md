@@ -1,5 +1,6 @@
 # Reason
-1. not support ts import equal
+1. rolldown is not ts aware, it's not possibly support for now
+2. sub optimal
 # Diff
 ## /out.js
 ### esbuild

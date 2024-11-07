@@ -101,12 +101,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
-## not support ts import equal
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import
 ## throw should be kept
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one

@@ -2807,6 +2807,7 @@ dependencies = [
 name = "rolldown_plugin_vite_resolve"
 version = "0.1.0"
 dependencies = [
+ "cow-utils",
  "rolldown_common",
  "rolldown_plugin",
 ]

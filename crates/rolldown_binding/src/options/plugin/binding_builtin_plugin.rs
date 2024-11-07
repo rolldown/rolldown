@@ -164,11 +164,12 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 #[serde(rename_all = "camelCase")]
 pub struct BindingViteResolvePluginResolveOptions {
   pub is_production: bool,
+  pub as_src: bool,
 }
 
 impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
-    Self { is_production: value.is_production }
+    Self { is_production: value.is_production, as_src: value.as_src }
   }
 }
 

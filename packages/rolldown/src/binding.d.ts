@@ -440,6 +440,7 @@ export interface BindingViteResolvePluginConfig {
 
 export interface BindingViteResolvePluginResolveOptions {
   isProduction: boolean
+  asSrc: boolean
 }
 
 export declare enum BindingWatcherEvent {

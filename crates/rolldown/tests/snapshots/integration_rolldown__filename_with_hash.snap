@@ -4016,7 +4016,7 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-aQcdQkzB.js
 
-# tests/rolldown/function/comments/preserve_legal_comments
+# tests/rolldown/function/comments/preserve_legal
 
 - main-!~{000}~.js => main-aQcdQkzB.js
 

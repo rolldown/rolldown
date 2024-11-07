@@ -1,6 +1,6 @@
 {
   "config": {
-    "comments": "preserveLegalComments"
+    "comments": "preserve-legal"
   },
   "expectExecuted": false
 }

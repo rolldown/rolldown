@@ -7,7 +7,7 @@ use serde::Deserialize;
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
-  serde(rename_all = "camelCase", deny_unknown_fields)
+  serde(rename_all = "kebab-case", deny_unknown_fields)
 )]
 pub enum Comments {
   /// Don't preserve any comment
@@ -15,5 +15,5 @@ pub enum Comments {
   /// Keep comments as much as possible
   Preserve,
   /// Keep legal comments only
-  PreserveLegalComments,
+  PreserveLegal,
 }

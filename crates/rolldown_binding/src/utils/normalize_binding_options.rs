@@ -203,7 +203,17 @@ pub fn normalize_binding_options(
     profiler_names: input_options.profiler_names,
     jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
-    comments: None,
+    comments: output_options
+      .comments
+      .map(|inner| match inner.as_str() {
+        "none" => Ok(rolldown::Comments::None),
+        "preserve-legal" => Ok(rolldown::Comments::Preserve),
+        _ => Err(napi::Error::new(
+          napi::Status::GenericFailure,
+          format!("Invalid valid for `comments` option: {inner}"),
+        )),
+      })
+      .transpose()?,
     drop_labels: input_options.drop_labels,
   };
 

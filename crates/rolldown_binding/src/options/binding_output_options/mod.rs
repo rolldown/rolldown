@@ -115,4 +115,6 @@ pub struct BindingOutputOptions {
   // --- Enhanced options
   pub minify: Option<bool>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
+  #[napi(ts_type = "'none' | 'preserve-legal'")]
+  pub comments: Option<String>,
 }

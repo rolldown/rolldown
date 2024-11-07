@@ -126,6 +126,7 @@ export interface InputOptions {
   profilerNames?: boolean
   jsx?: JsxOptions
   watch?: WatchOptions | false
+  dropLabels?: string[]
 }
 
 interface OverwriteInputOptionsForCli {

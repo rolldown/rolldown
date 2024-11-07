@@ -204,8 +204,7 @@ pub fn normalize_binding_options(
     jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
     comments: None,
-    // TODO: binding
-    drop_labels: None,
+    drop_labels: input_options.drop_labels,
   };
 
   #[cfg(not(target_family = "wasm"))]

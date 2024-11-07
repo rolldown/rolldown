@@ -27,6 +27,7 @@ OPTIONS
   --chunk-file-names <name>   .
   --cwd <cwd>                 Current working directory.
   --define <define>           Define global variables.
+  --drop-labels <drop-labels> .
   --entry-file-names <name>   .
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).

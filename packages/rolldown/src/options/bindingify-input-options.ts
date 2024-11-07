@@ -133,6 +133,7 @@ export function bindingifyInputOptions(
     profilerNames: options?.profilerNames,
     jsx: bindingifyJsx(options.jsx),
     watch: bindingifyWatch(options.watch),
+    dropLabels: options.dropLabels,
   }
 }
 

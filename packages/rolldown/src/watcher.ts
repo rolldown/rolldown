@@ -78,7 +78,7 @@ export class Watcher {
   watch() {
     const timer = setInterval(() => {}, 1e9 /* Low power usage */)
     this.controller.signal.addEventListener('abort', () => {
-      clearTimeout(timer)
+      clearInterval(timer)
     })
   }
 }

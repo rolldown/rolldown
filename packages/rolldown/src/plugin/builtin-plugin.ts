@@ -13,6 +13,7 @@ import {
   BindingJsonPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   BindingReplacePluginConfig,
+  type BindingViteResolvePluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -98,6 +99,12 @@ export class ReplacePlugin extends BuiltinPlugin {
   }
 }
 
+export class ViteResolvePlugin extends BuiltinPlugin {
+  constructor(config?: BindingViteResolvePluginConfig) {
+    super(BindingBuiltinPluginName.ViteResolvePlugin, config)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -144,6 +151,10 @@ export function buildImportAnalysisPlugin(
   config: BindingBuildImportAnalysisPluginConfig,
 ) {
   return new BuildImportAnalysisPlugin(config)
+}
+
+export function viteResolvePlugin(config: BindingViteResolvePluginConfig) {
+  return new ViteResolvePlugin(config)
 }
 
 /**

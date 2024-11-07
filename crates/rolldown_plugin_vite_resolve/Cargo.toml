@@ -1,0 +1,12 @@
+[package]
+edition = "2021"
+license = "MIT"
+name    = "rolldown_plugin_vite_resolve"
+version = "0.1.0"
+
+[lib]
+doctest = false
+
+[dependencies]
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }

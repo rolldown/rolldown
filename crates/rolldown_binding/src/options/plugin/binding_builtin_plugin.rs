@@ -13,6 +13,9 @@ use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_resolve::{
+  ViteResolveOptions, ViteResolvePlugin, ViteResolveResolveOptions,
+};
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use serde::Deserialize;
@@ -55,6 +58,7 @@ pub enum BindingBuiltinPluginName {
   JsonPlugin,
   BuildImportAnalysisPlugin,
   ReplacePlugin,
+  ViteResolvePlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -140,6 +144,32 @@ pub struct BindingBuildImportAnalysisPluginConfig {
   pub optimize_module_preload_relative_paths: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingViteResolvePluginConfig {
+  pub resolve_options: BindingViteResolvePluginResolveOptions,
+}
+
+impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
+  fn from(value: BindingViteResolvePluginConfig) -> Self {
+    Self { resolve_options: value.resolve_options.into() }
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingViteResolvePluginResolveOptions {
+  pub is_production: bool,
+}
+
+impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
+  fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
+    Self { is_production: value.is_production }
+  }
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
@@ -269,6 +299,18 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
             object_guards: opts.object_guards.unwrap_or(false),
           }
         })))
+      }
+      BindingBuiltinPluginName::ViteResolvePlugin => {
+        let config = if let Some(options) = plugin.options {
+          BindingViteResolvePluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteResolvePlugin",
+          ));
+        };
+
+        Arc::new(ViteResolvePlugin::new(config.into()))
       }
     })
   }

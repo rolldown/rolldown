@@ -17,4 +17,5 @@ export {
   jsonPlugin,
   buildImportAnalysisPlugin,
   replacePlugin,
+  viteResolvePlugin,
 } from './plugin/builtin-plugin'

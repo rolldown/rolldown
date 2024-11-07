@@ -22,6 +22,7 @@ export interface OutputOptions {
   dir?: string
   file?: string
   exports?: 'auto' | 'named' | 'default' | 'none'
+  hashCharacters?: 'base64' | 'base36' | 'hex'
   format?: ModuleFormat
   sourcemap?: boolean | 'inline' | 'hidden'
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption

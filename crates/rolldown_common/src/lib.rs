@@ -19,6 +19,7 @@ pub mod bundler_options {
       es_module_flag::EsModuleFlag,
       experimental_options::ExperimentalOptions,
       filename_template::{FileNameRenderOptions, FilenameTemplate},
+      hash_characters::HashCharacters,
       inject_import::InjectImport,
       input_item::InputItem,
       is_external::IsExternal,

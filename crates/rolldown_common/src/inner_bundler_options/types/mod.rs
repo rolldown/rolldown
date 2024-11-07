@@ -4,6 +4,7 @@ pub mod comments;
 pub mod es_module_flag;
 pub mod experimental_options;
 pub mod filename_template;
+pub mod hash_characters;
 pub mod inject_import;
 pub mod input_item;
 pub mod is_external;

@@ -36,6 +36,7 @@ OPTIONS
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
+  --hash-characters <hash-characters>.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).

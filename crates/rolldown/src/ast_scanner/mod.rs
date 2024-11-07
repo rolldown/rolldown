@@ -671,4 +671,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
   }
+
+  // `console` in `console.log` is a global reference
+  pub fn is_global_identifier_reference(&self, ident: &IdentifierReference) -> bool {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
+    symbol_id.is_none()
+  }
 }

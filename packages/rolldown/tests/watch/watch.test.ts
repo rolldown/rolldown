@@ -170,7 +170,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   expect(changeFn).toBeCalled()
 
   // revert change
-  fs.writeFileSync(foo, 'console.log(1)')
+  fs.writeFileSync(foo, 'console.log(1)\n')
   await watcher.close()
 })
 
@@ -195,7 +195,7 @@ test.sequential('watch include/exclude', async () => {
   expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
 
   // revert change
-  fs.writeFileSync(input, 'console.log(1)')
+  fs.writeFileSync(input, 'console.log(1)\n')
   await watcher.close()
 })
 

@@ -1,25 +1,6 @@
 # Reason
-1. css reference .png
-2. not support asset path template
+1. not support asset path template
 # Diff
-## /out/image-LSAMBFUD.png
-### esbuild
-```js
-x
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/image-LSAMBFUD.png
-+++ rolldown	
-@@ -1,1 +0,0 @@
--x;
-
-```
 ## /out/entries/entry.css
 ### esbuild
 ```js
@@ -30,18 +11,23 @@ div {
 ```
 ### rolldown
 ```js
+div {
+	background: url(assets/image-6tcw8vpN.png);
+}
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entries/entry.css
-+++ rolldown	
-@@ -1,4 +0,0 @@
++++ rolldown	entries_entry.css
+@@ -1,4 +1,3 @@
 -/* src/entries/entry.css */
--div {
+ div {
 -  background: url("../image-LSAMBFUD.png");
 -}
 \ No newline at end of file
++	background: url(assets/image-6tcw8vpN.png);
++}
 
 ```

@@ -95,12 +95,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
 - crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
-## css reference .png
-- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_css
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
 ## throw should be kept
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
@@ -325,8 +319,12 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
 ## Same content has different name
 - crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
+## generate wrong output when css as entry and has shared css
+- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 ## immediate js file reference `.png` file
 - crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
+## css reference .png
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
 ## abs output base
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
 ## Wrong wrapkind, when json is imported by `require`

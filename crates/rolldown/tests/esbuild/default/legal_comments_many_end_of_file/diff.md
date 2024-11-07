@@ -1,5 +1,5 @@
 # Reason
-1. not support legal comments
+1. not support legal comments EOF option
 # Diff
 ## /out/entry.css
 ### esbuild

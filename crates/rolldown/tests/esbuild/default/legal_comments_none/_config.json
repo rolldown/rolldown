@@ -9,7 +9,8 @@
         "name": "entry",
         "import": "entry.css"
       }
-    ]
+    ],
+    "comments": "none"
   },
   "expectExecuted": false
 }

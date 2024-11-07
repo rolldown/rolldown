@@ -1,5 +1,5 @@
 # Reason
-1. not support legal comments
+1. not support legal comments linked option
 # Diff
 ## /out/entry.js.LEGAL.txt
 ### esbuild

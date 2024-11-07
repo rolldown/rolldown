@@ -1,20 +1,4 @@
 # Aggregate Reason
-## not support legal comments
-- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
-- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
-- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
-- crates/rolldown/tests/esbuild/default/legal_comments_end_of_file
-- crates/rolldown/tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
-- crates/rolldown/tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
-- crates/rolldown/tests/esbuild/default/legal_comments_external
-- crates/rolldown/tests/esbuild/default/legal_comments_inline
-- crates/rolldown/tests/esbuild/default/legal_comments_linked
-- crates/rolldown/tests/esbuild/default/legal_comments_many_end_of_file
-- crates/rolldown/tests/esbuild/default/legal_comments_many_linked
-- crates/rolldown/tests/esbuild/default/legal_comments_modify_indent
-- crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
-- crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
-- crates/rolldown/tests/esbuild/default/legal_comments_none
 ## const enum inline
 - crates/rolldown/tests/esbuild/ts/enum_rules_from_type_script_5_0
 - crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
@@ -89,6 +73,12 @@
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
+## not support legal comments on css
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
+- crates/rolldown/tests/esbuild/default/legal_comments_inline
+- crates/rolldown/tests/esbuild/default/legal_comments_modify_indent
+- crates/rolldown/tests/esbuild/default/legal_comments_none
 ## Wrong output
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
@@ -106,6 +96,16 @@
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
+## js legal comments isn't expected
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
+- crates/rolldown/tests/esbuild/default/legal_comments_inline
+- crates/rolldown/tests/esbuild/default/legal_comments_modify_indent
+## not support legal comments
+- crates/rolldown/tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
+- crates/rolldown/tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
+- crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
+- crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 ## not support import attributes
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
@@ -137,6 +137,15 @@
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
+## not support legal comments external option
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
+- crates/rolldown/tests/esbuild/default/legal_comments_external
+## not support legal comments EOF option
+- crates/rolldown/tests/esbuild/default/legal_comments_end_of_file
+- crates/rolldown/tests/esbuild/default/legal_comments_many_end_of_file
+## not support legal comments linked option
+- crates/rolldown/tests/esbuild/default/legal_comments_linked
+- crates/rolldown/tests/esbuild/default/legal_comments_many_linked
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6

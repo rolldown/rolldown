@@ -1,6 +1,6 @@
 # Reason
-1. drop label feature
-2. low priority
+1. codegen sub optimal
+2. oxc minifier will handle `EmptyStatement`
 # Diff
 ## /out.js
 ### esbuild
@@ -17,9 +17,9 @@ exports.bar = function() {
 
 //#region entry.js
 keep_1: require("foo1");
-DROP_1: require("bar1");
+;
 exports.bar = function() {
-	if (x) DROP_2: require("foo2");
+	if (x);
 	if (y) keep_2: require("bar2");
 };
 
@@ -32,10 +32,9 @@ exports.bar = function() {
 +++ rolldown	entry.js
 @@ -1,5 +1,6 @@
  keep_1: require("foo1");
-+DROP_1: require("bar1");
++;
  exports.bar = function () {
--    if (x) ;
-+    if (x) DROP_2: require("foo2");
+     if (x) ;
      if (y) keep_2: require("bar2");
  };
 

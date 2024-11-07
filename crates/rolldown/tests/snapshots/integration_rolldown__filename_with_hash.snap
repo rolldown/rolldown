@@ -147,11 +147,11 @@ snapshot_kind: text
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
-- entry-!~{000}~.js => entry-lI3mxQuY.js
+- entry-!~{000}~.js => entry-xH-gbjNi.js
 
 # tests/esbuild/dce/drop_labels
 
-- entry-!~{000}~.js => entry-6aKzeo3k.js
+- entry-!~{000}~.js => entry-dF8EZtsh.js
 
 # tests/esbuild/dce/file_loader_remove_unused
 

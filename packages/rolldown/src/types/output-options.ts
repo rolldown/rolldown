@@ -32,9 +32,11 @@ export interface OutputOptions {
   outro?: string | AddonFunction
   extend?: boolean
   esModule?: boolean | 'if-default-prop'
+  assetFileNames?: string
   entryFileNames?: string | ChunkFileNamesFunction
   chunkFileNames?: string | ChunkFileNamesFunction
-  assetFileNames?: string
+  cssEntryFileNames?: string | ChunkFileNamesFunction
+  cssChunkFileNames?: string | ChunkFileNamesFunction
   minify?: boolean
   name?: string
   globals?: Record<string, string>

@@ -24,6 +24,8 @@ pub struct BindingOutputOptions {
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
   pub name: Option<String>,
+  pub asset_file_names: Option<String>,
+
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
@@ -32,7 +34,14 @@ pub struct BindingOutputOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub chunk_file_names: Option<ChunkFileNamesOutputOption>,
-  pub asset_file_names: Option<String>,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub css_entry_file_names: Option<ChunkFileNamesOutputOption>,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub css_chunk_file_names: Option<ChunkFileNamesOutputOption>,
 
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);

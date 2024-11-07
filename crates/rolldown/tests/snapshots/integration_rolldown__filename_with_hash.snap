@@ -4994,6 +4994,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-TuPuA5QX.js
 
+# tests/rolldown/warnings/none-ascii-content
+
+- main-!~{000}~.js => main-FyyVF187.js
+
 # tests/rolldown/warnings/unresolved_import_treated_as_external
 
 - main-!~{000}~.js => main-m6JmBL5g.js

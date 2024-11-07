@@ -165,6 +165,7 @@ export const inputOptionsSchema = z.strictObject({
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
   watch: watchOptionsSchema.or(z.literal(false)).optional(),
+  dropLabels: z.array(z.string()).optional(),
 }) satisfies z.ZodType<InputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema

@@ -78,6 +78,7 @@ pub struct BindingInputOptions {
 
   pub module_types: Option<HashMap<String, String>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
+  pub drop_labels: Option<Vec<String>>,
   #[serde(skip_deserializing)]
   #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
   pub inject: Option<Vec<BindingInjectImport>>,

@@ -350,6 +350,20 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
+    if !self.ctx.options.drop_labels.is_empty() {
+      match it {
+        ast::Statement::LabeledStatement(stmt)
+          if self.ctx.options.drop_labels.contains(stmt.label.name.as_str()) =>
+        {
+          self.snippet.builder.move_statement(it);
+        }
+        _ => {}
+      }
+    }
+    walk_mut::walk_statement(self, it);
+  }
+
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
     // This ensure all `IdentifierReference`s are processed
     debug_assert!(

@@ -78,6 +78,7 @@ pub struct BundlerOptions {
   pub globals: Option<HashMap<String, String>>,
   pub sourcemap: Option<SourceMapType>,
   pub es_module: Option<EsModuleFlag>,
+  pub drop_labels: Option<Vec<String>>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),

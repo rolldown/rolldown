@@ -168,6 +168,15 @@
             "null"
           ]
         },
+        "dropLabels": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "entryFilenames": {
           "type": [
             "string",

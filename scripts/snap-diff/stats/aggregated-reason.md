@@ -131,12 +131,6 @@
 ## cross module constant folding
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
-## drop label feature
-- crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
-- crates/rolldown/tests/esbuild/dce/drop_labels
-## low priority
-- crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
-- crates/rolldown/tests/esbuild/dce/drop_labels
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main

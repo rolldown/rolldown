@@ -1,6 +1,6 @@
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{Comments, InjectImport, ModuleType, NormalizedBundlerOptions, Platform};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
@@ -137,6 +137,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     jsx: raw_options.jsx,
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),
+    drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

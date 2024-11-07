@@ -1,6 +1,6 @@
 # Reason
-1. drop label feature
-2. low priority
+1. codegen sub optimal
+2. oxc minifier will handle `EmptyStatement`
 # Diff
 ## /out.js
 ### esbuild
@@ -19,7 +19,7 @@ export {
 
 //#region entry.js
 const myFunc = () => {
-	DROP: console.log("drop");
+	;
 	console.log("keep");
 };
 var entry_default = myFunc;
@@ -34,7 +34,7 @@ export { entry_default as default };
 +++ rolldown	entry.js
 @@ -1,5 +1,6 @@
  var myFunc = () => {
-+    DROP: console.log("drop");
++    ;
      console.log("keep");
  };
  var entry_default = myFunc;

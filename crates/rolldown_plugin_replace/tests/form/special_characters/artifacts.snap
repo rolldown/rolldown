@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -12,4 +13,18 @@ const one = 1;
 console.log(one);
 
 //#endregion
+//# sourceMappingURL=input.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../input.js
+(0:0-0:6) "const " --> (2:0-2:6) "\nconst"
+(0:6-0:12) "one = " --> (2:6-2:12) " one ="
+(0:12-2:0) "require('one');\n" --> (2:12-3:0) " 1;"
+(2:0-2:8) "\nconsole" --> (3:0-3:8) "\nconsole"
+(2:8-2:12) ".log" --> (3:8-3:12) ".log"
+(2:12-2:16) "(one" --> (3:12-3:16) "(one"
+(2:16-3:1) ");\n" --> (3:16-6:34) ");\n\n//#endregion\n//# sourceMappingURL=input.js.map"
 ```

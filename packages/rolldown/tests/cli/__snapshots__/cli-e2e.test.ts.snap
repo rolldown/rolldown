@@ -25,6 +25,7 @@ OPTIONS
   --asset-file-names <name>   .
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
   --chunk-file-names <name>   .
+  --comments <comments>       .
   --css-chunk-file-names <css-chunk-file-names>.
   --css-entry-file-names <css-entry-file-names>.
   --cwd <cwd>                 Current working directory.

@@ -312,6 +312,7 @@ export interface BindingOutputOptions {
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean
   advancedChunks?: BindingAdvancedChunksOptions
+  comments?: 'none' | 'preserve-legal'
 }
 
 export interface BindingPluginContextResolvedId {

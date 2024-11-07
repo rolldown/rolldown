@@ -19,3 +19,4 @@ packages/rolldown/src/rolldown-binding.wasi-browser.js
 packages/rolldown/src/rolldown-binding.wasi.cjs
 packages/rolldown/src/wasi-worker-browser.mjs
 packages/rolldown/src/wasi-worker.mjs
+packages/rolldown/tests/fixtures/**/*.js

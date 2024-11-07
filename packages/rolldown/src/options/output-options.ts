@@ -118,6 +118,7 @@ const outputOptionsSchema = z.strictObject({
         .optional(),
     })
     .optional(),
+  comments: z.enum(['none', 'preserve-legal']).optional(),
 }) satisfies z.ZodType<OutputOptions>
 
 const getAddonDescription = (

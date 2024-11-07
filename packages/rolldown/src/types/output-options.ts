@@ -53,6 +53,13 @@ export interface OutputOptions {
       minShareCount?: number
     }[]
   }
+  /**
+   * Control comments in the output.
+   *
+   * - `none`: no comments
+   * - `preserve-legal`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   */
+  comments?: 'none' | 'preserve-legal'
 }
 
 interface OverwriteOutputOptionsForCli {

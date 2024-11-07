@@ -1,4 +1,4 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
+// 注释
+import hyperCube from 'test';
 
 console.log(hyperCube(5));

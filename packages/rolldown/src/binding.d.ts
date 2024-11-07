@@ -287,9 +287,11 @@ export interface BindingNotifyOption {
 
 export interface BindingOutputOptions {
   name?: string
+  assetFileNames?: string
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
-  assetFileNames?: string
+  cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
   file?: string

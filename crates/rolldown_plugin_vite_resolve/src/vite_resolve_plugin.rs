@@ -315,8 +315,8 @@ fn is_bare_import(id: &str) -> bool {
 // deepImportRE.test(id)
 fn is_deep_import(id: &str) -> bool {
   if id.starts_with('@') {
-    let splitten: Vec<&str> = id.splitn(3, '/').collect();
-    splitten.len() == 3 && splitten[0].len() >= 2 && !splitten[1].is_empty()
+    let split: Vec<&str> = id.splitn(3, '/').collect();
+    split.len() == 3 && split[0].len() >= 2 && !split[1].is_empty()
   } else {
     id[1..].contains('/')
   }

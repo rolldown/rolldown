@@ -137,7 +137,11 @@ impl ModuleTask {
     let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
     let repr_name = legitimize_identifier_name(&repr_name);
 
-    let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
+    // `ModuleId` is the filename we used to create a file, replace `\0` to avoid raise issue,
+    // ref: https://en.wikipedia.org/wiki/Filename#Reserved_characters_and_words
+    // TODO: maybe we need to handle all reserved characters, but `\0` is widely used reserved
+    // char
+    let id = ModuleId::new(self.resolved_id.id.replace('\0', "_"));
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
     let mut raw_import_records = IndexVec::default();

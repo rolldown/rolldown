@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,17 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region inject.js
+let test = 100;
+
+//#endregion
 //#region entry.js
-console.log(
-	// These should be fully substituted
-	import.meta,
-	import.meta.foo,
-	import.meta.foo.bar,
-	// Should just substitute "import.meta.foo"
-	import.meta.foo.baz,
-	// This should not be substituted
-	import.meta.bar
-);
+console.log(test);
 
 //#endregion
 ```

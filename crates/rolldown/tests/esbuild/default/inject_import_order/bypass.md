@@ -1,5 +1,5 @@
 # Reason
-1. different inject implementation
+1. `oxc` inject align with `@rollup/plugin-inject` don't support inject plugin
 # Diff
 ## /out.js
 ### esbuild

@@ -104,6 +104,8 @@ impl PreProcessEcmaAst {
         self.ast_changed = true;
       }
 
+      dbg!(&bundle_options.inject);
+      dbg!(&self.ast_changed);
       if !bundle_options.inject.is_empty() {
         let ret = InjectGlobalVariables::new(
           allocator,

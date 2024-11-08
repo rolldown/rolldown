@@ -82,6 +82,10 @@ const ignoreTests = [
   "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
   "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",
 
+  // comment related
+  "rollup@form@comment-before-import: preserves comments before imports@generates es",
+  "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
+
   // Format cjs
   "rollup@function@default-export-with-null-prototype: default exports of objects with null prototypes are supported",
 

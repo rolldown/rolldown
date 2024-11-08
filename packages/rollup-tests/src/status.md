@@ -1,7 +1,7 @@
 |  | number |
 |----| ---- |
-| failed | 255|
+| failed | 248|
 | skipFailed | 0|
-| ignored | 581|
+| ignored | 590|
 | skipped | 0|
-| passed | 122|
+| passed | 120|

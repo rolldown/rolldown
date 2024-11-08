@@ -18,8 +18,7 @@ runTestSuiteWithSamples(
 	 */
 	(directory, config) => {
         const content = fs.readFileSync(directory + '/main.js', 'utf-8');
-        if (content.includes('// removed') || content.includes(`console.log('removed')`) || content.includes('const unused = ')  || content.includes('const removed') || config.description.includes('Tree-shake') || config.description.includes('tree-shake') || directory.includes('tree-shake') || directory.includes('treeshakes') || directory.includes('side-effect') || config.description.includes('side-effect') || content.includes('/*#__NO_SIDE_EFFECTS__*/') || directory.includes('skips-dead-branches') 
-        || content.includes('tree-shake') || content.includes('side-effect')) {
+        if (content.includes('// removed') || content.includes(`console.log('removed')`) || content.includes('const unused')  || content.includes('const removed') || included(directory) || included(config.description) || content.includes(directory)) {
             const testPath = directory.replace(testDirectory, '').replaceAll('/', '@')
             const isSingleFormatTest = fs.existsSync(directory + '/_expected.js');
             if (isSingleFormatTest) {
@@ -30,5 +29,10 @@ runTestSuiteWithSamples(
         }
 	}
 );
+
+function included(str) {
+    return str.includes('Tree-shake') || str.includes('tree-shake')  || str.includes('treeshakes') || str.includes('side-effect') || str.includes('/*#__NO_SIDE_EFFECTS__*/') || str.includes('skips-dead-branches') 
+     || str.includes('deoptimizations')
+}
 
 fs.writeFileSync(path.join(__dirname, '../../src/ignored-treeshaking-tests.json'), JSON.stringify(ignoredTreeshakingTests, null, 2))

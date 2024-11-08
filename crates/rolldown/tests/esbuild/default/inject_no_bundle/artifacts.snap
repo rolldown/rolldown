@@ -1,21 +1,34 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
+import { re_export } from "external-pkg";
+import { reexpo.rt } from "external-pkg2";
 
+//#region replacement.js
+let replace = { test() {} };
+let replaceDot = { test() {} };
+
+//#endregion
+//#region inject.js
+let obj = {};
+let sideEffects$1 = console.log("this should be renamed");
+
+//#endregion
 //#region entry.js
 let sideEffects = console.log("side effects");
 let collide = 123;
 console.log(obj.prop);
-console.log(obj.defined);
-console.log(injectedAndDefined);
-console.log(injected.and.defined);
-console.log(chain.prop.test);
-console.log(chain2.prop2.test);
+console.log("defined");
+console.log("should be used");
+console.log("should be used");
+console.log(replace.test);
+console.log(replaceDot.test);
 console.log(collide);
 console.log(re_export);
 console.log(reexpo.rt);

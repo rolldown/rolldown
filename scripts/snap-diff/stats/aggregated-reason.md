@@ -29,17 +29,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names
 - crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
-## different inject implementation
-- crates/rolldown/tests/esbuild/default/inject
-- crates/rolldown/tests/esbuild/default/inject_duplicate
-- crates/rolldown/tests/esbuild/default/inject_import_meta
-- crates/rolldown/tests/esbuild/default/inject_import_order
-- crates/rolldown/tests/esbuild/default/inject_import_ts
-- crates/rolldown/tests/esbuild/default/inject_jsx
-- crates/rolldown/tests/esbuild/default/inject_jsx_dot_names
-- crates/rolldown/tests/esbuild/default/inject_no_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -131,6 +120,9 @@
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
+## should not replace the function it self in `inject files`
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
@@ -249,8 +241,12 @@
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
 ## not align
 - crates/rolldown/tests/esbuild/default/indirect_require_message
-## Different inject impl
-- crates/rolldown/tests/esbuild/default/inject_with_define
+## generate wrong syntax when Exported is `StringLiteral`
+- crates/rolldown/tests/esbuild/default/inject
+## different inject implementation
+- crates/rolldown/tests/esbuild/default/inject_import_meta
+## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
+- crates/rolldown/tests/esbuild/default/inject_no_bundle
 ## different naming style
 - crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result

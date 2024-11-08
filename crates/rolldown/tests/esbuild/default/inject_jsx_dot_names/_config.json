@@ -1,11 +1,29 @@
 {
-  "config": {
-    "input": [
-      {
-        "name": "entry",
-        "import": "entry.jsx"
-      }
-    ]
-  },
-  "expectExecuted": false
+	"config": {
+		"input": [
+			{
+				"name": "entry",
+				"import": "entry.jsx"
+			}
+		],
+		"inject": [
+			{
+				"from": "./inject.js",
+				"imported": "React.Fragment",
+				"alias": "React.Fragment",
+				"type": "named"
+			},
+			{
+				"from": "./inject.js",
+				"imported": "React.createElement",
+				"alias": "React.createElement",
+				"type": "named"
+			}
+		],
+		"jsx": {
+			"runtime": "classic"
+		}
+	},
+	"expectExecuted": false
 }
+

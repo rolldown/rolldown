@@ -5,7 +5,12 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "inject": [{
+      "from": "./inject.js",
+      "imported": "test",
+      "type": "named"
+    }]
   },
   "expectExecuted": false
 }

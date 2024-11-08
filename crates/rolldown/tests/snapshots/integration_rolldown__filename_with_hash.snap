@@ -982,7 +982,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject
 
-- entry-!~{000}~.js => entry-9iE9d-Ud.js
+- entry-!~{000}~.js => entry-_N5EgwFn.js
 
 # tests/esbuild/default/inject_assign
 
@@ -1006,11 +1006,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_jsx
 
-- entry-!~{000}~.js => entry-AFVdgWBf.js
+- entry-!~{000}~.js => entry-lCLJByaS.js
 
 # tests/esbuild/default/inject_jsx_dot_names
 
-- entry-!~{000}~.js => entry-AFVdgWBf.js
+- entry-!~{000}~.js => entry-lCLJByaS.js
 
 # tests/esbuild/default/inject_missing
 
@@ -1018,19 +1018,19 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_no_bundle
 
-- entry-!~{000}~.js => entry-pGcopzfp.js
+- entry-!~{000}~.js => entry-jROtih1s.js
 
 # tests/esbuild/default/inject_with_define
 
-- entry-!~{000}~.js => entry-9xO_HrZc.js
+- entry-!~{000}~.js => entry-H_tnDYdK.js
 
 # tests/esbuild/default/inject_with_string_export_name_bundle
 
-- entry-!~{000}~.js => entry-b-33eN-K.js
+- entry-!~{000}~.js => entry-2wGhQr4h.js
 
 # tests/esbuild/default/inject_with_string_export_name_no_bundle
 
-- entry-!~{000}~.js => entry-9kCkuHWn.js
+- entry-!~{000}~.js => entry-b0Z7IhHT.js
 
 # tests/esbuild/default/jsx_automatic_imports_common_js
 

@@ -1,13 +1,7 @@
 [
-  "rollup@form@compact-multiple-imports: correctly handles empty external imports in compact mode@generates es",
-  "rollup@form@compact: supports compact output with compact: true@generates es",
-  "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers@generates es",
-  "rollup@form@conditional-put-parens-around-sequence: put parens around sequences if conditional simplified (#1311)",
-  "rollup@form@configure-file-url: allows to configure file urls@generates es",
-  "rollup@form@conflicting-imports: ensures bundle imports are deconflicted (#659)@generates es",
-  "rollup@form@curried-function: properly handles a curried function",
-  "rollup@form@custom-context: allows custom context@generates es",
-  "rollup@form@custom-dynamic-import-no-interop: does not add any interop when using a custom dynamic import handler@generates es",
+  
+ 
+  
   "rollup@form@custom-module-context-function: allows custom module-specific context with a function option",
   "rollup@form@custom-module-context: allows custom module-specific context@generates es",
   "rollup@form@deconflict-format-specific-exports: only deconflict \"exports\" for formats where it is necessary@generates es",

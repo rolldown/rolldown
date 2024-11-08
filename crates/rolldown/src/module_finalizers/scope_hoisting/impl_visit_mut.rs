@@ -202,12 +202,11 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     // 3. hoisted_names
     // 4. wrapped module declaration
     let declaration_of_module_namespace_object = if is_namespace_referenced {
-      let mut stmts = self.generate_declaration_of_module_namespace_object();
+      let stmts = self.generate_declaration_of_module_namespace_object();
       if needs_wrapper {
         stmts
       } else {
-        stmts.extend(program.body.take_in(self.alloc));
-        program.body.extend(stmts);
+        program.body.splice(0..0, stmts);
         vec![]
       }
     } else {

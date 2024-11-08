@@ -357,6 +357,20 @@ const ignoreTests = [
   "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
   "rollup@function@import-meta-url: resolves import.meta.url",
 
+  // output.format systemjs is not supported
+  "rollup@form@system-comments: Correctly places leading comments when rendering system bindings",
+  "rollup@form@system-default-comments: Correctly places leading comments when rendering system default exports",
+  "rollup@form@system-export-declarations: Renders declarations where some variables are exported",
+  "rollup@form@system-export-destructuring-declaration: supports destructuring declarations for systemJS",
+  "rollup@form@system-export-rendering-compact: Renders updates of exported variables for SystemJS output in compact mode",
+  "rollup@form@system-export-rendering: Renders updates of exported variables for SystemJS output",
+  "rollup@form@system-module-reserved: does not output reserved system format identifiers",
+  "rollup@form@system-multiple-export-bindings: supports multiple live bindings for the same symbol in systemJS",
+  "rollup@form@system-null-setters: allows to avoid null setters for side effect only imports",
+  "rollup@form@system-reexports: merges reexports in systemjs",
+  "rollup@form@system-semicolon: supports asi in system binding output",
+  "rollup@form@system-uninitialized: supports uninitialized binding exports",
+
   // Should delete use strict from function body
   "rollup@function@function-use-strict-directive-removed: should delete use strict from function body",
 

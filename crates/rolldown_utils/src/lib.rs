@@ -15,7 +15,6 @@ pub mod path_ext;
 pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
-pub mod sanitize_file_name;
 pub mod xxhash;
 pub use bitset::BitSet;
 pub mod extract_hash_pattern;

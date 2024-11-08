@@ -2,7 +2,6 @@ use crate::{FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
-use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
 use std::ffi::OsStr;
 use std::path::Path;
@@ -90,9 +89,8 @@ impl FileEmitter {
     if file.file_name.is_none() {
       let path = file.name.as_deref().map(Path::new);
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
-      let name = path
-        .and_then(|x| x.file_stem().and_then(OsStr::to_str))
-        .map(|x| sanitize_file_name(x.into()));
+      let name =
+        path.and_then(|x| x.file_stem().and_then(OsStr::to_str)).map(sanitize_filename::sanitize);
       let extract_hash_pattern = extract_hash_pattern(self.options.asset_filenames.template());
       let mut file_name: ArcStr = self
         .options

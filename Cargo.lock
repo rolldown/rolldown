@@ -2596,6 +2596,7 @@ dependencies = [
  "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
+ "sanitize-filename",
  "schemars",
  "serde",
  "serde_json",

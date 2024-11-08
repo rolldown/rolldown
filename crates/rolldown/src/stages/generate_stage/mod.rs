@@ -18,7 +18,6 @@ use rolldown_utils::{
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
-  sanitize_file_name::sanitize_file_name,
 };
 use sugar_path::SugarPath;
 
@@ -163,7 +162,9 @@ impl<'a> GenerateStage<'a> {
                 .map(ArcStr::from)
                 .unwrap_or(arcstr::literal!("input"))
             } else {
-              ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
+              ArcStr::from(sanitize_filename::sanitize(
+                module.id().as_path().representative_file_name(),
+              ))
             };
             generated
           }
@@ -176,7 +177,9 @@ impl<'a> GenerateStage<'a> {
               || arcstr::literal!("chunk"),
               |module_id| {
                 let module = &modules[*module_id];
-                ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
+                ArcStr::from(sanitize_filename::sanitize(
+                  module.id().as_path().representative_file_name(),
+                ))
               },
             )
           }

@@ -44,6 +44,7 @@ rolldown_std_utils        = { workspace = true }
 rolldown_tracing          = { workspace = true }
 rolldown_utils            = { workspace = true }
 rustc-hash                = { workspace = true }
+sanitize-filename         = { workspace = true }
 string_wizard             = { workspace = true }
 sugar_path                = { workspace = true }
 tokio                     = { workspace = true, features = ["rt", "macros", "sync"] }

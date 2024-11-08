@@ -63,8 +63,8 @@ importers:
         specifier: ^1.1.37
         version: 1.2.2
       vitepress:
-        specifier: ^1.2.3
-        version: 1.4.5(@algolia/client-search@5.12.0)(@types/node@22.8.7)(change-case@5.4.4)(postcss@8.4.47)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.36.0)(typescript@5.6.3)
+        specifier: ^1.5.0
+        version: 1.5.0(@algolia/client-search@5.12.0)(@types/node@22.8.7)(change-case@5.4.4)(postcss@8.4.47)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.36.0)(typescript@5.6.3)
       vitepress-plugin-group-icons:
         specifier: ^1.0.0
         version: 1.3.0
@@ -1864,6 +1864,9 @@ packages:
   '@iconify-json/logos@1.2.3':
     resolution: {integrity: sha512-JLHS5hgZP1b55EONAWNeqBUuriRfRNKWXK4cqYx0PpVaJfIIMiiMxFfvoQiX/bkE9XgkLhcKmDUqL3LXPdXPwQ==}
 
+  '@iconify-json/simple-icons@1.2.11':
+    resolution: {integrity: sha512-AHCGDtBRqP+JzAbBzgO8uN/08CXxEmuaC6lQQZ3b5burKhRU12AJnJczwbUw2K5Mb/U85EpSUNhYMG3F28b8NA==}
+
   '@iconify-json/vscode-icons@1.2.2':
     resolution: {integrity: sha512-bTpT0HJDRqGkxQv8oiETNHLEnBZpnA1QaRD35CQyO7M7qgWVLx2xwn/lK6e4waojmlPC3ckMBx3WFIUUn0/Jdg==}
 
@@ -1980,7 +1983,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 
@@ -5989,8 +5991,8 @@ packages:
   vitepress-plugin-group-icons@1.3.0:
     resolution: {integrity: sha512-E6Up5HyWh0gxmy2v1v1VVzQpL9UOZuHgoqOmSNBMTRv2rSwg6nk8MeIiJD0tJ0xtWrY5dwG69ENZPyFoD+fVoA==}
 
-  vitepress@1.4.5:
-    resolution: {integrity: sha512-9K0k8kvdEbeowVCpKF/x0AySSq0Pr9pM8xufLgQcKMjsifwxtDjXJjcFhZv4LYw2dcpdYiBq2j7PnWi0tCaMCg==}
+  vitepress@1.5.0:
+    resolution: {integrity: sha512-q4Q/G2zjvynvizdB3/bupdYkCJe2umSAMv9Ju4d92E6/NXJ59z70xB0q5p/4lpRyAwflDsbwy1mLV9Q5+nlB+g==}
     hasBin: true
     peerDependencies:
       markdown-it-mathjax3: ^4
@@ -7547,6 +7549,10 @@ snapshots:
   '@hutson/parse-repository-url@5.0.0': {}
 
   '@iconify-json/logos@1.2.3':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/simple-icons@1.2.11':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -12002,10 +12008,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vitepress@1.4.5(@algolia/client-search@5.12.0)(@types/node@22.8.7)(change-case@5.4.4)(postcss@8.4.47)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.36.0)(typescript@5.6.3):
+  vitepress@1.5.0(@algolia/client-search@5.12.0)(@types/node@22.8.7)(change-case@5.4.4)(postcss@8.4.47)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.36.0)(typescript@5.6.3):
     dependencies:
       '@docsearch/css': 3.6.3
       '@docsearch/js': 3.6.3(@algolia/client-search@5.12.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)
+      '@iconify-json/simple-icons': 1.2.11
       '@shikijs/core': 1.22.2
       '@shikijs/transformers': 1.22.2
       '@shikijs/types': 1.22.2

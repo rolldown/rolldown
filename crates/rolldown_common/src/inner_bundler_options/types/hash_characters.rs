@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
@@ -18,5 +18,15 @@ pub enum HashCharacters {
 impl Default for HashCharacters {
   fn default() -> Self {
     Self::Base64
+  }
+}
+
+impl HashCharacters {
+  pub fn base(&self) -> u8 {
+    match self {
+      HashCharacters::Base64 => 64,
+      HashCharacters::Base36 => 36,
+      HashCharacters::Hex => 16,
+    }
   }
 }

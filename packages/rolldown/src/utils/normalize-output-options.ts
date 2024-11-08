@@ -9,6 +9,7 @@ export function normalizeOutputOptions(
     dir,
     format,
     exports,
+    hashCharacters,
     sourcemap,
     sourcemapIgnoreList,
     sourcemapPathTransform,
@@ -27,6 +28,7 @@ export function normalizeOutputOptions(
     file,
     format: getFormat(format),
     exports: exports ?? 'auto',
+    hashCharacters: hashCharacters ?? 'base64',
     sourcemap: sourcemap ?? false,
     sourcemapIgnoreList:
       typeof sourcemapIgnoreList === 'function'

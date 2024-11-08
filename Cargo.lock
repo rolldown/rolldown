@@ -153,6 +153,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base-encode"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a17bd29f7c70f32e9387f4d4acfa5ea7b7749ef784fb78cf382df97069337b8c"
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2906,6 +2912,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-scoped",
+ "base-encode",
  "base64-simd 0.8.0",
  "futures",
  "glob-match",

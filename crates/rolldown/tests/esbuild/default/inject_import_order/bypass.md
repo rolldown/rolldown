@@ -1,5 +1,5 @@
 # Reason
-1. `oxc` inject align with `@rollup/plugin-inject` don't support inject plugin
+1. `oxc` inject align with `@rollup/plugin-inject` don't support inject files directly
 # Diff
 ## /out.js
 ### esbuild

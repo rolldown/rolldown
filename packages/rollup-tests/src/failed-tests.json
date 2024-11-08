@@ -1,5 +1,4 @@
 [
-  "rollup@form@addon-functions: provides module information when adding addons@generates es",
   "rollup@form@argument-deoptimization@no-default-deoptimization: does not deoptimize call arguments by default",
   "rollup@form@argument-deoptimization@no-global-call-deoptimization: does not deoptimize call arguments of calls to globals by default",
   "rollup@form@argument-deoptimization@return-function-deoptimization: does not deoptimize call arguments of returned functions by default",

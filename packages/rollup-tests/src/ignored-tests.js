@@ -382,6 +382,9 @@ const ignoreTests = [
   "rollup@function@context-resolve: returns the correct results for the context resolve helper",
   "rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test",
 
+  // The chunk information is not compatible with rollup
+  "rollup@form@addon-functions: provides module information when adding addons@generates es",
+  
   // The sourcemap related
   "rollup@function@handles-stringified-sourcemaps: handles transforms that return stringified source maps (#377)",
   "rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming",

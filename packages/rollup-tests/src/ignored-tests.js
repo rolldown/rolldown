@@ -75,6 +75,8 @@ const ignoreTests = [
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
   "rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es",
+  "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
+  "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
 
   // `return init_foo(), foo_exports;` is not expected 
   "rollup@form@dynamic-import-inlining: dynamic import inlining",
@@ -260,6 +262,26 @@ const ignoreTests = [
   "rollup@function@deconflict-synthetic-named-export: deconflicts synthetic named exports",
   "rollup@form@entry-with-unused-synthetic-exports: does not include unused synthetic namespace object in entry points@generates es",
 
+  // output.generatedCode is not supported 
+  "rollup@form@generated-code-compact@arrow-functions-false: does not use arrow functions@generates es",
+  "rollup@form@generated-code-compact@arrow-functions-true: uses arrow functions@generates es",
+  "rollup@form@generated-code-compact@const-bindings-false: does not use block bindings@generates es",
+  "rollup@form@generated-code-compact@const-bindings-true: uses block bindings@generates es",
+  "rollup@form@generated-code-compact@object-shorthand-false: does not use object shorthand syntax",
+  "rollup@form@generated-code-compact@object-shorthand-true: uses object shorthand syntax",
+  "rollup@form@generated-code-compact@reserved-names-as-props-false: escapes reserved names used as props@generates es",
+  "rollup@form@generated-code-compact@reserved-names-as-props-true: escapes reserved names used as props@generates es",
+  "rollup@form@generated-code-presets@es2015: handles generatedCode preset \"es2015\"",
+  "rollup@form@generated-code-presets@es5: handles generatedCode preset \"es5\"",
+  "rollup@form@generated-code-presets@preset-with-override: handles generatedCode preset \"es2015\"",
+  "rollup@form@generated-code@arrow-functions-false: does not use arrow functions@generates es",
+  "rollup@form@generated-code@arrow-functions-true: uses arrow functions@generates es",
+  "rollup@form@generated-code@const-bindings-false: does not use block bindings@generates es",
+  "rollup@form@generated-code@const-bindings-true: uses block bindings@generates es",
+  "rollup@form@generated-code@object-shorthand-false: does not use object shorthand syntax",
+  "rollup@form@generated-code@object-shorthand-true: uses object shorthand syntax",
+  "rollup@form@generated-code@reserved-names-as-props-false: escapes reserved names used as props@generates es",
+  "rollup@form@generated-code@reserved-names-as-props-true: escapes reserved names used as props@generates es",
   // output.generatedCode.symbols is not supported 
   "rollup@function@reexport-ns: external namespace reexport",
   "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
@@ -450,6 +472,26 @@ const ignoreTests = [
   "rollup@form@default-export-mode: allows specifying the export mode to be \"default\"@generates es",
   "rollup@form@deopt-string-concatenation: deoptimize concatenation when used as an expression statement to better support es5-shim",
   "rollup@form@effect-in-for-of-loop-in-functions: includes effects in for-of loop (#870)@generates es",
+  "rollup@form@exponentiation-operator: folds exponentiation operator when considering dead code@generates es",
+  "rollup@form@export-default-2: re-exporting a default export@generates es",
+  "rollup@form@export-default-3: re-exporting a default export@generates es",
+  "rollup@form@export-default-4: single default export in deep namespace@generates es",
+  "rollup@form@export-default-anonymous-declarations: export default [Declaration] with spaces and comments@generates es", // avoid rename default function
+  "rollup@form@export-default-global: handles default exporting global variables@generates es",
+  "rollup@form@export-default-import: correctly exports a default import, even in ES mode (#513)@generates es", // convert reexport to import and export
+  "rollup@form@export-default: single (default) exports@generates es",
+  "rollup@form@export-internal-namespace-as: supports exporting and resolving internal namespaces as names",
+  "rollup@form@export-live-bindings: exported live bindings@generates es",
+  "rollup@form@export-namespace-as: supports exporting namespaces as names in entry points@generates es",
+  "rollup@form@external-deshadowing: Externals aliases with deshadowing@generates es",
+  "rollup@form@external-empty-import-no-global-b: does not expect a global to be provided for empty imports (#1217)@generates es",
+  "rollup@form@external-export-tracing: Support external namespace reexport@generates es", // convert reexport to import and export
+  "rollup@form@external-import-alias-shadow: handles external aliased named imports that shadow another name@generates es", // avoid deconfilct aliased named imports
+  "rollup@form@external-namespace-and-named: Correctly handles external namespace tracing with both namespace and named exports@generates es",
+  "rollup@form@external-namespace-reexport: Support external namespace reexport@generates es",
+  "rollup@form@for-loop-with-empty-head: handles for loop with empty head@generates es",
+  "rollup@form@freeze: supports opt-ing out of usage of Object.freeze@generates es",
+  "rollup@form@function-body-return-values: properly extract return values from function bodies",
 
   // Test is passed. Class related, `class A` -> `var A = class`
   "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers@generates es",
@@ -457,6 +499,9 @@ const ignoreTests = [
   "rollup@form@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions@generates es",
   "rollup@form@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions@generates es",
   "rollup@form@empty-statament-class-member: Do not crash if class body has empty statements@generates es",
+  "rollup@form@exported-class-declaration-conflict: handles exporting class declarations with name conflicts in SystemJS@generates es",
+  "rollup@form@external-empty-import-no-global: does not expect a global to be provided for empty imports (#1217)@generates es",
+  "rollup@form@external-imports: prefixes global names with `global.` when creating UMD bundle (#57)@generates es",
 
   // Should give error or warinings
   // The output.generatedCode.preset is not supported 
@@ -593,9 +638,15 @@ const ignoreTests = [
 
   // The treeshaking is not compatible with rollup
   "rollup@form@conditional-put-parens-around-sequence: put parens around sequences if conditional simplified (#1311)",
+  "rollup@form@for-in-scopes: properly associate or shadow variables in and around for-in-loops", // the treeshaking affect deconfilct
   "rollup@form@curried-function: properly handles a curried function", // the treeshaking affect deconfilct
   "rollup@form@early-bind-member-expressions: correctly resolves namespace members when accessed early (#2895)", // `const {x} = xxx`, x unused
   "rollup@form@effect-in-for-of-loop: includes effects in for-of loop (#870)@generates es",// `const x = xxx`, x unused
+  "rollup@form@for-loop-assignment: removes assignments with computed indexes in for loops",
+  "rollup@form@for-of-scopes: properly associate or shadow variables in and around for-of-loops",
+  "rollup@form@for-scopes: properly associate or shadow variables in and around for-loops@generates es",
+  "rollup@form@function-mutation: function-mutations do not have effects@generates es",
+  "rollup@form@function-scopes: properly associate or shadow variables in and around functions@generates es", //the treeshaking affect deconfilct
 ]
 
 // Generated by packages/rollup-tests/test/form/found-tree-shaking-not-align.js

@@ -5,14 +5,6 @@ const ignoreTests = [
 
   // --- following tests will hang forever ---
 
-  // Import Assertions related
-  'rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve',
-"rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve",
-  "rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes",
-  "rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved",
-  "rollup@form@deprecated@removes-dynamic-assertions: keep import assertions for dynamic imports",
-  "rollup@form@deprecated@removes-static-attributes: keeps any import assertions on input",
-
   // FATAL ERROR: threadsafe_function.rs:573
   'rollup@function@external-ignore-reserved-null-marker: external function ignores \\0 started ids',
 
@@ -77,6 +69,10 @@ const ignoreTests = [
   "rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es",
   "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
   "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
+  "rollup@form@guessed-global-names: guesses global names if necessary@generates es",
+  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", // import external module is tree-shakend
+  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
+  "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
 
   // `return init_foo(), foo_exports;` is not expected 
   "rollup@form@dynamic-import-inlining: dynamic import inlining",
@@ -136,6 +132,25 @@ const ignoreTests = [
 
   // Nested plugin is not supported
   "rollup@function@nested-and-async-plugin: works when nested plugin",
+
+  // Import Assertions is not supported
+  'rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve',
+  "rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve",
+  "rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes",
+  "rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved",
+  "rollup@form@deprecated@removes-dynamic-assertions: keep import assertions for dynamic imports",
+  "rollup@form@deprecated@removes-static-attributes: keeps any import assertions on input",
+  
+  // Import attributes is not supported
+  "rollup@form@import-attributes@attribute-shapes: handles special shapes of attributes",
+  "rollup@form@import-attributes@keep-dynamic-assertions: keep import attributes for dynamic imports@generates es",
+  "rollup@form@import-attributes@keep-dynamic-attributes: keep import attributes for dynamic imports@generates es",
+  "rollup@form@import-attributes@keeps-static-assertions: keeps any import assertions on input@generates es",
+  "rollup@form@import-attributes@keeps-static-attributes: keeps any import attributes on input@generates es",
+  "rollup@form@import-attributes@plugin-attributes-resolvedynamicimport: allows plugins to read and write import attributes in resolveDynamicImport",
+  "rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId",
+  "rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports",
+  "rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input",
 
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
@@ -492,6 +507,7 @@ const ignoreTests = [
   "rollup@form@for-loop-with-empty-head: handles for loop with empty head@generates es",
   "rollup@form@freeze: supports opt-ing out of usage of Object.freeze@generates es",
   "rollup@form@function-body-return-values: properly extract return values from function bodies",
+  "rollup@form@hoisted-variable-case-stmt: Properly handles a variable hoisted from within a fallthrough switch case",
 
   // Test is passed. Class related, `class A` -> `var A = class`
   "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers@generates es",
@@ -502,6 +518,7 @@ const ignoreTests = [
   "rollup@form@exported-class-declaration-conflict: handles exporting class declarations with name conflicts in SystemJS@generates es",
   "rollup@form@external-empty-import-no-global: does not expect a global to be provided for empty imports (#1217)@generates es",
   "rollup@form@external-imports: prefixes global names with `global.` when creating UMD bundle (#57)@generates es",
+  "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properites",
 
   // Should give error or warinings
   // The output.generatedCode.preset is not supported 
@@ -647,6 +664,8 @@ const ignoreTests = [
   "rollup@form@for-scopes: properly associate or shadow variables in and around for-loops@generates es",
   "rollup@form@function-mutation: function-mutations do not have effects@generates es",
   "rollup@form@function-scopes: properly associate or shadow variables in and around functions@generates es", //the treeshaking affect deconfilct
+  "rollup@form@getter-return-values: forwards return values of getters",
+  "rollup@form@super-classes@super-class-prototype-access: correctly resolves the prototype of the super class when accessing properties",
 ]
 
 // Generated by packages/rollup-tests/test/form/found-tree-shaking-not-align.js

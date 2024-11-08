@@ -145,6 +145,7 @@ rayon               = "1.10.0"
 regex               = "1.10.5"
 regress             = "0.10.0"
 rustc-hash          = "2.0.0"
+sanitize-filename   = "0.6.0"
 schemars            = "0.8.21"
 self_cell           = "1.0.4"
 serde               = { version = "1.0.203", features = ["derive"] }

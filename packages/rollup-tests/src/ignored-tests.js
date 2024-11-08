@@ -390,6 +390,7 @@ const ignoreTests = [
   "rollup@function@deconflicts-interop: deconflicts the interop function",
   "rollup@form@interop-per-dependency-no-live-binding: allows to configure the interop type per external dependency",
   "rollup@form@interop-per-dependency: allows to configure the interop type per external dependency@generates es",
+  "rollup@form@interop-per-reexported-dependency: allows to configure the interop type per reexported external dependency@generates es",
   
   // The load hook retrun ast is not supported
   "rollup@function@uses-supplied-ast: uses supplied AST",

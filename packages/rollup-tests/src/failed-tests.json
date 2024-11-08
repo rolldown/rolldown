@@ -1,5 +1,4 @@
 [
-  "rollup@form@interop-per-reexported-dependency: allows to configure the interop type per reexported external dependency@generates es",
   "rollup@form@intro-and-outro: adds an intro/outro@generates es",
   "rollup@form@invalid-binary-expressions: Does not fail when bundling code where the `in`-operator is used with invalid right sides",
   "rollup@form@json-parse-is-not-pure: JSON.parse is not pure as it can throw on invalid json strings@generates es",

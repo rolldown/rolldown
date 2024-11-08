@@ -1,7 +1,8 @@
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, fs, path::Path};
 
 use crate::resolver::{self, AdditionalOptions, Resolver};
 use cow_utils::CowUtils;
+use dashmap::DashSet;
 use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -13,12 +14,20 @@ const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
 const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
-#[derive(Debug, Default)]
+const NODE_BUILTIN_NAMESPACE: &str = "node:";
+const NPM_BUILTIN_NAMESPACE: &str = "npm:";
+const BUN_BUILTIN_NAMESPACE: &str = "bun:";
+
+#[derive(Debug)]
 pub struct ViteResolveOptions {
   pub resolve_options: ViteResolveResolveOptions,
+  pub environment_consumer: String,
+
+  pub runtime: String,
+  pub node_builtins: Vec<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ViteResolveResolveOptions {
   pub is_production: bool,
   pub as_src: bool,
@@ -35,13 +44,22 @@ pub struct ViteResolveResolveOptions {
 
 #[derive(Debug)]
 pub struct ViteResolvePlugin {
-  options: ViteResolveOptions,
+  resolve_options: ViteResolveResolveOptions,
+  environment_consumer: String,
+
+  runtime: String,
+  node_builtins: DashSet<String>,
+
   resolver: Resolver,
 }
 
 impl ViteResolvePlugin {
   pub fn new(options: ViteResolveOptions) -> Self {
     Self {
+      environment_consumer: options.environment_consumer,
+      runtime: options.runtime,
+      node_builtins: options.node_builtins.into_iter().collect(),
+
       resolver: Resolver::new(&resolver::BaseOptions {
         main_fields: &options.resolve_options.main_fields,
         conditions: &options.resolve_options.conditions,
@@ -53,7 +71,7 @@ impl ViteResolvePlugin {
         root: &options.resolve_options.root,
         preserve_symlinks: options.resolve_options.preserve_symlinks,
       }),
-      options,
+      resolve_options: options.resolve_options,
     }
   }
 }
@@ -83,7 +101,7 @@ impl Plugin for ViteResolvePlugin {
       }));
     }
 
-    if self.options.resolve_options.as_src && args.specifier.starts_with(FS_PREFIX) {
+    if self.resolve_options.as_src && args.specifier.starts_with(FS_PREFIX) {
       // TODO: implement for dev
       let res = fs_path_from_id(args.specifier);
       return Ok(Some(HookResolveIdOutput { id: res.to_string(), ..Default::default() }));
@@ -112,22 +130,87 @@ impl Plugin for ViteResolvePlugin {
 
     let additional_options = AdditionalOptions::new(
       args.kind == ImportKind::Require,
-      self.options.resolve_options.prefer_relative || args.specifier.ends_with(".html"),
+      self.resolve_options.prefer_relative || args.importer.map_or(false, |i| i.ends_with(".html")),
       is_from_ts_importer(args.importer),
     );
     let resolver = self.resolver.get(additional_options);
 
     if is_bare_import(args.specifier) {
-      // TODO
-      return Ok(None);
+      let base_dir = if let Some(importer) = args.importer {
+        let imp = Path::new(importer);
+        if imp.is_absolute()
+          && (importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false))
+        {
+          imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
+        } else {
+          &self.resolve_options.root
+        }
+      } else {
+        &self.resolve_options.root
+      };
+
+      let oxc_resolved_result = resolver.resolve(base_dir, args.specifier);
+      let resolved = normalize_oxc_resolver_result(&self.resolver, &oxc_resolved_result)?;
+      if let Some(mut resolved) = resolved {
+        // TODO: handle shouldExternal
+        let external = self.environment_consumer == "server";
+
+        if external {
+          let resolved_ext = get_extension(&resolved.id);
+          if resolved_ext == "js" || resolved_ext == "mjs" || resolved_ext == "cjs" {
+            let id = args.specifier;
+            let mut resolved_id = id;
+            if is_deep_import(id) && resolved_ext != get_extension(id) {
+              if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
+                let has_exports_field =
+                  pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
+                if !has_exports_field {
+                  if let Some(index) = resolved.id.find(id) {
+                    resolved_id = &resolved.id[index..];
+                  }
+                }
+              }
+            }
+            resolved.id = resolved_id.to_string();
+            resolved.external = Some(true);
+          }
+        }
+
+        return Ok(Some(resolved));
+      }
+
+      if is_builtin(args.specifier, &self.runtime, &self.node_builtins) {
+        if self.environment_consumer == "server" {
+          // TODO: noExternal error
+          return Ok(Some(HookResolveIdOutput {
+            id: args.specifier.to_string(),
+            external: Some(true),
+            side_effects: Some(HookSideEffects::False),
+          }));
+        } else {
+          if !self.resolve_options.as_src {
+            // debug log
+          } else if self.resolve_options.is_production {
+            // warn log
+          }
+          return Ok(Some(HookResolveIdOutput {
+            id: if self.resolve_options.is_production {
+              BROWSER_EXTERNAL_ID.to_string()
+            } else {
+              format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier)
+            },
+            ..Default::default()
+          }));
+        }
+      }
     }
 
     let base_dir = args
       .importer
       .map(|i| Path::new(i).parent().map(|i| i.to_str().unwrap()).unwrap_or(i))
-      .unwrap_or(&self.options.resolve_options.root);
+      .unwrap_or(&self.resolve_options.root);
     let resolved =
-      normalize_oxc_resolver_result(&self.resolver, resolver.resolve(base_dir, args.specifier))?;
+      normalize_oxc_resolver_result(&self.resolver, &resolver.resolve(base_dir, args.specifier))?;
     if let Some(resolved) = resolved {
       // TODO: call `finalize_other_specifiers`
       return Ok(Some(resolved));
@@ -139,7 +222,7 @@ impl Plugin for ViteResolvePlugin {
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
       // TODO: implement for dev
-      if self.options.resolve_options.is_production {
+      if self.resolve_options.is_production {
         // rolldown treats missing export as an error, and will break build.
         // So use cjs to avoid it.
         return Ok(Some(HookLoadOutput {
@@ -229,6 +312,16 @@ fn is_bare_import(id: &str) -> bool {
   id.starts_with(|c| is_regex_w_character_class(c) || c == '@') && !id.contains("://")
 }
 
+// deepImportRE.test(id)
+fn is_deep_import(id: &str) -> bool {
+  if id.starts_with('@') {
+    let splitten: Vec<&str> = id.splitn(3, '/').collect();
+    splitten.len() == 3 && splitten[0].len() >= 2 && !splitten[1].is_empty()
+  } else {
+    id[1..].contains('/')
+  }
+}
+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Character_class_escape#w
 fn is_regex_w_character_class(c: char) -> bool {
   c.is_ascii_alphanumeric() || c == '_'
@@ -255,9 +348,13 @@ fn has_suffix(s: &str, suffix: &[&str]) -> bool {
   }
 }
 
+fn clean_url(url: &str) -> &str {
+  url.find(['?', '#']).map(|pos| (&url[..pos])).unwrap_or(url)
+}
+
 fn normalize_oxc_resolver_result(
   resolver: &Resolver,
-  result: Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
+  result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
 ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
   match result {
     Ok(result) => {
@@ -282,6 +379,24 @@ fn normalize_oxc_resolver_result(
     Err(oxc_resolver::ResolveError::Ignored(_)) => {
       Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.to_string(), ..Default::default() }))
     }
-    Err(err) => Err(err),
+    Err(err) => Err(err.to_owned()),
   }
+}
+
+fn is_builtin(id: &str, runtime: &str, node_builtins: &DashSet<String>) -> bool {
+  if runtime == "deno" && id.starts_with(NPM_BUILTIN_NAMESPACE) {
+    return true;
+  }
+  if runtime == "bun" && id.starts_with(BUN_BUILTIN_NAMESPACE) {
+    return true;
+  }
+  is_node_builtin(id, node_builtins)
+}
+
+fn is_node_builtin(id: &str, node_builtins: &DashSet<String>) -> bool {
+  id.starts_with(NODE_BUILTIN_NAMESPACE) || node_builtins.contains(id)
+}
+
+fn get_extension(id: &str) -> &str {
+  id.rsplit_once('.').map_or("", |(_, ext)| ext)
 }

@@ -10,6 +10,6 @@ doctest = false
 [dependencies]
 cow-utils = "0.1.3"
 dashmap = { workspace = true }
-oxc_resolver = { workspace = true }
+oxc_resolver = { workspace = true, features = ["package_json_raw_json_api"] }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

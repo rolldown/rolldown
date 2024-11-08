@@ -77,7 +77,6 @@ impl Resolver {
     } else {
       let pkg_json = Arc::new(
         PackageJson::new(oxc_pkg_json.path.clone())
-          .with_type(oxc_pkg_json.r#type.as_ref())
           .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
       );
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));

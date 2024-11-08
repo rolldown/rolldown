@@ -151,11 +151,21 @@ pub struct BindingBuildImportAnalysisPluginConfig {
 #[serde(rename_all = "camelCase")]
 pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
+  pub environment_consumer: String,
+
+  pub runtime: String,
+  pub node_builtins: Vec<String>,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
   fn from(value: BindingViteResolvePluginConfig) -> Self {
-    Self { resolve_options: value.resolve_options.into() }
+    Self {
+      resolve_options: value.resolve_options.into(),
+      environment_consumer: value.environment_consumer,
+
+      runtime: value.runtime,
+      node_builtins: value.node_builtins,
+    }
   }
 }
 

@@ -57,7 +57,7 @@ export default defineConfig({
               },
               {
                 text: 'Bluesky',
-                link: 'https://bsky.app/profile/rolldown.bsky.social',
+                link: 'https://bsky.app/profile/rolldown.rs',
               },
               {
                 text: 'Discord Chat',

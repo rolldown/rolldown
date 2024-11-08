@@ -1,5 +1,5 @@
 # Reason
-1. different inject implementation
+1. different usage between 
 # Diff
 ## /out.js
 ### esbuild

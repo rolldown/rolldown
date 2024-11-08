@@ -31,7 +31,7 @@ runTestSuiteWithSamples(
 );
 
 function included(str) {
-    return str.includes('Tree-shake') || str.includes('tree-shake') || str.includes('tree-shaking')  || str.includes('treeshakes') || str.includes('side-effect') || str.includes('/*#__NO_SIDE_EFFECTS__*/') || str.includes('skips-dead-branches') 
+    return str.includes('Tree-shake') || str.includes('tree-shake') || str.includes('tree-shaking')  || str.includes('treeshake') || str.includes('side-effect') || str.includes('/*#__NO_SIDE_EFFECTS__*/') || str.includes('skips-dead-branches') 
      || str.includes('deoptimizations') || str.includes('deoptimize')
 }
 

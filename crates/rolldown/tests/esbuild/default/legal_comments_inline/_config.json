@@ -1,4 +1,5 @@
 {
+  // Unexpected
   "config": {
     "input": [
       {
@@ -9,7 +10,8 @@
         "name": "entry",
         "import": "entry.css"
       }
-    ]
+    ],
+    "comments": "preserve-legal"
   },
   "expectExecuted": false
 }

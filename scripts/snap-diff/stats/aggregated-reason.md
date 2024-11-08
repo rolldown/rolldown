@@ -78,12 +78,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
-## different inject implementation
-- crates/rolldown/tests/esbuild/default/inject
-- crates/rolldown/tests/esbuild/default/inject_import_meta
-- crates/rolldown/tests/esbuild/default/inject_no_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## Wrong output
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
@@ -126,6 +120,9 @@
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
+## should not replace the function it self in `inject files`
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
@@ -244,8 +241,12 @@
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
 ## not align
 - crates/rolldown/tests/esbuild/default/indirect_require_message
-## Different inject impl
-- crates/rolldown/tests/esbuild/default/inject_with_define
+## generate wrong syntax when Exported is `StringLiteral`
+- crates/rolldown/tests/esbuild/default/inject
+## different inject implementation
+- crates/rolldown/tests/esbuild/default/inject_import_meta
+## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
+- crates/rolldown/tests/esbuild/default/inject_no_bundle
 ## different naming style
 - crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result

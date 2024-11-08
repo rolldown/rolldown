@@ -103,8 +103,6 @@ impl PreProcessEcmaAst {
         scopes = ret.scopes;
         self.ast_changed = true;
       }
-      dbg!(&bundle_options.inject);
-      dbg!(&bundle_options.oxc_inject_global_variables_config);
       if !bundle_options.inject.is_empty() {
         // if the define replace something, we need to recreate the semantic data.
         // to correct the `root_unresolved_references`

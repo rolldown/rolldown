@@ -1,5 +1,5 @@
 # Reason
-1. different inject implementation
+1. should not replace the function it self in `inject files`
 # Diff
 ## /out.js
 ### esbuild
@@ -16,10 +16,15 @@ fn(test);
 ### rolldown
 ```js
 
+//#region inject.js
+const old = fn;
+const fn = (...args) => old.apply(console, ["log:"].concat(args));
+
+//#endregion
 //#region entry.js
-console.log(test);
-console.info(test);
-console.warn(test);
+fn(test);
+fn(test);
+fn(test);
 
 //#endregion
 ```
@@ -28,14 +33,12 @@ console.warn(test);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,3 @@
+@@ -1,5 +1,5 @@
 -var old = console.log;
--var fn = (...args) => old.apply(console, ["log:"].concat(args));
--fn(test);
--fn(test);
--fn(test);
-+console.log(test);
-+console.info(test);
-+console.warn(test);
++var old = fn;
+ var fn = (...args) => old.apply(console, ["log:"].concat(args));
+ fn(test);
+ fn(test);
+ fn(test);
 
 ```

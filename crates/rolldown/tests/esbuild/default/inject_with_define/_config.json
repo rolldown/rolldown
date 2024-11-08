@@ -1,11 +1,30 @@
 {
-  "config": {
-    "input": [
-      {
-        "name": "entry",
-        "import": "entry.js"
-      }
-    ]
-  },
-  "expectExecuted": false
+	"config": {
+		"input": [
+			{
+				"name": "entry",
+				"import": "entry.js"
+			}
+		],
+		"define": {
+			"both": "'define'",
+			"first": "second",
+			"bo.th": "'defi.ne'",
+			"fir.st": "seco.nd"
+		},
+		"inject": [
+			{
+				"from": "./inject.js",
+				"imported": "seco.nd",
+				"type": "named"
+			},
+			{
+				"from": "./inject.js",
+				"imported": "second",
+				"type": "named"
+			}
+		]
+
+	},
+	"expectExecuted": false
 }

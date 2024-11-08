@@ -1,5 +1,5 @@
 # Reason
-1. different inject implementation
+1. generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
 # Diff
 ## /out.js
 ### esbuild
@@ -31,16 +31,28 @@ console.log(reexpo_rt);
 ```
 ### rolldown
 ```js
+import { re_export } from "external-pkg";
+import { reexpo.rt } from "external-pkg2";
 
+//#region replacement.js
+let replace = { test() {} };
+let replaceDot = { test() {} };
+
+//#endregion
+//#region inject.js
+let obj = {};
+let sideEffects$1 = console.log("this should be renamed");
+
+//#endregion
 //#region entry.js
 let sideEffects = console.log("side effects");
 let collide = 123;
 console.log(obj.prop);
-console.log(obj.defined);
-console.log(injectedAndDefined);
-console.log(injected.and.defined);
-console.log(chain.prop.test);
-console.log(chain2.prop2.test);
+console.log("defined");
+console.log("should be used");
+console.log("should be used");
+console.log(replace.test);
+console.log(replaceDot.test);
 console.log(collide);
 console.log(re_export);
 console.log(reexpo.rt);
@@ -52,7 +64,7 @@ console.log(reexpo.rt);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,22 +1,11 @@
+@@ -1,22 +1,27 @@
 -var obj2 = {};
 -var sideEffects2 = console.log("this should be renamed");
 -console.log("This is unused but still has side effects");
@@ -64,26 +76,37 @@ console.log(reexpo.rt);
 -};
 -import {re_export as re_export2} from "external-pkg";
 -import {undefined as reexpo_rt} from "external-pkg2";
--let sideEffects = console.log("side effects");
--let collide = 123;
++import { re_export } from "external-pkg";
++import { reexpo.rt } from "external-pkg2";
++
++//#region replacement.js
++let replace = { test() {} };
++let replaceDot = { test() {} };
++
++//#endregion
++//#region inject.js
++let obj = {};
++let sideEffects$1 = console.log("this should be renamed");
++
++//#endregion
++//#region entry.js
+ let sideEffects = console.log("side effects");
+ let collide = 123;
 -console.log(obj2.prop);
--console.log("defined");
--console.log("should be used");
--console.log("should be used");
--console.log(replace2.test);
--console.log(replaceDot.test);
-+var sideEffects = console.log("side effects");
-+var collide = 123;
 +console.log(obj.prop);
-+console.log(obj.defined);
-+console.log(injectedAndDefined);
-+console.log(injected.and.defined);
-+console.log(chain.prop.test);
-+console.log(chain2.prop2.test);
+ console.log("defined");
+ console.log("should be used");
+ console.log("should be used");
+-console.log(replace2.test);
++console.log(replace.test);
+ console.log(replaceDot.test);
  console.log(collide);
 -console.log(re_export2);
 -console.log(reexpo_rt);
 +console.log(re_export);
 +console.log(reexpo.rt);
++
++//#endregion
+\ No newline at end of file
 
 ```

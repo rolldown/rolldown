@@ -79,8 +79,6 @@
   diff
 ## [inject_no_bundle](../../../crates/rolldown/tests/esbuild/default/inject_no_bundle/diff.md)
   diff
-## [inject_with_define](../../../crates/rolldown/tests/esbuild/default/inject_with_define/diff.md)
-  diff
 ## [inject_with_string_export_name_bundle](../../../crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle/diff.md)
   diff
 ## [inject_with_string_export_name_no_bundle](../../../crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle/diff.md)
@@ -238,6 +236,7 @@
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [inject_jsx](../../../crates/rolldown/tests/esbuild/default/inject_jsx)
 ## [inject_jsx_dot_names](../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names)
+## [inject_with_define](../../../crates/rolldown/tests/esbuild/default/inject_with_define)
 ## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)

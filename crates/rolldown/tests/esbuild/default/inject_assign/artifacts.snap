@@ -2,26 +2,11 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'test' in entry.js
-   ╭─[entry.js:1:18]
-   │
- 1 │ import test from 'test'
-   │                  ───┬──  
-   │                     ╰──── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-import test from "test";
 
 //#region entry.js
 test = true;

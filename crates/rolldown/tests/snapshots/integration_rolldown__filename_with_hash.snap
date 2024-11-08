@@ -986,7 +986,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_assign
 
-- entry-!~{000}~.js => entry-8ett9VXb.js
+- entry-!~{000}~.js => entry-9ivNsWOn.js
 
 # tests/esbuild/default/inject_duplicate
 

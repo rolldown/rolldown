@@ -18,7 +18,7 @@ runTestSuiteWithSamples(
 	 */
 	(directory, config) => {
         const content = fs.readFileSync(directory + '/main.js', 'utf-8');
-        if (content.includes('// removed') || content.includes(`console.log('removed')`) || content.includes('const unused')  || content.includes('const removed') || included(directory) || included(config.description) || content.includes(directory)) {
+        if (content.includes('// removed') || content.includes(`console.log('removed')`) || content.includes('const unused')  || content.includes('const removed') || included(directory) || included(config.description) || included(content)) {
             const testPath = directory.replace(testDirectory, '').replaceAll('/', '@')
             const isSingleFormatTest = fs.existsSync(directory + '/_expected.js');
             if (isSingleFormatTest) {

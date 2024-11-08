@@ -1,5 +1,4 @@
 [
-  "rollup@form@class-fields: supports class fields",
   "rollup@form@comment-before-import: preserves comments before imports@generates es",
   "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
   "rollup@form@compact-multiple-imports: correctly handles empty external imports in compact mode@generates es",
@@ -166,7 +165,6 @@
   "rollup@form@no-treeshake-default-export-conflict: properly deconflicts default exports when not tree-shaking",
   "rollup@form@no-treeshake-namespace-object: generates namespace objects when not tree-shaking",
   "rollup@form@ns-external-star-reexport: supports namespaces with external star reexports@generates es",
-  "rollup@form@nullish-coalescing: supports tree-shaking with nullish-coalescing",
   "rollup@form@object-expression@proto-property: Deoptimize when __proto__ is used",
   "rollup@form@object-expression@reassign-prop-without-proto: correctly deoptimizes when there is no proto",
   "rollup@form@optional-chaining: supports optional chaining",
@@ -216,7 +214,6 @@
   "rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es",
   "rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es",
   "rollup@form@self-deoptimization: handles situations where a member expression is deoptimized while being deoptimized",
-  "rollup@form@sequence-expression: only retain expressions with effects in sequence expressions (#1649)",
   "rollup@form@simplify-return-expression: Simplifies conditionals in return expression",
   "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
   "rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es",

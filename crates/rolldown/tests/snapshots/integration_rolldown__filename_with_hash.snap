@@ -4978,6 +4978,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-q3p3uKvC.js
 
+# tests/rolldown/warnings/commonjs_variable_in_esm/2
+
+- main-!~{000}~.js => main-el1CupfP.js
+
 # tests/rolldown/warnings/eval
 
 - main-!~{000}~.js => main-tfWCeD4O.js

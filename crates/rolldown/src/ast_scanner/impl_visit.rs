@@ -188,12 +188,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       ast::AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
         Expression::Identifier(ref id) => {
           if id.name == "module"
-            && self.resolve_identifier_to_root_symbol(id).is_none()
+            && self.is_global_identifier_reference(id)
             && member_expr.property.name == "exports"
           {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
           }
-          if id.name == "exports" && self.resolve_identifier_to_root_symbol(id).is_none() {
+          if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
           }
         }
@@ -201,7 +201,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         Expression::StaticMemberExpression(ref member_expr) => {
           if let Expression::Identifier(ref id) = member_expr.object {
             if id.name == "module"
-              && self.resolve_identifier_to_root_symbol(id).is_none()
+              && self.is_global_identifier_reference(id)
               && member_expr.property.name == "exports"
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));

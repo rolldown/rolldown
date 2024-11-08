@@ -1,19 +1,4 @@
 [
-  
- 
-  
-  "rollup@form@custom-module-context-function: allows custom module-specific context with a function option",
-  "rollup@form@custom-module-context: allows custom module-specific context@generates es",
-  "rollup@form@deconflict-format-specific-exports: only deconflict \"exports\" for formats where it is necessary@generates es",
-  "rollup@form@deconflict-format-specific-globals: deconflicts format specific globals@generates es",
-  "rollup@form@dedupes-external-imports: dedupes external imports@generates es",
-  "rollup@form@default-export-anonymous-class-extends: handles default exported classes extending a regular expression argument (#4783)",
-  "rollup@form@default-export-class: puts the export after the declaration for default exported classes in SystemJS@generates es",
-  "rollup@form@default-export-mode: allows specifying the export mode to be \"default\"@generates es",
-  "rollup@form@deopt-string-concatenation: deoptimize concatenation when used as an expression statement to better support es5-shim",
-  "rollup@form@deoptimize-superclass: does not deoptimize the entire superclass when reassigning a property",
-  "rollup@form@deprecated@removes-dynamic-assertions: keep import assertions for dynamic imports",
-  "rollup@form@deprecated@removes-static-attributes: keeps any import assertions on input",
   "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
   "rollup@form@dynamic-import-inlining: dynamic import inlining",
   "rollup@form@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions@generates es",
@@ -119,7 +104,6 @@
   "rollup@form@labeled-break-statements: keep break statements if their label is included",
   "rollup@form@labeled-continue-statements: keep continue statements if their label is included",
   "rollup@form@large-var-cnt-deduping: large variable count deduping",
-  "rollup@form@lazy-assignment-deoptimization: only deoptimizes assigned variables when the assignment is included",
   "rollup@form@literals-from-class-statics: tracks literal values in class static fields",
   "rollup@form@logical-expression@mutate-logical-expression: properly handle the results of mutating logical expressions@generates es",
   "rollup@form@logical-expression@simplify-non-boolean: simplifies logical expressions that resolve statically to non-boolean values",
@@ -154,7 +138,6 @@
   "rollup@form@no-treeshake-conflict: does not introduce conflicting variables with treeshake: false@generates es",
   "rollup@form@ns-external-star-reexport: supports namespaces with external star reexports@generates es",
   "rollup@form@object-expression@proto-property: Deoptimize when __proto__ is used",
-  "rollup@form@object-expression@reassign-prop-without-proto: correctly deoptimizes when there is no proto",
   "rollup@form@optional-chaining: supports optional chaining",
   "rollup@form@override-external-namespace: allows overriding imports of external namespace reexports@generates es",
   "rollup@form@paths-function: external paths (#754)@generates es",
@@ -200,7 +183,6 @@
   "rollup@form@reserved-keywords-in-imports-exports: correctly handles reserved keywords in exports/imports@generates es",
   "rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es",
   "rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es",
-  "rollup@form@self-deoptimization: handles situations where a member expression is deoptimized while being deoptimized",
   "rollup@form@simplify-return-expression: Simplifies conditionals in return expression",
   "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
   "rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es",

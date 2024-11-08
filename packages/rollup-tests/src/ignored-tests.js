@@ -90,12 +90,6 @@ const ignoreTests = [
   "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
   "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",
 
-  // Class related, `class A` -> `var A = class`
-  "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers@generates es",
-  "rollup@form@dedupes-external-imports: dedupes external imports@generates es",
-  "rollup@form@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions@generates es",
-  "rollup@form@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions@generates es",
-
   // comment related
   "rollup@form@comment-before-import: preserves comments before imports@generates es",
   "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
@@ -264,6 +258,8 @@ const ignoreTests = [
   "rollup@function@internal-reexports-from-external: supports namespaces with external star reexports",
   "rollup@function@deconflict-synthetic-named-export-cross-chunk: deconflicts synthetic named exports across chunks",
   "rollup@function@deconflict-synthetic-named-export: deconflicts synthetic named exports",
+  "rollup@form@entry-with-unused-synthetic-exports: does not include unused synthetic namespace object in entry points@generates es",
+
   // output.generatedCode.symbols is not supported 
   "rollup@function@reexport-ns: external namespace reexport",
   "rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode",
@@ -455,6 +451,12 @@ const ignoreTests = [
   "rollup@form@deopt-string-concatenation: deoptimize concatenation when used as an expression statement to better support es5-shim",
   "rollup@form@effect-in-for-of-loop-in-functions: includes effects in for-of loop (#870)@generates es",
 
+  // Test is passed. Class related, `class A` -> `var A = class`
+  "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers@generates es",
+  "rollup@form@dedupes-external-imports: dedupes external imports@generates es",
+  "rollup@form@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions@generates es",
+  "rollup@form@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions@generates es",
+  "rollup@form@empty-statament-class-member: Do not crash if class body has empty statements@generates es",
 
   // Should give error or warinings
   // The output.generatedCode.preset is not supported 

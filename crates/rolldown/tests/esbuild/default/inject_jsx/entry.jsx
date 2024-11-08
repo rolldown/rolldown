@@ -1,1 +1,1 @@
-console.log(el)
+console.log(<><div/></>)

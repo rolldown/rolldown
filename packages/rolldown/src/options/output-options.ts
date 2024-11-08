@@ -84,10 +84,26 @@ const outputOptionsSchema = z.strictObject({
     .optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
   assetFileNames: z.string().optional(),
-  entryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
-  chunkFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
-  cssEntryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
-  cssChunkFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
+  entryFileNames: z
+    .string()
+    .or(chunkFileNamesFunctionSchema)
+    .describe('name pattern for emitted entry chunks')
+    .optional(),
+  chunkFileNames: z
+    .string()
+    .or(chunkFileNamesFunctionSchema)
+    .describe('name pattern for emitted secondary chunks')
+    .optional(),
+  cssEntryFileNames: z
+    .string()
+    .or(chunkFileNamesFunctionSchema)
+    .describe('name pattern for emitted css entry chunks')
+    .optional(),
+  cssChunkFileNames: z
+    .string()
+    .or(chunkFileNamesFunctionSchema)
+    .describe('name pattern for emitted css secondary chunks')
+    .optional(),
   minify: z.boolean().describe('minify the bundled file.').optional(),
   name: z.string().describe('name for UMD / IIFE format outputs').optional(),
   globals: z

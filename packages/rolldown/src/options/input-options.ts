@@ -123,7 +123,10 @@ export const inputOptionsSchema = z.strictObject({
       `platform for which the code should be generated (node, ${underline('browser')}, neutral).`,
     )
     .optional(),
-  shimMissingExports: z.boolean().optional(),
+  shimMissingExports: z
+    .boolean()
+    .describe(`create shim variables for missing exports`)
+    .optional(),
   // FIXME: should use a more specific schema
   treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
   logLevel: LogLevelOptionSchema.describe(

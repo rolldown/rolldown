@@ -24,14 +24,14 @@ OPTIONS
   --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   .
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --chunk-file-names <name>   .
+  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --comments <comments>       .
-  --css-chunk-file-names <css-chunk-file-names>.
-  --css-entry-file-names <css-entry-file-names>.
+  --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
+  --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
   --define <define>           Define global variables.
   --drop-labels <drop-labels> .
-  --entry-file-names <name>   .
+  --entry-file-names <name>   Name pattern for emitted entry chunks.
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
@@ -52,7 +52,7 @@ OPTIONS
   --no-external-live-bindings Disable external live bindings.
   --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
-  --shim-missing-exports      .
+  --shim-missing-exports      Create shim variables for missing exports.
 
 EXAMPLES
 

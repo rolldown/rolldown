@@ -1,7 +1,7 @@
+use crate::{HookLoadArgs, PluginDriver};
 use rolldown_common::{
   side_effects::HookSideEffects, ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes,
 };
-use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;

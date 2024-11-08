@@ -1,3 +1,4 @@
+use crate::EcmaAst;
 use arcstr::ArcStr;
 use oxc::{
   index::IndexVec,
@@ -6,9 +7,9 @@ use oxc::{
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx,
-  ModuleType, RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
+  ModuleType, RawImportRecord, SharedNormalizedBundlerOptions, SymbolRef, SymbolRefDbForModule,
+  TreeshakeOptions,
 };
-use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
@@ -20,7 +21,6 @@ use crate::{
     make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
     parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},
   },
-  SharedOptions,
 };
 
 fn scan_ast(

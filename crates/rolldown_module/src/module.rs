@@ -1,10 +1,7 @@
-pub mod external_module;
-pub mod normal_module;
-
 use oxc::index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
-use crate::{
+use rolldown_common::{
   types::interop, EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule,
   ResolvedImportRecord,
 };

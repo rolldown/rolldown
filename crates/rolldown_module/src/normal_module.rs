@@ -1,12 +1,10 @@
 use std::fmt::Debug;
 
-use crate::css::css_view::CssView;
-use crate::types::module_render_output::ModuleRenderOutput;
-use crate::{
-  AssetView, Comments, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, StmtInfo,
+use rolldown_common::{
+  AssetView, Comments, CssView, DebugStmtInfoForTreeShaking, EcmaAstIdx, EcmaView, ExportsKind,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, Interop, Module, ModuleId, ModuleIdx,
+  ModuleInfo, ModuleRenderOutput, ModuleType, NormalizedBundlerOptions, StmtInfo,
 };
-use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use either::Either;

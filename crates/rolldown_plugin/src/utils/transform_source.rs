@@ -1,7 +1,7 @@
+use crate::{HookTransformArgs, PluginDriver};
 use anyhow::Result;
 use rolldown_common::ModuleType;
 use rolldown_common::{side_effects::HookSideEffects, ResolvedId};
-use rolldown_plugin::{HookTransformArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 
 pub async fn transform_source(

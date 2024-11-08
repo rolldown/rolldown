@@ -2,7 +2,7 @@
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-name                 = "rolldown_plugin"
+name                 = "rolldown_module"
 repository.workspace = true
 version              = "0.1.0"
 
@@ -18,11 +18,7 @@ inner = []
 workspace = true
 
 [dependencies]
-anyhow              = { workspace = true }
 arcstr              = { workspace = true }
-async-trait         = { workspace = true }
-dashmap             = { workspace = true }
-memchr              = { workspace = true }
 oxc                 = { workspace = true }
 oxc_index           = { workspace = true }
 rolldown_common     = { workspace = true }
@@ -31,8 +27,6 @@ rolldown_error      = { workspace = true }
 rolldown_fs         = { workspace = true }
 rolldown_resolver   = { workspace = true }
 rolldown_sourcemap  = { workspace = true }
+rolldown_std_utils  = { workspace = true }
 rolldown_utils      = { workspace = true }
 rustc-hash          = { workspace = true }
-sugar_path          = { workspace = true }
-tracing             = { workspace = true }
-typedmap            = { workspace = true, features = ["dashmap"] }

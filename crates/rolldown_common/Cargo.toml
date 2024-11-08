@@ -17,27 +17,27 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow              = { workspace = true }
-arcstr              = { workspace = true }
-bitflags            = { workspace = true }
-dashmap             = { workspace = true }
-either              = { workspace = true }
-glob-match          = { workspace = true }
-itertools           = { workspace = true }
-lightningcss        = { workspace = true }
-oxc                 = { workspace = true, features = ["semantic"] }
-rolldown_ecmascript = { workspace = true }
-rolldown_fs         = { workspace = true }
-rolldown_rstr       = { workspace = true }
-rolldown_sourcemap  = { workspace = true }
-rolldown_std_utils  = { workspace = true }
-rolldown_utils      = { workspace = true }
-rustc-hash          = { workspace = true }
-schemars            = { workspace = true, optional = true }
-serde               = { workspace = true, features = ["derive"], optional = true }
-serde_json          = { workspace = true }
-string_wizard       = { workspace = true }
-sugar_path          = { workspace = true }
+anyhow             = { workspace = true }
+arcstr             = { workspace = true }
+bitflags           = { workspace = true }
+css-module-lexer   = { workspace = true }
+dashmap            = { workspace = true }
+either             = { workspace = true }
+glob-match         = { workspace = true }
+itertools          = { workspace = true }
+lightningcss       = { workspace = true }
+oxc                = { workspace = true, features = ["semantic"] }
+rolldown_fs        = { workspace = true }
+rolldown_rstr      = { workspace = true }
+rolldown_sourcemap = { workspace = true }
+rolldown_std_utils = { workspace = true }
+rolldown_utils     = { workspace = true }
+rustc-hash         = { workspace = true }
+schemars           = { workspace = true, optional = true }
+serde              = { workspace = true, features = ["derive"], optional = true }
+serde_json         = { workspace = true }
+string_wizard      = { workspace = true }
+sugar_path         = { workspace = true }
 
 [features]
 deserialize_bundler_options = ["dep:schemars", "dep:serde"]

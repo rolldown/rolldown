@@ -17,9 +17,12 @@ workspace = true
 
 
 [dependencies]
-anyhow         = { workspace = true }
-arcstr         = { workspace = true }
-either         = { workspace = true }
-oxc            = { workspace = true }
-rolldown_error = { workspace = true }
-self_cell      = { workspace = true }
+anyhow          = { workspace = true }
+arcstr          = { workspace = true }
+either          = { workspace = true }
+oxc             = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_error  = { workspace = true }
+rolldown_utils  = { workspace = true }
+self_cell       = { workspace = true }
+sugar_path      = { workspace = true }

@@ -9,3 +9,7 @@ impl Debug for AssetView {
     f.debug_struct("AssetView").field("source", &"Box<[u8]>").finish()
   }
 }
+
+pub fn create_asset_view(source: Box<[u8]>) -> AssetView {
+  AssetView { source }
+}

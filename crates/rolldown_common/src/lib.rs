@@ -4,7 +4,6 @@ mod css;
 mod ecmascript;
 mod file_emitter;
 mod inner_bundler_options;
-mod module;
 mod type_aliases;
 mod types;
 
@@ -41,7 +40,7 @@ pub mod bundler_options {
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
-  asset::asset_view::AssetView,
+  asset::asset_view::{create_asset_view, AssetView},
   chunk::{
     chunk_table::ChunkTable,
     types::{
@@ -52,7 +51,7 @@ pub use crate::{
   css::{
     css_module::CssModule,
     css_module_idx::CssModuleIdx,
-    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
+    css_view::{create_css_view, CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
     ecma_asset_meta::EcmaAssetMeta,
@@ -61,11 +60,6 @@ pub use crate::{
     node_builtin_modules::is_builtin_modules,
   },
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
-  module::{
-    external_module::ExternalModule,
-    normal_module::{ModuleRenderArgs, NormalModule},
-    Module,
-  },
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,

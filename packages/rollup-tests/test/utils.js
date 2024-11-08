@@ -20,7 +20,7 @@ const {
 } = require('node:fs');
 const { basename, join } = require('node:path');
 const { platform, version } = require('node:process');
-const { Parser } = require('acorn');
+// const { Parser } = require('acorn');
 // const { importAssertions } = require('acorn-import-assertions');
 const fixturify = require('fixturify');
 

@@ -1,13 +1,7 @@
 {
-  "failed": 421,
+  "failed": 268,
   "skipFailed": 0,
-<<<<<<< HEAD
-  "ignored": 372,
+  "ignored": 565,
   "skipped": 0,
-  "passed": 557
-=======
-  "ignored": 391,
-  "skipped": 0,
-  "passed": 153
->>>>>>> 0fc960f72 (fix: diff formatter code)
+  "passed": 125
 }

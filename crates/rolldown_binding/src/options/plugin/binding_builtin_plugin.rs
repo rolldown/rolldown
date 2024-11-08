@@ -162,14 +162,36 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 #[napi_derive::napi(object)]
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
   pub is_production: bool,
   pub as_src: bool,
+  pub prefer_relative: bool,
+  pub root: String,
+
+  pub main_fields: Vec<String>,
+  pub conditions: Vec<String>,
+  pub extensions: Vec<String>,
+  pub try_index: bool,
+  pub try_prefix: Option<String>,
+  pub preserve_symlinks: bool,
 }
 
 impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
-    Self { is_production: value.is_production, as_src: value.as_src }
+    Self {
+      is_production: value.is_production,
+      as_src: value.as_src,
+      prefer_relative: value.prefer_relative,
+      root: value.root,
+
+      main_fields: value.main_fields,
+      conditions: value.conditions,
+      extensions: value.extensions,
+      try_index: value.try_index,
+      try_prefix: value.try_prefix,
+      preserve_symlinks: value.preserve_symlinks,
+    }
   }
 }
 

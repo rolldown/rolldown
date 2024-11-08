@@ -1,6 +1,8 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
+use crate::resolver::{self, AdditionalOptions, Resolver};
 use cow_utils::CowUtils;
+use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
@@ -9,6 +11,7 @@ use rolldown_plugin::{
 const BROWSER_EXTERNAL_ID: &str = "__vite-browser-external";
 const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
+const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
 #[derive(Debug, Default)]
 pub struct ViteResolveOptions {
@@ -19,16 +22,39 @@ pub struct ViteResolveOptions {
 pub struct ViteResolveResolveOptions {
   pub is_production: bool,
   pub as_src: bool,
+  pub prefer_relative: bool,
+  pub root: String,
+
+  pub main_fields: Vec<String>,
+  pub conditions: Vec<String>,
+  pub extensions: Vec<String>,
+  pub try_index: bool,
+  pub try_prefix: Option<String>,
+  pub preserve_symlinks: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ViteResolvePlugin {
   options: ViteResolveOptions,
+  resolver: Resolver,
 }
 
 impl ViteResolvePlugin {
   pub fn new(options: ViteResolveOptions) -> Self {
-    Self { options }
+    Self {
+      resolver: Resolver::new(&resolver::BaseOptions {
+        main_fields: &options.resolve_options.main_fields,
+        conditions: &options.resolve_options.conditions,
+        extensions: &options.resolve_options.extensions,
+        is_production: options.resolve_options.is_production,
+        try_index: options.resolve_options.try_index,
+        try_prefix: &options.resolve_options.try_prefix,
+        as_src: options.resolve_options.as_src,
+        root: &options.resolve_options.root,
+        preserve_symlinks: options.resolve_options.preserve_symlinks,
+      }),
+      options,
+    }
   }
 }
 
@@ -82,6 +108,29 @@ impl Plugin for ViteResolvePlugin {
         external: Some(true),
         ..Default::default()
       }));
+    }
+
+    let additional_options = AdditionalOptions::new(
+      args.kind == ImportKind::Require,
+      self.options.resolve_options.prefer_relative || args.specifier.ends_with(".html"),
+      is_from_ts_importer(args.importer),
+    );
+    let resolver = self.resolver.get(additional_options);
+
+    if is_bare_import(args.specifier) {
+      // TODO
+      return Ok(None);
+    }
+
+    let base_dir = args
+      .importer
+      .map(|i| Path::new(i).parent().map(|i| i.to_str().unwrap()).unwrap_or(i))
+      .unwrap_or(&self.options.resolve_options.root);
+    let resolved =
+      normalize_oxc_resolver_result(&self.resolver, resolver.resolve(base_dir, args.specifier))?;
+    if let Some(resolved) = resolved {
+      // TODO: call `finalize_other_specifiers`
+      return Ok(Some(resolved));
     }
 
     Ok(None)
@@ -141,17 +190,9 @@ module.exports = Object.create(new Proxy({{}}, {{
 
 fn fs_path_from_id(id: &str) -> Cow<str> {
   let fs_path = normalize_path(id.strip_prefix(FS_PREFIX).unwrap_or(id));
-  if fs_path.starts_with('/') {
+  if fs_path.starts_with('/') || is_windows_drive_path(&fs_path) {
     return fs_path;
   }
-  let fs_path_bytes = fs_path.as_bytes();
-
-  // check if fs_path matches `^[a-zA-Z]:`
-  if fs_path_bytes.len() >= 2 && fs_path_bytes[0].is_ascii_alphabetic() && fs_path_bytes[1] == b':'
-  {
-    return fs_path;
-  }
-
   format!("/{fs_path}").into()
 }
 
@@ -171,5 +212,76 @@ fn is_external_url(id: &str) -> bool {
     }
   } else {
     false
+  }
+}
+
+fn is_windows_drive_path(id: &str) -> bool {
+  let id_bytes = id.as_bytes();
+  id_bytes.len() >= 2 && id_bytes[0].is_ascii_alphabetic() && id_bytes[1] == b':'
+}
+
+// bareImportRE.test(id)
+fn is_bare_import(id: &str) -> bool {
+  if is_windows_drive_path(id) {
+    return false;
+  }
+
+  id.starts_with(|c| is_regex_w_character_class(c) || c == '@') && !id.contains("://")
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Character_class_escape#w
+fn is_regex_w_character_class(c: char) -> bool {
+  c.is_ascii_alphanumeric() || c == '_'
+}
+
+fn is_from_ts_importer(importer: Option<&str>) -> bool {
+  if let Some(importer) = importer {
+    // TODO: support depScan, moduleMeta
+    has_suffix(importer, TS_EXTENSIONS)
+  } else {
+    false
+  }
+}
+
+fn has_suffix(s: &str, suffix: &[&str]) -> bool {
+  if suffix.iter().any(|suffix| s.ends_with(suffix)) {
+    return true;
+  }
+
+  if let Some((s, _)) = s.split_once('?') {
+    suffix.iter().any(|suffix| s.ends_with(suffix))
+  } else {
+    false
+  }
+}
+
+fn normalize_oxc_resolver_result(
+  resolver: &Resolver,
+  result: Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
+) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
+  match result {
+    Ok(result) => {
+      let raw_path = result.full_path().to_str().unwrap().to_string();
+      let path = raw_path.strip_prefix("\\\\?\\").unwrap_or(&raw_path);
+      let path = normalize_path(path);
+
+      let side_effects = result
+        .package_json()
+        .and_then(|pkg_json| {
+          resolver.cached_package_json(pkg_json).check_side_effects_for(&raw_path)
+        })
+        .map(
+          |side_effects| if side_effects { HookSideEffects::True } else { HookSideEffects::False },
+        );
+      Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
+    }
+    Err(oxc_resolver::ResolveError::NotFound(_id)) => {
+      // TODO
+      Ok(None)
+    }
+    Err(oxc_resolver::ResolveError::Ignored(_)) => {
+      Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.to_string(), ..Default::default() }))
+    }
+    Err(err) => Err(err),
   }
 }

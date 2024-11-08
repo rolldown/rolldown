@@ -441,6 +441,14 @@ export interface BindingViteResolvePluginConfig {
 export interface BindingViteResolvePluginResolveOptions {
   isProduction: boolean
   asSrc: boolean
+  preferRelative: boolean
+  root: string
+  mainFields: Array<string>
+  conditions: Array<string>
+  extensions: Array<string>
+  tryIndex: boolean
+  tryPrefix?: string
+  preserveSymlinks: boolean
 }
 
 export declare enum BindingWatcherEvent {

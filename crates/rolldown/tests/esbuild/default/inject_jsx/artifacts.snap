@@ -8,6 +8,11 @@ snapshot_kind: text
 
 ```js
 
+//#region inject.js
+function el() {}
+function frag() {}
+
+//#endregion
 //#region entry.jsx
 console.log(el(frag, null, el("div", null)));
 

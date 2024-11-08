@@ -24,17 +24,12 @@ console.log(
 ### rolldown
 ```js
 
+//#region inject.js
+let test = 100;
+
+//#endregion
 //#region entry.js
-console.log(
-	// These should be fully substituted
-	import.meta,
-	import.meta.foo,
-	import.meta.foo.bar,
-	// Should just substitute "import.meta.foo"
-	import.meta.foo.baz,
-	// This should not be substituted
-	import.meta.bar
-);
+console.log(test);
 
 //#endregion
 ```
@@ -43,11 +38,12 @@ console.log(
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,1 @@
+@@ -1,4 +1,2 @@
 -var foo = 1;
 -var bar = 2;
 -var baz = 3;
 -console.log(foo, bar, baz, bar.baz, foo.bar);
-+console.log(import.meta, import.meta.foo, import.meta.foo.bar, import.meta.foo.baz, import.meta.bar);
++var test = 100;
++console.log(test);
 
 ```

@@ -986,7 +986,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_assign
 
-- entry-!~{000}~.js => entry-9ivNsWOn.js
+- entry-!~{000}~.js => entry-8ett9VXb.js
 
 # tests/esbuild/default/inject_duplicate
 
@@ -994,7 +994,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_import_meta
 
-- entry-!~{000}~.js => entry-ukwammug.js
+- entry-!~{000}~.js => entry-9PFeDbOz.js
 
 # tests/esbuild/default/inject_import_order
 
@@ -1006,7 +1006,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_jsx
 
-- entry-!~{000}~.js => entry-AFVdgWBf.js
+- entry-!~{000}~.js => entry-H6EmDgdJ.js
 
 # tests/esbuild/default/inject_jsx_dot_names
 

@@ -29,17 +29,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names
 - crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
-## different inject implementation
-- crates/rolldown/tests/esbuild/default/inject
-- crates/rolldown/tests/esbuild/default/inject_duplicate
-- crates/rolldown/tests/esbuild/default/inject_import_meta
-- crates/rolldown/tests/esbuild/default/inject_import_order
-- crates/rolldown/tests/esbuild/default/inject_import_ts
-- crates/rolldown/tests/esbuild/default/inject_jsx
-- crates/rolldown/tests/esbuild/default/inject_jsx_dot_names
-- crates/rolldown/tests/esbuild/default/inject_no_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -89,6 +78,12 @@
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
+## different inject implementation
+- crates/rolldown/tests/esbuild/default/inject
+- crates/rolldown/tests/esbuild/default/inject_import_meta
+- crates/rolldown/tests/esbuild/default/inject_no_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## Wrong output
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file

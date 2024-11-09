@@ -4,12 +4,12 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/x-QPVb1P9U.txt
+## assets/x-10ZlLk_R.txt
 
 ```txt
 x
 ```
-## assets/y-wSWe67SA.txt
+## assets/y-319pXHJ8.txt
 
 ```txt
 y
@@ -20,12 +20,12 @@ y
 
 
 //#region y.txt
-var y_default = "assets/y-wSWe67SA.txt";
+var y_default = "assets/y-319pXHJ8.txt";
 
 //#endregion
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
-	module.exports = "assets/x-QPVb1P9U.txt";
+	module.exports = "assets/x-10ZlLk_R.txt";
 } });
 
 //#endregion

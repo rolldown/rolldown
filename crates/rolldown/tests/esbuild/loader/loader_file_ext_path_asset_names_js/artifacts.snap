@@ -4,12 +4,12 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/file-Ji3Mzccb.txt
+## assets/file-CbsPdNNJ.txt
 
 ```txt
 y
 ```
-## assets/image-6tcw8vpN.png
+## assets/image-3GRP3O-A.png
 
 ```png
 x
@@ -19,11 +19,11 @@ x
 ```js
 
 //#region images/image.png
-var image_default = "assets/image-6tcw8vpN.png";
+var image_default = "assets/image-3GRP3O-A.png";
 
 //#endregion
 //#region uploads/file.txt
-var file_default = "assets/file-Ji3Mzccb.txt";
+var file_default = "assets/file-CbsPdNNJ.txt";
 
 //#endregion
 //#region entries/entry.js

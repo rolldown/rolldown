@@ -4,14 +4,14 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/image-6tcw8vpN.png
+## assets/image-3GRP3O-A.png
 
 ## entries_entry.js
 
 ```js
 
 //#region images/image.png
-var image_default = "assets/image-6tcw8vpN.png";
+var image_default = "assets/image-3GRP3O-A.png";
 
 //#endregion
 //#region entries/entry.js

@@ -42,7 +42,7 @@ snapshot_kind: text
 ```
 # Assets
 
-## assets/file-JEFwJEkD.file
+## assets/file-Agn0Aigc.file
 
 ## copy.js
 
@@ -50,7 +50,7 @@ snapshot_kind: text
 
 
 //#region file.file
-var file_default = "assets/file-JEFwJEkD.file";
+var file_default = "assets/file-Agn0Aigc.file";
 
 //#endregion
 //#region copy.copy

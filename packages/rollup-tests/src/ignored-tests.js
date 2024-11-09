@@ -22,7 +22,11 @@ const ignoreTests = [
   // It crashed at call `banner` function at rust. 
   "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
 
+  // The output plugins is not working
+  "rollup@form@per-output-plugins: allows specifying per-output plugins@generates es",
+
   // The treeshake is not working as expected
+  "rollup@form@tdz-access-in-declaration: detect accessing TDZ variables within the declaration",
   "rollup@function@tree-shake-variable-declarations-2: remove unused variables from declarations (#1831)",
   "rollup@function@can-import-self-treeshake: direct self import", // check chunk why is empty
   "rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable",// check chunk why is empty
@@ -73,11 +77,25 @@ const ignoreTests = [
   "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", // import external module is tree-shakend
   "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
+  "rollup@form@mutations-in-imports: track mutations of imports",
+  "rollup@form@quote-id: handles escaping for external ids@generates es",
+  "rollup@form@relative-external-ids: relative external ids are absolutely resolved",
+
+  // The `this` related
+  "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions", 
+  "rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es",
 
   // `return init_foo(), foo_exports;` is not expected 
   "rollup@form@dynamic-import-inlining: dynamic import inlining",
   "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
   "rollup@form@inline-with-reexport: handles inlining dynamic imports when the imported module contains reexports",
+  "rollup@form@nested-inlined-dynamic-import: deconflicts variables when nested dynamic imports are inlined@generates es",
+
+  // /*@__PURE__*/ related
+  "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",
+  "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", 
+  // treeshake.annotations false is not supported
+  "rollup@form@pure-comments-disabled: does not rely on pure annotations if they are disabled",
 
   // deconfilct
   "rollup@function@deshadow-respect-existing: respect existing variable names when deshadowing",
@@ -115,6 +133,9 @@ const ignoreTests = [
   "rollup@function@relative-external-include-once: includes a relative external module only once",
   "rollup@function@external-directory-import: handles using ../ as external import (#4349)", // makeAbsoluteExternalsRelative normlized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51
   "rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external",
+  "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",
+  "rollup@form@make-absolute-externals-relative@make-relative-relative: only normalizes external paths that were originally relative when set to \"ifRelativeSource\"",
+  "rollup@form@make-absolute-externals-relative@make-relative-true: normalizes both relative and absolute external paths when set to true",
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",
@@ -153,7 +174,9 @@ const ignoreTests = [
   "rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId",
   "rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports",
   "rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input",
-
+  
+  // output.sourcemapExcludeSources is not supported
+  "rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es",
   // output.sourcemapBaseUrl is not supported
   "rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
@@ -258,6 +281,7 @@ const ignoreTests = [
   "rollup@function@input-name-validation3: throws for relative paths as input names",
   "rollup@function@input-name-validation: throws for absolute paths as input names",
   // syntheticNamedExports is not supported
+  "rollup@form@synthetic-named-exports: synthetic named exports",
   "rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy",
   "rollup@function@synthetic-named-exports-fallback: adds a fallback in case synthetic named exports are falsy",
   "rollup@function@synthetic-named-exports@circular-synthetic-exports2: handles circular synthetic exports",
@@ -278,6 +302,8 @@ const ignoreTests = [
   "rollup@function@deconflict-synthetic-named-export-cross-chunk: deconflicts synthetic named exports across chunks",
   "rollup@function@deconflict-synthetic-named-export: deconflicts synthetic named exports",
   "rollup@form@entry-with-unused-synthetic-exports: does not include unused synthetic namespace object in entry points@generates es",
+  "rollup@form@merge-namespaces-non-live: merges namespaces without live-bindings",
+  "rollup@form@merge-namespaces: merges namespaces with live-bindings",
 
   // output.generatedCode is not supported 
   "rollup@form@generated-code-compact@arrow-functions-false: does not use arrow functions@generates es",
@@ -309,6 +335,9 @@ const ignoreTests = [
   "rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag",
   "rollup@function@namespace-tostring@property-descriptor: namespace export should have @@toStringTag with correct property descriptors #4336",
   "rollup@function@name-conflict-symbol: avoids name conflicts with local variables named Symbol", // the `Symbol` need to deconflict
+  "rollup@form@namespace-tostring@inlined-namespace-static-resolution: statically resolves Symbol.toStringTag for inlined namespaces",
+  "rollup@form@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces@generates es",
+
   // PluginContext.cache is not supported
   "rollup@function@plugin-cache@anonymous-delete: throws for anonymous plugins deleting from the cache",
   "rollup@function@plugin-cache@anonymous-get: throws for anonymous plugins reading the cache",
@@ -366,11 +395,15 @@ const ignoreTests = [
   // shouldTransformCachedModule hook is not supported
   "rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build",
   // PluginContext.load is not supported
+  "rollup@form@supports-es5-shim: supports es5-shim",
+  "rollup@form@supports-es6-shim: supports es6-shim",
+  "rollup@form@supports-core-js: supports core-js",
   "rollup@function@preload-after-build: supports this.load() in buildEnd and renderStart",
   "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",
   "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
   "rollup@function@preload-module: allows pre-loading modules via this.load",
   "rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees",
+  "rollup@form@try-statement-deoptimization@supports-core-js: supports core-js feature detection (#2869)",
 
   // Retrun `meta` from transform hook is not supported
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
@@ -424,6 +457,9 @@ const ignoreTests = [
   // The `output.paths` is not supported
   "rollup@function@re-export-own: avoid using export.hasOwnProperty",
   "rollup@function@mixed-external-paths: allows using the path option selectively",
+  "rollup@form@paths-function: external paths (#754)@generates es",
+  "rollup@form@paths-relative: external paths (#754)@generates es",
+  "rollup@form@paths: external paths (#754)@generates es",
   // The `output.compact` is not supported
   "rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode",
   "rollup@function@compact: compact output with compact: true", // Check test runner
@@ -434,6 +470,8 @@ const ignoreTests = [
   "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
   "rollup@function@import-meta-url: resolves import.meta.url",
   "rollup@form@import-meta-url: supports import.meta.url@generates es",
+  "rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es",
+  "rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es",
 
   // output.format systemjs is not supported
   "rollup@form@system-comments: Correctly places leading comments when rendering system bindings",
@@ -449,6 +487,7 @@ const ignoreTests = [
   "rollup@form@system-semicolon: supports asi in system binding output",
   "rollup@form@system-uninitialized: supports uninitialized binding exports",
   "rollup@form@import-namespace-systemjs: imports namespace (systemjs only)",
+  "rollup@form@modify-export-semi: inserts semicolons correctly when modifying SystemJS exports@generates system",
 
   // Should delete use strict from function body
   "rollup@function@function-use-strict-directive-removed: should delete use strict from function body",
@@ -471,6 +510,9 @@ const ignoreTests = [
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
   "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",
+  "rollup@form@render-chunk-plugin-sourcemaps: supports returning undefined source maps from render chunk hooks, when source maps are enabled@generates es", // file not expected
+  "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // file not expected
+  "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // file not expected
 
   // The namespace object is not compatible with rollup
   "rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes",
@@ -483,6 +525,12 @@ const ignoreTests = [
   "rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports",
 
   // Passed, but the output snapshot is same as rollup
+  "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
+  "rollup@form@render-named-export-declarations: renders named export declarations@generates es",
+  "rollup@form@render-declaration-semicolons: properly inserts semi-colons after declarations (#1993)@generates es",
+  "rollup@form@removes-existing-sourcemap-comments: removes existing sourcemap comments@generates es",
+  "rollup@form@re-export-aliasing: external re-exports aliasing@generates es",
+  "rollup@form@pure-class-field: retains pure annotations in class fields",
   "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
   "rollup@form@automatic-semicolon-insertion-var: Adds trailing semicolons for modules",
   "rollup@form@base64-deshadow: base64 deshadowing indices",
@@ -527,8 +575,47 @@ const ignoreTests = [
   "rollup@form@labeled-break-statements: keep break statements if their label is included",
   "rollup@form@labeled-continue-statements: keep continue statements if their label is included",
   "rollup@form@large-var-cnt-deduping: large variable count deduping",
+  "rollup@form@mjs: supports loading mjs with precedence@generates es",
+  "rollup@form@namespace-conflict: replaces conflicting namespace properties with undefined",
+  "rollup@form@namespace-import-reexport-2: properly associate or shadow variables in and around functions@generates es",
+  "rollup@form@namespace-import-reexport: properly associate or shadow variables in and around functions@generates es",
+  "rollup@form@namespace-object-import: properly encodes reserved names if namespace import is used@generates es",
+  "rollup@form@namespace-optimization-b: it does static lookup optimization of internal namespaces, coping with multiple namespaces in one function@generates es",
+  "rollup@form@namespace-reexport-name: uses correct names when reexporting from namespace reexports (#4049)@generates es", // the rollup result is simply
+  "rollup@form@namespace-self-import: namespace early import hoisting@generates es",
+  "rollup@form@namespace-tostring@entry-default: does not add Symbol.toStringTag property to entry chunks with default export mode@generates es",
+  "rollup@form@namespace-tostring@entry-named: adds Symbol.toStringTag property to entry chunks with named exports@generates es",
+  "rollup@form@namespaced-default-exports: creates namespaced module names@generates es",
+  "rollup@form@namespaces-have-null-prototype: creates namespaces with null prototypes@generates es",
+  "rollup@form@no-external-live-bindings-compact: Allows omitting the code that handles external live bindings in compact mode@generates es",
+  "rollup@form@no-external-live-bindings: Allows omitting the code that handles external live bindings@generates es",
+  "rollup@form@ns-external-star-reexport: supports namespaces with external star reexports@generates es",
+  "rollup@form@override-external-namespace: allows overriding imports of external namespace reexports@generates es",
+  "rollup@form@pattern-member-expressions: handles member expressions in patterns (#2750)",
+  "rollup@form@recursive-assignments: do not fail for pathological recursive algorithms and circular structures",
+  "rollup@form@recursive-literal-values: do not fail for literal values from recursive return values",
+  "rollup@form@relative-external-with-global: applies globals to externalised relative imports@generates es",
+  // Passed. convert reexport to import and export
+  "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
+  "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",
+  "rollup@form@reexport-external-default-as-name-and-name: re-exports a named external export as default@generates es",
+  "rollup@form@reexport-external-default: reexports an external default export@generates es",
+  "rollup@form@reexport-external-name-as-default2: re-exports a named external export as default via another file@generates es",
+  "rollup@form@reexport-external-name-as-default: re-exports a named external export as default@generates es",
+  "rollup@form@reexport-external-name: re-exports a named export from an external module@generates es",
+  "rollup@form@reexport-external-namespace-as: reexport external namespace as name@generates es",
+  "rollup@form@reexport-external-namespace: re-exports * from external module (#791)@generates es",
+  "rollup@form@reexport-used-external-namespace-as: reexport external namespace as name if the namespace is also used@generates es",
+  "rollup@form@reserved-keywords-in-imports-exports: correctly handles reserved keywords in exports/imports@generates es",
+  "rollup@form@top-level-await: top-level await support@generates system",
+  "rollup@form@undefined-default-export: handles default exporting undefined",
+  "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
+  "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
 
   // Test is passed. Class related, `class A` -> `var A = class`
+  "rollup@form@use-class-name-in-static-block: use the original class name instead of renderName in class body@generates es",
+  "rollup@form@static-method-deoptimization: avoids infinite recursions when deoptimizing \"this\" context",
+  "rollup@form@reassigned-exported-functions-and-classes: use legal names for exported functions and classed (#1943)@generates es",
   "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers@generates es",
   "rollup@form@dedupes-external-imports: dedupes external imports@generates es",
   "rollup@form@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions@generates es",
@@ -690,6 +777,23 @@ const ignoreTests = [
   "rollup@form@literals-from-class-statics: tracks literal values in class static fields", // minify feature
   "rollup@form@logical-expression@mutate-logical-expression: properly handle the results of mutating logical expressions@generates es",
   "rollup@form@logical-expression@simplify-non-boolean: simplifies logical expressions that resolve statically to non-boolean values", //  minify feature
+  "rollup@form@namespace-missing-export-effects: handles interacting with missing namespace members", // the cross module const folding
+  "rollup@form@namespace-optimization-computed-string: it does dynamic lookup optimization of internal namespaces for string-literal keys@generates es",
+  "rollup@form@nested-this-expressions: properly keep or ignore nested \"this\"-expressions",
+  "rollup@form@object-expression@proto-property: Deoptimize when __proto__ is used", // minify feature
+  "rollup@form@optional-chaining: supports optional chaining", // minify feature
+  "rollup@form@property-setters-and-getters@early-access-getter-return: handles accessing the return expression of a getter before it has been bound",
+  "rollup@form@property-setters-and-getters@early-access-getter-value: handles accessing the value of a getter before it has been bound",
+  "rollup@form@property-setters-and-getters@shadowed-setters: handles setters shadowed by computed setters",
+  "rollup@form@prototype-functions: properly includes prototype functions",// const folding
+  "rollup@form@redeclarations: make sure re-declarations via var and function are linked properly",
+  "rollup@form@render-removed-statements: make sure removed statements do no leave unwanted white-space",
+  "rollup@form@simplify-return-expression: Simplifies conditionals in return expression",
+  "rollup@form@switch-scopes: correctly handles switch scopes",
+  "rollup@form@tdz-pattern-access: handles accessing variables declared in patterns before their declaration",
+  "rollup@form@this-in-imports: properly keep or ignore \"this\"-expressions when calling imported functions",
+  "rollup@form@unmodified-default-exports: does not treat property assignment as rebinding for sake of unbound default exports",
+  "rollup@form@wrap-simplified-expressions: wraps simplified expressions that have become callees if necessary@generates es", // const folding
 ]
 
 // Generated by packages/rollup-tests/test/form/found-tree-shaking-not-align.js

@@ -97,6 +97,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     css_chunk_filenames: raw_options
       .css_chunk_filenames
       .unwrap_or_else(|| "[name]-[hash].css".to_string().into()),
+    file_loader_filenames: "[name]-[hash:8][extname]".to_string().into(),
     banner: raw_options.banner,
     footer: raw_options.footer,
     intro: raw_options.intro,

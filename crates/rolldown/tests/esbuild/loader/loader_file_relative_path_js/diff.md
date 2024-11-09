@@ -14,7 +14,7 @@ console.log(image_default);
 ```js
 
 //#region images/image.png
-var image_default = "assets/image-3GRP3O-A.png";
+var image_default = "assets/image-Dq1zDy-k.png";
 
 //#endregion
 //#region entries/entry.js
@@ -29,7 +29,7 @@ console.log(image_default);
 +++ rolldown	entries_entry.js
 @@ -1,2 +1,2 @@
 -var image_default = "../image-LSAMBFUD.png";
-+var image_default = "assets/image-3GRP3O-A.png";
++var image_default = "assets/image-Dq1zDy-k.png";
  console.log(image_default);
 
 ```

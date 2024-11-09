@@ -4,7 +4,7 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/image-3GRP3O-A.png
+## assets/image-Dq1zDy-k.png
 
 ```png
 x
@@ -13,7 +13,7 @@ x
 
 ```css
 div {
-	background: url(assets/image-3GRP3O-A.png);
+	background: url(assets/image-Dq1zDy-k.png);
 }
 
 ```
@@ -22,7 +22,7 @@ div {
 ```js
 
 //#region images/image.png
-var image_default = "assets/image-3GRP3O-A.png";
+var image_default = "assets/image-Dq1zDy-k.png";
 
 //#endregion
 ```

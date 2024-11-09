@@ -4,13 +4,13 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/some-KvyFEe5A.file
+## assets/some-ufipoOFk.file
 
 ## src_entry.css
 
 ```css
 body {
-	background: url(assets/some-KvyFEe5A.file);
+	background: url(assets/some-ufipoOFk.file);
 }
 
 ```
@@ -19,7 +19,7 @@ body {
 ```js
 
 //#region assets/some.file
-var some_default = "assets/some-KvyFEe5A.file";
+var some_default = "assets/some-ufipoOFk.file";
 
 //#endregion
 ```

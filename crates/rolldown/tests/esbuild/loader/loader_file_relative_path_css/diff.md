@@ -12,7 +12,7 @@ div {
 ### rolldown
 ```js
 div {
-	background: url(assets/image-3GRP3O-A.png);
+	background: url(assets/image-Dq1zDy-k.png);
 }
 
 ```
@@ -27,7 +27,7 @@ div {
 -  background: url("../image-LSAMBFUD.png");
 -}
 \ No newline at end of file
-+	background: url(assets/image-3GRP3O-A.png);
++	background: url(assets/image-Dq1zDy-k.png);
 +}
 
 ```

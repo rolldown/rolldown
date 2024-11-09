@@ -4,7 +4,7 @@ snapshot_kind: text
 ---
 # Assets
 
-## common-imported-by-js-1m2jrEpe.css
+## common-imported-by-js-BWCTboZO.css
 
 ```css
 body {
@@ -20,7 +20,7 @@ body {
 ```js
 
 ```
-## entry-a-2HxpeEdc.css
+## entry-a-CrhZOoNM.css
 
 ```css
 
@@ -43,7 +43,7 @@ console.log("entry-a");
 
 //#endregion
 ```
-## entry-b-vF0W47Xs.css
+## entry-b-fpA6EH7c.css
 
 ```css
 

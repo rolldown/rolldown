@@ -4,7 +4,7 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/test-TAMejr9Y.png
+## assets/test-3kwOTbJ8.png
 
 ## main.css
 
@@ -15,7 +15,7 @@ body {
 
 body {
   background-color: #f0f0f0;
-  background-image: url(assets/test-TAMejr9Y.png);
+  background-image: url(assets/test-3kwOTbJ8.png);
 }
 
 
@@ -25,7 +25,7 @@ body {
 ```js
 
 //#region test.png
-var test_default = "assets/test-TAMejr9Y.png";
+var test_default = "assets/test-3kwOTbJ8.png";
 
 //#endregion
 ```

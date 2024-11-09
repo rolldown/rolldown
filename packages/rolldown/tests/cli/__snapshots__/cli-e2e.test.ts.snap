@@ -49,8 +49,8 @@ OPTIONS
   --jsx.refresh               React refresh transformation.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Disable External live bindings.
-  --no-treeshake              Disable Enable treeshaking.
+  --no-external-live-bindings Disable external live bindings.
+  --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --shim-missing-exports      Create shim variables for missing exports.
 

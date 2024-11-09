@@ -188,7 +188,7 @@ export const inputCliOptionsSchema = inputOptionsSchema
       .optional(),
     treeshake: z
       .boolean()
-      .describe('Enable treeshaking')
+      .describe('enable treeshaking')
       .default(true)
       .optional(),
   })

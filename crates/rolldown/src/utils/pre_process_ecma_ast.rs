@@ -6,11 +6,11 @@ use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SemanticBuilder, Stats, SymbolTable};
 use oxc::transformer::{
-  InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig, TransformOptions,
-  Transformer,
+  ESTarget as OxcESTarget, InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
+  TransformOptions, Transformer,
 };
 
-use rolldown_common::NormalizedBundlerOptions;
+use rolldown_common::{ESTarget, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_error::{BuildDiagnostic, Severity};
 
@@ -59,11 +59,13 @@ impl PreProcessEcmaAst {
     let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
 
     // Transform TypeScript and jsx.
-    if !matches!(parse_type, OxcParseType::Js) {
+    if !matches!(parse_type, OxcParseType::Js) || !matches!(bundle_options.target, ESTarget::EsNext)
+    {
       let ret = ast.program.with_mut(move |fields| {
-        let mut transformer_options = TransformOptions::default();
+        let target: OxcESTarget = bundle_options.target.into();
+        let mut transformer_options = TransformOptions::from(target);
         match parse_type {
-          OxcParseType::Js => unreachable!("Should not reach here"),
+          OxcParseType::Js => {}
           OxcParseType::Jsx | OxcParseType::Tsx => {
             transformer_options.jsx.jsx_plugin = true;
           }

@@ -12,6 +12,7 @@ use super::checks_options::ChecksOptions;
 use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::output_option::ChunkFilenamesOutputOption;
+use super::target::ESTarget;
 use super::treeshake::TreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
@@ -72,6 +73,7 @@ pub struct NormalizedBundlerOptions {
   pub watch: WatchOption,
   pub comments: Comments,
   pub drop_labels: FxHashSet<String>,
+  pub target: ESTarget,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

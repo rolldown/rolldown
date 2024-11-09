@@ -33,6 +33,7 @@ pub mod bundler_options {
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
+      target::ESTarget,
       treeshake::{InnerOptions, ModuleSideEffects, TreeshakeOptions},
       watch_option::{NotifyOption, WatchOption},
     },

@@ -31,13 +31,13 @@ console.log(
 
 //#region a/test.txt
 var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
-	module.exports = "assets/test-axxhOgr8.txt";
+	module.exports = "assets/test-1H764W2L.txt";
 } });
 
 //#endregion
 //#region b/test.txt
 var require_test = __commonJS({ "b/test.txt"(exports, module) {
-	module.exports = "assets/test-NT_ktVcT.txt";
+	module.exports = "assets/test-Rf-iRlNf.txt";
 } });
 
 //#endregion
@@ -56,14 +56,14 @@ console.log(require_test$1(), require_test());
 +var require_test$1 = __commonJS({
      "a/test.txt"(exports, module) {
 -        module.exports = "./test-J7OMUXO3.txt";
-+        module.exports = "assets/test-axxhOgr8.txt";
++        module.exports = "assets/test-1H764W2L.txt";
      }
  });
 -var require_test2 = __commonJS({
 +var require_test = __commonJS({
      "b/test.txt"(exports, module) {
 -        module.exports = "./test-J7OMUXO3.txt";
-+        module.exports = "assets/test-NT_ktVcT.txt";
++        module.exports = "assets/test-Rf-iRlNf.txt";
      }
  });
 -console.log(require_test(), require_test2());

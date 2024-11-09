@@ -32,8 +32,7 @@ const PRELOAD_METHOD: &str = "__vitePreload";
 
 pub const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 
-// TODO:replace `\t` with `\0`
-const PRELOAD_HELPER_ID: &str = "\tvite/preload-helper.js";
+const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 /// First element is the import specifier, second element is `decls` or `props` of expr
 #[derive(Debug)]

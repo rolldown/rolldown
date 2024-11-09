@@ -425,6 +425,10 @@ const ignoreTests = [
   "rollup@form@interop-per-dependency: allows to configure the interop type per external dependency@generates es",
   "rollup@form@interop-per-reexported-dependency: allows to configure the interop type per reexported external dependency@generates es",
 
+  // The `output.globals` function is not supported
+  "rollup@form@globals-function: Externals aliases with deshadowing@generates es",
+  "rollup@form@external-imports-custom-names-function: allows globals to be specified as a function@generates es",
+
   // The load hook retrun ast is not supported
   "rollup@function@uses-supplied-ast: uses supplied AST",
 

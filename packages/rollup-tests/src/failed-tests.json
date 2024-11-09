@@ -1,4 +1,1 @@
-[
-  "rollup@form@external-imports-custom-names-function: allows globals to be specified as a function@generates es",
-  "rollup@form@globals-function: Externals aliases with deshadowing@generates es"
-]
+[]

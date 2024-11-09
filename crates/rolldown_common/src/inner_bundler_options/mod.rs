@@ -5,6 +5,7 @@ use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
+use types::target::ESTarget;
 use types::watch_option::WatchOption;
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -149,6 +150,7 @@ pub struct BundlerOptions {
   pub jsx: Option<JsxOptions>,
   pub watch: Option<WatchOption>,
   pub comments: Option<Comments>,
+  pub target: Option<ESTarget>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

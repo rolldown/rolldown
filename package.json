@@ -56,6 +56,7 @@
     "*.{js,ts,json,md,yml,yaml,vue}": [
       "prettier --write",
       "pnpm lint-code -- --fix"
-    ]
+    ],
+    "*": "cspell --no-progress --gitignore --no-must-find-files"
   }
 }

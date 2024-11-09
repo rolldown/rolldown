@@ -6,11 +6,8 @@ use rolldown_plugin::{
 use std::borrow::Cow;
 
 const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
-// TODO: vite use `\0` to prefix MODULE_PRELOAD_POLYFILL, but because `napi` impl, it will raise
-// `Caused by: Error: Rolldown internal error: file name contained an unexpected NUL byte`
-// so here use `\t` instead, use `\0` instead when the issue is fixed.
 
-const RESOLVED_MODULE_PRELOAD_POLYFILL_ID: &str = "\tvite/modulepreload-polyfill.js";
+const RESOLVED_MODULE_PRELOAD_POLYFILL_ID: &str = "\0vite/modulepreload-polyfill.js";
 
 const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 

@@ -1,5 +1,5 @@
 
-//#region 	vite/modulepreload-polyfill.js
+//#region \0vite/modulepreload-polyfill.js
 __VITE_IS_MODERN__ && function polyfill() {
 	const relList = document.createElement("link").relList;
 	if (relList && relList.supports && relList.supports("modulepreload")) return;

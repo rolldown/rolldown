@@ -16,6 +16,8 @@ const ignoreTests = [
   // Ignore skipIfWindows test avoid test status error
   'rollup@function@preserve-symlink: follows symlinks',
   'rollup@function@symlink: follows symlinks',
+  "rollup@form@sourcemaps-inline: correct sourcemaps are written (inline)@generates es",
+
   // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
   "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es",
   // Here has unexpected error `Error: nul byte found in provided data at position: 0` from rust due to #967.

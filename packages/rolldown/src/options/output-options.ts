@@ -23,7 +23,7 @@ const ModuleFormatSchema = z
   .or(z.literal('iife'))
   .or(z.literal('umd'))
   .describe(
-    `output format of the generated bundle (supports ${underline('esm')}, cjs, and iife).`,
+    `Output format of the generated bundle (supports ${underline('esm')}, cjs, and iife)`,
   ) satisfies z.ZodType<ModuleFormat>
 
 const addonFunctionSchema = z
@@ -41,7 +41,7 @@ const chunkFileNamesFunctionSchema = z
 const outputOptionsSchema = z.strictObject({
   dir: z
     .string()
-    .describe('Output directory, defaults to `dist` if `file` is not set.')
+    .describe('Output directory, defaults to `dist` if `file` is not set')
     .optional(),
   file: z.string().describe('Single output file').optional(),
   exports: z
@@ -50,13 +50,14 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('default'))
     .or(z.literal('none'))
     .describe(
-      `specify a export mode (${underline('auto')}, named, default, none)`,
+      `Specify a export mode (${underline('auto')}, named, default, none)`,
     )
     .optional(),
   hashCharacters: z
     .literal('base64')
     .or(z.literal('base36'))
     .or(z.literal('hex'))
+    .describe('Use the specified character set for file hashes')
     .optional(),
   format: ModuleFormatSchema.optional(),
   sourcemap: z
@@ -64,7 +65,7 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('inline'))
     .or(z.literal('hidden'))
     .describe(
-      `generate sourcemap (\`-s inline\` for inline, or ${bold('pass the `-s` on the last argument if you want to generate `.map` file')}).`,
+      `Generate sourcemap (\`-s inline\` for inline, or ${bold('pass the `-s` on the last argument if you want to generate `.map` file')})`,
     )
     .optional(),
   sourcemapIgnoreList: z
@@ -80,46 +81,49 @@ const outputOptionsSchema = z.strictObject({
   outro: z.string().or(addonFunctionSchema).optional(),
   extend: z
     .boolean()
-    .describe('extend global variable defined by name in IIFE / UMD formats')
+    .describe('Extend global variable defined by name in IIFE / UMD formats')
     .optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
-  assetFileNames: z.string().optional(),
+  assetFileNames: z
+    .string()
+    .describe('Name pattern for asset files')
+    .optional(),
   entryFileNames: z
     .string()
     .or(chunkFileNamesFunctionSchema)
-    .describe('name pattern for emitted entry chunks')
+    .describe('Name pattern for emitted entry chunks')
     .optional(),
   chunkFileNames: z
     .string()
     .or(chunkFileNamesFunctionSchema)
-    .describe('name pattern for emitted secondary chunks')
+    .describe('Name pattern for emitted secondary chunks')
     .optional(),
   cssEntryFileNames: z
     .string()
     .or(chunkFileNamesFunctionSchema)
-    .describe('name pattern for emitted css entry chunks')
+    .describe('Name pattern for emitted css entry chunks')
     .optional(),
   cssChunkFileNames: z
     .string()
     .or(chunkFileNamesFunctionSchema)
-    .describe('name pattern for emitted css secondary chunks')
+    .describe('Name pattern for emitted css secondary chunks')
     .optional(),
-  minify: z.boolean().describe('minify the bundled file.').optional(),
-  name: z.string().describe('name for UMD / IIFE format outputs').optional(),
+  minify: z.boolean().describe('Minify the bundled file.').optional(),
+  name: z.string().describe('Name for UMD / IIFE format outputs').optional(),
   globals: z
     .record(z.string())
     .describe(
-      'global variable of UMD / IIFE dependencies (syntax: `key=value`)',
+      'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
     )
     .optional(),
   externalLiveBindings: z
     .boolean()
-    .describe('external live bindings')
+    .describe('External live bindings')
     .default(true)
     .optional(),
   inlineDynamicImports: z
     .boolean()
-    .describe('inline dynamic imports')
+    .describe('Inline dynamic imports')
     .default(false)
     .optional(),
   advancedChunks: z
@@ -139,14 +143,17 @@ const outputOptionsSchema = z.strictObject({
         .optional(),
     })
     .optional(),
-  comments: z.enum(['none', 'preserve-legal']).optional(),
+  comments: z
+    .enum(['none', 'preserve-legal'])
+    .describe('Control comments in the output')
+    .optional(),
 }) satisfies z.ZodType<OutputOptions>
 
 const getAddonDescription = (
   placement: 'bottom' | 'top',
   wrapper: 'inside' | 'outside',
 ) => {
-  return `code to insert the ${bold(placement)} of the bundled file (${bold(wrapper)} the wrapper function).`
+  return `Code to insert the ${bold(placement)} of the bundled file (${bold(wrapper)} the wrapper function)`
 }
 
 export const outputCliOptionsSchema = outputOptionsSchema
@@ -169,15 +176,15 @@ export const outputCliOptionsSchema = outputOptionsSchema
     esModule: z
       .boolean()
       .describe(
-        'always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable).',
+        'Always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable)',
       )
       .optional(),
     advancedChunks: z
       .strictObject({
-        minSize: z.number().describe('minimum size of the chunk').optional(),
+        minSize: z.number().describe('Minimum size of the chunk').optional(),
         minShareCount: z
           .number()
-          .describe('minimum share count of the chunk')
+          .describe('Minimum share count of the chunk')
           .optional(),
       })
       .optional(),

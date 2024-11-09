@@ -12,6 +12,6 @@ pub fn xxhash_base64_url(input: &[u8]) -> String {
   to_url_safe_base64(hash)
 }
 
-pub fn xxhash_to_base_url(input: &[u8], base: u8) -> String {
-  to_string(input, base, &CHARACTERS[..base as usize]).unwrap()
+pub fn xxhash_with_base(hash: &[u8], base: u8) -> String {
+  to_string(hash, base, &CHARACTERS[..base as usize]).unwrap()
 }

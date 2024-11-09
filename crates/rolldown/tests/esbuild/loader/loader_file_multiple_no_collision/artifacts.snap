@@ -4,12 +4,12 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/test-NT_ktVcT.txt
+## assets/test-1P-S1VxP.txt
 
 ```txt
 test
 ```
-## assets/test-axxhOgr8.txt
+## assets/test-BrHGE6Cv.txt
 
 ```txt
 test
@@ -21,13 +21,13 @@ test
 
 //#region a/test.txt
 var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
-	module.exports = "assets/test-axxhOgr8.txt";
+	module.exports = "assets/test-BrHGE6Cv.txt";
 } });
 
 //#endregion
 //#region b/test.txt
 var require_test = __commonJS({ "b/test.txt"(exports, module) {
-	module.exports = "assets/test-NT_ktVcT.txt";
+	module.exports = "assets/test-1P-S1VxP.txt";
 } });
 
 //#endregion

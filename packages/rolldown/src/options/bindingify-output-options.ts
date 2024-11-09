@@ -8,6 +8,7 @@ export function bindingifyOutputOptions(
     dir,
     format,
     exports,
+    hashCharacters,
     sourcemap,
     sourcemapIgnoreList,
     sourcemapPathTransform,
@@ -42,6 +43,7 @@ export function bindingifyOutputOptions(
       }
     })(),
     exports,
+    hashCharacters,
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapIgnoreList,
     sourcemapPathTransform,

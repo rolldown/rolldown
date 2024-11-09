@@ -42,7 +42,12 @@ impl<'a> GenerateStage<'a> {
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mut assets = finalize_assets(chunk_graph, instantiated_chunks, &index_chunk_to_assets);
+    let mut assets = finalize_assets(
+      chunk_graph,
+      instantiated_chunks,
+      &index_chunk_to_assets,
+      self.options.hash_characters,
+    );
 
     self.minify_assets(&mut assets)?;
 

@@ -11,7 +11,8 @@ use crate::{
 use napi::bindgen_prelude::Either;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption,
-  ExperimentalOptions, IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
+  ExperimentalOptions, HashCharacters, IsExternal, MatchGroup, ModuleType, OutputExports,
+  OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -168,6 +169,12 @@ pub fn normalize_binding_options(
       "iife" => OutputFormat::Iife,
       "umd" => OutputFormat::Umd,
       _ => panic!("Invalid format: {format_str}"),
+    }),
+    hash_characters: output_options.hash_characters.map(|format_str| match format_str.as_str() {
+      "base64" => HashCharacters::Base64,
+      "base36" => HashCharacters::Base36,
+      "hex" => HashCharacters::Hex,
+      _ => panic!("Invalid hash characters: {format_str}"),
     }),
     globals: output_options.globals,
     module_types,

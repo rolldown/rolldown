@@ -4,14 +4,14 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/common-h8VKzHVD.png
+## assets/common-CHxUrMdU.png
 
 ## common.js
 
 ```js
 
 //#region shared/common.png
-var common_default = "assets/common-h8VKzHVD.png";
+var common_default = "assets/common-CHxUrMdU.png";
 
 //#endregion
 //#region shared/common.js

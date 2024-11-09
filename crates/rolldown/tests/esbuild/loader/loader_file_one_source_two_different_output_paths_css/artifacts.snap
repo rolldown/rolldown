@@ -4,16 +4,16 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/common-h8VKzHVD.png
+## assets/common-CHxUrMdU.png
 
 ```png
 x
 ```
-## common-3yRNVswI.css
+## common-DfJE1WzA.css
 
 ```css
 div {
-	background: url(assets/common-h8VKzHVD.png);
+	background: url(assets/common-CHxUrMdU.png);
 }
 
 ```
@@ -22,7 +22,7 @@ div {
 ```js
 
 //#region shared/common.png
-var common_default = "assets/common-h8VKzHVD.png";
+var common_default = "assets/common-CHxUrMdU.png";
 
 //#endregion
 ```

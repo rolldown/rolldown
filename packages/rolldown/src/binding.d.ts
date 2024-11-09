@@ -302,6 +302,7 @@ export interface BindingOutputOptions {
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
   globals?: Record<string, string>
+  hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>

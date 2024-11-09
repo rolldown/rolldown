@@ -115,6 +115,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     file: raw_options.file,
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
+    hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
     globals,
     sourcemap: raw_options.sourcemap,
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,

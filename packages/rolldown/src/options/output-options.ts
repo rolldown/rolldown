@@ -53,6 +53,11 @@ const outputOptionsSchema = z.strictObject({
       `specify a export mode (${underline('auto')}, named, default, none)`,
     )
     .optional(),
+  hashCharacters: z
+    .literal('base64')
+    .or(z.literal('base36'))
+    .or(z.literal('hex'))
+    .optional(),
   format: ModuleFormatSchema.optional(),
   sourcemap: z
     .boolean()

@@ -71,6 +71,8 @@ pub struct BindingOutputOptions {
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;
   pub globals: Option<HashMap<String, String>>,
+  #[napi(ts_type = "'base64' | 'base36' | 'hex'")]
+  pub hash_characters: Option<String>,
   // hoistTransitiveImports: boolean;
   // indent: true | string;
   pub inline_dynamic_imports: Option<bool>,

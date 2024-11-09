@@ -265,6 +265,16 @@
             "type": "string"
           }
         },
+        "hashCharacters": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HashCharacters"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "inject": {
           "type": [
             "array",
@@ -495,6 +505,14 @@
         }
       },
       "additionalProperties": false
+    },
+    "HashCharacters": {
+      "type": "string",
+      "enum": [
+        "base64",
+        "base36",
+        "hex"
+      ]
     },
     "InjectImport": {
       "title": "Usage",

@@ -3,16 +3,15 @@ use std::{hash::Hash, mem};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{AssetIdx, InstantiationKind, ModuleId, StrOrBytes};
+use rolldown_common::{AssetIdx, HashCharacters, InstantiationKind, ModuleId, StrOrBytes};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  base64::to_url_safe_base64,
   hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
-  xxhash::xxhash_base64_url,
+  xxhash::{xxhash_base64_url, xxhash_with_base},
 };
 use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
@@ -27,6 +26,7 @@ pub fn finalize_assets(
   chunk_graph: &mut ChunkGraph,
   preliminary_assets: IndexInstantiatedChunks,
   index_chunk_to_assets: &IndexChunkToAssets,
+  hash_characters: HashCharacters,
 ) -> IndexAssets {
   let asset_idx_by_placeholder = preliminary_assets
     .iter_enumerated()
@@ -52,6 +52,7 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
+  let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
     .par_iter()
     .map(|chunk| xxhash_base64_url(chunk.content.as_bytes()))
@@ -83,7 +84,7 @@ pub fn finalize_assets(
       }
 
       let digested = hasher.digest128();
-      (to_url_safe_base64(digested.to_le_bytes()), digested)
+      (xxhash_with_base(&digested.to_le_bytes(), hash_base), digested)
     })
     .collect::<Vec<_>>()
     .into();

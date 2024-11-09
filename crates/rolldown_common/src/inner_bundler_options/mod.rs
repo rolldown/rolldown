@@ -17,10 +17,10 @@ use types::experimental_options::ExperimentalOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  es_module_flag::EsModuleFlag, input_item::InputItem, is_external::IsExternal,
-  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
-  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
-  sourcemap_path_transform::SourceMapPathTransform,
+  es_module_flag::EsModuleFlag, hash_characters::HashCharacters, input_item::InputItem,
+  is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
+  output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
+  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
 
@@ -79,6 +79,7 @@ pub struct BundlerOptions {
   pub sourcemap: Option<SourceMapType>,
   pub es_module: Option<EsModuleFlag>,
   pub drop_labels: Option<Vec<String>>,
+  pub hash_characters: Option<HashCharacters>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),

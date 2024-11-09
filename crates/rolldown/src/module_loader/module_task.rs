@@ -20,6 +20,7 @@ use super::{task_context::TaskContext, Msg};
 use crate::{
   css::create_css_view,
   ecmascript::ecma_module_view_factory::{create_ecma_view, CreateEcmaViewReturn},
+  file_loader::create_file_view,
   module_loader::NormalModuleTaskResult,
   runtime::RUNTIME_MODULE_ID,
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
@@ -152,6 +153,13 @@ impl ModuleTask {
       None
     };
 
+    let file_view = if matches!(module_type, ModuleType::File) {
+      let file_view_source: ArcStr = source.clone().try_into_string()?.into();
+      Some(create_file_view(&file_view_source))
+    } else {
+      None
+    };
+
     let ret = create_ecma_view(
       &mut CreateModuleContext {
         module_index: self.module_idx,
@@ -212,6 +220,7 @@ impl ModuleTask {
       module_type: module_type.clone(),
       ecma_view,
       css_view,
+      file_view,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

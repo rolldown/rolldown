@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use crate::css::css_view::CssView;
+use crate::file_view::FileView;
 use crate::{
   DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
   ModuleInfo, StmtInfo,
@@ -25,6 +26,7 @@ pub struct NormalModule {
   pub module_type: ModuleType,
   pub ecma_view: EcmaView,
   pub css_view: Option<CssView>,
+  pub file_view: Option<FileView>,
 }
 
 impl NormalModule {

@@ -4,6 +4,7 @@ mod bundler_builder;
 mod chunk_graph;
 mod css;
 mod ecmascript;
+mod file_loader;
 mod module_finalizers;
 mod module_loader;
 mod runtime;

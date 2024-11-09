@@ -2,6 +2,7 @@ mod chunk;
 mod css;
 mod ecmascript;
 mod file_emitter;
+mod file_loader;
 mod inner_bundler_options;
 mod module;
 mod type_aliases;
@@ -57,6 +58,7 @@ pub use crate::{
     module_idx::ModuleIdx,
   },
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
+  file_loader::file_view,
   module::{external_module::ExternalModule, normal_module::NormalModule, Module},
   types::asset::Asset,
   types::asset_idx::AssetIdx,

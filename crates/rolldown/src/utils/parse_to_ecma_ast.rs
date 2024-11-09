@@ -83,6 +83,7 @@ pub fn parse_to_ecma_ast(
       (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
     }
     ModuleType::Empty => (String::new(), OxcParseType::Js),
+    ModuleType::File => (source.try_into_string()?, OxcParseType::Js),
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks

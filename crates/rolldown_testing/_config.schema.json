@@ -584,7 +584,8 @@
             "dataurl",
             "binary",
             "empty",
-            "css"
+            "css",
+            "file"
           ]
         },
         {

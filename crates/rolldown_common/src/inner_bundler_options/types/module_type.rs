@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use anyhow::Ok;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -23,6 +24,7 @@ pub enum ModuleType {
   Binary,
   Empty,
   Css,
+  File,
   Custom(String),
 }
 
@@ -39,6 +41,7 @@ impl ModuleType {
       "dataurl" => Ok(Self::Dataurl),
       "binary" => Ok(Self::Binary),
       "empty" => Ok(Self::Empty),
+      "file" => Ok(Self::File),
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
   }
@@ -57,6 +60,7 @@ impl ModuleType {
       "dataurl" => Self::Dataurl,
       "binary" => Self::Binary,
       "empty" => Self::Empty,
+      "file" => Self::File,
       _ => Self::Custom(s.as_ref().to_string()),
     }
   }
@@ -76,6 +80,7 @@ impl Display for ModuleType {
       ModuleType::Binary => write!(f, "binary"),
       ModuleType::Empty => write!(f, "empty"),
       ModuleType::Css => write!(f, "css"),
+      ModuleType::File => write!(f, "file"),
       ModuleType::Custom(custom_type) => write!(f, "{custom_type}"),
     }
   }

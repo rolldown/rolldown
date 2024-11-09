@@ -114,20 +114,23 @@ export const inputOptionsSchema = z.strictObject({
       tsconfigFilename: z.string().optional(),
     })
     .optional(),
-  cwd: z.string().describe('current working directory.').optional(),
+  cwd: z.string().describe('Current working directory').optional(),
   platform: z
     .literal('node')
     .or(z.literal('browser'))
     .or(z.literal('neutral'))
     .describe(
-      `platform for which the code should be generated (node, ${underline('browser')}, neutral).`,
+      `Platform for which the code should be generated (node, ${underline('browser')}, neutral)`,
     )
     .optional(),
-  shimMissingExports: z.boolean().optional(),
+  shimMissingExports: z
+    .boolean()
+    .describe(`Create shim variables for missing exports`)
+    .optional(),
   // FIXME: should use a more specific schema
   treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
   logLevel: LogLevelOptionSchema.describe(
-    `log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
+    `Log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
   ).optional(),
   onLog: z
     .function()
@@ -151,7 +154,7 @@ export const inputOptionsSchema = z.strictObject({
     )
     .optional(),
   moduleTypes: moduleTypesSchema
-    .describe('module types for customized extensions.')
+    .describe('Module types for customized extensions')
     .optional(),
   experimental: z
     .strictObject({
@@ -160,12 +163,15 @@ export const inputOptionsSchema = z.strictObject({
       disableLiveBindings: z.boolean().optional(),
     })
     .optional(),
-  define: z.record(z.string()).describe('define global variables').optional(),
+  define: z.record(z.string()).describe('Define global variables').optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
   watch: watchOptionsSchema.or(z.literal(false)).optional(),
-  dropLabels: z.array(z.string()).optional(),
+  dropLabels: z
+    .array(z.string())
+    .describe('Remove labeled statements with these label names')
+    .optional(),
 }) satisfies z.ZodType<InputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema
@@ -178,7 +184,7 @@ export const inputCliOptionsSchema = inputOptionsSchema
       .optional(),
     inject: z
       .record(z.string())
-      .describe('inject import statements on demand')
+      .describe('Inject import statements on demand')
       .optional(),
     treeshake: z
       .boolean()

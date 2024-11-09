@@ -22,21 +22,21 @@ OPTIONS
   --watch -w,                 Watch files in bundle and rebuild on changes.
   --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
   --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
-  --asset-file-names <name>   .
+  --asset-file-names <name>   Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --chunk-file-names <name>   .
-  --comments <comments>       .
-  --css-chunk-file-names <css-chunk-file-names>.
-  --css-entry-file-names <css-entry-file-names>.
+  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
+  --comments <comments>       Control comments in the output.
+  --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
+  --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
   --define <define>           Define global variables.
-  --drop-labels <drop-labels> .
-  --entry-file-names <name>   .
+  --drop-labels <drop-labels> Remove labeled statements with these label names.
+  --entry-file-names <name>   Name pattern for emitted entry chunks.
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
-  --hash-characters <hash-characters>.
+  --hash-characters <hash-characters>Use the specified character set for file hashes.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
@@ -52,7 +52,7 @@ OPTIONS
   --no-external-live-bindings Disable external live bindings.
   --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
-  --shim-missing-exports      .
+  --shim-missing-exports      Create shim variables for missing exports.
 
 EXAMPLES
 

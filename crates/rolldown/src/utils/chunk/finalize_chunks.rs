@@ -11,7 +11,7 @@ use rolldown_utils::{
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
-  xxhash::xxhash_to_base_url,
+  xxhash::{xxhash_base64_url, xxhash_to_base_url},
 };
 use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
@@ -55,7 +55,7 @@ pub fn finalize_assets(
   let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
     .par_iter()
-    .map(|chunk| xxhash_to_base_url(chunk.content.as_bytes(), hash_base))
+    .map(|chunk| xxhash_base64_url(chunk.content.as_bytes()))
     .collect::<Vec<_>>()
     .into();
 

@@ -16,24 +16,26 @@ export default defineTest({
     const hash_entry =
       output.output
         .find((chunk) => (chunk as RolldownOutputChunk).isEntry)
-        ?.fileName.match(/-([a-zA-Z0-9]+)\.js$/) || []
+        ?.fileName.match(/-([a-z0-9]+)\.js$/) || []
     const hash_chunk =
       output.output
         .find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
-        ?.fileName.match(/-([a-zA-Z0-9]+)\.js$/) || []
+        ?.fileName.match(/-([a-z0-9]+)\.js$/) || []
 
     const hash_css_entry =
       output.output
-        .find((chunk) =>
-          (chunk as RolldownOutputChunk).fileName.startsWith('main'),
+        .find(
+          (chunk) =>
+            chunk.fileName.startsWith('main') && chunk.type === 'asset',
         )
-        ?.fileName.match(/-([a-zA-Z0-9]+)\.js$/) || []
+        ?.fileName.match(/-([a-z0-9]+)\.css$/) || []
     const hash_css_chunk =
       output.output
-        .find((chunk) =>
-          (chunk as RolldownOutputChunk).fileName.startsWith('test'),
+        .find(
+          (chunk) =>
+            chunk.fileName.startsWith('test') && chunk.type === 'asset',
         )
-        ?.fileName.match(/-([a-zA-Z0-9]+)\.js$/) || []
+        ?.fileName.match(/-([a-z0-9]+)\.css$/) || []
 
     expect(hash_entry[1]).toHaveLength(6)
     expect(hash_chunk[1]).toHaveLength(7)

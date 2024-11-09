@@ -173,13 +173,6 @@ impl<'a> SideEffectDetector<'a> {
             if key_side_effect {
               return true;
             }
-
-            let prop_init_side_effect =
-              prop.init.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr));
-
-            if prop_init_side_effect {
-              return true;
-            }
             self.detect_side_effect_of_expr(&prop.value)
           }
           ast::ObjectPropertyKind::SpreadProperty(_) => {

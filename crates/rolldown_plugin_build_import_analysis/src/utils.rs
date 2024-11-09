@@ -130,7 +130,6 @@ fn construct_vite_preload_call<'a>(
                   PropertyKind::Init,
                   ast_builder.property_key_identifier_name(SPAN, name),
                   ast_builder.expression_identifier_reference(SPAN, name),
-                  None,
                   false,
                   true,
                   false,

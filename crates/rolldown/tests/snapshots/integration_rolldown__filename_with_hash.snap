@@ -3603,7 +3603,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_export_equals
 
-- a-!~{000}~.js => a-BSU1BExw.js
+- a-!~{000}~.js => a-BPCnKJzv.js
 
 # tests/esbuild/ts/ts_export_missing_es6
 

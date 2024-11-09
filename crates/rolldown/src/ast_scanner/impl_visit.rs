@@ -139,13 +139,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
       self.add_referenced_symbol(root_symbol_id);
     }
-    ident.reference_id().and_then(|ref_id| {
-      let (symbol_id, ids) = self.cur_class_decl_and_symbol_referenced_ids?;
-      if ids.contains(&ref_id) {
+    if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
+      if ids.contains(&ident.reference_id()) {
         self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
       }
-      Some(())
-    });
+    }
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {

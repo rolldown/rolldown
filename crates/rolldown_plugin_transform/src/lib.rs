@@ -79,7 +79,7 @@ impl Plugin for TransformPlugin {
 
       let (symbols, scopes) =
         SemanticBuilder::new().build(fields.program).semantic.into_symbol_table_and_scope_tree();
-      Transformer::new(fields.allocator, Path::new(args.id), transformer_options)
+      Transformer::new(fields.allocator, Path::new(args.id), &transformer_options)
         .build_with_symbols_and_scopes(symbols, scopes, fields.program)
     });
     if !ret.errors.is_empty() {

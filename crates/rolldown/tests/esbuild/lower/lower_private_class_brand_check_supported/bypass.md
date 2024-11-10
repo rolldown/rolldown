@@ -1,3 +1,5 @@
+# Reason
+1. pure transformation is handled by `oxc-transform`
 # Diff
 ## /out.js
 ### esbuild

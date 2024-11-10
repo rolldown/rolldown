@@ -1,28 +1,30 @@
+# Reason
+1. pure transformation is handled by `oxc-transform`
 # Diff
 ## /out.js
 ### esbuild
 ```js
-var _Foo_static, foo_get, _FooThis_static, foo_get2;
+var _a, _Foo_static, foo_fn, _b, _FooThis_static, foo_fn2;
 const _Foo = class _Foo {
   // This must be set before "bar" is initialized
 };
 _Foo_static = new WeakSet();
-foo_get = function() {
+foo_fn = function() {
   return 123;
 };
 __privateAdd(_Foo, _Foo_static);
-__publicField(_Foo, "bar", __privateGet(_Foo, _Foo_static, foo_get));
+__publicField(_Foo, "bar", __privateMethod(_a = _Foo, _Foo_static, foo_fn).call(_a));
 let Foo = _Foo;
 console.log(Foo.bar === 123);
 const _FooThis = class _FooThis {
   // This must be set before "bar" is initialized
 };
 _FooThis_static = new WeakSet();
-foo_get2 = function() {
+foo_fn2 = function() {
   return 123;
 };
 __privateAdd(_FooThis, _FooThis_static);
-__publicField(_FooThis, "bar", __privateGet(_FooThis, _FooThis_static, foo_get2));
+__publicField(_FooThis, "bar", __privateMethod(_b = _FooThis, _FooThis_static, foo_fn2).call(_b));
 let FooThis = _FooThis;
 console.log(FooThis.bar === 123);
 ```
@@ -32,19 +34,19 @@ import assert from "node:assert";
 
 //#region entry.js
 var Foo = class Foo {
-	static bar = Foo.#foo;
-	static get #foo() {
+	static bar = Foo.#foo();
+	static #foo() {
 		return 123;
 	}
 };
-assert.equal(Foo.bar, 123);
+assert(Foo.bar === 123);
 var FooThis = class {
-	static bar = this.#foo;
-	static get #foo() {
+	static bar = this.#foo();
+	static #foo() {
 		return 123;
 	}
 };
-assert.equal(FooThis.bar, 123);
+assert(FooThis.bar === 123);
 
 //#endregion
 ```
@@ -53,36 +55,37 @@ assert.equal(FooThis.bar, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,19 +1,13 @@
--var _Foo_static, foo_get, _FooThis_static, foo_get2;
+@@ -1,19 +1,14 @@
+-var _a, _Foo_static, foo_fn, _b, _FooThis_static, foo_fn2;
 -const _Foo = class _Foo {};
 -_Foo_static = new WeakSet();
--foo_get = function () {
+-foo_fn = function () {
 -    return 123;
 +var Foo = class Foo {
-+    static bar = Foo.#foo;
-+    static get #foo() {
++    static bar = Foo.#foo();
++    static #foo() {
 +        return 123;
 +    }
  };
 -__privateAdd(_Foo, _Foo_static);
--__publicField(_Foo, "bar", __privateGet(_Foo, _Foo_static, foo_get));
+-__publicField(_Foo, "bar", __privateMethod(_a = _Foo, _Foo_static, foo_fn).call(_a));
 -let Foo = _Foo;
 -console.log(Foo.bar === 123);
 -const _FooThis = class _FooThis {};
 -_FooThis_static = new WeakSet();
--foo_get2 = function () {
+-foo_fn2 = function () {
 -    return 123;
++assert(Foo.bar === 123);
 +var FooThis = class {
-+    static bar = this.#foo;
-+    static get #foo() {
++    static bar = this.#foo();
++    static #foo() {
 +        return 123;
 +    }
  };
 -__privateAdd(_FooThis, _FooThis_static);
--__publicField(_FooThis, "bar", __privateGet(_FooThis, _FooThis_static, foo_get2));
+-__publicField(_FooThis, "bar", __privateMethod(_b = _FooThis, _FooThis_static, foo_fn2).call(_b));
 -let FooThis = _FooThis;
 -console.log(FooThis.bar === 123);
-+console.log(Foo.bar, FooThis.bar);
++assert(FooThis.bar === 123);
 
 ```

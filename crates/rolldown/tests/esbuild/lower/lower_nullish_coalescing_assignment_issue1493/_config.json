@@ -5,6 +5,7 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "target": "es2015"
   }
 }

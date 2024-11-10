@@ -1,3 +1,5 @@
+# Reason
+1. pure transformation is handled by `oxc-transform`
 # Diff
 ## /out.js
 ### esbuild
@@ -21,7 +23,7 @@ var Foo = class {
     --__privateWrapper(fn(), _Foo_instances, prop_set, prop_get)._;
   }
   binary(fn) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
     __privateSet(fn(), _Foo_instances, 1, prop_set);
     __privateSet(_a = fn(), _Foo_instances, __privateGet(_a, _Foo_instances, prop_get) + 1, prop_set);
     __privateSet(_b = fn(), _Foo_instances, __privateGet(_b, _Foo_instances, prop_get) - 1, prop_set);
@@ -37,7 +39,7 @@ var Foo = class {
     __privateSet(_l = fn(), _Foo_instances, __privateGet(_l, _Foo_instances, prop_get) ^ 1, prop_set);
     __privateGet(_m = fn(), _Foo_instances, prop_get) && __privateSet(_m, _Foo_instances, 1, prop_set);
     __privateGet(_n = fn(), _Foo_instances, prop_get) || __privateSet(_n, _Foo_instances, 1, prop_set);
-    (_p = __privateGet(_o = fn(), _Foo_instances, prop_get)) != null ? _p : __privateSet(_o, _Foo_instances, 1, prop_set);
+    __privateGet(_o = fn(), _Foo_instances, prop_get) ?? __privateSet(_o, _Foo_instances, 1, prop_set);
   }
 };
 _Foo_instances = new WeakSet();
@@ -152,7 +154,7 @@ export { Foo };
 +        --fn().#prop;
      }
      binary(fn) {
--        var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+-        var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
 -        __privateSet(fn(), _Foo_instances, 1, prop_set);
 -        __privateSet(_a = fn(), _Foo_instances, __privateGet(_a, _Foo_instances, prop_get) + 1, prop_set);
 -        __privateSet(_b = fn(), _Foo_instances, __privateGet(_b, _Foo_instances, prop_get) - 1, prop_set);
@@ -168,7 +170,7 @@ export { Foo };
 -        __privateSet(_l = fn(), _Foo_instances, __privateGet(_l, _Foo_instances, prop_get) ^ 1, prop_set);
 -        __privateGet(_m = fn(), _Foo_instances, prop_get) && __privateSet(_m, _Foo_instances, 1, prop_set);
 -        __privateGet(_n = fn(), _Foo_instances, prop_get) || __privateSet(_n, _Foo_instances, 1, prop_set);
--        (_p = __privateGet(_o = fn(), _Foo_instances, prop_get)) != null ? _p : __privateSet(_o, _Foo_instances, 1, prop_set);
+-        __privateGet(_o = fn(), _Foo_instances, prop_get) ?? __privateSet(_o, _Foo_instances, 1, prop_set);
 +        fn().#prop = 1;
 +        fn().#prop += 1;
 +        fn().#prop -= 1;

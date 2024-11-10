@@ -391,7 +391,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           // use `__require` instead of `require`
           if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
             *call_expr.callee.get_inner_expression_mut() =
-              self.snippet.builder.expression_identifier_reference(SPAN, "__require");
+              self.snippet.builder.expression_identifier_reference(
+                SPAN,
+                self.canonical_name_for_runtime("__require").as_str(),
+              );
           }
           match &self.ctx.modules[rec.resolved_module] {
             Module::Normal(importee) => {

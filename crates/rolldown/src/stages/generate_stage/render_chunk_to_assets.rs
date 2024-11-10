@@ -13,6 +13,7 @@ use crate::{
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
+  file_loader::file_generator::FileGenerator,
   type_alias::{IndexChunkToAssets, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
@@ -218,7 +219,23 @@ impl<'a> GenerateStage<'a> {
           };
           let css_chunks = CssGenerator::instantiate_chunk(&mut ctx).await;
 
-          ecma_chunks.and_then(|ecma_chunks| css_chunks.map(|css_chunks| [ecma_chunks, css_chunks]))
+          let mut ctx = GenerateContext {
+            chunk_idx,
+            chunk,
+            options: self.options,
+            link_output: self.link_output,
+            chunk_graph,
+            plugin_driver: self.plugin_driver,
+            warnings: vec![],
+            module_id_to_codegen_ret: vec![],
+          };
+          let file_loader_chunks = FileGenerator::instantiate_chunk(&mut ctx).await;
+
+          ecma_chunks.and_then(|ecma_chunks| {
+            css_chunks.and_then(|css_chunks| {
+              file_loader_chunks.map(|file_chunks| [ecma_chunks, css_chunks, file_chunks])
+            })
+          })
         },
       ),
     )

@@ -37,7 +37,6 @@ pub fn finalize_assets(
         .map(|hash_placeholder| (hash_placeholder.into(), asset_idx))
     })
     .collect::<FxHashMap<ArcStr, _>>();
-
   let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
     .par_iter()
     .map(|asset| {

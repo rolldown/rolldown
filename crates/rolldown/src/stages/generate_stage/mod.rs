@@ -196,6 +196,9 @@ impl<'a> GenerateStage<'a> {
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
       let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
 
+      let file_loader_template = &self.options.file_loader_filenames;
+      let extract_file_loader_hash_pattern = extract_hash_pattern(file_loader_template.template());
+
       let need_to_ensure_unique =
         extracted_hash_pattern.is_none() || extracted_css_hash_pattern.is_none();
       let chunk_name = if need_to_ensure_unique {
@@ -255,6 +258,32 @@ impl<'a> GenerateStage<'a> {
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
       chunk.css_preliminary_filename =
         Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
+
+      chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()).for_each(|module| {
+        if module.file_view.is_some() {
+          let file_loader_hash_placeholder = extract_file_loader_hash_pattern
+            .as_ref()
+            .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+          let file_loader_preliminary = file_loader_template.render(&FileNameRenderOptions {
+            name: Some(&chunk_name),
+            hash: file_loader_hash_placeholder.as_deref(),
+            ext: module.id.as_path().extension().and_then(|s| s.to_str()),
+          });
+
+          chunk.file_absolute_preliminary_filenames.insert(
+            module.idx,
+            file_loader_preliminary
+              .absolutize_with(self.options.cwd.join(&self.options.dir))
+              .expect_into_string(),
+          );
+
+          chunk.file_preliminary_filenames.insert(
+            module.idx,
+            PreliminaryFilename::new(file_loader_preliminary, file_loader_hash_placeholder),
+          );
+        }
+      });
     }
     Ok(index_chunk_id_to_name)
   }

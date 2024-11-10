@@ -142,7 +142,6 @@ impl<'name> Renamer<'name> {
       let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
       bindings.iter().for_each(|(binding_name, symbol_id)| {
-        used_canonical_names_for_this_scope.insert(binding_name.to_rstr(), 0);
         let binding_ref: SymbolRef = (module.idx, *symbol_id).into();
 
         let mut count = 1;
@@ -151,7 +150,8 @@ impl<'name> Renamer<'name> {
           Entry::Vacant(slot) => loop {
             let is_shadowed = stack
               .iter()
-              .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name));
+              .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name))
+              || used_canonical_names_for_this_scope.contains_key(&candidate_name);
 
             if is_shadowed {
               candidate_name =
@@ -167,6 +167,7 @@ impl<'name> Renamer<'name> {
             // The symbol is already renamed
           }
         }
+        used_canonical_names_for_this_scope.insert(binding_name.to_rstr(), 0);
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));

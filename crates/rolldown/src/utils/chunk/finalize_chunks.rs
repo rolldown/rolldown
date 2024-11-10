@@ -85,7 +85,7 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let final_hashes_by_placeholder = chunk_graph
+  let mut final_hashes_by_placeholder = chunk_graph
     .chunk_table
     .iter()
     .zip(&index_final_hashes)
@@ -98,6 +98,27 @@ pub fn finalize_assets(
         .map(|hash_placeholder| (hash_placeholder.into(), &hash[..hash_placeholder.len()]))
     })
     .collect::<FxHashMap<_, _>>();
+
+  let asset_preliminary_vecv = chunk_graph
+    .chunk_table
+    .iter()
+    .map(|chunk| {
+      return chunk
+        .file_preliminary_filenames
+        .iter()
+        .map(|(_, asset_preliminary)| asset_preliminary);
+    })
+    .flatten()
+    .collect::<Vec<_>>();
+  let asset_hash_placeholder_map = asset_preliminary_vecv
+    .iter()
+    .zip(&index_final_hashes)
+    .map(|(preliminary, (hash, _))| {
+      let asset_hash_placeholder = preliminary.hash_placeholder().unwrap_or("");
+      return (asset_hash_placeholder.into(), &hash[..asset_hash_placeholder.len()]);
+    })
+    .collect::<FxHashMap<ArcStr, _>>();
+  final_hashes_by_placeholder.extend(asset_hash_placeholder_map);
 
   let mut assets: IndexAssets = preliminary_assets
     .into_par_iter()

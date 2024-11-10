@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports) {
+	exports[Math.random() < 1 && "__esModule"] = true;
+	Object.defineProperty(exports, Math.random() < 1 && "default", {
+		value: 123,
+		enumerable: true
+	});
+} });
+
+//#endregion
+//#region entry.js
+var import_foo = __toESM(require_foo());
+let keys = Object.keys(import_foo);
+input.works = import_foo.default === 123 && keys.includes("default");
+
+//#endregion
+```

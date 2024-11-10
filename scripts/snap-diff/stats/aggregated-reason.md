@@ -331,6 +331,10 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
 ## Not support json attributes
 - crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
+## should not transform `export * as ns from 'mod'` above es2019
+- crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision
+## pure transformation is handled by `oxc-transform`
+- crates/rolldown/tests/esbuild/lower/static_class_block_es_next
 ## redundant `__commonJS` wrapper
 - crates/rolldown/tests/esbuild/packagejson/common_js_variable_in_esm_type_module
 ## `sub` is not resolved

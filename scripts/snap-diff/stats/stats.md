@@ -1,7 +1,7 @@
 # Compatibility metric
 - total: 784
-- passed: 476
-- passed ratio: 60.71%
+- passed: 502
+- passed ratio: 64.03%
 # Compatibility metric details
 ## dce
 - total: 113
@@ -29,8 +29,8 @@
 - passed ratio: 34.33%
 ## lower
 - total: 79
-- passed: 32
-- passed ratio: 40.51%
+- passed: 58
+- passed ratio: 73.42%
 ## packagejson
 - total: 59
 - passed: 47

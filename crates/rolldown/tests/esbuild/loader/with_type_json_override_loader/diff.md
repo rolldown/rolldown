@@ -1,5 +1,5 @@
 # Reason
-1. Not support json attributes
+1. not support import attributes
 # Diff
 ## entry.js
 ### esbuild

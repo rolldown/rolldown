@@ -14,7 +14,7 @@ import {
   BuiltinPlugin,
 } from '../plugin/builtin-plugin'
 import { PluginContextData } from '../plugin/plugin-context-data'
-import { normalizedStringOrRegex } from './utils'
+import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,

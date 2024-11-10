@@ -10,7 +10,7 @@ import { BuiltinPlugin } from '../plugin/builtin-plugin'
 import { TupleToUnion } from 'type-fest'
 import * as R from 'remeda'
 import { PluginHookNames } from '../constants/plugin'
-import { AssertNever } from './type-assert'
+import { AssertNever } from '../types/assert'
 import {
   PluginContext,
   PrivatePluginContextResolveOptions,

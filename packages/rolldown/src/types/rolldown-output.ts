@@ -1,10 +1,6 @@
 import { AssetSource } from '../utils/asset-source'
 import type { OutputAsset, OutputChunk } from '../rollup'
-import type {
-  HasProperty,
-  IsPropertiesEqual,
-  TypeAssert,
-} from '../utils/type-assert'
+import type { HasProperty, IsPropertiesEqual, TypeAssert } from './assert'
 import type { RenderedModule } from './rendered-module'
 
 export interface RolldownOutputAsset {

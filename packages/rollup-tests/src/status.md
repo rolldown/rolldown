@@ -2,6 +2,6 @@
 |----| ---- |
 | failed | 0|
 | skipFailed | 0|
-| ignored | 372|
+| ignored | 853|
 | skipped | 0|
-| passed | 557|
+| passed | 662|

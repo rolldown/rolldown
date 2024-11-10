@@ -317,6 +317,9 @@ importers:
       mocha:
         specifier: ^10.4.0
         version: 10.8.2
+      oxc-transform:
+        specifier: 0.35.0
+        version: 0.35.0
       rolldown:
         specifier: workspace:*
         version: link:../rolldown
@@ -2456,6 +2459,46 @@ packages:
 
   '@oxc-node/core@0.0.15':
     resolution: {integrity: sha512-g8ip2dUKtxfZ5IqROmZbHz7OY/+GOG4dnhqgQezlYXCufUcWA+0GM+FqI0ZzA50njUFKCTAHXRiN+BqJPy4trA==}
+
+  '@oxc-transform/binding-darwin-arm64@0.35.0':
+    resolution: {integrity: sha512-oh+L/TM7/u3A1qIlFz2hEW0LIVPdhgK+dGAgnyDCOaXqP0P45MgkklbTF+lSAXkv5PgpvNmrnocu4j1mjswskA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@oxc-transform/binding-darwin-x64@0.35.0':
+    resolution: {integrity: sha512-/B8YOmxxHGKeNqCeCoe7FY3eLrru5R07kS5pObkOGZgz2jqWw2CnJ3XMq+GaNAAgvVJc4O7wU88yV8a/TX3ppQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@oxc-transform/binding-linux-arm64-gnu@0.35.0':
+    resolution: {integrity: sha512-Smbku1J3IofBVEJFvnP6IcGyavZsAskbGBs++ty/4+JQqv67fCeGFNRf8erAWpNQGhpgsL/EW7QIPuZ89SlIBw==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@oxc-transform/binding-linux-arm64-musl@0.35.0':
+    resolution: {integrity: sha512-H0CV1mf4TNIPm4PwkHWJUxekgOHvyyCTehHimUjBaB2XxImwo1pEa+bO79wkJYm/F1aSDRM4APivK9c3Hi4F0w==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@oxc-transform/binding-linux-x64-gnu@0.35.0':
+    resolution: {integrity: sha512-VSOiPOx4I/e3yTNED50Vn0VwHb3Pa0QQwqCZYRDKmqztsTQN6RSKnawWG+EPY+9mqLJs+8KfMphQMsjRE2K+hA==}
+    cpu: [x64]
+    os: [linux]
+
+  '@oxc-transform/binding-linux-x64-musl@0.35.0':
+    resolution: {integrity: sha512-ItoZZ1auUQsgSE+lvL559+cLBnZb4Q2zotTB0JpH8M8rxROpW+GVwU3TzBwQHmtGE9ri+KuywpXkPREifdOx9g==}
+    cpu: [x64]
+    os: [linux]
+
+  '@oxc-transform/binding-win32-arm64-msvc@0.35.0':
+    resolution: {integrity: sha512-XuvyU0mhgpF5NIAcoknQPQnl70s/kfkBASo6xCx2HQP74vGGP6Aj810U4N0D66jGazpVw+mbaEsDzGHm3KWwiw==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@oxc-transform/binding-win32-x64-msvc@0.35.0':
+    resolution: {integrity: sha512-+hTWKxqO519Iot9A6XdCEdvokg/2Yid4NevjhsEJnsa1MrHHxbOjzWKq22GRjv0CpMgKlMyJXWHP4YKzDZ/Sog==}
+    cpu: [x64]
+    os: [win32]
 
   '@oxlint/darwin-arm64@0.11.0':
     resolution: {integrity: sha512-qQ1C5yvRYECp+FP8DCOSqNX4+e72xXyApJ2O8QyIeYFuGGF2MoDVQz3NYJEOjOfArZ9YXGsELwM3UFtjTGIZVg==}
@@ -4926,6 +4969,9 @@ packages:
   os-tmpdir@1.0.2:
     resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
     engines: {node: '>=0.10.0'}
+
+  oxc-transform@0.35.0:
+    resolution: {integrity: sha512-biVB7H7ZxuAQYbMJPUZw1umT7nzDU44tEBYyqMgLle0mnAbi9AetadIqTpjAp8KmcOYpG6VmvGeFPxWihFCWFQ==}
 
   oxlint@0.11.0:
     resolution: {integrity: sha512-uY6/R4k5bECwJBR+y8CqGRcUb5hxNReziBjt5+pk6DKxj46DqMd6HwEk090KnaH1czVf23r8mcEsJYGowMWeIA==}
@@ -8096,6 +8142,30 @@ snapshots:
       '@oxc-node/core-win32-ia32-msvc': 0.0.15
       '@oxc-node/core-win32-x64-msvc': 0.0.15
 
+  '@oxc-transform/binding-darwin-arm64@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-darwin-x64@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-linux-arm64-gnu@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-linux-arm64-musl@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-linux-x64-gnu@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-linux-x64-musl@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-win32-arm64-msvc@0.35.0':
+    optional: true
+
+  '@oxc-transform/binding-win32-x64-msvc@0.35.0':
+    optional: true
+
   '@oxlint/darwin-arm64@0.11.0':
     optional: true
 
@@ -10914,6 +10984,17 @@ snapshots:
       regex: 4.4.0
 
   os-tmpdir@1.0.2: {}
+
+  oxc-transform@0.35.0:
+    optionalDependencies:
+      '@oxc-transform/binding-darwin-arm64': 0.35.0
+      '@oxc-transform/binding-darwin-x64': 0.35.0
+      '@oxc-transform/binding-linux-arm64-gnu': 0.35.0
+      '@oxc-transform/binding-linux-arm64-musl': 0.35.0
+      '@oxc-transform/binding-linux-x64-gnu': 0.35.0
+      '@oxc-transform/binding-linux-x64-musl': 0.35.0
+      '@oxc-transform/binding-win32-arm64-msvc': 0.35.0
+      '@oxc-transform/binding-win32-x64-msvc': 0.35.0
 
   oxlint@0.11.0:
     optionalDependencies:

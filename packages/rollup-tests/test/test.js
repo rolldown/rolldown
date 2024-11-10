@@ -4,7 +4,7 @@ describe('rollup', function () {
 	this.timeout(30000);
 	// require('./misc/index.js');
 	require('./function/index.js');
-	// require('./form/index.js');
+	require('./form/index.js');
 	// require('./chunking-form/index.js');
 	require('./file-hashes/index.js');
 	require('./sourcemaps/index.js');

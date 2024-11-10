@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region foo.js
+var foo_default = { bar: 123 };
+
+//#endregion
+//#region entry.js
+input.works = foo_default.bar === 123;
+
+//#endregion
+```

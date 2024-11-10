@@ -4746,6 +4746,244 @@ snapshot_kind: text
 - assets/main.js => assets/main.js
 - assets/main.js.map
 
+# tests/rolldown/topics/bundler_esm_cjs_tests/0
+
+- entry-!~{000}~.js => entry-BHE7Uujs.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/1
+
+- entry-!~{000}~.js => entry-DF-EJVBy.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/10
+
+- entry-!~{000}~.js => entry-aun_KrGf.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/11
+
+- entry-!~{000}~.js => entry-DoYjAvQ0.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/12
+
+- entry-!~{002}~.js => entry-D3-eG8OI.js
+- foo-!~{003}~.js => foo-B28NeLgd.js
+- foo-!~{000}~.js => foo-DjaVM35p.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/13
+
+- entry-!~{002}~.js => entry-DNmU8hjP.js
+- foo-!~{003}~.js => foo-B28NeLgd.js
+- foo-!~{000}~.js => foo-DjaVM35p.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/14
+
+- entry-!~{000}~.js => entry-DPIBQ7AP.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/15
+
+- entry-!~{000}~.js => entry-_n8vEn09.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/16
+
+- entry-!~{000}~.js => entry-BGpah9js.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/17
+
+- entry-!~{000}~.js => entry-DnuC57pj.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/18
+
+- entry-!~{000}~.js => entry-DE6LZCbB.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/19
+
+- entry-!~{000}~.js => entry-D6WPp7gs.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/2
+
+- entry-!~{000}~.js => entry-DJ01yqNB.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/20
+
+- entry-!~{000}~.js => entry-hs0wycSz.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/21
+
+- entry-!~{000}~.js => entry-CKH3PBQB.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/22
+
+- entry-!~{000}~.js => entry-Dz-MX9IK.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/23
+
+- entry-!~{000}~.js => entry-CplbL4L_.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/24
+
+- entry-!~{000}~.js => entry-D7xQmYeJ.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/25
+
+- entry-!~{000}~.js => entry-HOjpr-iR.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/26
+
+- entry-!~{000}~.js => entry-BZrpy6wF.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/27
+
+- entry-!~{000}~.js => entry-CcqbmhYR.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/28
+
+- entry-!~{000}~.js => entry-DVBvaPhP.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/29
+
+- entry-!~{000}~.js => entry-DeRWd78o.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/3
+
+- entry-!~{000}~.js => entry-DoDSOtg6.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/30
+
+- entry-!~{000}~.js => entry-C8S6EkXe.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/31
+
+- entry-!~{000}~.js => entry-BTp3L74V.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/32
+
+- entry-!~{000}~.js => entry-mIywnXtE.js
+- foo-!~{001}~.js => foo-BCDGKvll.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/33
+
+- entry-!~{000}~.js => entry-MzEpz5aq.js
+- foo-!~{001}~.js => foo-BCDGKvll.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/34
+
+- entry-!~{000}~.js => entry-Bi_WE05r.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/35
+
+- entry-!~{000}~.js => entry-BfWegEx2.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/36
+
+- entry-!~{000}~.js => entry-B5Xwa2ti.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/37
+
+- entry-!~{000}~.js => entry-DOTRx4Sw.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/38
+
+- entry-!~{000}~.js => entry-DiFuu2T-.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/39
+
+- entry-!~{000}~.js => entry-B7vXfqZC.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/4
+
+- entry-!~{000}~.js => entry-DL9Qesab.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/40
+
+- entry-!~{000}~.js => entry-CUcANFp-.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/41
+
+- entry-!~{000}~.js => entry-R8ZcggYt.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/42
+
+- entry-!~{000}~.js => entry-DSEN_1oD.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/43
+
+- entry-!~{000}~.js => entry-N7sqlT7J.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/44
+
+- entry-!~{000}~.js => entry-DSEN_1oD.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/45
+
+- entry-!~{000}~.js => entry-Y_q56w8D.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/46
+
+- entry-!~{000}~.js => entry-CLOdiYHz.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/47
+
+- entry-!~{000}~.js => entry-D-M_PF7L.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/48
+
+- entry-!~{000}~.js => entry-C_vBNst0.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/49
+
+- entry-!~{000}~.js => entry-ju4TXbvh.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/5
+
+- entry-!~{000}~.js => entry-yCBo7d69.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/56
+
+- entry-!~{000}~.js => entry-CuSWxZIf.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/57
+
+- entry-!~{000}~.js => entry-BZ1Lw8Cb.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/58
+
+- entry-!~{000}~.js => entry-C5I2EwgM.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/59
+
+- entry-!~{000}~.js => entry-D-sWInl8.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/6
+
+- entry-!~{000}~.js => entry-Bz8-9WVx.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/60
+
+- entry-!~{000}~.js => entry-BDcc3WHC.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/61
+
+- entry-!~{000}~.js => entry-aThiEUs1.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/62
+
+- entry-!~{000}~.js => entry-BErAspDN.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/63
+
+- entry-!~{000}~.js => entry-TG3ZDRI9.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/7
+
+- entry-!~{000}~.js => entry-B2XrAS5H.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/8
+
+- entry-!~{000}~.js => entry-B2tOTMOi.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/9
+
+- entry-!~{000}~.js => entry-qAWlTxKm.js
+
 # tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
 
 - main-!~{000}~.js => main-CdXuY02q.js

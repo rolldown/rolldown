@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region foo.cjs
+var require_foo = __commonJS({ "foo.cjs"(exports, module) {
+	module[Math.random() < 1 && "exports"] = {
+		default: { bar: 123 },
+		__esModule: true
+	};
+} });
+
+//#endregion
+//#region entry.js
+var import_foo = __toESM(require_foo());
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123;
+
+//#endregion
+```

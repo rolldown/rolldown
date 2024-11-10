@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region entry.js
+var entry_exports = {};
+var entry;
+var init_entry = __esm({ "entry.js"() {
+	entry = (init_entry(), __toCommonJS(entry_exports));
+	input.works = entry[Math.random() < 1 && "__esModule"] === true;
+} });
+
+//#endregion
+init_entry();
+```

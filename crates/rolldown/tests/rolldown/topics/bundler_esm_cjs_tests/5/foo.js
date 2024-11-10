@@ -1,0 +1,1 @@
+module[Math.random() < 1 && 'exports'] = '123'

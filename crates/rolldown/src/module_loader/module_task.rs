@@ -155,7 +155,8 @@ impl ModuleTask {
 
     let file_view = if matches!(module_type, ModuleType::File) {
       let file_view_source: ArcStr = source.clone().try_into_string()?.into();
-      Some(create_file_view(&file_view_source))
+      let ret = create_file_view(&file_view_source);
+      Some(ret)
     } else {
       None
     };

@@ -1,11 +1,13 @@
+# Reason
+1. pure transformation is handled by `oxc-transform`
 # Diff
 ## /out.js
 ### esbuild
 ```js
 export default [
-  async () => {
+  () => __async(void 0, null, function* () {
     try {
-      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
         x = temp.value;
         z(x);
       }
@@ -13,16 +15,16 @@ export default [
       error = [temp];
     } finally {
       try {
-        more && (temp = iter.return) && await temp.call(iter);
+        more && (temp = iter.return) && (yield temp.call(iter));
       } finally {
         if (error)
           throw error[0];
       }
     }
-  },
-  async () => {
+  }),
+  () => __async(void 0, null, function* () {
     try {
-      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
         x.y = temp.value;
         z(x);
       }
@@ -30,16 +32,16 @@ export default [
       error = [temp];
     } finally {
       try {
-        more && (temp = iter.return) && await temp.call(iter);
+        more && (temp = iter.return) && (yield temp.call(iter));
       } finally {
         if (error)
           throw error[0];
       }
     }
-  },
-  async () => {
+  }),
+  () => __async(void 0, null, function* () {
     try {
-      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
         let x2 = temp.value;
         z(x2);
       }
@@ -47,16 +49,16 @@ export default [
       error = [temp];
     } finally {
       try {
-        more && (temp = iter.return) && await temp.call(iter);
+        more && (temp = iter.return) && (yield temp.call(iter));
       } finally {
         if (error)
           throw error[0];
       }
     }
-  },
-  async () => {
+  }),
+  () => __async(void 0, null, function* () {
     try {
-      for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+      for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
         const x2 = temp.value;
         z(x2);
       }
@@ -64,16 +66,16 @@ export default [
       error = [temp];
     } finally {
       try {
-        more && (temp = iter.return) && await temp.call(iter);
+        more && (temp = iter.return) && (yield temp.call(iter));
       } finally {
         if (error)
           throw error[0];
       }
     }
-  },
-  async () => {
+  }),
+  () => __async(void 0, null, function* () {
     try {
-      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
         const x2 = temp.value;
         break label;
       }
@@ -81,16 +83,16 @@ export default [
       error = [temp];
     } finally {
       try {
-        more && (temp = iter.return) && await temp.call(iter);
+        more && (temp = iter.return) && (yield temp.call(iter));
       } finally {
         if (error)
           throw error[0];
       }
     }
-  },
-  async () => {
+  }),
+  () => __async(void 0, null, function* () {
     try {
-      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+      label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
         const x2 = temp.value;
         continue label;
       }
@@ -98,13 +100,13 @@ export default [
       error = [temp];
     } finally {
       try {
-        more && (temp = iter.return) && await temp.call(iter);
+        more && (temp = iter.return) && (yield temp.call(iter));
       } finally {
         if (error)
           throw error[0];
       }
     }
-  }
+  })
 ];
 ```
 ### rolldown
@@ -135,9 +137,9 @@ export { entry_default as default };
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,91 +1,10 @@
--export default [async () => {
+-export default [() => __async(void 0, null, function* () {
 -    try {
--        for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+-        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
 -            x = temp.value;
 -            z(x);
 -        }
@@ -145,16 +147,14 @@ export { entry_default as default };
 -        error = [temp];
 -    } finally {
 -        try {
--            more && (temp = iter.return) && await temp.call(iter);
+-            more && (temp = iter.return) && (yield temp.call(iter));
 -        } finally {
 -            if (error) throw error[0];
 -        }
 -    }
-+var entry_default = [async () => {
-+    for await (x of y) z(x);
- }, async () => {
+-}), () => __async(void 0, null, function* () {
 -    try {
--        for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+-        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
 -            x.y = temp.value;
 -            z(x);
 -        }
@@ -162,15 +162,14 @@ export { entry_default as default };
 -        error = [temp];
 -    } finally {
 -        try {
--            more && (temp = iter.return) && await temp.call(iter);
+-            more && (temp = iter.return) && (yield temp.call(iter));
 -        } finally {
 -            if (error) throw error[0];
 -        }
 -    }
-+    for await (x.y of y) z(x);
- }, async () => {
+-}), () => __async(void 0, null, function* () {
 -    try {
--        for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+-        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
 -            let x2 = temp.value;
 -            z(x2);
 -        }
@@ -178,15 +177,14 @@ export { entry_default as default };
 -        error = [temp];
 -    } finally {
 -        try {
--            more && (temp = iter.return) && await temp.call(iter);
+-            more && (temp = iter.return) && (yield temp.call(iter));
 -        } finally {
 -            if (error) throw error[0];
 -        }
 -    }
-+    for await (let x$1 of y) z(x$1);
- }, async () => {
+-}), () => __async(void 0, null, function* () {
 -    try {
--        for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+-        for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
 -            const x2 = temp.value;
 -            z(x2);
 -        }
@@ -194,14 +192,14 @@ export { entry_default as default };
 -        error = [temp];
 -    } finally {
 -        try {
--            more && (temp = iter.return) && await temp.call(iter);
+-            more && (temp = iter.return) && (yield temp.call(iter));
 -        } finally {
 -            if (error) throw error[0];
 -        }
 -    }
--}, async () => {
+-}), () => __async(void 0, null, function* () {
 -    try {
--        label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+-        label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
 -            const x2 = temp.value;
 -            break label;
 -        }
@@ -209,14 +207,14 @@ export { entry_default as default };
 -        error = [temp];
 -    } finally {
 -        try {
--            more && (temp = iter.return) && await temp.call(iter);
+-            more && (temp = iter.return) && (yield temp.call(iter));
 -        } finally {
 -            if (error) throw error[0];
 -        }
 -    }
--}, async () => {
+-}), () => __async(void 0, null, function* () {
 -    try {
--        label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
+-        label: for (var iter = __forAwait(y), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
 -            const x2 = temp.value;
 -            continue label;
 -        }
@@ -224,13 +222,21 @@ export { entry_default as default };
 -        error = [temp];
 -    } finally {
 -        try {
--            more && (temp = iter.return) && await temp.call(iter);
+-            more && (temp = iter.return) && (yield temp.call(iter));
 -        } finally {
 -            if (error) throw error[0];
 -        }
 -    }
+-})];
++var entry_default = [async () => {
++    for await (x of y) z(x);
++}, async () => {
++    for await (x.y of y) z(x);
++}, async () => {
++    for await (let x$1 of y) z(x$1);
++}, async () => {
 +    for await (const x$1 of y) z(x$1);
- }];
++}];
 +export {entry_default as default};
 
 ```

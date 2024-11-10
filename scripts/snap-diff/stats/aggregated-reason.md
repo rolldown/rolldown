@@ -15,7 +15,7 @@
 - crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_none
-## const enum inline
+## not support const enum inline
 - crates/rolldown/tests/esbuild/ts/enum_rules_from_type_script_5_0
 - crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
 - crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access
@@ -93,6 +93,7 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
+- crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## should rewrite `require`
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call
@@ -329,8 +330,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
-## Not support json attributes
-- crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## should not transform `export * as ns from 'mod'` above es2019
 - crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision
 ## pure transformation is handled by `oxc-transform`

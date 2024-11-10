@@ -1,3 +1,5 @@
+# Reason
+1. pure transformation is handled by `oxc-transform`
 # Diff
 ## /out.js
 ### esbuild
@@ -14,6 +16,7 @@ class Foo {
     --__privateWrapper(this, _x)._;
   }
   binary() {
+    var _a;
     __privateSet(this, _x, 1);
     __privateSet(this, _x, __privateGet(this, _x) + 1);
     __privateSet(this, _x, __privateGet(this, _x) - 1);
@@ -29,7 +32,7 @@ class Foo {
     __privateSet(this, _x, __privateGet(this, _x) ^ 1);
     __privateGet(this, _x) && __privateSet(this, _x, 1);
     __privateGet(this, _x) || __privateSet(this, _x, 1);
-    __privateGet(this, _x) ?? __privateSet(this, _x, 1);
+    (_a = __privateGet(this, _x)) != null ? _a : __privateSet(this, _x, 1);
   }
 }
 _x = new WeakMap();
@@ -43,7 +46,7 @@ _x = new WeakMap();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +0,0 @@
+@@ -1,32 +0,0 @@
 -var _x;
 -class Foo {
 -    constructor() {
@@ -56,6 +59,7 @@ _x = new WeakMap();
 -        --__privateWrapper(this, _x)._;
 -    }
 -    binary() {
+-        var _a;
 -        __privateSet(this, _x, 1);
 -        __privateSet(this, _x, __privateGet(this, _x) + 1);
 -        __privateSet(this, _x, __privateGet(this, _x) - 1);
@@ -71,7 +75,7 @@ _x = new WeakMap();
 -        __privateSet(this, _x, __privateGet(this, _x) ^ 1);
 -        __privateGet(this, _x) && __privateSet(this, _x, 1);
 -        __privateGet(this, _x) || __privateSet(this, _x, 1);
--        __privateGet(this, _x) ?? __privateSet(this, _x, 1);
+-        (_a = __privateGet(this, _x)) != null ? _a : __privateSet(this, _x, 1);
 -    }
 -}
 -_x = new WeakMap();

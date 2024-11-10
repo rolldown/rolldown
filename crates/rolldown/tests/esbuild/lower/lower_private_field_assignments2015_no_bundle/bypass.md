@@ -1,3 +1,5 @@
+# Reason
+1. pure transformation is handled by `oxc-transform`
 # Diff
 ## /out.js
 ### esbuild
@@ -21,7 +23,7 @@ class Foo {
     __privateSet(this, _x, __privateGet(this, _x) * 1);
     __privateSet(this, _x, __privateGet(this, _x) / 1);
     __privateSet(this, _x, __privateGet(this, _x) % 1);
-    __privateSet(this, _x, __privateGet(this, _x) ** 1);
+    __privateSet(this, _x, __pow(__privateGet(this, _x), 1));
     __privateSet(this, _x, __privateGet(this, _x) << 1);
     __privateSet(this, _x, __privateGet(this, _x) >> 1);
     __privateSet(this, _x, __privateGet(this, _x) >>> 1);
@@ -64,7 +66,7 @@ _x = new WeakMap();
 -        __privateSet(this, _x, __privateGet(this, _x) * 1);
 -        __privateSet(this, _x, __privateGet(this, _x) / 1);
 -        __privateSet(this, _x, __privateGet(this, _x) % 1);
--        __privateSet(this, _x, __privateGet(this, _x) ** 1);
+-        __privateSet(this, _x, __pow(__privateGet(this, _x), 1));
 -        __privateSet(this, _x, __privateGet(this, _x) << 1);
 -        __privateSet(this, _x, __privateGet(this, _x) >> 1);
 -        __privateSet(this, _x, __privateGet(this, _x) >>> 1);

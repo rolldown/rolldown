@@ -264,9 +264,9 @@ impl<'a> GenerateStage<'a> {
           let file_loader_hash_placeholder = extract_file_loader_hash_pattern
             .as_ref()
             .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
-
+          let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unwrap();
           let file_loader_preliminary = file_loader_template.render(&FileNameRenderOptions {
-            name: Some(&chunk_name),
+            name: Some(&name),
             hash: file_loader_hash_placeholder.as_deref(),
             ext: module.id.as_path().extension().and_then(|s| s.to_str()),
           });

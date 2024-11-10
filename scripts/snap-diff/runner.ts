@@ -116,17 +116,27 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
     aggregatedStats.stats.bypass += summary.stats.bypass
     aggregatedStats.stats.failed += summary.stats.failed
   }
-  generateStatsMarkdown(aggregatedStats)
-  generateAggregateMarkdown()
+  let unsupportedCaseCount = generateAggregateMarkdown()
+  generateStatsMarkdown(aggregatedStats, unsupportedCaseCount)
 }
 
 function generateAggregateMarkdown() {
   let entries = aggregateReason()
   let markdown = '# Aggregate Reason\n'
+  let unsupportedCase = 0
+  let markdownSkipUnsupported = '# Aggregate Reason\n'
   for (let [reason, caseDirs] of entries) {
     markdown += `## ${reason}\n`
     for (let dir of caseDirs) {
       markdown += `- ${dir}\n`
+    }
+    if (reason.startsWith('not support')) {
+      unsupportedCase += caseDirs.length
+      continue
+    }
+    markdownSkipUnsupported += `## ${reason}\n`
+    for (let dir of caseDirs) {
+      markdownSkipUnsupported += `- ${dir}\n`
     }
   }
 
@@ -134,6 +144,14 @@ function generateAggregateMarkdown() {
     path.resolve(import.meta.dirname, './stats/aggregated-reason.md'),
     markdown,
   )
+  fs.writeFileSync(
+    path.resolve(
+      import.meta.dirname,
+      './stats/aggregated-reason-without-not-support.md',
+    ),
+    markdownSkipUnsupported,
+  )
+  return unsupportedCase
 }
 
 function getRolldownSnap(caseDir: string) {
@@ -159,7 +177,10 @@ function getDiffMarkdown(
   return markdown
 }
 
-function generateStatsMarkdown(aggregateStats: AggregateStats) {
+function generateStatsMarkdown(
+  aggregateStats: AggregateStats,
+  unsupportedCaseCount: number,
+) {
   const { stats, details } = aggregateStats
   let markdown = ''
 
@@ -167,6 +188,12 @@ function generateStatsMarkdown(aggregateStats: AggregateStats) {
   markdown += `- total: ${stats.total}\n`
   markdown += `- passed: ${stats.total - stats.failed}\n`
   markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(2)}%\n`
+
+  let totalWithoutNotSupport = stats.total - unsupportedCaseCount
+  markdown += `# Compatibility metric without not supported case\n`
+  markdown += `- total: ${totalWithoutNotSupport}\n`
+  markdown += `- passed: ${stats.total - stats.failed}\n`
+  markdown += `- passed ratio: ${(((stats.total - stats.failed) / totalWithoutNotSupport) * 100).toFixed(2)}%\n`
 
   markdown += `# Compatibility metric details\n`
   Object.entries(details).forEach(([category, stats]) => {

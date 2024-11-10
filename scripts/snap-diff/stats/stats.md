@@ -2,6 +2,10 @@
 - total: 784
 - passed: 502
 - passed ratio: 64.03%
+# Compatibility metric without not supported case
+- total: 722
+- passed: 502
+- passed ratio: 69.53%
 # Compatibility metric details
 ## dce
 - total: 113

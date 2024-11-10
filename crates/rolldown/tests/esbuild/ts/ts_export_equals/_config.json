@@ -6,6 +6,5 @@
         "import": "a.ts"
       }
     ]
-  },
-  "expectError": true
+  }
 }

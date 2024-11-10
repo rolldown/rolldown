@@ -75,7 +75,7 @@ impl PreProcessEcmaAst {
           transformer_options.jsx = jsx.clone();
         }
 
-        Transformer::new(fields.allocator, Path::new(path), transformer_options)
+        Transformer::new(fields.allocator, Path::new(path), &transformer_options)
           .build_with_symbols_and_scopes(symbols, scopes, fields.program)
       });
 

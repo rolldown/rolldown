@@ -34,10 +34,11 @@ impl<'a> SideEffectDetector<'a> {
   pub fn leading_comment_for(&self, span: Span) -> Option<(&Comment, &str)> {
     let comment = comments_range(self.comments, ..span.start).next_back()?;
 
-    let comment_text = comment.span.source_text(self.source);
+    let comment_span = comment.content_span();
+    let comment_text = comment_span.source_text(self.source);
     // If there are non-whitespace characters between the `comment` and the `span`,
     // we treat the `comment` not belongs to the `span`.
-    let range_text = Span::new(comment.span.end, span.start).source_text(self.source);
+    let range_text = Span::new(comment_span.end, span.start).source_text(self.source);
     let only_whitespace = match comment.kind {
       CommentKind::Line => range_text.trim().is_empty(),
       CommentKind::Block => {
@@ -319,7 +320,7 @@ pub fn is_side_effect_free_unbound_identifier_ref(
   mut is_yes_branch: bool,
 ) -> Option<bool> {
   let ident = value.as_identifier()?;
-  let is_unresolved = scope.is_unresolved(ident.reference_id()?);
+  let is_unresolved = scope.is_unresolved(ident.reference_id());
   if !is_unresolved {
     return Some(false);
   }
@@ -396,7 +397,7 @@ pub fn maybe_side_effect_free_global_constructor(
     return false;
   };
 
-  if scope.is_unresolved(ident.reference_id().unwrap()) {
+  if scope.is_unresolved(ident.reference_id()) {
     match ident.name.as_str() {
       "WeakSet" | "WeakMap" => match expr.arguments.len() {
         0 => return true,
@@ -405,7 +406,7 @@ pub fn maybe_side_effect_free_global_constructor(
           match arg {
             ast::Argument::NullLiteral(_) => return true,
             ast::Argument::Identifier(id)
-              if id.name == "undefined" && scope.is_unresolved(id.reference_id().unwrap()) =>
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
             {
               return true
             }
@@ -443,7 +444,7 @@ pub fn maybe_side_effect_free_global_constructor(
           match arg {
             ast::Argument::NullLiteral(_) | ast::Argument::ArrayExpression(_) => return true,
             ast::Argument::Identifier(id)
-              if id.name == "undefined" && scope.is_unresolved(id.reference_id().unwrap()) =>
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
             {
               return true
             }
@@ -459,7 +460,7 @@ pub fn maybe_side_effect_free_global_constructor(
           match arg {
             ast::Argument::NullLiteral(_) => return true,
             ast::Argument::Identifier(id)
-              if id.name == "undefined" && scope.is_unresolved(id.reference_id().unwrap()) =>
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
             {
               return true
             }

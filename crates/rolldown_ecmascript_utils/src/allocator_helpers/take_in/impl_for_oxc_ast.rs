@@ -338,7 +338,6 @@ impl<'ast> TakeIn<'ast> for ast::ObjectProperty<'ast> {
       kind: TakeIn::dummy(alloc),
       key: TakeIn::dummy(alloc),
       value: TakeIn::dummy(alloc),
-      init: TakeIn::dummy(alloc),
       method: TakeIn::dummy(alloc),
       shorthand: TakeIn::dummy(alloc),
       computed: TakeIn::dummy(alloc),

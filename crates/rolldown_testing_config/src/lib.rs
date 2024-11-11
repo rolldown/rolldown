@@ -42,6 +42,9 @@ pub struct TestMeta {
   /// If `true`, the bundle will be called with `write()` instead of `generate()`.
   #[serde(default = "true_by_default")]
   pub write_to_disk: bool,
+  /// If `true`, assets won't be snapshot
+  #[serde(default)]
+  pub snapshot_skip_assets: bool,
 }
 
 impl Default for TestMeta {

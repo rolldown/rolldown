@@ -98,6 +98,12 @@ export class ReplacePlugin extends BuiltinPlugin {
   }
 }
 
+export class VirtualPlugin extends BuiltinPlugin {
+  constructor(modules?: Record<string, string>) {
+    super(BindingBuiltinPluginName.VirtualPlugin, modules)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -175,6 +181,10 @@ export function replacePlugin(
   options: Omit<BindingReplacePluginConfig, 'values'> = {},
 ) {
   return new ReplacePlugin({ ...options, values })
+}
+
+export function virtualPlugin(modules: Record<string, string>) {
+  return new VirtualPlugin(modules)
 }
 
 export function bindingifyBuiltInPlugin(

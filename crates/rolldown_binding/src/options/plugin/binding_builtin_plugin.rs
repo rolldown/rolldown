@@ -13,6 +13,7 @@ use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_virtual::{VirtualOption, VirtualPlugin};
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use serde::Deserialize;
@@ -55,6 +56,7 @@ pub enum BindingBuiltinPluginName {
   JsonPlugin,
   BuildImportAnalysisPlugin,
   ReplacePlugin,
+  VirtualPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -270,6 +272,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
             sourcemap: opts.sourcemap.unwrap_or(false),
           }
         })))
+      }
+      BindingBuiltinPluginName::VirtualPlugin => {
+        let modules = if let Some(options) = plugin.options {
+          HashMap::<String, String>::from_unknown(options)?
+        } else {
+          HashMap::new()
+        };
+        Arc::new(VirtualPlugin::new(VirtualOption { modules }))
       }
     })
   }

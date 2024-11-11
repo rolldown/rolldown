@@ -17,4 +17,5 @@ export {
   jsonPlugin,
   buildImportAnalysisPlugin,
   replacePlugin,
+  virtualPlugin,
 } from './plugin/builtin-plugin'

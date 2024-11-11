@@ -203,7 +203,7 @@ impl IntegrationTest {
 
     let mut assets = bundle_output.assets;
 
-    let assets_section = if !assets.is_empty() {
+    let assets_section = if !assets.is_empty() && !self.test_meta.snapshot_skip_assets {
       let mut snapshot = String::new();
       snapshot.push_str("# Assets\n\n");
       assets.sort_by_key(|c| c.filename().to_string());

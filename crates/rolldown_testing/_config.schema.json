@@ -41,6 +41,11 @@
       "default": false,
       "type": "boolean"
     },
+    "snapshotSkipAssets": {
+      "description": "If `true`, assets won't be snapshot",
+      "default": false,
+      "type": "boolean"
+    },
     "visualizeSourcemap": {
       "description": "If `true`, the sourcemap visualizer will be snapshot.",
       "default": false,

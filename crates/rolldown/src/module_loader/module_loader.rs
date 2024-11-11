@@ -72,7 +72,7 @@ impl ModuleLoader {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> anyhow::Result<Self> {
-    let tx_to_runtime_module = plugin_driver.tx.clone();
+    let tx_to_runtime_module = Arc::clone(&plugin_driver.tx);
 
     let meta = TaskContextMeta {
       replace_global_define_config: if options.define.is_empty() {
@@ -233,7 +233,7 @@ impl ModuleLoader {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
-    let rx = self.shared_context.plugin_driver.rx.clone();
+    let rx = Arc::clone(&self.shared_context.plugin_driver.rx);
     let mut rx = rx.lock().await;
 
     while self.remaining > 0 {

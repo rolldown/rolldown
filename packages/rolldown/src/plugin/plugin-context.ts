@@ -62,7 +62,7 @@ export class PluginContext extends MinimalPluginContext {
     data: PluginContextData,
   ) {
     super(options, plugin)
-    this.load = async ({ id, resolveDependencies, ...options }) => {
+    this.load = async ({ id, ...options }) => {
       // resolveDependencies always true at rolldown
       const rawOptions = {
         meta: options.meta || {},
@@ -70,7 +70,7 @@ export class PluginContext extends MinimalPluginContext {
       }
       data.updateModuleOption(id, rawOptions)
       let resolveFn
-      const promise = new Promise((resolve, reject) => {
+      const promise = new Promise((resolve, _) => {
         resolveFn = resolve
       })
       await context.load(id, resolveFn!)

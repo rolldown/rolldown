@@ -9,7 +9,9 @@ export default defineTest({
         name: 'test-plugin-context',
         async load(id) {
           if (id.endsWith('main.js')) {
-            const moduleInfo = await this.load({ id: path.join(__dirname, 'foo.js')})
+            const moduleInfo = await this.load({
+              id: path.join(__dirname, 'foo.js'),
+            })
             expect(moduleInfo.code!.includes('foo')).toBe(true)
           }
         },

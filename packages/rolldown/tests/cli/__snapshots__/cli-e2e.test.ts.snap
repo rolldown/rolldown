@@ -135,6 +135,12 @@ exports[`cli options for bundling > should handle single string options 1`] = `
 "
 `;
 
+exports[`config > no package.json > should allow loading ts config with tsx 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
 exports[`config > no package.json > should bundle in ext-js-syntax-cjs 1`] = `
 "<DIR>/index.js  chunk │ size: 0.13 kB
 

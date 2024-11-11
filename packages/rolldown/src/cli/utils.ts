@@ -39,21 +39,22 @@ function createTestingLogger() {
 }
 
 export async function ensureConfig(configPath: string): Promise<ConfigExport> {
-  if (!isSupportedFormat(configPath)) {
-    throw new Error(
-      `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(
-        ',',
-      )}\` but got \`${nodePath.extname(configPath)}\``,
-    )
-  }
-
   // Ensure the path is recognized by Node.js in windows
   const fileUrl = pathToFileURL(configPath).toString()
 
-  const configExports = await import(fileUrl)
+  let configExports: { default?: ConfigExport }
+  try {
+    configExports = await import(fileUrl)
+  } catch (err) {
+    let errorMessage = 'Error happened while loading config.'
+    if (!isSupportedFormat(configPath)) {
+      errorMessage += ` Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(',')}\` but got \`${nodePath.extname(configPath)}\``
+    }
+    throw new Error(errorMessage, { cause: err })
+  }
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message
-  return configExports.default
+  return configExports.default!
 }
 
 const SUPPORTED_CONFIG_FORMATS = ['.js', '.mjs', '.cjs']

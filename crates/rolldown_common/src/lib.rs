@@ -34,7 +34,7 @@ pub mod bundler_options {
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
       target::ESTarget,
-      treeshake::{InnerOptions, ModuleSideEffects, TreeshakeOptions},
+      treeshake::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, TreeshakeOptions},
       watch_option::{NotifyOption, WatchOption},
     },
     BundlerOptions,

@@ -1,6 +1,5 @@
 import type { InputOptions } from '../types/input-options'
 import { NormalizedTreeshakingOptions } from '../treeshake'
-import { isRegExp } from 'node:util/types'
 
 export function normalizeTreeshakeOptions(
   config: InputOptions['treeshake'],
@@ -10,18 +9,16 @@ export function normalizeTreeshakeOptions(
   }
   if (config === true || config === undefined) {
     return {
-      moduleSideEffects: 'true',
+      moduleSideEffects: true,
     }
   }
   let normalizedConfig: NormalizedTreeshakingOptions = {
-    moduleSideEffects: '',
+    moduleSideEffects: true,
   }
   if (config.moduleSideEffects === undefined) {
-    normalizedConfig.moduleSideEffects = 'true'
-  } else if (isRegExp(config.moduleSideEffects)) {
-    normalizedConfig.moduleSideEffects = config.moduleSideEffects.source
+    normalizedConfig.moduleSideEffects = true
   } else {
-    normalizedConfig.moduleSideEffects = config.moduleSideEffects.toString()
+    normalizedConfig.moduleSideEffects = config.moduleSideEffects
   }
   return normalizedConfig
 }

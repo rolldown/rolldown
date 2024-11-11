@@ -73,6 +73,7 @@ pub struct BindingInputOptions {
   // extra
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
+  #[serde(skip_deserializing)]
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
   pub module_types: Option<HashMap<String, String>>,

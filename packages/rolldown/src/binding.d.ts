@@ -280,6 +280,12 @@ export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
 
+export interface BindingModuleSideEffectsRule {
+  test?: RegExp | undefined
+  sideEffects: boolean
+  external?: boolean | undefined
+}
+
 export interface BindingNotifyOption {
   pollInterval?: number
   compareContents?: boolean
@@ -436,7 +442,7 @@ export interface BindingTransformPluginConfig {
 }
 
 export interface BindingTreeshake {
-  moduleSideEffects: string
+  moduleSideEffects: boolean | BindingModuleSideEffectsRule[]
 }
 
 export declare enum BindingWatcherEvent {

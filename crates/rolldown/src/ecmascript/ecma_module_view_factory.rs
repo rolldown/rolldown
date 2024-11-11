@@ -156,16 +156,15 @@ pub async fn create_ecma_view<'any>(
       TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
       TreeshakeOptions::Boolean(true) => unreachable!(),
       TreeshakeOptions::Option(ref opt) => {
-        match opt.module_side_effects.resolve(&stable_id, true) {
-          Some(true) => todo!(),
-          Some(false) => {
-            todo!()
-          }
-          None => DeterminedSideEffects::UserDefined(false),
+        match opt.module_side_effects.resolve(&stable_id, false) {
+          Some(false) => DeterminedSideEffects::UserDefined(false),
+          None | Some(true) => lazy_check_side_effects(),
         }
       }
     },
   };
+
+  dbg!(&side_effects);
 
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let view = EcmaView {

@@ -30,9 +30,9 @@ pub enum ModuleSideEffects {
 
 #[derive(Debug)]
 pub struct ModuleSideEffectsRule {
-  test: Option<HybridRegex>,
-  external: Option<bool>,
-  side_effects: bool,
+  pub test: Option<HybridRegex>,
+  pub external: Option<bool>,
+  pub side_effects: bool,
 }
 
 impl ModuleSideEffects {

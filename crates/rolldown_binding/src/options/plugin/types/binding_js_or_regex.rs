@@ -70,8 +70,16 @@ impl TryFrom<BindingStringOrRegex> for HybridRegex {
   fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
     match value.0 {
       Either::A(value) => HybridRegex::new(&value),
-      Either::B(value) => HybridRegex::with_flags(&value.source, &value.flags),
+      Either::B(value) => HybridRegex::try_from(value),
     }
+  }
+}
+
+impl TryFrom<JsRegExp> for HybridRegex {
+  type Error = anyhow::Error;
+
+  fn try_from(value: JsRegExp) -> Result<Self, Self::Error> {
+    HybridRegex::with_flags(&value.source, &value.flags)
   }
 }
 

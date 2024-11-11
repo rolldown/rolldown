@@ -17,6 +17,11 @@ export function normalizeTreeshakeOptions(
   }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true
+  } else if (config.moduleSideEffects === 'no-external') {
+    normalizedConfig.moduleSideEffects = [
+      { external: true, sideEffects: false },
+      { external: false, sideEffects: true },
+    ]
   } else {
     normalizedConfig.moduleSideEffects = config.moduleSideEffects
   }

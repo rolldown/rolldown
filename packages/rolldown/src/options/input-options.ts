@@ -9,7 +9,7 @@ import {
   RollupLogWithStringSchema,
 } from '../log/logging'
 import type { RolldownPluginRec } from '../plugin'
-import type { TreeshakingOptions } from '../treeshake'
+import { TreeshakingOptionsSchema } from '../treeshake'
 import type {
   ExternalOption,
   InputCliOptions,
@@ -127,8 +127,7 @@ export const inputOptionsSchema = z.strictObject({
     .boolean()
     .describe(`Create shim variables for missing exports`)
     .optional(),
-  // FIXME: should use a more specific schema
-  treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
+  treeshake: TreeshakingOptionsSchema.optional(),
   logLevel: LogLevelOptionSchema.describe(
     `Log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
   ).optional(),

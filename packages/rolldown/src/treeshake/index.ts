@@ -1,11 +1,7 @@
-export interface TreeshakingOptions {
-  moduleSideEffects?: boolean | ModuleSideEffectsRule[] | 'no-external'
-}
+import { ModuleSideEffectsRule } from './module-side-effects'
 
-export type ModuleSideEffectsRule = {
-  test?: RegExp
-  external?: boolean
-  sideEffects: boolean
+export interface NormalizedTreeshakingOptions {
+  moduleSideEffects: boolean | ModuleSideEffectsRule[]
 }
 
 export * from './module-side-effects'

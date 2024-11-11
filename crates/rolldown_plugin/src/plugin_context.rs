@@ -1,13 +1,19 @@
 use std::{
+  fmt::Debug,
+  future::Future,
   ops::Deref,
   path::PathBuf,
+  pin::Pin,
   sync::{Arc, Weak},
 };
 
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
-use rolldown_common::{ModuleInfo, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions};
+use rolldown_common::{
+  ModuleDefFormat, ModuleInfo, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
+};
 use rolldown_resolver::{ResolveError, Resolver};
+use tokio::sync::Mutex;
 
 use crate::{
   types::{
@@ -36,6 +42,9 @@ impl PluginContext {
       options: Arc::clone(&self.options),
       watch_files: Arc::clone(&self.watch_files),
       modules: Arc::clone(&self.modules),
+      context_load_modules: Arc::clone(&self.context_load_modules),
+      rx: Arc::clone(&self.rx),
+      tx: Arc::clone(&self.tx),
     }))
   }
 }
@@ -45,6 +54,27 @@ impl Deref for PluginContext {
 
   fn deref(&self) -> &Self::Target {
     &self.0
+  }
+}
+
+type LoadCallbackFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>>
+  + Send
+  + Sync
+  + 'static;
+
+pub struct LoadCallback(Box<LoadCallbackFn>);
+
+impl Deref for LoadCallback {
+  type Target = LoadCallbackFn;
+
+  fn deref(&self) -> &Self::Target {
+    &*self.0
+  }
+}
+
+impl Debug for LoadCallback {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "LoadCallback fn")
   }
 }
 
@@ -58,6 +88,9 @@ pub struct PluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<DashSet<ArcStr>>,
   pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub(crate) context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
+  pub(crate) tx: Arc<tokio::sync::mpsc::Sender<ResolvedId>>,
+  pub(crate) rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ResolvedId>>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -67,6 +100,27 @@ impl From<PluginContextImpl> for PluginContext {
 }
 
 impl PluginContextImpl {
+  pub async fn load(
+    &self,
+    specifier: &str,
+    load_callback_fn: Box<LoadCallbackFn>,
+  ) -> anyhow::Result<()> {
+    self.context_load_modules.insert(specifier.into(), LoadCallback(Box::new(load_callback_fn)));
+    self
+      .tx
+      .send(ResolvedId {
+        id: specifier.into(),
+        ignored: false,
+        module_def_format: ModuleDefFormat::Unknown,
+        is_external: false,
+        package_json: None,
+        side_effects: None,
+        is_external_without_side_effects: false,
+      })
+      .await?;
+    Ok(())
+  }
+
   pub async fn resolve(
     &self,
     specifier: &str,

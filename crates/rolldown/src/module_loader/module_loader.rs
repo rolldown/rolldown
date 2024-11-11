@@ -241,6 +241,9 @@ impl ModuleLoader {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
+    let load_module_rx = self.shared_context.plugin_driver.rx.clone();
+    let mut load_module_rx_guard = load_module_rx.lock().await;
+
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
@@ -306,6 +309,14 @@ impl ModuleLoader {
         }
       }
       self.remaining -= 1;
+
+      let mut count = load_module_rx_guard.len();
+      while count > 0 {
+        count -= 1;
+        if let Ok(resolve_id) = load_module_rx_guard.try_recv() {
+          self.try_spawn_new_task(resolve_id, None);
+        }
+      }
     }
 
     if !errors.is_empty() {

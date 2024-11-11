@@ -2699,6 +2699,7 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_utils",
  "sugar_path",
+ "tokio",
  "tracing",
  "typedmap",
 ]

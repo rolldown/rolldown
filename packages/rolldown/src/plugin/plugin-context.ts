@@ -64,12 +64,17 @@ export class PluginContext extends MinimalPluginContext {
     super(options, plugin)
     this.load = async ({ id, ...options }) => {
       // resolveDependencies always true at rolldown
+      const moduleInfo = data.getModuleInfo(id, context)
+      if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
+        return moduleInfo
+      }
       const rawOptions = {
         meta: options.meta || {},
         moduleSideEffects: options.moduleSideEffects || null,
       }
       data.updateModuleOption(id, rawOptions)
       let resolveFn
+      // TODO: If is not resolved, we need to set a time to avoid waiting.
       const promise = new Promise((resolve, _) => {
         resolveFn = resolve
       })

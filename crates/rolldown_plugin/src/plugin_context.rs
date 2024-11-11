@@ -10,7 +10,8 @@ use std::{
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_common::{
-  ModuleDefFormat, ModuleInfo, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
+  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
+  SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use tokio::sync::Mutex;
@@ -89,8 +90,8 @@ pub struct PluginContextImpl {
   pub(crate) watch_files: Arc<DashSet<ArcStr>>,
   pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
   pub(crate) context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
-  pub(crate) tx: Arc<tokio::sync::mpsc::Sender<ResolvedId>>,
-  pub(crate) rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ResolvedId>>>,
+  pub(crate) tx: Arc<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+  pub(crate) rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ModuleLoaderMsg>>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -108,7 +109,7 @@ impl PluginContextImpl {
     self.context_load_modules.insert(specifier.into(), LoadCallback(Box::new(load_callback_fn)));
     self
       .tx
-      .send(ResolvedId {
+      .send(ModuleLoaderMsg::FetchModule(ResolvedId {
         id: specifier.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::Unknown,
@@ -116,7 +117,7 @@ impl PluginContextImpl {
         package_json: None,
         side_effects: None,
         is_external_without_side_effects: false,
-      })
+      }))
       .await?;
     Ok(())
   }

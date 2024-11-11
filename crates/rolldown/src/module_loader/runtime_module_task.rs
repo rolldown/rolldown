@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use oxc::span::SourceType;
 use oxc::{ast::VisitMut, index::IndexVec};
@@ -17,7 +19,7 @@ use crate::{
   utils::tweak_ast_for_scanning::PreProcessor,
 };
 pub struct RuntimeModuleTask {
-  tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
+  tx: Arc<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
   module_id: ModuleIdx,
   errors: Vec<BuildDiagnostic>,
 }
@@ -30,7 +32,7 @@ pub struct MakeEcmaAstResult {
 }
 
 impl RuntimeModuleTask {
-  pub fn new(id: ModuleIdx, tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>) -> Self {
+  pub fn new(id: ModuleIdx, tx: Arc<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>) -> Self {
     Self { module_id: id, tx, errors: Vec::new() }
   }
 

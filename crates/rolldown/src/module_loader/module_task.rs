@@ -65,6 +65,7 @@ impl ModuleTask {
         if !self.errors.is_empty() {
           self
             .ctx
+            .plugin_driver
             .tx
             .send(ModuleLoaderMsg::BuildErrors(self.errors))
             .await
@@ -74,6 +75,7 @@ impl ModuleTask {
       Err(errs) => {
         self
           .ctx
+          .plugin_driver
           .tx
           .send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
           .await
@@ -244,6 +246,7 @@ impl ModuleTask {
 
     if let Err(_err) = self
       .ctx
+      .plugin_driver
       .tx
       .send(ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps,

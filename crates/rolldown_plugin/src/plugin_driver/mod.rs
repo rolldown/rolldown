@@ -7,7 +7,7 @@ use std::{
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_common::{
-  ModuleId, ModuleInfo, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
+  ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
 use tokio::sync::Mutex;
@@ -36,8 +36,8 @@ pub struct PluginDriver {
   pub watch_files: Arc<DashSet<ArcStr>>,
   pub modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
   pub context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
-  pub tx: Arc<tokio::sync::mpsc::Sender<ResolvedId>>,
-  pub rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ResolvedId>>>,
+  pub tx: Arc<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+  pub rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ModuleLoaderMsg>>>,
 }
 
 impl PluginDriver {
@@ -50,6 +50,8 @@ impl PluginDriver {
     let watch_files = Arc::new(DashSet::default());
     let modules = Arc::new(DashMap::default());
     let context_load_modules = Arc::new(DashMap::default());
+    // 1024 should be enough for most cases
+    // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel(100);
     let tx = Arc::new(tx);
     let rx = Arc::new(Mutex::new(rx));

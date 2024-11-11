@@ -47,7 +47,6 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
-  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
@@ -73,11 +72,7 @@ impl ModuleLoader {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> anyhow::Result<Self> {
-    // 1024 should be enough for most cases
-    // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel::<ModuleLoaderMsg>(1024);
-
-    let tx_to_runtime_module = tx.clone();
+    let tx_to_runtime_module = plugin_driver.tx.clone();
 
     let meta = TaskContextMeta {
       replace_global_define_config: if options.define.is_empty() {
@@ -94,14 +89,8 @@ impl ModuleLoader {
         })?)
       },
     };
-    let common_data = Arc::new(TaskContext {
-      options: Arc::clone(&options),
-      tx,
-      resolver,
-      fs,
-      plugin_driver,
-      meta,
-    });
+    let common_data =
+      Arc::new(TaskContext { options: Arc::clone(&options), resolver, fs, plugin_driver, meta });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let symbols = SymbolRefDb::default();
@@ -123,7 +112,6 @@ impl ModuleLoader {
 
     Ok(Self {
       shared_context: common_data,
-      rx,
       options,
       visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
       runtime_id,
@@ -238,11 +226,11 @@ impl ModuleLoader {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
-    let load_module_rx = self.shared_context.plugin_driver.rx.clone();
-    let mut load_module_rx_guard = load_module_rx.lock().await;
+    let rx = self.shared_context.plugin_driver.rx.clone();
+    let mut rx = rx.lock().await;
 
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+      let Some(msg) = rx.recv().await else {
         break;
       };
       match msg {
@@ -301,19 +289,14 @@ impl ModuleLoader {
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
         }
+        ModuleLoaderMsg::FetchModule(resolve_id) => {
+          self.try_spawn_new_task(resolve_id, None);
+        }
         ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);
         }
       }
       self.remaining -= 1;
-
-      let mut count = load_module_rx_guard.len();
-      while count > 0 {
-        count -= 1;
-        if let Ok(resolve_id) = load_module_rx_guard.try_recv() {
-          self.try_spawn_new_task(resolve_id, None);
-        }
-      }
     }
 
     if !errors.is_empty() {

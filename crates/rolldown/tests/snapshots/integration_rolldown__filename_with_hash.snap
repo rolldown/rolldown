@@ -5065,6 +5065,11 @@ snapshot_kind: text
 - main-!~{000}~.js => main-BPZcaBgY.js
 - main-BPZcaBgY.js.map
 
+# tests/rolldown/topics/import_meta_url_polyfill/node_cjs
+
+- main-!~{000}~.js => main--GEls6KC.js
+- main--GEls6KC.js.map
+
 # tests/rolldown/topics/live_bindings/default_export_binding
 
 - main-!~{000}~.js => main-D8Iw7_K1.js

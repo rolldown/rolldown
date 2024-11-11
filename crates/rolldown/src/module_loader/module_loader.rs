@@ -285,6 +285,7 @@ impl ModuleLoader {
             self.symbol_ref_db.store_local_db(module_idx, ast_symbol);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
+          self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeModuleTaskResult { local_symbol_ref_db, mut module, runtime, ast } =
@@ -295,15 +296,16 @@ impl ModuleLoader {
 
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
+          self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
           self.try_spawn_new_task(resolve_id, None, false);
         }
         ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);
+          self.remaining -= 1;
         }
       }
-      self.remaining -= 1;
     }
 
     if !errors.is_empty() {

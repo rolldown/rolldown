@@ -11,17 +11,22 @@ export const ModuleSideEffectsRuleSchema = z
     sideEffects: z.boolean(),
   })
   .refine((data) => {
-    data.test || data.external
+    return data.test !== undefined || data.external !== undefined
   }, 'Either `test` or `external` should be set.')
+
+export type ModuleSideEffectsRule = z.infer<typeof ModuleSideEffectsRuleSchema>
 
 export const ModuleSideEffectsOptionSchema = z
   .boolean()
   .or(z.array(ModuleSideEffectsRuleSchema))
+  .or(z.literal('no-external'))
 
-export const NormalizedTreeshakingOptionsSchema = z.strictObject({
-  moduleSideEffects: ModuleSideEffectsOptionSchema,
-})
+export const TreeshakingOptionsSchema = z
+  .object({
+    moduleSideEffects: ModuleSideEffectsOptionSchema.optional(),
+  })
+  .passthrough()
 
-export type NormalizedTreeshakingOptions = z.infer<
-  typeof NormalizedTreeshakingOptionsSchema
->
+  .or(z.boolean())
+
+export type TreeshakingOptions = z.infer<typeof TreeshakingOptionsSchema>

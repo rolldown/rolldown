@@ -1,12 +1,12 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
-  span::{Atom, SPAN},
+  span::{Atom, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, SymbolRef, WrapKind,
+  AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, Platform, SymbolRef, WrapKind,
 };
-use rolldown_ecmascript_utils::{AstSnippet, BindingPatternExt, TakeIn};
+use rolldown_ecmascript_utils::{AstSnippet, BindingPatternExt, ExpressionExt, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -313,5 +313,74 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ret.extend(re_export_external_stmts.unwrap_or_default());
 
     ret
+  }
+
+  // Handle `import.meta.xxx` expression
+  pub fn handle_import_meta_prop_expr(&self, expr: &mut ast::Expression<'ast>) {
+    match expr {
+      // Check if the `expr` is `import.meta.xxx`. Doesn't include `import.meta`.
+      ast::Expression::StaticMemberExpression(member_expr)
+        if member_expr.object.is_import_meta() =>
+      {
+        let original_expr_span = member_expr.span;
+        match member_expr.property.name.as_str() {
+          // Try to polyfill `import.meta.url`
+          "url" => {
+            match (self.ctx.options.platform, &self.ctx.options.format) {
+              (Platform::Node, OutputFormat::Cjs) => {
+                // Replace it with `require('url').pathToFileURL(__filename).href`
+
+                // require('url')
+                let require_call = self.snippet.builder.alloc_call_expression(
+                  SPAN,
+                  self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+                  oxc::ast::NONE,
+                  self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                    self.snippet.builder.alloc_string_literal(SPAN, "url"),
+                  )),
+                  false,
+                );
+
+                // require('url').pathToFileURL
+                let require_path_to_file_url = self.snippet.builder.alloc_static_member_expression(
+                  SPAN,
+                  ast::Expression::CallExpression(require_call),
+                  self.snippet.builder.identifier_name(SPAN, "pathToFileURL"),
+                  false,
+                );
+
+                // require('url').pathToFileURL(__filename)
+                let require_path_to_file_url_call = self.snippet.builder.alloc_call_expression(
+                  SPAN,
+                  ast::Expression::StaticMemberExpression(require_path_to_file_url),
+                  oxc::ast::NONE,
+                  self.snippet.builder.vec1(ast::Argument::Identifier(
+                    self.snippet.builder.alloc_identifier_reference(SPAN, "__filename"),
+                  )),
+                  false,
+                );
+
+                // require('url').pathToFileURL(__filename).href
+                let require_path_to_file_url_href =
+                  self.snippet.builder.alloc_static_member_expression(
+                    SPAN,
+                    ast::Expression::CallExpression(require_path_to_file_url_call),
+                    self.snippet.builder.identifier_name(SPAN, "href"),
+                    false,
+                  );
+                *expr = ast::Expression::StaticMemberExpression(require_path_to_file_url_href);
+                *expr.span_mut() = original_expr_span;
+              }
+              _ => {
+                // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
+                // so users may handle it in their own way.
+              }
+            }
+          }
+          _ => {}
+        }
+      }
+      _ => {}
+    };
   }
 }

@@ -126,6 +126,7 @@ impl ModuleLoader {
     &mut self,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
+    is_user_defined_entry: bool,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -174,7 +175,13 @@ impl ModuleLoader {
           not_visited.insert(idx);
           self.remaining += 1;
 
-          let task = ModuleTask::new(Arc::clone(&self.shared_context), idx, resolved_id, owner);
+          let task = ModuleTask::new(
+            Arc::clone(&self.shared_context),
+            idx,
+            resolved_id,
+            owner,
+            is_user_defined_entry,
+          );
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
@@ -214,7 +221,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ None),
+        id: self.try_spawn_new_task(info, None, true),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -256,7 +263,7 @@ impl ModuleLoader {
                   normal_module.stable_id.as_str().into(),
                   raw_rec.span,
                 );
-                let id = self.try_spawn_new_task(info, Some(owner));
+                let id = self.try_spawn_new_task(info, Some(owner), false);
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
@@ -290,7 +297,7 @@ impl ModuleLoader {
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None);
+          self.try_spawn_new_task(resolve_id, None, false);
         }
         ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);

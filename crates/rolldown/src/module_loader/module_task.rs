@@ -53,8 +53,8 @@ impl ModuleTask {
     idx: ModuleIdx,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
+    is_user_defined_entry: bool,
   ) -> Self {
-    let is_user_defined_entry = owner.is_none();
     Self { ctx, module_idx: idx, resolved_id, owner, errors: vec![], is_user_defined_entry }
   }
 

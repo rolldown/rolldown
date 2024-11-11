@@ -12,11 +12,12 @@ export default defineConfig({
   plugins: [
     {
       name: 'test-plugin-context',
-      async resolveId(id) {
+      async load(id) {
+        console.log(111222)
         if (id.endsWith('index.js')) {
           const moduleInfo = await this.load({ id: path.join(import.meta.dirname, 'lib.js')})
           console.log(moduleInfo)
-          }
+        }
       },
     },
   ],

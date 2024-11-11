@@ -1,11 +1,7 @@
 use super::module_task::{ModuleTask, ModuleTaskOwner};
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
-use super::task_result::NormalModuleTaskResult;
-use super::Msg;
-use crate::module_loader::runtime_module_task::RuntimeModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
-use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::type_alias::IndexEcmaAst;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
@@ -13,7 +9,8 @@ use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleId, ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
+  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, NormalModuleTaskResult, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -50,7 +47,7 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
-  rx: tokio::sync::mpsc::Receiver<Msg>,
+  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
@@ -78,7 +75,7 @@ impl ModuleLoader {
   ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
+    let (tx, rx) = tokio::sync::mpsc::channel::<ModuleLoaderMsg>(1024);
 
     let tx_to_runtime_module = tx.clone();
 
@@ -249,7 +246,7 @@ impl ModuleLoader {
         break;
       };
       match msg {
-        Msg::NormalModuleDone(task_result) => {
+        ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
             module_idx,
             resolved_deps,
@@ -294,7 +291,7 @@ impl ModuleLoader {
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
         }
-        Msg::RuntimeNormalModuleDone(task_result) => {
+        ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeModuleTaskResult { local_symbol_ref_db, mut module, runtime, ast } =
             task_result;
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
@@ -304,7 +301,7 @@ impl ModuleLoader {
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
         }
-        Msg::BuildErrors(e) => {
+        ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);
         }
       }

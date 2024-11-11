@@ -1,7 +1,7 @@
-use oxc::index::IndexVec;
-use rolldown_common::{
+use crate::{
   ImportRecordIdx, Module, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
 };
+use oxc::index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 

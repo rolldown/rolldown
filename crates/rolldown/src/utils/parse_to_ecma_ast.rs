@@ -6,7 +6,7 @@ use oxc::{
   span::SourceType as OxcSourceType,
   transformer::ReplaceGlobalDefinesConfig,
 };
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes, RUNTIME_MODULE_ID};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
@@ -15,7 +15,7 @@ use rolldown_utils::mime::guess_mime;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
-use crate::{runtime::RUNTIME_MODULE_ID, types::oxc_parse_type::OxcParseType};
+use crate::types::oxc_parse_type::OxcParseType;
 
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);

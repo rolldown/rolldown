@@ -9,20 +9,18 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule,
-  RawImportRecord, ResolvedId, StrOrBytes,
+  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType,
+  NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId, StrOrBytes, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
 };
 
-use super::{task_context::TaskContext, Msg};
+use super::task_context::TaskContext;
 use crate::{
   asset::create_asset_view,
   css::create_css_view,
   ecmascript::ecma_module_view_factory::{create_ecma_view, CreateEcmaViewReturn},
-  module_loader::NormalModuleTaskResult,
-  runtime::RUNTIME_MODULE_ID,
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
   SharedOptions, SharedResolver,
@@ -65,11 +63,21 @@ impl ModuleTask {
     match self.run_inner().await {
       Ok(()) => {
         if !self.errors.is_empty() {
-          self.ctx.tx.send(Msg::BuildErrors(self.errors)).await.expect("Send should not fail");
+          self
+            .ctx
+            .tx
+            .send(ModuleLoaderMsg::BuildErrors(self.errors))
+            .await
+            .expect("Send should not fail");
         }
       }
       Err(errs) => {
-        self.ctx.tx.send(Msg::BuildErrors(errs.into_vec())).await.expect("Send should not fail");
+        self
+          .ctx
+          .tx
+          .send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
+          .await
+          .expect("Send should not fail");
       }
     }
   }
@@ -237,7 +245,7 @@ impl ModuleTask {
     if let Err(_err) = self
       .ctx
       .tx
-      .send(Msg::NormalModuleDone(NormalModuleTaskResult {
+      .send(ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,

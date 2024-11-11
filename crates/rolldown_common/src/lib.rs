@@ -5,6 +5,7 @@ mod ecmascript;
 mod file_emitter;
 mod inner_bundler_options;
 mod module;
+mod module_loader;
 mod type_aliases;
 mod types;
 
@@ -67,6 +68,12 @@ pub use crate::{
     external_module::ExternalModule,
     normal_module::{ModuleRenderArgs, NormalModule},
     Module,
+  },
+  module_loader::{
+    runtime_module_brief::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
+    runtime_task_result::RuntimeModuleTaskResult,
+    task_result::NormalModuleTaskResult,
+    ModuleLoaderMsg,
   },
   types::asset::Asset,
   types::asset_idx::AssetIdx,

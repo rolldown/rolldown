@@ -5,7 +5,10 @@ import { expect } from 'vitest'
 export default defineTest({
   config: {
     treeshake: {
-      moduleSideEffects: /\.mjs$/,
+      moduleSideEffects: [{
+        test: /\.mjs$/,
+        sideEffects: true
+      }],
     },
   },
   afterTest: (output) => {

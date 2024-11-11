@@ -1,11 +1,5 @@
 import { z } from 'zod'
 
-export const HasModuleSideEffectsSchema = z
-  .function()
-  .args(z.string(), z.boolean())
-  .returns(z.boolean())
-export type HasModuleSideEffects = z.infer<typeof HasModuleSideEffectsSchema>
-
 export type ModuleSideEffectsOption = z.infer<
   typeof ModuleSideEffectsOptionSchema
 >

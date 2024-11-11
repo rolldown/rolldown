@@ -24,15 +24,45 @@ impl Default for TreeshakeOptions {
 
 #[derive(Debug)]
 pub enum ModuleSideEffects {
-  Regex(HybridRegex),
+  ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
   Boolean(bool),
 }
 
+#[derive(Debug)]
+pub struct ModuleSideEffectsRule {
+  test: Option<HybridRegex>,
+  external: Option<bool>,
+  side_effects: bool,
+}
+
 impl ModuleSideEffects {
-  pub fn resolve(&self, path: &str) -> bool {
+  pub fn resolve(&self, path: &str, is_external: bool) -> Option<bool> {
     match self {
-      ModuleSideEffects::Regex(reg) => reg.matches(path),
-      ModuleSideEffects::Boolean(b) => *b,
+      ModuleSideEffects::ModuleSideEffectsRules(rules) => {
+        for ModuleSideEffectsRule { test, external, side_effects } in rules {
+          match (test, external) {
+            (Some(test), Some(external)) => {
+              if test.matches(path) && *external == is_external {
+                return Some(*side_effects);
+              }
+            }
+            (None, Some(external)) => {
+              if *external == is_external {
+                return Some(*side_effects);
+              }
+            }
+            (Some(test), None) => {
+              if test.matches(path) {
+                return Some(*side_effects);
+              }
+            }
+            (None, None) => unreachable!(),
+          };
+        }
+        // analyze side effects from source code
+        None
+      }
+      ModuleSideEffects::Boolean(b) => Some(*b),
     }
   }
 }

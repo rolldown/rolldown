@@ -93,7 +93,6 @@ pub async fn create_ecma_view<'any>(
     ctx.resolved_id.module_def_format,
     ctx.options,
   )?;
-
   let ScanResult {
     named_imports,
     named_exports,
@@ -157,10 +156,12 @@ pub async fn create_ecma_view<'any>(
       TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
       TreeshakeOptions::Boolean(true) => unreachable!(),
       TreeshakeOptions::Option(ref opt) => {
-        if opt.module_side_effects.resolve(&stable_id) {
-          lazy_check_side_effects()
-        } else {
-          DeterminedSideEffects::UserDefined(false)
+        match opt.module_side_effects.resolve(&stable_id, true) {
+          Some(true) => todo!(),
+          Some(false) => {
+            todo!()
+          }
+          None => DeterminedSideEffects::UserDefined(false),
         }
       }
     },

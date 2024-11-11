@@ -1,4 +1,4 @@
-use derivative::Derivative;
+use derive_more::Debug;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::JsUnknown;
 use napi_derive::napi;
@@ -22,7 +22,7 @@ use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, Bindin
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
-#[derive(Deserialize, Derivative)]
+#[derive(Deserialize)]
 pub struct BindingBuiltinPlugin {
   #[napi(js_name = "__name")]
   pub __name: BindingBuiltinPluginName,

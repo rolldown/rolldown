@@ -1,5 +1,4 @@
 import { defineConfig } from 'rolldown'
-import path from 'path'
 
 export default defineConfig({
   input: './index.js',
@@ -9,16 +8,4 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-  plugins: [
-    {
-      name: 'test-plugin-context',
-      async load(id) {
-        console.log(111222)
-        if (id.endsWith('index.js')) {
-          const moduleInfo = await this.load({ id: path.join(import.meta.dirname, 'lib.js')})
-          console.log(moduleInfo)
-        }
-      },
-    },
-  ],
 })

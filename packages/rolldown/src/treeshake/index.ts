@@ -1,15 +1,11 @@
-import {
-  ModuleSideEffectsOptionSchema,
-  NormalizedTreeshakingOptionsSchema,
-} from './module-side-effects'
-
-export const TreeshakingOptionsSchema =
-  NormalizedTreeshakingOptionsSchema.extend({
-    moduleSideEffects: ModuleSideEffectsOptionSchema.optional(),
-  })
-
 export interface TreeshakingOptions {
-  moduleSideEffects?: boolean | RegExp
+  moduleSideEffects?: boolean | ModuleSideEffectsRule[] | 'no-external'
+}
+
+export type ModuleSideEffectsRule = {
+  test?: RegExp
+  external?: boolean
+  sideEffects: boolean
 }
 
 export * from './module-side-effects'

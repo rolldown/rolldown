@@ -56,7 +56,6 @@ impl ModuleSideEffects {
                 return Some(*side_effects);
               }
             }
-            // At least one of `test` or `external` should be defined
             (None, None) => unreachable!(),
           };
         }
@@ -64,7 +63,6 @@ impl ModuleSideEffects {
         None
       }
       ModuleSideEffects::Boolean(false) => Some(false),
-      ModuleSideEffects::Boolean(true) => None,
     }
   }
 }

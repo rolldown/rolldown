@@ -119,7 +119,7 @@ base64-simd         = "0.8.0"
 bitflags            = { version = "2.6.0" }
 daachorse           = "1.0.0"
 dashmap             = "6.0.0"
-derivative          = "2.2.0"
+derive_more         = { version = "1.0.0", features = ["debug"] }
 dunce               = "1.0.4"                                                                           # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 either              = "1.13.0"
 futures             = "0.3.30"

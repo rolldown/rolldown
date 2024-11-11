@@ -76,7 +76,7 @@ single_match      = "allow"
 single_match_else = "allow"
 
 [workspace.dependencies]
-css-module-lexer                        = "0.0.14"
+css-module-lexer                        = "0.0.15"
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
 rolldown_ecmascript                     = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }

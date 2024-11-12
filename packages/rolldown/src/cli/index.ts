@@ -28,6 +28,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.error(err)
+  console.log(err)
   process.exit(1)
 })

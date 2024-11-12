@@ -9,6 +9,7 @@ import type {
   Plugin,
   PluginHooks,
   PrivateResolveIdExtraOptions,
+  ResolveIdResult,
 } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
@@ -92,7 +93,7 @@ export function bindingifyResolveId(
   const { handler, meta, options } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx, specifier, importer, extraOptions) => {
+    plugin: (ctx, specifier, importer, extraOptions) => {
       // `contextResolveOptions` comes from `PluginContext.resolve(.., .., options)` method if this hook is triggered by `PluginContext.resolve`.
       const contextResolveOptions =
         extraOptions.custom != null
@@ -108,18 +109,13 @@ export function bindingifyResolveId(
           contextResolveOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
       }
 
-      let ret
-      try {
-        ret = await handler.call(
-          new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
-          specifier,
-          importer ?? undefined,
-          newExtraOptions,
-        )
-      } catch (err) {
-        console.log(`err: `, err)
-        throw err
-      }
+      let ret = handler.call(
+        new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
+        specifier,
+        importer ?? undefined,
+        newExtraOptions,
+      ) as any as ResolveIdResult
+
       if (ret == null) {
         return
       }

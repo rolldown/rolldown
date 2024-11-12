@@ -9,8 +9,9 @@ use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, NormalModuleTaskResult, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb, RUNTIME_MODULE_ID,
+  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, ModuleType, NormalModuleTaskResult,
+  ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb,
+  RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -139,6 +140,7 @@ impl ModuleLoader {
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
+    assert_module_type: Option<ModuleType>,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -193,6 +195,7 @@ impl ModuleLoader {
             resolved_id,
             owner,
             is_user_defined_entry,
+            assert_module_type,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -235,7 +238,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info, None, true),
+        id: self.try_spawn_new_task(info, None, true, None),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -274,7 +277,12 @@ impl ModuleLoader {
                   normal_module.stable_id.as_str().into(),
                   raw_rec.span,
                 );
-                let id = self.try_spawn_new_task(info, Some(owner), false);
+                let id = self.try_spawn_new_task(
+                  info,
+                  Some(owner),
+                  false,
+                  raw_rec.asserted_module_type.clone(),
+                );
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
@@ -310,7 +318,7 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false);
+          self.try_spawn_new_task(resolve_id, None, false, None);
         }
         ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);

@@ -68,6 +68,7 @@ impl RuntimeModuleTask {
       self_referenced_class_decl_symbol_ids: _,
       hashbang_range: _,
       has_star_exports,
+      new_url_references,
     } = scan_result;
 
     let module = NormalModule {
@@ -114,6 +115,7 @@ impl RuntimeModuleTask {
           meta
         },
         mutations: vec![],
+        new_url_references,
       },
       css_view: None,
       asset_view: None,

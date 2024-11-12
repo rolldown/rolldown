@@ -6,15 +6,17 @@ use std::{
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
-use crate::{ImportKind, ModuleIdx, SymbolRef};
+use crate::{ImportKind, ModuleIdx, ModuleType, SymbolRef};
 
 oxc::index::define_index_type! {
   pub struct ImportRecordIdx = u32;
 }
 
 #[derive(Debug)]
-pub struct ImportRecordStateSpan {
+pub struct ImportRecordStateInit {
   pub span: Span,
+  /// The importee of this import record is asserted to be this specific module type.
+  pub asserted_module_type: Option<ModuleType>,
 }
 
 #[derive(Debug)]
@@ -74,7 +76,7 @@ impl<T: Debug> DerefMut for ImportRecord<T> {
   }
 }
 
-pub type RawImportRecord = ImportRecord<ImportRecordStateSpan>;
+pub type RawImportRecord = ImportRecord<ImportRecordStateInit>;
 
 impl RawImportRecord {
   pub fn new(
@@ -82,13 +84,14 @@ impl RawImportRecord {
     kind: ImportKind,
     namespace_ref: SymbolRef,
     span: Span,
+    assert_module_type: Option<ModuleType>,
   ) -> RawImportRecord {
     RawImportRecord {
       module_request: specifier,
       kind,
       namespace_ref,
       meta: ImportRecordMeta::empty(),
-      state: ImportRecordStateSpan { span },
+      state: ImportRecordStateInit { span, asserted_module_type: assert_module_type },
     }
   }
 

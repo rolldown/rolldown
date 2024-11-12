@@ -1,7 +1,7 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
-  span::{Atom, GetSpanMut, SPAN},
+  span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
   AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, Platform, SymbolRef, WrapKind,
@@ -12,6 +12,7 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
+use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 mod rename;
@@ -382,5 +383,62 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       _ => {}
     };
+  }
+
+  /// Check if it is exact `new URL('path', import.meta.url)` pattern
+  fn is_new_url_with_string_literal_and_import_meta_url(
+    &self,
+    expr: &ast::Expression<'ast>,
+  ) -> bool {
+    let ast::Expression::NewExpression(expr) = expr else {
+      return false;
+    };
+    let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
+
+    if !is_callee_global_url {
+      return false;
+    }
+
+    let is_second_arg_import_meta_url = expr
+      .arguments
+      .get(1)
+      .map_or(false, |arg| arg.as_expression().is_some_and(ExpressionExt::is_import_meta_url));
+
+    if !is_second_arg_import_meta_url {
+      return false;
+    }
+
+    let is_first_arg_string_literal = expr
+      .arguments
+      .first()
+      .map_or(false, |arg| arg.as_expression().is_some_and(ast::Expression::is_string_literal));
+
+    is_first_arg_string_literal
+  }
+
+  pub fn handle_new_url_with_string_literal_and_import_meta_url(
+    &self,
+    expr: &mut ast::Expression<'ast>,
+  ) {
+    if self.is_new_url_with_string_literal_and_import_meta_url(expr) {
+      let span = expr.span();
+      let rec = &self.ctx.module.import_records[self.ctx.module.new_url_references[&span]];
+      let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else { return };
+      let Some(chunk_idx) = &self.ctx.chunk_graph.module_to_chunk[importee.idx] else {
+        return;
+      };
+      let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
+      let asset_filename = &chunk.asset_preliminary_filenames[&importee.idx];
+      match expr {
+        ast::Expression::NewExpression(new_expr) => {
+          if let Some(ast::Expression::StringLiteral(string_lit)) =
+            new_expr.arguments.get_mut(0).unpack().as_expression_mut()
+          {
+            string_lit.value = self.snippet.atom(asset_filename);
+          }
+        }
+        _ => {}
+      }
+    }
   }
 }

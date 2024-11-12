@@ -23,16 +23,9 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
     walk_mut::walk_module_declaration(self, it);
   }
 
-  fn visit_import_expression(&mut self, it: &mut oxc::ast::ast::ImportExpression<'a>) {
+  fn visit_expression(&mut self, it: &mut oxc::ast::ast::Expression<'a>) {
     self.ensure_uniqueness(it.span_mut());
-    walk_mut::walk_import_expression(self, it);
-  }
-
-  fn visit_call_expression(&mut self, it: &mut oxc::ast::ast::CallExpression<'a>) {
-    if it.callee.is_specific_id("require") && it.arguments.len() == 1 {
-      self.ensure_uniqueness(it.span_mut());
-    }
-    walk_mut::walk_call_expression(self, it);
+    walk_mut::walk_expression(self, it);
   }
 }
 

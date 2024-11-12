@@ -7,6 +7,7 @@ use rolldown_common::{
   BundleEndEventData, BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent,
   WatcherEventData,
 };
+use rolldown_error::DiagnosticOptions;
 use rolldown_utils::pattern_filter;
 use std::{
   path::Path,
@@ -117,7 +118,7 @@ impl Watcher {
 
     bundler.plugin_driver.clear();
 
-    let output = {
+    let mut output = {
       if bundler.options.watch.skip_write {
         // TODO Here should be call scan
         bundler.generate().await?
@@ -154,17 +155,34 @@ impl Watcher {
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
     std::mem::drop(inner);
 
-    self
-      .emitter
-      .emit(
-        WatcherEvent::Event,
-        BundleEventKind::BundleEnd(BundleEndEventData {
-          output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
-          duration: start_time.elapsed().as_millis().to_string(),
-        })
-        .into(),
-      )
-      .await?;
+    if output.errors.is_empty() {
+      self
+        .emitter
+        .emit(
+          WatcherEvent::Event,
+          BundleEventKind::BundleEnd(BundleEndEventData {
+            output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
+            duration: start_time.elapsed().as_millis().to_string(),
+          })
+          .into(),
+        )
+        .await?;
+    } else {
+      self
+        .emitter
+        .emit(
+          WatcherEvent::Event,
+          BundleEventKind::Error(
+            output
+              .errors
+              .remove(0)
+              .into_diagnostic_with(&DiagnosticOptions { cwd: bundler.options.cwd.clone() })
+              .to_color_string(),
+          )
+          .into(),
+        )
+        .await?;
+    }
 
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event, BundleEventKind::End.into()).await?;

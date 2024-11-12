@@ -39,6 +39,7 @@ pub enum BundleEventKind {
   BundleStart,
   BundleEnd(BundleEndEventData),
   End,
+  Error(String),
 }
 
 impl Display for BundleEventKind {
@@ -48,6 +49,7 @@ impl Display for BundleEventKind {
       BundleEventKind::BundleStart => write!(f, "BUNDLE_START"),
       BundleEventKind::BundleEnd(_) => write!(f, "BUNDLE_END"),
       BundleEventKind::End => write!(f, "END"),
+      BundleEventKind::Error(_) => write!(f, "ERROR"),
     }
   }
 }
@@ -56,9 +58,15 @@ impl From<BundleEventKind> for WatcherEventData {
   fn from(kind: BundleEventKind) -> Self {
     let mut map = HashMap::default();
     map.insert("code", kind.to_string());
-    if let BundleEventKind::BundleEnd(data) = kind {
-      map.insert("output", data.output);
-      map.insert("duration", data.duration);
+    match kind {
+      BundleEventKind::BundleEnd(data) => {
+        map.insert("output", data.output);
+        map.insert("duration", data.duration);
+      }
+      BundleEventKind::Error(msg) => {
+        map.insert("error", msg);
+      }
+      _ => {}
     }
     Self(Some(map))
   }

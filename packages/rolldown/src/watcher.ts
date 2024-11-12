@@ -44,14 +44,25 @@ export class Watcher {
         break
       case 'event':
         this.inner.on(BindingWatcherEvent.Event, async (data) => {
-          if (data!.code === 'BUNDLE_END') {
-            await listener({
-              code: 'BUNDLE_END',
-              duration: Number(data!.duration),
-              output: [data!.output], // rolldown doesn't support arraying configure output
-            })
-          } else {
-            await listener(data)
+          switch (data!.code) {
+            case 'BUNDLE_END':
+              await listener({
+                code: 'BUNDLE_END',
+                duration: Number(data!.duration),
+                output: [data!.output], // rolldown doesn't support arraying configure output
+              })
+              break
+
+            case 'ERROR':
+              await listener({
+                code: 'ERROR',
+                error: { message: data!.error },
+              })
+              break
+
+            default:
+              await listener(data)
+              break
           }
         })
         break
@@ -74,7 +85,7 @@ export class Watcher {
   }
 
   // The rust side already create a thread for watcher, but it isn't at main thread.
-  // So here we need to spawn a process to avoid main process exit util the user call `watcher.close()`.
+  // So here we need to avoid main process exit util the user call `watcher.close()`.
   watch() {
     const timer = setInterval(() => {}, 1e9 /* Low power usage */)
     this.controller.signal.addEventListener('abort', () => {
@@ -100,4 +111,9 @@ export type RollupWatcherEvent =
       // result: RollupBuild
     }
   | { code: 'END' }
-  | { code: 'ERROR' /** error: RollupError; result: RollupBuild | null **/ }
+  | {
+      code: 'ERROR'
+      error: {
+        message: string
+      } /* the error is not compilable with rollup * /  /**  result: RollupBuild | null **/
+    }

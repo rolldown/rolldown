@@ -249,8 +249,8 @@ test.sequential('error handling', async () => {
   // failed again
   fs.writeFileSync(input, 'conso le.log(1)')
   await waitBuildFinished()
-  // The different platform maybe emit multiple events, so here ignored it
-  // expect(errors.length).toBe(2)
+  // The different platform maybe emit multiple events
+  expect(errors.length > 1).toBe(true)
 
   // It should be working if the changes are fixed error
   fs.writeFileSync(input, 'console.log(3)')

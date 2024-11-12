@@ -1,5 +1,7 @@
 import { defineConfig } from 'rolldown'
 
+throw new Error('test')
+
 export default defineConfig({
   input: './index.js',
   resolve: {

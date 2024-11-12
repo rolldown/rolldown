@@ -45,12 +45,17 @@ export async function ensureConfig(configPath: string): Promise<ConfigExport> {
   let configExports: { default?: ConfigExport }
   try {
     configExports = await import(fileUrl)
-  } catch (err) {
+  } catch (err: any) {
     let errorMessage = 'Error happened while loading config.'
     if (!isSupportedFormat(configPath)) {
       errorMessage += ` Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(',')}\` but got \`${nodePath.extname(configPath)}\``
     }
-    throw new Error(errorMessage, { cause: err })
+    let newError = new Error(errorMessage)
+    ;(newError as any).original_error = err
+    newError.stack =
+      newError?.stack?.split('\n').slice(0, 2).join('\n') + '\n' + err.stack
+
+    throw newError
   }
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message

@@ -8,9 +8,9 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'b'
-   ╭─[main.js:5:1]
+   ╭─[main.js:6:1]
    │
- 5 │ b -= 1;
+ 6 │ b -= 1;
    │ ┬  
    │ ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setB') and then import and call that function here instead.
 ───╯
@@ -20,11 +20,35 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'importedA'
-   ╭─[main.js:3:1]
+   ╭─[main.js:4:1]
    │
- 3 │ importedA = 1;
+ 4 │ importedA = 1;
    │ ────┬────  
    │     ╰────── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setImportedA') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'test'
+   ╭─[main.js:8:4]
+   │
+ 8 │ ns.test += 1;
+   │    ──┬─  
+   │      ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setTest') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'test'
+   ╭─[main.js:9:11]
+   │
+ 9 │ delete ns.test;
+   │           ──┬─  
+   │             ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setTest') and then import and call that function here instead.
 ───╯
 
 ```

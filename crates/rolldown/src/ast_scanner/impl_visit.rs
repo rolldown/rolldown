@@ -138,6 +138,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
     if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
       self.add_referenced_symbol(root_symbol_id);
+      self.check_import_assign(ident, root_symbol_id.symbol);
     }
     if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
       if ids.contains(&ident.reference_id()) {

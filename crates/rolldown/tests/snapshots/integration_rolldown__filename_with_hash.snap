@@ -576,7 +576,6 @@ snapshot_kind: text
 
 # tests/esbuild/default/assign_to_import
 
-- entry-!~{000}~.js => entry-DoEALa7J.js
 
 # tests/esbuild/default/auto_external
 
@@ -3928,6 +3927,9 @@ snapshot_kind: text
 # tests/rolldown/errors/ambiguous_external_namespace
 
 - main-!~{000}~.js => main-e4408L-u.js
+
+# tests/rolldown/errors/assign_to_import
+
 
 # tests/rolldown/errors/export_undefined_variable
 

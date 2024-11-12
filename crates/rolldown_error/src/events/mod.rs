@@ -8,6 +8,7 @@ use crate::{
 };
 
 pub mod ambiguous_external_namespace;
+pub mod assign_to_import;
 pub mod circular_dependency;
 pub mod commonjs_variable_in_esm;
 pub mod eval;

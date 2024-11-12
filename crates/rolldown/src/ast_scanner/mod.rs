@@ -1,4 +1,5 @@
 pub mod impl_visit;
+mod import_assign_analyzer;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
@@ -566,11 +567,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
-        self.add_star_import(spec.local.expect_symbol_id(), rec_id, spec.span);
+        let symbol_id = spec.local.expect_symbol_id();
+        self.add_star_import(symbol_id, rec_id, spec.span);
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
       }
     });
   }
+
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration<'ast>) {
     match decl {
       ast::ModuleDeclaration::ImportDeclaration(decl) => {

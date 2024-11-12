@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    ast::{self, Expression, IdentifierReference, MemberExpression},
+    ast::{self, Expression, IdentifierReference},
     visit::walk,
     AstKind, Visit,
   },
@@ -60,48 +60,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
   }
 
-  fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
-    match expr {
-      MemberExpression::StaticMemberExpression(member_expr) => {
-        // For member expression like `a.b.c.d`, we will first enter the (object: `a.b.c`, property: `d`) expression.
-        // So we add these properties with order `d`, `c`, `b`.
-        let mut props_in_reverse_order = vec![];
-        let mut cur_member_expr = member_expr;
-        let object_symbol_in_root_scope = loop {
-          props_in_reverse_order.push(&cur_member_expr.property);
-          match &cur_member_expr.object {
-            Expression::StaticMemberExpression(expr) => {
-              cur_member_expr = expr;
-            }
-            Expression::Identifier(id) => {
-              break self.resolve_identifier_to_root_symbol(id);
-            }
-            _ => break None,
-          }
-        };
-        match object_symbol_in_root_scope {
-          // - Import statements are hoisted to the top of the module, so in this time being, all imports are scanned.
-          // - Having empty span will also results to bailout since we rely on span to identify ast nodes.
-          Some(sym_ref)
-            if self.result.named_imports.contains_key(&sym_ref) && !expr.span().is_unspanned() =>
-          {
-            let props = props_in_reverse_order
-              .into_iter()
-              .rev()
-              .map(|ident| ident.name.as_str().into())
-              .collect::<Vec<_>>();
-            self.add_member_expr_reference(sym_ref, props, expr.span());
-            // Don't walk again, otherwise we will add the `object_symbol_in_root_scope` again in `visit_identifier_reference`
-            return;
-          }
-          _ => {}
-        }
-      }
-      _ => {}
-    };
-    walk::walk_member_expression(self, expr);
-  }
-
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
     if it.r#await && self.is_top_level() {
       if let Some(format) = self.options.as_ref().map(|option| &option.format) {
@@ -137,7 +95,20 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
     if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
-      self.add_referenced_symbol(root_symbol_id);
+      // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
+      // use this flag to avoid insert it as `Symbol` at the same time.
+      let mut is_inserted_before = false;
+      if self.result.named_imports.contains_key(&root_symbol_id) {
+        if let Some((span, props)) = self.try_extract_parent_static_member_expr_chain(usize::MAX) {
+          if !span.is_unspanned() {
+            is_inserted_before = true;
+            self.add_member_expr_reference(root_symbol_id, props, span);
+          }
+        }
+      }
+      if !is_inserted_before {
+        self.add_referenced_symbol(root_symbol_id);
+      }
       self.check_import_assign(ident, root_symbol_id.symbol);
     }
     if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {

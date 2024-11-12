@@ -3,9 +3,11 @@ mod import_assign_analyzer;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
 use oxc::semantic::{Reference, ReferenceId, ScopeId, SymbolTable};
+use oxc::span::SPAN;
 use oxc::{
   ast::{
     ast::{
@@ -673,6 +675,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         None
       }
     }
+  }
+
+  pub fn try_extract_parent_static_member_expr_chain(
+    &self,
+    max_len: usize,
+  ) -> Option<(Span, Vec<CompactStr>)> {
+    let mut span = SPAN;
+    let mut props = vec![];
+    for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
+      match ancestor_ast {
+        AstKind::MemberExpression(MemberExpression::StaticMemberExpression(expr)) => {
+          span = ancestor_ast.span();
+          props.push(expr.property.name.as_str().into());
+        }
+        _ => break,
+      }
+    }
+    (!props.is_empty()).then_some((span, props))
   }
 
   // `console` in `console.log` is a global reference

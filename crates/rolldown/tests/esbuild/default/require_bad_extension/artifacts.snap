@@ -5,7 +5,9 @@ snapshot_kind: text
 # Errors
 
 ## PARSE_ERROR
-```text[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+
+```text
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[test.bad:1:5]
    │
  1 │ This is a test.
@@ -14,4 +16,5 @@ snapshot_kind: text
    │ 
    │ Help: Try insert a semicolon here
 ───╯
+
 ```

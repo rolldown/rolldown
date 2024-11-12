@@ -5,11 +5,14 @@ snapshot_kind: text
 # Errors
 
 ## PARSE_ERROR
-```text[PARSE_ERROR] Error: Optional chaining cannot appear in the callee of new expressions
+
+```text
+[PARSE_ERROR] Error: Optional chaining cannot appear in the callee of new expressions
    ╭─[all_computed.ts:2:2]
    │
  2 │ @new y?.[_ + 'x']()
    │  ──┬──  
    │    ╰──── 
 ───╯
+
 ```

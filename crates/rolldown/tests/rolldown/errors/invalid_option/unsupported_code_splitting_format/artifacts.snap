@@ -5,7 +5,10 @@ snapshot_kind: text
 # Errors
 
 ## INVALID_OPTION
-```text[INVALID_OPTION] Error: Invalid value "iife" for option "format". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.
+
+```text
+[INVALID_OPTION] Error: Invalid value "iife" for option "format". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.
+
 ```
 
 # Assets

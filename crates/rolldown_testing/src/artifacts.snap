@@ -5,5 +5,8 @@ snapshot_kind: text
 # Errors
 
 ## UNRESOLVED_ENTRY
-```text[UNRESOLVED_ENTRY] Error: Cannot resolve entry module entry.js.
+
+```text
+[UNRESOLVED_ENTRY] Error: Cannot resolve entry module entry.js.
+
 ```

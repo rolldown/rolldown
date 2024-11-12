@@ -165,7 +165,7 @@ impl IntegrationTest {
             Cow::Owned(diagnostic.to_string()),
             "```".into(),
           ]
-          .concat()
+          .join("\n")
         })
         .collect::<Vec<_>>();
       rendered_diagnostics.sort();

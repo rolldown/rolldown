@@ -5,11 +5,14 @@ snapshot_kind: text
 # Errors
 
 ## RESOLVE_ERROR
-```text[RESOLVE_ERROR] Error: Could not resolve 'demo-pkg' in src/entry.js
+
+```text
+[RESOLVE_ERROR] Error: Could not resolve 'demo-pkg' in src/entry.js
    ╭─[src/entry.js:1:16]
    │
  1 │ import fn from 'demo-pkg'
    │                ─────┬────  
    │                     ╰────── JSON parse error
 ───╯
+
 ```

@@ -5,5 +5,8 @@ snapshot_kind: text
 # Errors
 
 ## MISSING_NAME_OPTION_FOR_UMD_EXPORT
-```text[MISSING_NAME_OPTION_FOR_UMD_EXPORT] Error: You must supply `output.name` for UMD bundles that have exports so that the exports are accessible in environments without a module loader.
+
+```text
+[MISSING_NAME_OPTION_FOR_UMD_EXPORT] Error: You must supply `output.name` for UMD bundles that have exports so that the exports are accessible in environments without a module loader.
+
 ```

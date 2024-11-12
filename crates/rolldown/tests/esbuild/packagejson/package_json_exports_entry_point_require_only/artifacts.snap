@@ -5,6 +5,9 @@ snapshot_kind: text
 # Errors
 
 ## UNRESOLVED_ENTRY
-```text[UNRESOLVED_ENTRY] Error: Cannot resolve entry module pkg.
+
+```text
+[UNRESOLVED_ENTRY] Error: Cannot resolve entry module pkg.
 - Package subpath '.' is not defined by "exports" in node_modules/pkg/package.json
+
 ```

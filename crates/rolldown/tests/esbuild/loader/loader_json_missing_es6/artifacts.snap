@@ -5,13 +5,16 @@ snapshot_kind: text
 # Errors
 
 ## MISSING_EXPORT
-```text[MISSING_EXPORT] Error: "missing" is not exported by "test.json".
+
+```text
+[MISSING_EXPORT] Error: "missing" is not exported by "test.json".
    ╭─[entry.js:1:9]
    │
  1 │ import {missing} from './test.json'
    │         ───┬───  
    │            ╰───── Missing export
 ───╯
+
 ```
 
 # Assets

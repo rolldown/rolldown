@@ -5,13 +5,16 @@ snapshot_kind: text
 # Errors
 
 ## MISSING_EXPORT
-```text[MISSING_EXPORT] Error: "nope" is not exported by "bar.js".
+
+```text
+[MISSING_EXPORT] Error: "nope" is not exported by "bar.js".
    ╭─[foo.ts:1:9]
    │
  1 │ export {nope} from './bar'
    │         ──┬─  
    │           ╰─── Missing export
 ───╯
+
 ```
 
 # Assets

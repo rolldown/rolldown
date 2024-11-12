@@ -112,3 +112,63 @@ snapshot_kind: text
 ───╯
 
 ```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y z'
+   ╭─[bad10.js:1:29]
+   │
+ 1 │ import * as x from "foo"; x['y z'] = 1
+   │                             ──┬──  
+   │                               ╰──── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setYZ') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad13.js:1:36]
+   │
+ 1 │ import * as x from "foo"; delete x.y
+   │                                    ┬  
+   │                                    ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad14.js:1:36]
+   │
+ 1 │ import * as x from "foo"; delete x['y']
+   │                                    ─┬─  
+   │                                     ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad7.js:1:29]
+   │
+ 1 │ import * as x from "foo"; x.y = 1
+   │                             ┬  
+   │                             ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad9.js:1:29]
+   │
+ 1 │ import * as x from "foo"; x['y'] = 1
+   │                             ─┬─  
+   │                              ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```

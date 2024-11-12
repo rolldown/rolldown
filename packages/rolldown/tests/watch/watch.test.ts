@@ -188,11 +188,31 @@ test.sequential('watch include/exclude', async () => {
   // edit file
   fs.writeFileSync(input, 'console.log(2)')
   // wait for watcher to detect the change
-  await new Promise((resolve) => {
-    setTimeout(resolve, 50)
-  })
+  await waitBuildFinished()
   // The input is excluded, so the output file should not be updated
   expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
+
+  // revert change
+  fs.writeFileSync(input, 'console.log(1)\n')
+  await watcher.close()
+})
+
+test.sequential('(perf)watching same file multiply times', async () => {
+  const watcher = await watch({
+    input,
+    cwd: import.meta.dirname,
+  })
+
+  await waitBuildFinished()
+
+  // edit file
+  for (let i = 2; i < 20; i++) {
+    const change = `console.log(${i})`
+    fs.writeFileSync(input, change)
+    // wait for watcher to detect the change, the time should be less than 50ms
+    await waitBuildFinished()
+    expect(fs.readFileSync(output, 'utf-8').includes(change)).toBe(true)
+  }
 
   // revert change
   fs.writeFileSync(input, 'console.log(1)\n')

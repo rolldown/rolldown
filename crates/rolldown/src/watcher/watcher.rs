@@ -127,6 +127,13 @@ impl Watcher {
     };
     let mut inner = self.inner.lock().await;
     for file in &output.watch_files {
+      // we should skip the file that is already watched, here here some reasons:
+      // - The watching files has a ms level overhead.
+      // - Watching the same files multiple times will cost more overhead.
+      // TODO: tracking https://github.com/notify-rs/notify/issues/653
+      if self.watch_files.contains(file) {
+        continue;
+      }
       let path = Path::new(file.as_str());
       if path.exists() {
         let normalized_path = path.relative(&bundler.options.cwd);

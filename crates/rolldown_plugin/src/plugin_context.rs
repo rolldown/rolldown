@@ -44,7 +44,6 @@ impl PluginContext {
       watch_files: Arc::clone(&self.watch_files),
       modules: Arc::clone(&self.modules),
       context_load_modules: Arc::clone(&self.context_load_modules),
-      rx: Arc::clone(&self.rx),
       tx: Arc::clone(&self.tx),
     }))
   }
@@ -90,8 +89,7 @@ pub struct PluginContextImpl {
   pub(crate) watch_files: Arc<DashSet<ArcStr>>,
   pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
   pub(crate) context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
-  pub(crate) tx: Arc<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
-  pub(crate) rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ModuleLoaderMsg>>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -109,6 +107,10 @@ impl PluginContextImpl {
     self.context_load_modules.insert(specifier.into(), LoadCallback(Box::new(load_callback_fn)));
     self
       .tx
+      .lock()
+      .await
+      .as_ref()
+      .expect("The load modules tx should be set.")
       .send(ModuleLoaderMsg::FetchModule(ResolvedId {
         id: specifier.into(),
         ignored: false,

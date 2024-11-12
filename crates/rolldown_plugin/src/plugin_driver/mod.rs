@@ -36,8 +36,7 @@ pub struct PluginDriver {
   pub watch_files: Arc<DashSet<ArcStr>>,
   pub modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
   pub context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
-  pub tx: Arc<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
-  pub rx: Arc<Mutex<tokio::sync::mpsc::Receiver<ModuleLoaderMsg>>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
 impl PluginDriver {
@@ -50,11 +49,7 @@ impl PluginDriver {
     let watch_files = Arc::new(DashSet::default());
     let modules = Arc::new(DashMap::default());
     let context_load_modules = Arc::new(DashMap::default());
-    // 1024 should be enough for most cases
-    // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel(100);
-    let tx = Arc::new(tx);
-    let rx = Arc::new(Mutex::new(rx));
+    let tx = Arc::new(Mutex::new(None));
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
@@ -80,7 +75,6 @@ impl PluginDriver {
             options: Arc::clone(options),
             watch_files: Arc::clone(&watch_files),
             context_load_modules: Arc::clone(&context_load_modules),
-            rx: Arc::clone(&rx),
             tx: Arc::clone(&tx),
           }
           .into(),
@@ -97,7 +91,6 @@ impl PluginDriver {
         modules,
         context_load_modules,
         tx,
-        rx,
       }
     })
   }
@@ -110,6 +103,11 @@ impl PluginDriver {
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
     self.modules.insert(module_id.as_str().into(), module_info);
+  }
+
+  pub async fn set_context_load_modules_tx(&self, tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>) {
+    let mut tx_guard = self.tx.lock().await;
+    *tx_guard = Some(tx);
   }
 
   pub async fn mark_context_load_modules_loaded(&self, module_id: &ModuleId) -> anyhow::Result<()> {

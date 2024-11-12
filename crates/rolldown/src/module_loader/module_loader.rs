@@ -47,6 +47,8 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
+  tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
+  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
@@ -72,7 +74,9 @@ impl ModuleLoader {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> anyhow::Result<Self> {
-    let tx_to_runtime_module = Arc::clone(&plugin_driver.tx);
+    // 1024 should be enough for most cases
+    // over 1024 pending tasks are insane
+    let (tx, rx) = tokio::sync::mpsc::channel(1024);
 
     let meta = TaskContextMeta {
       replace_global_define_config: if options.define.is_empty() {
@@ -89,14 +93,20 @@ impl ModuleLoader {
         })?)
       },
     };
-    let common_data =
-      Arc::new(TaskContext { options: Arc::clone(&options), resolver, fs, plugin_driver, meta });
+    let common_data = Arc::new(TaskContext {
+      options: Arc::clone(&options),
+      tx: tx.clone(),
+      resolver,
+      fs,
+      plugin_driver,
+      meta,
+    });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let symbols = SymbolRefDb::default();
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
-    let task = RuntimeModuleTask::new(runtime_id, tx_to_runtime_module);
+    let task = RuntimeModuleTask::new(runtime_id, tx.clone());
 
     #[cfg(target_family = "wasm")]
     {
@@ -112,6 +122,8 @@ impl ModuleLoader {
 
     Ok(Self {
       shared_context: common_data,
+      tx,
+      rx,
       options,
       visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
       runtime_id,
@@ -207,6 +219,8 @@ impl ModuleLoader {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
+    self.shared_context.plugin_driver.set_context_load_modules_tx(self.tx.clone()).await;
+
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
@@ -233,11 +247,8 @@ impl ModuleLoader {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
-    let rx = Arc::clone(&self.shared_context.plugin_driver.rx);
-    let mut rx = rx.lock().await;
-
     while self.remaining > 0 {
-      let Some(msg) = rx.recv().await else {
+      let Some(msg) = self.rx.recv().await else {
         break;
       };
       match msg {

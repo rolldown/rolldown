@@ -79,6 +79,7 @@ impl Plugin for JsPlugin {
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
         .map(|v| *v);
+
       Ok(
         cb.await_call((
           ctx.clone().into(),

@@ -108,12 +108,18 @@ export function bindingifyResolveId(
           contextResolveOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
       }
 
-      const ret = await handler.call(
-        new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
-        specifier,
-        importer ?? undefined,
-        newExtraOptions,
-      )
+      let ret
+      try {
+        ret = await handler.call(
+          new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
+          specifier,
+          importer ?? undefined,
+          newExtraOptions,
+        )
+      } catch (err) {
+        console.log(`err: `, err)
+        throw err
+      }
       if (ret == null) {
         return
       }

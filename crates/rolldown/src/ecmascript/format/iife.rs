@@ -141,7 +141,7 @@ pub fn render_iife<'code>(
   // TODO indent chunk content for iife format
   module_sources.iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources {
+      for source in emitted_sources.as_ref() {
         source_joiner.append_source(source);
       }
     }

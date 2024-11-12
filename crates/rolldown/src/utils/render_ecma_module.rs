@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
 use rolldown_sourcemap::{collapse_sourcemaps, Source, SourceMapSource};
 
@@ -5,11 +7,11 @@ pub fn render_ecma_module(
   module: &NormalModule,
   options: &NormalizedBundlerOptions,
   render_output: ModuleRenderOutput,
-) -> Option<Vec<Box<dyn Source + Send>>> {
+) -> Option<Arc<[Box<dyn Source + Send + Sync>]>> {
   if render_output.code.is_empty() {
     None
   } else {
-    let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send>> = vec![];
+    let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = vec![];
     sources
       .push(Box::new(format!("//#region {debug_module_id}", debug_module_id = module.debug_id)));
 
@@ -44,6 +46,6 @@ pub fn render_ecma_module(
 
     sources.push(Box::new("//#endregion"));
 
-    Some(sources)
+    Some(Arc::from(sources.into_boxed_slice()))
   }
 }

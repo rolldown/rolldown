@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
   types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
@@ -21,7 +23,8 @@ use super::format::{
   app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd,
 };
 
-pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
+pub type RenderedModuleSources =
+  Vec<(ModuleIdx, ModuleId, Option<Arc<[Box<dyn Source + Send + Sync>]>>)>;
 
 pub struct EcmaGenerator;
 

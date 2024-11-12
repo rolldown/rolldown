@@ -209,7 +209,7 @@ test.sequential('(perf)watching same file multiply times', async () => {
   for (let i = 2; i < 20; i++) {
     const change = `console.log(${i})`
     fs.writeFileSync(input, change)
-    // wait for watcher to detect the change, the time should be less than 100ms
+    // wait for watcher to detect the change, the time should be less than 50ms
     await waitBuildFinished()
     expect(fs.readFileSync(output, 'utf-8').includes(change)).toBe(true)
   }

@@ -4,7 +4,8 @@ use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
-  ModuleTable, OutputFormat, ResolvedImportRecord, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
+  ModuleTable, OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef,
+  SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -15,7 +16,6 @@ use rolldown_utils::{
 use rustc_hash::FxHashSet;
 
 use crate::{
-  runtime::RuntimeModuleBrief,
   type_alias::IndexEcmaAst,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,

@@ -1,5 +1,5 @@
+use crate::{AstScopes, ModuleIdx, SymbolRef};
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
-use rolldown_common::{AstScopes, ModuleIdx, SymbolRef};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]

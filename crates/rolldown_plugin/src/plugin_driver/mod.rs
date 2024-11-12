@@ -6,12 +6,15 @@ use std::{
 
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
-use rolldown_common::{ModuleId, ModuleInfo, SharedFileEmitter, SharedNormalizedBundlerOptions};
+use rolldown_common::{
+  ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
+};
 use rolldown_resolver::Resolver;
+use tokio::sync::Mutex;
 
 use crate::{
   __inner::SharedPluginable,
-  plugin_context::PluginContextImpl,
+  plugin_context::{LoadCallback, PluginContextImpl},
   type_aliases::{IndexPluginContext, IndexPluginFilter, IndexPluginable},
   types::{hook_filter::HookFilterOptions, plugin_idx::PluginIdx},
   PluginContext, PluginHookMeta, PluginOrder,
@@ -32,6 +35,8 @@ pub struct PluginDriver {
   file_emitter: SharedFileEmitter,
   pub watch_files: Arc<DashSet<ArcStr>>,
   pub modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
 impl PluginDriver {
@@ -43,6 +48,8 @@ impl PluginDriver {
   ) -> SharedPluginDriver {
     let watch_files = Arc::new(DashSet::default());
     let modules = Arc::new(DashMap::default());
+    let context_load_modules = Arc::new(DashMap::default());
+    let tx = Arc::new(Mutex::new(None));
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
@@ -67,6 +74,8 @@ impl PluginDriver {
             modules: Arc::clone(&modules),
             options: Arc::clone(options),
             watch_files: Arc::clone(&watch_files),
+            context_load_modules: Arc::clone(&context_load_modules),
+            tx: Arc::clone(&tx),
           }
           .into(),
         );
@@ -80,6 +89,8 @@ impl PluginDriver {
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         modules,
+        context_load_modules,
+        tx,
       }
     })
   }
@@ -92,6 +103,18 @@ impl PluginDriver {
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
     self.modules.insert(module_id.as_str().into(), module_info);
+  }
+
+  pub async fn set_context_load_modules_tx(&self, tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>) {
+    let mut tx_guard = self.tx.lock().await;
+    *tx_guard = Some(tx);
+  }
+
+  pub async fn mark_context_load_modules_loaded(&self, module_id: &ModuleId) -> anyhow::Result<()> {
+    if let Some((_, callback)) = self.context_load_modules.remove(module_id.as_str()) {
+      callback().await?;
+    }
+    Ok(())
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(

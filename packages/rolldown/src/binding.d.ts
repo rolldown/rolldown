@@ -48,6 +48,7 @@ export declare class BindingOutputs {
 }
 
 export declare class BindingPluginContext {
+  load(specifier: string, fn: () => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string

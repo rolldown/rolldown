@@ -2614,6 +2614,7 @@ dependencies = [
  "lightningcss",
  "oxc",
  "rolldown_ecmascript",
+ "rolldown_error",
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2706,6 +2707,7 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_utils",
  "sugar_path",
+ "tokio",
  "tracing",
  "typedmap",
 ]

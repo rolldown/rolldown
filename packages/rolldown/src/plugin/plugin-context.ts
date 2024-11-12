@@ -12,6 +12,7 @@ import { unimplemented, unsupported } from '../utils/misc'
 import { ModuleInfo } from '../types/module-info'
 import { PluginContextData } from './plugin-context-data'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
+import { PartialNull } from '../types/utils'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -34,6 +35,11 @@ export interface PrivatePluginContextResolveOptions
 }
 
 export class PluginContext extends MinimalPluginContext {
+  readonly load: (
+    options: { id: string; resolveDependencies?: boolean } & Partial<
+      PartialNull<ModuleOptions>
+    >,
+  ) => Promise<ModuleInfo>
   readonly resolve: (
     source: string,
     importer?: string,
@@ -56,6 +62,26 @@ export class PluginContext extends MinimalPluginContext {
     data: PluginContextData,
   ) {
     super(options, plugin)
+    this.load = async ({ id, ...options }) => {
+      // resolveDependencies always true at rolldown
+      const moduleInfo = data.getModuleInfo(id, context)
+      if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
+        return moduleInfo
+      }
+      const rawOptions = {
+        meta: options.meta || {},
+        moduleSideEffects: options.moduleSideEffects || null,
+      }
+      data.updateModuleOption(id, rawOptions)
+      let resolveFn
+      // TODO: If is not resolved, we need to set a time to avoid waiting.
+      const promise = new Promise((resolve, _) => {
+        resolveFn = resolve
+      })
+      await context.load(id, resolveFn!)
+      await promise
+      return data.getModuleInfo(id, context)!
+    }
     this.resolve = async (source, importer, options) => {
       let receipt: number | undefined = undefined
       if (options != null) {

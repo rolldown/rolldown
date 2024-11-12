@@ -15,6 +15,10 @@ impl ModuleId {
     Self(value.into())
   }
 
+  pub fn inner(&self) -> &ArcStr {
+    &self.0
+  }
+
   pub fn as_str(&self) -> &str {
     &self.0
   }

@@ -7,6 +7,7 @@ use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::events::assign_to_import::AssignToImport;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::import_is_undefined::ImportIsUndefined;
@@ -254,6 +255,10 @@ impl BuildDiagnostic {
     name: ArcStr,
   ) -> Self {
     Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+  }
+
+  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
+    Self::new_inner(AssignToImport { filename, source, span, name })
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {

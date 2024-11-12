@@ -80,6 +80,9 @@ impl ModuleTask {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
+    // Add watch files for watcher recover if build errors occurred.
+    self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
+
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let (source, mut module_type) = match load_source(
       &self.ctx.plugin_driver,

@@ -219,6 +219,48 @@ test.sequential('(perf)watching same file multiply times', async () => {
   await watcher.close()
 })
 
+test.sequential('error handling', async () => {
+  // first build error, the watching could be work with recover error
+  fs.writeFileSync(input, 'conso le.log(1)')
+  // wait 50ms avoid the change event emit at first build
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50)
+  })
+  const watcher = await watch({
+    input,
+    cwd: import.meta.dirname,
+  })
+  const errors: string[] = []
+  watcher.on('event', (event) => {
+    if (event.code === 'ERROR') {
+      errors.push(event.error.message)
+    }
+  })
+  await waitBuildFinished()
+  // First build should error
+  expect(errors.length).toBe(1)
+  expect(errors[0].includes('PARSE_ERROR')).toBe(true)
+
+  // It should be working if the changes are fixed error
+  fs.writeFileSync(input, 'console.log(2)')
+  await waitBuildFinished()
+  expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
+
+  // failed again
+  fs.writeFileSync(input, 'conso le.log(1)')
+  await waitBuildFinished()
+  expect(errors.length).toBe(2)
+
+  // It should be working if the changes are fixed error
+  fs.writeFileSync(input, 'console.log(2)')
+  await waitBuildFinished()
+  expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
+
+  // revert change
+  fs.writeFileSync(input, 'console.log(1)\n')
+  await watcher.close()
+})
+
 async function waitBuildFinished() {
   // sleep 50ms
   await new Promise((resolve) => {

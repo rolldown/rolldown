@@ -184,7 +184,12 @@ impl<'a> GenerateStage<'a> {
 
     output.extend(output_assets);
 
-    Ok(BundleOutput { assets: output, errors, warnings, watch_files: vec![] })
+    Ok(BundleOutput {
+      assets: output,
+      errors,
+      warnings,
+      watch_files: self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect(),
+    })
   }
 
   async fn instantiate_chunks(

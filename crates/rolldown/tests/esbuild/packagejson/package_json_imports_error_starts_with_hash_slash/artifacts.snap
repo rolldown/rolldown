@@ -1,17 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## RESOLVE_ERROR
-
-```text
-[RESOLVE_ERROR] Error: Could not resolve '#/foo' in src/entry.js
+```text[RESOLVE_ERROR] Error: Could not resolve '#/foo' in src/entry.js
    ╭─[src/entry.js:1:8]
    │
  1 │ import '#/foo'
    │        ───┬───  
    │           ╰───── Invalid module specifier
 ───╯
-
 ```

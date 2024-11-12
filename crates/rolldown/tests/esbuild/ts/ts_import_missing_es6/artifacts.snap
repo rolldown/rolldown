@@ -1,31 +1,26 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "y" is not exported by "foo.js".
-   ╭─[entry.ts:1:21]
-   │
- 1 │ import fn, {x as a, y as b} from './foo'
-   │                     ┬  
-   │                     ╰── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+```text[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
    ╭─[entry.ts:1:8]
    │
  1 │ import fn, {x as a, y as b} from './foo'
    │        ─┬  
    │         ╰── Missing export
 ───╯
-
+```
+## MISSING_EXPORT
+```text[MISSING_EXPORT] Error: "y" is not exported by "foo.js".
+   ╭─[entry.ts:1:21]
+   │
+ 1 │ import fn, {x as a, y as b} from './foo'
+   │                     ┬  
+   │                     ╰── Missing export
+───╯
 ```
 
 # Assets

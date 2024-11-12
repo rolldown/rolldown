@@ -1,31 +1,26 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "Test" is not exported by "test.ts".
+```text[MISSING_EXPORT] Error: "Test" is not exported by "test.ts".
    ╭─[c.ts:1:10]
    │
  1 │ import { Test } from './test'
    │          ──┬─  
    │            ╰─── Missing export
 ───╯
-
 ```
 ## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "Test" is not exported by "test.ts".
+```text[MISSING_EXPORT] Error: "Test" is not exported by "test.ts".
    ╭─[d.ts:3:10]
    │
  3 │ import { Test } from './test'
    │          ──┬─  
    │            ╰─── Missing export
 ───╯
-
 ```
 
 # Assets

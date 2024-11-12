@@ -1,12 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## AMBIGUOUS_EXTERNAL_NAMESPACES
-
-```text
-[AMBIGUOUS_EXTERNAL_NAMESPACES] Error: Found ambiguous export.
+```text[AMBIGUOUS_EXTERNAL_NAMESPACES] Error: Found ambiguous export.
    ╭─[entry.js:1:12]
    │
  1 │ import {x, y, z} from './common'
@@ -25,7 +24,6 @@ source: crates/rolldown_testing/src/integration_test.rs
    │              ┬  
    │              ╰── One matching export is here.
 ───╯
-
 ```
 
 # Assets

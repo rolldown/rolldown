@@ -1,31 +1,26 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "Foo" is not exported by "type.ts".
+```text[MISSING_EXPORT] Error: "Foo" is not exported by "type.ts".
    ╭─[types2.ts:1:9]
    │
  1 │ import {Foo} from "./type"
    │         ─┬─  
    │          ╰─── Missing export
 ───╯
-
 ```
 ## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "Foo" is not exported by "type.ts".
+```text[MISSING_EXPORT] Error: "Foo" is not exported by "type.ts".
    ╭─[types3.ts:1:9]
    │
  1 │ export {Foo} from "./type"
    │         ─┬─  
    │          ╰─── Missing export
 ───╯
-
 ```
 
 # Assets

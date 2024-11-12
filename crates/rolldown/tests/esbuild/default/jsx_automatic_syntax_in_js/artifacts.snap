@@ -1,17 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Error: Unexpected token
+```text[PARSE_ERROR] Error: Unexpected token
    ╭─[entry.js:1:13]
    │
  1 │ console.log(<div/>)
    │             ┬  
    │             ╰── 
 ───╯
-
 ```

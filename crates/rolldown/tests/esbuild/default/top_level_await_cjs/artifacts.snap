@@ -5,26 +5,20 @@ snapshot_kind: text
 # Errors
 
 ## UNSUPPORTED_FEATURE
-
-```text
-[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
+```text[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
    ╭─[entry.js:1:1]
    │
  1 │ await foo;
    │ ────┬────  
    │     ╰────── 
 ───╯
-
 ```
 ## UNSUPPORTED_FEATURE
-
-```text
-[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
+```text[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
    ╭─[entry.js:2:1]
    │
  2 │ for await (foo of bar) ;
    │ ────────────┬───────────  
    │             ╰───────────── 
 ───╯
-
 ```

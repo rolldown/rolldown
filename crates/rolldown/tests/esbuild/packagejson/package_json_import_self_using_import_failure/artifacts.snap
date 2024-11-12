@@ -1,17 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## RESOLVE_ERROR
-
-```text
-[RESOLVE_ERROR] Error: Could not resolve 'xyz/src/foo.js' in src/index.js
+```text[RESOLVE_ERROR] Error: Could not resolve 'xyz/src/foo.js' in src/index.js
    ╭─[src/index.js:1:8]
    │
  1 │ import 'xyz/src/foo.js'
    │        ────────┬───────  
    │                ╰───────── Package subpath is not defined by exports
 ───╯
-
 ```

@@ -1,19 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "buton" is not exported by "bar.js".
+```text[MISSING_EXPORT] Error: "buton" is not exported by "bar.js".
    ╭─[foo.js:1:9]
    │
  1 │ export {buton} from './bar'
    │         ──┬──  
    │           ╰──── Missing export
 ───╯
-
 ```
 
 # Assets

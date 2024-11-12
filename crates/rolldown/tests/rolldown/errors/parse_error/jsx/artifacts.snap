@@ -1,12 +1,20 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
 ## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Error: Expected corresponding JSX closing tag for 'b'.
+```text[PARSE_ERROR] Error: Expected `,` but found `class`
+   ╭─[main.jsx:8:8]
+   │
+ 8 │     <a class="the">
+   │        ──┬──  
+   │          ╰──── `,` expected
+───╯
+```
+## PARSE_ERROR
+```text[PARSE_ERROR] Error: Expected corresponding JSX closing tag for 'b'.
    ╭─[main.jsx:5:6]
    │
  5 │     <b>
@@ -17,17 +25,4 @@ source: crates/rolldown_testing/src/integration_test.rs
    │       ┬  
    │       ╰── 
 ───╯
-
-```
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Error: Expected `,` but found `class`
-   ╭─[main.jsx:8:8]
-   │
- 8 │     <a class="the">
-   │        ──┬──  
-   │          ╰──── `,` expected
-───╯
-
 ```

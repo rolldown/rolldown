@@ -5,38 +5,29 @@ snapshot_kind: text
 # Errors
 
 ## RESOLVE_ERROR
-
-```text
-[RESOLVE_ERROR] Error: Could not resolve "pkg/foo/bar/baz" in entry.js
-   ╭─[entry.js:4:8]
-   │
- 4 │ import "pkg/foo/bar/baz"
-   │        ────────┬────────  
-   │                ╰────────── Matched alias not found
-───╯
-
-```
-## RESOLVE_ERROR
-
-```text
-[RESOLVE_ERROR] Error: Could not resolve "pkg/bar/baz" in entry.js
+```text[RESOLVE_ERROR] Error: Could not resolve "pkg/bar/baz" in entry.js
    ╭─[entry.js:5:8]
    │
  5 │ import "pkg/bar/baz"
    │        ──────┬──────  
    │              ╰──────── Matched alias not found
 ───╯
-
 ```
 ## RESOLVE_ERROR
-
-```text
-[RESOLVE_ERROR] Error: Could not resolve "pkg/baz" in entry.js
+```text[RESOLVE_ERROR] Error: Could not resolve "pkg/baz" in entry.js
    ╭─[entry.js:6:8]
    │
  6 │ import "pkg/baz"
    │        ────┬────  
    │            ╰────── Matched alias not found
 ───╯
-
+```
+## RESOLVE_ERROR
+```text[RESOLVE_ERROR] Error: Could not resolve "pkg/foo/bar/baz" in entry.js
+   ╭─[entry.js:4:8]
+   │
+ 4 │ import "pkg/foo/bar/baz"
+   │        ────────┬────────  
+   │                ╰────────── Matched alias not found
+───╯
 ```

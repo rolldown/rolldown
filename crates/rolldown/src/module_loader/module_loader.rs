@@ -219,7 +219,7 @@ impl ModuleLoader {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
-    self.shared_context.plugin_driver.set_context_load_modules_tx(self.tx.clone()).await;
+    self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;
 
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
@@ -322,6 +322,8 @@ impl ModuleLoader {
     if !errors.is_empty() {
       return Ok(Err(errors.into()));
     }
+
+    self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
 
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules

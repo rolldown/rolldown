@@ -1,5 +1,5 @@
 import { BindingTransformPluginConfig } from '../binding'
-import { normalizedStringOrRegex } from './utils'
+import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex'
 
 type TransformPattern = string | RegExp | (RegExp | string)[]
 // A temp config type for giving better user experience

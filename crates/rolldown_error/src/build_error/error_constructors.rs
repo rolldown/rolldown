@@ -7,6 +7,7 @@ use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::events::assign_to_import::AssignToImport;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::import_is_undefined::ImportIsUndefined;
@@ -17,6 +18,7 @@ use crate::events::missing_name_option_for_umd_export::MissingNameOptionForUmdEx
 use crate::events::resolve_error::DiagnosableResolveError;
 use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
+use crate::events::unsupported_feature::UnsupportedFeature;
 use crate::events::DiagnosableArcstr;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
@@ -176,6 +178,15 @@ impl BuildDiagnostic {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
+  pub fn unsupported_feature(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    error_message: String,
+  ) -> Self {
+    Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
+  }
+
   // --- Rolldown related
 
   pub fn oxc_parse_error(
@@ -244,6 +255,10 @@ impl BuildDiagnostic {
     name: ArcStr,
   ) -> Self {
     Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+  }
+
+  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
+    Self::new_inner(AssignToImport { filename, source, span, name })
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {

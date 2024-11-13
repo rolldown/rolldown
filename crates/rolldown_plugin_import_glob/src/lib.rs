@@ -397,7 +397,6 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
         PropertyKind::Init,
         PropertyKey::from(self.ast_builder.expression_string_literal(Span::default(), file)),
         value,
-        None,
         false,
         false,
         false,

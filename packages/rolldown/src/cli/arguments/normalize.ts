@@ -2,17 +2,13 @@
  * @description This file is used for normalize the options.
  * In CLI, the input options and output options are mixed together. We need to tell them apart.
  */
-import {
-  inputCliOptionsSchema,
-  InputOptions,
-} from '../../options/input-options'
-import {
-  outputCliOptionsSchema,
-  OutputOptions,
-} from '../../options/output-options'
-import { CliOptions, cliOptionsSchema } from './schema'
 import { logger } from '../utils'
 import { setNestedProperty } from './utils'
+import { CliOptions, cliOptionsSchema } from './schema'
+import { inputCliOptionsSchema } from '../../options/input-options'
+import { outputCliOptionsSchema } from '../../options/output-options'
+import type { InputOptions } from '../../types/input-options'
+import type { OutputOptions } from '../../types/output-options'
 
 export interface NormalizedCliOptions {
   input: InputOptions

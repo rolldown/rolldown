@@ -2,29 +2,23 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# Errors
-
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "default" is not exported by "b.ts".
-   ╭─[a.ts:1:8]
-   │
- 1 │ import b from './b.ts'
-   │        ┬  
-   │        ╰── Missing export
-───╯
-
-```
-
 # Assets
 
 ## a.js
 
 ```js
 
+
+//#region b.ts
+var require_b = __commonJS({ "b.ts"(exports, module) {
+	module.exports = [123, foo];
+	function foo() {}
+} });
+
+//#endregion
 //#region a.ts
-console.log(b);
+var import_b = __toESM(require_b());
+console.log(import_b.default);
 
 //#endregion
 ```

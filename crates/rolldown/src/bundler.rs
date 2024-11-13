@@ -11,7 +11,6 @@ use crate::{
 };
 use anyhow::Result;
 
-use arcstr::ArcStr;
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -161,18 +160,10 @@ impl Bundler {
           assets: vec![],
           warnings: vec![],
           errors: errors.into_vec(),
-          watch_files: vec![],
+          watch_files: self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect(),
         })
       }
     };
-
-    self.plugin_driver.set_module_table(unsafe {
-      // Can't ensure the safety here. It's only a temporary solution.
-      // - We won't mutate the `module_table` in the generate stage.
-      // - We transmute the stacked reference to a static lifetime and it haven't met errors due to we happen
-      // to only need to access the `module_table` during this function call.
-      std::mem::transmute(&link_stage_output.module_table)
-    });
 
     self.plugin_driver.render_start().await?;
 
@@ -194,16 +185,7 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
-    output.watch_files = {
-      let mut files = link_stage_output
-        .module_table
-        .modules
-        .iter()
-        .filter_map(|m| m.as_normal().map(|m| m.id.as_str().into()))
-        .collect::<Vec<ArcStr>>();
-      files.extend(self.plugin_driver.watch_files.iter().map(|f| f.clone()));
-      files
-    };
+    output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
     Ok(output)
   }
@@ -222,10 +204,24 @@ impl Bundler {
     &self.options
   }
 
-  pub async fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
+  pub fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
     let watcher = Arc::new(Watcher::new(bundler)?);
 
-    watcher.run().await?;
+    // using async task to run first build, it could be report first build error.
+    let cloned_watcher = Arc::clone(&watcher);
+    let future = async move {
+      let _ = cloned_watcher.run().await;
+    };
+    #[cfg(target_family = "wasm")]
+    {
+      let handle = tokio::runtime::Handle::current();
+      // could not block_on/spawn the main thread in WASI
+      std::thread::spawn(move || {
+        handle.spawn(future);
+      });
+    }
+    #[cfg(not(target_family = "wasm"))]
+    tokio::spawn(future);
 
     wait_for_change(Arc::clone(&watcher));
 

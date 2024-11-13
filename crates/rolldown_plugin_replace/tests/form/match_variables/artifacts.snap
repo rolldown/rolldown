@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -11,4 +12,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 console.log("beta version 1.0.0");
 
 //#endregion
+//# sourceMappingURL=input.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../input.js
+(0:0-0:8) "console." --> (2:0-2:8) "\nconsole"
+(0:8-0:12) "log(" --> (2:8-2:12) ".log"
+(0:12-0:42) "'BUILD version BUILD_VERSION')" --> (2:12-2:33) "(\"beta version 1.0.0\""
+(0:42-1:1) ";\n" --> (2:33-5:34) ");\n\n//#endregion\n//# sourceMappingURL=input.js.map"
 ```

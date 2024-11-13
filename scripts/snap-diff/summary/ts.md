@@ -73,16 +73,6 @@
   diff
 ## [ts_implicit_extensions](../../../crates/rolldown/tests/esbuild/ts/ts_implicit_extensions/diff.md)
   diff
-## [ts_import_equals_bundle](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle/diff.md)
-  diff
-## [ts_import_equals_elimination_test](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test/diff.md)
-  diff
-## [ts_import_equals_tree_shaking_false](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false/diff.md)
-  diff
-## [ts_import_equals_tree_shaking_true](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true/diff.md)
-  diff
-## [ts_import_equals_undefined_import](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import/diff.md)
-  diff
 ## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css/diff.md)
   diff
 ## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts/diff.md)
@@ -125,6 +115,11 @@
 ## [ts_abstract_class_field_use_assign](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_assign/bypass.md)
 ## [ts_enum_define](../../../crates/rolldown/tests/esbuild/ts/ts_enum_define/bypass.md)
 ## [ts_export_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_export_namespace/bypass.md)
+## [ts_import_equals_bundle](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle/bypass.md)
+## [ts_import_equals_elimination_test](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test/bypass.md)
+## [ts_import_equals_tree_shaking_false](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false/bypass.md)
+## [ts_import_equals_tree_shaking_true](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true/bypass.md)
+## [ts_import_equals_undefined_import](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import/bypass.md)
 ## [ts_minified_bundle_es6](../../../crates/rolldown/tests/esbuild/ts/ts_minified_bundle_es6/bypass.md)
 ## [ts_minify_enum](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum/bypass.md)
 ## [ts_minify_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_minify_namespace/bypass.md)

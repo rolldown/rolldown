@@ -1,5 +1,5 @@
 import type { MaybeArray } from '../types/utils'
-import type { StringOrRegExp } from '../constants/types'
+import type { StringOrRegExp } from '../types/utils'
 import type { ModuleType } from '../index'
 
 export type StringFilter =

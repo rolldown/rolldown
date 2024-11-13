@@ -1,11 +1,14 @@
 {
-  "config": {
-    "input": [
-      {
-        "name": "test",
-        "import": "test.jsx"
-      }
-    ]
-  },
-  "expectExecuted": false
+	"config": {
+		"input": [
+			{
+				"name": "test",
+				"import": "test.jsx"
+			}
+		],
+		"jsx": {
+			"runtime": "classic"
+		}
+	},
+	"expectExecuted": false
 }

@@ -87,7 +87,7 @@ impl Diagnostic {
     let builder = self.clone().init_report_builder();
     let mut output = Vec::new();
     builder
-      .with_config(Config::default().with_color(color))
+      .with_config(Config::default().with_color(color).with_index_type(ariadne::IndexType::Byte))
       .finish()
       .write_for_stdout(sources(self.files.clone()), &mut output)
       .unwrap();

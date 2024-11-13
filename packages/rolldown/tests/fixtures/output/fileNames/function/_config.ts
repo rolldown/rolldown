@@ -16,6 +16,14 @@ export default defineTest({
         preRenderedChunk = chunk
         return '[name]-chunk.js'
       },
+      cssEntryFileNames: (chunk) => {
+        preRenderedEntry = chunk
+        return '[name]-test.css'
+      },
+      cssChunkFileNames: (chunk) => {
+        preRenderedChunk = chunk
+        return '[name]-chunk.css'
+      },
     },
   },
   afterTest: (output) => {
@@ -28,13 +36,27 @@ export default defineTest({
         ?.fileName,
     ).toBe('test-chunk.js')
 
+    expect(
+      output.output.find(
+        (chunk) => (chunk as RolldownOutputChunk).fileName === 'main-test.css',
+      ),
+    ).toBeTruthy()
+    expect(
+      output.output.find(
+        (chunk) => (chunk as RolldownOutputChunk).fileName === 'test-chunk.css',
+      ),
+    ).toBeTruthy()
+
     expect(preRenderedEntry).toMatchObject({
       name: 'main',
       isEntry: true,
       isDynamicEntry: false,
       exports: [],
       facadeModuleId: expect.stringMatching(/main\.js$/),
-      moduleIds: [expect.stringMatching(/main\.js$/)],
+      moduleIds: [
+        expect.stringMatching(/main\.css$/),
+        expect.stringMatching(/main\.js$/),
+      ],
     })
 
     expect(preRenderedChunk).toMatchObject({
@@ -43,7 +65,10 @@ export default defineTest({
       isDynamicEntry: true,
       exports: ['hello'],
       facadeModuleId: expect.stringMatching(/test\.js$/),
-      moduleIds: [expect.stringMatching(/test\.js$/)],
+      moduleIds: [
+        expect.stringMatching(/test\.css$/),
+        expect.stringMatching(/test\.js$/),
+      ],
     })
   },
 })

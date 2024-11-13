@@ -56,6 +56,10 @@ export default defineConfig({
                 link: 'https://twitter.com/rolldown_rs',
               },
               {
+                text: 'Bluesky',
+                link: 'https://bsky.app/profile/rolldown.rs',
+              },
+              {
                 text: 'Discord Chat',
                 link: 'https://chat.rolldown.rs',
               },
@@ -125,6 +129,10 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'x', link: 'https://twitter.com/rolldown_rs' },
+      {
+        icon: 'bluesky',
+        link: 'https://bsky.app/profile/rolldown.bsky.social',
+      },
       { icon: 'discord', link: 'https://chat.rolldown.rs' },
       { icon: 'github', link: 'https://github.com/rolldown/rolldown' },
     ],

@@ -59,6 +59,7 @@
     "bools",
     "Boshen",
     "Brooooooklyn",
+    "browserslist",
     "canonicalize",
     "cdylib",
     "citty",
@@ -154,6 +155,7 @@
     "schemars",
     "serde",
     "sfnt",
+    "shaked",
     "sharedworker",
     "simd",
     "simdutf",
@@ -197,9 +199,10 @@
     "Xiangjun",
     "Yinan",
     "Yunfei",
-    "browserslist",
     "कुत्तेपरपानी",
     "पतलूनमे",
-    "मेरेशॉर्ट्सखाओ"
-  ]
+    "मेरेशॉर्ट्सखाओ",
+    "conso" // for watcher error test
+  ],
+  "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

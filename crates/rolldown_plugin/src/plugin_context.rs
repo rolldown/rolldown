@@ -1,13 +1,21 @@
 use std::{
+  fmt::Debug,
+  future::Future,
   ops::Deref,
   path::PathBuf,
-  sync::{Arc, Mutex, Weak},
+  pin::Pin,
+  sync::{Arc, Weak},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
-use dashmap::DashSet;
-use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions};
+use dashmap::{DashMap, DashSet};
+use rolldown_common::{
+  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
+  SharedNormalizedBundlerOptions,
+};
 use rolldown_resolver::{ResolveError, Resolver};
+use tokio::sync::Mutex;
 
 use crate::{
   types::{
@@ -33,9 +41,11 @@ impl PluginContext {
       plugin_driver: Weak::clone(&self.plugin_driver),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
-      module_table: Arc::clone(&self.module_table),
       options: Arc::clone(&self.options),
       watch_files: Arc::clone(&self.watch_files),
+      modules: Arc::clone(&self.modules),
+      context_load_modules: Arc::clone(&self.context_load_modules),
+      tx: Arc::clone(&self.tx),
     }))
   }
 }
@@ -48,6 +58,27 @@ impl Deref for PluginContext {
   }
 }
 
+type LoadCallbackFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>>
+  + Send
+  + Sync
+  + 'static;
+
+pub struct LoadCallback(Box<LoadCallbackFn>);
+
+impl Deref for LoadCallback {
+  type Target = LoadCallbackFn;
+
+  fn deref(&self) -> &Self::Target {
+    &*self.0
+  }
+}
+
+impl Debug for LoadCallback {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "LoadCallback fn")
+  }
+}
+
 #[derive(Debug)]
 pub struct PluginContextImpl {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
@@ -55,10 +86,11 @@ pub struct PluginContextImpl {
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
-  #[allow(clippy::redundant_allocation)]
-  pub(crate) module_table: Arc<Mutex<&'static ModuleTable>>,
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<DashSet<ArcStr>>,
+  pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub(crate) context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -68,6 +100,33 @@ impl From<PluginContextImpl> for PluginContext {
 }
 
 impl PluginContextImpl {
+  pub async fn load(
+    &self,
+    specifier: &str,
+    load_callback_fn: Box<LoadCallbackFn>,
+  ) -> anyhow::Result<()> {
+    self.context_load_modules.insert(specifier.into(), LoadCallback(Box::new(load_callback_fn)));
+    self
+      .tx
+      .lock()
+      .await
+      .as_ref()
+      .context(
+        "The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.",
+      )?
+      .send(ModuleLoaderMsg::FetchModule(ResolvedId {
+        id: specifier.into(),
+        ignored: false,
+        module_def_format: ModuleDefFormat::Unknown,
+        is_external: false,
+        package_json: None,
+        side_effects: None,
+        is_external_without_side_effects: false,
+      }))
+      .await?;
+    Ok(())
+  }
+
   pub async fn resolve(
     &self,
     specifier: &str,
@@ -121,27 +180,14 @@ impl PluginContextImpl {
     self.file_emitter.get_file_name(reference_id)
   }
 
-  pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
-    let module_table = self.module_table.lock().unwrap();
-    for normal_module in &module_table.modules {
-      if let Some(ecma_module) = normal_module.as_normal() {
-        if ecma_module.id.as_str() == module_id {
-          return Some(ecma_module.to_module_info());
-        }
-      }
-    }
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
     // TODO external module
-    None
+    self.modules.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
   }
-  #[allow(clippy::unnecessary_wraps)]
-  pub fn get_module_ids(&self) -> Option<Vec<String>> {
-    let module_table = self.module_table.lock().unwrap();
-    let mut ids = Vec::with_capacity(module_table.modules.len());
-    for normal_module in &module_table.modules {
-      ids.push(normal_module.id().to_string());
-    }
+
+  pub fn get_module_ids(&self) -> Vec<String> {
     // TODO external module
-    Some(ids)
+    self.modules.iter().map(|v| v.key().to_string()).collect()
   }
 
   pub fn cwd(&self) -> &PathBuf {

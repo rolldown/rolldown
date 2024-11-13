@@ -26,9 +26,9 @@ export default defineTest({
   afterTest(output) {
     // cSpell:disable
     expect(getOutputChunkNames(output)).toStrictEqual([
-      'main.js',
       'entry.js',
-      '_module-IFF5elLO.js',
+      'main.js',
+      '_module-gUXl6Us6.js',
     ])
   },
 })

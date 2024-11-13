@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
@@ -12,30 +13,6 @@ source: crates/rolldown_testing/src/integration_test.rs
  4 │ import importedE from "./foo"
    │        ────┬────  
    │            ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "importedC" is not exported by "foo.js".
-   ╭─[main.js:2:10]
-   │
- 2 │ export { importedC, importedD as d } from "./foo"
-   │          ────┬────  
-   │              ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "importedD" is not exported by "foo.js".
-   ╭─[main.js:2:21]
-   │
- 2 │ export { importedC, importedD as d } from "./foo"
-   │                     ────┬────  
-   │                         ╰────── Missing export
 ───╯
 
 ```
@@ -82,6 +59,30 @@ source: crates/rolldown_testing/src/integration_test.rs
    ╭─[main.js:1:21]
    │
  1 │ import { importedA, importedB as b } from "./foo"
+   │                     ────┬────  
+   │                         ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "importedC" is not exported by "foo.js".
+   ╭─[main.js:2:10]
+   │
+ 2 │ export { importedC, importedD as d } from "./foo"
+   │          ────┬────  
+   │              ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "importedD" is not exported by "foo.js".
+   ╭─[main.js:2:21]
+   │
+ 2 │ export { importedC, importedD as d } from "./foo"
    │                     ────┬────  
    │                         ╰────── Missing export
 ───╯

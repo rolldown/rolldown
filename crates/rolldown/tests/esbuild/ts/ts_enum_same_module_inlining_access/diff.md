@@ -1,6 +1,6 @@
 # Reason
 1. pure annotation for enum
-2. const enum inline
+2. not support const enum inline
 # Diff
 ## /out/entry.js
 ### esbuild

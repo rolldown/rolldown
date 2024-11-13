@@ -16,5 +16,8 @@ pub fn try_init_custom_trace_subscriber(napi_env: Env) {
 }
 
 pub fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
-  result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
+  result.map_err(|e| match e.downcast::<napi::Error>() {
+    Ok(e) => e,
+    Err(e) => napi::Error::from_reason(format!("Rolldown internal error: {e}")),
+  })
 }

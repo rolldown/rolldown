@@ -5,12 +5,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::checks_options::ChecksOptions;
+use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::output_option::ChunkFilenamesOutputOption;
+use super::target::ESTarget;
 use super::treeshake::TreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
@@ -19,7 +21,7 @@ use super::{
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{EsModuleFlag, InjectImport, InputItem, ModuleType};
+use crate::{EsModuleFlag, HashCharacters, InjectImport, InputItem, ModuleType};
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
 #[derive(Debug)]
@@ -46,6 +48,7 @@ pub struct NormalizedBundlerOptions {
   pub format: OutputFormat,
   pub exports: OutputExports,
   pub es_module: EsModuleFlag,
+  pub hash_characters: HashCharacters,
   pub globals: FxHashMap<String, String>,
   pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
@@ -68,6 +71,15 @@ pub struct NormalizedBundlerOptions {
   pub profiler_names: bool,
   pub jsx: Option<JsxOptions>,
   pub watch: WatchOption,
+  pub comments: Comments,
+  pub drop_labels: FxHashSet<String>,
+  pub target: ESTarget,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;
+
+impl NormalizedBundlerOptions {
+  pub fn is_sourcemap_enabled(&self) -> bool {
+    self.sourcemap.is_some()
+  }
+}

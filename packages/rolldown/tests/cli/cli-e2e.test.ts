@@ -104,5 +104,23 @@ describe('config', () => {
         expect(err).not.toBeUndefined()
       }
     })
+    it('should throw friendly error message for ts', async () => {
+      const cwd = cliFixturesDir('ext-ts')
+      try {
+        const _ = await $({ cwd })`rolldown -c rolldown.config.ts`
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error)
+        expect((err as Error).message).toContain('Unsupported config format.')
+      }
+    })
+    it('should allow loading ts config with tsx', async () => {
+      const cwd = cliFixturesDir('ext-ts')
+      const status = await $({
+        cwd,
+        env: { NODE_OPTIONS: '--import=tsx' },
+      })`rolldown -c rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
   })
 })

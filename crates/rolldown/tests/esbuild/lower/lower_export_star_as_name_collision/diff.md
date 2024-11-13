@@ -1,3 +1,5 @@
+# Reason
+1. should not transform `export * as ns from 'mod'` above es2019
 # Diff
 ## /out.js
 ### esbuild

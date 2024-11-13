@@ -1,11 +1,7 @@
 use super::module_task::{ModuleTask, ModuleTaskOwner};
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
-use super::task_result::NormalModuleTaskResult;
-use super::Msg;
-use crate::module_loader::runtime_module_task::RuntimeModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
-use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::type_alias::IndexEcmaAst;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
@@ -13,7 +9,8 @@ use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, ResolvedId, SymbolNameRefToken, SymbolRefDb,
+  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, NormalModuleTaskResult, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -50,7 +47,8 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
-  rx: tokio::sync::mpsc::Receiver<Msg>,
+  tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
+  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
@@ -78,9 +76,7 @@ impl ModuleLoader {
   ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
-
-    let tx_to_runtime_module = tx.clone();
+    let (tx, rx) = tokio::sync::mpsc::channel(1024);
 
     let meta = TaskContextMeta {
       replace_global_define_config: if options.define.is_empty() {
@@ -99,7 +95,7 @@ impl ModuleLoader {
     };
     let common_data = Arc::new(TaskContext {
       options: Arc::clone(&options),
-      tx,
+      tx: tx.clone(),
       resolver,
       fs,
       plugin_driver,
@@ -110,7 +106,7 @@ impl ModuleLoader {
     let symbols = SymbolRefDb::default();
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
-    let task = RuntimeModuleTask::new(runtime_id, tx_to_runtime_module);
+    let task = RuntimeModuleTask::new(runtime_id, tx.clone());
 
     #[cfg(target_family = "wasm")]
     {
@@ -126,6 +122,7 @@ impl ModuleLoader {
 
     Ok(Self {
       shared_context: common_data,
+      tx,
       rx,
       options,
       visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
@@ -141,6 +138,7 @@ impl ModuleLoader {
     &mut self,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
+    is_user_defined_entry: bool,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -189,7 +187,13 @@ impl ModuleLoader {
           not_visited.insert(idx);
           self.remaining += 1;
 
-          let task = ModuleTask::new(Arc::clone(&self.shared_context), idx, resolved_id, owner);
+          let task = ModuleTask::new(
+            Arc::clone(&self.shared_context),
+            idx,
+            resolved_id,
+            owner,
+            is_user_defined_entry,
+          );
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
@@ -215,6 +219,8 @@ impl ModuleLoader {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
+    self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;
+
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
@@ -229,7 +235,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ None),
+        id: self.try_spawn_new_task(info, None, true),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -246,7 +252,7 @@ impl ModuleLoader {
         break;
       };
       match msg {
-        Msg::NormalModuleDone(task_result) => {
+        ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
             module_idx,
             resolved_deps,
@@ -268,11 +274,11 @@ impl ModuleLoader {
                   normal_module.stable_id.as_str().into(),
                   raw_rec.span,
                 );
-                let id = self.try_spawn_new_task(info, Some(owner));
+                let id = self.try_spawn_new_task(info, Some(owner), false);
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
-                  importer_path: module.id().to_string().into(),
+                  importer_path: ModuleId::new(module.id()),
                 });
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
@@ -290,8 +296,9 @@ impl ModuleLoader {
             self.symbol_ref_db.store_local_db(module_idx, ast_symbol);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
+          self.remaining -= 1;
         }
-        Msg::RuntimeNormalModuleDone(task_result) => {
+        ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeModuleTaskResult { local_symbol_ref_db, mut module, runtime, ast } =
             task_result;
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
@@ -300,17 +307,23 @@ impl ModuleLoader {
 
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
+          self.remaining -= 1;
         }
-        Msg::BuildErrors(e) => {
+        ModuleLoaderMsg::FetchModule(resolve_id) => {
+          self.try_spawn_new_task(resolve_id, None, false);
+        }
+        ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);
+          self.remaining -= 1;
         }
       }
-      self.remaining -= 1;
     }
 
     if !errors.is_empty() {
       return Ok(Err(errors.into()));
     }
+
+    self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
 
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
@@ -323,12 +336,19 @@ impl ModuleLoader {
         if let Some(module) = module.as_normal_mut() {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-          for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
+          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
+          for importer in &importers {
             if importer.kind.is_static() {
-              module.importers.push(importer.importer_path);
+              module.importers.push(importer.importer_path.clone());
             } else {
-              module.dynamic_importers.push(importer.importer_path);
+              module.dynamic_importers.push(importer.importer_path.clone());
             }
+          }
+          if !importers.is_empty() {
+            self
+              .shared_context
+              .plugin_driver
+              .set_module_info(&module.id, Arc::new(module.to_module_info()));
           }
         }
         module

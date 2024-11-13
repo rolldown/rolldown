@@ -1,10 +1,13 @@
 pub mod impl_visit;
+mod import_assign_analyzer;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
-use oxc::semantic::{Reference, ReferenceId, SymbolTable};
+use oxc::semantic::{Reference, ReferenceId, ScopeId, SymbolTable};
+use oxc::span::SPAN;
 use oxc::{
   ast::{
     ast::{
@@ -28,6 +31,8 @@ use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
+
+use crate::SharedOptions;
 
 #[derive(Debug)]
 pub struct ScanResult {
@@ -79,6 +84,8 @@ pub struct AstScanner<'me, 'ast> {
   ast_usage: EcmaModuleAstUsage,
   cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
   visit_path: Vec<AstKind<'ast>>,
+  scope_stack: Vec<Option<ScopeId>>,
+  options: Option<&'me SharedOptions>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -92,6 +99,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     source: &'me ArcStr,
     file_path: &'me ModuleId,
     comments: &'me oxc::allocator::Vec<'me, Comment>,
+    options: Option<&'me SharedOptions>,
   ) -> Self {
     let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, idx, scope.root_scope_id());
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
@@ -142,7 +150,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
       visit_path: vec![],
+      options,
+      scope_stack: vec![],
     }
+  }
+
+  /// if current visit path is top level
+  pub fn is_top_level(&self) -> bool {
+    self
+      .scope_stack
+      .iter()
+      .filter_map(|item| *item)
+      .all(|scope| self.scopes.get_flags(scope).is_top())
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
@@ -550,11 +569,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
-        self.add_star_import(spec.local.expect_symbol_id(), rec_id, spec.span);
+        let symbol_id = spec.local.expect_symbol_id();
+        self.add_star_import(symbol_id, rec_id, spec.span);
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
       }
     });
   }
+
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration<'ast>) {
     match decl {
       ast::ModuleDeclaration::ImportDeclaration(decl) => {
@@ -604,27 +625,22 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scopes.root_scope_id() == self.result.symbol_ref_db.get_scope_id(symbol_id)
   }
 
-  fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) {
-    match (self.resolve_symbol_from_reference(id_ref), id_ref.reference_id.get()) {
-      (Some(symbol_id), Some(ref_id))
-        if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() =>
-      {
-        let reference = &self.scopes.references[ref_id];
-        if reference.is_write() {
-          self.result.warnings.push(
-            BuildDiagnostic::forbid_const_assign(
-              self.file_path.to_string(),
-              self.source.clone(),
-              self.result.symbol_ref_db.get_name(symbol_id).into(),
-              self.result.symbol_ref_db.get_span(symbol_id),
-              id_ref.span(),
-            )
-            .with_severity_warning(),
-          );
-        }
+  fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) -> Option<()> {
+    let ref_id = id_ref.reference_id.get()?;
+    let reference = &self.scopes.references[ref_id];
+    if reference.is_write() {
+      let symbol_id = reference.symbol_id()?;
+      if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() {
+        self.result.errors.push(BuildDiagnostic::forbid_const_assign(
+          self.file_path.to_string(),
+          self.source.clone(),
+          self.result.symbol_ref_db.get_name(symbol_id).into(),
+          self.result.symbol_ref_db.get_span(symbol_id),
+          id_ref.span(),
+        ));
       }
-      _ => {}
     }
+    None
   }
 
   /// resolve the symbol from the identifier reference, and return if it is a root symbol
@@ -654,5 +670,29 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         None
       }
     }
+  }
+
+  pub fn try_extract_parent_static_member_expr_chain(
+    &self,
+    max_len: usize,
+  ) -> Option<(Span, Vec<CompactStr>)> {
+    let mut span = SPAN;
+    let mut props = vec![];
+    for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
+      match ancestor_ast {
+        AstKind::MemberExpression(MemberExpression::StaticMemberExpression(expr)) => {
+          span = ancestor_ast.span();
+          props.push(expr.property.name.as_str().into());
+        }
+        _ => break,
+      }
+    }
+    (!props.is_empty()).then_some((span, props))
+  }
+
+  // `console` in `console.log` is a global reference
+  pub fn is_global_identifier_reference(&self, ident: &IdentifierReference) -> bool {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
+    symbol_id.is_none()
   }
 }

@@ -4,11 +4,17 @@ use napi_derive::napi;
 
 use rolldown_plugin::PluginContext;
 
-use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
-
 use super::types::{
   binding_emitted_asset::BindingEmittedAsset,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
+};
+
+use crate::{
+  types::{
+    binding_module_info::BindingModuleInfo,
+    js_callback::{JsCallback, JsCallbackExt},
+  },
+  utils::napi_error,
 };
 
 #[napi]
@@ -18,6 +24,27 @@ pub struct BindingPluginContext {
 
 #[napi]
 impl BindingPluginContext {
+  #[napi(ts_args_type = "specifier: string, fn: () => void")]
+  pub async fn load(
+    &self,
+    specifier: String,
+    load_callback_fn: JsCallback<(), ()>,
+  ) -> napi::Result<()> {
+    self
+      .inner
+      .load(
+        &specifier,
+        Box::new(move || {
+          let load_callback_fn = Arc::clone(&load_callback_fn);
+          Box::pin(
+            async move { load_callback_fn.invoke_async(()).await.map_err(anyhow::Error::from) },
+          )
+        }),
+      )
+      .await
+      .map_err(|program_err| napi_error::load_error(&specifier, program_err))
+  }
+
   #[napi]
   pub async fn resolve(
     &self,
@@ -53,11 +80,11 @@ impl BindingPluginContext {
 
   #[napi]
   pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(|info| BindingModuleInfo::new(Arc::new(info)))
+    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
   }
 
   #[napi]
-  pub fn get_module_ids(&self) -> Option<Vec<String>> {
+  pub fn get_module_ids(&self) -> Vec<String> {
     self.inner.get_module_ids()
   }
 

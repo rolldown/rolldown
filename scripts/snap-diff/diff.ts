@@ -7,6 +7,7 @@ import {
 import { DebugConfig } from './types'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
+import { isRegExp } from 'node:util/types'
 
 type Resolver = (
   esbuildFilename: string,
@@ -28,6 +29,12 @@ function defaultResolveFunction(
     return true
   }
   if (resolver && typeof resolver === 'object') {
+    if (
+      isRegExp(resolver[esbuildFilename]) &&
+      (resolver[esbuildFilename] as RegExp).test(rolldownFilename)
+    ) {
+      return true
+    }
     if (resolver[esbuildFilename] == rolldownFilename) {
       return true
     }

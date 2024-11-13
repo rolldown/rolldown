@@ -20,8 +20,17 @@ console.log(import_b.default);
 ### rolldown
 ```js
 
+
+//#region b.ts
+var require_b = __commonJS({ "b.ts"(exports, module) {
+	module.exports = [123, foo];
+	function foo() {}
+} });
+
+//#endregion
 //#region a.ts
-console.log(b);
+var import_b = __toESM(require_b());
+console.log(import_b.default);
 
 //#endregion
 ```
@@ -30,15 +39,15 @@ console.log(b);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	a.js
-@@ -1,8 +1,1 @@
--var require_b = __commonJS({
--    "b.ts"(exports, module) {
+@@ -1,8 +1,8 @@
+ var require_b = __commonJS({
+     "b.ts"(exports, module) {
 -        function foo() {}
--        module.exports = [123, foo];
--    }
--});
--var import_b = __toESM(require_b());
--console.log(import_b.default);
-+console.log(b);
+         module.exports = [123, foo];
++        function foo() {}
+     }
+ });
+ var import_b = __toESM(require_b());
+ console.log(import_b.default);
 
 ```

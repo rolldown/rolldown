@@ -1,11 +1,12 @@
-use rolldown_common::{IndexModules, ModuleIdx, NormalModule, SymbolRef, SymbolRefDb};
+use rolldown_common::{
+  IndexModules, ModuleIdx, NormalModule, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  runtime::RuntimeModuleBrief,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,
 };

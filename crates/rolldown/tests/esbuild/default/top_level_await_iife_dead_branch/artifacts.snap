@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,10 +10,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 (function() {
 
 
-//#region entry.js
-if (false) await foo;
-if (false) for await (foo of bar);
-
-//#endregion
 })();
 ```

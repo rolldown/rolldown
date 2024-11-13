@@ -6,7 +6,9 @@
         "import": "test.jsx"
       }
     ],
-    "sourcemap": "File"
+    "jsx": {
+      "runtime": "classic"
+    }
   },
   "expectExecuted": false
 }

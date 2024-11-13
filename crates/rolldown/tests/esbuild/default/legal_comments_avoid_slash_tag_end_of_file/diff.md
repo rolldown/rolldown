@@ -1,5 +1,5 @@
 # Reason
-1. css stabilization
+1. not support legal comments
 # Diff
 ## /out/entry.css
 ### esbuild
@@ -12,19 +12,23 @@ x {
 ```
 ### rolldown
 ```js
+/*! <style>foo</style> */
+x { y: z }
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.css
-+++ rolldown	
-@@ -1,5 +0,0 @@
++++ rolldown	entry2.css
+@@ -1,5 +1,2 @@
 -/* entry.css */
 -x {
 -  y: z;
 -}
 -/*! <style>foo<\/style> */
 \ No newline at end of file
++/*! <style>foo</style> */
++x { y: z }
 
 ```

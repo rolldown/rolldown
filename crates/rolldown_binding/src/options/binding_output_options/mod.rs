@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::types::binding_pre_rendered_chunk::PreRenderedChunk;
-use derivative::Derivative;
+use derive_more::Debug;
 use napi::Either;
 use napi_derive::napi;
 use serde::Deserialize;
@@ -16,27 +16,35 @@ pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>
 pub type ChunkFileNamesOutputOption = Either<String, JsCallback<PreRenderedChunk, String>>;
 
 #[napi(object, object_to_js = false)]
-#[derive(Deserialize, Derivative)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
 pub struct BindingOutputOptions {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
   pub name: Option<String>,
-  #[derivative(Debug = "ignore")]
+  pub asset_file_names: Option<String>,
+
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub entry_file_names: Option<ChunkFileNamesOutputOption>,
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub chunk_file_names: Option<ChunkFileNamesOutputOption>,
-  pub asset_file_names: Option<String>,
+  #[debug(skip)]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub css_entry_file_names: Option<ChunkFileNamesOutputOption>,
+  #[debug(skip)]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub css_chunk_file_names: Option<ChunkFileNamesOutputOption>,
 
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub banner: Option<AddonOutputOption>,
@@ -53,7 +61,7 @@ pub struct BindingOutputOptions {
   pub extend: Option<bool>,
   pub external_live_bindings: Option<bool>,
   // footer: () => string | Promise<string>;
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub footer: Option<AddonOutputOption>,
@@ -62,11 +70,13 @@ pub struct BindingOutputOptions {
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;
   pub globals: Option<HashMap<String, String>>,
+  #[napi(ts_type = "'base64' | 'base36' | 'hex'")]
+  pub hash_characters: Option<String>,
   // hoistTransitiveImports: boolean;
   // indent: true | string;
   pub inline_dynamic_imports: Option<bool>,
   // interop: GetInterop;
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub intro: Option<AddonOutputOption>,
@@ -74,7 +84,7 @@ pub struct BindingOutputOptions {
   // minifyInternalExports: boolean;
   // namespaceToStringTag: boolean;
   // noConflict: boolean;
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub outro: Option<AddonOutputOption>,
@@ -88,12 +98,12 @@ pub struct BindingOutputOptions {
   // sanitizeFileName: (fileName: string) => string;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
   pub sourcemap_ignore_list: Option<JsCallback<(String, String), bool>>,
   pub sourcemap_debug_ids: Option<bool>,
-  #[derivative(Debug = "ignore")]
+  #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
   pub sourcemap_path_transform: Option<JsCallback<(String, String), String>>,
@@ -106,4 +116,6 @@ pub struct BindingOutputOptions {
   // --- Enhanced options
   pub minify: Option<bool>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
+  #[napi(ts_type = "'none' | 'preserve-legal'")]
+  pub comments: Option<String>,
 }

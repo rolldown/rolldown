@@ -91,6 +91,10 @@ async function watchInner(
         )
         break
 
+      case 'ERROR':
+        logger.error(event.error.message)
+        break
+
       default:
         break
     }

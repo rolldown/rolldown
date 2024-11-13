@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    ast::{self, Expression, IdentifierReference, MemberExpression},
+    ast::{self, Expression, IdentifierReference},
     visit::walk,
     AstKind, Visit,
   },
@@ -16,6 +16,18 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
+  fn enter_scope(
+    &mut self,
+    _flags: oxc::semantic::ScopeFlags,
+    scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
+  ) {
+    self.scope_stack.push(scope_id.get());
+  }
+
+  fn leave_scope(&mut self) {
+    self.scope_stack.pop();
+  }
+
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
     self.visit_path.push(kind);
   }
@@ -48,59 +60,63 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
   }
 
-  fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
-    match expr {
-      MemberExpression::StaticMemberExpression(member_expr) => {
-        // For member expression like `a.b.c.d`, we will first enter the (object: `a.b.c`, property: `d`) expression.
-        // So we add these properties with order `d`, `c`, `b`.
-        let mut props_in_reverse_order = vec![];
-        let mut cur_member_expr = member_expr;
-        let object_symbol_in_root_scope = loop {
-          props_in_reverse_order.push(&cur_member_expr.property);
-          match &cur_member_expr.object {
-            Expression::StaticMemberExpression(expr) => {
-              cur_member_expr = expr;
-            }
-            Expression::Identifier(id) => {
-              break self.resolve_identifier_to_root_symbol(id);
-            }
-            _ => break None,
-          }
-        };
-        match object_symbol_in_root_scope {
-          // - Import statements are hoisted to the top of the module, so in this time being, all imports are scanned.
-          // - Having empty span will also results to bailout since we rely on span to identify ast nodes.
-          Some(sym_ref)
-            if self.result.named_imports.contains_key(&sym_ref) && !expr.span().is_unspanned() =>
-          {
-            let props = props_in_reverse_order
-              .into_iter()
-              .rev()
-              .map(|ident| ident.name.as_str().into())
-              .collect::<Vec<_>>();
-            self.add_member_expr_reference(sym_ref, props, expr.span());
-            // Don't walk again, otherwise we will add the `object_symbol_in_root_scope` again in `visit_identifier_reference`
-            return;
-          }
-          _ => {}
+  fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
+    if it.r#await && self.is_top_level() {
+      if let Some(format) = self.options.as_ref().map(|option| &option.format) {
+        if !format.keep_esm_import_export_syntax() {
+          self.result.errors.push(BuildDiagnostic::unsupported_feature(
+            self.file_path.as_str().into(),
+            self.source.clone(),
+            it.span(),
+            format!(
+              "Top-level await is currently not supported with the '{format}' output format",
+            ),
+          ));
         }
       }
-      _ => {}
-    };
-    walk::walk_member_expression(self, expr);
+    }
+
+    walk::walk_for_of_statement(self, it);
+  }
+
+  fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
+    if let Some(format) = self.options.as_ref().map(|option| &option.format) {
+      if !format.keep_esm_import_export_syntax() && self.is_top_level() {
+        self.result.errors.push(BuildDiagnostic::unsupported_feature(
+          self.file_path.as_str().into(),
+          self.source.clone(),
+          it.span(),
+          format!("Top-level await is currently not supported with the '{format}' output format",),
+        ));
+      }
+    }
+    walk::walk_await_expression(self, it);
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
     if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
-      self.add_referenced_symbol(root_symbol_id);
+      // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
+      // use this flag to avoid insert it as `Symbol` at the same time.
+      let mut is_inserted_before = false;
+      if self.result.named_imports.contains_key(&root_symbol_id) {
+        if let Some((span, props)) = self.try_extract_parent_static_member_expr_chain(usize::MAX) {
+          if !span.is_unspanned() {
+            is_inserted_before = true;
+            self.add_member_expr_reference(root_symbol_id, props, span);
+          }
+        }
+      }
+      if !is_inserted_before {
+        self.add_referenced_symbol(root_symbol_id);
+      }
+      self.check_import_assign(ident, root_symbol_id.symbol);
     }
-    ident.reference_id().and_then(|ref_id| {
-      let (symbol_id, ids) = self.cur_class_decl_and_symbol_referenced_ids?;
-      if ids.contains(&ref_id) {
+    if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
+      if ids.contains(&ident.reference_id()) {
         self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
       }
-      Some(())
-    });
+    }
+    _ = self.try_diagnostic_forbid_const_assign(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -136,19 +152,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
-      ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
-        self.try_diagnostic_forbid_const_assign(id_ref);
-      }
       // Detect `module.exports` and `exports.ANY`
       ast::AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
         Expression::Identifier(ref id) => {
           if id.name == "module"
-            && self.resolve_identifier_to_root_symbol(id).is_none()
+            && self.is_global_identifier_reference(id)
             && member_expr.property.name == "exports"
           {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
           }
-          if id.name == "exports" && self.resolve_identifier_to_root_symbol(id).is_none() {
+          if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
           }
         }
@@ -156,7 +169,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         Expression::StaticMemberExpression(ref member_expr) => {
           if let Expression::Identifier(ref id) = member_expr.object {
             if id.name == "module"
-              && self.resolve_identifier_to_root_symbol(id).is_none()
+              && self.is_global_identifier_reference(id)
               && member_expr.property.name == "exports"
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));

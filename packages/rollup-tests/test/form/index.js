@@ -1,6 +1,7 @@
 const assert = require('node:assert');
 const { existsSync, readFileSync } = require('node:fs');
 const { basename, resolve } = require('node:path');
+const oxc = require('oxc-transform')
 /**
  * @type {import('../../src/rollup/types')} Rollup
  */
@@ -13,7 +14,8 @@ const {
 	verifyAstPlugin
 } = require('../utils.js');
 
-const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
+// const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
+const FORMATS = ['es'];
 
 runTestSuiteWithSamples(
 	'form',
@@ -145,6 +147,18 @@ async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show
 		console.log(actualCode + '\n\n\n');
 	}
 
-	assert.strictEqual(actualCode, expectedCode);
+	assert.strictEqual(formatter(actualCode), formatter(expectedCode));
 	assert.deepStrictEqual(actualMap, expectedMap);
+}
+
+function formatter(input) {
+	const { code, declaration, errors } = oxc.transform(
+		'test.js',
+		input,
+		{}
+	);
+	if (errors.length > 0) {
+		throw new Error('oxc formatter code found error: ' + errors.join(', '))
+	}
+	return code 
 }

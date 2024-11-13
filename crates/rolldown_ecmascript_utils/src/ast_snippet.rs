@@ -355,7 +355,6 @@ impl<'ast> AstSnippet<'ast> {
             NONE,
             Some(body),
           ),
-          None,
           true,
           false,
           false,
@@ -421,7 +420,6 @@ impl<'ast> AstSnippet<'ast> {
             NONE,
             Some(body),
           ),
-          None,
           true,
           false,
           false,
@@ -719,7 +717,6 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.property_key_identifier_name(SPAN, key)
       },
       self.only_return_arrow_expr(expr),
-      None,
       true,
       false,
       computed,

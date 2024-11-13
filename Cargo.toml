@@ -76,7 +76,7 @@ single_match      = "allow"
 single_match_else = "allow"
 
 [workspace.dependencies]
-css-module-lexer                        = "0.0.14"
+css-module-lexer                        = "0.0.15"
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
 rolldown_ecmascript                     = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
@@ -115,15 +115,18 @@ ariadne             = "0.5.0"
 async-channel       = "2.3.1"
 async-scoped        = { version = "0.9.0" }
 async-trait         = "0.1.80"
+base-encode         = "0.3.1"
 base64-simd         = "0.8.0"
 bitflags            = { version = "2.6.0" }
 daachorse           = "1.0.0"
 dashmap             = "6.0.0"
-derivative          = "2.2.0"
+derive_more         = { version = "1.0.0", features = ["debug"] }
 dunce               = "1.0.4"                                                                           # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+either              = "1.13.0"
 futures             = "0.3.30"
 glob                = "0.3.1"
 glob-match          = "0.2.1"
+heck                = { version = "0.5.0" }
 indexmap            = "2.2.6"
 infer               = "0.16.0"
 insta               = "1.39.0"
@@ -145,6 +148,7 @@ rayon               = "1.10.0"
 regex               = "1.10.5"
 regress             = "0.10.0"
 rustc-hash          = "2.0.0"
+sanitize-filename   = "0.6.0"
 schemars            = "0.8.21"
 self_cell           = "1.0.4"
 serde               = { version = "1.0.203", features = ["derive"] }
@@ -164,10 +168,10 @@ vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
 
 # oxc crates share the same version
-oxc                = { version = "0.35.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
-oxc_index          = { version = "0.35.0", features = ["rayon"] }
-oxc_sourcemap      = { version = "0.35.0" }
-oxc_transform_napi = { version = "0.35.0" }
+oxc                = { version = "0.36.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
+oxc_index          = { version = "0.36.0", features = ["rayon"] }
+oxc_sourcemap      = { version = "0.36.0" }
+oxc_transform_napi = { version = "0.36.0" }
 
 [profile.release]
 codegen-units = 1

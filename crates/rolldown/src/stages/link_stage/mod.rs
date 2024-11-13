@@ -4,7 +4,8 @@ use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
-  ModuleTable, OutputFormat, ResolvedImportRecord, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
+  ModuleTable, OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef,
+  SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -15,7 +16,6 @@ use rolldown_utils::{
 use rustc_hash::FxHashSet;
 
 use crate::{
-  runtime::RuntimeModuleBrief,
   type_alias::IndexEcmaAst,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,
@@ -291,7 +291,7 @@ impl<'a> LinkStage<'a> {
             || is_external_dynamic_import(&self.module_table, rec, importer_idx)
           {
             if matches!(rec.kind, ImportKind::Require)
-              || !self.options.format.keep_esm_import_export()
+              || !self.options.format.keep_esm_import_export_syntax()
             {
               if self.options.format.should_call_runtime_require() {
                 stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());

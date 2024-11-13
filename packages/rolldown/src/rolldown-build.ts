@@ -1,10 +1,10 @@
-import type { OutputOptions } from './options/output-options'
 import { transformToRollupOutput } from './utils/transform-to-rollup-output'
 import { BundlerWithStopWorker, createBundler } from './utils/create-bundler'
 
+import type { InputOptions } from './types/input-options'
+import type { OutputOptions } from './types/output-options'
 import type { RolldownOutput } from './types/rolldown-output'
-import type { HasProperty, TypeAssert } from './utils/type-assert'
-import type { InputOptions } from './options/input-options'
+import type { HasProperty, TypeAssert } from './types/assert'
 
 export class RolldownBuild {
   #inputOptions: InputOptions

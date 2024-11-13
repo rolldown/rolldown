@@ -48,11 +48,12 @@ export declare class BindingOutputs {
 }
 
 export declare class BindingPluginContext {
+  load(specifier: string, fn: () => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
-  getModuleIds(): Array<string> | null
+  getModuleIds(): Array<string>
   addWatchFile(file: string): void
 }
 
@@ -235,6 +236,7 @@ export interface BindingInputOptions {
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
+  dropLabels?: Array<string>
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
@@ -280,6 +282,12 @@ export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
 
+export interface BindingModuleSideEffectsRule {
+  test?: RegExp | undefined
+  sideEffects: boolean
+  external?: boolean | undefined
+}
+
 export interface BindingNotifyOption {
   pollInterval?: number
   compareContents?: boolean
@@ -287,9 +295,11 @@ export interface BindingNotifyOption {
 
 export interface BindingOutputOptions {
   name?: string
+  assetFileNames?: string
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
-  assetFileNames?: string
+  cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
   file?: string
@@ -300,6 +310,7 @@ export interface BindingOutputOptions {
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
   globals?: Record<string, string>
+  hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
@@ -310,6 +321,7 @@ export interface BindingOutputOptions {
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean
   advancedChunks?: BindingAdvancedChunksOptions
+  comments?: 'none' | 'preserve-legal'
 }
 
 export interface BindingPluginContextResolvedId {
@@ -393,6 +405,7 @@ export interface BindingReplacePluginConfig {
   delimiters?: [string, string]
   preventAssignment?: boolean
   objectGuards?: boolean
+  sourcemap?: boolean
 }
 
 export interface BindingResolveOptions {
@@ -431,7 +444,7 @@ export interface BindingTransformPluginConfig {
 }
 
 export interface BindingTreeshake {
-  moduleSideEffects: string
+  moduleSideEffects: boolean | BindingModuleSideEffectsRule[]
 }
 
 export interface BindingViteResolvePluginConfig {

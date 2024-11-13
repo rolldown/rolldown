@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
-use derivative::Derivative;
 use rolldown_plugin::{typedmap::TypedDashMap, PluginContextResolveOptions};
 use serde::Deserialize;
 
 use crate::options::plugin::JsPluginContextResolveCustomArgId;
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Derivative, Default)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
 pub struct BindingPluginContextResolveOptions {
   #[napi(ts_type = "'import' | 'dynamic-import' | 'require-call'")]
   pub import_kind: Option<String>,

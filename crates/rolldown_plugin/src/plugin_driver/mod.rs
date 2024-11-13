@@ -1,17 +1,20 @@
 use std::{
   ops::Deref,
-  sync::{Arc, Mutex, Weak},
+  sync::{Arc, Weak},
   vec,
 };
 
 use arcstr::ArcStr;
-use dashmap::DashSet;
-use rolldown_common::{ModuleTable, SharedFileEmitter, SharedNormalizedBundlerOptions};
+use dashmap::{DashMap, DashSet};
+use rolldown_common::{
+  ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
+};
 use rolldown_resolver::Resolver;
+use tokio::sync::Mutex;
 
 use crate::{
   __inner::SharedPluginable,
-  plugin_context::PluginContextImpl,
+  plugin_context::{LoadCallback, PluginContextImpl},
   type_aliases::{IndexPluginContext, IndexPluginFilter, IndexPluginable},
   types::{hook_filter::HookFilterOptions, plugin_idx::PluginIdx},
   PluginContext, PluginHookMeta, PluginOrder,
@@ -29,10 +32,11 @@ pub struct PluginDriver {
   contexts: IndexPluginContext,
   order_indicates: HookOrderIndicates,
   index_plugin_filters: IndexPluginFilter,
-  resolver: Arc<Resolver>,
   file_emitter: SharedFileEmitter,
-  options: SharedNormalizedBundlerOptions,
   pub watch_files: Arc<DashSet<ArcStr>>,
+  pub modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
 impl PluginDriver {
@@ -43,9 +47,10 @@ impl PluginDriver {
     options: &SharedNormalizedBundlerOptions,
   ) -> SharedPluginDriver {
     let watch_files = Arc::new(DashSet::default());
+    let modules = Arc::new(DashMap::default());
+    let context_load_modules = Arc::new(DashMap::default());
+    let tx = Arc::new(Mutex::new(None));
 
-    let dummy_module_table = Box::new(ModuleTable::default());
-    let dummy_module_table = Box::leak(dummy_module_table) as &'static mut ModuleTable;
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(plugins.len());
@@ -66,9 +71,11 @@ impl PluginDriver {
             plugin_driver: Weak::clone(plugin_driver),
             resolver: Arc::clone(resolver),
             file_emitter: Arc::clone(file_emitter),
-            module_table: Arc::new(Mutex::new(dummy_module_table)),
+            modules: Arc::clone(&modules),
             options: Arc::clone(options),
             watch_files: Arc::clone(&watch_files),
+            context_load_modules: Arc::clone(&context_load_modules),
+            tx: Arc::clone(&tx),
           }
           .into(),
         );
@@ -79,65 +86,38 @@ impl PluginDriver {
         plugins: index_plugins,
         contexts: index_contexts,
         index_plugin_filters,
-        resolver: Arc::clone(resolver),
         file_emitter: Arc::clone(file_emitter),
-        options: Arc::clone(options),
         watch_files,
+        modules,
+        context_load_modules,
+        tx,
       }
     })
   }
 
-  pub fn new_shared_from_self(&self) -> SharedPluginDriver {
-    let watch_files = Arc::new(DashSet::default());
-    let dummy_module_table = Box::new(ModuleTable::default());
-    let dummy_module_table = Box::leak(dummy_module_table) as &'static mut ModuleTable;
-    Arc::new_cyclic(|plugin_driver| {
-      let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
-      let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
-      let mut index_plugin_filters = IndexPluginFilter::with_capacity(self.plugins.len());
-
-      self.plugins.iter().for_each(|plugin| {
-        let plugin_idx = index_plugins.push(Arc::clone(plugin));
-        // TODO: Error handling
-        index_plugin_filters.push(HookFilterOptions {
-          load: plugin.call_load_filter().unwrap(),
-          resolve_id: plugin.call_resolve_id_filter().unwrap(),
-          transform: plugin.call_transform_filter().unwrap(),
-        });
-
-        index_contexts.push(
-          PluginContextImpl {
-            skipped_resolve_calls: vec![],
-            plugin_idx,
-            plugin_driver: Weak::clone(plugin_driver),
-            resolver: Arc::clone(&self.resolver),
-            file_emitter: Arc::clone(&self.file_emitter),
-            module_table: Arc::new(Mutex::new(dummy_module_table)),
-            options: Arc::clone(&self.options),
-            watch_files: Arc::clone(&watch_files),
-          }
-          .into(),
-        );
-      });
-
-      Self {
-        order_indicates: HookOrderIndicates::new(&index_plugins),
-        plugins: index_plugins,
-        contexts: index_contexts,
-        index_plugin_filters,
-        resolver: Arc::clone(&self.resolver),
-        file_emitter: Arc::clone(&self.file_emitter),
-        options: Arc::clone(&self.options),
-        watch_files,
-      }
-    })
+  pub fn clear(&self) {
+    self.watch_files.clear();
+    self.modules.clear();
+    self.file_emitter.clear();
   }
 
-  pub fn set_module_table(&self, module_table: &'static ModuleTable) {
-    if let Some(ctx) = self.contexts.first() {
-      let mut table = ctx.module_table.lock().unwrap();
-      *table = module_table;
+  pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
+    self.modules.insert(module_id.as_str().into(), module_info);
+  }
+
+  pub async fn set_context_load_modules_tx(
+    &self,
+    tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+  ) {
+    let mut tx_guard = self.tx.lock().await;
+    *tx_guard = tx;
+  }
+
+  pub async fn mark_context_load_modules_loaded(&self, module_id: &ModuleId) -> anyhow::Result<()> {
+    if let Some((_, callback)) = self.context_load_modules.remove(module_id.as_str()) {
+      callback().await?;
     }
+    Ok(())
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(

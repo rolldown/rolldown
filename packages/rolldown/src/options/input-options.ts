@@ -1,6 +1,6 @@
-import type { RolldownPluginRec } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
+import { underline, gray, yellow, dim } from '../cli/colors'
 import {
   LogLevelOptionSchema,
   LogLevelSchema,
@@ -8,13 +8,23 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
-import { TreeshakingOptions } from '../treeshake'
-import { underline, gray, yellow, dim } from '../cli/colors'
+import type { RolldownPluginRec } from '../plugin'
+import { TreeshakingOptionsSchema } from '../treeshake'
+import type {
+  ExternalOption,
+  InputCliOptions,
+  InputOption,
+  JsxOptions,
+  ModuleTypes,
+  InputOptions,
+  WatchOptions,
+} from '../types/input-options'
+import type { StringOrRegExp } from '../types/utils'
 
 const inputOptionSchema = z
   .string()
   .or(z.string().array())
-  .or(z.record(z.string()))
+  .or(z.record(z.string())) satisfies z.ZodType<InputOption>
 
 const externalSchema = zodExt
   .stringOrRegExp()
@@ -24,7 +34,7 @@ const externalSchema = zodExt
       .function()
       .args(z.string(), z.string().optional(), z.boolean())
       .returns(zodExt.voidNullableWith(z.boolean())),
-  )
+  ) satisfies z.ZodType<ExternalOption>
 
 const moduleTypesSchema = z.record(
   z
@@ -39,7 +49,7 @@ const moduleTypesSchema = z.record(
     .or(z.literal('binary'))
     .or(z.literal('empty'))
     .or(z.literal('css')),
-)
+) satisfies z.ZodType<ModuleTypes>
 
 const jsxOptionsSchema = z.strictObject({
   mode: z
@@ -63,11 +73,13 @@ const jsxOptionsSchema = z.strictObject({
     .describe('Development specific information')
     .optional(),
   // The rollup preset is not supported at now
-})
+}) satisfies z.ZodType<JsxOptions>
 
 const stringOrRegExpSchema = zodExt
   .stringOrRegExp()
-  .or(zodExt.stringOrRegExp().array())
+  .or(zodExt.stringOrRegExp().array()) satisfies z.ZodType<
+  StringOrRegExp | StringOrRegExp[]
+>
 
 const watchOptionsSchema = z.strictObject({
   skipWrite: z.boolean().describe('Skip the bundle.write() step').optional(),
@@ -81,7 +93,7 @@ const watchOptionsSchema = z.strictObject({
   include: stringOrRegExpSchema.optional(),
   exclude: stringOrRegExpSchema.optional(),
   chokidar: z.any().optional(),
-})
+}) satisfies z.ZodType<WatchOptions>
 
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
@@ -102,20 +114,22 @@ export const inputOptionsSchema = z.strictObject({
       tsconfigFilename: z.string().optional(),
     })
     .optional(),
-  cwd: z.string().describe('current working directory.').optional(),
+  cwd: z.string().describe('Current working directory').optional(),
   platform: z
     .literal('node')
     .or(z.literal('browser'))
     .or(z.literal('neutral'))
     .describe(
-      `platform for which the code should be generated (node, ${underline('browser')}, neutral).`,
+      `Platform for which the code should be generated (node, ${underline('browser')}, neutral)`,
     )
     .optional(),
-  shimMissingExports: z.boolean().optional(),
-  // FIXME: should use a more specific schema
-  treeshake: zodExt.phantom<boolean | TreeshakingOptions>().optional(),
+  shimMissingExports: z
+    .boolean()
+    .describe(`Create shim variables for missing exports`)
+    .optional(),
+  treeshake: TreeshakingOptionsSchema.optional(),
   logLevel: LogLevelOptionSchema.describe(
-    `log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
+    `Log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
   ).optional(),
   onLog: z
     .function()
@@ -139,7 +153,7 @@ export const inputOptionsSchema = z.strictObject({
     )
     .optional(),
   moduleTypes: moduleTypesSchema
-    .describe('module types for customized extensions.')
+    .describe('Module types for customized extensions')
     .optional(),
   experimental: z
     .strictObject({
@@ -148,12 +162,16 @@ export const inputOptionsSchema = z.strictObject({
       disableLiveBindings: z.boolean().optional(),
     })
     .optional(),
-  define: z.record(z.string()).describe('define global variables').optional(),
+  define: z.record(z.string()).describe('Define global variables').optional(),
   inject: z.record(z.string().or(z.tuple([z.string(), z.string()]))).optional(),
   profilerNames: z.boolean().optional(),
   jsx: jsxOptionsSchema.optional(),
   watch: watchOptionsSchema.or(z.literal(false)).optional(),
-})
+  dropLabels: z
+    .array(z.string())
+    .describe('Remove labeled statements with these label names')
+    .optional(),
+}) satisfies z.ZodType<InputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema
   .extend({
@@ -165,7 +183,7 @@ export const inputCliOptionsSchema = inputOptionsSchema
       .optional(),
     inject: z
       .record(z.string())
-      .describe('inject import statements on demand')
+      .describe('Inject import statements on demand')
       .optional(),
     treeshake: z
       .boolean()
@@ -182,42 +200,4 @@ export const inputCliOptionsSchema = inputOptionsSchema
     experimental: true,
     profilerNames: true,
     watch: true,
-  })
-
-type RawInputOptions = z.infer<typeof inputOptionsSchema>
-interface OverwriteInputOptionsWithDoc {
-  /**
-   * Inject import statements on demand.
-   *
-   * ## Supported patterns
-   * ```js
-   * {
-   *   // import { Promise } from 'es6-promise'
-   *   Promise: ['es6-promise', 'Promise'],
-   *
-   *   // import { Promise as P } from 'es6-promise'
-   *   P: ['es6-promise', 'Promise'],
-   *
-   *   // import $ from 'jquery'
-   *   $: 'jquery',
-   *
-   *   // import * as fs from 'node:fs'
-   *   fs: ['node:fs', '*'],
-   *
-   *   // Inject shims for property access pattern
-   *   'Object.assign': path.resolve( 'src/helpers/object-assign.js' ),
-   * }
-   * ```
-   */
-  inject?: RawInputOptions['inject']
-}
-
-export type InputOption = z.infer<typeof inputOptionSchema>
-export type InputOptions = Omit<
-  RawInputOptions,
-  keyof OverwriteInputOptionsWithDoc
-> &
-  OverwriteInputOptionsWithDoc
-export type ExternalOption = z.infer<typeof externalSchema>
-
-export type JsxOptions = z.infer<typeof jsxOptionsSchema>
+  }) satisfies z.ZodType<InputCliOptions>

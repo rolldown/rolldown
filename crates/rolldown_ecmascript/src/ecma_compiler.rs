@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
 use arcstr::ArcStr;
+use either::Either;
 use oxc::{
   allocator::Allocator,
-  codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn},
+  codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
   minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
   sourcemap::SourceMap,
@@ -62,6 +63,21 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
+  pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
+    let (is_print_full_comments, legal_comments) = match options.comments {
+      Either::Left(value) => (value, LegalComment::None),
+      Either::Right(value) => (false, value),
+    };
+    CodeGenerator::new()
+      .with_options(CodegenOptions {
+        comments: is_print_full_comments,
+        source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
+        legal_comments,
+        ..CodegenOptions::default()
+      })
+      .build(ast.program())
+  }
+
   pub fn minify(
     source_text: &str,
     enable_sourcemap: bool,
@@ -89,4 +105,10 @@ fn basic_test() {
   let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
   let code = EcmaCompiler::print(&ast, "", false).code;
   assert_eq!(code, "const a = 1;\n");
+}
+
+pub struct PrintOptions {
+  pub comments: Either</* is print full comments */ bool, LegalComment>,
+  pub filename: String,
+  pub sourcemap: bool,
 }

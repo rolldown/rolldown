@@ -34,23 +34,28 @@ async fn typescript_declare() {
   let cwd = abs_file_dir!();
   let code = Arc::new(Mutex::new(None));
 
-  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() })
-    .run_with_plugins(
-      BundlerOptions {
-        input: Some(vec!["./input.ts".to_string().into()]),
-        cwd: Some(cwd),
+  IntegrationTest::new(TestMeta {
+    expect_executed: false,
+    visualize_sourcemap: true,
+    ..Default::default()
+  })
+  .run_with_plugins(
+    BundlerOptions {
+      input: Some(vec!["./input.ts".to_string().into()]),
+      cwd: Some(cwd),
+      ..Default::default()
+    },
+    vec![
+      Arc::new(ReplacePlugin::with_options(ReplaceOptions {
+        values: [("NAME".to_string(), "replaced".to_string())].into(),
+        prevent_assignment: true,
+        sourcemap: true,
         ..Default::default()
-      },
-      vec![
-        Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-          values: [("NAME".to_string(), "replaced".to_string())].into(),
-          prevent_assignment: true,
-          ..Default::default()
-        })),
-        Arc::new(TestPlugin(Arc::clone(&code))),
-      ],
-    )
-    .await;
+      })),
+      Arc::new(TestPlugin(Arc::clone(&code))),
+    ],
+  )
+  .await;
 
   let replaced = "declare const NAME: string\nconsole.log(replaced)\n";
   assert_eq!(*code.lock().unwrap().as_ref().unwrap(), replaced);

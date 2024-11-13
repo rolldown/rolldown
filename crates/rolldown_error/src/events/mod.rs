@@ -8,6 +8,7 @@ use crate::{
 };
 
 pub mod ambiguous_external_namespace;
+pub mod assign_to_import;
 pub mod circular_dependency;
 pub mod commonjs_variable_in_esm;
 pub mod eval;
@@ -31,6 +32,7 @@ pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 pub mod unresolved_import_treated_as_external;
+pub mod unsupported_feature;
 
 pub trait BuildEvent: Debug + Sync + Send {
   fn kind(&self) -> EventKind;

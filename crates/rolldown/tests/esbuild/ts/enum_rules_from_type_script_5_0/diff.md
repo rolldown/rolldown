@@ -1,5 +1,5 @@
 # Reason
-1. const enum inline
+1. not support const enum inline
 # Diff
 ## /out/supported.js
 ### esbuild

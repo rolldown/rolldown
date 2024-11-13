@@ -157,17 +157,19 @@ impl IntegrationTest {
         .into_iter()
         .map(|e| (e.kind(), e.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
 
-      let rendered = diagnostics
-        .flat_map(|(code, diagnostic)| {
+      let mut rendered_diagnostics = diagnostics
+        .map(|(code, diagnostic)| {
           [
             Cow::Owned(format!("## {code}\n")),
             "```text".into(),
             Cow::Owned(diagnostic.to_string()),
             "```".into(),
           ]
+          .join("\n")
         })
-        .collect::<Vec<_>>()
-        .join("\n");
+        .collect::<Vec<_>>();
+      rendered_diagnostics.sort();
+      let rendered = rendered_diagnostics.join("\n");
       snapshot.push_str(&rendered);
       snapshot
     } else {

@@ -1,8 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected `,` but found `class`
+   ╭─[main.jsx:8:8]
+   │
+ 8 │     <a class="the">
+   │        ──┬──  
+   │          ╰──── `,` expected
+───╯
+
+```
 ## PARSE_ERROR
 
 ```text
@@ -16,18 +29,6 @@ source: crates/rolldown_testing/src/integration_test.rs
  7 │     </a>
    │       ┬  
    │       ╰── 
-───╯
-
-```
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Error: Expected `,` but found `class`
-   ╭─[main.jsx:8:8]
-   │
- 8 │     <a class="the">
-   │        ──┬──  
-   │          ╰──── `,` expected
 ───╯
 
 ```

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,14 +8,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region inject.js
+let second = "success (identifier)";
+let second2 = "success (dot name)";
+
+//#endregion
 //#region entry.js
 console.log(
 	// define wins over inject
-	both === "define",
-	bo.th === "defi.ne",
+	true,
+	true,
 	// define forwards to inject
-	first === "success (identifier)",
-	fir.st === "success (dot name)"
+	second === "success (identifier)",
+	second2 === "success (dot name)"
 );
 
 //#endregion

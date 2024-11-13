@@ -23,12 +23,12 @@ console.log(x_url, y_default);
 
 
 //#region y.txt
-var y_default = "assets/y-wSWe67SA.txt";
+var y_default = "assets/y-DBJZ7rtI.txt";
 
 //#endregion
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
-	module.exports = "assets/x-QPVb1P9U.txt";
+	module.exports = "assets/x-BA9VvU_1.txt";
 } });
 
 //#endregion
@@ -44,11 +44,11 @@ console.log(x_url, y_default);
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,8 +1,8 @@
-+var y_default = "assets/y-wSWe67SA.txt";
++var y_default = "assets/y-DBJZ7rtI.txt";
  var require_x = __commonJS({
      "x.txt"(exports, module) {
 -        module.exports = "./x-LSAMBFUD.txt";
-+        module.exports = "assets/x-QPVb1P9U.txt";
++        module.exports = "assets/x-BA9VvU_1.txt";
      }
  });
 -var y_default = "./y-YE5AYNFB.txt";

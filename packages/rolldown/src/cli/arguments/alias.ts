@@ -26,6 +26,9 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   dir: {
     abbreviation: 'd',
   },
+  file: {
+    abbreviation: 'o',
+  },
   external: {
     abbreviation: 'e',
   },

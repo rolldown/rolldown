@@ -1,24 +1,6 @@
 # Reason
-1. css reference .png
+1. generate wrong output when css as entry and has shared css
 # Diff
-## /out/common-LSAMBFUD.png
-### esbuild
-```js
-x
-```
-### rolldown
-```js
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/common-LSAMBFUD.png
-+++ rolldown	
-@@ -1,1 +0,0 @@
--x;
-
-```
 ## /out/entries/entry.css
 ### esbuild
 ```js
@@ -32,18 +14,19 @@ div {
 ### rolldown
 ```js
 
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entries/entry.css
-+++ rolldown	
-@@ -1,6 +0,0 @@
++++ rolldown	entries_entry.css
+@@ -1,6 +1,1 @@
 -/* src/shared/common.css */
 -div {
 -  background: url("../common-LSAMBFUD.png");
 -}
--
+ 
 -/* src/entries/entry.css */
 \ No newline at end of file
 

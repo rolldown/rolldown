@@ -1,5 +1,5 @@
 # Reason
-1. const enum inline
+1. not support const enum inline
 2. enum tree shaking
 # Diff
 ## /out/simple-member.js

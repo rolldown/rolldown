@@ -14,5 +14,6 @@
       ".css": "css",
       ".png": "asset"
     }
-  }
+  },
+  "snapshotBytes": true
 }

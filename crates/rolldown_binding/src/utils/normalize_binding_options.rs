@@ -11,7 +11,8 @@ use crate::{
 use napi::bindgen_prelude::Either;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption,
-  ExperimentalOptions, IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
+  ExperimentalOptions, HashCharacters, IsExternal, MatchGroup, ModuleType, OutputExports,
+  OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -135,9 +136,11 @@ pub fn normalize_binding_options(
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
+    asset_filenames: output_options.asset_file_names,
     entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
-    asset_filenames: output_options.asset_file_names,
+    css_entry_filenames: normalize_chunk_file_names_option(output_options.css_entry_file_names)?,
+    css_chunk_filenames: normalize_chunk_file_names_option(output_options.css_chunk_file_names)?,
     dir: output_options.dir,
     file: output_options.file,
     sourcemap: output_options.sourcemap.map(Into::into),
@@ -167,6 +170,12 @@ pub fn normalize_binding_options(
       "umd" => OutputFormat::Umd,
       _ => panic!("Invalid format: {format_str}"),
     }),
+    hash_characters: output_options.hash_characters.map(|format_str| match format_str.as_str() {
+      "base64" => HashCharacters::Base64,
+      "base36" => HashCharacters::Base36,
+      "hex" => HashCharacters::Hex,
+      _ => panic!("Invalid hash characters: {format_str}"),
+    }),
     globals: output_options.globals,
     module_types,
     experimental: input_options.experimental.map(|inner| ExperimentalOptions {
@@ -174,8 +183,6 @@ pub fn normalize_binding_options(
       disable_live_bindings: inner.disable_live_bindings,
     }),
     minify: output_options.minify,
-    css_entry_filenames: None,
-    css_chunk_filenames: None,
     extend: output_options.extend,
     define: input_options.define.map(FxIndexMap::from_iter),
     inject: input_options
@@ -203,6 +210,20 @@ pub fn normalize_binding_options(
     profiler_names: input_options.profiler_names,
     jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
+    comments: output_options
+      .comments
+      .map(|inner| match inner.as_str() {
+        "none" => Ok(rolldown::Comments::None),
+        "preserve-legal" => Ok(rolldown::Comments::Preserve),
+        _ => Err(napi::Error::new(
+          napi::Status::GenericFailure,
+          format!("Invalid valid for `comments` option: {inner}"),
+        )),
+      })
+      .transpose()?,
+    drop_labels: input_options.drop_labels,
+    // the target is not ready to expose yet
+    target: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

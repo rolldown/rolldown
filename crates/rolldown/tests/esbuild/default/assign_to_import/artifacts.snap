@@ -2,110 +2,173 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# Assets
+# Errors
 
-## entry.js
+## ASSIGN_TO_IMPORT
 
-```js
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad0.js:1:22]
+   │
+ 1 │ import x from "foo"; x = 1
+   │                      ┬  
+   │                      ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
+```
+## ASSIGN_TO_IMPORT
 
-//#region node_modules/foo/index.js
-var require_foo = __commonJS({ "node_modules/foo/index.js"() {} });
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad1.js:1:22]
+   │
+ 1 │ import x from "foo"; x++
+   │                      ┬  
+   │                      ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad0.js
-var import_foo$18 = __toESM(require_foo());
-import_foo$18.default = 1;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad1.js
-var import_foo$17 = __toESM(require_foo());
-import_foo$17.default++;
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad2.js:1:24]
+   │
+ 1 │ import x from "foo"; ([x] = 1)
+   │                        ┬  
+   │                        ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad2.js
-var import_foo$16 = __toESM(require_foo());
-[import_foo$16.default] = 1;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad3.js
-var import_foo$15 = __toESM(require_foo());
-({x: import_foo$15.default} = 1);
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad3.js:1:24]
+   │
+ 1 │ import x from "foo"; ({x} = 1)
+   │                        ┬  
+   │                        ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad4.js
-var import_foo$14 = __toESM(require_foo());
-({y: import_foo$14.default} = 1);
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad5.js
-var import_foo$13 = __toESM(require_foo());
-import_foo$13.x++;
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad4.js:1:27]
+   │
+ 1 │ import x from "foo"; ({y: x} = 1)
+   │                           ┬  
+   │                           ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad6.js
-var import_foo$12 = __toESM(require_foo());
-import_foo$12++;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad7.js
-var import_foo$11 = __toESM(require_foo());
-import_foo$11.y = 1;
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad5.js:1:24]
+   │
+ 1 │ import {x} from "foo"; x++
+   │                        ┬  
+   │                        ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad8.js
-var import_foo$10 = __toESM(require_foo());
-import_foo$10[y] = 1;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad9.js
-var import_foo$9 = __toESM(require_foo());
-import_foo$9["y"] = 1;
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[bad6.js:1:27]
+   │
+ 1 │ import * as x from "foo"; x++
+   │                           ┬  
+   │                           ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad10.js
-var import_foo$8 = __toESM(require_foo());
-import_foo$8["y z"] = 1;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad13.js
-var import_foo$7 = __toESM(require_foo());
-delete import_foo$7.y;
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[good0.js:1:28]
+   │
+ 1 │ import x from "foo"; ({y = x} = 1)
+   │                            ┬  
+   │                            ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region bad14.js
-var import_foo$6 = __toESM(require_foo());
-delete import_foo$6["y"];
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region bad15.js
-var import_foo$5 = __toESM(require_foo());
-delete import_foo$5[y];
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+   ╭─[good1.js:1:25]
+   │
+ 1 │ import x from "foo"; ({[x]: y} = 1)
+   │                         ┬  
+   │                         ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region good0.js
-var import_foo$4 = __toESM(require_foo());
-({y = import_foo$4.default} = 1);
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region good1.js
-var import_foo$3 = __toESM(require_foo());
-({[import_foo$3.default]: y} = 1);
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y z'
+   ╭─[bad10.js:1:29]
+   │
+ 1 │ import * as x from "foo"; x['y z'] = 1
+   │                             ──┬──  
+   │                               ╰──── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setYZ') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region good2.js
-var import_foo$2 = __toESM(require_foo());
-import_foo$2.default.y = 1;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
-//#region good3.js
-var import_foo$1 = __toESM(require_foo());
-import_foo$1.default[y] = 1;
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad13.js:1:36]
+   │
+ 1 │ import * as x from "foo"; delete x.y
+   │                                    ┬  
+   │                                    ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
 
-//#endregion
-//#region good4.js
-var import_foo = __toESM(require_foo());
-import_foo.default["y"] = 1;
+```
+## ASSIGN_TO_IMPORT
 
-//#endregion
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad14.js:1:36]
+   │
+ 1 │ import * as x from "foo"; delete x['y']
+   │                                    ─┬─  
+   │                                     ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad7.js:1:29]
+   │
+ 1 │ import * as x from "foo"; x.y = 1
+   │                             ┬  
+   │                             ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+   ╭─[bad9.js:1:29]
+   │
+ 1 │ import * as x from "foo"; x['y'] = 1
+   │                             ─┬─  
+   │                              ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
 ```

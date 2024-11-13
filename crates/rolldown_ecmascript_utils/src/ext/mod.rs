@@ -261,6 +261,8 @@ pub trait ExpressionExt<'ast> {
   fn as_unary_expression(&self) -> Option<&ast::UnaryExpression<'ast>>;
   fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>>;
   fn as_binary_expression(&self) -> Option<&ast::BinaryExpression<'ast>>;
+
+  fn is_import_meta(&self) -> bool;
 }
 
 impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
@@ -315,5 +317,11 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
       return None;
     };
     Some(expr)
+  }
+
+  /// // Check if the expression is `import.meta`
+  fn is_import_meta(&self) -> bool {
+    matches!(self, ast::Expression::MetaProperty(meta_prop)
+    if meta_prop.meta.name == "import" && meta_prop.property.name == "meta")
   }
 }

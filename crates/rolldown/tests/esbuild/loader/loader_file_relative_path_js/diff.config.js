@@ -1,6 +1,6 @@
 module.exports = {
 	resolver: {
-		"/out/image-LSAMBFUD.png": "assets/image-6tcw8vpN.png",
+		"/out/image-LSAMBFUD.png": /assets\/image-.*.png/,
     "/out/entries/entry.js": "entries_entry.js"
 	},
 };

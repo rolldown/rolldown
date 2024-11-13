@@ -3,12 +3,16 @@ use std::path::Path;
 pub fn try_extract_meaningful_input_name_from_path(path: impl AsRef<Path>) -> Option<String> {
   let path = path.as_ref();
   let file_name = path.file_stem().and_then(|f| f.to_str()).map(ToString::to_string)?;
-
-  Some(file_name)
+  Some(sanitize_filename::sanitize(file_name))
 }
 
 #[test]
 fn test_try_extract_meaningful_input_name_from_path() {
+  assert_eq!(
+    try_extract_meaningful_input_name_from_path("\0virtual:test").as_deref(),
+    // cspell:disable-next-line
+    Some("virtualtest")
+  );
   assert_eq!(
     try_extract_meaningful_input_name_from_path("foo/bar/baz.js"),
     Some("baz".to_string())

@@ -350,6 +350,20 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
+    if !self.ctx.options.drop_labels.is_empty() {
+      match it {
+        ast::Statement::LabeledStatement(stmt)
+          if self.ctx.options.drop_labels.contains(stmt.label.name.as_str()) =>
+        {
+          self.snippet.builder.move_statement(it);
+        }
+        _ => {}
+      }
+    }
+    walk_mut::walk_statement(self, it);
+  }
+
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
     // This ensure all `IdentifierReference`s are processed
     debug_assert!(
@@ -377,7 +391,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           // use `__require` instead of `require`
           if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
             *call_expr.callee.get_inner_expression_mut() =
-              self.snippet.builder.expression_identifier_reference(SPAN, "__require");
+              self.snippet.builder.expression_identifier_reference(
+                SPAN,
+                self.canonical_name_for_runtime("__require").as_str(),
+              );
           }
           match &self.ctx.modules[rec.resolved_module] {
             Module::Normal(importee) => {
@@ -525,6 +542,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         return;
       }
     }
+
+    self.handle_import_meta_prop_expr(expr);
 
     walk_mut::walk_expression(self, expr);
   }

@@ -1,12 +1,13 @@
 import { bindingifyInputOptions } from '../options/bindingify-input-options'
 import { Bundler } from '../binding'
-import type { InputOptions } from '../options/input-options'
-import type { OutputOptions } from '../options/output-options'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { normalizeInputOptions } from './normalize-input-options'
 import { normalizeOutputOptions } from './normalize-output-options'
 import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { PluginDriver } from '../plugin/plugin-driver'
+import type { InputOptions } from '../types/input-options'
+import type { OutputOptions } from '../types/output-options'
+import { TreeshakingOptionsSchema } from '../treeshake'
 
 export async function createBundler(
   inputOptions: InputOptions,
@@ -14,6 +15,9 @@ export async function createBundler(
 ): Promise<BundlerWithStopWorker> {
   const pluginDriver = new PluginDriver()
   inputOptions = await pluginDriver.callOptionsHook(inputOptions)
+  if (inputOptions.treeshake !== undefined) {
+    TreeshakingOptionsSchema.parse(inputOptions.treeshake)
+  }
   // Convert `InputOptions` to `NormalizedInputOptions`.
   const normalizedInputOptions = await normalizeInputOptions(inputOptions)
 

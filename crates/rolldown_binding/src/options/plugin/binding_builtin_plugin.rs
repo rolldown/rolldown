@@ -1,4 +1,4 @@
-use derivative::Derivative;
+use derive_more::Debug;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::JsUnknown;
 use napi_derive::napi;
@@ -25,7 +25,7 @@ use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, Bindin
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
-#[derive(Deserialize, Derivative)]
+#[derive(Deserialize)]
 pub struct BindingBuiltinPlugin {
   #[napi(js_name = "__name")]
   pub __name: BindingBuiltinPluginName,
@@ -330,6 +330,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
             delimiters: opts.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
             prevent_assignment: opts.prevent_assignment.unwrap_or(false),
             object_guards: opts.object_guards.unwrap_or(false),
+            sourcemap: opts.sourcemap.unwrap_or(false),
           }
         })))
       }
@@ -359,4 +360,5 @@ pub struct BindingReplacePluginConfig {
   pub delimiters: Option<Vec<String>>,
   pub prevent_assignment: Option<bool>,
   pub object_guards: Option<bool>,
+  pub sourcemap: Option<bool>,
 }

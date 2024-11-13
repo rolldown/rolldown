@@ -1,5 +1,6 @@
 # Aggregate Reason
 ## not support legal comments
+- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external
 - crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_inline
 - crates/rolldown/tests/esbuild/default/legal_comments_end_of_file
@@ -14,7 +15,7 @@
 - crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 - crates/rolldown/tests/esbuild/default/legal_comments_none
-## const enum inline
+## not support const enum inline
 - crates/rolldown/tests/esbuild/ts/enum_rules_from_type_script_5_0
 - crates/rolldown/tests/esbuild/ts/ts_const_enum_comments
 - crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access
@@ -28,17 +29,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names
 - crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
-## different inject implementation
-- crates/rolldown/tests/esbuild/default/inject
-- crates/rolldown/tests/esbuild/default/inject_duplicate
-- crates/rolldown/tests/esbuild/default/inject_import_meta
-- crates/rolldown/tests/esbuild/default/inject_import_order
-- crates/rolldown/tests/esbuild/default/inject_import_ts
-- crates/rolldown/tests/esbuild/default/inject_jsx
-- crates/rolldown/tests/esbuild/default/inject_jsx_dot_names
-- crates/rolldown/tests/esbuild/default/inject_no_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -48,14 +38,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_format
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_injected_file_bundle
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_transform
-## needs css stable
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 ## lowering class
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
@@ -102,18 +84,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
 - crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
-## css reference .png
-- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_asset_names_css
-- crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
-- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_css
-## not support ts import equal
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true
-- crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import
 ## throw should be kept
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
@@ -123,10 +93,7 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
 - crates/rolldown/tests/esbuild/default/output_for_assert_type_json
-## css stabilization
-- crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
-- crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_from_css
-- crates/rolldown/tests/esbuild/loader/loader_data_url_text_css
+- crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
 ## should rewrite `require`
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call
@@ -142,12 +109,6 @@
 ## cross module constant folding
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
-## drop label feature
-- crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
-- crates/rolldown/tests/esbuild/dce/drop_labels
-## low priority
-- crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
-- crates/rolldown/tests/esbuild/dce/drop_labels
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
@@ -160,9 +121,9 @@
 ## rolldown split chunks
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 - crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
-## should not appear `await`
-- crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch
-- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch
+## should not replace the function it self in `inject files`
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
+- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
@@ -213,6 +174,10 @@
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
+## Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the sub tree should be eliminated
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
+## Our side effects normalization is not right
+- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 ## jsx element don't have pure annotation
@@ -277,8 +242,12 @@
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
 ## not align
 - crates/rolldown/tests/esbuild/default/indirect_require_message
-## Different inject impl
-- crates/rolldown/tests/esbuild/default/inject_with_define
+## generate wrong syntax when Exported is `StringLiteral`
+- crates/rolldown/tests/esbuild/default/inject
+## different inject implementation
+- crates/rolldown/tests/esbuild/default/inject_import_meta
+## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
+- crates/rolldown/tests/esbuild/default/inject_no_bundle
 ## different naming style
 - crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result
@@ -321,12 +290,8 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## Can't disable bundle splitting
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
-## should not appear top level `await` in cjs
-- crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch
 ## should not appear `__commonJS`
 - crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
-## Strip `await` when format don't support top level await
-- crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch
 ## inject path
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
 ## should not drop `'use strict'`
@@ -351,8 +316,12 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
 ## Same content has different name
 - crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision
+## generate wrong output when css as entry and has shared css
+- crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 ## immediate js file reference `.png` file
 - crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
+## css reference .png
+- crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
 ## abs output base
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
 ## Wrong wrapkind, when json is imported by `require`
@@ -361,8 +330,10 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
-## Not support json attributes
-- crates/rolldown/tests/esbuild/loader/with_type_json_override_loader
+## should not transform `export * as ns from 'mod'` above es2019
+- crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision
+## pure transformation is handled by `oxc-transform`
+- crates/rolldown/tests/esbuild/lower/static_class_block_es_next
 ## redundant `__commonJS` wrapper
 - crates/rolldown/tests/esbuild/packagejson/common_js_variable_in_esm_type_module
 ## `sub` is not resolved

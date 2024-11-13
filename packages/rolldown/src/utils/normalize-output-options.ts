@@ -1,5 +1,5 @@
-import type { OutputOptions } from '../options/output-options'
 import { unimplemented } from './misc'
+import type { OutputOptions } from '../types/output-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 
 export function normalizeOutputOptions(
@@ -9,13 +9,16 @@ export function normalizeOutputOptions(
     dir,
     format,
     exports,
+    hashCharacters,
     sourcemap,
     sourcemapIgnoreList,
     sourcemapPathTransform,
     globals,
+    assetFileNames,
     entryFileNames,
     chunkFileNames,
-    assetFileNames,
+    cssEntryFileNames,
+    cssChunkFileNames,
     name,
     esModule,
     file,
@@ -25,6 +28,7 @@ export function normalizeOutputOptions(
     file,
     format: getFormat(format),
     exports: exports ?? 'auto',
+    hashCharacters: hashCharacters ?? 'base64',
     sourcemap: sourcemap ?? false,
     sourcemapIgnoreList:
       typeof sourcemapIgnoreList === 'function'
@@ -43,6 +47,8 @@ export function normalizeOutputOptions(
     globals: globals ?? {},
     entryFileNames: entryFileNames ?? '[name].js',
     chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
+    cssEntryFileNames: cssEntryFileNames ?? '[name].css',
+    cssChunkFileNames: cssChunkFileNames ?? '[name]-[hash].css',
     assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
     plugins: [],
     minify: opts.minify,

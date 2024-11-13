@@ -261,22 +261,30 @@ impl<'a> GenerateStage<'a> {
   ) {
     fn add_module_and_dependencies_to_group_recursively(
       module_group: &mut ModuleGroup,
-      module: ModuleIdx,
+      module_idx: ModuleIdx,
       module_metas: &LinkingMetadataVec,
       module_table: &ModuleTable,
       visited: &mut FxHashSet<ModuleIdx>,
     ) {
-      let is_visited = !visited.insert(module);
+      let is_visited = !visited.insert(module_idx);
 
       if is_visited {
         return;
       }
 
-      visited.insert(module);
+      let Module::Normal(module) = &module_table.modules[module_idx] else {
+        return;
+      };
 
-      module_group.add_module(module, module_table);
+      if !module.ecma_view.meta.is_included() {
+        return;
+      }
 
-      for dep in &module_metas[module].dependencies {
+      visited.insert(module_idx);
+
+      module_group.add_module(module_idx, module_table);
+
+      for dep in &module_metas[module_idx].dependencies {
         add_module_and_dependencies_to_group_recursively(
           module_group,
           *dep,

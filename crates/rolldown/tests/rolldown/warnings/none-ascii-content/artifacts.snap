@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'test' in main.js
+   ╭─[main.js:2:14]
+   │
+ 2 │ import test from 'test';
+   │                  ───┬──  
+   │                     ╰──── Module not found, treating it as an external dependency
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+import test from "test";
+
+//#region main.js
+console.log(`test: `, test);
+
+//#endregion
+```

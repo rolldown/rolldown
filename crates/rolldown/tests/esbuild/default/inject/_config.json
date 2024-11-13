@@ -1,11 +1,52 @@
 {
-  "config": {
-    "input": [
-      {
-        "name": "entry",
-        "import": "entry.js"
-      }
-    ]
-  },
-  "expectExecuted": false
+	"config": {
+		"input": [
+			{
+				"name": "entry",
+				"import": "entry.js"
+			}
+		],
+    "format": "cjs",
+		"define": {
+      "chain.prop": "replace",
+      "obj.defined": "'defined'",
+      "injectedAndDefined": "'should be used'",
+      "injected.and.defined": "'should be used'"
+    },
+    "external": ["external-pkg", "external-pkg2"],
+		"inject": [
+			{
+				"from": "./re-export.js",
+				"imported": "re_export",
+				"type": "named"
+			},
+			{
+				"from": "./re-export.js",
+				"imported": "re.export",
+				"type": "named"
+			},
+			{
+				"from": "./replacement.js",
+				"imported": "chain2.prop2",
+				"type": "named"
+			},
+			{
+				"from": "./replacement.js",
+				"imported": "replace",
+				"type": "named"
+			},
+			{
+				"from": "./collision.js",
+				"imported": "collide",
+				"type": "named"
+			},
+			{
+				"from": "./inject.js",
+				"imported": "obj",
+				"type": "named"
+			}
+		]
+	},
+	"expectExecuted": false
 }
+

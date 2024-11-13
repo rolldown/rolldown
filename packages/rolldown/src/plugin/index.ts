@@ -300,5 +300,8 @@ export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
 }
 
 export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin | ParallelPlugin
+export type RolldownPluginOption<A = any> = NullValue<RolldownPlugin<A>> | false
 // A recursive type definition for `RolldownPlugin`, this type is used internally for `config.plugins`
-export type RolldownPluginRec<A = any> = RolldownPlugin<A> | RolldownPlugin<A>[]
+export type RolldownPluginRec<A = any> =
+  | RolldownPluginOption<A>
+  | RolldownPluginOption<A>[]

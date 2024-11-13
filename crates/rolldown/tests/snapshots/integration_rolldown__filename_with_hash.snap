@@ -5186,6 +5186,16 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DiUzpIWs.js
 
+# tests/rolldown/tree_shaking/dynamic-import-bailout
+
+- main-!~{000}~.js => main-CD6yVfjQ.js
+- lib-!~{001}~.js => lib-Bb_UTIhh.js
+
+# tests/rolldown/tree_shaking/dynamic-import-then
+
+- main-!~{000}~.js => main-DPq_p8ej.js
+- lib-!~{001}~.js => lib-D53kxRc8.js
+
 # tests/rolldown/tree_shaking/export_default
 
 - main-!~{000}~.js => main-BG86bJeA.js

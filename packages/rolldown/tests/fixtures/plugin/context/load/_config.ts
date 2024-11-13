@@ -9,6 +9,17 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin-context',
+        async buildStart() {
+          try {
+            await this.load({
+              id: path.join(__dirname, 'foo.js'),
+            })
+          } catch (e: any) {
+            expect(e.message).toMatch(
+              'The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks',
+            )
+          }
+        },
         async load(id) {
           if (id.endsWith('main.js')) {
             const moduleInfo = await this.load({

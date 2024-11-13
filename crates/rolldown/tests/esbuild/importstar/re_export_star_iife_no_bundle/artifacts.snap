@@ -1,8 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "foo" in "output.globals" – guessing "foo".
+
+```
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -20,9 +27,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-(function() {
+(function(foo) {
 
 "use strict";
 
-})();
+})(foo);
 ```

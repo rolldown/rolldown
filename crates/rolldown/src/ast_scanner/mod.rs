@@ -1,6 +1,7 @@
 pub mod dynamic_import;
 pub mod impl_visit;
 mod import_assign_analyzer;
+mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
@@ -63,6 +64,8 @@ pub struct ScanResult {
   /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
   /// temporarily
   pub dynamic_import_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
+  /// `new URL('...', import.meta.url)`
+  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -138,6 +141,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       hashbang_range: None,
       has_star_exports: false,
       dynamic_import_exports_usage: FxHashMap::default(),
+      new_url_references: FxHashMap::default(),
     };
 
     Self {
@@ -280,7 +284,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )
       .into(),
     );
-    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, span)
+    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, span, None)
       .with_meta(init_meta);
 
     let id = self.result.import_records.push(rec);

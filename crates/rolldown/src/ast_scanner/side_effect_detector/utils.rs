@@ -8,7 +8,7 @@ use oxc::{
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, SpanExt};
 
 use super::SideEffectDetector;
 
@@ -35,10 +35,15 @@ impl<'a> SideEffectDetector<'a> {
     let comment = comments_range(self.comments, ..span.start).next_back()?;
 
     let comment_span = comment.content_span();
+
     let comment_text = comment_span.source_text(self.source);
     // If there are non-whitespace characters between the `comment` and the `span`,
     // we treat the `comment` not belongs to the `span`.
-    let range_text = Span::new(comment_span.end, span.start).source_text(self.source);
+    let leading_comment_span = Span::new(comment_span.end, span.start);
+    if !leading_comment_span.is_valid(self.source) {
+      return None;
+    }
+    let range_text = leading_comment_span.source_text(self.source);
     let only_whitespace = match comment.kind {
       CommentKind::Line => range_text.trim().is_empty(),
       CommentKind::Block => {

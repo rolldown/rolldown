@@ -268,6 +268,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
     walk::walk_call_expression(self, expr);
   }
+
+  fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
+    self.handle_new_url_with_string_literal_and_import_meta_url(it);
+    walk::walk_new_expression(self, it);
+  }
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {

@@ -72,17 +72,11 @@ const ignoreTests = [
   "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
-  "rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es",
   "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
   "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
-  "rollup@form@guessed-global-names: guesses global names if necessary@generates es",
-  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", // import external module is tree-shakend
-  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
-  "rollup@form@quote-id: handles escaping for external ids@generates es",
-  "rollup@form@relative-external-ids: relative external ids are absolutely resolved",
-
+ 
   // The `this` related
   "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions", 
   "rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es",
@@ -138,6 +132,14 @@ const ignoreTests = [
   "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",
   "rollup@form@make-absolute-externals-relative@make-relative-relative: only normalizes external paths that were originally relative when set to \"ifRelativeSource\"",
   "rollup@form@make-absolute-externals-relative@make-relative-true: normalizes both relative and absolute external paths when set to true",
+  "rollup@form@relative-external-ids: relative external ids are absolutely resolved",
+  "rollup@form@guessed-global-names: guesses global names if necessary@generates es",
+
+  // escaping external id is not supported
+  "rollup@form@quote-id: handles escaping for external ids@generates es",
+
+  // `resolveDynamicImport` hook `specifier: AstNode` not supported
+  "rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es",
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",
@@ -396,16 +398,13 @@ const ignoreTests = [
   
   // shouldTransformCachedModule hook is not supported
   "rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build",
-  // PluginContext.load is not supported
-  "rollup@form@supports-es5-shim: supports es5-shim",
-  "rollup@form@supports-es6-shim: supports es6-shim",
-  "rollup@form@supports-core-js: supports core-js",
-  "rollup@function@preload-after-build: supports this.load() in buildEnd and renderStart",
-  "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook",
-  "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
-  "rollup@function@preload-module: allows pre-loading modules via this.load",
-  "rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees",
-  "rollup@form@try-statement-deoptimization@supports-core-js: supports core-js feature detection (#2869)",
+  
+  // PluginContext.load is not fully supported
+  "rollup@form@supports-core-js: supports core-js", // `@rollup/plugin-commonjs` is not supported
+  "rollup@form@supports-es5-shim: supports es5-shim", // `@rollup/plugin-commonjs` is not supported
+  "rollup@form@supports-es6-shim: supports es6-shim", // `@rollup/plugin-commonjs` is not supported
+  "rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook", // load entry module at resolveId hook
+  "rollup@function@preload-module: allows pre-loading modules via this.load", // load entry module at resolveId hook
 
   // Retrun `meta` from transform hook is not supported
   "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
@@ -505,6 +504,7 @@ const ignoreTests = [
   "rollup@function@has-default-export: reports if a module has a default export", // hasDefaultExport is not support
   "rollup@function@context-resolve: returns the correct results for the context resolve helper",
   "rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test",
+  "rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees", // importedIdResolutions
 
   // The chunk information is not compatible with rollup
   "rollup@form@addon-functions: provides module information when adding addons@generates es",
@@ -531,6 +531,8 @@ const ignoreTests = [
   "rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports",
 
   // Passed, but the output snapshot is same as rollup
+  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
+  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
   "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
   "rollup@form@render-named-export-declarations: renders named export declarations@generates es",
   "rollup@form@render-declaration-semicolons: properly inserts semi-colons after declarations (#1993)@generates es",
@@ -800,6 +802,7 @@ const ignoreTests = [
   "rollup@form@this-in-imports: properly keep or ignore \"this\"-expressions when calling imported functions",
   "rollup@form@unmodified-default-exports: does not treat property assignment as rebinding for sake of unbound default exports",
   "rollup@form@wrap-simplified-expressions: wraps simplified expressions that have become callees if necessary@generates es", // const folding
+  "rollup@form@try-statement-deoptimization@supports-core-js: supports core-js feature detection (#2869)",
 ]
 
 // Generated by packages/rollup-tests/test/form/found-tree-shaking-not-align.js

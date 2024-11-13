@@ -10,8 +10,9 @@ use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, NormalModuleTaskResult, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb, RUNTIME_MODULE_ID,
+  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, ModuleType, NormalModuleTaskResult,
+  ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb,
+  RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -141,6 +142,7 @@ impl ModuleLoader {
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
+    assert_module_type: Option<ModuleType>,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -195,6 +197,7 @@ impl ModuleLoader {
             resolved_id,
             owner,
             is_user_defined_entry,
+            assert_module_type,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -221,7 +224,7 @@ impl ModuleLoader {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
-    self.shared_context.plugin_driver.set_context_load_modules_tx(self.tx.clone()).await;
+    self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;
 
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
@@ -237,7 +240,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info, None, true),
+        id: self.try_spawn_new_task(info, None, true, None),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -246,7 +249,7 @@ impl ModuleLoader {
       .collect::<Vec<_>>();
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
-    let mut dynamic_imoprt_exports_usage_pairs = vec![];
+    let mut dynamic_import_exports_usage_pairs = vec![];
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
     while self.remaining > 0 {
@@ -277,7 +280,12 @@ impl ModuleLoader {
                   normal_module.stable_id.as_str().into(),
                   raw_rec.span,
                 );
-                let id = self.try_spawn_new_task(info, Some(owner), false);
+                let id = self.try_spawn_new_task(
+                  info,
+                  Some(owner),
+                  false,
+                  raw_rec.asserted_module_type.clone(),
+                );
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
@@ -286,7 +294,7 @@ impl ModuleLoader {
                 // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
                 // as possible
                 if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
-                  dynamic_imoprt_exports_usage_pairs.push((id, usage));
+                  dynamic_import_exports_usage_pairs.push((id, usage));
                 }
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
@@ -318,7 +326,7 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false);
+          self.try_spawn_new_task(resolve_id, None, false, None);
         }
         ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);
@@ -331,7 +339,7 @@ impl ModuleLoader {
       return Ok(Err(errors.into()));
     }
 
-    let dynamic_import_exports_usage_map = dynamic_imoprt_exports_usage_pairs.into_iter().fold(
+    let dynamic_import_exports_usage_map = dynamic_import_exports_usage_pairs.into_iter().fold(
       FxHashMap::default(),
       |mut acc, (idx, usage)| {
         match acc.entry(idx) {
@@ -345,6 +353,8 @@ impl ModuleLoader {
         acc
       },
     );
+    self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
+
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules

@@ -234,6 +234,7 @@ impl<'a> LinkStage<'a> {
           ImportKind::UrlImport => {
             unreachable!("A Js module would never import a CSS module via `url()`");
           }
+          ImportKind::NewUrl => {}
         }
       });
 
@@ -465,6 +466,7 @@ impl<'a> LinkStage<'a> {
                 ImportKind::UrlImport => {
                   unreachable!("A Js module would never import a CSS module via `url()`");
                 }
+                ImportKind::NewUrl => {}
               }
             }
           }

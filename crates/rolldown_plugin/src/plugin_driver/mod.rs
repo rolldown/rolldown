@@ -105,9 +105,12 @@ impl PluginDriver {
     self.modules.insert(module_id.as_str().into(), module_info);
   }
 
-  pub async fn set_context_load_modules_tx(&self, tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>) {
+  pub async fn set_context_load_modules_tx(
+    &self,
+    tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+  ) {
     let mut tx_guard = self.tx.lock().await;
-    *tx_guard = Some(tx);
+    *tx_guard = tx;
   }
 
   pub async fn mark_context_load_modules_loaded(&self, module_id: &ModuleId) -> anyhow::Result<()> {

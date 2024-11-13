@@ -7,6 +7,7 @@ use std::{
   sync::{Arc, Weak},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_common::{
@@ -110,7 +111,9 @@ impl PluginContextImpl {
       .lock()
       .await
       .as_ref()
-      .expect("The load modules tx should be set.")
+      .context(
+        "The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.",
+      )?
       .send(ModuleLoaderMsg::FetchModule(ResolvedId {
         id: specifier.into(),
         ignored: false,

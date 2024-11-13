@@ -222,6 +222,7 @@ impl ModuleTask {
       ast,
       symbols,
       raw_import_records: ecma_raw_import_records,
+      dynamic_import_rec_exports_usage,
     } = ret;
 
     if !matches!(module_type, ModuleType::Css) {
@@ -285,6 +286,7 @@ impl ModuleTask {
         ecma_related: Some((ast, symbols)),
         module: module.into(),
         raw_import_records,
+        dynamic_import_rec_exports_usage,
       }))
       .await
     {

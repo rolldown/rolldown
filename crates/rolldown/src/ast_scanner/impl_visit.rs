@@ -6,10 +6,13 @@ use oxc::{
   },
   span::{GetSpan, Span},
 };
-use rolldown_common::{ImportKind, ImportRecordMeta};
+use rolldown_common::{
+  dynamic_import_usage::DynamicImportExportsUsage, ImportKind, ImportRecordMeta,
+};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
+use rustc_hash::FxHashSet;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -51,6 +54,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
+    self.result.dynamic_import_exports_usage =
+      std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
@@ -117,6 +122,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
     }
     _ = self.try_diagnostic_forbid_const_assign(ident);
+    _ = self.update_dynamic_import_binding_usage_info(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -128,7 +134,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_import_expression(&mut self, expr: &ast::ImportExpression<'ast>) {
     if let ast::Expression::StringLiteral(request) = &expr.source {
-      let id = self.add_import_record(
+      let import_rec_idx = self.add_import_record(
         request.value.as_str(),
         ImportKind::DynamicImport,
         expr.source.span(),
@@ -138,7 +144,21 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           ImportRecordMeta::empty()
         },
       );
-      self.result.imports.insert(expr.span, id);
+      match self.init_dynamic_import_binding_usage_info(import_rec_idx) {
+        Some(()) => {
+          self
+            .dynamic_import_usage_info
+            .dynamic_import_exports_usage
+            .insert(import_rec_idx, DynamicImportExportsUsage::Partial(FxHashSet::default()));
+        }
+        None => {
+          self
+            .dynamic_import_usage_info
+            .dynamic_import_exports_usage
+            .insert(import_rec_idx, DynamicImportExportsUsage::Complete);
+        }
+      };
+      self.result.imports.insert(expr.span, import_rec_idx);
     }
     walk::walk_import_expression(self, expr);
   }

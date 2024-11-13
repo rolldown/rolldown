@@ -9,7 +9,7 @@ pub struct EntryPoint {
   pub kind: EntryPointKind,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum EntryPointKind {
   UserDefined,
   DynamicImport,

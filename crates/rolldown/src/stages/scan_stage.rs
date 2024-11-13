@@ -4,12 +4,14 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
-  EntryPoint, ImportKind, ModuleTable, ResolvedId, RuntimeModuleBrief, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ImportKind, ModuleIdx, ModuleTable,
+  ResolvedId, RuntimeModuleBrief, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
+use rustc_hash::FxHashMap;
 
 use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
@@ -34,6 +36,7 @@ pub struct ScanStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
 impl ScanStage {
@@ -73,6 +76,7 @@ impl ScanStage {
       runtime,
       warnings,
       index_ecma_ast,
+      dynamic_import_exports_usage_map,
     } = match module_loader.fetch_all_modules(user_entries).await? {
       Ok(output) => output,
       Err(errors) => {
@@ -88,6 +92,7 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       errors: vec![],
+      dynamic_import_exports_usage_map,
     }))
   }
 

@@ -4580,10 +4580,10 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2038/a
 
-- main-!~{000}~.js => main-bk8MM_z6.js
-- a-!~{005}~.js => a-D3sZvV0F.js
-- b-!~{003}~.js => b-CxXmj776.js
-- b-!~{001}~.js => b-IhPIH1bv.js
+- main-!~{000}~.js => main-CKHUtC3I.js
+- a-!~{005}~.js => a-CyIxLojH.js
+- b-!~{001}~.js => b-BvfSK1o_.js
+- b-!~{003}~.js => b-D4JBj5UV.js
 
 # tests/rolldown/issues/2038/b
 
@@ -5185,6 +5185,16 @@ snapshot_kind: text
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 
 - main-!~{000}~.js => main-DiUzpIWs.js
+
+# tests/rolldown/tree_shaking/dynamic-import-bailout
+
+- main-!~{000}~.js => main-CD6yVfjQ.js
+- lib-!~{001}~.js => lib-Bb_UTIhh.js
+
+# tests/rolldown/tree_shaking/dynamic-import-then
+
+- main-!~{000}~.js => main-DPq_p8ej.js
+- lib-!~{001}~.js => lib-D53kxRc8.js
 
 # tests/rolldown/tree_shaking/export_default
 

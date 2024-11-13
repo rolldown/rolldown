@@ -9,7 +9,7 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import "node:assert";
+import assert from "node:assert";
 
 //#region node_modules/foo/index.txt
 var foo_default = "assets/index-B0GLEKT9.txt";
@@ -18,6 +18,7 @@ var foo_default = "assets/index-B0GLEKT9.txt";
 //#region main.js
 const url = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
 const url3 = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
+assert.strictEqual(url.href, url3.href);
 
 //#endregion
 export { url, url3 };

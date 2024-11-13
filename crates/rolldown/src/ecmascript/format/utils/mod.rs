@@ -39,9 +39,8 @@ pub fn render_chunk_external_imports(
           ctx.chunk.canonical_name_by_token.get(&external_stmt.binding_name_token).unpack();
         match &external_stmt.specifiers {
           RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-            // Empty specifiers can be ignored in IIFE.
             if specifiers.is_empty() {
-              None
+              Some(external_stmt)
             } else {
               let specifiers = specifiers
                 .iter()

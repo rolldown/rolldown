@@ -76,11 +76,7 @@ const ignoreTests = [
   "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
-
-  // The rolldown import external module is tree-shaked at format iife/umd
-  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
-  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
-
+ 
   // The `this` related
   "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions", 
   "rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es",
@@ -535,6 +531,8 @@ const ignoreTests = [
   "rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports",
 
   // Passed, but the output snapshot is same as rollup
+  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
+  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
   "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
   "rollup@form@render-named-export-declarations: renders named export declarations@generates es",
   "rollup@form@render-declaration-semicolons: properly inserts semi-colons after declarations (#1993)@generates es",

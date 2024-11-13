@@ -1,5 +1,4 @@
 // MULTIPLE ENTRY MODULES
-//
-const a = await import('./hyper-cube');
+import hyperCube from './hyper-cube.js';
 
-a.default();
+console.log(hyperCube(5));

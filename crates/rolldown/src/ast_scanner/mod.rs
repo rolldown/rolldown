@@ -625,27 +625,22 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scopes.root_scope_id() == self.result.symbol_ref_db.get_scope_id(symbol_id)
   }
 
-  fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) {
-    match (self.resolve_symbol_from_reference(id_ref), id_ref.reference_id.get()) {
-      (Some(symbol_id), Some(ref_id))
-        if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() =>
-      {
-        let reference = &self.scopes.references[ref_id];
-        if reference.is_write() {
-          self.result.warnings.push(
-            BuildDiagnostic::forbid_const_assign(
-              self.file_path.to_string(),
-              self.source.clone(),
-              self.result.symbol_ref_db.get_name(symbol_id).into(),
-              self.result.symbol_ref_db.get_span(symbol_id),
-              id_ref.span(),
-            )
-            .with_severity_warning(),
-          );
-        }
+  fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) -> Option<()> {
+    let ref_id = id_ref.reference_id.get()?;
+    let reference = &self.scopes.references[ref_id];
+    if reference.is_write() {
+      let symbol_id = reference.symbol_id()?;
+      if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() {
+        self.result.warnings.push(BuildDiagnostic::forbid_const_assign(
+          self.file_path.to_string(),
+          self.source.clone(),
+          self.result.symbol_ref_db.get_name(symbol_id).into(),
+          self.result.symbol_ref_db.get_span(symbol_id),
+          id_ref.span(),
+        ));
       }
-      _ => {}
     }
+    None
   }
 
   /// resolve the symbol from the identifier reference, and return if it is a root symbol

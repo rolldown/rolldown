@@ -116,6 +116,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
       }
     }
+    _ = self.try_diagnostic_forbid_const_assign(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -151,9 +152,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
-      ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
-        self.try_diagnostic_forbid_const_assign(id_ref);
-      }
       // Detect `module.exports` and `exports.ANY`
       ast::AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
         Expression::Identifier(ref id) => {

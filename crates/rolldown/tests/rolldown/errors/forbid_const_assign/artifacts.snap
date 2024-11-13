@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# warnings
+
+## ILLEGAL_REASSIGNMENT
+
+```text
+[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
+   ╭─[main.js:3:1]
+   │
+ 1 │ const a = 10;
+   │       ┬  
+   │       ╰── `a` is declared here as const
+   │ 
+ 3 │ a += 1;
+   │ ┬  
+   │ ╰── `a` is re-assigned here
+───╯
+
+```
+## ILLEGAL_REASSIGNMENT
+
+```text
+[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
+   ╭─[main.js:5:1]
+   │
+ 1 │ const a = 10;
+   │       ┬  
+   │       ╰── `a` is declared here as const
+   │ 
+ 5 │ a ++;
+   │ ┬  
+   │ ╰── `a` is re-assigned here
+───╯
+
+```
+## ILLEGAL_REASSIGNMENT
+
+```text
+[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
+   ╭─[main.js:7:1]
+   │
+ 1 │ const a = 10;
+   │       ┬  
+   │       ╰── `a` is declared here as const
+   │ 
+ 7 │ a = 2;
+   │ ┬  
+   │ ╰── `a` is re-assigned here
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+
+//#region main.js
+const a = 10;
+a += 1;
+a++;
+a = 2;
+
+//#endregion
+```

@@ -3934,6 +3934,10 @@ snapshot_kind: text
 # tests/rolldown/errors/export_undefined_variable
 
 
+# tests/rolldown/errors/forbid_const_assign
+
+- main-!~{000}~.js => main-DmliaA6a.js
+
 # tests/rolldown/errors/invalid_export_mode/should_not_be_default
 
 

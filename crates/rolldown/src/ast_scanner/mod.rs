@@ -1,10 +1,9 @@
-mod dynamic_import;
+pub mod dynamic_import;
 pub mod impl_visit;
 mod import_assign_analyzer;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use dynamic_import::DynamicImportUsageInfo;
 use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
@@ -21,6 +20,7 @@ use oxc::{
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
 };
+use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
@@ -60,6 +60,9 @@ pub struct ScanResult {
   /// has hashbang. Storing the span of hashbang used for hashbang codegen in chunk level
   pub hashbang_range: Option<Span>,
   pub has_star_exports: bool,
+  /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
+  /// temporarily
+  pub dynamic_import_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -134,6 +137,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
       has_star_exports: false,
+      dynamic_import_exports_usage: FxHashMap::default(),
     };
 
     Self {

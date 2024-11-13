@@ -6,6 +6,7 @@ use crate::type_alias::IndexEcmaAst;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::transformer::ReplaceGlobalDefinesConfig;
+use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
@@ -65,6 +66,7 @@ pub struct ModuleLoaderOutput {
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
 impl ModuleLoader {
@@ -244,9 +246,9 @@ impl ModuleLoader {
       .collect::<Vec<_>>();
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
+    let mut dynamic_imoprt_exports_usage_pairs = vec![];
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
-
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
@@ -260,14 +262,15 @@ impl ModuleLoader {
             raw_import_records,
             warnings,
             ecma_related,
+            mut dynamic_import_rec_exports_usage,
           } = task_result;
           all_warnings.extend(warnings);
 
           let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
-              .into_iter()
+              .into_iter_enumerated()
               .zip(resolved_deps)
-              .map(|(raw_rec, info)| {
+              .map(|((rec_idx, raw_rec), info)| {
                 let normal_module = module.as_normal().unwrap();
                 let owner = ModuleTaskOwner::new(
                   normal_module.source.clone(),
@@ -280,6 +283,11 @@ impl ModuleLoader {
                   kind: raw_rec.kind,
                   importer_path: ModuleId::new(module.id()),
                 });
+                // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
+                // as possible
+                if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
+                  dynamic_imoprt_exports_usage_pairs.push((id, usage));
+                }
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -323,6 +331,20 @@ impl ModuleLoader {
       return Ok(Err(errors.into()));
     }
 
+    let dynamic_import_exports_usage_map = dynamic_imoprt_exports_usage_pairs.into_iter().fold(
+      FxHashMap::default(),
+      |mut acc, (idx, usage)| {
+        match acc.entry(idx) {
+          std::collections::hash_map::Entry::Vacant(vac) => {
+            vac.insert(usage);
+          }
+          std::collections::hash_map::Entry::Occupied(mut occ) => {
+            occ.get_mut().merge(usage);
+          }
+        };
+        acc
+      },
+    );
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
@@ -372,6 +394,7 @@ impl ModuleLoader {
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
+      dynamic_import_exports_usage_map,
     }))
   }
 }

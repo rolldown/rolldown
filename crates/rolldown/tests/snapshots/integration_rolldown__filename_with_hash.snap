@@ -4580,10 +4580,10 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2038/a
 
-- main-!~{000}~.js => main-bk8MM_z6.js
-- a-!~{005}~.js => a-D3sZvV0F.js
-- b-!~{003}~.js => b-CxXmj776.js
-- b-!~{001}~.js => b-IhPIH1bv.js
+- main-!~{000}~.js => main-CKHUtC3I.js
+- a-!~{005}~.js => a-CyIxLojH.js
+- b-!~{001}~.js => b-BvfSK1o_.js
+- b-!~{003}~.js => b-D4JBj5UV.js
 
 # tests/rolldown/issues/2038/b
 

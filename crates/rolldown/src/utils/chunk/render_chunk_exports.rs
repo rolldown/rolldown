@@ -2,8 +2,8 @@ use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateConte
 use std::borrow::Cow;
 
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, IndexModules, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, EntryPointKind, ExportsKind, IndexModules, NormalizedBundlerOptions,
+  OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecmascript::{is_validate_identifier_name, property_access_str};
@@ -156,10 +156,14 @@ pub fn render_chunk_exports(
 
 pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
   match chunk.kind {
-    ChunkKind::EntryPoint { module, .. } => {
+    ChunkKind::EntryPoint { module, is_user_defined, .. } => {
       let meta = &graph.metas[module];
       meta
-        .canonical_exports()
+        .referenced_canonical_exports_symbols(
+          module,
+          if is_user_defined { EntryPointKind::UserDefined } else { EntryPointKind::DynamicImport },
+          &graph.dynamic_imoprt_exports_usage_map,
+        )
         .map(|(name, export)| (name.clone(), export.symbol_ref))
         .collect::<Vec<_>>()
     }

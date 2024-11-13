@@ -65,7 +65,27 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     import_record_id: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
     let ancestor_len = self.visit_path.len();
-    let parent = self.visit_path.last()?.as_member_expression()?;
+    match self.visit_path.last()? {
+      AstKind::MemberExpression(member_expr) => {
+        self.init_dynamic_import_usage_with_member_expr(member_expr, ancestor_len, import_record_id)
+      }
+      AstKind::AwaitExpression(_) => {
+        let parent_parent = self.visit_path.get(ancestor_len - 2)?;
+        let AstKind::VariableDeclarator(var_decl) = parent_parent else {
+          return None;
+        };
+        self.update_dynamic_import_usage_info_from_binding_pattern(&var_decl.id, import_record_id)
+      }
+      _ => None,
+    }
+  }
+
+  fn init_dynamic_import_usage_with_member_expr(
+    &mut self,
+    parent: &ast::MemberExpression<'ast>,
+    ancestor_len: usize,
+    import_record_id: ImportRecordIdx,
+  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
     let ast::MemberExpression::StaticMemberExpression(parent) = parent else {
       return None;
     };
@@ -88,7 +108,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     //   mod;
     // })
     // ```
-    let symbol_id = match &dynamic_import_binding.pattern.kind {
+    self.update_dynamic_import_usage_info_from_binding_pattern(
+      &dynamic_import_binding.pattern,
+      import_record_id,
+    )
+  }
+
+  fn update_dynamic_import_usage_info_from_binding_pattern(
+    &mut self,
+    binding_pattern: &ast::BindingPattern<'_>,
+    import_record_id: ImportRecordIdx,
+  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
+    let symbol_id = match &binding_pattern.kind {
       ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
       // only care about first level destructuring, if it is nested just assume it is used
       ast::BindingPatternKind::ObjectPattern(obj) => {

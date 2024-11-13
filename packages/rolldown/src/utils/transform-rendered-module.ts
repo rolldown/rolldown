@@ -1,8 +1,7 @@
-import { RenderedModule } from '../types/rendered-module'
-import { BindingRenderedModule } from '../binding'
+import { RenderedModule } from '../binding'
 
 export function transformToRenderedModule(
-  bindingRenderedModule: BindingRenderedModule,
+  bindingRenderedModule: RenderedModule,
 ): RenderedModule {
   return {
     get code() {

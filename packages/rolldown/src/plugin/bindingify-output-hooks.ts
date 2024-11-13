@@ -16,7 +16,6 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
-import { RenderedChunk } from '../rollup'
 
 export function bindingifyRenderStart(
   plugin: Plugin,
@@ -63,7 +62,7 @@ export function bindingifyRenderChunk(
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         code,
-        chunk as RenderedChunk,
+        chunk,
         outputOptions,
       )
 
@@ -101,9 +100,13 @@ export function bindingifyAugmentChunkHash(
 
   return {
     plugin: async (ctx, chunk) => {
+      Object.entries(chunk.modules).forEach(([key, module]) => {
+        chunk.modules[key] = transformToRenderedModule(module)
+      })
+
       return await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk as RenderedChunk,
+        chunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -232,7 +235,7 @@ export function bindingifyBanner(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk as RenderedChunk,
+        chunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -259,7 +262,7 @@ export function bindingifyFooter(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk as RenderedChunk,
+        chunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -286,7 +289,7 @@ export function bindingifyIntro(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk as RenderedChunk,
+        chunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -313,7 +316,7 @@ export function bindingifyOutro(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk as RenderedChunk,
+        chunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),

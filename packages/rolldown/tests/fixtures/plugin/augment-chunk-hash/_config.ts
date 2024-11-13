@@ -22,6 +22,8 @@ export default defineTest({
         name: 'test-plugin',
         augmentChunkHash: (chunk) => {
           fn()
+          expect(Object.values(chunk.modules)[0].code).toBe('console.log();\n')
+          expect(Object.values(chunk.modules)[0].renderedLength).toBe(15)
           if (chunk.fileName.includes('entry')) {
             return 'entry-hash'
           }

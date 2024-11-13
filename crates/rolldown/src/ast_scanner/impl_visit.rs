@@ -12,7 +12,6 @@ use rolldown_common::{
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
-use rustc_hash::FxHashSet;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -145,11 +144,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         },
       );
       match self.init_dynamic_import_binding_usage_info(import_rec_idx) {
-        Some(()) => {
+        Some(set) => {
           self
             .dynamic_import_usage_info
             .dynamic_import_exports_usage
-            .insert(import_rec_idx, DynamicImportExportsUsage::Partial(FxHashSet::default()));
+            .insert(import_rec_idx, DynamicImportExportsUsage::Partial(set));
         }
         None => {
           self

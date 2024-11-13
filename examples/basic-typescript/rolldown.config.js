@@ -10,4 +10,22 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  plugins: [
+    {
+      name: 'repro',
+      async resolveId() {
+        await testFn()
+      },
+    },
+  ],
 })
+
+async function testFn() {
+  await Promise.resolve()
+  await testMoreFn()
+}
+
+async function testMoreFn() {
+  await Promise.resolve()
+  throw new Error('test error!')
+}

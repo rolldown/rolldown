@@ -16,6 +16,7 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
+import { RenderedChunk } from '../rollup'
 
 export function bindingifyRenderStart(
   plugin: Plugin,
@@ -55,14 +56,14 @@ export function bindingifyRenderChunk(
 
   return {
     plugin: async (ctx, code, chunk) => {
-      for (const key in chunk.modules) {
-        chunk.modules[key] = transformToRenderedModule(chunk.modules[key])
-      }
+      Object.entries(chunk.modules).forEach(([key, module]) => {
+        chunk.modules[key] = transformToRenderedModule(module)
+      })
 
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         code,
-        chunk,
+        chunk as RenderedChunk,
         outputOptions,
       )
 
@@ -102,7 +103,7 @@ export function bindingifyAugmentChunkHash(
     plugin: async (ctx, chunk) => {
       return await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
+        chunk as RenderedChunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -231,7 +232,7 @@ export function bindingifyBanner(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
+        chunk as RenderedChunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -258,7 +259,7 @@ export function bindingifyFooter(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
+        chunk as RenderedChunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -285,7 +286,7 @@ export function bindingifyIntro(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
+        chunk as RenderedChunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -312,7 +313,7 @@ export function bindingifyOutro(
 
       return handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
+        chunk as RenderedChunk,
       )
     },
     meta: bindingifyPluginHookMeta(meta),

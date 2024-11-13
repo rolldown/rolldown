@@ -1,7 +1,6 @@
 import type {
   BindingHookResolveIdExtraArgs,
   BindingTransformHookExtraArgs,
-  RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type {
@@ -17,7 +16,7 @@ import { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transform-plugin-context'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
-import type { RollupLog } from '../rollup'
+import type { RollupLog, RenderedChunk } from '../rollup'
 import type { MinimalPluginContext } from '../log/logger'
 import { InputOptions, OutputOptions } from '..'
 import { BuiltinPlugin } from './builtin-plugin'

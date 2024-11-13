@@ -24,6 +24,8 @@ export default defineTest({
           expect(chunk.imports).toStrictEqual([])
           expect(chunk.moduleIds).toStrictEqual([entry])
           expect(Object.keys(chunk.modules).length).toBe(1)
+          expect(Object.values(chunk.modules)[0].code).toBe('console.log();\n')
+          expect(Object.values(chunk.modules)[0].renderedLength).toBe(15)
           return 'render-chunk-code'
         },
       },

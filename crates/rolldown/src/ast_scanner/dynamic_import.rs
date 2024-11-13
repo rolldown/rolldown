@@ -1,8 +1,12 @@
-use oxc::ast::{
-  ast::{Argument, IdentifierReference},
-  AstKind,
+use oxc::{
+  ast::{
+    ast::{self, Argument, IdentifierReference},
+    AstKind,
+  },
+  span::CompactStr,
 };
 use rolldown_common::{dynamic_import_usage::DynamicImportExportsUsage, ImportRecordIdx};
+use rustc_hash::FxHashSet;
 
 use super::AstScanner;
 
@@ -59,10 +63,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn init_dynamic_import_binding_usage_info(
     &mut self,
     import_record_id: ImportRecordIdx,
-  ) -> Option<()> {
+  ) -> Option<FxHashSet<CompactStr>> {
     let ancestor_len = self.visit_path.len();
     let parent = self.visit_path.last()?.as_member_expression()?;
-    let oxc::ast::ast::MemberExpression::StaticMemberExpression(parent) = parent else {
+    let ast::MemberExpression::StaticMemberExpression(parent) = parent else {
       return None;
     };
     if parent.property.name != "then" {
@@ -85,10 +89,33 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // })
     // ```
     let symbol_id = match &dynamic_import_binding.pattern.kind {
-      oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id.get()?,
-      oxc::ast::ast::BindingPatternKind::ObjectPattern(_)
-      | oxc::ast::ast::BindingPatternKind::ArrayPattern(_)
-      | oxc::ast::ast::BindingPatternKind::AssignmentPattern(_) => {
+      ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+      // only care about first level destructuring, if it is nested just assume it is used
+      ast::BindingPatternKind::ObjectPattern(obj) => {
+        let mut set = FxHashSet::default();
+        for binding in &obj.properties {
+          let binding_name = match &binding.key {
+            // for complex key pattern, just return `None` to bailout
+            ast::PropertyKey::StaticIdentifier(id) => id.name.as_str(),
+            _ => return None,
+          };
+          let binding_symbol_id = match &binding.value.kind {
+            ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+            _ => {
+              // for complex alias pattern, assume the key is used
+              // import('mod').then(({a: {b: {c: d}}}) => {})
+              set.insert(binding_name.into());
+              continue;
+            }
+          };
+          let is_used = !self.scopes.resolved_references[binding_symbol_id].is_empty();
+          if is_used {
+            set.insert(binding_name.into());
+          }
+        }
+        return Some(set);
+      }
+      ast::BindingPatternKind::ArrayPattern(_) | ast::BindingPatternKind::AssignmentPattern(_) => {
         // TODO: handle advance pattern
         return None;
       }
@@ -101,6 +128,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id
       .extend(self.scopes.resolved_references[symbol_id].iter());
-    Some(())
+    Some(FxHashSet::default())
   }
 }

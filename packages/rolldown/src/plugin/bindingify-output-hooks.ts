@@ -15,6 +15,7 @@ import {
   PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
+import { transformToRenderedModule } from '../utils/transform-rendered-module'
 
 export function bindingifyRenderStart(
   plugin: Plugin,
@@ -54,6 +55,10 @@ export function bindingifyRenderChunk(
 
   return {
     plugin: async (ctx, code, chunk) => {
+      for (const key in chunk.modules) {
+        chunk.modules[key] = transformToRenderedModule(chunk.modules[key])
+      }
+
       const ret = await handler.call(
         new PluginContext(options, ctx, plugin, pluginContextData),
         code,

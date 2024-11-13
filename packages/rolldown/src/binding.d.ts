@@ -57,6 +57,10 @@ export declare class BindingPluginContext {
   addWatchFile(file: string): void
 }
 
+export declare class BindingRenderedModule {
+  get code(): string | null
+}
+
 export declare class BindingTransformPluginContext {
   inner(): BindingPluginContext
 }
@@ -395,10 +399,6 @@ export declare enum BindingPluginOrder {
 export interface BindingPluginWithIndex {
   index: number
   plugin: BindingPluginOptions
-}
-
-export interface BindingRenderedModule {
-  code?: string
 }
 
 export interface BindingReplacePluginConfig {

@@ -16,6 +16,12 @@ export default defineTest({
             }
           }
         },
+        load(id) {
+          if (id.endsWith('main.js')) {
+            const moduleInfo = this.getModuleInfo(id)!
+            expect(moduleInfo.isEntry).toBe(true)
+          }
+        },
         renderStart() {
           let count = 0
           for (const id of this.getModuleIds()) {

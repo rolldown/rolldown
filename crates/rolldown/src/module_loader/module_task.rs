@@ -9,8 +9,9 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType,
-  NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId, StrOrBytes, RUNTIME_MODULE_ID,
+  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
+  ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId, StrOrBytes,
+  RUNTIME_MODULE_ID,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
@@ -87,9 +88,23 @@ impl ModuleTask {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
+    let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
 
     // Add watch files for watcher recover if build errors occurred.
     self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
+
+    self.ctx.plugin_driver.set_module_info(
+      &id,
+      Arc::new(ModuleInfo {
+        code: None,
+        id: id.clone(),
+        is_entry: self.is_user_defined_entry,
+        importers: vec![],
+        dynamic_importers: vec![],
+        imported_ids: vec![],
+        dynamically_imported_ids: vec![],
+      }),
+    );
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let (source, mut module_type) = match load_source(
@@ -148,7 +163,6 @@ impl ModuleTask {
     let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
     let repr_name = legitimize_identifier_name(&repr_name);
 
-    let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
     let mut raw_import_records = IndexVec::default();

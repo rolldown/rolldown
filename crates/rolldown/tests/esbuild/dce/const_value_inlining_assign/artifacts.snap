@@ -2,7 +2,7 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
+# Errors
 
 ## ILLEGAL_REASSIGNMENT
 
@@ -33,26 +33,4 @@ snapshot_kind: text
    │ ╰── `x` is re-assigned here
 ───╯
 
-```
-# Assets
-
-## const-assign.js
-
-```js
-
-//#region const-assign.js
-const x = 1;
-x = 2;
-
-//#endregion
-```
-## const-update.js
-
-```js
-
-//#region const-update.js
-const x = 1;
-x += 2;
-
-//#endregion
 ```

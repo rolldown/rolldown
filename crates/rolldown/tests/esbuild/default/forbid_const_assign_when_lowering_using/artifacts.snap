@@ -2,7 +2,7 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
+# Errors
 
 ## ILLEGAL_REASSIGNMENT
 
@@ -35,17 +35,4 @@ snapshot_kind: text
    │     ╰── `y` is re-assigned here
 ───╯
 
-```
-# Assets
-
-## entry.js
-
-```js
-
-//#region entry.js
-const x = 1;
-using x2 = 2;
-x = 3;
-
-//#endregion
 ```

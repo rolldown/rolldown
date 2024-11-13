@@ -631,7 +631,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if reference.is_write() {
       let symbol_id = reference.symbol_id()?;
       if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() {
-        self.result.warnings.push(BuildDiagnostic::forbid_const_assign(
+        self.result.errors.push(BuildDiagnostic::forbid_const_assign(
           self.file_path.to_string(),
           self.source.clone(),
           self.result.symbol_ref_db.get_name(symbol_id).into(),

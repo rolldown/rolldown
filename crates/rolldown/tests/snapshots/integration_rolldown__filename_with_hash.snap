@@ -10,8 +10,6 @@ snapshot_kind: text
 
 # tests/esbuild/dce/const_value_inlining_assign
 
-- const-assign-!~{000}~.js => const-assign-DR1Q__Hh.js
-- const-update-!~{001}~.js => const-update-D1TNZiwd.js
 
 # tests/esbuild/dce/const_value_inlining_bundle
 
@@ -839,11 +837,9 @@ snapshot_kind: text
 
 # tests/esbuild/default/forbid_const_assign_when_bundling
 
-- entry-!~{000}~.js => entry-DEzJLKvO.js
 
 # tests/esbuild/default/forbid_const_assign_when_lowering_using
 
-- entry-!~{000}~.js => entry-BxdPM8Fj.js
 
 # tests/esbuild/default/forbid_string_export_names_bundle
 
@@ -3932,6 +3928,9 @@ snapshot_kind: text
 
 
 # tests/rolldown/errors/export_undefined_variable
+
+
+# tests/rolldown/errors/forbid_const_assign
 
 
 # tests/rolldown/errors/invalid_export_mode/should_not_be_default

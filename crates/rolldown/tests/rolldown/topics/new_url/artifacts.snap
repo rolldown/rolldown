@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## assets/index-B0GLEKT9.txt
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region node_modules/foo/index.txt
+var foo_default = "assets/index-B0GLEKT9.txt";
+
+//#endregion
+//#region main.js
+const url = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
+const url3 = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
+assert.strictEqual(url.href, url3.href);
+
+//#endregion
+export { url, url3 };
+```

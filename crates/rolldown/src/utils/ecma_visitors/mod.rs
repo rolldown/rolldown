@@ -34,6 +34,11 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
     }
     walk_mut::walk_call_expression(self, it);
   }
+
+  fn visit_new_expression(&mut self, it: &mut oxc::ast::ast::NewExpression<'a>) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_new_expression(self, it);
+  }
 }
 
 impl EnsureSpanUniqueness {

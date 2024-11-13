@@ -1,5 +1,6 @@
 pub mod impl_visit;
 mod import_assign_analyzer;
+mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
@@ -58,6 +59,8 @@ pub struct ScanResult {
   /// has hashbang. Storing the span of hashbang used for hashbang codegen in chunk level
   pub hashbang_range: Option<Span>,
   pub has_star_exports: bool,
+  /// `new URL('...', import.meta.url)`
+  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -131,6 +134,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
       has_star_exports: false,
+      new_url_references: FxHashMap::default(),
     };
 
     Self {
@@ -272,7 +276,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )
       .into(),
     );
-    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, span)
+    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, span, None)
       .with_meta(init_meta);
 
     let id = self.result.import_records.push(rec);

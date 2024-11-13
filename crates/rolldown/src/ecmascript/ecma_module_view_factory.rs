@@ -109,6 +109,7 @@ pub async fn create_ecma_view<'any>(
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
     has_star_exports,
+    new_url_references: new_url_imports,
   } = scan_result;
   if !errors.is_empty() {
     return Err(errors.into());
@@ -196,6 +197,7 @@ pub async fn create_ecma_view<'any>(
       meta
     },
     mutations: vec![],
+    new_url_references: new_url_imports,
   };
 
   Ok(CreateEcmaViewReturn { view, raw_import_records: import_records, ast, symbols: symbol_ref_db })

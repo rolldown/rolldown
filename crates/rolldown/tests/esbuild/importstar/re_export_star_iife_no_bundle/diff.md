@@ -12,11 +12,11 @@ var mod = (() => {
 ```
 ### rolldown
 ```js
-(function() {
+(function(foo) {
 
 "use strict";
 
-})();
+})(foo);
 ```
 ### diff
 ```diff
@@ -29,6 +29,6 @@ var mod = (() => {
 -    __reExport(entry_exports, require("foo"));
 -    return __toCommonJS(entry_exports);
 -})();
-+(function () {})();
++(function (foo) {})(foo);
 
 ```

@@ -4,7 +4,7 @@ import { expect } from 'vitest'
 export default defineTest({
   config: {
     output: {
-      inlineDynamicImports: false,
+      inlineDynamicImports: true,
     },
   },
   afterTest: (output) => {

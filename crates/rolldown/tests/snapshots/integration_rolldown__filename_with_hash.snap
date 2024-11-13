@@ -2169,11 +2169,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_external_iife
 
-- entry-!~{000}~.js => entry-CRJgxGwW.js
+- entry-!~{000}~.js => entry-C_-fjv1R.js
 
 # tests/esbuild/importstar/re_export_star_iife_no_bundle
 
-- entry-!~{000}~.js => entry-CRJgxGwW.js
+- entry-!~{000}~.js => entry-C_-fjv1R.js
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
@@ -4311,7 +4311,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.js => main-DLCvegcv.js
+- main-!~{000}~.js => main-BpLY4dGu.js
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
@@ -4339,7 +4339,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/umd/external_modules
 
-- main-!~{000}~.js => main-C5f5HNCi.js
+- main-!~{000}~.js => main-Cux2vdjB.js
 
 # tests/rolldown/function/format/umd/external_modules_with_complex_globals
 

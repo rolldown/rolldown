@@ -2,7 +2,8 @@
   "config": {
     "format": "iife",
     "external": [
-      "node:path"
+      "node:path",
+      "node:fs"
     ],
     "name": "module"
   },

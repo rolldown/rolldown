@@ -72,16 +72,15 @@ const ignoreTests = [
   "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
-  "rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es",
   "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
   "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
   "rollup@form@guessed-global-names: guesses global names if necessary@generates es",
-  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", // import external module is tree-shakend
-  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
-  "rollup@form@quote-id: handles escaping for external ids@generates es",
-  "rollup@form@relative-external-ids: relative external ids are absolutely resolved",
+
+  // The rolldown import external module is tree-shaked
+  "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
+  "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
 
   // The `this` related
   "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions", 
@@ -138,6 +137,13 @@ const ignoreTests = [
   "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",
   "rollup@form@make-absolute-externals-relative@make-relative-relative: only normalizes external paths that were originally relative when set to \"ifRelativeSource\"",
   "rollup@form@make-absolute-externals-relative@make-relative-true: normalizes both relative and absolute external paths when set to true",
+  "rollup@form@relative-external-ids: relative external ids are absolutely resolved",
+
+  // escaping external id is not supported
+  "rollup@form@quote-id: handles escaping for external ids@generates es",
+
+  // `resolveDynamicImport` hook `specifier: AstNode` not supported
+  "rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es",
 
   // The plugin sequential is not supported
   "rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks",

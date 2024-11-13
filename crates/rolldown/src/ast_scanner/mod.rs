@@ -1,8 +1,10 @@
+mod dynamic_import;
 pub mod impl_visit;
 mod import_assign_analyzer;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use dynamic_import::DynamicImportUsageInfo;
 use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
 use oxc::index::IndexVec;
@@ -86,6 +88,7 @@ pub struct AstScanner<'me, 'ast> {
   visit_path: Vec<AstKind<'ast>>,
   scope_stack: Vec<Option<ScopeId>>,
   options: Option<&'me SharedOptions>,
+  dynamic_import_usage_info: DynamicImportUsageInfo,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -152,6 +155,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       visit_path: vec![],
       options,
       scope_stack: vec![],
+      dynamic_import_usage_info: DynamicImportUsageInfo::default(),
     }
   }
 

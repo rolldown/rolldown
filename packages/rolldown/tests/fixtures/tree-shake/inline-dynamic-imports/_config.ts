@@ -1,0 +1,14 @@
+import { defineTest } from '@tests'
+import { expect } from 'vitest'
+
+export default defineTest({
+  config: {
+    output: {
+      inlineDynamicImports: false,
+    },
+  },
+  afterTest: (output) => {
+    expect(output.output.length).toEqual(1)
+    expect(output.output[0].code).toContain('"b"')
+  },
+})

@@ -197,7 +197,8 @@ test.sequential('watch include/exclude', async () => {
   await watcher.close()
 })
 
-test.sequential('(perf)watching same file multiply times', async () => {
+// TODO make the test stable, failed at https://github.com/rolldown/rolldown/actions/runs/11812958121/job/32909172765
+test.skip.sequential('(perf)watching same file multiply times', async () => {
   const watcher = await watch({
     input,
     cwd: import.meta.dirname,

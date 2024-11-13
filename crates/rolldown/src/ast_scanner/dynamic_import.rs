@@ -1,15 +1,8 @@
-use oxc::{
-  ast::{
-    ast::{Argument, IdentifierReference, UnaryOperator},
-    AstKind,
-  },
-  semantic::{ReferenceId, SymbolFlags, SymbolId},
-  span::{CompactStr, Span},
+use oxc::ast::{
+  ast::{Argument, IdentifierReference},
+  AstKind,
 };
-use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, ImportRecordIdx, Specifier,
-};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rolldown_common::{dynamic_import_usage::DynamicImportExportsUsage, ImportRecordIdx};
 
 use super::AstScanner;
 
@@ -69,15 +62,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   ) -> Option<()> {
     let ancestor_len = self.visit_path.len();
     let parent = self.visit_path.last()?.as_member_expression()?;
-    let parent = match parent {
-      oxc::ast::ast::MemberExpression::StaticMemberExpression(parent) => parent,
-      _ => return None,
+    let oxc::ast::ast::MemberExpression::StaticMemberExpression(parent) = parent else {
+      return None;
     };
     if parent.property.name != "then" {
       return None;
     }
     let parent_parent = self.visit_path.get(ancestor_len - 2)?.as_call_expression()?;
-    let first_arg = parent_parent.arguments.get(0)?;
+    let first_arg = parent_parent.arguments.first()?;
     let dynamic_import_binding = match first_arg {
       Argument::FunctionExpression(func) => func.params.items.first()?,
       Argument::ArrowFunctionExpression(func) => func.params.items.first()?,

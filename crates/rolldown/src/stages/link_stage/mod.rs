@@ -3,10 +3,9 @@ use std::{ptr::addr_of, sync::Mutex};
 use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
-  dynamic_import_usage::{self, DynamicImportExportsUsage},
-  EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
-  ModuleTable, OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef,
-  SymbolRefDb, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
+  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -44,7 +43,7 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub dynamic_imoprt_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
 #[derive(Debug)]
@@ -60,7 +59,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub dynamic_imoprt_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -98,7 +97,7 @@ impl<'a> LinkStage<'a> {
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,
       ast_table: scan_stage_output.index_ecma_ast,
-      dynamic_imoprt_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
+      dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
       used_symbol_refs: FxHashSet::default(),
     }
@@ -129,7 +128,7 @@ impl<'a> LinkStage<'a> {
       errors: self.errors,
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
-      dynamic_imoprt_exports_usage_map: self.dynamic_imoprt_exports_usage_map,
+      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
     }
   }
 
@@ -495,7 +494,7 @@ impl<'a> LinkStage<'a> {
 
         create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
         if let Some(entry) = self.entries.iter().find(|entry| entry.id == ecma_module.idx) {
-          init_entry_point_stmt_info(linking_info, entry, &self.dynamic_imoprt_exports_usage_map);
+          init_entry_point_stmt_info(linking_info, entry, &self.dynamic_import_exports_usage_map);
         }
 
         // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
@@ -610,7 +609,7 @@ fn is_external_dynamic_import(
 pub fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
   entry: &EntryPoint,
-  dynamic_imoprt_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 ) {
   let mut referenced_symbols = vec![];
 
@@ -623,7 +622,7 @@ pub fn init_entry_point_stmt_info(
 
   referenced_symbols.extend(
     meta
-      .referenced_canonical_exports_symbols(entry.id, entry.kind, dynamic_imoprt_exports_usage_map)
+      .referenced_canonical_exports_symbols(entry.id, entry.kind, dynamic_import_exports_usage_map)
       .map(|(_, resolved_export)| resolved_export.symbol_ref),
   );
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.

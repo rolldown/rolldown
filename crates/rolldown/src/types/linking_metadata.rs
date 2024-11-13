@@ -3,8 +3,8 @@ use oxc::{
   span::{CompactStr, Span},
 };
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, EntryPointKind, ImportRecordIdx,
-  ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPointKind, ImportRecordIdx, ModuleIdx,
+  ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -79,12 +79,12 @@ impl LinkingMetadata {
     &'b self,
     module_idx: ModuleIdx,
     entry_point_kind: EntryPointKind,
-    dynamic_imoprt_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+    dynamic_import_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   ) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> + '_ {
     let partial_used_exports = match entry_point_kind {
       rolldown_common::EntryPointKind::UserDefined => None,
       rolldown_common::EntryPointKind::DynamicImport => {
-        dynamic_imoprt_exports_usage_map.get(&module_idx).and_then(|usage| match usage {
+        dynamic_import_exports_usage_map.get(&module_idx).and_then(|usage| match usage {
           DynamicImportExportsUsage::Complete => None,
           DynamicImportExportsUsage::Partial(set) => Some(set),
           DynamicImportExportsUsage::Single(_) => unreachable!(),

@@ -162,7 +162,7 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
         .referenced_canonical_exports_symbols(
           module,
           if is_user_defined { EntryPointKind::UserDefined } else { EntryPointKind::DynamicImport },
-          &graph.dynamic_imoprt_exports_usage_map,
+          &graph.dynamic_import_exports_usage_map,
         )
         .map(|(name, export)| (name.clone(), export.symbol_ref))
         .collect::<Vec<_>>()

@@ -145,7 +145,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         },
       );
       match self.init_dynamic_import_binding_usage_info(import_rec_idx) {
-        Some(_) => {
+        Some(()) => {
           self
             .dynamic_import_usage_info
             .dynamic_import_exports_usage

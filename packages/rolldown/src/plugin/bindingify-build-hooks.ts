@@ -9,7 +9,6 @@ import type {
   Plugin,
   PluginHooks,
   PrivateResolveIdExtraOptions,
-  ResolveIdResult,
 } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
@@ -33,6 +32,7 @@ import {
   bindingifyResolveIdFilter,
   bindingifyTransformFilter,
 } from './bindingify-hook-filter'
+import { isPromise } from 'node:util/types'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -109,44 +109,52 @@ export function bindingifyResolveId(
           contextResolveOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
       }
 
-      let ret = handler.call(
+      let promiseLike = handler.call(
         new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
         specifier,
         importer ?? undefined,
         newExtraOptions,
-      ) as any as ResolveIdResult
-
-      if (ret == null) {
-        return
+      )
+      if (!isPromise(promiseLike)) {
+        promiseLike = Promise.resolve(promiseLike)
       }
-      if (ret === false) {
-        return {
-          id: specifier,
-          external: true,
-        }
-      }
-      if (typeof ret === 'string') {
-        return {
-          id: ret,
-        }
-      }
+      return promiseLike
+        .then((ret) => {
+          if (ret == null) {
+            return
+          }
+          if (ret === false) {
+            return {
+              id: specifier,
+              external: true,
+            }
+          }
+          if (typeof ret === 'string') {
+            return {
+              id: ret,
+            }
+          }
 
-      const result: BindingHookResolveIdOutput = {
-        id: ret.id,
-        external: ret.external,
-      }
+          const result: BindingHookResolveIdOutput = {
+            id: ret.id,
+            external: ret.external,
+          }
 
-      if (ret.moduleSideEffects !== null) {
-        // @ts-ignore TODO The typing should import from binding
-        result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
-      }
+          if (ret.moduleSideEffects !== null) {
+            // @ts-ignore TODO The typing should import from binding
+            result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
+          }
 
-      pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
-      })
+          pluginContextData.updateModuleOption(ret.id, {
+            meta: ret.meta || {},
+            moduleSideEffects: ret.moduleSideEffects || null,
+          })
 
-      return result
+          return result
+        })
+        .catch(function fn(e) {
+          Error.captureStackTrace(e, fn)
+        })
     },
     meta: bindingifyPluginHookMeta(meta),
     // @ts-ignore

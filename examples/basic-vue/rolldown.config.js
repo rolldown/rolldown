@@ -10,7 +10,9 @@ export default defineConfig({
   },
   plugins: [
     {
-      resolveId() {
+      async resolveId() {
+        await new Promise((r) => setTimeout(r, 1000))
+        console.log('test')
         throw new Error('test')
       },
     },

@@ -78,7 +78,7 @@ const ignoreTests = [
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
 
-  // The rolldown import external module is tree-shaked
+  // The rolldown import external module is tree-shaked at format iife/umd
   "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
   "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
 

@@ -74,7 +74,6 @@ const ignoreTests = [
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
   "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
   "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
-  "rollup@form@guessed-global-names: guesses global names if necessary@generates es",
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
 
@@ -138,6 +137,7 @@ const ignoreTests = [
   "rollup@form@make-absolute-externals-relative@make-relative-relative: only normalizes external paths that were originally relative when set to \"ifRelativeSource\"",
   "rollup@form@make-absolute-externals-relative@make-relative-true: normalizes both relative and absolute external paths when set to true",
   "rollup@form@relative-external-ids: relative external ids are absolutely resolved",
+  "rollup@form@guessed-global-names: guesses global names if necessary@generates es",
 
   // escaping external id is not supported
   "rollup@form@quote-id: handles escaping for external ids@generates es",

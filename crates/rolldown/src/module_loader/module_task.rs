@@ -9,9 +9,9 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
-  ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId, StrOrBytes,
-  RUNTIME_MODULE_ID,
+  EcmaRelated, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
+  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId,
+  StrOrBytes, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
@@ -283,10 +283,9 @@ impl ModuleTask {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,
-        ecma_related: Some((ast, symbols)),
+        ecma_related: Some(EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage }),
         module: module.into(),
         raw_import_records,
-        dynamic_import_rec_exports_usage,
       }))
       .await
     {

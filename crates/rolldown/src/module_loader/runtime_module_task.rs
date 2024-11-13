@@ -68,7 +68,7 @@ impl RuntimeModuleTask {
       self_referenced_class_decl_symbol_ids: _,
       hashbang_range: _,
       has_star_exports,
-      dynamic_import_exports_usage: _,
+      dynamic_import_rec_exports_usage: _,
       new_url_references,
     } = scan_result;
 

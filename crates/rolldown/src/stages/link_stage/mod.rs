@@ -3,9 +3,9 @@ use std::{ptr::addr_of, sync::Mutex};
 use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
-  ModuleTable, OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef,
-  SymbolRefDb, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
+  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -13,7 +13,7 @@ use rolldown_utils::{
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   type_alias::IndexEcmaAst,
@@ -43,6 +43,7 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
 #[derive(Debug)]
@@ -58,6 +59,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -95,6 +97,7 @@ impl<'a> LinkStage<'a> {
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,
       ast_table: scan_stage_output.index_ecma_ast,
+      dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
       used_symbol_refs: FxHashSet::default(),
     }
@@ -125,6 +128,7 @@ impl<'a> LinkStage<'a> {
       errors: self.errors,
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
+      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
     }
   }
 
@@ -230,6 +234,7 @@ impl<'a> LinkStage<'a> {
           ImportKind::UrlImport => {
             unreachable!("A Js module would never import a CSS module via `url()`");
           }
+          ImportKind::NewUrl => {}
         }
       });
 
@@ -461,6 +466,7 @@ impl<'a> LinkStage<'a> {
                 ImportKind::UrlImport => {
                   unreachable!("A Js module would never import a CSS module via `url()`");
                 }
+                ImportKind::NewUrl => {}
               }
             }
           }
@@ -489,8 +495,8 @@ impl<'a> LinkStage<'a> {
         let linking_info = &mut self.metas[ecma_module.idx];
 
         create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
-        if self.entries.iter().any(|entry| entry.id == ecma_module.idx) {
-          init_entry_point_stmt_info(linking_info);
+        if let Some(entry) = self.entries.iter().find(|entry| entry.id == ecma_module.idx) {
+          init_entry_point_stmt_info(linking_info, entry, &self.dynamic_import_exports_usage_map);
         }
 
         // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
@@ -602,7 +608,11 @@ fn is_external_dynamic_import(
     && record.resolved_module != module_idx
 }
 
-pub fn init_entry_point_stmt_info(meta: &mut LinkingMetadata) {
+pub fn init_entry_point_stmt_info(
+  meta: &mut LinkingMetadata,
+  entry: &EntryPoint,
+  dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+) {
   let mut referenced_symbols = vec![];
 
   // Include the wrapper if present
@@ -612,8 +622,12 @@ pub fn init_entry_point_stmt_info(meta: &mut LinkingMetadata) {
     referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
 
+  referenced_symbols.extend(
+    meta
+      .referenced_canonical_exports_symbols(entry.id, entry.kind, dynamic_import_exports_usage_map)
+      .map(|(_, resolved_export)| resolved_export.symbol_ref),
+  );
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
-  referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
 
   meta.referenced_symbols_by_entry_point_chunk.extend(referenced_symbols);
 }

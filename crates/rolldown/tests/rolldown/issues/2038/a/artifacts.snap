@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -22,19 +23,16 @@ export { a_default as default };
 function result() {
 	return "result";
 }
-function test() {
-	return "test";
-}
 
 //#endregion
-export { result, test };
+export { result };
 ```
 ## b2.js
 
 ```js
-import { result, test } from "./b.js";
+import { result } from "./b.js";
 
-export { result, test };
+export { result };
 ```
 ## main.js
 

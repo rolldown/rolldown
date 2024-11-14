@@ -9,9 +9,9 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
-  ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId, StrOrBytes,
-  RUNTIME_MODULE_ID,
+  EcmaRelated, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
+  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId,
+  StrOrBytes, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
@@ -46,6 +46,8 @@ pub struct ModuleTask {
   owner: Option<ModuleTaskOwner>,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
+  /// The module is asserted to be this specific module type.
+  asserted_module_type: Option<ModuleType>,
 }
 
 impl ModuleTask {
@@ -55,8 +57,17 @@ impl ModuleTask {
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
+    assert_module_type: Option<ModuleType>,
   ) -> Self {
-    Self { ctx, module_idx: idx, resolved_id, owner, errors: vec![], is_user_defined_entry }
+    Self {
+      ctx,
+      module_idx: idx,
+      resolved_id,
+      owner,
+      errors: vec![],
+      is_user_defined_entry,
+      asserted_module_type: assert_module_type,
+    }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
@@ -114,6 +125,7 @@ impl ModuleTask {
       &mut sourcemap_chain,
       &mut hook_side_effects,
       &self.ctx.options,
+      &self.asserted_module_type,
     )
     .await
     {
@@ -131,6 +143,10 @@ impl ModuleTask {
         return Ok(());
       }
     };
+
+    if let Some(asserted) = &self.asserted_module_type {
+      module_type = asserted.clone();
+    }
 
     let mut source = match source {
       StrOrBytes::Str(source) => {
@@ -206,6 +222,7 @@ impl ModuleTask {
       ast,
       symbols,
       raw_import_records: ecma_raw_import_records,
+      dynamic_import_rec_exports_usage,
     } = ret;
 
     if !matches!(module_type, ModuleType::Css) {
@@ -229,7 +246,7 @@ impl ModuleTask {
     if !matches!(module_type, ModuleType::Css) {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
-          ImportKind::Import | ImportKind::Require => {
+          ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
             ecma_view.imported_ids.push(ArcStr::clone(&info.id).into());
           }
           ImportKind::DynamicImport => {
@@ -266,7 +283,7 @@ impl ModuleTask {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,
-        ecma_related: Some((ast, symbols)),
+        ecma_related: Some(EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage }),
         module: module.into(),
         raw_import_records,
       }))

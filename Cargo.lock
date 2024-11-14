@@ -2614,6 +2614,7 @@ dependencies = [
  "itertools 0.13.0",
  "lightningcss",
  "oxc",
+ "oxc_resolver",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_fs",

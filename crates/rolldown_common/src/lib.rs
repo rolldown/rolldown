@@ -58,10 +58,11 @@ pub use crate::{
     css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
+    dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer},
     module_idx::ModuleIdx,
-    node_builtin_modules::is_builtin_modules,
+    node_builtin_modules::is_existing_node_builtin_modules,
   },
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::{
@@ -72,7 +73,7 @@ pub use crate::{
   module_loader::{
     runtime_module_brief::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
     runtime_task_result::RuntimeModuleTaskResult,
-    task_result::NormalModuleTaskResult,
+    task_result::{EcmaRelated, NormalModuleTaskResult},
     ModuleLoaderMsg,
   },
   types::asset::Asset,

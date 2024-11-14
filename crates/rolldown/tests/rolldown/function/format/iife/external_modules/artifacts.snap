@@ -1,8 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:fs" in "output.globals" – guessing "node_fs".
+
+```
 ## MISSING_GLOBAL_NAME
 
 ```text
@@ -14,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-(function(node_path) {
+(function(node_path, node_fs) {
 
 "use strict";
 const { default: nodePath } = node_path;
@@ -23,5 +30,5 @@ const { default: nodePath } = node_path;
 console.log(nodePath);
 
 //#endregion
-})(node_path);
+})(node_path, node_fs);
 ```

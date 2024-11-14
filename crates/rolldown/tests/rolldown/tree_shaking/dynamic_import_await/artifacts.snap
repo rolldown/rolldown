@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## lib.js
+
+```js
+
+//#region lib.js
+var foo = "foo";
+var bar = "bar";
+
+//#endregion
+export { bar, foo };
+```
+## main.js
+
+```js
+
+//#region main.js
+const lib = await import("./lib.js");
+lib.foo;
+const lib2 = await import("./lib.js");
+lib.bar;
+
+//#endregion
+```

@@ -11,11 +11,13 @@ pub enum ImportKind {
   AtImport,
   /// css url import, e.g. `url(foo.png)`
   UrlImport,
+  // `new URL('path', import.meta.url)`
+  NewUrl,
 }
 
 impl ImportKind {
   pub fn is_static(&self) -> bool {
-    matches!(self, Self::Import | Self::Require | Self::AtImport)
+    matches!(self, Self::Import | Self::Require | Self::AtImport | Self::UrlImport)
   }
 }
 
@@ -44,6 +46,7 @@ impl Display for ImportKind {
       // TODO(hyf0): check if this literal is the same as esbuild's
       Self::AtImport => write!(f, "import-rule"),
       ImportKind::UrlImport => write!(f, "url-import"),
+      ImportKind::NewUrl => write!(f, "new-url"),
     }
   }
 }

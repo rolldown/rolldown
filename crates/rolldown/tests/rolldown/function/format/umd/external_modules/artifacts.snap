@@ -1,8 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:fs" in "output.globals" – guessing "node_fs".
+
+```
 ## MISSING_GLOBAL_NAME
 
 ```text
@@ -15,10 +22,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(require('node:path')) :
-  typeof define === 'function' && define.amd ? define(['node:path'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.node_path));
-})(this, function(node_path) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(require('node:path'), require('node:fs')) :
+  typeof define === 'function' && define.amd ? define(['node:path', 'node:fs'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.node_path,global.node_fs));
+})(this, function(node_path, node_fs) {
 "use strict";
 const { default: nodePath } = node_path;
 

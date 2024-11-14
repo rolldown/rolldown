@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use rolldown_common::{
   side_effects::HookSideEffects, ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes,
 };
@@ -13,6 +15,7 @@ pub async fn load_source(
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
+  asserted_module_type: &Option<ModuleType>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?
@@ -28,6 +31,17 @@ pub async fn load_source(
   } else {
     (None, None)
   };
+
+  if let Some(asserted) = asserted_module_type {
+    let is_type_conflicted = match &maybe_module_type {
+      None => false,
+      Some(user_specified_type) if user_specified_type == asserted => false,
+      _ => true,
+    };
+    if is_type_conflicted {
+      // TODO: emit a warning about the type conflict
+    }
+  }
 
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
@@ -70,7 +84,13 @@ pub async fn load_source(
         (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
       }
     }
-    (None, Some(_)) => unreachable!("Invalid state"),
+    (None, Some(ty)) => {
+      if asserted_module_type.is_some() {
+        Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs)?, ty))
+      } else {
+        unreachable!("Invalid state")
+      }
+    }
   }
 }
 
@@ -86,4 +106,26 @@ fn get_module_loader_from_file_extension<S: AsRef<str>>(
     }
   }
   None
+}
+
+fn read_file_by_module_type(
+  path: impl AsRef<Path>,
+  ty: &ModuleType,
+  fs: &dyn rolldown_fs::FileSystem,
+) -> anyhow::Result<StrOrBytes> {
+  let path = path.as_ref();
+  match ty {
+    ModuleType::Js
+    | ModuleType::Jsx
+    | ModuleType::Ts
+    | ModuleType::Tsx
+    | ModuleType::Json
+    | ModuleType::Css
+    | ModuleType::Empty
+    | ModuleType::Custom(_)
+    | ModuleType::Text => Ok(StrOrBytes::Str(fs.read_to_string(path)?)),
+    ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
+      Ok(StrOrBytes::Bytes(fs.read(path)?))
+    }
+  }
 }

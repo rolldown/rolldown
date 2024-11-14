@@ -106,6 +106,8 @@ pub struct EcmaView {
   pub hashbang_range: Option<Span>,
   pub meta: EcmaViewMeta,
   pub mutations: Vec<BoxedSourceMutation>,
+  /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
+  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
 }
 
 bitflags! {

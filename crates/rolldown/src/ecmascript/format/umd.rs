@@ -163,14 +163,9 @@ fn render_iife_export(
   has_exports: bool,
   named_exports: bool,
 ) -> BuildResult<String> {
-  if ctx.options.name.as_ref().map_or(true, String::is_empty) {
+  if has_exports && ctx.options.name.as_ref().map_or(true, String::is_empty) {
     return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
   }
-  let (stmt, namespace) = generate_namespace_definition(
-    ctx.options.name.as_ref().expect("should have name"),
-    "global",
-    ",",
-  );
   let mut dependencies = Vec::with_capacity(externals.len());
   externals.iter().for_each(|external| {
     if let Some(global) = ctx.options.globals.get(external.path.as_str()) {
@@ -189,6 +184,11 @@ fn render_iife_export(
   });
   let deps = dependencies.join(",");
   if has_exports {
+    let (stmt, namespace) = generate_namespace_definition(
+      ctx.options.name.as_ref().expect("should have name"),
+      "global",
+      ",",
+    );
     if named_exports {
       Ok(format!(
         "factory(({stmt}{namespace} = {}){})",

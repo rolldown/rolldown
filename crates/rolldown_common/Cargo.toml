@@ -26,6 +26,7 @@ glob-match          = { workspace = true }
 itertools           = { workspace = true }
 lightningcss        = { workspace = true }
 oxc                 = { workspace = true, features = ["semantic"] }
+oxc_resolver        = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error      = { workspace = true }
 rolldown_fs         = { workspace = true }

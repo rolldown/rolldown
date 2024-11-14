@@ -1,82 +1,33 @@
-/* cSpell:disable */
+use oxc_resolver::NODEJS_BUILTINS;
 
-/// Node.js built-in modules
-///
-/// `node -p "[...require('module').builtinModules].map(b => JSON.stringify(b)).join(',\n')"`
-/// <https://nodejs.org/api/modules.html#core-modules>
-/// copy from `oxc_resolver`
-pub const NODEJS_BUILTINS: &[&str] = &[
-  "_http_agent",
-  "_http_client",
-  "_http_common",
-  "_http_incoming",
-  "_http_outgoing",
-  "_http_server",
-  "_stream_duplex",
-  "_stream_passthrough",
-  "_stream_readable",
-  "_stream_transform",
-  "_stream_wrap",
-  "_stream_writable",
-  "_tls_common",
-  "_tls_wrap",
-  "assert",
-  "assert/strict",
-  "async_hooks",
-  "buffer",
-  "child_process",
-  "cluster",
-  "console",
-  "constants",
-  "crypto",
-  "dgram",
-  "diagnostics_channel",
-  "dns",
-  "dns/promises",
-  "domain",
-  "events",
-  "fs",
-  "fs/promises",
-  "http",
-  "http2",
-  "https",
-  "inspector",
-  "module",
-  "net",
-  "os",
-  "path",
-  "path/posix",
-  "path/win32",
-  "perf_hooks",
-  "process",
-  "punycode",
-  "querystring",
-  "readline",
-  "repl",
-  "stream",
-  "stream/consumers",
-  "stream/promises",
-  "stream/web",
-  "string_decoder",
-  "sys",
-  "timers",
-  "timers/promises",
-  "tls",
-  "trace_events",
-  "tty",
-  "url",
-  "util",
-  "util/types",
-  "v8",
-  "vm",
-  "worker_threads",
-  "zlib",
+/// A list of prefix-only modules
+const NODEJS_PREFIXED_BUILTINS: &[&str] = &[
+  // https://nodejs.org/api/modules.html#built-in-modules-with-mandatory-node-prefix
+  "node:sea",
+  "node:test",
+  "node:test/reporters",
+  // https://nodejs.org/api/sqlite.html
+  "node:sqlite",
 ];
 
 /// Using `phf` should be faster, but it would increase the compile time, since this function is
 /// not frequently used, we use `binary_search` instead.
-pub fn is_builtin_modules(specifier: &str) -> bool {
-  let normalized_specifier =
-    if let Some(specifier) = specifier.strip_prefix("node:") { specifier } else { specifier };
-  NODEJS_BUILTINS.binary_search(&normalized_specifier).is_ok()
+pub fn is_existing_node_builtin_modules(specifier: &str) -> bool {
+  if let Some(stripped) = specifier.strip_prefix("node:") {
+    return NODEJS_BUILTINS.binary_search(&stripped).is_ok()
+      || NODEJS_PREFIXED_BUILTINS.binary_search(&specifier).is_ok();
+  }
+  NODEJS_BUILTINS.binary_search(&specifier).is_ok()
+}
+
+#[test]
+fn test_is_builtin_modules() {
+  // not prefix-only modules
+  assert!(is_existing_node_builtin_modules("fs"));
+  assert!(is_existing_node_builtin_modules("node:fs"));
+  // prefix-only modules
+  assert!(is_existing_node_builtin_modules("node:test"));
+  // not a builtin module
+  assert!(!is_existing_node_builtin_modules("unknown"));
+  assert!(!is_existing_node_builtin_modules("node:unknown"));
 }

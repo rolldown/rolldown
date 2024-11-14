@@ -543,6 +543,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
+    self.handle_new_url_with_string_literal_and_import_meta_url(expr);
     self.handle_import_meta_prop_expr(expr);
 
     walk_mut::walk_expression(self, expr);

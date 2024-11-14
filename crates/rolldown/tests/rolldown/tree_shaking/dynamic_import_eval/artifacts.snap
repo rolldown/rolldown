@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[main.js:2:1]
+   │
+ 2 │ eval("ns.a")
+   │ ──┬─  
+   │   ╰─── Use `eval` function here.
+───╯
+
+```
+# Assets
+
+## lib.js
+
+```js
+
+//#region a.js
+const a = "a";
+const b = "b";
+
+//#endregion
+export { a, b };
+```
+## lib2.js
+
+```js
+
+//#region b.js
+const c = "c";
+const d = "d";
+
+//#endregion
+export { c, d };
+```
+## main.js
+
+```js
+
+//#region main.js
+const ns = await import("./lib.js");
+eval("ns.a");
+import("./lib2.js").then((res) => {});
+
+//#endregion
+```

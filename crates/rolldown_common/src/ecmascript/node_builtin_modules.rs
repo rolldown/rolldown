@@ -86,8 +86,11 @@ const NODEJS_PREFIXED_BUILTINS: &[&str] = &[
 /// Using `phf` should be faster, but it would increase the compile time, since this function is
 /// not frequently used, we use `binary_search` instead.
 pub fn is_existing_node_builtin_modules(specifier: &str) -> bool {
+  if let Some(stripped) = specifier.strip_prefix("node:") {
+    return NODEJS_BUILTINS.binary_search(&stripped).is_ok()
+      || NODEJS_PREFIXED_BUILTINS.binary_search(&specifier).is_ok();
+  }
   NODEJS_BUILTINS.binary_search(&specifier).is_ok()
-    || NODEJS_PREFIXED_BUILTINS.binary_search(&specifier).is_ok()
 }
 
 #[test]

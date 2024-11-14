@@ -2,7 +2,6 @@ use std::{borrow::Cow, fs, path::Path};
 
 use crate::resolver::{self, AdditionalOptions, Resolver};
 use cow_utils::CowUtils;
-use dashmap::DashSet;
 use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -14,7 +13,6 @@ const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
 const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
-const NODE_BUILTIN_NAMESPACE: &str = "node:";
 const NPM_BUILTIN_NAMESPACE: &str = "npm:";
 const BUN_BUILTIN_NAMESPACE: &str = "bun:";
 
@@ -24,7 +22,6 @@ pub struct ViteResolveOptions {
   pub environment_consumer: String,
 
   pub runtime: String,
-  pub node_builtins: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -48,7 +45,6 @@ pub struct ViteResolvePlugin {
   environment_consumer: String,
 
   runtime: String,
-  node_builtins: DashSet<String>,
 
   resolver: Resolver,
 }
@@ -58,7 +54,6 @@ impl ViteResolvePlugin {
     Self {
       environment_consumer: options.environment_consumer,
       runtime: options.runtime,
-      node_builtins: options.node_builtins.into_iter().collect(),
 
       resolver: Resolver::new(&resolver::BaseOptions {
         main_fields: &options.resolve_options.main_fields,
@@ -179,7 +174,7 @@ impl Plugin for ViteResolvePlugin {
         return Ok(Some(resolved));
       }
 
-      if is_builtin(args.specifier, &self.runtime, &self.node_builtins) {
+      if is_builtin(args.specifier, &self.runtime) {
         if self.environment_consumer == "server" {
           // TODO: noExternal error
           return Ok(Some(HookResolveIdOutput {
@@ -383,18 +378,14 @@ fn normalize_oxc_resolver_result(
   }
 }
 
-fn is_builtin(id: &str, runtime: &str, node_builtins: &DashSet<String>) -> bool {
+fn is_builtin(id: &str, runtime: &str) -> bool {
   if runtime == "deno" && id.starts_with(NPM_BUILTIN_NAMESPACE) {
     return true;
   }
   if runtime == "bun" && id.starts_with(BUN_BUILTIN_NAMESPACE) {
     return true;
   }
-  is_node_builtin(id, node_builtins)
-}
-
-fn is_node_builtin(id: &str, node_builtins: &DashSet<String>) -> bool {
-  id.starts_with(NODE_BUILTIN_NAMESPACE) || node_builtins.contains(id)
+  rolldown_common::is_builtin_modules(id)
 }
 
 fn get_extension(id: &str) -> &str {

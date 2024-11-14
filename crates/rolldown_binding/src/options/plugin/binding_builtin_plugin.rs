@@ -154,7 +154,6 @@ pub struct BindingViteResolvePluginConfig {
   pub environment_consumer: String,
 
   pub runtime: String,
-  pub node_builtins: Vec<String>,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
@@ -164,7 +163,6 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       environment_consumer: value.environment_consumer,
 
       runtime: value.runtime,
-      node_builtins: value.node_builtins,
     }
   }
 }

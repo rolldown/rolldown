@@ -451,7 +451,6 @@ export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
   environmentConsumer: string
   runtime: string
-  nodeBuiltins: Array<string>
 }
 
 export interface BindingViteResolvePluginResolveOptions {

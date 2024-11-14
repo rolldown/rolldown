@@ -16,8 +16,6 @@ import {
   type BindingViteResolvePluginConfig,
 } from '../binding'
 
-import { builtinModules } from 'node:module'
-
 export class BuiltinPlugin {
   constructor(
     public name: BindingBuiltinPluginName,
@@ -156,7 +154,7 @@ export function buildImportAnalysisPlugin(
 }
 
 export function viteResolvePlugin(
-  config: Omit<BindingViteResolvePluginConfig, 'runtime' | 'nodeBuiltins'>,
+  config: Omit<BindingViteResolvePluginConfig, 'runtime'>,
 ) {
   return new ViteResolvePlugin({
     ...config,
@@ -165,7 +163,6 @@ export function viteResolvePlugin(
       : process.versions.bun
         ? 'bun'
         : 'node',
-    nodeBuiltins: builtinModules.filter((id) => !id.includes(':')),
   })
 }
 

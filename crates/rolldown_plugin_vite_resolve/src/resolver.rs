@@ -84,7 +84,6 @@ impl Resolver {
     base_options: &BaseOptions,
     external_conditions: &Vec<String>,
   ) -> oxc_resolver::Resolver {
-    // TODO
     self.base_resolver.clone_with_options(get_resolve_options(
       &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
       AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
@@ -196,7 +195,7 @@ pub fn normalize_oxc_resolver_result(
       Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
     }
     Err(oxc_resolver::ResolveError::NotFound(_id)) => {
-      // TODO
+      // TODO(sapphi-red): handle missing peerDep
       Ok(None)
     }
     Err(oxc_resolver::ResolveError::Ignored(_)) => {

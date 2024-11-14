@@ -29,7 +29,7 @@ impl ResolveOptionsExternal {
 #[derive(Debug)]
 pub enum ResolveOptionsNoExternal {
   True,
-  // TODO: support RegExp
+  // TODO(sapphi-red): support RegExp
   Vec(Vec<String>),
 }
 
@@ -41,7 +41,7 @@ impl ResolveOptionsNoExternal {
         if vec.is_empty() {
           false
         } else {
-          // TODO: implement the same logic with createFilter
+          // TODO(sapphi-red): implement the same logic with createFilter
           vec.iter().any(|v| v == id)
         }
       }

@@ -111,7 +111,7 @@ impl Plugin for ViteResolvePlugin {
     }
 
     if args.specifier.starts_with(BROWSER_EXTERNAL_ID) {
-      // TODO: implement for dev
+      // TODO(sapphi-red): implement for dev
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.to_string(),
         ..Default::default()
@@ -119,13 +119,13 @@ impl Plugin for ViteResolvePlugin {
     }
 
     if self.resolve_options.as_src && args.specifier.starts_with(FS_PREFIX) {
-      // TODO: implement for dev
+      // TODO(sapphi-red): implement for dev
       let res = fs_path_from_id(args.specifier);
       return Ok(Some(HookResolveIdOutput { id: res.to_string(), ..Default::default() }));
     }
 
     if args.specifier.starts_with("file://") {
-      // TODO: implement fileURLToPath properly
+      // TODO(sapphi-red): implement fileURLToPath properly
       let mut res = args.specifier.replace("file://", "");
       if res.starts_with('/') && is_windows_drive_path(&res[1..]) {
         res.remove(0);
@@ -169,7 +169,7 @@ impl Plugin for ViteResolvePlugin {
 
       if is_builtin(args.specifier, &self.runtime) {
         if self.environment_consumer == "server" {
-          // TODO: noExternal error
+          // TODO(sapphi-red): noExternal error
           return Ok(Some(HookResolveIdOutput {
             id: args.specifier.to_string(),
             external: Some(true),
@@ -202,7 +202,7 @@ impl Plugin for ViteResolvePlugin {
       &resolver.resolve(base_dir, args.specifier),
     )?;
     if let Some(resolved) = resolved {
-      // TODO: call `finalize_other_specifiers`
+      // TODO(sapphi-red): call `finalize_other_specifiers`
       return Ok(Some(resolved));
     }
 
@@ -211,7 +211,7 @@ impl Plugin for ViteResolvePlugin {
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
-      // TODO: implement for dev
+      // TODO(sapphi-red): implement for dev
       if self.resolve_options.is_production {
         // rolldown treats missing export as an error, and will break build.
         // So use cjs to avoid it.
@@ -231,7 +231,7 @@ impl Plugin for ViteResolvePlugin {
     }
 
     if args.id.starts_with(OPTIONAL_PEER_DEP_ID) {
-      // TODO: implement for dev
+      // TODO(sapphi-red): implement for dev
       return Ok(Some(HookLoadOutput {
         code: "export default {}".to_string(),
         ..Default::default()
@@ -284,7 +284,7 @@ fn is_external_url(id: &str) -> bool {
 
 fn is_from_ts_importer(importer: Option<&str>) -> bool {
   if let Some(importer) = importer {
-    // TODO: support depScan, moduleMeta
+    // TODO(sapphi-red): support depScan, moduleMeta
     has_suffix(importer, TS_EXTENSIONS)
   } else {
     false

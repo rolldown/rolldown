@@ -6,9 +6,7 @@ use oxc::{
   },
   span::{GetSpan, Span},
 };
-use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, ImportKind, ImportRecordMeta,
-};
+use rolldown_common::{ImportKind, ImportRecordMeta};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
@@ -143,20 +141,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           ImportRecordMeta::empty()
         },
       );
-      match self.init_dynamic_import_binding_usage_info(import_rec_idx) {
-        Some(set) => {
-          self
-            .dynamic_import_usage_info
-            .dynamic_import_exports_usage
-            .insert(import_rec_idx, DynamicImportExportsUsage::Partial(set));
-        }
-        None => {
-          self
-            .dynamic_import_usage_info
-            .dynamic_import_exports_usage
-            .insert(import_rec_idx, DynamicImportExportsUsage::Complete);
-        }
-      };
+      self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.span, import_rec_idx);
     }
     walk::walk_import_expression(self, expr);

@@ -62,7 +62,7 @@ pub use crate::{
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer},
     module_idx::ModuleIdx,
-    node_builtin_modules::is_builtin_modules,
+    node_builtin_modules::is_existing_node_builtin_modules,
   },
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::{

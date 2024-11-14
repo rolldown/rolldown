@@ -2,6 +2,7 @@ use std::{borrow::Cow, fs, path::Path};
 
 use crate::resolver::{self, AdditionalOptions, Resolver};
 use cow_utils::CowUtils;
+use oxc_resolver::NODEJS_BUILTINS;
 use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -13,6 +14,7 @@ const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
 const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
+const NODE_BUILTIN_NAMESPACE: &str = "node:";
 const NPM_BUILTIN_NAMESPACE: &str = "npm:";
 const BUN_BUILTIN_NAMESPACE: &str = "bun:";
 
@@ -385,7 +387,11 @@ fn is_builtin(id: &str, runtime: &str) -> bool {
   if runtime == "bun" && id.starts_with(BUN_BUILTIN_NAMESPACE) {
     return true;
   }
-  rolldown_common::is_builtin_modules(id)
+  is_node_builtin(id)
+}
+
+fn is_node_builtin(id: &str) -> bool {
+  id.starts_with(NODE_BUILTIN_NAMESPACE) || NODEJS_BUILTINS.binary_search(&id).is_ok()
 }
 
 fn get_extension(id: &str) -> &str {

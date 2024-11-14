@@ -3252,6 +3252,7 @@ checksum = "e9557cb6521e8d009c51a8666f09356f4b817ba9ba0981a305bd86aee47bd35c"
 name = "string_wizard"
 version = "0.0.22"
 dependencies = [
+ "insta",
  "oxc_index",
  "oxc_sourcemap",
  "rustc-hash",

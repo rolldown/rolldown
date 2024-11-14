@@ -62,22 +62,40 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn init_dynamic_import_binding_usage_info(
     &mut self,
-    import_record_id: ImportRecordIdx,
-  ) -> Option<FxHashSet<CompactStr>> {
+    import_record_idx: ImportRecordIdx,
+  ) -> Option<()> {
     let ancestor_len = self.visit_path.len();
-    match self.visit_path.last()? {
-      AstKind::MemberExpression(member_expr) => {
-        self.init_dynamic_import_usage_with_member_expr(member_expr, ancestor_len, import_record_id)
-      }
+    let init_set = match self.visit_path.last()? {
+      AstKind::MemberExpression(member_expr) => self.init_dynamic_import_usage_with_member_expr(
+        member_expr,
+        ancestor_len,
+        import_record_idx,
+      ),
       AstKind::AwaitExpression(_) => {
         let parent_parent = self.visit_path.get(ancestor_len - 2)?;
         let AstKind::VariableDeclarator(var_decl) = parent_parent else {
           return None;
         };
-        self.update_dynamic_import_usage_info_from_binding_pattern(&var_decl.id, import_record_id)
+        self.update_dynamic_import_usage_info_from_binding_pattern(&var_decl.id, import_record_idx)
       }
       _ => None,
-    }
+    };
+
+    match init_set {
+      Some(init_set) => {
+        self
+          .dynamic_import_usage_info
+          .dynamic_import_exports_usage
+          .insert(import_record_idx, DynamicImportExportsUsage::Partial(init_set));
+      }
+      None => {
+        self
+          .dynamic_import_usage_info
+          .dynamic_import_exports_usage
+          .insert(import_record_idx, DynamicImportExportsUsage::Complete);
+      }
+    };
+    None
   }
 
   fn init_dynamic_import_usage_with_member_expr(

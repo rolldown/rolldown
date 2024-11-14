@@ -112,7 +112,7 @@ pub async fn create_ecma_view<'any>(
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
     has_star_exports,
-    dynamic_import_exports_usage,
+    dynamic_import_rec_exports_usage: dynamic_import_exports_usage,
     new_url_references: new_url_imports,
   } = scan_result;
   if !errors.is_empty() {

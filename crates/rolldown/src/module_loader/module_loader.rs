@@ -9,10 +9,10 @@ use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, ModuleType, NormalModuleTaskResult,
-  ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolNameRefToken, SymbolRefDb,
-  RUNTIME_MODULE_ID,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
+  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, ModuleType,
+  NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  SymbolNameRefToken, SymbolRefDb, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -264,11 +264,13 @@ impl ModuleLoader {
             mut module,
             raw_import_records,
             warnings,
-            ecma_related,
-            mut dynamic_import_rec_exports_usage,
+            mut ecma_related,
           } = task_result;
           all_warnings.extend(warnings);
-
+          let mut dynamic_import_rec_exports_usage = ecma_related
+            .as_mut()
+            .map(|item| std::mem::take(&mut item.dynamic_import_rec_exports_usage))
+            .unwrap_or_default();
           let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
               .into_iter_enumerated()
@@ -306,10 +308,10 @@ impl ModuleLoader {
               .collect::<IndexVec<ImportRecordIdx, _>>();
 
           module.set_import_records(import_records);
-          if let Some((ast, ast_symbol)) = ecma_related {
+          if let Some(EcmaRelated { ast, symbols, .. }) = ecma_related {
             let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx()));
             module.set_ecma_ast_idx(ast_idx);
-            self.symbol_ref_db.store_local_db(module_idx, ast_symbol);
+            self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
           self.remaining -= 1;

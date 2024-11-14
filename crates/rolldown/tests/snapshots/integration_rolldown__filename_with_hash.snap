@@ -4393,6 +4393,7 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DOQUAn8i.js
 - assets/foo-D91Zmg_q.txt
+- main-DOQUAn8i.js.map
 
 # tests/rolldown/function/module_types/base64/binary
 

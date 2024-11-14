@@ -450,6 +450,8 @@ export interface BindingTreeshake {
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
   environmentConsumer: string
+  external: true | string[]
+  noExternal: true | string[]
   runtime: string
 }
 
@@ -460,6 +462,7 @@ export interface BindingViteResolvePluginResolveOptions {
   root: string
   mainFields: Array<string>
   conditions: Array<string>
+  externalConditions: Array<string>
   extensions: Array<string>
   tryIndex: boolean
   tryPrefix?: string

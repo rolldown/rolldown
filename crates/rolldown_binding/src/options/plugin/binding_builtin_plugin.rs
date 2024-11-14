@@ -22,6 +22,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 
 use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
+use super::types::binding_limited_boolean::BindingTrueValue;
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
@@ -147,20 +148,37 @@ pub struct BindingBuildImportAnalysisPluginConfig {
 }
 
 #[napi_derive::napi(object)]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
   pub environment_consumer: String,
+  #[serde(with = "EitherDeserializeEnabler")]
+  #[napi(ts_type = "true | string[]")]
+  pub external: napi::Either<BindingTrueValue, Vec<String>>,
+  #[serde(with = "EitherDeserializeEnabler")]
+  #[napi(ts_type = "true | string[]")]
+  pub no_external: napi::Either<BindingTrueValue, Vec<String>>,
 
   pub runtime: String,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
   fn from(value: BindingViteResolvePluginConfig) -> Self {
+    let external = match value.external {
+      napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsExternal::True,
+      napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsExternal::Vec(v),
+    };
+    let no_external = match value.no_external {
+      napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::True,
+      napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::Vec(v),
+    };
+
     Self {
       resolve_options: value.resolve_options.into(),
       environment_consumer: value.environment_consumer,
+      external,
+      no_external,
 
       runtime: value.runtime,
     }
@@ -168,7 +186,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 }
 
 #[napi_derive::napi(object)]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
@@ -179,6 +197,7 @@ pub struct BindingViteResolvePluginResolveOptions {
 
   pub main_fields: Vec<String>,
   pub conditions: Vec<String>,
+  pub external_conditions: Vec<String>,
   pub extensions: Vec<String>,
   pub try_index: bool,
   pub try_prefix: Option<String>,
@@ -195,12 +214,20 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
 
       main_fields: value.main_fields,
       conditions: value.conditions,
+      external_conditions: value.external_conditions,
       extensions: value.extensions,
       try_index: value.try_index,
       try_prefix: value.try_prefix,
       preserve_symlinks: value.preserve_symlinks,
     }
   }
+}
+
+#[derive(Deserialize)]
+#[serde(remote = "napi::bindgen_prelude::Either<BindingTrueValue, Vec<String>>")]
+enum EitherDeserializeEnabler {
+  A(BindingTrueValue),
+  B(Vec<String>),
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {

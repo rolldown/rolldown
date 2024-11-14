@@ -1,7 +1,15 @@
-use std::{path::PathBuf, sync::Arc, vec};
+use std::{fs, path::Path};
 
-use dashmap::DashMap;
-use rolldown_common::PackageJson;
+use rolldown_common::side_effects::HookSideEffects;
+use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
+
+use crate::{
+  package_json_cache::PackageJsonCache,
+  utils::{
+    can_externalize_file, clean_url, get_extension, is_deep_import, normalize_path,
+    BROWSER_EXTERNAL_ID,
+  },
+};
 
 pub struct BaseOptions<'a> {
   pub main_fields: &'a Vec<String>,
@@ -48,8 +56,8 @@ impl From<[bool; RESOLVER_COUNT as usize]> for AdditionalOptions {
 
 #[derive(Debug)]
 pub struct Resolver {
+  base_resolver: oxc_resolver::Resolver,
   resolvers: [oxc_resolver::Resolver; RESOLVER_COUNT as usize],
-  package_json_cache: DashMap<PathBuf, Arc<PackageJson>>,
 }
 
 impl Resolver {
@@ -64,24 +72,23 @@ impl Resolver {
       .try_into()
       .unwrap();
 
-    Self { resolvers, package_json_cache: DashMap::default() }
+    Self { base_resolver, resolvers }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &oxc_resolver::Resolver {
     &self.resolvers[additional_options.as_u8() as usize]
   }
 
-  pub fn cached_package_json(&self, oxc_pkg_json: &oxc_resolver::PackageJson) -> Arc<PackageJson> {
-    if let Some(v) = self.package_json_cache.get(&oxc_pkg_json.realpath) {
-      Arc::clone(v.value())
-    } else {
-      let pkg_json = Arc::new(
-        PackageJson::new(oxc_pkg_json.path.clone())
-          .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
-      );
-      self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
-      pkg_json
-    }
+  pub fn get_for_external(
+    &self,
+    base_options: &BaseOptions,
+    external_conditions: &Vec<String>,
+  ) -> oxc_resolver::Resolver {
+    // TODO
+    self.base_resolver.clone_with_options(get_resolve_options(
+      &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
+      AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
+    ))
   }
 }
 
@@ -166,4 +173,83 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
   let mut ret = [false; N];
   ret.iter_mut().enumerate().for_each(|(i, v)| *v = n & 1 << i != 0);
   ret
+}
+
+pub fn normalize_oxc_resolver_result(
+  package_json_cache: &PackageJsonCache,
+  result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
+) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
+  match result {
+    Ok(result) => {
+      let raw_path = result.full_path().to_str().unwrap().to_string();
+      let path = raw_path.strip_prefix("\\\\?\\").unwrap_or(&raw_path);
+      let path = normalize_path(path);
+
+      let side_effects = result
+        .package_json()
+        .and_then(|pkg_json| {
+          package_json_cache.cached_package_json(pkg_json).check_side_effects_for(&raw_path)
+        })
+        .map(
+          |side_effects| if side_effects { HookSideEffects::True } else { HookSideEffects::False },
+        );
+      Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
+    }
+    Err(oxc_resolver::ResolveError::NotFound(_id)) => {
+      // TODO
+      Ok(None)
+    }
+    Err(oxc_resolver::ResolveError::Ignored(_)) => {
+      Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.to_string(), ..Default::default() }))
+    }
+    Err(err) => Err(err.to_owned()),
+  }
+}
+
+pub fn resolve_bare_import(
+  specifier: &str,
+  importer: Option<&str>,
+  resolver: &oxc_resolver::Resolver,
+  package_json_cache: &PackageJsonCache,
+  root: &str,
+  external: bool,
+) -> HookResolveIdReturn {
+  let base_dir = if let Some(importer) = importer {
+    let imp = Path::new(importer);
+    if imp.is_absolute()
+      && (importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false))
+    {
+      imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
+    } else {
+      root
+    }
+  } else {
+    root
+  };
+
+  let oxc_resolved_result = resolver.resolve(base_dir, specifier);
+  let resolved = normalize_oxc_resolver_result(package_json_cache, &oxc_resolved_result)?;
+  if let Some(mut resolved) = resolved {
+    if !external || !can_externalize_file(&resolved.id) {
+      return Ok(Some(resolved));
+    }
+
+    let id = specifier;
+    let mut resolved_id = id;
+    if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
+      if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
+        let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
+        if !has_exports_field {
+          if let Some(index) = resolved.id.find(id) {
+            resolved_id = &resolved.id[index..];
+          }
+        }
+      }
+    }
+    resolved.id = resolved_id.to_string();
+    resolved.external = Some(true);
+
+    return Ok(Some(resolved));
+  }
+  Ok(None)
 }

@@ -142,7 +142,8 @@ export declare enum BindingBuiltinPluginName {
   AliasPlugin = 8,
   JsonPlugin = 9,
   BuildImportAnalysisPlugin = 10,
-  ReplacePlugin = 11
+  ReplacePlugin = 11,
+  ViteResolvePlugin = 12
 }
 
 export interface BindingEmittedAsset {
@@ -444,6 +445,28 @@ export interface BindingTransformPluginConfig {
 
 export interface BindingTreeshake {
   moduleSideEffects: boolean | BindingModuleSideEffectsRule[]
+}
+
+export interface BindingViteResolvePluginConfig {
+  resolveOptions: BindingViteResolvePluginResolveOptions
+  environmentConsumer: string
+  external: true | string[]
+  noExternal: true | string[]
+  runtime: string
+}
+
+export interface BindingViteResolvePluginResolveOptions {
+  isProduction: boolean
+  asSrc: boolean
+  preferRelative: boolean
+  root: string
+  mainFields: Array<string>
+  conditions: Array<string>
+  externalConditions: Array<string>
+  extensions: Array<string>
+  tryIndex: boolean
+  tryPrefix?: string
+  preserveSymlinks: boolean
 }
 
 export declare enum BindingWatcherEvent {

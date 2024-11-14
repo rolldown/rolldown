@@ -1,0 +1,15 @@
+[package]
+edition = "2021"
+license = "MIT"
+name    = "rolldown_plugin_vite_resolve"
+version = "0.1.0"
+
+[lib]
+doctest = false
+
+[dependencies]
+cow-utils       = { workspace = true }
+dashmap         = { workspace = true }
+oxc_resolver    = { workspace = true, features = ["package_json_raw_json_api"] }
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }

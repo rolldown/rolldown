@@ -2590,6 +2590,7 @@ dependencies = [
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_replace",
  "rolldown_plugin_transform",
+ "rolldown_plugin_vite_resolve",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",
  "rolldown_sourcemap",
@@ -2831,6 +2832,17 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_resolve"
+version = "0.1.0"
+dependencies = [
+ "cow-utils",
+ "dashmap 6.1.0",
+ "oxc_resolver",
+ "rolldown_common",
+ "rolldown_plugin",
 ]
 
 [[package]]

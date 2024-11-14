@@ -5201,6 +5201,12 @@ snapshot_kind: text
 - main-!~{000}~.js => main-CD6yVfjQ.js
 - lib-!~{001}~.js => lib-Bb_UTIhh.js
 
+# tests/rolldown/tree_shaking/dynamic_import_eval
+
+- main-!~{000}~.js => main-C6arPjYg.js
+- lib-!~{001}~.js => lib-ppoa65lg.js
+- lib2-!~{003}~.js => lib2-ol3_aPb8.js
+
 # tests/rolldown/tree_shaking/dynamic_import_then
 
 - main-!~{000}~.js => main-DPq_p8ej.js

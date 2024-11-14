@@ -1,8 +1,12 @@
 use std::{borrow::Cow, fs, path::Path};
 
-use crate::resolver::{self, AdditionalOptions, Resolver};
+use crate::{
+  resolver::{self, AdditionalOptions, Resolver},
+  utils::{
+    clean_url, get_extension, is_builtin, is_regex_w_character_class, is_windows_drive_path,
+  },
+};
 use cow_utils::CowUtils;
-use oxc_resolver::NODEJS_BUILTINS;
 use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -13,10 +17,6 @@ const BROWSER_EXTERNAL_ID: &str = "__vite-browser-external";
 const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
 const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
-
-const NODE_BUILTIN_NAMESPACE: &str = "node:";
-const NPM_BUILTIN_NAMESPACE: &str = "npm:";
-const BUN_BUILTIN_NAMESPACE: &str = "bun:";
 
 #[derive(Debug)]
 pub struct ViteResolveOptions {
@@ -295,11 +295,6 @@ fn is_external_url(id: &str) -> bool {
   }
 }
 
-fn is_windows_drive_path(id: &str) -> bool {
-  let id_bytes = id.as_bytes();
-  id_bytes.len() >= 2 && id_bytes[0].is_ascii_alphabetic() && id_bytes[1] == b':'
-}
-
 // bareImportRE.test(id)
 fn is_bare_import(id: &str) -> bool {
   if is_windows_drive_path(id) {
@@ -317,11 +312,6 @@ fn is_deep_import(id: &str) -> bool {
   } else {
     id[1..].contains('/')
   }
-}
-
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Character_class_escape#w
-fn is_regex_w_character_class(c: char) -> bool {
-  c.is_ascii_alphanumeric() || c == '_'
 }
 
 fn is_from_ts_importer(importer: Option<&str>) -> bool {
@@ -343,10 +333,6 @@ fn has_suffix(s: &str, suffix: &[&str]) -> bool {
   } else {
     false
   }
-}
-
-fn clean_url(url: &str) -> &str {
-  url.find(['?', '#']).map(|pos| (&url[..pos])).unwrap_or(url)
 }
 
 fn normalize_oxc_resolver_result(
@@ -378,22 +364,4 @@ fn normalize_oxc_resolver_result(
     }
     Err(err) => Err(err.to_owned()),
   }
-}
-
-fn is_builtin(id: &str, runtime: &str) -> bool {
-  if runtime == "deno" && id.starts_with(NPM_BUILTIN_NAMESPACE) {
-    return true;
-  }
-  if runtime == "bun" && id.starts_with(BUN_BUILTIN_NAMESPACE) {
-    return true;
-  }
-  is_node_builtin(id)
-}
-
-fn is_node_builtin(id: &str) -> bool {
-  id.starts_with(NODE_BUILTIN_NAMESPACE) || NODEJS_BUILTINS.binary_search(&id).is_ok()
-}
-
-fn get_extension(id: &str) -> &str {
-  id.rsplit_once('.').map_or("", |(_, ext)| ext)
 }

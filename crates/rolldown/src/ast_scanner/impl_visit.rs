@@ -6,7 +6,9 @@ use oxc::{
   },
   span::{GetSpan, Span},
 };
-use rolldown_common::{ImportKind, ImportRecordMeta};
+use rolldown_common::{
+  dynamic_import_usage::DynamicImportExportsUsage, ImportKind, ImportRecordMeta,
+};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
@@ -53,6 +55,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
+    if self.result.has_eval {
+      // if there exists `eval` in current module, assume all dynamic import are completely used;
+      for usage in self.result.dynamic_import_rec_exports_usage.values_mut() {
+        *usage = DynamicImportExportsUsage::Complete;
+      }
+    }
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
@@ -118,8 +126,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
       }
     }
-    _ = self.try_diagnostic_forbid_const_assign(ident);
-    _ = self.update_dynamic_import_binding_usage_info(ident);
+    self.try_diagnostic_forbid_const_assign(ident);
+    self.update_dynamic_import_binding_usage_info(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {

@@ -16,12 +16,11 @@ pub fn render_chunk_exports(
   let GenerateContext { chunk, link_output, options, .. } = ctx;
   let export_items = get_export_items(chunk, link_output);
 
-  if export_items.is_empty() {
-    return None;
-  }
-
   match options.format {
     OutputFormat::Esm => {
+      if export_items.is_empty() {
+        return None;
+      }
       let mut s = String::new();
       let rendered_items = export_items
         .into_iter()
@@ -119,6 +118,24 @@ pub fn render_chunk_exports(
               .collect::<Vec<_>>();
             s.push_str(&rendered_items.join("\n"));
           }
+
+          let meta = &ctx.link_output.metas[module.idx];
+          meta.star_exports_from_external_modules.iter().for_each(|rec_idx| {
+          let rec = &module.ecma_view.import_records[*rec_idx];
+          let external = &ctx.link_output.module_table.modules[rec.resolved_module].as_external().expect("Should be external module here");
+          let binding_ref_name =
+          &ctx.chunk.canonical_names[&external.name_token_for_external_binding];
+            let import_stmt =
+"Object.keys($NAME).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return $NAME[k]; }
+  });
+});\n".replace("$NAME", binding_ref_name);
+
+          s.push_str(&format!("\nvar {} = require(\"{}\");\n", binding_ref_name, &external.name));
+          s.push_str(&import_stmt);
+        });
         }
         ChunkKind::Common => {
           export_items.into_iter().for_each(|(exported_name, export_ref)| {
@@ -151,6 +168,9 @@ pub fn render_chunk_exports(
         }
       }
 
+      if s.is_empty() {
+        return None;
+      }
       Some(s)
     }
     OutputFormat::App => None,

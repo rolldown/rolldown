@@ -26,6 +26,23 @@ pub fn deconflict_chunk_symbols(
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.name_token_for_external_binding);
       });
+
+    match chunk.kind {
+      ChunkKind::EntryPoint { module, .. } => {
+        let entry_module =
+          link_output.module_table.modules[module].as_normal().expect("should be normal module");
+        link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
+          |rec_idx| {
+            let rec = &entry_module.ecma_view.import_records[*rec_idx];
+            let external_module = &link_output.module_table.modules[rec.resolved_module]
+              .as_external()
+              .expect("Should be external module here");
+            renamer.add_symbol_in_root_scope(external_module.name_token_for_external_binding);
+          },
+        );
+      }
+      ChunkKind::Common => {}
+    }
   }
 
   chunk
@@ -62,10 +79,6 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         renamer.add_symbol_in_root_scope(*symbol_ref);
       });
-      meta
-        .require_bindings_for_star_exports
-        .iter()
-        .for_each(|(_module, binding_ref)| renamer.add_symbol_in_root_scope(*binding_ref));
     }
     ChunkKind::Common => {}
   }

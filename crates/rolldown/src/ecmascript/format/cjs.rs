@@ -61,22 +61,6 @@ pub fn render_cjs<'code>(
             source_joiner.append_source(marker.to_string());
           }
         }
-        let meta = &ctx.link_output.metas[entry_id];
-        meta.require_bindings_for_star_exports.iter().for_each(|(importee_idx, binding_ref)| {
-          let importee = &ctx.link_output.module_table.modules[*importee_idx];
-          let binding_ref_name =
-            ctx.link_output.symbol_db.canonical_name_for(*binding_ref, &ctx.chunk.canonical_names);
-            let import_stmt =
-"Object.keys($NAME).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return $NAME[k]; }
-  });
-});".replace("$NAME", binding_ref_name);
-
-          source_joiner.append_source(format!("var {} = require(\"{}\");", binding_ref_name,&importee.stable_id()));
-          source_joiner.append_source(import_stmt);
-        });
         Some(export_mode)
       } else {
         // There is no need for a non-ESM export kind for determining the export mode.

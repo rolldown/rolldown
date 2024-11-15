@@ -8,21 +8,24 @@ snapshot_kind: text
 
 ```js
 "use strict";
-var node_path$1 = require("node:path");
-Object.keys(node_path$1).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_path$1[k]; }
-  });
-});
-var node_fs$1 = require("node:fs");
-Object.keys(node_fs$1).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs$1[k]; }
-  });
-});
 require("node:fs");
 require("node:path");
+
+
+var node_fs = require("node:fs");
+Object.keys(node_fs).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return node_fs[k]; }
+  });
+});
+
+var node_path = require("node:path");
+Object.keys(node_path).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return node_path[k]; }
+  });
+});
 
 ```

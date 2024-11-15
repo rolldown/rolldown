@@ -6,7 +6,8 @@ export type BindingStringOrRegex = string | RegExp
 export declare class BindingCallableBuiltinPlugin {
   name: string
   constructor(plugin: BindingBuiltinPlugin)
-  resolveId(id: string, importer?: string | undefined | null): Promise<BindingHookResolveIdReturn | null>
+  resolveId(id: string, importer?: string | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
+  load(id: string): Promise<BindingHookJsLoadOutput | null>
 }
 
 export declare class BindingLog {
@@ -174,6 +175,18 @@ export interface BindingGlobImportPluginConfig {
   restoreQueryExtension?: boolean
 }
 
+export interface BindingHookJsLoadOutput {
+  code: string
+  map?: string
+  sideEffects: boolean | 'no-treeshake'
+}
+
+export interface BindingHookJsResolveIdOutput {
+  id: string
+  external?: boolean
+  sideEffects: boolean | 'no-treeshake'
+}
+
 export interface BindingHookLoadOutput {
   code: string
   sideEffects?: BindingHookSideEffects
@@ -196,12 +209,6 @@ export interface BindingHookResolveIdOutput {
   id: string
   external?: boolean
   sideEffects?: BindingHookSideEffects
-}
-
-export interface BindingHookResolveIdReturn {
-  id: string
-  external?: boolean
-  sideEffects?: boolean | string
 }
 
 export declare enum BindingHookSideEffects {

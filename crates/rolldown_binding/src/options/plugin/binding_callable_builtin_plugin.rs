@@ -3,7 +3,7 @@ use std::sync::Arc;
 use napi::{bindgen_prelude::FromNapiValue, Either};
 use napi_derive::napi;
 use rolldown_common::side_effects;
-use rolldown_plugin::{HookResolveIdArgs, HookResolveIdOutput};
+use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput};
 use rolldown_plugin_vite_resolve::{CallablePluginAsyncTrait, ViteResolvePlugin};
 
 use super::binding_builtin_plugin::{
@@ -61,7 +61,7 @@ impl BindingCallableBuiltinPlugin {
     &self,
     id: String,
     importer: Option<String>,
-  ) -> napi::Result<Option<BindingHookResolveIdReturn>> {
+  ) -> napi::Result<Option<BindingHookJsResolveIdOutput>> {
     Ok(
       self
         .inner
@@ -76,25 +76,55 @@ impl BindingCallableBuiltinPlugin {
         .map(Into::into),
     )
   }
+
+  #[napi]
+  pub async fn load(&self, id: String) -> napi::Result<Option<BindingHookJsLoadOutput>> {
+    Ok(self.inner.load(&HookLoadArgs { id: &id }).await?.map(Into::into))
+  }
 }
 
 #[napi(object)]
-pub struct BindingHookResolveIdReturn {
+pub struct BindingHookJsResolveIdOutput {
   pub id: String,
   pub external: Option<bool>,
-  pub side_effects: Option<Either<bool, String>>,
+  #[napi(ts_type = "boolean | 'no-treeshake'")]
+  pub side_effects: BindingJsSideEffects,
 }
 
-impl From<HookResolveIdOutput> for BindingHookResolveIdReturn {
+impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
   fn from(value: HookResolveIdOutput) -> Self {
     Self {
       id: value.id,
       external: value.external,
-      side_effects: value.side_effects.map(|side_effects| match side_effects {
-        side_effects::HookSideEffects::False => Either::A(false),
-        side_effects::HookSideEffects::True => Either::A(true),
-        side_effects::HookSideEffects::NoTreeshake => Either::B("no-treeshake".to_string()),
-      }),
+      side_effects: get_side_effects_binding(value.side_effects),
     }
   }
+}
+
+#[napi(object)]
+pub struct BindingHookJsLoadOutput {
+  pub code: String,
+  pub map: Option<String>,
+  #[napi(ts_type = "boolean | 'no-treeshake'")]
+  pub side_effects: BindingJsSideEffects,
+}
+
+impl From<HookLoadOutput> for BindingHookJsLoadOutput {
+  fn from(value: HookLoadOutput) -> Self {
+    Self {
+      code: value.code,
+      map: value.map.map(|map| map.to_json_string()),
+      side_effects: get_side_effects_binding(value.side_effects),
+    }
+  }
+}
+
+type BindingJsSideEffects = Option<Either<bool, String>>;
+
+fn get_side_effects_binding(value: Option<side_effects::HookSideEffects>) -> BindingJsSideEffects {
+  value.map(|side_effects| match side_effects {
+    side_effects::HookSideEffects::False => Either::A(false),
+    side_effects::HookSideEffects::True => Either::A(true),
+    side_effects::HookSideEffects::NoTreeshake => Either::B("no-treeshake".to_string()),
+  })
 }

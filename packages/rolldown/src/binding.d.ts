@@ -472,6 +472,8 @@ export interface BindingViteResolvePluginConfig {
   environmentConsumer: string
   external: true | string[]
   noExternal: true | string[]
+  finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
+  finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   runtime: string
 }
 

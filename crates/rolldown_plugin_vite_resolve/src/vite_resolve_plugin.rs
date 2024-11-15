@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::Path, sync::Arc};
+use std::{borrow::Cow, future::Future, path::Path, pin::Pin, sync::Arc};
 
 use crate::{
   external::{self, ExternalDecider, ExternalDeciderOptions},
@@ -9,6 +9,7 @@ use crate::{
   utils::{is_bare_import, is_builtin, is_windows_drive_path, normalize_path, BROWSER_EXTERNAL_ID},
   CallablePlugin,
 };
+use derive_more::Debug;
 use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -25,9 +26,24 @@ pub struct ViteResolveOptions {
   pub environment_consumer: String,
   pub external: external::ResolveOptionsExternal,
   pub no_external: external::ResolveOptionsNoExternal,
+  #[debug(skip)]
+  pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
+  #[debug(skip)]
+  pub finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
 
   pub runtime: String,
 }
+pub type FinalizeBareSpecifierCallback = dyn (Fn(
+    &str,
+    &str,
+    Option<&str>,
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  + Send
+  + Sync;
+
+pub type FinalizeOtherSpecifiersCallback = dyn (Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  + Send
+  + Sync;
 
 #[derive(Debug)]
 pub struct ViteResolveResolveOptions {
@@ -49,6 +65,10 @@ pub struct ViteResolveResolveOptions {
 pub struct ViteResolvePlugin {
   resolve_options: ViteResolveResolveOptions,
   environment_consumer: String,
+  #[debug(skip)]
+  pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
+  #[debug(skip)]
+  pub finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
 
   runtime: String,
 
@@ -75,6 +95,8 @@ impl ViteResolvePlugin {
 
     Self {
       environment_consumer: options.environment_consumer,
+      finalize_bare_specifier: options.finalize_bare_specifier,
+      finalize_other_specifiers: options.finalize_other_specifiers,
       runtime: options.runtime.clone(),
       package_json_cache: package_json_cache.clone(),
       external_decider: ExternalDecider::new(
@@ -106,7 +128,6 @@ impl ViteResolvePlugin {
     }
 
     if args.specifier.starts_with(BROWSER_EXTERNAL_ID) {
-      // TODO(sapphi-red): implement for dev
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.to_string(),
         ..Default::default()
@@ -114,8 +135,12 @@ impl ViteResolvePlugin {
     }
 
     if self.resolve_options.as_src && args.specifier.starts_with(FS_PREFIX) {
-      // TODO(sapphi-red): implement for dev
-      let res = fs_path_from_id(args.specifier);
+      let mut res = fs_path_from_id(args.specifier);
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
+        if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
+          res = finalized.into();
+        }
+      }
       return Ok(Some(HookResolveIdOutput { id: res.to_string(), ..Default::default() }));
     }
 
@@ -124,6 +149,11 @@ impl ViteResolvePlugin {
       let mut res = args.specifier.replace("file://", "");
       if res.starts_with('/') && is_windows_drive_path(&res[1..]) {
         res.remove(0);
+      }
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
+        if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
+          res = finalized;
+        }
       }
       return Ok(Some(HookResolveIdOutput { id: res, ..Default::default() }));
     }
@@ -158,7 +188,14 @@ impl ViteResolvePlugin {
         &self.resolve_options.root,
         external,
       )?;
-      if let Some(result) = result {
+      if let Some(mut result) = result {
+        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
+          let finalized = finalize_bare_specifier(&result.id, args.specifier, args.importer)
+            .await?
+            .unwrap_or(result.id);
+          result.id = finalized;
+        }
+
         return Ok(Some(result));
       }
 
@@ -196,8 +233,12 @@ impl ViteResolvePlugin {
       &self.package_json_cache,
       &resolver.resolve(base_dir, args.specifier),
     )?;
-    if let Some(resolved) = resolved {
-      // TODO(sapphi-red): call `finalize_other_specifiers`
+    if let Some(mut resolved) = resolved {
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
+        if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
+          resolved.id = finalized;
+        }
+      }
       return Ok(Some(resolved));
     }
 

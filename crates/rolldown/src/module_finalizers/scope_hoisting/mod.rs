@@ -15,7 +15,6 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
-use rolldown_std_utils::OptionExt;
 use rolldown_utils::{ecmascript::is_validate_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
@@ -390,18 +389,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
   }
 
-  /// Check if it is exact `new URL('path', import.meta.url)` pattern
-  fn is_new_url_with_string_literal_and_import_meta_url(
+  pub fn handle_new_url_with_string_literal_and_import_meta_url(
     &self,
-    expr: &ast::Expression<'ast>,
-  ) -> bool {
+    expr: &mut ast::Expression<'ast>,
+  ) -> Option<()> {
     let ast::Expression::NewExpression(expr) = expr else {
-      return false;
+      return None;
     };
     let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
 
     if !is_callee_global_url {
-      return false;
+      return None;
     }
 
     let is_second_arg_import_meta_url = expr
@@ -410,53 +408,37 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .map_or(false, |arg| arg.as_expression().is_some_and(ExpressionExt::is_import_meta_url));
 
     if !is_second_arg_import_meta_url {
-      return false;
+      return None;
     }
 
-    let is_first_arg_string_literal = expr
-      .arguments
-      .first()
-      .map_or(false, |arg| arg.as_expression().is_some_and(ast::Expression::is_string_literal));
+    let span = expr.span();
+    let first_arg_string_literal =
+      expr.arguments.first_mut().and_then(|arg| arg.as_expression_mut()).and_then(
+        |item| match item {
+          ast::Expression::StringLiteral(lit) => Some(lit),
+          _ => None,
+        },
+      )?;
 
-    is_first_arg_string_literal
-  }
+    let &rec_idx = self.ctx.module.new_url_references.get(&span)?;
+    let rec = &self.ctx.module.import_records[rec_idx];
 
-  pub fn handle_new_url_with_string_literal_and_import_meta_url(
-    &self,
-    expr: &mut ast::Expression<'ast>,
-  ) {
-    if self.is_new_url_with_string_literal_and_import_meta_url(expr) {
-      let span = expr.span();
-      if let Some(&rec_idx) = self.ctx.module.new_url_references.get(&span) {
-        let rec = &self.ctx.module.import_records[rec_idx];
-        let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else { return };
-        let Some(chunk_idx) = &self.ctx.chunk_graph.module_to_chunk[importee.idx] else {
-          return;
-        };
-        let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
-        let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
-        let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
-          .expect("This module should be in a chunk");
-        let current_chunk_filename = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
-          .absolute_preliminary_filename
-          .as_ref()
-          .expect("This chunk should have a filename");
-        match expr {
-          ast::Expression::NewExpression(new_expr) => {
-            if let Some(ast::Expression::StringLiteral(string_lit)) =
-              new_expr.arguments.get_mut(0).unpack().as_expression_mut()
-            {
-              let importer_dir = current_chunk_filename.as_path().parent().unwrap();
-              let importee_filename = asset_filename;
-              let import_path =
-                importee_filename.relative(importer_dir).as_path().expect_to_slash();
+    let importee = &self.ctx.modules[rec.resolved_module].as_normal()?;
+    let chunk_idx = &self.ctx.chunk_graph.module_to_chunk[importee.idx]?;
+    let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
+    let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
+    let cur_chunk_idx =
+      self.ctx.chunk_graph.module_to_chunk[self.ctx.id].expect("This module should be in a chunk");
+    let current_chunk_filename = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("This chunk should have a filename");
 
-              string_lit.value = self.snippet.atom(&import_path);
-            }
-          }
-          _ => {}
-        }
-      }
-    }
+    let importer_dir = current_chunk_filename.as_path().parent().unwrap();
+    let importee_filename = asset_filename;
+    let import_path = importee_filename.relative(importer_dir).as_path().expect_to_slash();
+
+    first_arg_string_literal.value = self.snippet.atom(&import_path);
+    None
   }
 }

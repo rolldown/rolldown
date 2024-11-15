@@ -15,7 +15,6 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
-use rolldown_std_utils::OptionExt;
 use rolldown_utils::{ecmascript::is_validate_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 

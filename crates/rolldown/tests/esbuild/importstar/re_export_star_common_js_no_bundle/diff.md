@@ -11,11 +11,11 @@ __reExport(entry_exports, require("foo"), module.exports);
 ### rolldown
 ```js
 "use strict";
-var foo = require("foo");
-Object.keys(foo).forEach(function (k) {
+var foo$1 = require("foo");
+Object.keys(foo$1).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return foo[k]; }
+    get: function () { return foo$1[k]; }
   });
 });
 require("foo");
@@ -30,12 +30,12 @@ require("foo");
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);
 -__reExport(entry_exports, require("foo"), module.exports);
-+var foo = require("foo");
-+Object.keys(foo).forEach(function (k) {
++var foo$1 = require("foo");
++Object.keys(foo$1).forEach(function (k) {
 +    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 +        enumerable: true,
 +        get: function () {
-+            return foo[k];
++            return foo$1[k];
 +        }
 +    });
 +});

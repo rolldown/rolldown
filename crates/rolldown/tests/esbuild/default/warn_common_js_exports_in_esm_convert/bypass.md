@@ -93,12 +93,12 @@ module.exports.bar = import_bar.foo;
 ### rolldown
 ```js
 
-const { foo } = __toESM(require("bar"));
+const bar = __toESM(require("bar"));
 
 //#region import-in-cjs.js
-exports.foo = foo;
-module.exports = foo;
-module.exports.bar = foo;
+exports.foo = bar.foo;
+module.exports = bar.foo;
+module.exports.bar = bar.foo;
 
 //#endregion
 ```
@@ -112,9 +112,9 @@ module.exports.bar = foo;
 -exports.foo = import_bar.foo;
 -module.exports = import_bar.foo;
 -module.exports.bar = import_bar.foo;
-+var {foo} = __toESM(require("bar"));
-+exports.foo = foo;
-+module.exports = foo;
-+module.exports.bar = foo;
++var bar = __toESM(require("bar"));
++exports.foo = bar.foo;
++module.exports = bar.foo;
++module.exports.bar = bar.foo;
 
 ```

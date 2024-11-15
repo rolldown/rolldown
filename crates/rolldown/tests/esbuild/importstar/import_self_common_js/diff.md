@@ -17,13 +17,13 @@ module.exports = require_entry();
 ### rolldown
 ```js
 
-const { default: assert } = __toESM(require("node:assert"));
+const node_assert = __toESM(require("node:assert"));
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
-	assert.equal(import_entry.foo, undefined);
+	node_assert.default.equal(import_entry.foo, undefined);
 } });
 
 //#endregion
@@ -36,13 +36,13 @@ export default require_entry();
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,8 +1,9 @@
-+var {default: assert} = __toESM(require("node:assert"));
++var node_assert = __toESM(require("node:assert"));
  var require_entry = __commonJS({
      "entry.js"(exports) {
          var import_entry = __toESM(require_entry());
          exports.foo = 123;
 -        console.log(import_entry.foo);
-+        assert.equal(import_entry.foo, undefined);
++        node_assert.default.equal(import_entry.foo, undefined);
      }
  });
 -module.exports = require_entry();

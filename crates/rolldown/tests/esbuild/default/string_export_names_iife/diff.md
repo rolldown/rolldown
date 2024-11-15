@@ -21,16 +21,17 @@ var global;
 (function(exports, ___foo, ___foo) {
 
 "use strict";
-const all the stuff = ___foo;
-const { some import: someImport } = ___foo;
+
+___foo = __toESM(___foo);
+___foo = __toESM(___foo);
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
   get: function () {
-    return all the stuff;
+    return ___foo;
   }
 });
-exports["some export"] = someImport
+exports["some export"] = ___foo["some import"]
 return exports;
 })({}, ___foo, ___foo);
 ```
@@ -39,7 +40,7 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,15 @@
+@@ -1,11 +1,16 @@
 -var global;
 -(global ||= {}).name = (() => {
 -    var entry_exports = {};
@@ -54,16 +55,17 @@ return exports;
 +(function(exports, ___foo, ___foo) {
 +
 +"use strict";
-+const all the stuff = ___foo;
-+const { some import: someImport } = ___foo;
++
++___foo = __toESM(___foo);
++___foo = __toESM(___foo);
 +
 +Object.defineProperty(exports, 'all the stuff', {
 +  enumerable: true,
 +  get: function () {
-+    return all the stuff;
++    return ___foo;
 +  }
 +});
-+exports["some export"] = someImport
++exports["some export"] = ___foo["some import"]
 +return exports;
 +})({}, ___foo, ___foo);
 \ No newline at end of file

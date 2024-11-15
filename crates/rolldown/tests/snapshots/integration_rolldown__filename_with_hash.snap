@@ -5136,6 +5136,13 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DNNvtmmD.js
 
+# tests/rolldown/topics/new_url/nested_dirs
+
+- main-!~{000}~.js => main-dActflev.js
+- chunks/dep-!~{004}~.js => chunks/dep-CI3j_nds.js
+- chunks/foo-!~{001}~.js => chunks/foo-8lWEkhwL.js
+- assets/foo-BEmL3U_T.txt
+
 # tests/rolldown/topics/new_url/opt-out
 
 - main-!~{000}~.js => main-CkBA_0o1.js

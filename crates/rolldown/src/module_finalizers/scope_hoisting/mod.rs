@@ -16,7 +16,8 @@ mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
-use rolldown_utils::ecmascript::is_validate_identifier_name;
+use rolldown_utils::{ecmascript::is_validate_identifier_name, path_ext::PathExt};
+use sugar_path::SugarPath;
 
 mod rename;
 
@@ -433,13 +434,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return;
         };
         let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
-        let asset_filename = &chunk.asset_preliminary_filenames[&importee.idx];
+        let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
+        let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+          .expect("This module should be in a chunk");
+        let current_chunk_filename = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+          .absolute_preliminary_filename
+          .as_ref()
+          .expect("This chunk should have a filename");
         match expr {
           ast::Expression::NewExpression(new_expr) => {
             if let Some(ast::Expression::StringLiteral(string_lit)) =
               new_expr.arguments.get_mut(0).unpack().as_expression_mut()
             {
-              string_lit.value = self.snippet.atom(asset_filename);
+              let importer_dir = current_chunk_filename.as_path().parent().unwrap();
+              let importee_filename = asset_filename;
+              let import_path =
+                importee_filename.relative(importer_dir).as_path().expect_to_slash();
+
+              string_lit.value = self.snippet.atom(&import_path);
             }
           }
           _ => {}

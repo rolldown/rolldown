@@ -222,13 +222,14 @@ export function makeBuiltinPluginCallable(plugin: BuiltinPlugin) {
   } = {
     _original: callablePlugin,
   }
-  for (const [key, value] of Object.entries(callablePlugin)) {
+  for (const key in callablePlugin) {
     if (key === 'name') {
-      wrappedPlugin[key] = value
+      wrappedPlugin[key] = callablePlugin[key]
     } else {
       // @ts-expect-error
       wrappedPlugin[key] = function (...args) {
-        return value(...args)
+        // @ts-expect-error
+        return callablePlugin[key](...args)
       }
     }
   }

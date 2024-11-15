@@ -25,9 +25,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
+    let Some(first_arg_string_literal) = expr
+      .arguments
+      .first()
+      .and_then(|arg| arg.as_expression().and_then(|expr| expr.as_string_literal()))
+    else {
+      return;
+    };
+
     let has_leading_ignore_comment = self
       .comments
-      .binary_search_by(|c| c.attached_to.cmp(&expr.span.start))
+      .binary_search_by(|c| c.attached_to.cmp(&first_arg_string_literal.span.start))
       .ok()
       .and_then(|i| {
         let comment = &self.comments[i];
@@ -38,14 +46,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if has_leading_ignore_comment {
       return;
     }
-
-    let Some(first_arg_string_literal) = expr
-      .arguments
-      .first()
-      .and_then(|arg| arg.as_expression().and_then(|expr| expr.as_string_literal()))
-    else {
-      return;
-    };
     let path = &first_arg_string_literal.value;
 
     if path.starts_with("data:") {

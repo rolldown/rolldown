@@ -9,7 +9,11 @@ snapshot_kind: text
 ```js
 
 //#region main.js
-new URL("path-should-not-exists", import.meta.url);
+new URL(
+	/* @rolldown-ignore */
+	"path-should-not-exists",
+	import.meta.url
+);
 
 //#endregion
 ```

@@ -16,6 +16,15 @@ var mod = (() => {
 
 "use strict";
 
+
+var foo = require("foo");
+Object.keys(foo).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return foo[k]; }
+  });
+});
+
 })(foo);
 ```
 ### diff
@@ -23,12 +32,22 @@ var mod = (() => {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,1 @@
+@@ -1,5 +1,11 @@
 -var mod = (() => {
 -    var entry_exports = {};
 -    __reExport(entry_exports, require("foo"));
 -    return __toCommonJS(entry_exports);
 -})();
-+(function (foo) {})(foo);
++(function (foo) {
++    var foo = require("foo");
++    Object.keys(foo).forEach(function (k) {
++        if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
++            enumerable: true,
++            get: function () {
++                return foo[k];
++            }
++        });
++    });
++})(foo);
 
 ```

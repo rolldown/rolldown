@@ -29,13 +29,6 @@ x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
 ### rolldown
 ```js
 "use strict";
-var c_nowrap$1 = require("c_nowrap");
-Object.keys(c_nowrap$1).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return c_nowrap$1[k]; }
-  });
-});
 
 require("a_nowrap");
 const b_nowrap = __toESM(require("b_nowrap"));
@@ -60,6 +53,15 @@ j_WRAP.x``;
 x = import("k_WRAP");
 
 //#endregion
+
+var c_nowrap = require("c_nowrap");
+Object.keys(c_nowrap).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return c_nowrap[k]; }
+  });
+});
+
 ```
 ### diff
 ```diff
@@ -88,15 +90,6 @@ x = import("k_WRAP");
 -i.x();
 -(j.x)``;
 -x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
-+var c_nowrap$1 = require("c_nowrap");
-+Object.keys(c_nowrap$1).forEach(function (k) {
-+    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-+        enumerable: true,
-+        get: function () {
-+            return c_nowrap$1[k];
-+        }
-+    });
-+});
 +require("a_nowrap");
 +var b_nowrap = __toESM(require("b_nowrap"));
 +require("c_nowrap");
@@ -116,5 +109,14 @@ x = import("k_WRAP");
 +i_WRAP.x();
 +(j_WRAP.x)``;
 +x = import("k_WRAP");
++var c_nowrap = require("c_nowrap");
++Object.keys(c_nowrap).forEach(function (k) {
++    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
++        enumerable: true,
++        get: function () {
++            return c_nowrap[k];
++        }
++    });
++});
 
 ```

@@ -19,13 +19,6 @@ __reExport(inner_exports, require("b"));
 ### rolldown
 ```js
 "use strict";
-var a$1 = require("a");
-Object.keys(a$1).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return a$1[k]; }
-  });
-});
 
 require("a");
 require("b");
@@ -41,6 +34,14 @@ Object.defineProperty(exports, 'inner', {
     return inner_exports;
   }
 });
+var a = require("a");
+Object.keys(a).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return a[k]; }
+  });
+});
+
 ```
 ### diff
 ```diff
@@ -51,15 +52,7 @@ Object.defineProperty(exports, 'inner', {
 -var entry_exports = {};
 -__export(entry_exports, {
 -    inner: () => inner_exports
-+var a$1 = require("a");
-+Object.keys(a$1).forEach(function (k) {
-+    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-+        enumerable: true,
-+        get: function () {
-+            return a$1[k];
-+        }
-+    });
- });
+-});
 -module.exports = __toCommonJS(entry_exports);
 -__reExport(entry_exports, require("a"), module.exports);
 +require("a");
@@ -71,6 +64,15 @@ Object.defineProperty(exports, 'inner', {
 +    get: function () {
 +        return inner_exports;
 +    }
++});
++var a = require("a");
++Object.keys(a).forEach(function (k) {
++    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
++        enumerable: true,
++        get: function () {
++            return a[k];
++        }
++    });
 +});
 
 ```

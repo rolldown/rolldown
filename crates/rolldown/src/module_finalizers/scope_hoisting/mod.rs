@@ -422,22 +422,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) {
     if self.is_new_url_with_string_literal_and_import_meta_url(expr) {
       let span = expr.span();
-      let rec = &self.ctx.module.import_records[self.ctx.module.new_url_references[&span]];
-      let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else { return };
-      let Some(chunk_idx) = &self.ctx.chunk_graph.module_to_chunk[importee.idx] else {
-        return;
-      };
-      let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
-      let asset_filename = &chunk.asset_preliminary_filenames[&importee.idx];
-      match expr {
-        ast::Expression::NewExpression(new_expr) => {
-          if let Some(ast::Expression::StringLiteral(string_lit)) =
-            new_expr.arguments.get_mut(0).unpack().as_expression_mut()
-          {
-            string_lit.value = self.snippet.atom(asset_filename);
+      if let Some(rec_idx) = self.ctx.module.new_url_references.get(&span) {
+        let rec = &self.ctx.module.import_records[*rec_idx];
+        let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else { return };
+        let Some(chunk_idx) = &self.ctx.chunk_graph.module_to_chunk[importee.idx] else {
+          return;
+        };
+        let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
+        let asset_filename = &chunk.asset_preliminary_filenames[&importee.idx];
+        match expr {
+          ast::Expression::NewExpression(new_expr) => {
+            if let Some(ast::Expression::StringLiteral(string_lit)) =
+              new_expr.arguments.get_mut(0).unpack().as_expression_mut()
+            {
+              string_lit.value = self.snippet.atom(asset_filename);
+            }
           }
+          _ => {}
         }
-        _ => {}
       }
     }
   }

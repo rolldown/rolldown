@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region main.js
+const foo = "foo";
+const url = new URL(`./${foo}.txt`, import.meta.url);
+
+//#endregion
+export { url };
+```

@@ -1,6 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
-use rolldown_sourcemap::Source;
+use rolldown_sourcemap::{Source, SourceJoiner};
 
 #[derive(Clone)]
 pub struct RenderedModule {
@@ -19,9 +19,14 @@ impl RenderedModule {
   }
 
   pub fn code(&self) -> Option<String> {
-    self
-      .inner_code
-      .as_ref()
-      .and_then(|sources| sources.get(1).map(|source| source.content().to_string()))
+    self.inner_code.as_ref().and_then(|sources| {
+      let mut joiner = SourceJoiner::default();
+
+      for source in sources.iter() {
+        joiner.append_source(source);
+      }
+
+      Some(joiner.join().0)
+    })
   }
 }

@@ -2,11 +2,14 @@ use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateConte
 use std::borrow::Cow;
 
 use rolldown_common::{
-  Chunk, ChunkKind, EntryPointKind, ExportsKind, IndexModules, NormalizedBundlerOptions,
+  Chunk, ChunkKind, EntryPointKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions,
   OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
-use rolldown_utils::ecmascript::{is_validate_identifier_name, property_access_str};
+use rolldown_utils::{
+  ecmascript::{is_validate_identifier_name, property_access_str},
+  indexmap::FxIndexSet,
+};
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(
@@ -120,9 +123,13 @@ pub fn render_chunk_exports(
           }
 
           let meta = &ctx.link_output.metas[module.idx];
-          meta.star_exports_from_external_modules.iter().for_each(|rec_idx| {
-          let rec = &module.ecma_view.import_records[*rec_idx];
-          let external = &ctx.link_output.module_table.modules[rec.resolved_module].as_external().expect("Should be external module here");
+          let external_modules = meta
+            .star_exports_from_external_modules
+            .iter()
+            .map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
+            .collect::<FxIndexSet<ModuleIdx>>();
+          external_modules.iter().for_each(|idx| {
+          let external = &ctx.link_output.module_table.modules[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =
           &ctx.chunk.canonical_names[&external.name_token_for_external_binding];
             let import_stmt =

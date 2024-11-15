@@ -4729,8 +4729,8 @@ snapshot_kind: text
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-DkXLv1OL.js
-- entry2-!~{001}~.js => entry2-B6vU81Oa.js
+- entry-!~{000}~.js => entry-Ber6gQNm.js
+- entry2-!~{001}~.js => entry2-CXESVBTS.js
 - main-!~{002}~.js => main-BFNcOq71.js
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry

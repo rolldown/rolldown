@@ -19,14 +19,6 @@ Object.keys(node_fs).forEach(function (k) {
   });
 });
 
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
-});
-
 ```
 ## entry2.js
 
@@ -34,14 +26,6 @@ Object.keys(node_fs).forEach(function (k) {
 "use strict";
 require('./main.js');
 
-
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
-});
 
 var node_fs = require("node:fs");
 Object.keys(node_fs).forEach(function (k) {

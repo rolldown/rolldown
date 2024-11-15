@@ -1,6 +1,9 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
-  ast::ast::{self, IdentifierReference, Statement},
+  ast::{
+    ast::{self, IdentifierReference, Statement},
+    Comment,
+  },
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
@@ -24,6 +27,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
+  pub comments: oxc::allocator::Vec<'ast, Comment>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -423,8 +427,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) {
     if self.is_new_url_with_string_literal_and_import_meta_url(expr) {
       let span = expr.span();
-      if let Some(rec_idx) = self.ctx.module.new_url_references.get(&span) {
-        let rec = &self.ctx.module.import_records[*rec_idx];
+      if let Some(&rec_idx) = self.ctx.module.new_url_references.get(&span) {
+        let rec = &self.ctx.module.import_records[rec_idx];
         let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else { return };
         let Some(chunk_idx) = &self.ctx.chunk_graph.module_to_chunk[importee.idx] else {
           return;

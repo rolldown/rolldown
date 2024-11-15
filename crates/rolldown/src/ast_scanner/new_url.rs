@@ -1,5 +1,5 @@
 use oxc::ast::ast::NewExpression;
-use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType};
+use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, ROLLDOWN_IGNORE};
 use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::AstScanner;
@@ -32,6 +32,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     else {
       return;
     };
+
+    let has_leading_ignore_comment = self
+      .comments
+      .binary_search_by(|c| c.attached_to.cmp(&first_arg_string_literal.span.start))
+      .ok()
+      .and_then(|i| {
+        let comment = &self.comments[i];
+        let original_source = &self.source.as_str()[comment.content_span()];
+        original_source.contains(ROLLDOWN_IGNORE).then_some(())
+      })
+      .is_some();
+    if has_leading_ignore_comment {
+      return;
+    }
     let path = &first_arg_string_literal.value;
 
     if path.starts_with("data:") {

@@ -5143,6 +5143,10 @@ snapshot_kind: text
 - chunks/foo-!~{001}~.js => chunks/foo-8lWEkhwL.js
 - assets/foo-BEmL3U_T.txt
 
+# tests/rolldown/topics/new_url/opt-out
+
+- main-!~{000}~.js => main-CPsayYKk.js
+
 # tests/rolldown/topics/new_url/should_prefer_relative
 
 - main-!~{000}~.js => main-DaLi9F1d.js

@@ -706,7 +706,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       return;
     };
 
-    // eliminat class name and transformed it into class expr
+    // eliminate class name and transformed it into class expr
     let Some(id) = class.id.take() else {
       walk_mut::walk_declaration(self, it);
       return;

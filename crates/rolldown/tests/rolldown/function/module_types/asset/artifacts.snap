@@ -19,7 +19,19 @@ var main_default = foo_default;
 
 //#endregion
 export { main_default as default };
+//# sourceMappingURL=main.js.map
 ```
 ## Output Stats
 
 - main.js, is_entry true, is_dynamic_entry false, exports ["default"]
+# Sourcemap Visualizer
+
+```
+- ../foo.txt
+(0:0-0:0) "" --> (2:0-2:18) "\nvar foo_default ="
+(0:0-0:12) "import.meta." --> (2:18-2:43) " \"assets/foo-C-m4uiP6.txt"
+(0:12-0:37) "__ROLLDOWN_ASSET_FILENAME" --> (2:43-6:0) "\";\n\n//#endregion\n//#region main.js"
+- ../main.js
+(0:0-2:15) "import filePath from './foo.txt'\n\nexport default" --> (6:0-6:19) "\nvar main_default ="
+(2:15-2:24) " filePath" --> (6:19-10:33) " foo_default;\n\n//#endregion\nexport { main_default as default };\n//# sourceMappingURL=main.js.map"
+```

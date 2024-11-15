@@ -41,3 +41,13 @@ test('rolldown concurrent write', async () => {
     ])
   }
 })
+
+test('should support `Symbol.asyncDispose` of the rolldown bundle and set closed state to true', async () => {
+  const bundle = await rolldown({
+    input: ['./main.js'],
+    cwd: import.meta.dirname,
+  })
+
+  await bundle[Symbol.asyncDispose]()
+  expect(bundle.closed).toBe(true)
+})

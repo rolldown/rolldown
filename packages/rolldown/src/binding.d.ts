@@ -73,6 +73,7 @@ export declare class Bundler {
   scan(): Promise<void>
   close(): Promise<void>
   watch(): Promise<BindingWatcher>
+  get closed(): boolean
 }
 
 export declare class ParallelJsPluginRegistry {

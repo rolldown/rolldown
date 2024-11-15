@@ -5136,6 +5136,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DNNvtmmD.js
 
+# tests/rolldown/topics/new_url/opt-out
+
+- main-!~{000}~.js => main-CkBA_0o1.js
+
 # tests/rolldown/topics/new_url/should_prefer_relative
 
 - main-!~{000}~.js => main-DaLi9F1d.js

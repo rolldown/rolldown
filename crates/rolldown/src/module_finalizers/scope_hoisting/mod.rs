@@ -402,6 +402,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !is_callee_global_url {
       return false;
     }
+
     let is_second_arg_import_meta_url = expr
       .arguments
       .get(1)

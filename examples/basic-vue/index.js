@@ -1,3 +1,3 @@
 import { createApp } from 'vue'
 
-export default createApp({})
+ /* @vite-ignore */ new URL(f);

@@ -1,3 +1,4 @@
+pub mod comment_annotation;
 pub mod dynamic_import_usage;
 pub mod ecma_asset_meta;
 pub mod ecma_view;

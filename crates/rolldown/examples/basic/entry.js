@@ -1,4 +1,4 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
 
-console.log(hyperCube(5));
+import { createApp } from 'vue'
+
+ /* @rolldown-ignore */ new URL("somepath-should-not-exists", import.meta.url);

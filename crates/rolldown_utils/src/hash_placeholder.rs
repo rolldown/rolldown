@@ -11,8 +11,8 @@ const HASH_PLACEHOLDER_LEFT: &str = "!~{";
 const HASH_PLACEHOLDER_RIGHT: &str = "}~";
 const HASH_PLACEHOLDER_OVERHEAD: usize = HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len();
 
-// This is the size of a 128-bits xxhash with base64url encoding
-const MAX_HASH_SIZE: usize = 22;
+// This is the size of a 128-bit xxhash with `base_encode::to_string`
+const MAX_HASH_SIZE: usize = 21;
 // const DEFAULT_HASH_SIZE: usize = 8;
 
 static REPLACER_REGEX: LazyLock<Regex> = LazyLock::new(|| {

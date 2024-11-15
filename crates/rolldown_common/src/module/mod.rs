@@ -122,6 +122,10 @@ impl Module {
     matches!(self, Self::Normal(..))
   }
 
+  pub fn is_external(&self) -> bool {
+    matches!(self, Self::External(..))
+  }
+
   pub fn size(&self) -> usize {
     match self {
       Module::Normal(v) => v.source.len(),

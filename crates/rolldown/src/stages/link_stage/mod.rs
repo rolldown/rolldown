@@ -318,8 +318,12 @@ impl<'a> LinkStage<'a> {
                     );
                   } else {
                     // import ... from 'external' or export ... from 'external'
-                    let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
-                    if cjs_format && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT) {
+                    if matches!(
+                      self.options.format,
+                      OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd
+                    ) && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+                    {
+                      stmt_info.side_effect = true;
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());

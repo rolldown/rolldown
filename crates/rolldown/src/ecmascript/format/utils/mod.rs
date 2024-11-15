@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use rolldown_std_utils::OptionExt;
 
 use crate::{
   types::generator::GenerateContext,
@@ -18,7 +17,7 @@ pub fn render_factory_parameters(
 ) -> String {
   let mut parameters = if has_exports { vec!["exports"] } else { vec![] };
   externals.iter().for_each(|external| {
-    let symbol_name = ctx.chunk.canonical_name_by_token.get(&external.binding_name_token).unpack();
+    let symbol_name = &ctx.chunk.canonical_names[&external.binding_name_token];
     parameters.push(symbol_name.as_str());
   });
   parameters.join(", ")
@@ -28,40 +27,28 @@ pub fn render_chunk_external_imports(
   ctx: &GenerateContext<'_>,
 ) -> (String, Vec<ExternalRenderImportStmt>) {
   let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
+    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, &ctx.options.format);
 
   let mut import_code = String::new();
   let externals = render_import_stmts
     .into_iter()
     .filter_map(|stmt| {
       if let RenderImportStmt::ExternalRenderImportStmt(external_stmt) = stmt {
-        let symbol_name =
-          ctx.chunk.canonical_name_by_token.get(&external_stmt.binding_name_token).unpack();
-        match &external_stmt.specifiers {
-          RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-            if specifiers.is_empty() {
-              Some(external_stmt)
-            } else {
-              let specifiers = specifiers
-                .iter()
-                .map(|specifier| {
-                  if let Some(alias) = &specifier.alias {
-                    format!("{}: {alias}", specifier.imported)
-                  } else {
-                    specifier.imported.to_string()
-                  }
-                })
-                .collect::<Vec<_>>();
-              import_code
-                .push_str(&format!("const {{ {} }} = {symbol_name};\n", specifiers.join(", ")));
-              Some(external_stmt)
-            }
-          }
-          RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-            import_code.push_str(&format!("const {alias} = {symbol_name};\n"));
-            Some(external_stmt)
-          }
+        let symbol_name = &ctx.chunk.canonical_names[&external_stmt.binding_name_token];
+
+        let need_to_esm_wrapper = match &external_stmt.specifiers {
+          RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => !specifiers.is_empty(),
+          RenderImportDeclarationSpecifier::ImportStarSpecifier(_) => true,
+        };
+        if need_to_esm_wrapper {
+          let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
+            .link_output
+            .symbol_db
+            .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+          import_code.push_str(&format!("{symbol_name} = {to_esm_fn_name}({symbol_name});\n"));
         }
+
+        Some(external_stmt)
       } else {
         None
       }

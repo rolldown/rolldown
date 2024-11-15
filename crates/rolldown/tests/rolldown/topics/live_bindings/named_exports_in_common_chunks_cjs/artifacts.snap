@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,18 +10,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 "use strict";
 
 const require_shared = require('./shared.js');
-const { default: assert } = __toESM(require("node:assert"));
+const node_assert = __toESM(require("node:assert"));
 
 //#region async-entry.js
 require_shared.reset();
-assert.strictEqual(require_shared.count, 0);
-assert.strictEqual(require_shared.count, require_shared.count);
+node_assert.default.strictEqual(require_shared.count, 0);
+node_assert.default.strictEqual(require_shared.count, require_shared.count);
 require_shared.inc();
-assert.strictEqual(require_shared.count, 1);
-assert.strictEqual(require_shared.count, require_shared.count);
+node_assert.default.strictEqual(require_shared.count, 1);
+node_assert.default.strictEqual(require_shared.count, require_shared.count);
 require_shared.inc();
-assert.strictEqual(require_shared.count, 2);
-assert.strictEqual(require_shared.count, require_shared.count);
+node_assert.default.strictEqual(require_shared.count, 2);
+node_assert.default.strictEqual(require_shared.count, require_shared.count);
 
 //#endregion
 ```

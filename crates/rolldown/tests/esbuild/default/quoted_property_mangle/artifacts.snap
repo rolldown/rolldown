@@ -9,10 +9,10 @@ snapshot_kind: text
 ```js
 "use strict";
 
-const ns = __toESM(require("ext"));
+const ext = __toESM(require("ext"));
 
 //#region entry.js
-console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
+console.log(ext.mustBeUnquoted, ext["mustBeUnquoted2"]);
 
 //#endregion
 ```

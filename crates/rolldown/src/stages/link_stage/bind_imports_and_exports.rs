@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, ResolvedExport,
-  Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
+  ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -91,7 +91,7 @@ pub enum ImportStatus {
   _Disabled,
 
   /// The imported file is external and has unknown exports
-  External,
+  External(SymbolRef),
 }
 
 impl<'link> LinkStage<'link> {
@@ -264,9 +264,11 @@ impl<'link> LinkStage<'link> {
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
-                let mut canonical_ref_owner = self.module_table.modules[canonical_ref.owner]
-                  .as_normal()
-                  .expect("only normal module");
+                let mut canonical_ref_owner: &NormalModule =
+                  match &self.module_table.modules[canonical_ref.owner] {
+                    Module::Normal(module) => module,
+                    Module::External(_) => return,
+                  };
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref;
                 let mut ns_symbol_list = vec![];
@@ -363,19 +365,16 @@ impl<'a> BindImportsAndExportsContext<'a> {
 
       let rec = &module.import_records[named_import.record_id];
 
-      let ret = match &self.normal_modules[rec.resolved_module] {
-        Module::External(_) => MatchImportKind::Normal { symbol: *imported_as_ref },
-        Module::Normal(importee) => self.match_import_with_export(
-          self.normal_modules,
-          &mut MatchingContext { tracker_stack: Vec::default() },
-          ImportTracker {
-            importer: module_id,
-            importee: importee.idx,
-            imported: named_import.imported.clone(),
-            imported_as: *imported_as_ref,
-          },
-        ),
-      };
+      let ret = self.match_import_with_export(
+        self.normal_modules,
+        &mut MatchingContext { tracker_stack: Vec::default() },
+        ImportTracker {
+          importer: module_id,
+          importee: rec.resolved_module,
+          imported: named_import.imported.clone(),
+          imported_as: *imported_as_ref,
+        },
+      );
       tracing::trace!("Got match result {:?}", ret);
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
@@ -460,7 +459,9 @@ impl<'a> BindImportsAndExportsContext<'a> {
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
     let importee_id = match &self.normal_modules[importee_id] {
       Module::Normal(importee) => importee.idx,
-      Module::External(_) => return ImportStatus::External,
+      Module::External(external) => {
+        return ImportStatus::External(external.name_token_for_external_binding)
+      }
     };
 
     // Is this a named import of a file without any exports?
@@ -561,21 +562,16 @@ impl<'a> BindImportsAndExportsContext<'a> {
             {
               let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
                 [another_named_import.record_id];
-              let ambiguous_result = match &self.normal_modules[rec.resolved_module] {
-                Module::Normal(importee) => self.match_import_with_export(
-                  normal_modules,
-                  &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                  ImportTracker {
-                    importer: ambiguous_ref_owner.idx(),
-                    importee: importee.idx,
-                    imported: another_named_import.imported.clone(),
-                    imported_as: another_named_import.imported_as,
-                  },
-                ),
-                Module::External(_) => {
-                  MatchImportKind::Normal { symbol: another_named_import.imported_as }
-                }
-              };
+              let ambiguous_result = self.match_import_with_export(
+                normal_modules,
+                &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+                ImportTracker {
+                  importer: ambiguous_ref_owner.idx(),
+                  importee: rec.resolved_module,
+                  imported: another_named_import.imported.clone(),
+                  imported_as: another_named_import.imported_as,
+                },
+              );
               ambiguous_results.push(ambiguous_result);
             } else {
               ambiguous_results.push(MatchImportKind::Normal { symbol: *ambiguous_ref });
@@ -606,7 +602,21 @@ impl<'a> BindImportsAndExportsContext<'a> {
         }
         ImportStatus::_CommonJSWithoutExports => todo!(),
         ImportStatus::_Disabled => todo!(),
-        ImportStatus::External => todo!(),
+        ImportStatus::External(symbol_ref) => {
+          if self.options.format.keep_esm_import_export_syntax() {
+            // Imports from external modules should not be converted to CommonJS
+            // if the output format preserves the original ES6 import statements
+            break MatchImportKind::Normal { symbol: tracker.imported_as };
+          }
+
+          match &tracker.imported {
+            Specifier::Star => MatchImportKind::Namespace { namespace_ref: symbol_ref },
+            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
+              namespace_ref: symbol_ref,
+              alias: alias.clone(),
+            },
+          }
+        }
       };
       break kind;
     };

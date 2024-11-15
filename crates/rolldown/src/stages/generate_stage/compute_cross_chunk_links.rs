@@ -305,6 +305,10 @@ impl<'a> GenerateStage<'a> {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;
         }
+        // If the symbol from external, we don't need to include it.
+        if self.link_output.module_table.modules[import_ref.owner].is_external() {
+          continue;
+        }
         let import_symbol = self.link_output.symbol_db.get(import_ref);
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];

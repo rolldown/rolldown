@@ -8,8 +8,8 @@ snapshot_kind: text
 
 ```js
 
-const { default: assert } = __toESM(require("node:assert"));
-const { deprecate } = __toESM(require("node:util"));
+const node_assert = __toESM(require("node:assert"));
+const node_util = __toESM(require("node:util"));
 
 //#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
 var require_node = __commonJS({ "../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js"(exports, module) {
@@ -22,7 +22,7 @@ var require_node = __commonJS({ "../../../../../../../node_modules/.pnpm/util-de
 //#endregion
 //#region main.js
 const exports$1 = require_node();
-assert.strictEqual(deprecate, exports$1);
+node_assert.default.strictEqual(node_util.deprecate, exports$1);
 
 //#endregion
 ```

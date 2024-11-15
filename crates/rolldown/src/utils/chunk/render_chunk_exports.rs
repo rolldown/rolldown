@@ -63,7 +63,10 @@ pub fn render_chunk_exports(
                 let exported_value = if let Some(ns_alias) = &symbol.namespace_alias {
                   let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
                   let property_name = &ns_alias.property_name;
-                  Cow::Owned(format!("{canonical_ns_name}.{property_name}").into())
+                  Cow::Owned(property_access_str(canonical_ns_name, property_name).into())
+                } else if link_output.module_table.modules[canonical_ref.owner].is_external() {
+                  let namespace = &chunk.canonical_names[&canonical_ref];
+                  Cow::Owned(namespace.as_str().into())
                 } else {
                   let cur_chunk_idx = ctx.chunk_idx;
                   let canonical_ref_owner_chunk_idx =

@@ -1,5 +1,5 @@
 use crate::side_effects::DeterminedSideEffects;
-use crate::{ImportRecordIdx, ModuleIdx, ResolvedImportRecord, SymbolNameRefToken};
+use crate::{ImportRecordIdx, ModuleIdx, ResolvedImportRecord, SymbolRef};
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 
@@ -8,7 +8,7 @@ pub struct ExternalModule {
   pub idx: ModuleIdx,
   pub exec_order: u32,
   // Used for iife format to inject symbol and deconflict.
-  pub name_token_for_external_binding: SymbolNameRefToken,
+  pub name_token_for_external_binding: SymbolRef,
   pub name: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   pub side_effects: DeterminedSideEffects,
@@ -19,7 +19,7 @@ impl ExternalModule {
     idx: ModuleIdx,
     module_id: ArcStr,
     side_effects: DeterminedSideEffects,
-    name_token_for_external_binding: SymbolNameRefToken,
+    name_token_for_external_binding: SymbolRef,
   ) -> Self {
     Self {
       idx,

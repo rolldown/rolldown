@@ -16,7 +16,7 @@ pub fn deconflict_chunk_symbols(
   let mut renamer =
     Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), format);
 
-  if matches!(format, OutputFormat::Iife | OutputFormat::Umd) {
+  if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
     // Also AMD, but we don't support them yet.
     chunk
@@ -24,7 +24,7 @@ pub fn deconflict_chunk_symbols(
       .iter()
       .filter_map(|(idx, _)| link_output.module_table.modules[*idx].as_external())
       .for_each(|external_module| {
-        renamer.add_symbol_name_ref_token(&external_module.name_token_for_external_binding);
+        renamer.add_symbol_in_root_scope(external_module.name_token_for_external_binding);
       });
   }
 

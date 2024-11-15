@@ -108,6 +108,7 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
+  #[allow(dead_code)]
   pub fn add_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
     let hint = Rstr::new(token.value());
     let mut conflictless_name = hint.clone();

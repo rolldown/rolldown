@@ -81,20 +81,20 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-  let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_normal().unwrap();
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
-    canonical_ref_owner = ctx.modules[canonical_ref.owner].as_normal().unwrap();
   }
 
   ctx.used_symbol_refs.insert(canonical_ref);
 
-  include_module(ctx, canonical_ref_owner);
-  canonical_ref_owner.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
-    |stmt_info_id| {
-      include_statement(ctx, canonical_ref_owner, stmt_info_id);
-    },
-  );
+  if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
+    include_module(ctx, module);
+    module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
+      |stmt_info_id| {
+        include_statement(ctx, module, stmt_info_id);
+      },
+    );
+  }
 }
 
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoIdx) {

@@ -47,6 +47,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     };
     let path = &first_arg_string_literal.value;
+
+    if path.starts_with("data:") {
+      return;
+    }
+
     let idx =
       self.add_import_record(path, ImportKind::NewUrl, expr.span, ImportRecordMeta::empty());
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "dir": "dist",
+    "chunkFilenames": "chunks/[name]-[hash].js"
+  }
+}

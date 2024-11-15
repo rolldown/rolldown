@@ -18,4 +18,7 @@ export {
   buildImportAnalysisPlugin,
   replacePlugin,
   viteResolvePlugin,
+  isCallableCompatibleBuiltinPlugin,
+  makeBuiltinPluginCallable,
+  isCallableBuiltinPlugin,
 } from './plugin/builtin-plugin'

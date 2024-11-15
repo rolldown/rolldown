@@ -8,6 +8,7 @@ version = "0.1.0"
 doctest = false
 
 [dependencies]
+async-trait         = { workspace = true }
 cow-utils       = { workspace = true }
 dashmap         = { workspace = true }
 oxc_resolver    = { workspace = true, features = ["package_json_raw_json_api"] }

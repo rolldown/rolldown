@@ -7,6 +7,7 @@ use crate::{
     self, normalize_oxc_resolver_result, resolve_bare_import, AdditionalOptions, Resolver,
   },
   utils::{is_bare_import, is_builtin, is_windows_drive_path, normalize_path, BROWSER_EXTERNAL_ID},
+  CallablePlugin,
 };
 use rolldown_common::{side_effects::HookSideEffects, ImportKind};
 use rolldown_plugin::{
@@ -91,18 +92,12 @@ impl ViteResolvePlugin {
       resolve_options: options.resolve_options,
     }
   }
-}
 
-impl Plugin for ViteResolvePlugin {
-  fn name(&self) -> Cow<'static, str> {
-    "rolldown:vite-resolve".into()
+  fn name_internal(&self) -> &'static str {
+    "rolldown:vite-resolve"
   }
 
-  async fn resolve_id(
-    &self,
-    _ctx: &PluginContext,
-    args: &HookResolveIdArgs<'_>,
-  ) -> HookResolveIdReturn {
+  async fn resolve_id_internal(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     if args.specifier.starts_with('\0')
       || args.specifier.starts_with("virtual:")
       || args.specifier.starts_with("/virtual:")
@@ -209,7 +204,7 @@ impl Plugin for ViteResolvePlugin {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load_internal(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
       // TODO(sapphi-red): implement for dev
       if self.resolve_options.is_production {
@@ -239,6 +234,38 @@ impl Plugin for ViteResolvePlugin {
     }
 
     Ok(None)
+  }
+}
+
+impl CallablePlugin for ViteResolvePlugin {
+  fn name(&self) -> Cow<'static, str> {
+    self.name_internal().into()
+  }
+
+  async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
+    self.resolve_id_internal(args).await
+  }
+
+  async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    self.load_internal(args).await
+  }
+}
+
+impl Plugin for ViteResolvePlugin {
+  fn name(&self) -> Cow<'static, str> {
+    self.name_internal().into()
+  }
+
+  async fn resolve_id(
+    &self,
+    _ctx: &PluginContext,
+    args: &HookResolveIdArgs<'_>,
+  ) -> HookResolveIdReturn {
+    self.resolve_id_internal(args).await
+  }
+
+  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    self.load_internal(args).await
   }
 }
 

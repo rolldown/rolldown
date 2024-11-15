@@ -14,6 +14,8 @@ import {
   BindingBuildImportAnalysisPluginConfig,
   BindingReplacePluginConfig,
   type BindingViteResolvePluginConfig,
+  BindingCallableBuiltinPlugin,
+  isCallableCompatibleBuiltinPlugin as isCallableCompatibleBuiltinPluginInternal,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -195,6 +197,23 @@ export function replacePlugin(
   options: Omit<BindingReplacePluginConfig, 'values'> = {},
 ) {
   return new ReplacePlugin({ ...options, values })
+}
+
+export function isCallableCompatibleBuiltinPlugin(
+  plugin: any,
+): plugin is BuiltinPlugin {
+  return (
+    plugin instanceof BuiltinPlugin &&
+    isCallableCompatibleBuiltinPluginInternal(bindingifyBuiltInPlugin(plugin))
+  )
+}
+
+export function makeBuiltinPluginCallable(plugin: BuiltinPlugin) {
+  return new BindingCallableBuiltinPlugin(bindingifyBuiltInPlugin(plugin))
+}
+
+export function isCallableBuiltinPlugin(plugin: any): boolean {
+  return plugin instanceof BindingCallableBuiltinPlugin
 }
 
 export function bindingifyBuiltInPlugin(

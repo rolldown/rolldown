@@ -2838,6 +2838,7 @@ dependencies = [
 name = "rolldown_plugin_vite_resolve"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "cow-utils",
  "dashmap 6.1.0",
  "oxc_resolver",

@@ -3,6 +3,12 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 
+export declare class BindingCallableBuiltinPlugin {
+  name: string
+  constructor(plugin: BindingBuiltinPlugin)
+  resolveId(id: string, importer?: string | undefined | null): Promise<BindingHookResolveIdReturn | null>
+}
+
 export declare class BindingLog {
   code: string
   message: string
@@ -190,6 +196,12 @@ export interface BindingHookResolveIdOutput {
   id: string
   external?: boolean
   sideEffects?: BindingHookSideEffects
+}
+
+export interface BindingHookResolveIdReturn {
+  id: string
+  external?: boolean
+  sideEffects?: boolean | string
 }
 
 export declare enum BindingHookSideEffects {
@@ -492,6 +504,8 @@ export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
 }
+
+export declare function isCallableCompatibleBuiltinPlugin(plugin: BindingBuiltinPlugin): boolean
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
 export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult

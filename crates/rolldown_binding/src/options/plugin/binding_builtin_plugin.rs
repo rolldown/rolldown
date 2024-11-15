@@ -44,7 +44,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 }
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[napi]
 pub enum BindingBuiltinPluginName {
   WasmHelperPlugin,

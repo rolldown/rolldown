@@ -5134,7 +5134,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/new_url
 
-- main-!~{000}~.js => main-B7vXpKZd.js
+- main-!~{000}~.js => main-DaLi9F1d.js
 - assets/index-D25jITRo.txt
 
 # tests/rolldown/topics/npm_packages/util_deprecate

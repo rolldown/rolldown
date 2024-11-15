@@ -4393,6 +4393,7 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DOQUAn8i.js
 - assets/foo-D91Zmg_q.txt
+- main-DOQUAn8i.js.map
 
 # tests/rolldown/function/module_types/base64/binary
 
@@ -5131,10 +5132,18 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-JMmY_R4v.js
 
-# tests/rolldown/topics/new_url
+# tests/rolldown/topics/new_url/dataurl
 
-- main-!~{000}~.js => main-B7vXpKZd.js
+- main-!~{000}~.js => main-DNNvtmmD.js
+
+# tests/rolldown/topics/new_url/should_prefer_relative
+
+- main-!~{000}~.js => main-DaLi9F1d.js
 - assets/index-D25jITRo.txt
+
+# tests/rolldown/topics/new_url/template_literal_with_expression
+
+- main-!~{000}~.js => main-CpMmxUDI.js
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 

@@ -19,9 +19,14 @@ use oxc_resolver::{
 pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   cwd: PathBuf,
   default_resolver: ResolverGeneric<T>,
+  // Resolver for `import '...'` and `import(...)`
   import_resolver: ResolverGeneric<T>,
+  // Resolver for `require('...')`
   require_resolver: ResolverGeneric<T>,
+  // Resolver for `@import '...'` and `url('...')`
   css_resolver: ResolverGeneric<T>,
+  // Resolver for `new URL(..., import.meta.url)`
+  new_url_resolver: ResolverGeneric<T>,
   package_json_cache: DashMap<PathBuf, Arc<PackageJson>>,
 }
 
@@ -124,6 +129,11 @@ impl<F: FileSystem + Default> Resolver<F> {
       ..resolve_options_with_default_conditions.clone()
     };
 
+    let resolve_options_for_new_url = OxcResolverOptions {
+      prefer_relative: true,
+      ..resolve_options_with_default_conditions.clone()
+    };
+
     let default_resolver =
       ResolverGeneric::new_with_file_system(fs, resolve_options_with_default_conditions);
     let import_resolver =
@@ -131,6 +141,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     let require_resolver =
       default_resolver.clone_with_options(resolve_options_with_require_conditions);
     let css_resolver = default_resolver.clone_with_options(resolve_options_for_css);
+    let new_url_resolver = default_resolver.clone_with_options(resolve_options_for_new_url);
 
     Self {
       cwd,
@@ -138,6 +149,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       import_resolver,
       require_resolver,
       css_resolver,
+      new_url_resolver,
       package_json_cache: DashMap::default(),
     }
   }
@@ -163,7 +175,8 @@ impl<F: FileSystem + Default> Resolver<F> {
     is_user_defined_entry: bool,
   ) -> anyhow::Result<Result<ResolveReturn, ResolveError>> {
     let selected_resolver = match import_kind {
-      ImportKind::Import | ImportKind::DynamicImport | ImportKind::NewUrl => &self.import_resolver,
+      ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
+      ImportKind::NewUrl => &self.new_url_resolver,
       ImportKind::Require => &self.require_resolver,
       ImportKind::AtImport | ImportKind::UrlImport => &self.css_resolver,
     };

@@ -4,5 +4,6 @@
       ".txt": "asset"
     }
   },
-  "snapshotOutputStats": true
+  "snapshotOutputStats": true,
+  "visualizeSourcemap": true
 }

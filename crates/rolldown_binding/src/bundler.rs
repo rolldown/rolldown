@@ -104,6 +104,12 @@ impl Bundler {
   pub async fn watch(&self) -> napi::Result<BindingWatcher> {
     self.watch_impl()
   }
+
+  #[napi(getter)]
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub fn get_closed(&self) -> napi::Result<bool> {
+    napi::bindgen_prelude::block_on(async { self.get_closed_impl().await })
+  }
 }
 
 impl Bundler {
@@ -167,6 +173,13 @@ impl Bundler {
   pub fn watch_impl(&self) -> napi::Result<BindingWatcher> {
     let watcher = handle_result(NativeBundler::watch(Arc::clone(&self.inner)))?;
     Ok(BindingWatcher::new(watcher))
+  }
+
+  #[allow(clippy::significant_drop_tightening)]
+  pub async fn get_closed_impl(&self) -> napi::Result<bool> {
+    let bundler_core = self.inner.lock().await;
+
+    Ok(bundler_core.closed)
   }
 
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {

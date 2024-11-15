@@ -17,6 +17,7 @@ jobs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
+      # cspell:disable-next-line
       - uses: taiki-e/checkout-action@v1
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -32,6 +33,7 @@ jobs:
           echo $COMPILE_TIME
           echo "COMPILE_TIME=$COMPILE_TIME" >> $GITHUB_OUTPUT
 
+          # cspell:disable-next-line
           BINARY_SIZE=$(ls -l ./target/release/librolldown_binding.so | awk '{print $5}')
           echo $BINARY_SIZE
           echo "BINARY_SIZE=$BINARY_SIZE" >> $GITHUB_OUTPUT
@@ -52,8 +54,6 @@ jobs:
 
       - name: Setup Pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 8.10.5
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

@@ -22,7 +22,7 @@ use tokio::sync::Mutex;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
-  pub(crate) closed: bool,
+  pub closed: bool,
   pub(crate) options: SharedOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: OsFileSystem,

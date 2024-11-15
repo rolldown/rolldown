@@ -2846,6 +2846,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",
+ "sugar_path",
 ]
 
 [[package]]

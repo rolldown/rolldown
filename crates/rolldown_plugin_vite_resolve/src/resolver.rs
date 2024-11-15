@@ -6,8 +6,7 @@ use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use crate::{
   package_json_cache::PackageJsonCache,
   utils::{
-    can_externalize_file, clean_url, get_extension, is_deep_import, normalize_path,
-    BROWSER_EXTERNAL_ID,
+    can_externalize_file, clean_url, get_extension, is_bare_import, is_builtin, is_deep_import, normalize_path, BROWSER_EXTERNAL_ID
   },
 };
 
@@ -61,6 +60,7 @@ pub struct Resolver {
 }
 
 impl Resolver {
+  // TODO(sapphi-red): tryPrefix support
   pub fn new(base_options: &BaseOptions) -> Self {
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
@@ -128,6 +128,8 @@ fn get_resolve_options(
       vec!["index".to_string()]
     },
     prefer_relative: additional_options.prefer_relative,
+    // TODO(sapphi-red): maybe oxc-resolver can do the rootInRoot optimization
+    // https://github.com/vitejs/vite/blob/a50ff6000bca46a6fe429f2c3a98c486ea5ebc8e/packages/vite/src/node/plugins/resolve.ts#L304
     roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
     ..Default::default()
@@ -176,6 +178,7 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 
 pub fn normalize_oxc_resolver_result(
   package_json_cache: &PackageJsonCache,
+  runtime: &str,
   result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
 ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
   match result {
@@ -194,8 +197,16 @@ pub fn normalize_oxc_resolver_result(
         );
       Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
     }
-    Err(oxc_resolver::ResolveError::NotFound(_id)) => {
-      // TODO(sapphi-red): handle missing peerDep
+    Err(oxc_resolver::ResolveError::NotFound(id)) => {
+      // TODO(sapphi-red): maybe need to do the same thing for id mapped from browser field
+
+      // if import can't be found, check if it's an optional peer dep.
+      // if so, we can resolve to a special id that errors only when imported.
+      if is_bare_import(id) && !is_builtin(id, runtime) && !id.contains('\0') {
+        // TODO(sapphi-red): handle missing peerDep
+        // https://github.com/vitejs/vite/blob/58f1df3288b0f9584bb413dd34b8d65671258f6f/packages/vite/src/node/plugins/resolve.ts#L728-L752
+        return Ok(None)
+      }
       Ok(None)
     }
     Err(oxc_resolver::ResolveError::Ignored(_)) => {
@@ -210,13 +221,19 @@ pub fn resolve_bare_import(
   importer: Option<&str>,
   resolver: &oxc_resolver::Resolver,
   package_json_cache: &PackageJsonCache,
+  runtime: &str,
   root: &str,
   external: bool,
 ) -> HookResolveIdReturn {
+  // TODO(sapphi-red): support `dedupe`
   let base_dir = if let Some(importer) = importer {
     let imp = Path::new(importer);
     if imp.is_absolute()
-      && (importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false))
+      && (
+        // css processing appends `*` for importer
+        importer.ends_with('*') ||
+        fs::exists(clean_url(importer)).unwrap_or(false)
+      )
     {
       imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
     } else {
@@ -227,7 +244,7 @@ pub fn resolve_bare_import(
   };
 
   let oxc_resolved_result = resolver.resolve(base_dir, specifier);
-  let resolved = normalize_oxc_resolver_result(package_json_cache, &oxc_resolved_result)?;
+  let resolved = normalize_oxc_resolver_result(package_json_cache, runtime, &oxc_resolved_result)?;
   if let Some(mut resolved) = resolved {
     if !external || !can_externalize_file(&resolved.id) {
       return Ok(Some(resolved));
@@ -239,6 +256,8 @@ pub fn resolve_bare_import(
       if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
         let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
         if !has_exports_field {
+          // id date-fns/locale
+          // resolve.id ...date-fns/esm/locale/index.js
           if let Some(index) = resolved.id.find(id) {
             resolved_id = &resolved.id[index..];
           }

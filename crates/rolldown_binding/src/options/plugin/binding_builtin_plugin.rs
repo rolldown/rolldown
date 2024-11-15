@@ -155,6 +155,7 @@ pub struct BindingBuildImportAnalysisPluginConfig {
 pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
   pub environment_consumer: String,
+  pub environment_name: String,
   #[serde(with = "EitherDeserializeEnabler")]
   #[napi(ts_type = "true | string[]")]
   pub external: napi::Either<BindingTrueValue, Vec<String>>,
@@ -189,6 +190,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
     Self {
       resolve_options: value.resolve_options.into(),
       environment_consumer: value.environment_consumer,
+      environment_name: value.environment_name,
       external,
       no_external,
       finalize_bare_specifier: value.finalize_bare_specifier.map(
@@ -230,6 +232,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 #[serde(rename_all = "camelCase")]
 #[allow(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
+  pub is_build: bool,
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
@@ -247,6 +250,7 @@ pub struct BindingViteResolvePluginResolveOptions {
 impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
     Self {
+      is_build: value.is_build,
       is_production: value.is_production,
       as_src: value.as_src,
       prefer_relative: value.prefer_relative,

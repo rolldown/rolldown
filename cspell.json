@@ -77,6 +77,7 @@
     "dashmap",
     "dataurl",
     "deconflict",
+    "dedupe",
     "defg",
     "deoptimized",
     "Deque",

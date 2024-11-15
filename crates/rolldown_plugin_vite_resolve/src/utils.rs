@@ -22,6 +22,7 @@ pub fn is_bare_import(id: &str) -> bool {
   id.starts_with(|c| is_regex_w_character_class(c) || c == '@') && !id.contains("://")
 }
 
+// check for deep import, e.g. "my-lib/foo"
 // deepImportRE.test(id)
 pub fn is_deep_import(id: &str) -> bool {
   if id.starts_with('@') {

@@ -470,6 +470,7 @@ export interface BindingTreeshake {
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
   environmentConsumer: string
+  environmentName: string
   external: true | string[]
   noExternal: true | string[]
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
@@ -478,6 +479,7 @@ export interface BindingViteResolvePluginConfig {
 }
 
 export interface BindingViteResolvePluginResolveOptions {
+  isBuild: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean

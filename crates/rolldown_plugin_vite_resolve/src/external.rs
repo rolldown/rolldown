@@ -10,7 +10,7 @@ use crate::{
   },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ResolveOptionsExternal {
   True,
   Vec(Vec<String>),
@@ -26,7 +26,7 @@ impl ResolveOptionsExternal {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ResolveOptionsNoExternal {
   True,
   // TODO(sapphi-red): support RegExp
@@ -126,6 +126,7 @@ impl ExternalDecider {
       importer,
       &self.resolver,
       &self.package_json_cache,
+      &self.runtime,
       &self.options.root,
       false,
     );

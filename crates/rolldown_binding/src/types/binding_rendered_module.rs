@@ -40,6 +40,6 @@ impl FromNapiValue for BindingRenderedModule {
     _env: napi::sys::napi_env,
     _napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
-    Ok(BindingRenderedModule { inner: RenderedModule { inner_code: None } })
+    Ok(BindingRenderedModule { inner: RenderedModule::default() })
   }
 }

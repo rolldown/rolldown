@@ -2,9 +2,9 @@ use std::{fmt::Debug, sync::Arc};
 
 use rolldown_sourcemap::{Source, SourceJoiner};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct RenderedModule {
-  pub inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+  inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
 }
 
 impl Debug for RenderedModule {
@@ -19,14 +19,14 @@ impl RenderedModule {
   }
 
   pub fn code(&self) -> Option<String> {
-    self.inner_code.as_ref().and_then(|sources| {
+    self.inner_code.as_ref().map(|sources| {
       let mut joiner = SourceJoiner::default();
 
       for source in sources.iter() {
         joiner.append_source(source);
       }
 
-      Some(joiner.join().0)
+      joiner.join().0
     })
   }
 }

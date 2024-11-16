@@ -28,7 +28,7 @@ impl<'source> SourceJoiner<'source> {
     self.prepend_source.push(source);
   }
 
-  pub fn join(self) -> (String, Option<SourceMap>) {
+  pub fn join(&self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
     let mut sourcemap_builder = self.enable_sourcemap.then(|| {
       ConcatSourceMapBuilder::with_capacity(

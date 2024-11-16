@@ -19,6 +19,9 @@ export default defineTest({
     expect(e.errors[0]).toMatchObject({
       message: 'my-error',
       extraProp: 1234,
+      code: 'PLUGIN_ERROR',
+      plugin: 'my-plugin',
+      hook: 'resolveId',
     })
   },
 })

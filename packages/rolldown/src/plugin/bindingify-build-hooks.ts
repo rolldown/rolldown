@@ -9,6 +9,8 @@ import type {
   Plugin,
   PluginHooks,
   PrivateResolveIdExtraOptions,
+  ResolveIdResult,
+  TransformResult,
 } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
@@ -32,6 +34,7 @@ import {
   bindingifyResolveIdFilter,
   bindingifyTransformFilter,
 } from './bindingify-hook-filter'
+import { error, logPluginError } from '../log/logs'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -108,12 +111,21 @@ export function bindingifyResolveId(
           contextResolveOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
       }
 
-      const ret = await handler.call(
-        new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
-        specifier,
-        importer ?? undefined,
-        newExtraOptions,
-      )
+      let ret: ResolveIdResult
+      try {
+        ret = await handler.call(
+          new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
+          specifier,
+          importer ?? undefined,
+          newExtraOptions,
+        )
+      } catch (error_: any) {
+        return error(
+          logPluginError(error_, plugin.name || '<unknown>', {
+            hook: 'resolveId',
+          }),
+        )
+      }
       if (ret == null) {
         return
       }
@@ -219,20 +231,30 @@ export function bindingifyTransform(
 
   return {
     plugin: async (ctx, code, id, meta) => {
-      const ret = await handler.call(
-        new TransformPluginContext(
-          normalizedOptions,
-          ctx.inner(),
-          plugin,
-          pluginContextData,
-          ctx,
-          id,
+      let ret: TransformResult
+      try {
+        ret = await handler.call(
+          new TransformPluginContext(
+            normalizedOptions,
+            ctx.inner(),
+            plugin,
+            pluginContextData,
+            ctx,
+            id,
+            code,
+          ),
           code,
-        ),
-        code,
-        id,
-        meta,
-      )
+          id,
+          meta,
+        )
+      } catch (error_: any) {
+        return error(
+          logPluginError(error_, plugin.name || '<unknown>', {
+            hook: 'transform',
+            id,
+          }),
+        )
+      }
 
       if (ret == null) {
         return undefined

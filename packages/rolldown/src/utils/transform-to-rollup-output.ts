@@ -19,6 +19,7 @@ import {
 } from './asset-source'
 import { bindingifySourcemap } from '../types/sourcemap'
 import { transformToRenderedModule } from './transform-rendered-module'
+import { RollupLog } from '../rollup'
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -134,8 +135,7 @@ export function handleOutputErrors(output: BindingOutputs) {
         summary += '\n...'
         break
       }
-      const e = errors[i]
-      summary += (e.stack ?? e.message) + '\n'
+      summary += getErrorMessage(errors[i]) + '\n'
     }
     const wrapper = new Error(summary)
     // expose individual errors as getters so that
@@ -154,6 +154,24 @@ export function handleOutputErrors(output: BindingOutputs) {
     })
     throw wrapper
   }
+}
+
+function getErrorMessage(e: RollupLog) {
+  let prefix = ''
+  if (e.plugin) {
+    prefix += `[plugin ${e.plugin}]`
+  }
+  const id = e.id ?? e.loc?.file
+  if (id) {
+    prefix += ' ' + id
+    if (e.loc) {
+      prefix += `:${e.loc.line}:${e.loc.column}`
+    }
+  }
+  if (prefix) {
+    prefix += '\n'
+  }
+  return prefix + (e.stack ?? e.message)
 }
 
 export function transformToOutputBundle(

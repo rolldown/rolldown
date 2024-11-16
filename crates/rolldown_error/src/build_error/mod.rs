@@ -15,6 +15,8 @@ use self::severity::Severity;
 pub struct BuildDiagnostic {
   inner: Box<dyn BuildEvent>,
   source: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
+  #[cfg(feature = "napi")]
+  napi_error: Option<napi::Error>,
   severity: Severity,
 }
 
@@ -62,8 +64,29 @@ impl BuildDiagnostic {
 
   // --- private
 
+  #[cfg(feature = "napi")]
+  #[must_use]
+  pub fn with_napi_error(mut self, napi_error: napi::Error) -> Self {
+    self.napi_error = Some(napi_error);
+    self
+  }
+
+  #[cfg(feature = "napi")]
+  pub fn downcast_napi_error(self) -> Result<napi::Error, Self> {
+    match self.napi_error {
+      Some(napi_error) => Ok(napi_error),
+      None => Err(self),
+    }
+  }
+
   fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {
-    Self { inner: inner.into(), source: None, severity: Severity::Error }
+    Self {
+      inner: inner.into(),
+      source: None,
+      #[cfg(feature = "napi")]
+      napi_error: None,
+      severity: Severity::Error,
+    }
   }
 }
 

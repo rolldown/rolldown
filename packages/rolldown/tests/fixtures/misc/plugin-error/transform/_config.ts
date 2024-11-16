@@ -5,8 +5,9 @@ export default defineTest({
   config: {
     plugins: [
       {
-        name: 'plugin-error',
-        async resolveId() {
+        name: 'my-plugin',
+        async transform(code, id) {
+          console.log({ id, code })
           await errorFn1()
         },
       },
@@ -20,7 +21,6 @@ export default defineTest({
     })
     expect(e.stack).toContain('at errorFn2')
     expect(e.stack).toContain('at errorFn1')
-    expect(e.stack).toContain('at PluginContext.resolveId')
   },
 })
 

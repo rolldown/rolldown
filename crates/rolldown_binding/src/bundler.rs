@@ -183,13 +183,36 @@ impl Bundler {
   }
 
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {
+    let errs_len = errs.len();
+    let mut napi_errors: Vec<napi::Error> = vec![];
     errs.into_iter().for_each(|err| {
-      eprintln!(
-        "{}",
-        err.into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() }).to_color_string()
-      );
+      match err.downcast_napi_error() {
+        Ok(napi_error) => {
+          napi_errors.push(napi_error);
+        }
+        Err(err) => {
+          // TODO: should be included as js errors?
+          eprintln!(
+            "{}",
+            err
+              .into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
+              .to_color_string()
+          );
+        }
+      }
     });
-    napi::Error::from_reason("Build failed")
+    // TODO: is it possible to return as an aggregated error back to js side?
+    // it seems difficult since `Env` is not even available in async fn,
+    // so handle single js error case for now.
+    // https://github.com/napi-rs/napi-rs/issues/1981#issuecomment-1978208322
+    // https://github.com/napi-rs/napi-rs/issues/945
+    if napi_errors.len() == 1 {
+      return napi_errors.pop().unwrap();
+    }
+    napi::Error::from_reason(format!(
+      "Build failed{}",
+      if errs_len > 1 { format!(" with {} errors", errs_len) } else { "".to_string() }
+    ))
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]

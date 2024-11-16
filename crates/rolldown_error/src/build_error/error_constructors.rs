@@ -262,6 +262,19 @@ impl BuildDiagnostic {
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
-    Self::new_inner(UnhandleableError(err))
+    #[cfg(feature = "napi")]
+    {
+      match err.downcast::<napi::Error>() {
+        Ok(napi_error) => {
+          Self::new_inner(UnhandleableError(std::io::Error::other("napi_error").into()))
+            .with_napi_error(napi_error)
+        }
+        Err(err) => Self::new_inner(UnhandleableError(err)),
+      }
+    }
+    #[cfg(not(feature = "napi"))]
+    {
+      Self::new_inner(UnhandleableError(err))
+    }
   }
 }

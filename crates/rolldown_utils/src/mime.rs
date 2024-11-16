@@ -2,8 +2,8 @@ use crate::light_guess::{self, RawMimeExt};
 use mime::Mime;
 use std::{fmt::Display, path::Path, str::FromStr};
 
-fn is_texture(data: &[u8]) -> bool {
-  std::str::from_utf8(data).is_ok()
+fn is_valid_utf8(data: &[u8]) -> bool {
+  simdutf8::basic::from_utf8(data).is_ok()
 }
 
 #[derive(Debug)]
@@ -47,7 +47,7 @@ pub fn guess_mime(path: &Path, data: &[u8]) -> anyhow::Result<MimeExt> {
     return Ok((Mime::from_str(inferred.mime_type())?, false).into());
   }
 
-  if is_texture(data) || data.is_empty() {
+  if is_valid_utf8(data) || data.is_empty() {
     return Ok((mime::TEXT_PLAIN, true).into());
   }
 

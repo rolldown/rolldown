@@ -2,6 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_sourcemap::SourceJoiner;
+use rolldown_utils::concat_string;
 
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
@@ -53,8 +54,7 @@ pub fn render_esm<'code>(
           })
           .dedup()
           .for_each(|ext_name| {
-            let import_stmt = format!("export * from \"{}\"\n", &ext_name);
-            source_joiner.append_source(import_stmt);
+            source_joiner.append_source(concat_string!("export * from \"", ext_name, "\";\n"));
           });
       }
     }
@@ -77,14 +77,18 @@ pub fn render_esm<'code>(
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(format!("{wrapper_ref_name}();",));
+        source_joiner.append_source(concat_string!(wrapper_ref_name.as_str(), "();\n"));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(format!("export default {wrapper_ref_name}();\n"));
+        source_joiner.append_source(concat_string!(
+          "export default ",
+          wrapper_ref_name.as_str(),
+          "();\n"
+        ));
       }
       WrapKind::None => {}
     }
@@ -117,7 +121,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     match &stmt.specifiers() {
       RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
         if specifiers.is_empty() {
-          s.push_str(&format!("import \"{path}\";\n",));
+          s.push_str(&concat_string!("import \"", path, "\";\n"));
         } else {
           let mut default_alias = vec![];
           let specifiers = specifiers
@@ -128,7 +132,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
                   default_alias.push(alias.to_string());
                   return None;
                 }
-                Some(format!("{} as {alias}", specifier.imported))
+                Some(concat_string!(specifier.imported, " as ", alias))
               } else {
                 Some(specifier.imported.to_string())
               }
@@ -138,7 +142,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         }
       }
       RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-        s.push_str(&format!("import * as {alias} from \"{path}\";\n",));
+        s.push_str(&concat_string!("import * as ", alias, " from \"", path, "\";\n"));
       }
     }
   });
@@ -155,7 +159,7 @@ fn create_import_declaration(
     [] => None,
     [first] => Some(first),
     [first, rest @ ..] => {
-      specifiers.extend(rest.iter().map(|item| format!("default as {item}",)));
+      specifiers.extend(rest.iter().map(|item| concat_string!("default as ", item)));
       Some(first)
     }
   };
@@ -165,9 +169,9 @@ fn create_import_declaration(
       ret.push_str(first_default_alias);
       ret.push_str(", ");
     }
-    ret.push_str(&format!("{{ {} }} from \"{path}\";\n", specifiers.join(", ")));
+    ret.push_str(&concat_string!("{ ", specifiers.join(", "), " } from \"", path, "\";\n"));
   } else if let Some(first_default_alias) = first_default_alias {
-    ret.push_str(&format!("import {first_default_alias} from \"{path}\";\n"));
+    ret.push_str(&concat_string!("import ", first_default_alias, " from \"", path, "\";\n"));
   }
   ret
 }

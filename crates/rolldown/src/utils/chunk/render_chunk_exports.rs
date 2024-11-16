@@ -6,7 +6,10 @@ use rolldown_common::{
   OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
-use rolldown_utils::ecmascript::{is_validate_identifier_name, property_access_str};
+use rolldown_utils::{
+  concat_string,
+  ecmascript::{is_validate_identifier_name, property_access_str},
+};
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(
@@ -32,19 +35,27 @@ pub fn render_chunk_exports(
           if let Some(ns_alias) = &symbol.namespace_alias {
             let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
             let property_name = &ns_alias.property_name;
-            s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
+            s.push_str(&concat_string!(
+              "var ",
+              canonical_name,
+              " = ",
+              canonical_ns_name,
+              ".",
+              property_name,
+              ";\n"
+            ));
           }
 
           if canonical_name == &exported_name {
-            format!("{canonical_name}")
+            Cow::Borrowed(canonical_name.as_str())
           } else if is_validate_identifier_name(&exported_name) {
-            format!("{canonical_name} as {exported_name}")
+            Cow::Owned(concat_string!(canonical_name, " as ", exported_name))
           } else {
-            format!("{canonical_name} as '{exported_name}'")
+            Cow::Owned(concat_string!(canonical_name, " as '", exported_name, "'"))
           }
         })
         .collect::<Vec<_>>();
-      s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
+      s.push_str(&concat_string!("export { ", rendered_items.join(", "), " };"));
       Some(s)
     }
     OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
@@ -73,8 +84,11 @@ pub fn render_chunk_exports(
                   if is_this_symbol_point_to_other_chunk {
                     let require_binding = &ctx.chunk.require_binding_names_for_other_chunks
                       [&canonical_ref_owner_chunk_idx];
-                    canonical_name =
-                      Cow::Owned(Rstr::new(&format!("{require_binding}.{canonical_name}")));
+                    canonical_name = Cow::Owned(Rstr::new(&concat_string!(
+                      require_binding,
+                      ".",
+                      canonical_name.as_str()
+                    )));
                   };
                   canonical_name.clone()
                 };
@@ -87,26 +101,31 @@ pub fn render_chunk_exports(
                       options,
                       &link_output.module_table.modules,
                     ) {
-                      format!(
-                        "Object.defineProperty(exports, '{exported_name}', {{
+                      concat_string!(
+                        "Object.defineProperty(exports, '",
+                        exported_name.as_str(),
+                        "', {
   enumerable: true,
-  get: function () {{
-    return {exported_value};
-  }}
-}});"
+  get: function () {
+    return ",
+                        exported_value.as_str(),
+                        ";
+  }
+});"
                       )
                     } else {
-                      format!(
-                        "{left_value} = {exported_value}",
-                        left_value = property_access_str("exports", &exported_name)
+                      concat_string!(
+                        property_access_str("exports", exported_name.as_str()),
+                        " = ",
+                        exported_value.as_str()
                       )
                     }
                   }
                   Some(OutputExports::Default) => {
                     if matches!(options.format, OutputFormat::Cjs) {
-                      format!("module.exports = {canonical_name};")
+                      concat_string!("module.exports = ", canonical_name.as_str())
                     } else {
-                      format!("return {canonical_name};")
+                      concat_string!("return ", canonical_name.as_str())
                     }
                   }
                   Some(OutputExports::None) => String::new(),
@@ -126,22 +145,31 @@ pub fn render_chunk_exports(
             if let Some(ns_alias) = &symbol.namespace_alias {
               let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
               let property_name = &ns_alias.property_name;
-              s.push_str(&format!(
-                "Object.defineProperty(exports, '{exported_name}', {{
+              s.push_str(&concat_string!(
+                "Object.defineProperty(exports, '",
+                exported_name,
+                "', {
   enumerable: true,
-  get: function () {{
-    return {canonical_ns_name}.{property_name};
-  }}
-}});\n"
+  get: function () {
+    return ",
+                canonical_ns_name,
+                ".",
+                property_name,
+                ";\n  }
+});\n"
               ));
             } else {
-              s.push_str(&format!(
-                "Object.defineProperty(exports, '{exported_name}', {{
+              s.push_str(&concat_string!(
+                "Object.defineProperty(exports, '",
+                exported_name,
+                "', {
   enumerable: true,
-  get: function () {{
-    return {canonical_name};
-  }}
-}});"
+  get: function () {
+    return ",
+                canonical_name,
+                ";
+  }
+});"
               ));
             };
           });

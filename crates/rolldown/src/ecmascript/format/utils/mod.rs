@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use rolldown_std_utils::OptionExt;
+use rolldown_utils::concat_string;
 
 use crate::{
   types::generator::GenerateContext,
@@ -46,19 +47,22 @@ pub fn render_chunk_external_imports(
                 .iter()
                 .map(|specifier| {
                   if let Some(alias) = &specifier.alias {
-                    format!("{}: {alias}", specifier.imported)
+                    concat_string!(specifier.imported, ": ", alias)
                   } else {
                     specifier.imported.to_string()
                   }
                 })
                 .collect::<Vec<_>>();
-              import_code
-                .push_str(&format!("const {{ {} }} = {symbol_name};\n", specifiers.join(", ")));
+              import_code.push_str("const {");
+              import_code.push_str(&specifiers.join(", "));
+              import_code.push_str("} = ");
+              import_code.push_str(symbol_name);
+              import_code.push_str(";\n");
               Some(external_stmt)
             }
           }
           RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-            import_code.push_str(&format!("const {alias} = {symbol_name};\n"));
+            import_code.push_str(&concat_string!("const ", alias, " = ", symbol_name, ";\n"));
             Some(external_stmt)
           }
         }

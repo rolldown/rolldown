@@ -1,6 +1,8 @@
 use oxc::syntax::{identifier, keyword};
 use std::borrow::Cow;
 
+use crate::concat_string;
+
 pub fn is_validate_identifier_name(name: &str) -> bool {
   identifier::is_identifier_name(name)
 }
@@ -48,9 +50,9 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
 
 pub fn property_access_str(obj: &str, prop: &str) -> String {
   if is_validate_identifier_name(prop) {
-    format!("{obj}.{prop}")
+    concat_string!(obj, ".", prop)
   } else {
-    format!("{obj}[\"{prop}\"]")
+    concat_string!(obj, "[", "\"", prop, "\"]")
   }
 }
 

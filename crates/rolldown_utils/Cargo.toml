@@ -12,6 +12,11 @@ repository.workspace = true
 [lib]
 doctest = false
 
+[[bench]]
+harness = false
+name    = "concat_string"
+path    = "bench/concat_string.rs"
+
 [lints]
 workspace = true
 
@@ -33,6 +38,7 @@ regex              = { workspace = true }
 regress            = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rustc-hash         = { workspace = true }
+simdutf8           = { workspace = true }
 sugar_path         = { workspace = true }
 xxhash-rust        = { workspace = true, features = ["xxh3"] }
 
@@ -40,3 +46,6 @@ xxhash-rust        = { workspace = true, features = ["xxh3"] }
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon        = { workspace = true }
+
+[dev-dependencies]
+criterion2 = { workspace = true }

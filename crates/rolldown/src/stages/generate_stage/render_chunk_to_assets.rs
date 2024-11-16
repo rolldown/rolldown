@@ -8,7 +8,10 @@ use rolldown_common::{
   SourceMapType,
 };
 use rolldown_error::BuildDiagnostic;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{
+  concat_string,
+  rayon::{IntoParallelRefIterator, ParallelIterator},
+};
 use sugar_path::SugarPath;
 
 use crate::{
@@ -100,7 +103,8 @@ impl<'a> GenerateStage<'a> {
           if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
             let debug_id_str = uuid_v4_string_from_u128(rendered_chunk.debug_id);
             map.set_debug_id(&debug_id_str);
-            code.push_str(&format!("\n//# debugId={debug_id_str}"));
+            code.push_str("\n//# debugId=");
+            code.push_str(debug_id_str.as_str());
           }
 
           // Normalize the windows path at final.
@@ -119,18 +123,19 @@ impl<'a> GenerateStage<'a> {
                   name: None,
                 })));
                 if matches!(sourcemap, SourceMapType::File) {
-                  code.push_str(&format!(
-                    "\n//# sourceMappingURL={}",
-                    Path::new(&map_filename)
+                  code.push_str("\n//# sourceMappingURL=");
+                  code.push_str(
+                    &Path::new(&map_filename)
                       .file_name()
                       .expect("should have filename")
-                      .to_string_lossy()
-                  ));
+                      .to_string_lossy(),
+                  );
                 }
               }
               SourceMapType::Inline => {
                 let data_url = map.to_data_url();
-                code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
+                code.push_str("\n//# sourceMappingURL=");
+                code.push_str(&data_url);
               }
             }
           }
@@ -140,7 +145,7 @@ impl<'a> GenerateStage<'a> {
           if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
             None
           } else {
-            Some(format!("{}.map", rendered_chunk.filename.as_str()))
+            Some(concat_string!(rendered_chunk.filename, ".map"))
           };
         output.push(Output::Chunk(Box::new(OutputChunk {
           name: rendered_chunk.name,

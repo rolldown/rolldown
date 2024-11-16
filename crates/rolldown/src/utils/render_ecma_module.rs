@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
 use rolldown_sourcemap::{collapse_sourcemaps, Source, SourceMapSource};
+use rolldown_utils::concat_string;
 
 pub fn render_ecma_module(
   module: &NormalModule,
@@ -12,8 +13,7 @@ pub fn render_ecma_module(
     None
   } else {
     let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = vec![];
-    sources
-      .push(Box::new(format!("//#region {debug_module_id}", debug_module_id = module.debug_id)));
+    sources.push(Box::new(concat_string!("//#region ", module.debug_id)));
 
     let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
 

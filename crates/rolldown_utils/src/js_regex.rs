@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use crate::concat_string;
+
 /// According to the doc of `regress`, https://docs.rs/regress/0.10.0/regress/#comparison-to-regex-crate
 /// **regress supports features that regex does not, in particular backreferences and zero-width lookaround assertions.**
 /// these features are not commonly used, so in most cases the slow path will not be reached.
@@ -18,7 +20,8 @@ impl HybridRegex {
   }
 
   pub fn with_flags(pattern: &str, flags: &str) -> anyhow::Result<Self> {
-    let regex_pattern = if flags.is_empty() { pattern } else { &format!("(?{flags}){pattern}") };
+    let regex_pattern =
+      if flags.is_empty() { pattern } else { &concat_string!("(?", flags, ")", pattern) };
 
     match regex::Regex::new(regex_pattern).map(HybridRegex::Optimize) {
       Ok(reg) => Ok(reg),

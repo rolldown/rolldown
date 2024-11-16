@@ -15,6 +15,7 @@ use crate::{
 use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::SourceJoiner;
+use rolldown_utils::concat_string;
 
 #[allow(clippy::too_many_lines)]
 pub fn render_cjs<'code>(
@@ -65,15 +66,15 @@ pub fn render_cjs<'code>(
           let importee = &ctx.link_output.module_table.modules[*importee_idx];
           let binding_ref_name =
             ctx.link_output.symbol_db.canonical_name_for(*binding_ref, &ctx.chunk.canonical_names);
-            let import_stmt =
+            let import_stmt = concat_string!(
 "Object.keys($NAME).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return $NAME[k]; }
+    get: function () { return ", binding_ref_name, "[k]; }
   });
-});".replace("$NAME", binding_ref_name);
+});");
 
-          source_joiner.append_source(format!("var {} = require(\"{}\");", binding_ref_name,&importee.stable_id()));
+          source_joiner.append_source(concat_string!("var ", binding_ref_name, " = require(\"", &importee.stable_id(), "\");"));
           source_joiner.append_source(import_stmt);
         });
         Some(export_mode)
@@ -124,14 +125,14 @@ pub fn render_cjs<'code>(
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(format!("{wrapper_ref_name}();",));
+        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(format!("export default {wrapper_ref_name}();\n"));
+        source_joiner.append_source(concat_string!("export default ", wrapper_ref_name, "();\n"));
       }
       WrapKind::None => {}
     }
@@ -163,14 +164,15 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   // render imports from other chunks
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
-    let require_path_str = format!("require('{}');\n", ctx.chunk.import_path_for(importee_chunk));
+    let require_path_str =
+      concat_string!("require('", ctx.chunk.import_path_for(importee_chunk), "');\n");
     if items.is_empty() {
       s.push_str(&require_path_str);
     } else {
-      s.push_str(&format!(
-        "const {} = {require_path_str}",
-        ctx.chunk.require_binding_names_for_other_chunks[exporter_id],
-      ));
+      s.push_str("const ");
+      s.push_str(&ctx.chunk.require_binding_names_for_other_chunks[exporter_id]);
+      s.push_str(" = ");
+      s.push_str(&require_path_str);
     }
   });
 
@@ -178,52 +180,57 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     if !stmt.is_external() {
       return;
     }
-    let require_path_str = format!("require(\"{}\")", &stmt.path());
+    let require_path = concat_string!("require(\"", stmt.path(), "\")");
+    let require_path_str = require_path.as_str();
     match &stmt.specifiers() {
       RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
         if specifiers.is_empty() {
-          s.push_str(&format!("{require_path_str};\n"));
+          s.push_str(&concat_string!(require_path_str, ";\n"));
         } else {
           let specifiers = specifiers
             .iter()
             .map(|specifier| {
               if let Some(alias) = &specifier.alias {
-                format!("{}: {alias}", specifier.imported)
+                concat_string!(specifier.imported, ": ", alias)
               } else {
                 specifier.imported.to_string()
               }
             })
             .collect::<Vec<_>>();
-          s.push_str(&format!(
-            "const {{ {} }} = {};\n",
-            specifiers.join(", "),
-            if stmt.is_external() {
-              let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-                .link_output
-                .symbol_db
-                .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
-
-              format!("{to_esm_fn_name}({require_path_str})")
-            } else {
-              require_path_str
-            }
-          ));
-        }
-      }
-      RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-        s.push_str(&format!(
-          "const {alias} = {};\n",
+          s.push_str("const { ");
+          s.push_str(&specifiers.join(", "));
+          s.push_str(" } = ");
           if stmt.is_external() {
             let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
               .link_output
               .symbol_db
               .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
-            format!("{to_esm_fn_name}({require_path_str})")
+            s.push_str(to_esm_fn_name);
+            s.push('(');
+            s.push_str(require_path_str);
+            s.push(')');
           } else {
-            require_path_str
+            s.push_str(require_path_str);
           }
-        ));
+          s.push_str(";\n");
+        }
+      }
+      RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
+        s.push_str("const ");
+        s.push_str(alias);
+        s.push_str(" = ");
+        s.push_str(&if stmt.is_external() {
+          let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
+            .link_output
+            .symbol_db
+            .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+
+          concat_string!(to_esm_fn_name, "(", require_path_str, ")")
+        } else {
+          require_path
+        });
+        s.push_str(";\n");
       }
     }
   });

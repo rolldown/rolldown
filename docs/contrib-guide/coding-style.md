@@ -16,3 +16,12 @@ You could consider adding tests in Node.js with the following reasons:
 - The test is about the behavior of the JavaScript API.
 - The test is about the behavior of the `rolldown` package itself.
 - e2e tests.
+
+## Misc
+
+### Concat strings
+
+We prefer using [`concat-string`](https://crates.io/crates/concat-string) crate to concatenate strings. There are some advantages:
+
+- It is more efficient than the std's `format` macro. You could see the benchmark [here](https://github.com/hoodie/concatenation_benchmarks-rs).
+- Especially when you are manipulating JavaScript code, it doesn't need to worried about escaping characters `{` and `}`.

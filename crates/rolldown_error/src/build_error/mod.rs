@@ -92,7 +92,7 @@ impl From<std::io::Error> for BuildDiagnostic {
 #[cfg(feature = "napi")]
 impl From<napi::Error> for BuildDiagnostic {
   fn from(e: napi::Error) -> Self {
-    BuildDiagnostic::napi_error(e.status.to_string(), e.reason)
+    BuildDiagnostic::napi_error(e)
   }
 }
 

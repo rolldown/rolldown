@@ -20,8 +20,8 @@ use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::unsupported_feature::UnsupportedFeature;
 use crate::events::DiagnosableArcstr;
-#[allow(unused_imports)]
-use crate::events::JsPluginError;
+#[cfg(feature = "napi")]
+use crate::events::NapiError;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -37,7 +37,6 @@ use crate::events::{
   unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
-  NapiError,
 };
 
 impl BuildDiagnostic {
@@ -244,8 +243,11 @@ impl BuildDiagnostic {
     Self::new_inner(InvalidOption { invalid_option_types: situation, option })
   }
 
-  pub fn napi_error(status: String, reason: String) -> Self {
-    Self::new_inner(NapiError { status, reason })
+  #[cfg(feature = "napi")]
+  pub fn napi_error(err: napi::Error) -> Self {
+    let mut diagnostic = Self::new_inner(NapiError {});
+    diagnostic.napi_error = Some(err);
+    diagnostic
   }
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
@@ -274,11 +276,7 @@ impl BuildDiagnostic {
 fn downcast_napi_error_diagnostics(err: anyhow::Error) -> Result<BuildDiagnostic, anyhow::Error> {
   #[cfg(feature = "napi")]
   {
-    err.downcast::<napi::Error>().map(|napi_error| {
-      let mut error = BuildDiagnostic::new_inner(JsPluginError {});
-      error.napi_error = Some(napi_error);
-      error
-    })
+    err.downcast::<napi::Error>().map(BuildDiagnostic::napi_error)
   }
   #[cfg(not(feature = "napi"))]
   {

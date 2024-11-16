@@ -54,10 +54,7 @@ where
 // --- TODO(hyf0): These errors are only for compatibility with legacy code. They should be replaced with more specific errors.
 
 #[derive(Debug)]
-pub struct NapiError {
-  pub status: String,
-  pub reason: String,
-}
+pub struct NapiError {}
 
 impl BuildEvent for NapiError {
   fn kind(&self) -> EventKind {
@@ -65,20 +62,7 @@ impl BuildEvent for NapiError {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!("Napi error: {status}: {reason}", status = self.status, reason = self.reason)
-  }
-}
-
-#[derive(Debug)]
-pub struct JsPluginError {}
-
-impl BuildEvent for JsPluginError {
-  fn kind(&self) -> EventKind {
-    EventKind::NapiError
-  }
-
-  fn message(&self, _opts: &DiagnosticOptions) -> String {
-    "Js plugin error".into()
+    "Napi error".into()
   }
 }
 

@@ -10,18 +10,4 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-  plugins: [
-    {
-      name: 'xxx',
-      // resolveId() {
-      //   throw new Error('boom');
-      // },
-      // load() {
-      //   throw new Error('boom');
-      // },
-      // transform() {
-      //   throw new Error('boom');
-      // },
-    },
-  ],
 })

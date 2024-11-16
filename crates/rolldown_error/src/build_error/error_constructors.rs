@@ -274,9 +274,11 @@ impl BuildDiagnostic {
 fn downcast_napi_error_diagnostics(err: anyhow::Error) -> Result<BuildDiagnostic, anyhow::Error> {
   #[cfg(feature = "napi")]
   {
-    err
-      .downcast::<napi::Error>()
-      .map(|napi_error| BuildDiagnostic::new_inner(JsPluginError {}).with_napi_error(napi_error))
+    err.downcast::<napi::Error>().map(|napi_error| {
+      let mut error = BuildDiagnostic::new_inner(JsPluginError {});
+      error.napi_error = Some(napi_error);
+      error
+    })
   }
   #[cfg(not(feature = "napi"))]
   {

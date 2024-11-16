@@ -62,15 +62,6 @@ impl BuildDiagnostic {
     diagnostic
   }
 
-  // --- private
-
-  #[cfg(feature = "napi")]
-  #[must_use]
-  pub fn with_napi_error(mut self, napi_error: napi::Error) -> Self {
-    self.napi_error = Some(napi_error);
-    self
-  }
-
   #[cfg(feature = "napi")]
   pub fn downcast_napi_error(self) -> Result<napi::Error, Self> {
     match self.napi_error {
@@ -78,6 +69,8 @@ impl BuildDiagnostic {
       None => Err(self),
     }
   }
+
+  // --- private
 
   fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {
     Self {

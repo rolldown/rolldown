@@ -131,7 +131,6 @@ impl ModuleTask {
     {
       Ok(ret) => ret,
       Err(err) => {
-        // TODO: preserve anyhow::Error in unloadable_dependency?
         self.errors.push(BuildDiagnostic::unloadable_dependency(
           self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
           self.owner.as_ref().map(|owner| UnloadableDependencyContext {
@@ -139,7 +138,7 @@ impl ModuleTask {
             importee_span: owner.importee_span,
             source: owner.source.clone(),
           }),
-          err.to_string().into(),
+          err,
         ));
         return Ok(());
       }

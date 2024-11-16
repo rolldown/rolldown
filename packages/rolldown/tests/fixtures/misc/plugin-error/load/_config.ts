@@ -14,14 +14,12 @@ export default defineTest({
   },
   catchError(e) {
     assert(e instanceof Error)
-    // TODO
-    expect(e).not.toMatchObject({
+    expect(e).toMatchObject({
       message: 'hi',
       extraProp: 1234,
     })
-    // expect(e.stack).toContain('at errorFn2')
-    // expect(e.stack).toContain('at errorFn1')
-    // expect(e.stack).toContain('at PluginContext.resolveId')
+    expect(e.stack).toContain('at errorFn2')
+    expect(e.stack).toContain('at errorFn1')
   },
 })
 

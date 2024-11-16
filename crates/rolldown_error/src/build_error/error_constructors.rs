@@ -85,9 +85,11 @@ impl BuildDiagnostic {
   pub fn unloadable_dependency(
     resolved: ArcStr,
     context: Option<UnloadableDependencyContext>,
-    reason: ArcStr,
+    err: anyhow::Error,
   ) -> Self {
-    Self::new_inner(UnloadableDependency { resolved, context, reason })
+    downcast_napi_error_diagnostics(err).unwrap_or_else(|err| {
+      Self::new_inner(UnloadableDependency { resolved, context, reason: err.to_string().into() })
+    })
   }
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
@@ -262,19 +264,21 @@ impl BuildDiagnostic {
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
-    #[cfg(feature = "napi")]
-    {
-      match err.downcast::<napi::Error>() {
-        Ok(napi_error) => {
-          Self::new_inner(UnhandleableError(std::io::Error::other("napi_error").into()))
-            .with_napi_error(napi_error)
-        }
-        Err(err) => Self::new_inner(UnhandleableError(err)),
-      }
-    }
-    #[cfg(not(feature = "napi"))]
-    {
-      Self::new_inner(UnhandleableError(err))
-    }
+    downcast_napi_error_diagnostics(err)
+      .unwrap_or_else(|err| Self::new_inner(UnhandleableError(err)))
+  }
+}
+
+fn downcast_napi_error_diagnostics(err: anyhow::Error) -> Result<BuildDiagnostic, anyhow::Error> {
+  #[cfg(feature = "napi")]
+  {
+    err.downcast::<napi::Error>().map(|napi_error| {
+      BuildDiagnostic::new_inner(UnhandleableError(std::io::Error::other("__napi_error__").into()))
+        .with_napi_error(napi_error)
+    })
+  }
+  #[cfg(not(feature = "napi"))]
+  {
+    Err(err)
   }
 }

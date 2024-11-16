@@ -36,7 +36,6 @@ pub struct ParseToEcmaAstResult {
 }
 
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_lines)]
 pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,
@@ -47,8 +46,59 @@ pub fn parse_to_ecma_ast(
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
   is_user_defined_entry: bool,
 ) -> BuildResult<ParseToEcmaAstResult> {
+  let (has_lazy_export, source, parsed_type) =
+    pre_process_source(module_type, source, is_user_defined_entry, stable_id, path, options)?;
+
+  let oxc_source_type = {
+    let default = pure_esm_js_oxc_source_type();
+    match parsed_type {
+      OxcParseType::Js => default,
+      OxcParseType::Jsx => default.with_jsx(true),
+      OxcParseType::Ts => default.with_typescript(true),
+      OxcParseType::Tsx => default.with_typescript(true).with_jsx(true),
+    }
+  };
+
+  let source = ArcStr::from(source);
+  let mut ecma_ast = EcmaCompiler::parse(stable_id, &source, oxc_source_type)?;
+
+  ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
+    cwd: &options.cwd,
+    ast: ecma_ast,
+    id: stable_id,
+  })?;
+
+  PreProcessEcmaAst::default()
+    .build(
+      ecma_ast,
+      &parsed_type,
+      stable_id,
+      replace_global_define_config,
+      options,
+      has_lazy_export,
+    )
+    .map_or_else(
+      |errors| {
+        Err(
+          BuildDiagnostic::from_oxc_diagnostics(errors, &source, stable_id, &Severity::Error)
+            .into(),
+        )
+      },
+      |(ast, symbol_table, scope_tree, warning)| {
+        Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning })
+      },
+    )
+}
+
+fn pre_process_source(
+  module_type: &ModuleType,
+  source: StrOrBytes,
+  is_user_defined_entry: bool,
+  stable_id: &str,
+  path: &Path,
+  options: &NormalizedBundlerOptions,
+) -> BuildResult<(bool, String, OxcParseType)> {
   let mut has_lazy_export = false;
-  // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
     ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
     ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
@@ -116,44 +166,5 @@ pub fn parse_to_ecma_ast(
       return Err(anyhow::format_err!("Unknown module type: {custom_type}"))?;
     }
   };
-
-  let oxc_source_type = {
-    let default = pure_esm_js_oxc_source_type();
-    match parsed_type {
-      OxcParseType::Js => default,
-      OxcParseType::Jsx => default.with_jsx(true),
-      OxcParseType::Ts => default.with_typescript(true),
-      OxcParseType::Tsx => default.with_typescript(true).with_jsx(true),
-    }
-  };
-
-  let source = ArcStr::from(source);
-  let mut ecma_ast = EcmaCompiler::parse(stable_id, &source, oxc_source_type)?;
-
-  ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
-    cwd: &options.cwd,
-    ast: ecma_ast,
-    id: stable_id,
-  })?;
-
-  PreProcessEcmaAst::default()
-    .build(
-      ecma_ast,
-      &parsed_type,
-      stable_id,
-      replace_global_define_config,
-      options,
-      has_lazy_export,
-    )
-    .map_or_else(
-      |errors| {
-        Err(
-          BuildDiagnostic::from_oxc_diagnostics(errors, &source, stable_id, &Severity::Error)
-            .into(),
-        )
-      },
-      |(ast, symbol_table, scope_tree, warning)| {
-        Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning })
-      },
-    )
+  Ok((has_lazy_export, source, parsed_type))
 }

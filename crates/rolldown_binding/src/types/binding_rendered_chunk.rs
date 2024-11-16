@@ -18,6 +18,7 @@ pub struct RenderedChunk {
   // RenderedChunk
   pub file_name: String,
   #[serde(skip)]
+  #[napi(ts_type = "Record<string, RenderedModule>")]
   pub modules: HashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,

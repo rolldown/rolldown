@@ -3,6 +3,11 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 
+export interface RenderedModule {
+  readonly code: string | null
+  renderedLength: number
+}
+
 export declare class BindingLog {
   code: string
   message: string
@@ -32,7 +37,7 @@ export declare class BindingOutputChunk {
   get moduleIds(): Array<string>
   get exports(): Array<string>
   get fileName(): string
-  get modules(): Record<string, BindingRenderedModule>
+  get modules(): Record<string, RenderedModule>
   get imports(): Array<string>
   get dynamicImports(): Array<string>
   get code(): string
@@ -55,6 +60,10 @@ export declare class BindingPluginContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
   addWatchFile(file: string): void
+}
+
+export declare class BindingRenderedModule {
+  get code(): string | null
 }
 
 export declare class BindingTransformPluginContext {
@@ -397,10 +406,6 @@ export interface BindingPluginWithIndex {
   plugin: BindingPluginOptions
 }
 
-export interface BindingRenderedModule {
-  code?: string
-}
-
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
@@ -537,7 +542,7 @@ export interface JsOutputChunk {
   moduleIds: Array<string>
   exports: Array<string>
   filename: string
-  modules: Record<string, BindingRenderedModule>
+  modules: Record<string, RenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
   code: string
@@ -676,7 +681,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: Record<string, BindingRenderedModule>
+  modules: Record<string, RenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
 }

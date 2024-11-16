@@ -162,13 +162,14 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__PreRenderedChunk_struct_102']?.()
   __napiInstance.exports['__napi_register__RenderedChunk_struct_103']?.()
   __napiInstance.exports['__napi_register__BindingRenderedModule_struct_104']?.()
-  __napiInstance.exports['__napi_register__AliasItem_struct_105']?.()
-  __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_106']?.()
-  __napiInstance.exports['__napi_register__BindingSourcemap_struct_107']?.()
-  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_108']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_struct_109']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_112']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEvent_113']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_impl_106']?.()
+  __napiInstance.exports['__napi_register__AliasItem_struct_107']?.()
+  __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_108']?.()
+  __napiInstance.exports['__napi_register__BindingSourcemap_struct_109']?.()
+  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_110']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_struct_111']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_114']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_115']?.()
 }
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
@@ -176,6 +177,7 @@ module.exports.BindingOutputAsset = __napiModule.exports.BindingOutputAsset
 module.exports.BindingOutputChunk = __napiModule.exports.BindingOutputChunk
 module.exports.BindingOutputs = __napiModule.exports.BindingOutputs
 module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
+module.exports.BindingRenderedModule = __napiModule.exports.BindingRenderedModule
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
 module.exports.Bundler = __napiModule.exports.Bundler

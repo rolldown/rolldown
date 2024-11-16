@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
   types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
@@ -21,7 +23,8 @@ use super::format::{
   app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd,
 };
 
-pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
+pub type RenderedModuleSources =
+  Vec<(ModuleIdx, ModuleId, Option<Arc<[Box<dyn Source + Send + Sync>]>>)>;
 
 pub struct EcmaGenerator;
 
@@ -48,10 +51,10 @@ impl Generator for EcmaGenerator {
       })
       .collect::<Vec<_>>();
 
-    rendered_module_sources.iter().for_each(|(_, module_id, _)| {
+    rendered_module_sources.iter().for_each(|(_, module_id, sources)| {
       // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
       if !module_id.starts_with('\0') {
-        rendered_modules.insert(module_id.clone(), RenderedModule { code: None });
+        rendered_modules.insert(module_id.clone(), RenderedModule::new(sources.clone()));
       }
     });
 

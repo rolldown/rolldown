@@ -69,6 +69,19 @@ impl BuildEvent for NapiError {
   }
 }
 
+#[derive(Debug)]
+pub struct JsPluginError {}
+
+impl BuildEvent for JsPluginError {
+  fn kind(&self) -> EventKind {
+    EventKind::NapiError
+  }
+
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
+    "Js plugin error".into()
+  }
+}
+
 impl BuildEvent for std::io::Error {
   fn kind(&self) -> EventKind {
     EventKind::IoError

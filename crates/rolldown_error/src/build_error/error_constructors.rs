@@ -20,6 +20,8 @@ use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::unsupported_feature::UnsupportedFeature;
 use crate::events::DiagnosableArcstr;
+#[allow(unused_imports)]
+use crate::events::JsPluginError;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -272,10 +274,9 @@ impl BuildDiagnostic {
 fn downcast_napi_error_diagnostics(err: anyhow::Error) -> Result<BuildDiagnostic, anyhow::Error> {
   #[cfg(feature = "napi")]
   {
-    err.downcast::<napi::Error>().map(|napi_error| {
-      BuildDiagnostic::new_inner(UnhandleableError(std::io::Error::other("__napi_error__").into()))
-        .with_napi_error(napi_error)
-    })
+    err
+      .downcast::<napi::Error>()
+      .map(|napi_error| BuildDiagnostic::new_inner(JsPluginError {}).with_napi_error(napi_error))
   }
   #[cfg(not(feature = "napi"))]
   {

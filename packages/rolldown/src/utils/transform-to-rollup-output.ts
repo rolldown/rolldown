@@ -103,6 +103,17 @@ export function transformToRollupOutput(
   output: BindingOutputs,
   changed?: ChangedOutputs,
 ): RolldownOutput {
+  const errors = output.errors as unknown[] | null
+  if (errors && errors.length > 0) {
+    // TODO: how does rollup throw multiple errors?
+    const errors2 = errors.map((e: unknown) =>
+      e instanceof Error ? e : Object.assign(new Error(), e),
+    )
+    if (errors2.length === 1) {
+      throw errors2[0]
+    }
+    throw new AggregateError(errors2, 'Build failed')
+  }
   const { chunks, assets } = output
   return {
     output: [

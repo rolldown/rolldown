@@ -123,6 +123,7 @@ impl Bundler {
         self.handle_warnings(output.warnings).await;
       }
       Err(errs) => {
+        // TODO
         return Err(self.handle_errors(errs.into_vec()));
       }
     }
@@ -137,7 +138,7 @@ impl Bundler {
     let outputs = handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
-      return Err(self.handle_errors(outputs.errors));
+      return Ok(outputs.errors.into());
     }
 
     self.handle_warnings(outputs.warnings).await;
@@ -152,7 +153,7 @@ impl Bundler {
     let outputs = handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
-      return Err(self.handle_errors(outputs.errors));
+      return Ok(outputs.errors.into());
     }
 
     self.handle_warnings(outputs.warnings).await;

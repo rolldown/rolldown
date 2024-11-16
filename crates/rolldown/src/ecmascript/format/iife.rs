@@ -38,7 +38,7 @@ use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
 use super::utils::{render_chunk_external_imports, render_factory_parameters};
 
@@ -106,8 +106,8 @@ pub fn render_iife<'code>(
   // The function argument and the external imports are passed as arguments to the wrapper function.
   let factory_parameters = render_factory_parameters(ctx, &externals, exports_prefix.is_some());
 
-  source_joiner.append_source(format!(
-    "{definition}{}(function({factory_parameters}) {{\n",
+  source_joiner.append_source(concat_string!(
+    definition,
     if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
       // If facing following situations, there shouldn't an assignment for the wrapper function:
       // - Using `output.extend` and named export.
@@ -115,8 +115,11 @@ pub fn render_iife<'code>(
       // - the `assignment` is empty.
       String::new()
     } else {
-      format!("{assignment} = ")
-    }
+      concat_string!(assignment, " = ")
+    },
+    "(function(",
+    factory_parameters,
+    ") {\n"
   ));
 
   if determine_use_strict(ctx) {
@@ -177,7 +180,7 @@ pub fn render_iife<'code>(
 
   // iife wrapper end
   let factory_arguments = render_iife_factory_arguments(ctx, &externals, exports_prefix);
-  source_joiner.append_source(format!("}})({factory_arguments});"));
+  source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
     source_joiner.append_source(footer);

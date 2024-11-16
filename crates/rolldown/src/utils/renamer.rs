@@ -4,7 +4,10 @@ use rolldown_common::{
   IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
-use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{
+  concat_string,
+  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
+};
 use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
@@ -71,7 +74,7 @@ impl<'name> Renamer<'name> {
               let next_conflict_index = *occ.get() + 1;
               *occ.get_mut() = next_conflict_index;
               candidate_name =
-                format!("{original_name}${}", itoa::Buffer::new().format(next_conflict_index))
+                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
                   .into();
             }
             Entry::Vacant(vac) => {
@@ -97,7 +100,7 @@ impl<'name> Renamer<'name> {
           let next_conflict_index = *occ.get() + 1;
           *occ.get_mut() = next_conflict_index;
           conflictless_name =
-            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into();
+            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
         }
         Entry::Vacant(vac) => {
           vac.insert(0);
@@ -118,7 +121,7 @@ impl<'name> Renamer<'name> {
           let next_conflict_index = *occ.get() + 1;
           *occ.get_mut() = next_conflict_index;
           conflictless_name =
-            format!("{hint}${}", itoa::Buffer::new().format(next_conflict_index)).into();
+            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
         }
         Entry::Vacant(vac) => {
           vac.insert(0);
@@ -156,7 +159,7 @@ impl<'name> Renamer<'name> {
 
             if is_shadowed {
               candidate_name =
-                format!("{binding_name}${}", itoa::Buffer::new().format(count)).into();
+                concat_string!(binding_name, "$", itoa::Buffer::new().format(count)).into();
               count += 1;
             } else {
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);

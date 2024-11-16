@@ -36,6 +36,7 @@ pub struct ParseToEcmaAstResult {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines)]
 pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,
@@ -62,7 +63,22 @@ pub fn parse_to_ecma_ast(
       }
     }
     ModuleType::Json => {
-      let content = json_to_esm(&source.try_into_string()?)?;
+      let content = source.try_into_string()?;
+      let content = match json_to_esm(&content) {
+        Ok(content) => content,
+        Err(err) => {
+          return Err(
+            BuildDiagnostic::json_parse(
+              stable_id.into(),
+              content.into(),
+              err.line(),
+              err.column(),
+              err.to_string().into(),
+            )
+            .into(),
+          );
+        }
+      };
       (content, OxcParseType::Js)
     }
     ModuleType::Text => {

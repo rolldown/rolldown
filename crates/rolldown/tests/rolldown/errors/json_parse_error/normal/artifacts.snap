@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Errors
+
+## JSON_PARSE
+
+```text
+[JSON_PARSE] Error: expected value at line 3 column 1
+   ╭─[test.json:3:1]
+   │
+ 3 │ }
+   │ │ 
+   │ ╰─ expected value at line 3 column 1
+───╯
+
+```

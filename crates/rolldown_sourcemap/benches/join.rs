@@ -8,8 +8,8 @@ fn criterion_benchmark(c: &mut Criterion) {
 
   group.bench_function("join", move |b| {
     let mut joiner = SourceJoiner::default();
-    for _ in 0..1024 {
-      joiner.append_source(a_norma_module.as_str());
+    for _ in 0..10_000 {
+      joiner.append_source(a_norma_module.clone());
     }
     b.iter(move || {
       black_box(joiner.join());

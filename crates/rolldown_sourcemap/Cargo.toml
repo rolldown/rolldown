@@ -22,3 +22,11 @@ memchr         = { workspace = true }
 oxc            = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash     = { workspace = true }
+
+[dev-dependencies]
+criterion2 = { workspace = true, default-features = false }
+
+
+[[bench]]
+harness = false
+name    = "join"

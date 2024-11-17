@@ -46,60 +46,8 @@ pub fn parse_to_ecma_ast(
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
   is_user_defined_entry: bool,
 ) -> BuildResult<ParseToEcmaAstResult> {
-  let mut has_lazy_export = false;
-  // 1. Transform the source to the type that rolldown supported.
-  let (source, parsed_type) = match module_type {
-    ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
-    ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
-    ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
-    ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
-    ModuleType::Css => {
-      if is_user_defined_entry {
-        ("export {}".to_owned(), OxcParseType::Js)
-      } else {
-        has_lazy_export = true;
-        ("({})".to_owned(), OxcParseType::Js)
-      }
-    }
-    ModuleType::Json => {
-      let content = json_to_esm(&source.try_into_string()?)?;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Text => {
-      let content = text_to_string_literal(&source.try_into_string()?)?;
-      has_lazy_export = true;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Base64 => {
-      let source = source.into_bytes();
-      let encoded = rolldown_utils::base64::to_standard_base64(source);
-      has_lazy_export = true;
-      (text_to_string_literal(&encoded)?, OxcParseType::Js)
-    }
-    ModuleType::Dataurl => {
-      let data = source.into_bytes();
-      let guessed_mime = guess_mime(path, &data)?;
-      let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
-      has_lazy_export = true;
-      (text_to_string_literal(&dataurl)?, OxcParseType::Js)
-    }
-    ModuleType::Binary => {
-      let source = source.into_bytes();
-      let encoded = rolldown_utils::base64::to_standard_base64(source);
-      (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
-    }
-    ModuleType::Asset => {
-      let content = "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string();
-      has_lazy_export = true;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Empty => (String::new(), OxcParseType::Js),
-    ModuleType::Custom(custom_type) => {
-      // TODO: should provide friendly error message to say that this type is not supported by rolldown.
-      // Users should handle this type in load/transform hooks
-      return Err(anyhow::format_err!("Unknown module type: {custom_type}"))?;
-    }
-  };
+  let (has_lazy_export, source, parsed_type) =
+    pre_process_source(module_type, source, is_user_defined_entry, stable_id, path, options)?;
 
   let oxc_source_type = {
     let default = pure_esm_js_oxc_source_type();
@@ -140,4 +88,83 @@ pub fn parse_to_ecma_ast(
         Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning })
       },
     )
+}
+
+fn pre_process_source(
+  module_type: &ModuleType,
+  source: StrOrBytes,
+  is_user_defined_entry: bool,
+  stable_id: &str,
+  path: &Path,
+  options: &NormalizedBundlerOptions,
+) -> BuildResult<(bool, String, OxcParseType)> {
+  let mut has_lazy_export = false;
+  let (source, parsed_type) = match module_type {
+    ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
+    ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
+    ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
+    ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
+    ModuleType::Css => {
+      if is_user_defined_entry {
+        ("export {}".to_owned(), OxcParseType::Js)
+      } else {
+        has_lazy_export = true;
+        ("({})".to_owned(), OxcParseType::Js)
+      }
+    }
+    ModuleType::Json => {
+      let content = source.try_into_string()?;
+      let content = match json_to_esm(&content) {
+        Ok(content) => content,
+        Err(err) => {
+          return Err(
+            BuildDiagnostic::json_parse(
+              stable_id.into(),
+              content.into(),
+              err.line(),
+              err.column(),
+              err.to_string().into(),
+            )
+            .into(),
+          );
+        }
+      };
+      (content, OxcParseType::Js)
+    }
+    ModuleType::Text => {
+      let content = text_to_string_literal(&source.try_into_string()?)?;
+      has_lazy_export = true;
+      (content, OxcParseType::Js)
+    }
+    ModuleType::Base64 => {
+      let source = source.into_bytes();
+      let encoded = rolldown_utils::base64::to_standard_base64(source);
+      has_lazy_export = true;
+      (text_to_string_literal(&encoded)?, OxcParseType::Js)
+    }
+    ModuleType::Dataurl => {
+      let data = source.into_bytes();
+      let guessed_mime = guess_mime(path, &data)?;
+      let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
+      has_lazy_export = true;
+      (text_to_string_literal(&dataurl)?, OxcParseType::Js)
+    }
+    ModuleType::Binary => {
+      let source = source.into_bytes();
+      let encoded = rolldown_utils::base64::to_standard_base64(source);
+      (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
+    }
+    ModuleType::Asset => {
+      let content = "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string();
+      has_lazy_export = true;
+      (content, OxcParseType::Js)
+    }
+    ModuleType::Empty => (String::new(), OxcParseType::Js),
+    ModuleType::Custom(custom_type) => {
+      // TODO: should provide friendly error message to say that this type is not supported by rolldown.
+      // Users should handle this type in load/transform hooks
+      return Err(anyhow::format_err!("Unknown module type: {custom_type}"))?;
+    }
+  };
+  Ok((has_lazy_export, source, parsed_type))
 }

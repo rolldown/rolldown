@@ -41,8 +41,6 @@ pub struct MagicString<'s> {
 }
 
 impl<'text> MagicString<'text> {
-  // --- public
-
   pub fn new(source: impl Into<CowStr<'text>>) -> Self {
     Self::with_options(source, Default::default())
   }
@@ -84,16 +82,6 @@ impl<'text> MagicString<'text> {
   pub fn is_empty(&self) -> bool {
     self.len() == 0
   }
-
-  #[expect(clippy::inherent_to_string)]
-  pub fn to_string(&self) -> String {
-    let size_hint = self.len();
-    let mut ret = String::with_capacity(size_hint);
-    self.fragments().for_each(|f| ret.push_str(f));
-    ret
-  }
-
-  // --- private
 
   fn prepend_intro(&mut self, content: impl Into<CowStr<'text>>) {
     self.intro.push_front(content.into());
@@ -184,9 +172,8 @@ impl<'text> MagicString<'text> {
       None
     } else {
       self.split_at(text_index);
-      // TODO: safety: using `unwrap_unchecked` is fine.
-      let idx = self.chunk_by_start.get(&text_index).unwrap();
-      Some(&mut self.chunks[*idx])
+      let idx = self.chunk_by_start.get(&text_index)?;
+      self.chunks.get_mut(*idx)
     }
   }
 
@@ -195,10 +182,18 @@ impl<'text> MagicString<'text> {
       None
     } else {
       self.split_at(text_index);
-      // TODO: safety: using `unwrap_unchecked` is fine.
-      let idx = self.chunk_by_end.get(&text_index).unwrap();
-      Some(&mut self.chunks[*idx])
+      let idx = self.chunk_by_end.get(&text_index)?;
+      self.chunks.get_mut(*idx)
     }
+  }
+}
+
+impl<'text> std::fmt::Display for MagicString<'text> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let size_hint = self.len();
+    let mut ret = String::with_capacity(size_hint);
+    self.fragments().for_each(|f| ret.push_str(f));
+    write!(f, "{ret}")
   }
 }
 

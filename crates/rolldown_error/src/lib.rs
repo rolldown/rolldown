@@ -2,6 +2,7 @@ mod build_error;
 mod diagnostic;
 mod event_kind;
 mod events;
+mod locator;
 mod type_aliases;
 mod types;
 
@@ -15,6 +16,7 @@ pub use crate::{
   events::invalid_option::InvalidOptionTypes,
   events::unloadable_dependency::UnloadableDependencyContext,
   events::DiagnosableArcstr,
+  locator::line_column_to_byte_offset,
   type_aliases::{BuildResult, SingleBuildResult},
   types::diagnostic_options::DiagnosticOptions,
 };

@@ -3950,6 +3950,9 @@ snapshot_kind: text
 - main-!~{000}~.js => main-DVPOHc-8.js
 - lib-!~{001}~.js => lib-DO19f8Aw.js
 
+# tests/rolldown/errors/json_parse_error/normal
+
+
 # tests/rolldown/errors/missing_export
 
 - main-!~{000}~.js => main-BqfeEdT8.js

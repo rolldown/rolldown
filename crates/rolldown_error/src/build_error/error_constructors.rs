@@ -12,6 +12,7 @@ use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::import_is_undefined::ImportIsUndefined;
 use crate::events::invalid_option::{InvalidOption, InvalidOptionTypes};
+use crate::events::json_parse::JsonParse;
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use crate::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
@@ -38,6 +39,7 @@ use crate::events::{
   unresolved_import::UnresolvedImport,
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
 };
+use crate::line_column_to_byte_offset;
 
 impl BuildDiagnostic {
   // --- Rollup related
@@ -265,6 +267,20 @@ impl BuildDiagnostic {
 
   pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
     Self::new_inner(AssignToImport { filename, source, span, name })
+  }
+
+  #[allow(clippy::cast_possible_truncation)]
+  pub fn json_parse(
+    filename: ArcStr,
+    source: ArcStr,
+    line: usize,
+    column: usize,
+    message: ArcStr,
+  ) -> Self {
+    // `serde_json` Error is one-based https://docs.rs/serde_json/1.0.132/serde_json/struct.Error.html#method.column
+    let start_offset = line_column_to_byte_offset(source.as_str(), line - 1, column - 1);
+    let span = Span::new(start_offset as u32, start_offset as u32);
+    Self::new_inner(JsonParse { filename, source, span, message })
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {

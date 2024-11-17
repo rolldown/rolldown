@@ -18,6 +18,7 @@ import {
   transformAssetSource,
 } from './asset-source'
 import { bindingifySourcemap } from '../types/sourcemap'
+import { transformToRenderedModule } from './transform-rendered-module'
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -32,7 +33,10 @@ function transformToRollupOutputChunk(
     name: bindingChunk.name,
     get modules() {
       return Object.fromEntries(
-        Object.entries(bindingChunk.modules).map(([key, _]) => [key, {}]),
+        Object.entries(bindingChunk.modules).map(([key, value]) => [
+          key,
+          transformToRenderedModule(value),
+        ]),
       )
     },
     get imports() {
@@ -179,7 +183,7 @@ export function collectChangedBundle(
         isEntry: item.isEntry,
         exports: item.exports,
         modules: Object.fromEntries(
-          Object.entries(item.modules).map(([key, _]) => [key, {}]),
+          Object.entries(item.modules).map(([key, _]) => [key, {} as any]),
         ),
         imports: item.imports,
         dynamicImports: item.dynamicImports,

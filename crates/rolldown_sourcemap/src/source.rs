@@ -102,7 +102,7 @@ impl Source for SourceMapSource {
   }
 }
 
-impl<'a> Source for &'a Box<dyn Source + Send> {
+impl<'a> Source for &'a Box<dyn Source + Send + Sync> {
   fn sourcemap(&self) -> Option<&SourceMap> {
     self.as_ref().sourcemap()
   }

@@ -106,13 +106,15 @@ export function transformToRollupOutput(
   const errors = output.errors as unknown[] | null
   if (errors && errors.length > 0) {
     // TODO: how does rollup throw multiple errors?
-    const errors2 = errors.map((e: unknown) =>
-      e instanceof Error ? e : Object.assign(new Error(), e),
+    const causes = errors.map((e: unknown) =>
+      e instanceof Error
+        ? e
+        : Object.assign(new Error(), e, { stack: undefined }),
     )
-    if (errors2.length === 1) {
-      throw errors2[0]
+    if (causes.length === 1) {
+      throw causes[0]
     }
-    throw new AggregateError(errors2, 'Build failed')
+    throw new AggregateError(causes, 'Build failed')
   }
   const { chunks, assets } = output
   return {

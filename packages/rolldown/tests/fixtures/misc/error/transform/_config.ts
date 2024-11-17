@@ -6,8 +6,7 @@ export default defineTest({
     plugins: [
       {
         name: 'my-plugin',
-        async transform(code, id) {
-          console.log({ id, code })
+        async transform() {
           await errorFn1()
         },
       },

@@ -3,6 +3,7 @@ import { RolldownBuild } from './rolldown-build'
 import { Watcher } from './watcher'
 import { createBundler } from './utils/create-bundler'
 import { WatchOptions } from './options/watch-option'
+import { handleOutputErrors } from './utils/transform-to-rollup-output'
 
 // Compat to `rollup.rollup`, it is included scan module graph and linker.
 export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {
@@ -28,6 +29,7 @@ export const watch = async (input: WatchOptions): Promise<Watcher> => {
  */
 export const experimental_scan = async (input: InputOptions): Promise<void> => {
   const { bundler, stopWorkers } = await createBundler(input, {})
-  await bundler.scan()
+  const output = await bundler.scan()
+  handleOutputErrors(output)
   await stopWorkers?.()
 }

@@ -88,7 +88,7 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&self) -> napi::Result<()> {
+  pub async fn scan(&self) -> napi::Result<BindingOutputs> {
     self.scan_impl().await
   }
 
@@ -114,7 +114,7 @@ impl Bundler {
 
 impl Bundler {
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn scan_impl(&self) -> napi::Result<()> {
+  pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
     let output = handle_result(bundler_core.scan().await)?;
 
@@ -123,12 +123,11 @@ impl Bundler {
         self.handle_warnings(output.warnings).await;
       }
       Err(errs) => {
-        // TODO
-        return Err(self.handle_errors(errs.into_vec()));
+        return Ok(self.handle_errors(errs.into_vec()));
       }
     }
 
-    Ok(())
+    Ok(vec![].into())
   }
 
   #[allow(clippy::significant_drop_tightening)]
@@ -138,7 +137,7 @@ impl Bundler {
     let outputs = handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
-      return Ok(BindingOutputs::from_errors(outputs.errors, self.cwd.clone()));
+      return Ok(self.handle_errors(outputs.errors));
     }
 
     self.handle_warnings(outputs.warnings).await;
@@ -153,7 +152,7 @@ impl Bundler {
     let outputs = handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
-      return Ok(BindingOutputs::from_errors(outputs.errors, self.cwd.clone()));
+      return Ok(self.handle_errors(outputs.errors));
     }
 
     self.handle_warnings(outputs.warnings).await;
@@ -183,28 +182,8 @@ impl Bundler {
     Ok(bundler_core.closed)
   }
 
-  fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {
-    // TODO: is it possible to return as an aggregated error back to js side?
-    // it seems difficult since `Env` is not even available in async fn.
-    // for now, we only surface single js error.
-    // https://github.com/napi-rs/napi-rs/issues/1981#issuecomment-1978208322
-    // https://github.com/napi-rs/napi-rs/issues/945
-    for err in errs {
-      match err.downcast_napi_error() {
-        Ok(napi_error) => {
-          return napi_error;
-        }
-        Err(err) => {
-          eprintln!(
-            "{}",
-            err
-              .into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
-              .to_color_string()
-          );
-        }
-      }
-    }
-    napi::Error::from_reason("Build failed")
+  fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> BindingOutputs {
+    BindingOutputs::from_errors(errs, self.cwd.clone())
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]

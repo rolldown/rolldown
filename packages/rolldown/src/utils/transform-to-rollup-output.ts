@@ -107,6 +107,17 @@ export function transformToRollupOutput(
   output: BindingOutputs,
   changed?: ChangedOutputs,
 ): RolldownOutput {
+  handleOutputErrors(output)
+  const { chunks, assets } = output
+  return {
+    output: [
+      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk, changed)),
+      ...assets.map((asset) => transformToRollupOutputAsset(asset, changed)),
+    ],
+  } as RolldownOutput
+}
+
+export function handleOutputErrors(output: BindingOutputs) {
   const errors = output.errors
   if (errors.length > 0) {
     const causes = errors.map((e) =>
@@ -121,13 +132,6 @@ export function transformToRollupOutput(
     }
     throw new AggregateError(causes, 'Build failed')
   }
-  const { chunks, assets } = output
-  return {
-    output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk, changed)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset, changed)),
-    ],
-  } as RolldownOutput
 }
 
 export function transformToOutputBundle(

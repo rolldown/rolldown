@@ -1,4 +1,4 @@
-use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use oxc::sourcemap::SourceMap;
 
 use crate::lines_count;
 
@@ -8,13 +8,6 @@ pub trait Source {
   fn lines_count(&self) -> u32 {
     lines_count(self.content())
   }
-  #[allow(clippy::wrong_self_convention)]
-  fn join(
-    &self,
-    final_source: &mut String,
-    sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
-    line_offset: u32,
-  );
 }
 
 impl<'a> Source for &'a str {
@@ -25,15 +18,6 @@ impl<'a> Source for &'a str {
   fn content(&self) -> &str {
     self
   }
-
-  fn join(
-    &self,
-    final_source: &mut String,
-    _sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
-    _line_offset: u32,
-  ) {
-    final_source.push_str(self);
-  }
 }
 
 impl Source for String {
@@ -43,15 +27,6 @@ impl Source for String {
 
   fn content(&self) -> &str {
     self
-  }
-
-  fn join(
-    &self,
-    source: &mut String,
-    _sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
-    _line_offset: u32,
-  ) {
-    source.push_str(self);
   }
 }
 
@@ -87,19 +62,6 @@ impl Source for SourceMapSource {
   fn lines_count(&self) -> u32 {
     self.pre_computed_lines_count.unwrap_or_else(|| lines_count(&self.content))
   }
-
-  fn join(
-    &self,
-    source: &mut String,
-    sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
-    line_offset: u32,
-  ) {
-    if let Some(sourcemap_builder) = sourcemap_builder {
-      sourcemap_builder.add_sourcemap(&self.sourcemap, line_offset);
-    }
-
-    source.push_str(&self.content);
-  }
 }
 
 impl<'a> Source for &'a Box<dyn Source + Send + Sync> {
@@ -113,14 +75,5 @@ impl<'a> Source for &'a Box<dyn Source + Send + Sync> {
 
   fn lines_count(&self) -> u32 {
     self.as_ref().lines_count()
-  }
-
-  fn join(
-    &self,
-    source: &mut String,
-    sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
-    line_offset: u32,
-  ) {
-    self.as_ref().join(source, sourcemap_builder, line_offset);
   }
 }

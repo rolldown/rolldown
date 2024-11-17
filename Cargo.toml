@@ -119,6 +119,7 @@ base-encode         = "0.3.1"
 base64-simd         = "0.8.0"
 bitflags            = { version = "2.6.0" }
 cow-utils           = "0.1.3"
+criterion2          = { version = "2.0.0", default-features = false }
 daachorse           = "1.0.0"
 dashmap             = "6.0.0"
 derive_more         = { version = "1.0.0", features = ["debug"] }
@@ -167,6 +168,7 @@ typedmap            = "0.5.0"
 urlencoding         = "2.1.3"
 vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
+
 
 # oxc crates share the same version
 oxc                = { version = "0.36.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }

@@ -744,6 +744,25 @@ impl<'ast> AstSnippet<'ast> {
     }
   }
 
+  // If `node_mode` is true, using `__toESM(expr, 1)`
+  // If `node_mode` is false, using `__toESM(expr)`
+  pub fn wrap_with_to_esm(
+    &self,
+    to_esm_fn_name: PassedStr,
+    expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    if node_mode {
+      self.alloc_call_expr_with_2arg_expr_expr(
+        to_esm_fn_name,
+        expr,
+        self.builder.expression_numeric_literal(SPAN, 1.0, "1", NumberBase::Decimal),
+      )
+    } else {
+      self.call_expr_with_arg_expr_expr(to_esm_fn_name, expr)
+    }
+  }
+
   /// convert `Expression` to
   /// export default ${Expression}
   pub fn export_default_expr_stmt(&self, expr: Expression<'ast>) -> Statement<'ast> {

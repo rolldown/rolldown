@@ -1,3 +1,4 @@
+use crate::utils::chunk::collect_render_chunk_imports::RenderImportStmt;
 use crate::utils::chunk::determine_export_mode::determine_export_mode;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::utils::chunk::render_chunk_exports::get_export_items;
@@ -60,22 +61,6 @@ pub fn render_cjs<'code>(
             source_joiner.append_source(marker.to_string());
           }
         }
-        let meta = &ctx.link_output.metas[entry_id];
-        meta.require_bindings_for_star_exports.iter().for_each(|(importee_idx, binding_ref)| {
-          let importee = &ctx.link_output.module_table.modules[*importee_idx];
-          let binding_ref_name =
-            ctx.link_output.symbol_db.canonical_name_for(*binding_ref, &ctx.chunk.canonical_names);
-            let import_stmt =
-"Object.keys($NAME).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return $NAME[k]; }
-  });
-});".replace("$NAME", binding_ref_name);
-
-          source_joiner.append_source(format!("var {} = require(\"{}\");", binding_ref_name,&importee.stable_id()));
-          source_joiner.append_source(import_stmt);
-        });
         Some(export_mode)
       } else {
         // There is no need for a non-ESM export kind for determining the export mode.
@@ -154,9 +139,10 @@ pub fn render_cjs<'code>(
   Ok(source_joiner)
 }
 
+// Make sure the imports generate stmts keep live bindings.
 fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
+    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, &ctx.options.format);
 
   let mut s = String::new();
 
@@ -175,55 +161,26 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   });
 
   render_import_stmts.iter().for_each(|stmt| {
-    if !stmt.is_external() {
-      return;
-    }
-    let require_path_str = format!("require(\"{}\")", &stmt.path());
-    match &stmt.specifiers() {
-      RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-        if specifiers.is_empty() {
-          s.push_str(&format!("{require_path_str};\n"));
-        } else {
-          let specifiers = specifiers
-            .iter()
-            .map(|specifier| {
-              if let Some(alias) = &specifier.alias {
-                format!("{}: {alias}", specifier.imported)
-              } else {
-                specifier.imported.to_string()
-              }
-            })
-            .collect::<Vec<_>>();
-          s.push_str(&format!(
-            "const {{ {} }} = {};\n",
-            specifiers.join(", "),
-            if stmt.is_external() {
-              let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-                .link_output
-                .symbol_db
-                .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+    if let RenderImportStmt::ExternalRenderImportStmt(stmt) = stmt {
+      let has_specifiers = match &stmt.specifiers {
+        RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => !specifiers.is_empty(),
+        RenderImportDeclarationSpecifier::ImportStarSpecifier(_) => true,
+      };
 
-              format!("{to_esm_fn_name}({require_path_str})")
-            } else {
-              require_path_str
-            }
-          ));
-        }
-      }
-      RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
+      let require_path_str = format!("require(\"{}\")", &stmt.path);
+
+      if has_specifiers {
+        let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
+          .link_output
+          .symbol_db
+          .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+
+        let external_module_symbol_name = &ctx.chunk.canonical_names[&stmt.binding_name_token];
         s.push_str(&format!(
-          "const {alias} = {};\n",
-          if stmt.is_external() {
-            let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-              .link_output
-              .symbol_db
-              .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
-
-            format!("{to_esm_fn_name}({require_path_str})")
-          } else {
-            require_path_str
-          }
+          "const {external_module_symbol_name} = {to_esm_fn_name}({require_path_str});\n"
         ));
+      } else {
+        s.push_str(&format!("{require_path_str};\n"));
       }
     }
   });

@@ -18,12 +18,13 @@ var mod = (() => {
 var mod = (function(exports, foo) {
 
 "use strict";
-const out = foo;
+
+foo = __toESM(foo);
 
 Object.defineProperty(exports, 'out', {
   enumerable: true,
   get: function () {
-    return out;
+    return foo;
   }
 });
 return exports;
@@ -40,11 +41,11 @@ return exports;
 -    __export(entry_exports, {
 -        out: () => out
 +var mod = (function (exports, foo) {
-+    const out = foo;
++    foo = __toESM(foo);
 +    Object.defineProperty(exports, 'out', {
 +        enumerable: true,
 +        get: function () {
-+            return out;
++            return foo;
 +        }
      });
 -    var out = __toESM(require("foo"));

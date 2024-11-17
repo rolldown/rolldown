@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -17,8 +18,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 (function(node_assert) {
 
 "use strict";
-const { default: assert } = node_assert;
 
+node_assert = __toESM(node_assert);
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
@@ -27,7 +28,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 
 //#endregion
 //#region entry.js
-assert.deepEqual(require_cjs(), { foo: process });
+node_assert.default.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
 })(node_assert);

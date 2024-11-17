@@ -5,14 +5,15 @@ use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
+use oxc::semantic::{ScopeId, SymbolTable};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
   ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, ModuleType,
-  NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
-  SymbolNameRefToken, SymbolRefDb, RUNTIME_MODULE_ID,
+  NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRefDb,
+  SymbolRefDbForModule, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -178,11 +179,20 @@ impl ModuleLoader {
               },
             }
           };
+
+          self.symbol_ref_db.store_local_db(
+            idx,
+            SymbolRefDbForModule::new(SymbolTable::default(), idx, ScopeId::new(0)),
+          );
+          let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(
+            idx,
+            legitimize_identifier_name(resolved_id.id.as_str()).into(),
+          );
           let ext = ExternalModule::new(
             idx,
             ArcStr::clone(&resolved_id.id),
             external_module_side_effects,
-            SymbolNameRefToken::new(idx, legitimize_identifier_name(&resolved_id.id).into()),
+            symbol_ref,
           );
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx

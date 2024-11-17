@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -29,12 +30,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 var mod = (function(exports, foo) {
 
 "use strict";
-const out = foo;
+
+foo = __toESM(foo);
 
 Object.defineProperty(exports, 'out', {
   enumerable: true,
   get: function () {
-    return out;
+    return foo;
   }
 });
 return exports;

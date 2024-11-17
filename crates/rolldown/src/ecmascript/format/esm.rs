@@ -109,7 +109,7 @@ pub fn render_esm<'code>(
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
+    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, &ctx.options.format);
 
   let mut s = String::new();
   render_import_stmts.iter().for_each(|stmt| {

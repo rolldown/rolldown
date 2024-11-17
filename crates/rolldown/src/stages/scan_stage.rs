@@ -134,13 +134,7 @@ impl ScanStage {
     let mut errors = vec![];
 
     for resolve_id in resolved_ids {
-      let (args, resolve_id) = match resolve_id {
-        Ok(resolve_id) => resolve_id,
-        Err(e) => {
-          errors.push(BuildDiagnostic::unhandleable_error(e));
-          continue;
-        }
-      };
+      let (args, resolve_id) = resolve_id?;
 
       match resolve_id {
         Ok(item) => {

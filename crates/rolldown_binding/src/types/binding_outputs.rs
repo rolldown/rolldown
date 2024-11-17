@@ -108,6 +108,7 @@ fn into_js_diagnostic(
       object.set("kind", error.kind().to_string())?;
       object.set(
         "message",
+        // TODO: strip ansi on non tty
         error.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.clone() }).to_color_string(),
       )?;
       Ok(object.into_unknown())

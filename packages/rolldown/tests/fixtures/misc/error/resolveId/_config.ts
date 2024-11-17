@@ -13,14 +13,23 @@ export default defineTest({
     ],
   },
   catchError(e) {
-    assert(e instanceof AggregateError)
-    expect(e.message).toContain('my-error')
-    expect(e.message).toContain('at errorFn2')
-    expect(e.message).toContain('at errorFn1')
-    expect(e.errors[0]).toMatchObject({
+    // TODO: some errors are not handled as diagnostics yet
+    assert(e instanceof Error)
+    expect(e).toMatchObject({
       message: 'my-error',
       extraProp: 1234,
     })
+    expect(e.stack).toContain('at errorFn2')
+    expect(e.stack).toContain('at errorFn1')
+
+    // assert(e instanceof AggregateError)
+    // expect(e.message).toContain('my-error')
+    // expect(e.message).toContain('at errorFn2')
+    // expect(e.message).toContain('at errorFn1')
+    // expect(e.errors[0]).toMatchObject({
+    //   message: 'my-error',
+    //   extraProp: 1234
+    // })
   },
 })
 

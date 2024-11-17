@@ -24,7 +24,7 @@ pub fn deconflict_chunk_symbols(
       .iter()
       .filter_map(|(idx, _)| link_output.module_table.modules[*idx].as_external())
       .for_each(|external_module| {
-        renamer.add_symbol_in_root_scope(external_module.name_token_for_external_binding);
+        renamer.add_symbol_in_root_scope(external_module.namespace_ref);
       });
 
     match chunk.kind {
@@ -37,7 +37,7 @@ pub fn deconflict_chunk_symbols(
             let external_module = &link_output.module_table.modules[rec.resolved_module]
               .as_external()
               .expect("Should be external module here");
-            renamer.add_symbol_in_root_scope(external_module.name_token_for_external_binding);
+            renamer.add_symbol_in_root_scope(external_module.namespace_ref);
           },
         );
       }

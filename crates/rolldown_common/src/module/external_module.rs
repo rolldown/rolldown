@@ -7,8 +7,10 @@ use oxc::index::IndexVec;
 pub struct ExternalModule {
   pub idx: ModuleIdx,
   pub exec_order: u32,
-  // Used for iife format to inject symbol and deconflict.
-  pub name_token_for_external_binding: SymbolRef,
+  /// Usages:
+  /// - Used for iife format to inject symbol and deconflict.
+  /// - Used for for rewrite `import { foo } from 'external';console.log(foo)` to `var external = require('external'); console.log(external.foo)` in cjs format.
+  pub namespace_ref: SymbolRef,
   pub name: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   pub side_effects: DeterminedSideEffects,
@@ -19,12 +21,12 @@ impl ExternalModule {
     idx: ModuleIdx,
     module_id: ArcStr,
     side_effects: DeterminedSideEffects,
-    name_token_for_external_binding: SymbolRef,
+    namespace_ref: SymbolRef,
   ) -> Self {
     Self {
       idx,
       exec_order: u32::MAX,
-      name_token_for_external_binding,
+      namespace_ref,
       name: module_id,
       import_records: IndexVec::default(),
       side_effects,

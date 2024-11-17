@@ -459,9 +459,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
     let importee_id = match &self.normal_modules[importee_id] {
       Module::Normal(importee) => importee.idx,
-      Module::External(external) => {
-        return ImportStatus::External(external.name_token_for_external_binding)
-      }
+      Module::External(external) => return ImportStatus::External(external.namespace_ref),
     };
 
     // Is this a named import of a file without any exports?

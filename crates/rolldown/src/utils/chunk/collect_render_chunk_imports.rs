@@ -102,7 +102,7 @@ pub fn collect_render_chunk_imports(
         let target = if matches!(format, OutputFormat::Esm) {
           item.imported_as
         } else {
-          importee.name_token_for_external_binding
+          importee.namespace_ref
         };
         let canonical_ref = graph.symbol_db.canonical_ref_for(target);
         if !graph.used_symbol_refs.contains(&canonical_ref) {
@@ -115,7 +115,7 @@ pub fn collect_render_chunk_imports(
             render_import_stmts.push(RenderImportStmt::ExternalRenderImportStmt(
               ExternalRenderImportStmt {
                 path: importee.name.clone(),
-                binding_name_token: importee.name_token_for_external_binding,
+                binding_name_token: importee.namespace_ref,
                 specifiers: RenderImportDeclarationSpecifier::ImportStarSpecifier(
                   alias.as_str().into(),
                 ),
@@ -138,7 +138,7 @@ pub fn collect_render_chunk_imports(
       render_import_stmts.push(RenderImportStmt::ExternalRenderImportStmt(
         ExternalRenderImportStmt {
           path: importee.name.clone(),
-          binding_name_token: importee.name_token_for_external_binding,
+          binding_name_token: importee.namespace_ref,
           specifiers: RenderImportDeclarationSpecifier::ImportSpecifier(specifiers),
         },
       ));

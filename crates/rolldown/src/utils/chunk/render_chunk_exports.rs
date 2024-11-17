@@ -131,7 +131,7 @@ pub fn render_chunk_exports(
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table.modules[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =
-          &ctx.chunk.canonical_names[&external.name_token_for_external_binding];
+          &ctx.chunk.canonical_names[&external.namespace_ref];
             let import_stmt =
 "Object.keys($NAME).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {

@@ -359,7 +359,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
         module_id = module.stable_id,
-        imported_specifier = format!("{}", named_import.imported)
+        imported_specifier = named_import.imported.to_string()
       );
       let _enter = match_import_span.enter();
 
@@ -512,7 +512,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
       "TRACKING_MATCH_IMPORT",
       importer = normal_modules[tracker.importer].stable_id(),
       importee = normal_modules[tracker.importee].stable_id(),
-      imported_specifier = format!("{}", tracker.imported)
+      imported_specifier = tracker.imported.to_string()
     );
     let _enter = tracking_span.enter();
 

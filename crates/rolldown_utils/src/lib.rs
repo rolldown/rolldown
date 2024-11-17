@@ -18,6 +18,7 @@ pub mod rustc_hash;
 pub mod sanitize_file_name;
 pub mod xxhash;
 pub use bitset::BitSet;
+pub mod concat_string;
 pub mod extract_hash_pattern;
 pub mod hash_placeholder;
 pub mod index_vec_ext;

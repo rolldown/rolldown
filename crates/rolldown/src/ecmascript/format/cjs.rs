@@ -16,6 +16,7 @@ use crate::{
 use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::SourceJoiner;
+use rolldown_utils::concat_string;
 
 #[allow(clippy::too_many_lines)]
 pub fn render_cjs<'code>(
@@ -109,14 +110,14 @@ pub fn render_cjs<'code>(
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(format!("{wrapper_ref_name}();",));
+        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         let wrapper_ref_name =
           ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(format!("export default {wrapper_ref_name}();\n"));
+        source_joiner.append_source(concat_string!("export default ", wrapper_ref_name, "();\n"));
       }
       WrapKind::None => {}
     }
@@ -149,14 +150,15 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   // render imports from other chunks
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
-    let require_path_str = format!("require('{}');\n", ctx.chunk.import_path_for(importee_chunk));
+    let require_path_str =
+      concat_string!("require('", ctx.chunk.import_path_for(importee_chunk), "');\n");
     if items.is_empty() {
       s.push_str(&require_path_str);
     } else {
-      s.push_str(&format!(
-        "const {} = {require_path_str}",
-        ctx.chunk.require_binding_names_for_other_chunks[exporter_id],
-      ));
+      s.push_str("const ");
+      s.push_str(&ctx.chunk.require_binding_names_for_other_chunks[exporter_id]);
+      s.push_str(" = ");
+      s.push_str(&require_path_str);
     }
   });
 
@@ -167,7 +169,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         RenderImportDeclarationSpecifier::ImportStarSpecifier(_) => true,
       };
 
-      let require_path_str = format!("require(\"{}\")", &stmt.path);
+      let require_path_str = concat_string!("require(\"", &stmt.path, "\")");
 
       if has_specifiers {
         let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
@@ -176,11 +178,16 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
         let external_module_symbol_name = &ctx.chunk.canonical_names[&stmt.binding_name_token];
-        s.push_str(&format!(
-          "const {external_module_symbol_name} = {to_esm_fn_name}({require_path_str});\n"
-        ));
+        s.push_str("const ");
+        s.push_str(external_module_symbol_name);
+        s.push_str(" = ");
+        s.push_str(to_esm_fn_name);
+        s.push('(');
+        s.push_str(&require_path_str);
+        s.push_str(");\n");
       } else {
-        s.push_str(&format!("{require_path_str};\n"));
+        s.push_str(&require_path_str);
+        s.push_str(";\n");
       }
     }
   });

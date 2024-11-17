@@ -8,7 +8,7 @@ use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_utils::ecmascript::is_validate_assignee_identifier_name;
+use rolldown_utils::{concat_string, ecmascript::is_validate_assignee_identifier_name};
 
 /// According to the amount of `.` in the name (levels),
 /// it generates the initialization code and the final code.
@@ -130,9 +130,9 @@ pub fn generate_identifier(
 /// - Otherwise, it will generate a caller like `["if"]`.
 pub fn render_property_access(name: &str) -> String {
   if is_validate_assignee_identifier_name(name) {
-    format!(".{name}")
+    concat_string!(".", name)
   } else {
-    format!("[\"{name}\"]")
+    concat_string!("[\"", name, "\"]")
   }
 }
 

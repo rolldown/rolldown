@@ -9,6 +9,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
+  concat_string,
   ecmascript::legitimize_identifier_name,
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -288,7 +289,7 @@ impl<'a> LinkStage<'a> {
                     // export * from 'external' would be just removed. So it references nothing.
                     rec.namespace_ref.set_name(
                       &mut symbols.lock().unwrap(),
-                      &format!("import_{}", legitimize_identifier_name(&importee.name)),
+                      &concat_string!("import_", legitimize_identifier_name(&importee.name)),
                     );
                   } else {
                     // import ... from 'external' or export ... from 'external'
@@ -368,7 +369,7 @@ impl<'a> LinkStage<'a> {
                         declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                         rec.namespace_ref.set_name(
                           &mut symbols.lock().unwrap(),
-                          &format!("import_{}", &importee.repr_name),
+                          &concat_string!("import_", importee.repr_name),
                         );
                       }
                     }

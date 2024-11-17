@@ -2886,6 +2886,7 @@ dependencies = [
 name = "rolldown_sourcemap"
 version = "0.1.0"
 dependencies = [
+ "criterion2",
  "memchr",
  "oxc",
  "rolldown_utils",

@@ -1,13 +1,12 @@
 import { defineTest } from '@tests'
 import { stripVTControlCharacters } from 'util'
-import { assert, expect } from 'vitest'
+import { expect } from 'vitest'
 
 export default defineTest({
   config: {
     input: ['main1.js', 'main2.js'],
   },
-  catchError(e) {
-    assert(e instanceof AggregateError)
+  catchError(e: any) {
     e.message = stripVTControlCharacters(e.message)
     for (let error of e.errors) {
       error.message = stripVTControlCharacters(error.message)

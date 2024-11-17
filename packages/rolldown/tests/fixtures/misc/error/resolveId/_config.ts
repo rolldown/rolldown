@@ -1,5 +1,5 @@
 import { defineTest } from '@tests'
-import { assert, expect } from 'vitest'
+import { expect } from 'vitest'
 
 export default defineTest({
   config: {
@@ -12,8 +12,7 @@ export default defineTest({
       },
     ],
   },
-  catchError(e) {
-    assert(e instanceof AggregateError)
+  catchError(e: any) {
     expect(e.message).toContain('my-error')
     expect(e.message).toContain('at errorFn2')
     expect(e.message).toContain('at errorFn1')

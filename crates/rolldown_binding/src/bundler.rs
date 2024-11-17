@@ -116,15 +116,16 @@ impl Bundler {
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
-    let output = handle_result(bundler_core.scan().await)?;
+    let output = self.handle_result(bundler_core.scan().await);
 
     match output {
-      Ok(output) => {
+      Ok(Ok(output)) => {
         self.handle_warnings(output.warnings).await;
       }
-      Err(errs) => {
+      Ok(Err(errs)) => {
         return Ok(self.handle_errors(errs.into_vec()));
       }
+      Err(error) => return Ok(error),
     }
 
     Ok(vec![].into())
@@ -134,7 +135,12 @@ impl Bundler {
   pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
 
-    let outputs = handle_result(bundler_core.write().await)?;
+    let outputs = self.handle_result(bundler_core.write().await);
+
+    let outputs = match outputs {
+      Ok(outputs) => outputs,
+      Err(error) => return Ok(error),
+    };
 
     if !outputs.errors.is_empty() {
       return Ok(self.handle_errors(outputs.errors));
@@ -149,7 +155,12 @@ impl Bundler {
   pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
 
-    let outputs = handle_result(bundler_core.generate().await)?;
+    let outputs = self.handle_result(bundler_core.generate().await);
+
+    let outputs = match outputs {
+      Ok(outputs) => outputs,
+      Err(error) => return Ok(error),
+    };
 
     if !outputs.errors.is_empty() {
       return Ok(self.handle_errors(outputs.errors));
@@ -184,6 +195,10 @@ impl Bundler {
 
   fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> BindingOutputs {
     BindingOutputs::from_errors(errs, self.cwd.clone())
+  }
+
+  fn handle_result<T>(&self, result: anyhow::Result<T>) -> Result<T, BindingOutputs> {
+    result.map_err(|e| self.handle_errors(vec![BuildDiagnostic::unhandleable_error(e)]))
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]

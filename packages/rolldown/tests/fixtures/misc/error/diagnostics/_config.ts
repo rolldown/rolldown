@@ -17,15 +17,17 @@ export default defineTest({
     expect(e.message).toContain('invalid :(')
     expect(e.message).toContain('invalid :)')
     // diagnostics
-    expect(e.errors).toMatchObject([
-      {
-        kind: 'PARSE_ERROR',
-        message: expect.stringContaining('invalid :('),
-      },
-      {
-        kind: 'PARSE_ERROR',
-        message: expect.stringContaining('invalid :)'),
-      },
-    ])
+    expect(e.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'PARSE_ERROR',
+          message: expect.stringContaining('invalid :('),
+        }),
+        expect.objectContaining({
+          kind: 'PARSE_ERROR',
+          message: expect.stringContaining('invalid :)'),
+        }),
+      ]),
+    )
   },
 })

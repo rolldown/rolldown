@@ -11,8 +11,7 @@ use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 pub struct BindingOutputs {
   chunks: Vec<BindingOutputChunk>,
   assets: Vec<BindingOutputAsset>,
-  // TODO: BindingBuildDiagnostic?
-  errors: Vec<BuildDiagnostic>,
+  error: Option<BindingOutputsDiagnostics>,
 }
 
 #[napi]
@@ -28,34 +27,21 @@ impl BindingOutputs {
   }
 
   #[napi(getter)]
-  pub fn errors(&mut self, env: Env) -> napi::Result<Option<napi::JsObject>> {
-    if self.errors.is_empty() {
-      return Ok(None);
+  pub fn errors(&mut self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
+    if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = std::mem::take(&mut self.error) {
+      return Ok(
+        diagnostics
+          .into_iter()
+          .flat_map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
+          .collect(),
+      );
     }
-    let mut objects_array = env.create_array_with_length(self.errors.len())?;
-    for (i, error) in std::mem::take(&mut self.errors).into_iter().enumerate() {
-      let js_error = match error.downcast_napi_error() {
-        Ok(napi_error) => napi::JsError::from(napi_error).into_unknown(env),
-        Err(error) => {
-          let mut object = env.create_object()?;
-          object.set("kind", error.kind().to_string())?;
-          object.set(
-            "message",
-            format!(
-              "{}",
-              error
-                // TODO: cwd
-                // .into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
-                .into_diagnostic_with(&DiagnosticOptions::default())
-                .to_color_string()
-            ),
-          )?;
-          object.into_unknown()
-        }
-      };
-      objects_array.set_element(i as u32, js_error)?;
-    }
-    Ok(Some(objects_array))
+    Ok(vec![])
+  }
+
+  pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
+    let error = BindingOutputsDiagnostics { diagnostics, cwd };
+    Self { assets: vec![], chunks: vec![], error: Some(error) }
   }
 }
 
@@ -71,13 +57,7 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
         assets.push(BindingOutputAsset::new(*asset));
       }
     });
-    Self { chunks, assets, errors: vec![] }
-  }
-}
-
-impl From<Vec<BuildDiagnostic>> for BindingOutputs {
-  fn from(errors: Vec<BuildDiagnostic>) -> Self {
-    Self { chunks: vec![], assets: vec![], errors }
+    Self { chunks, assets, error: None }
   }
 }
 
@@ -109,4 +89,29 @@ pub fn update_outputs(
     }
   }
   Ok(())
+}
+
+pub struct BindingOutputsDiagnostics {
+  diagnostics: Vec<BuildDiagnostic>,
+  cwd: std::path::PathBuf,
+}
+
+fn into_js_diagnostic(
+  diagnostic: BuildDiagnostic,
+  cwd: std::path::PathBuf,
+  env: Env,
+) -> napi::Result<napi::JsUnknown> {
+  match diagnostic.downcast_napi_error() {
+    Ok(napi_error) => Ok(napi::JsError::from(napi_error).into_unknown(env)),
+    Err(error) => {
+      let mut object = env.create_object()?;
+      object.set("kind", error.kind().to_string())?;
+      object.set(
+        "message",
+        // TODO: strip ansi on non tty
+        error.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.clone() }).to_color_string(),
+      )?;
+      Ok(object.into_unknown())
+    }
+  }
 }

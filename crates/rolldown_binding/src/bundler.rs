@@ -138,7 +138,7 @@ impl Bundler {
     let outputs = handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
-      return Ok(outputs.errors.into());
+      return Ok(BindingOutputs::from_errors(outputs.errors, self.cwd.clone()));
     }
 
     self.handle_warnings(outputs.warnings).await;
@@ -153,7 +153,7 @@ impl Bundler {
     let outputs = handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
-      return Ok(outputs.errors.into());
+      return Ok(BindingOutputs::from_errors(outputs.errors, self.cwd.clone()));
     }
 
     self.handle_warnings(outputs.warnings).await;

@@ -45,7 +45,7 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  get errors(): object | null
+  get errors(): Array<unknown>
 }
 
 export declare class BindingPluginContext {

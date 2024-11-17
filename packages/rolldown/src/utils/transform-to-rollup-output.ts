@@ -103,9 +103,9 @@ export function transformToRollupOutput(
   output: BindingOutputs,
   changed?: ChangedOutputs,
 ): RolldownOutput {
-  const errors = output.errors as unknown[] | null
-  if (errors && errors.length > 0) {
-    const causes = errors.map((e: unknown) =>
+  const errors = output.errors
+  if (errors.length > 0) {
+    const causes = errors.map((e) =>
       e instanceof Error
         ? e
         : Object.assign(new Error(), e, { stack: undefined }),

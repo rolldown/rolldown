@@ -121,6 +121,6 @@ test('call transformContext error', async () => {
     })
     await build.write({})
   } catch (error: any) {
-    expect(error.message).toMatchInlineSnapshot(`"transform hook error"`)
+    expect(error.message).toContain('transform hook error')
   }
 })

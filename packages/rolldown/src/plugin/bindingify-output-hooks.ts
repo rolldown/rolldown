@@ -1,7 +1,7 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { Plugin } from './index'
+import type { FunctionPluginHooks, Plugin } from './index'
 import {
   ChangedOutputs,
   collectChangedBundle,
@@ -16,6 +16,7 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
+import { error, logPluginError } from '../log/logs'
 
 export function bindingifyRenderStart(
   plugin: Plugin,
@@ -31,11 +32,19 @@ export function bindingifyRenderStart(
 
   return {
     plugin: async (ctx) => {
-      handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        outputOptions,
-        options,
-      )
+      try {
+        handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          outputOptions,
+          options,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'renderStart',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -59,12 +68,21 @@ export function bindingifyRenderChunk(
         chunk.modules[key] = transformToRenderedModule(module)
       })
 
-      const ret = await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        code,
-        chunk,
-        outputOptions,
-      )
+      let ret: ReturnType<FunctionPluginHooks['renderChunk']>
+      try {
+        ret = await handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          code,
+          chunk,
+          outputOptions,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'renderChunk',
+          }),
+        )
+      }
 
       if (ret == null) {
         return
@@ -104,10 +122,18 @@ export function bindingifyAugmentChunkHash(
         chunk.modules[key] = transformToRenderedModule(module)
       })
 
-      return await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
-      )
+      try {
+        return await handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          chunk,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'augmentChunkHash',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -126,10 +152,18 @@ export function bindingifyRenderError(
 
   return {
     plugin: async (ctx, err) => {
-      handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        new Error(err),
-      )
+      try {
+        await handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          new Error(err),
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'renderError',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -154,12 +188,20 @@ export function bindingifyGenerateBundle(
         deleted: new Set(),
       } as ChangedOutputs
       const output = transformToOutputBundle(bundle, changed)
-      await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        outputOptions,
-        output,
-        isWrite,
-      )
+      try {
+        await handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          outputOptions,
+          output,
+          isWrite,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'generateBundle',
+          }),
+        )
+      }
       return collectChangedBundle(changed, output)
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -184,11 +226,20 @@ export function bindingifyWriteBundle(
         deleted: new Set(),
       } as ChangedOutputs
       const output = transformToOutputBundle(bundle, changed)
-      await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        outputOptions,
-        output,
-      )
+      try {
+        await handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          outputOptions,
+          output,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'writeBundle',
+          }),
+        )
+      }
+
       return collectChangedBundle(changed, output)
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -208,9 +259,17 @@ export function bindingifyCloseBundle(
 
   return {
     plugin: async (ctx) => {
-      await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-      )
+      try {
+        await handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'closeBundle',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -233,10 +292,18 @@ export function bindingifyBanner(
         return handler
       }
 
-      return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
-      )
+      try {
+        return handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          chunk,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'banner',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -259,11 +326,18 @@ export function bindingifyFooter(
       if (typeof handler === 'string') {
         return handler
       }
-
-      return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
-      )
+      try {
+        return handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          chunk,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'footer',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -287,10 +361,18 @@ export function bindingifyIntro(
         return handler
       }
 
-      return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
-      )
+      try {
+        return handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          chunk,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'intro',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -314,10 +396,18 @@ export function bindingifyOutro(
         return handler
       }
 
-      return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        chunk,
-      )
+      try {
+        return handler.call(
+          new PluginContext(options, ctx, plugin, pluginContextData),
+          chunk,
+        )
+      } catch (e: any) {
+        return error(
+          logPluginError(e, plugin.name || '<unknown>', {
+            hook: 'outro',
+          }),
+        )
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
   }

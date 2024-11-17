@@ -19,7 +19,7 @@ import {
 } from './asset-source'
 import { bindingifySourcemap } from '../types/sourcemap'
 import { transformToRenderedModule } from './transform-rendered-module'
-import { RollupLog } from '../rollup'
+import { RollupError } from '../rollup'
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -156,22 +156,32 @@ export function handleOutputErrors(output: BindingOutputs) {
   }
 }
 
-function getErrorMessage(e: RollupLog) {
-  let prefix = ''
+function getErrorMessage(e: RollupError) {
+  let s = ''
   if (e.plugin) {
-    prefix += `[plugin ${e.plugin}]`
+    s += `[plugin ${e.plugin}]`
   }
   const id = e.id ?? e.loc?.file
   if (id) {
-    prefix += ' ' + id
+    s += ' ' + id
     if (e.loc) {
-      prefix += `:${e.loc.line}:${e.loc.column}`
+      s += `:${e.loc.line}:${e.loc.column}`
     }
   }
-  if (prefix) {
-    prefix += '\n'
+  if (s) {
+    s += '\n'
   }
-  return prefix + (e.stack ?? e.message)
+  s += `${e.name ?? 'Error'}: ${e.message}`
+  if (e.frame) {
+    if (!s.endsWith('\n')) s += '\n'
+    s += e.frame.trimEnd()
+  }
+  // copy stack since it's important for js plugin error
+  if (e.stack) {
+    if (!s.endsWith('\n')) s += '\n'
+    s += e.stack.replace(`${e.name ?? 'Error'}: ${e.message}\n`, '')
+  }
+  return s
 }
 
 export function transformToOutputBundle(

@@ -105,12 +105,13 @@ export function transformToRollupOutput(
 ): RolldownOutput {
   const errors = output.errors as unknown[] | null
   if (errors && errors.length > 0) {
-    // TODO: how does rollup throw multiple errors?
     const causes = errors.map((e: unknown) =>
       e instanceof Error
         ? e
         : Object.assign(new Error(), e, { stack: undefined }),
     )
+    // TODO: should we consistently throw AggregatedError?
+    // TODO: create a summary message like esbuild?
     if (causes.length === 1) {
       throw causes[0]
     }

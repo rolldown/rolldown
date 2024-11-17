@@ -5,7 +5,7 @@ export default defineTest({
   config: {
     plugins: [
       {
-        name: 'plugin-error',
+        name: 'my-plugin',
         async load() {
           await errorFn1()
         },
@@ -13,13 +13,14 @@ export default defineTest({
     ],
   },
   catchError(e) {
-    assert(e instanceof Error)
-    expect(e).toMatchObject({
-      message: 'hi',
+    assert(e instanceof AggregateError)
+    expect(e.message).toContain('my-error')
+    expect(e.message).toContain('at errorFn2')
+    expect(e.message).toContain('at errorFn1')
+    expect(e.errors[0]).toMatchObject({
+      message: 'my-error',
       extraProp: 1234,
     })
-    expect(e.stack).toContain('at errorFn2')
-    expect(e.stack).toContain('at errorFn1')
   },
 })
 
@@ -30,5 +31,5 @@ async function errorFn1() {
 
 async function errorFn2() {
   await Promise.resolve()
-  throw Object.assign(new Error('hi'), { extraProp: 1234 })
+  throw Object.assign(new Error('my-error'), { extraProp: 1234 })
 }

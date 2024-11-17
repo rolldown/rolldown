@@ -13,13 +13,23 @@ export default defineTest({
     ],
   },
   catchError(e) {
+    // TODO: some errors are not handled as diagnostics yet
     assert(e instanceof Error)
     expect(e).toMatchObject({
-      message: 'hi',
+      message: 'my-error',
       extraProp: 1234,
     })
     expect(e.stack).toContain('at errorFn2')
     expect(e.stack).toContain('at errorFn1')
+
+    // assert(e instanceof AggregateError)
+    // expect(e.message).toContain('my-error')
+    // expect(e.message).toContain('at errorFn2')
+    // expect(e.message).toContain('at errorFn1')
+    // expect(e.errors[0]).toMatchObject({
+    //   message: 'my-error',
+    //   extraProp: 1234
+    // })
   },
 })
 
@@ -30,5 +40,5 @@ async function errorFn1() {
 
 async function errorFn2() {
   await Promise.resolve()
-  throw Object.assign(new Error('hi'), { extraProp: 1234 })
+  throw Object.assign(new Error('my-error'), { extraProp: 1234 })
 }

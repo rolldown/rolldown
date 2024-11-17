@@ -8,9 +8,15 @@ export default defineTest({
   },
   catchError(e) {
     assert(e instanceof AggregateError)
+    e.message = stripVTControlCharacters(e.message)
     for (let error of e.errors) {
       error.message = stripVTControlCharacters(error.message)
     }
+    // top level summary
+    expect(e.message).toContain('Build failed with 2 errors')
+    expect(e.message).toContain('invalid :(')
+    expect(e.message).toContain('invalid :)')
+    // diagnostics
     expect(e.errors).toMatchObject([
       {
         kind: 'PARSE_ERROR',
@@ -21,6 +27,5 @@ export default defineTest({
         message: expect.stringContaining('invalid :)'),
       },
     ])
-    expect(e.message).toBe('Build failed')
   },
 })

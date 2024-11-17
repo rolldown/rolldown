@@ -118,19 +118,25 @@ export function transformToRollupOutput(
 }
 
 export function handleOutputErrors(output: BindingOutputs) {
-  const errors = output.errors
-  if (errors.length > 0) {
-    const causes = errors.map((e) =>
+  const rawErrors = output.errors
+  if (rawErrors.length > 0) {
+    const errors = rawErrors.map((e) =>
       e instanceof Error
         ? e
-        : Object.assign(new Error(), e, { stack: undefined }),
+        : // strip stacktrace of errors from native diagnostics
+          Object.assign(new Error(), e, { stack: undefined }),
     )
-    // TODO: should we consistently throw AggregatedError?
-    // TODO: create a summary message like esbuild?
-    if (causes.length === 1) {
-      throw causes[0]
+    // combine error messages as a top level error
+    let summary = `Build failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`
+    for (let i = 0; i < errors.length; i++) {
+      if (i >= 5) {
+        summary += '\n...'
+        break
+      }
+      const e = errors[i]
+      summary += (e.stack ?? e.message) + '\n'
     }
-    throw new AggregateError(causes, 'Build failed')
+    throw new AggregateError(errors, summary)
   }
 }
 

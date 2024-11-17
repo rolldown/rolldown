@@ -126,6 +126,7 @@ export function handleOutputErrors(output: BindingOutputs) {
         : // strip stacktrace of errors from native diagnostics
           Object.assign(new Error(), e, { stack: undefined }),
     )
+    // based on https://github.com/evanw/esbuild/blob/9eca46464ed5615cb36a3beb3f7a7b9a8ffbe7cf/lib/shared/common.ts#L1673
     // combine error messages as a top level error
     let summary = `Build failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`
     for (let i = 0; i < errors.length; i++) {
@@ -136,7 +137,22 @@ export function handleOutputErrors(output: BindingOutputs) {
       const e = errors[i]
       summary += (e.stack ?? e.message) + '\n'
     }
-    throw new AggregateError(errors, summary)
+    const wrapper = new Error(summary)
+    // expose individual errors as getters so that
+    // `console.error(wrapper)` doesn't expand unnecessary details
+    // when they are already presented in `wrapper.message`
+    Object.defineProperty(wrapper, 'errors', {
+      configurable: true,
+      enumerable: true,
+      get: () => errors,
+      set: (value) =>
+        Object.defineProperty(wrapper, 'errors', {
+          configurable: true,
+          enumerable: true,
+          value,
+        }),
+    })
+    throw wrapper
   }
 }
 

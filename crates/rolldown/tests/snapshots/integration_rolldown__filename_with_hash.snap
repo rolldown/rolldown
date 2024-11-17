@@ -4512,7 +4512,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/resolve/browser_filed_false
 
-- package-!~{000}~.js => package-Cd4J7h_P.js
+- package-!~{000}~.js => package-BXyAy_VX.js
 
 # tests/rolldown/function/resolve/extension_alias
 
@@ -4940,6 +4940,22 @@ snapshot_kind: text
 # tests/rolldown/topics/bundler_esm_cjs_tests/5
 
 - entry-!~{000}~.js => entry-yCBo7d69.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/50
+
+- entry-!~{000}~.js => entry-CCDxkJSk.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/51
+
+- entry-!~{000}~.js => entry-DzTWYJoG.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/52
+
+- entry-!~{000}~.js => entry-Dqixz_6_.js
+
+# tests/rolldown/topics/bundler_esm_cjs_tests/53
+
+- entry-!~{000}~.js => entry-amgtY4TE.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/56
 

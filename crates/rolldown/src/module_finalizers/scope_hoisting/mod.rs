@@ -66,16 +66,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       WrapKind::Cjs => {
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
+
+        // `__toESM`
         let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+
+        // `require_foo`
         let importee_wrapper_ref_name =
           self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+        // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
+
+        // If the module is an ESM module that follows the Node.js ESM spec, such as
+        // - extension is `.mjs`
+        // - `package.json` has `"type": "module"`
+        // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
+        let should_consider_node_esm_spec = self.ctx.module.ecma_view.def_format.is_esm();
+
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret,
-          self.snippet.to_esm_call_with_interop(
+          self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
             self.snippet.call_expr_expr(importee_wrapper_ref_name),
-            importee.interop(),
+            should_consider_node_esm_spec,
           ),
         );
         return false;

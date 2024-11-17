@@ -16,8 +16,9 @@ export default defineTest({
     ],
   },
   catchError(e: any) {
+    const id = join(import.meta.dirname, 'main.js')
     expect(e.message).toContain(`\
-[plugin my-plugin] ${join(import.meta.dirname, 'main.js')}:2:0
+[plugin my-plugin] ${id}:2:0
 RollupError: my-error
 1: xxx
 2: yyy
@@ -29,6 +30,7 @@ RollupError: my-error
       code: 'PLUGIN_ERROR',
       plugin: 'my-plugin',
       hook: 'transform',
+      id,
     })
   },
 })

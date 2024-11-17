@@ -16,7 +16,6 @@ export default defineTest({
     ],
   },
   catchError(e: any) {
-    expect(e.message).toContain('[plugin my-plugin]')
     expect(e.message).toContain(`\
 [plugin my-plugin] ${join(import.meta.dirname, 'main.js')}:2:0
 RollupError: my-error

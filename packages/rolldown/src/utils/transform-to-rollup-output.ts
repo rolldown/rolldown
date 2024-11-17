@@ -171,17 +171,21 @@ function getErrorMessage(e: RollupError) {
   if (s) {
     s += '\n'
   }
-  s += `${e.name ?? 'Error'}: ${e.message}`
+  const message = `${e.name ?? 'Error'}: ${e.message}`
+  s += message
   if (e.frame) {
-    if (!s.endsWith('\n')) s += '\n'
-    s += e.frame.trimEnd()
+    s = joinNewLine(s, e.frame)
   }
   // copy stack since it's important for js plugin error
   if (e.stack) {
-    if (!s.endsWith('\n')) s += '\n'
-    s += e.stack.replace(`${e.name ?? 'Error'}: ${e.message}\n`, '')
+    s = joinNewLine(s, e.stack.replace(message, ''))
   }
   return s
+}
+
+function joinNewLine(s1: string, s2: string): string {
+  // ensure single new line in between
+  return s1.replace(/\n+$/, '') + '\n' + s2.replace(/^\n+/, '')
 }
 
 export function transformToOutputBundle(

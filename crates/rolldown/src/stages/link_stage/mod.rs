@@ -134,8 +134,6 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn determine_module_exports_kind(&mut self) {
-    // Maximize the compatibility with commonjs
-    let compat_mode = true;
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       // TODO(hyf0): should check if importer is a js module
@@ -150,24 +148,15 @@ impl<'a> LinkStage<'a> {
             if matches!(importee.exports_kind, ExportsKind::None)
               && !importee.meta.has_lazy_export()
             {
-              if compat_mode {
-                // See https://github.com/evanw/esbuild/issues/447
-                if rec.meta.intersects(
-                  ImportRecordMeta::CONTAINS_IMPORT_DEFAULT
-                    | ImportRecordMeta::CONTAINS_IMPORT_STAR,
-                ) {
-                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                  // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                  unsafe {
-                    let importee_mut = addr_of!(*importee).cast_mut();
-                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                  }
-                }
-              } else {
-                self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+              // See https://github.com/evanw/esbuild/issues/447
+              if rec.meta.intersects(
+                ImportRecordMeta::CONTAINS_IMPORT_DEFAULT | ImportRecordMeta::CONTAINS_IMPORT_STAR,
+              ) {
+                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                 unsafe {
                   let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::Esm;
+                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
                 }
               }
             }
@@ -180,20 +169,12 @@ impl<'a> LinkStage<'a> {
               self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
             }
             ExportsKind::None => {
-              if compat_mode {
-                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                }
-              } else {
-                self.metas[importee.idx].wrap_kind = WrapKind::Esm;
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::Esm;
-                }
+              self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+              // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+              // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+              unsafe {
+                let importee_mut = addr_of!(*importee).cast_mut();
+                (*importee_mut).exports_kind = ExportsKind::CommonJs;
               }
             }
           },
@@ -209,20 +190,12 @@ impl<'a> LinkStage<'a> {
                   self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                 }
                 ExportsKind::None => {
-                  if compat_mode {
-                    self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                    // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                    // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-                    unsafe {
-                      let importee_mut = addr_of!(*importee).cast_mut();
-                      (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                    }
-                  } else {
-                    self.metas[importee.idx].wrap_kind = WrapKind::Esm;
-                    unsafe {
-                      let importee_mut = addr_of!(*importee).cast_mut();
-                      (*importee_mut).exports_kind = ExportsKind::Esm;
-                    }
+                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                  // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+                  // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+                  unsafe {
+                    let importee_mut = addr_of!(*importee).cast_mut();
+                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
                   }
                 }
               }

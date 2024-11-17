@@ -32,8 +32,8 @@ impl BindingOutputs {
       return Ok(
         diagnostics
           .into_iter()
-          .flat_map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
-          .collect(),
+          .map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
+          .collect::<napi::Result<_>>()?,
       );
     }
     Ok(vec![])

@@ -216,7 +216,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     match resolution {
       Ok(info) => {
         let package_json = info.package_json().map(|p| self.cached_package_json(p));
-        let module_type = calc_module_type(&info);
+        let module_type = infer_module_def_format(&info);
         Ok(Ok(build_resolve_ret(
           info.full_path().to_str().expect("Should be valid utf8").to_string(),
           module_type,
@@ -242,14 +242,13 @@ impl<F: FileSystem + Default> Resolver<F> {
   }
 }
 
-fn calc_module_type(info: &Resolution) -> ModuleDefFormat {
-  if let Some(extension) = info.path().extension() {
-    if extension == "mjs" {
-      return ModuleDefFormat::EsmMjs;
-    } else if extension == "cjs" {
-      return ModuleDefFormat::CJS;
-    }
+fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
+  let fmt = ModuleDefFormat::from_path(info.path());
+
+  if !matches!(fmt, ModuleDefFormat::Unknown) {
+    return fmt;
   }
+
   if let Some(package_json) = info.package_json() {
     let type_value = package_json.r#type.as_ref().and_then(|v| v.as_str());
     if type_value == Some("module") {

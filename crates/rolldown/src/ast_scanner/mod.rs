@@ -212,10 +212,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
       match self.module_type {
-        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson => {
+        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
           exports_kind = ExportsKind::CommonJs;
         }
-        ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson => {
+        ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson | ModuleDefFormat::EsmMts => {
           exports_kind = ExportsKind::Esm;
         }
         ModuleDefFormat::Unknown => {

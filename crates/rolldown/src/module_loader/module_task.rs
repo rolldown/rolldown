@@ -138,7 +138,7 @@ impl ModuleTask {
             importee_span: owner.importee_span,
             source: owner.source.clone(),
           }),
-          err.to_string().into(),
+          err,
         ));
         return Ok(());
       }

@@ -21,6 +21,8 @@ use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::unsupported_feature::UnsupportedFeature;
 use crate::events::DiagnosableArcstr;
+#[cfg(feature = "napi")]
+use crate::events::NapiError;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -36,7 +38,6 @@ use crate::events::{
   unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
-  NapiError,
 };
 use crate::line_column_to_byte_offset;
 
@@ -87,9 +88,11 @@ impl BuildDiagnostic {
   pub fn unloadable_dependency(
     resolved: ArcStr,
     context: Option<UnloadableDependencyContext>,
-    reason: ArcStr,
+    err: anyhow::Error,
   ) -> Self {
-    Self::new_inner(UnloadableDependency { resolved, context, reason })
+    downcast_napi_error_diagnostics(err).unwrap_or_else(|err| {
+      Self::new_inner(UnloadableDependency { resolved, context, reason: err.to_string().into() })
+    })
   }
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
@@ -242,8 +245,11 @@ impl BuildDiagnostic {
     Self::new_inner(InvalidOption { invalid_option_types: situation, option })
   }
 
-  pub fn napi_error(status: String, reason: String) -> Self {
-    Self::new_inner(NapiError { status, reason })
+  #[cfg(feature = "napi")]
+  pub fn napi_error(err: napi::Error) -> Self {
+    let mut diagnostic = Self::new_inner(NapiError {});
+    diagnostic.napi_error = Some(err);
+    diagnostic
   }
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
@@ -278,6 +284,18 @@ impl BuildDiagnostic {
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
-    Self::new_inner(UnhandleableError(err))
+    downcast_napi_error_diagnostics(err)
+      .unwrap_or_else(|err| Self::new_inner(UnhandleableError(err)))
+  }
+}
+
+fn downcast_napi_error_diagnostics(err: anyhow::Error) -> Result<BuildDiagnostic, anyhow::Error> {
+  #[cfg(feature = "napi")]
+  {
+    err.downcast::<napi::Error>().map(BuildDiagnostic::napi_error)
+  }
+  #[cfg(not(feature = "napi"))]
+  {
+    Err(err)
   }
 }

@@ -107,6 +107,7 @@ export function transformToRollupOutput(
   output: BindingOutputs,
   changed?: ChangedOutputs,
 ): RolldownOutput {
+  handleOutputErrors(output)
   const { chunks, assets } = output
   return {
     output: [
@@ -114,6 +115,45 @@ export function transformToRollupOutput(
       ...assets.map((asset) => transformToRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput
+}
+
+export function handleOutputErrors(output: BindingOutputs) {
+  const rawErrors = output.errors
+  if (rawErrors.length > 0) {
+    const errors = rawErrors.map((e) =>
+      e instanceof Error
+        ? e
+        : // strip stacktrace of errors from native diagnostics
+          Object.assign(new Error(), e, { stack: undefined }),
+    )
+    // based on https://github.com/evanw/esbuild/blob/9eca46464ed5615cb36a3beb3f7a7b9a8ffbe7cf/lib/shared/common.ts#L1673
+    // combine error messages as a top level error
+    let summary = `Build failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`
+    for (let i = 0; i < errors.length; i++) {
+      if (i >= 5) {
+        summary += '\n...'
+        break
+      }
+      const e = errors[i]
+      summary += (e.stack ?? e.message) + '\n'
+    }
+    const wrapper = new Error(summary)
+    // expose individual errors as getters so that
+    // `console.error(wrapper)` doesn't expand unnecessary details
+    // when they are already presented in `wrapper.message`
+    Object.defineProperty(wrapper, 'errors', {
+      configurable: true,
+      enumerable: true,
+      get: () => errors,
+      set: (value) =>
+        Object.defineProperty(wrapper, 'errors', {
+          configurable: true,
+          enumerable: true,
+          value,
+        }),
+    })
+    throw wrapper
+  }
 }
 
 export function transformToOutputBundle(

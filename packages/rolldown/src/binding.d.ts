@@ -50,6 +50,7 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
+  get errors(): Array<unknown>
 }
 
 export declare class BindingPluginContext {
@@ -79,7 +80,7 @@ export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
-  scan(): Promise<void>
+  scan(): Promise<BindingOutputs>
   close(): Promise<void>
   watch(): Promise<BindingWatcher>
   get closed(): boolean

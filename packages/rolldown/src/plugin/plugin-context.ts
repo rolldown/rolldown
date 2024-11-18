@@ -13,6 +13,7 @@ import { ModuleInfo } from '../types/module-info'
 import { PluginContextData } from './plugin-context-data'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import { PartialNull } from '../types/utils'
+import { bindingifySideEffects } from '../utils/transform-side-effects'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -78,7 +79,11 @@ export class PluginContext extends MinimalPluginContext {
       const promise = new Promise((resolve, _) => {
         resolveFn = resolve
       })
-      await context.load(id, resolveFn!)
+      await context.load(
+        id,
+        bindingifySideEffects(options.moduleSideEffects),
+        resolveFn!,
+      )
       await promise
       return data.getModuleInfo(id, context)!
     }

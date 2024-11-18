@@ -65,7 +65,7 @@ pub fn generate_namespace_definition(
 /// As for the namespaced name (including `.`), please refer to the `generate_namespace_definition` function.
 pub fn generate_identifier(
   ctx: &mut GenerateContext<'_>,
-  export_mode: &OutputExports,
+  export_mode: OutputExports,
 ) -> BuildResult<(String, String)> {
   // Handle the diagnostic warning
   if ctx.options.name.as_ref().map_or(true, String::is_empty)

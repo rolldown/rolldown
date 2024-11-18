@@ -86,7 +86,7 @@ pub fn render_iife<'code>(
 
   // Generate the identifier for the IIFE wrapper function.
   // You can refer to the function for more details.
-  let (definition, assignment) = generate_identifier(ctx, &export_mode)?;
+  let (definition, assignment) = generate_identifier(ctx, export_mode)?;
 
   let exports_prefix = if has_exports && named_exports {
     if ctx.options.extend {
@@ -131,8 +131,7 @@ pub fn render_iife<'code>(
   }
 
   if named_exports {
-    if let Some(marker) =
-      render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+    if let Some(marker) = render_namespace_markers(ctx.options.es_module, has_default_export, false)
     {
       source_joiner.append_source(marker);
     }

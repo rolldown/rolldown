@@ -32,7 +32,7 @@ pub fn collect_render_chunk_imports(
   chunk: &Chunk,
   graph: &LinkStageOutput,
   _chunk_graph: &ChunkGraph,
-  format: &OutputFormat,
+  format: OutputFormat,
 ) -> Vec<RenderImportStmt> {
   let mut render_import_stmts = vec![];
 

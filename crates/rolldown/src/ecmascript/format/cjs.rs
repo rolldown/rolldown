@@ -57,7 +57,7 @@ pub fn render_cjs<'code>(
         // Only `named` export can we render the namespace markers.
         if matches!(&export_mode, OutputExports::Named) {
           if let Some(marker) =
-            render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+            render_namespace_markers(ctx.options.es_module, has_default_export, false)
           {
             source_joiner.append_source(marker.to_string());
           }
@@ -143,7 +143,7 @@ pub fn render_cjs<'code>(
 // Make sure the imports generate stmts keep live bindings.
 fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, &ctx.options.format);
+    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, ctx.options.format);
 
   let mut s = String::new();
 

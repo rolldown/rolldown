@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use crate::RollupRenderedChunk;
 
@@ -10,9 +11,10 @@ pub type AddonFunction = dyn Fn(
   + Send
   + Sync;
 
+#[derive(Clone)]
 pub enum AddonOutputOption {
   String(Option<String>),
-  Fn(Box<AddonFunction>),
+  Fn(Arc<AddonFunction>),
 }
 
 impl Debug for AddonOutputOption {

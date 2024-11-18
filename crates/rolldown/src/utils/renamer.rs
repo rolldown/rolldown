@@ -38,7 +38,7 @@ pub struct Renamer<'name> {
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name SymbolRefDb, _modules_len: usize, format: &OutputFormat) -> Self {
+  pub fn new(symbols: &'name SymbolRefDb, _modules_len: usize, format: OutputFormat) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let manual_reserved = match format {
       OutputFormat::Esm | OutputFormat::App => vec![],

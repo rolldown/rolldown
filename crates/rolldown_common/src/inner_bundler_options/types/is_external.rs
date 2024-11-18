@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
+use std::sync::Arc;
 
 type Inner = dyn Fn(
     &str,         // specifier
@@ -12,7 +13,8 @@ type Inner = dyn Fn(
   + Sync
   + 'static;
 
-pub struct IsExternal(Box<Inner>);
+#[derive(Clone)]
+pub struct IsExternal(Arc<Inner>);
 
 impl Deref for IsExternal {
   type Target = Inner;
@@ -34,7 +36,7 @@ impl IsExternal {
       + Sync
       + 'static,
   {
-    Self(Box::new(f))
+    Self(Arc::new(f))
   }
 
   pub fn from_vec(value: Vec<String>) -> Self {

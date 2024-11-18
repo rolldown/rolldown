@@ -33,7 +33,7 @@ fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| {
-    AddonOutputOption::Fn(Box::new(move |chunk| {
+    AddonOutputOption::Fn(Arc::new(move |chunk| {
       let fn_js = Arc::clone(&value);
       let chunk = chunk.clone();
       Box::pin(async move {
@@ -49,7 +49,7 @@ fn normalize_chunk_file_names_option(
   option
     .map(move |value| match value {
       Either::A(str) => Ok(ChunkFilenamesOutputOption::String(str)),
-      Either::B(func) => Ok(ChunkFilenamesOutputOption::Fn(Box::new(move |chunk| {
+      Either::B(func) => Ok(ChunkFilenamesOutputOption::Fn(Arc::new(move |chunk| {
         let func = Arc::clone(&func);
         let chunk = chunk.clone();
         Box::pin(async move { func.invoke_async(chunk.into()).await.map_err(anyhow::Error::from) })
@@ -85,7 +85,7 @@ pub fn normalize_binding_options(
   });
 
   let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|ts_fn| {
-    rolldown::SourceMapIgnoreList::new(Box::new(move |source, sourcemap_path| {
+    rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
       let ts_fn = Arc::clone(&ts_fn);
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
@@ -96,7 +96,7 @@ pub fn normalize_binding_options(
   });
 
   let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Box::new(move |source, sourcemap_path| {
+    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
       let ts_fn = Arc::clone(&ts_fn);
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();

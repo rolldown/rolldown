@@ -27,7 +27,7 @@ pub fn render_chunk_external_imports(
   ctx: &GenerateContext<'_>,
 ) -> (String, Vec<ExternalRenderImportStmt>) {
   let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, &ctx.options.format);
+    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph, ctx.options.format);
 
   let mut import_code = String::new();
   let externals = render_import_stmts

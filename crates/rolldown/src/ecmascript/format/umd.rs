@@ -95,8 +95,7 @@ pub fn render_umd<'code>(
   }
 
   if named_exports {
-    if let Some(marker) =
-      render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+    if let Some(marker) = render_namespace_markers(ctx.options.es_module, has_default_export, false)
     {
       source_joiner.append_source(marker.to_string());
     }

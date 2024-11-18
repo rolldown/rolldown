@@ -219,7 +219,8 @@ impl ViteResolvePlugin {
     let resolver = self.resolver.get(additional_options);
 
     if is_bare_import(args.specifier) {
-      let external = self.environment_consumer == "server"
+      let external = self.resolve_options.is_build
+        && self.environment_consumer == "server"
         && self.external_decider.is_external(args.specifier, args.importer);
       let result = resolve_bare_import(
         args.specifier,

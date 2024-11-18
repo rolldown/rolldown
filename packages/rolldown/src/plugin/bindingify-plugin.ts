@@ -225,7 +225,6 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
         try {
           return await handler(...args)
         } catch (e: any) {
-          hookName === 'transform'
           return error(
             logPluginError(e, plugin.name, {
               hook: hookName,

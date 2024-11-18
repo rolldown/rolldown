@@ -51,10 +51,14 @@ __export(b_exports, { foo: () => foo$2 });
 let foo$2 = 123;
 
 //#endregion
+//#region test.ts
+var Test = void 0;
+
+//#endregion
 //#region c.ts
 var c_exports = {};
 __export(c_exports, {
-	Test: () => Test$1,
+	Test: () => Test,
 	foo: () => foo$1
 });
 let foo$1 = 123;
@@ -79,7 +83,7 @@ console.log(a_exports, b_exports, c_exports, d_exports);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,21 +1,23 @@
+@@ -1,21 +1,24 @@
  var a_exports = {};
  __export(a_exports, {
 -    foo: () => foo
@@ -94,10 +98,11 @@ console.log(a_exports, b_exports, c_exports, d_exports);
  });
 -var foo2 = 123;
 +var foo$2 = 123;
++var Test = void 0;
  var c_exports = {};
  __export(c_exports, {
 -    foo: () => foo3
-+    Test: () => Test$1,
++    Test: () => Test,
 +    foo: () => foo$1
  });
 -var foo3 = 123;

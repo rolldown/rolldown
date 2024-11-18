@@ -12,7 +12,7 @@ use crate::{
 use anyhow::Result;
 
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::BuildResult;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
@@ -143,18 +143,19 @@ impl Bundler {
 
     self.plugin_driver.render_start().await?;
 
-    let mut output = {
-      let bundle_output =
-        GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
-          .generate()
-          .await;
+    let bundle_output =
+      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
+        .generate()
+        .await; // Notice we don't use `?` to break the control flow here.
 
-      if let Some(error) = Self::normalize_error(&bundle_output, |ret| &ret.errors) {
-        self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
-      }
+    if let Err(errs) = &bundle_output {
+      self
+        .plugin_driver
+        .render_error(&HookRenderErrorArgs { error: errs.first().unpack_ref().to_string() })
+        .await?;
+    }
 
-      bundle_output?
-    };
+    let mut output = bundle_output?;
 
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets);
@@ -164,16 +165,6 @@ impl Bundler {
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
     Ok(output)
-  }
-
-  fn normalize_error<T>(
-    ret: &Result<T>,
-    errors_fn: impl Fn(&T) -> &[BuildDiagnostic],
-  ) -> Option<String> {
-    ret.as_ref().map_or_else(
-      |error| Some(error.to_string()),
-      |ret| errors_fn(ret).first().map(ToString::to_string),
-    )
   }
 
   pub fn options(&self) -> &NormalizedBundlerOptions {

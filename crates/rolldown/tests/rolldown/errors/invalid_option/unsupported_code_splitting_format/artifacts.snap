@@ -10,32 +10,3 @@ snapshot_kind: text
 [INVALID_OPTION] Error: Invalid value "iife" for option "format". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.
 
 ```
-
-# Assets
-
-## lib.js
-
-```js
-var wrap = (function() {
-
-"use strict";
-
-//#region lib.js
-var lib_default = 2;
-
-//#endregion
-return lib_default;
-})();
-```
-## main.js
-
-```js
-(function() {
-
-
-//#region main.js
-import("./lib.js").then(console.log);
-
-//#endregion
-})();
-```

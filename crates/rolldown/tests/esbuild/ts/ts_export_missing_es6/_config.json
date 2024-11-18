@@ -5,8 +5,8 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "shimMissingExports": true
   },
-  "expectExecuted": false,
-  "expectError": true
+  "expectExecuted": false
 }

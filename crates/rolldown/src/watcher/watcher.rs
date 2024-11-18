@@ -21,7 +21,7 @@ use std::{
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
-use crate::{BundleOutput, Bundler};
+use crate::Bundler;
 
 use anyhow::Result;
 
@@ -126,10 +126,6 @@ impl Watcher {
         bundler.write().await
       }
     };
-    let mut output = match output {
-      Ok(output) => output,
-      Err(e) => BundleOutput { errors: e.into_vec(), ..Default::default() },
-    };
 
     let mut inner = self.inner.lock().await;
     // FIXME(hyf0): probably should have a more official API/better way to get watch files
@@ -161,33 +157,35 @@ impl Watcher {
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
     std::mem::drop(inner);
 
-    if output.errors.is_empty() {
-      self
-        .emitter
-        .emit(
-          WatcherEvent::Event,
-          BundleEventKind::BundleEnd(BundleEndEventData {
-            output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
-            duration: start_time.elapsed().as_millis().to_string(),
-          })
-          .into(),
-        )
-        .await?;
-    } else {
-      self
-        .emitter
-        .emit(
-          WatcherEvent::Event,
-          BundleEventKind::Error(
-            output
-              .errors
-              .remove(0)
-              .into_diagnostic_with(&DiagnosticOptions { cwd: bundler.options.cwd.clone() })
-              .to_color_string(),
+    match output {
+      Ok(_output) => {
+        self
+          .emitter
+          .emit(
+            WatcherEvent::Event,
+            BundleEventKind::BundleEnd(BundleEndEventData {
+              output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
+              duration: start_time.elapsed().as_millis().to_string(),
+            })
+            .into(),
           )
-          .into(),
-        )
-        .await?;
+          .await?;
+      }
+      Err(mut errs) => {
+        self
+          .emitter
+          .emit(
+            WatcherEvent::Event,
+            BundleEventKind::Error(
+              errs
+                .remove(0)
+                .into_diagnostic_with(&DiagnosticOptions { cwd: bundler.options.cwd.clone() })
+                .to_color_string(),
+            )
+            .into(),
+          )
+          .await?;
+      }
     }
 
     self.running.store(false, Ordering::Relaxed);

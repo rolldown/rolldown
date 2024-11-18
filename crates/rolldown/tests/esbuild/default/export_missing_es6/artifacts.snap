@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
@@ -14,22 +15,4 @@ source: crates/rolldown_testing/src/integration_test.rs
    │           ╰──── Missing export
 ───╯
 
-```
-
-# Assets
-
-## entry.js
-
-```js
-
-
-//#region foo.js
-var foo_exports = {};
-__export(foo_exports, { buton: () => buton });
-
-//#endregion
-//#region entry.js
-console.log(foo_exports);
-
-//#endregion
 ```

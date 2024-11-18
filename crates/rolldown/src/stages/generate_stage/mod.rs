@@ -1,9 +1,9 @@
 use std::collections::hash_map::Entry;
 
-use anyhow::Result;
 use arcstr::ArcStr;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -62,7 +62,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate(&mut self) -> Result<BundleOutput> {
+  pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     let mut chunk_graph = self.generate_chunks().await?;
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;

@@ -14,6 +14,10 @@ console.log(foo_exports);
 ```js
 
 
+//#region bar.js
+var nope = void 0;
+
+//#endregion
 //#region foo.ts
 var foo_exports = {};
 __export(foo_exports, { nope: () => nope });
@@ -29,7 +33,8 @@ console.log(foo_exports);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,2 +1,5 @@
+@@ -1,2 +1,6 @@
++var nope = void 0;
  var foo_exports = {};
 +__export(foo_exports, {
 +    nope: () => nope

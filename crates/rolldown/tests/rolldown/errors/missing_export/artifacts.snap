@@ -88,12 +88,3 @@ snapshot_kind: text
 ───╯
 
 ```
-
-# Assets
-
-## main.js
-
-```js
-
-export { d, g, importedC };
-```

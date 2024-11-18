@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
@@ -13,13 +14,5 @@ source: crates/rolldown_testing/src/integration_test.rs
    │         ───┬───  
    │            ╰───── Missing export
 ───╯
-
-```
-
-# Assets
-
-## entry.js
-
-```js
 
 ```

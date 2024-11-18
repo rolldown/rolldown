@@ -31,6 +31,7 @@ import {
   bindingifyCloseWatcher,
   bindingifyWatchChange,
 } from './bindingify-watch-hooks'
+import { error, logPluginError } from '../log/logs'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
@@ -144,7 +145,7 @@ export function bindingifyPlugin(
   const { plugin: closeWatcher, meta: closeWatcherMeta } =
     bindingifyCloseWatcher(plugin, options, pluginContextData)
 
-  return {
+  const result: BindingPluginOptions = {
     name: plugin.name ?? 'unknown',
     buildStart,
     buildStartMeta,
@@ -192,4 +193,47 @@ export function bindingifyPlugin(
     closeWatcher,
     closeWatcherMeta,
   }
+  return wrapHandlers(result)
+}
+
+function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
+  for (const hookName of [
+    'buildStart',
+    'resolveId',
+    'resolveDynamicImport',
+    'buildEnd',
+    'transform',
+    'moduleParsed',
+    'load',
+    'renderChunk',
+    'augmentChunkHash',
+    'renderStart',
+    'renderError',
+    'generateBundle',
+    'writeBundle',
+    'closeBundle',
+    'banner',
+    'footer',
+    'intro',
+    'outro',
+    'watchChange',
+    'closeWatcher',
+  ] as const) {
+    const handler = plugin[hookName] as any
+    if (handler) {
+      plugin[hookName] = async (...args: any[]) => {
+        try {
+          return await handler(...args)
+        } catch (e: any) {
+          return error(
+            logPluginError(e, plugin.name, {
+              hook: hookName,
+              id: hookName === 'transform' ? args[2] : undefined,
+            }),
+          )
+        }
+      }
+    }
+  }
+  return plugin
 }

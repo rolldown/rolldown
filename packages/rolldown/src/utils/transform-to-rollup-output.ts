@@ -19,6 +19,7 @@ import {
 } from './asset-source'
 import { bindingifySourcemap } from '../types/sourcemap'
 import { transformToRenderedModule } from './transform-rendered-module'
+import { RollupError } from '../rollup'
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -134,8 +135,7 @@ export function handleOutputErrors(output: BindingOutputs) {
         summary += '\n...'
         break
       }
-      const e = errors[i]
-      summary += (e.stack ?? e.message) + '\n'
+      summary += getErrorMessage(errors[i]) + '\n'
     }
     const wrapper = new Error(summary)
     // expose individual errors as getters so that
@@ -154,6 +154,38 @@ export function handleOutputErrors(output: BindingOutputs) {
     })
     throw wrapper
   }
+}
+
+function getErrorMessage(e: RollupError) {
+  let s = ''
+  if (e.plugin) {
+    s += `[plugin ${e.plugin}]`
+  }
+  const id = e.id ?? e.loc?.file
+  if (id) {
+    s += ' ' + id
+    if (e.loc) {
+      s += `:${e.loc.line}:${e.loc.column}`
+    }
+  }
+  if (s) {
+    s += '\n'
+  }
+  const message = `${e.name ?? 'Error'}: ${e.message}`
+  s += message
+  if (e.frame) {
+    s = joinNewLine(s, e.frame)
+  }
+  // copy stack since it's important for js plugin error
+  if (e.stack) {
+    s = joinNewLine(s, e.stack.replace(message, ''))
+  }
+  return s
+}
+
+function joinNewLine(s1: string, s2: string): string {
+  // ensure single new line in between
+  return s1.replace(/\n+$/, '') + '\n' + s2.replace(/^\n+/, '')
 }
 
 export function transformToOutputBundle(

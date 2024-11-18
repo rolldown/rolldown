@@ -499,12 +499,18 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             let importee_linking_info = &self.ctx.linking_infos[importee_id];
             match importee_linking_info.wrap_kind {
               WrapKind::Esm => {
-                // `(init_foo(), j)`
+                // Rewrite `import('./foo.mjs')` to `(init_foo(), foo_exports)`
                 let importee_linking_info = &self.ctx.linking_infos[importee_id];
+
+                // `init_foo`
                 let importee_wrapper_ref_name =
                   self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+                // `foo_exports`
                 let importee_namespace_name =
                   self.canonical_name_for(importee.namespace_object_ref);
+
+                // `(init_foo(), foo_exports)`
                 *expr = self.snippet.promise_resolve_then_call_expr(
                   expr.span(),
                   self.snippet.builder.vec1(self.snippet.return_stmt(
@@ -532,7 +538,13 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   )),
                 );
               }
-              WrapKind::None => {}
+              WrapKind::None => {
+                // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
+                // must be wrapped, so we could make sure the module is executed lazily.
+                if cfg!(debug_assertions) {
+                  unreachable!()
+                }
+              }
             }
           }
           Module::External(_) => {
@@ -706,7 +718,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       return;
     };
 
-    // eliminat class name and transformed it into class expr
+    // eliminate class name and transformed it into class expr
     let Some(id) = class.id.take() else {
       walk_mut::walk_declaration(self, it);
       return;

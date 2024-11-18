@@ -17,19 +17,19 @@ var import_bar = __toESM(require("./bar"));
 ```js
 "use strict";
 
-const { default: foo } = __toESM(require("./foo"));
-const { default: bar } = __toESM(require("./bar"));
+const ___foo = __toESM(require("./foo"));
+const ___bar = __toESM(require("./bar"));
 
 Object.defineProperty(exports, 'bar', {
   enumerable: true,
   get: function () {
-    return bar;
+    return ___bar.default;
   }
 });
 Object.defineProperty(exports, 'foo', {
   enumerable: true,
   get: function () {
-    return foo;
+    return ___foo.default;
   }
 });
 ```
@@ -43,12 +43,12 @@ Object.defineProperty(exports, 'foo', {
 -__export(entry_exports, {
 -    bar: () => import_bar.default,
 -    foo: () => import_foo.default
-+var {default: foo} = __toESM(require("./foo"));
-+var {default: bar} = __toESM(require("./bar"));
++var ___foo = __toESM(require("./foo"));
++var ___bar = __toESM(require("./bar"));
 +Object.defineProperty(exports, 'bar', {
 +    enumerable: true,
 +    get: function () {
-+        return bar;
++        return ___bar.default;
 +    }
  });
 -module.exports = __toCommonJS(entry_exports);
@@ -57,7 +57,7 @@ Object.defineProperty(exports, 'foo', {
 +Object.defineProperty(exports, 'foo', {
 +    enumerable: true,
 +    get: function () {
-+        return foo;
++        return ___foo.default;
 +    }
 +});
 

@@ -24,6 +24,7 @@ export default defineTest({
           if (id.endsWith('main.js')) {
             const moduleInfo = await this.load({
               id: path.join(__dirname, 'foo.js'),
+              moduleSideEffects: false,
             })
             expect(moduleInfo.code!.includes('foo')).toBe(true)
           }
@@ -46,5 +47,8 @@ export default defineTest({
   },
   beforeTest: () => {
     fooHookCalls = 0
+  },
+  afterTest: (output) => {
+    expect(output.output[0].code.includes(`console.log`)).toBe(false)
   },
 })

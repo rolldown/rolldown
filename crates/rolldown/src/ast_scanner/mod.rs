@@ -30,6 +30,7 @@ use rolldown_common::{
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
+use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -114,9 +115,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let default_export_ref = symbol_ref_db
-      .create_facade_root_symbol_ref(format!("{legitimized_repr_name}_default").into());
+      .create_facade_root_symbol_ref(concat_string!(legitimized_repr_name, "_default").into());
 
-    let name = format!("{legitimized_repr_name}_exports");
+    let name = concat_string!(legitimized_repr_name, "_exports");
     let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(name.into());
 
     let result = ScanResult {
@@ -211,10 +212,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
       match self.module_type {
-        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson => {
+        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
           exports_kind = ExportsKind::CommonJs;
         }
-        ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson => {
+        ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson | ModuleDefFormat::EsmMts => {
           exports_kind = ExportsKind::Esm;
         }
         ModuleDefFormat::Unknown => {
@@ -278,9 +279,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
     let namespace_ref: SymbolRef = self.result.symbol_ref_db.create_facade_root_symbol_ref(
-      format!(
-        "#LOCAL_NAMESPACE_IN_{}#",
-        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default())
+      concat_string!(
+        "#LOCAL_NAMESPACE_IN_",
+        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default()),
+        "#"
       )
       .into(),
     );
@@ -388,7 +390,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let importee_repr =
           self.result.import_records[record_id].module_request.as_path().representative_file_name();
         let importee_repr = legitimize_identifier_name(&importee_repr);
-        format!("{importee_repr}_default").into()
+        concat_string!(importee_repr, "_default").into()
       } else {
         export_name.into()
       });

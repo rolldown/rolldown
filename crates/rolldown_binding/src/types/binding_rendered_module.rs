@@ -1,10 +1,20 @@
+use napi::bindgen_prelude::FromNapiValue;
+use napi_derive::napi;
+use rolldown_common::RenderedModule;
 use std::fmt::Debug;
 
-use napi_derive::napi;
-
-#[napi(object)]
+#[napi]
 pub struct BindingRenderedModule {
-  pub code: Option<String>,
+  #[napi(skip)]
+  pub inner: RenderedModule,
+}
+
+#[napi]
+impl BindingRenderedModule {
+  #[napi(getter)]
+  pub fn code(&self) -> Option<String> {
+    self.inner.code()
+  }
 }
 
 impl Debug for BindingRenderedModule {
@@ -15,12 +25,21 @@ impl Debug for BindingRenderedModule {
 
 impl From<rolldown_common::RenderedModule> for BindingRenderedModule {
   fn from(value: rolldown_common::RenderedModule) -> Self {
-    Self { code: value.code }
+    Self { inner: value }
   }
 }
 
 impl From<BindingRenderedModule> for rolldown_common::RenderedModule {
   fn from(value: BindingRenderedModule) -> Self {
-    Self { code: value.code }
+    value.inner
+  }
+}
+
+impl FromNapiValue for BindingRenderedModule {
+  unsafe fn from_napi_value(
+    _env: napi::sys::napi_env,
+    _napi_val: napi::sys::napi_value,
+  ) -> napi::Result<Self> {
+    Ok(BindingRenderedModule { inner: RenderedModule::default() })
   }
 }

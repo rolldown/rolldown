@@ -9,8 +9,8 @@ snapshot_kind: text
 ```js
 
 
-//#region foo.cjs
-var require_foo = __commonJS({ "foo.cjs"(exports, module) {
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = {
 		default: { bar: 123 },
 		__esModule: true
@@ -18,8 +18,8 @@ var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 } });
 
 //#endregion
-//#region entry.js
-var import_foo = __toESM(require_foo());
+//#region entry.mts
+var import_foo = __toESM(require_foo(), 1);
 input.works = import_foo.default.default.bar === 123;
 
 //#endregion

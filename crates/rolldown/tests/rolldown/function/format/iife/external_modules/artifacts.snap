@@ -24,10 +24,11 @@ snapshot_kind: text
 (function(node_path, node_fs) {
 
 "use strict";
-const { default: nodePath } = node_path;
+
+node_path = __toESM(node_path);
 
 //#region main.js
-console.log(nodePath);
+console.log(node_path.default);
 
 //#endregion
 })(node_path, node_fs);

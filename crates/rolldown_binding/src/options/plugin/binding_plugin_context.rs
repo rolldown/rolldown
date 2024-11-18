@@ -5,7 +5,7 @@ use napi_derive::napi;
 use rolldown_plugin::PluginContext;
 
 use super::types::{
-  binding_emitted_asset::BindingEmittedAsset,
+  binding_emitted_asset::BindingEmittedAsset, binding_hook_side_effects::BindingHookSideEffects,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
 };
 
@@ -24,16 +24,20 @@ pub struct BindingPluginContext {
 
 #[napi]
 impl BindingPluginContext {
-  #[napi(ts_args_type = "specifier: string, fn: () => void")]
+  #[napi(
+    ts_args_type = "specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void"
+  )]
   pub async fn load(
     &self,
     specifier: String,
+    side_effects: Option<BindingHookSideEffects>,
     load_callback_fn: JsCallback<(), ()>,
   ) -> napi::Result<()> {
     self
       .inner
       .load(
         &specifier,
+        side_effects.map(Into::into),
         Box::new(move || {
           let load_callback_fn = Arc::clone(&load_callback_fn);
           Box::pin(

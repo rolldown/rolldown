@@ -76,6 +76,7 @@ single_match      = "allow"
 single_match_else = "allow"
 
 [workspace.dependencies]
+criterion2                              = { version = "2.0.0", default-features = false }
 css-module-lexer                        = "0.0.15"
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
@@ -154,7 +155,7 @@ schemars            = "0.8.21"
 self_cell           = "1.0.4"
 serde               = { version = "1.0.203", features = ["derive"] }
 serde_json          = "1.0.117"
-simdutf8            = { version = "0.1.4", features = ["aarch64_neon"] }
+simdutf8            = { version = "0.1.5" }
 smallvec            = "1.13.2"
 string_wizard       = { path = "./crates/string_wizard" }
 sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
@@ -167,6 +168,7 @@ typedmap            = "0.5.0"
 urlencoding         = "2.1.3"
 vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
+
 
 # oxc crates share the same version
 oxc                = { version = "0.36.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }

@@ -9,6 +9,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
+  concat_string,
   ecmascript::legitimize_identifier_name,
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -134,8 +135,6 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn determine_module_exports_kind(&mut self) {
-    // Maximize the compatibility with commonjs
-    let compat_mode = true;
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       // TODO(hyf0): should check if importer is a js module
@@ -150,24 +149,15 @@ impl<'a> LinkStage<'a> {
             if matches!(importee.exports_kind, ExportsKind::None)
               && !importee.meta.has_lazy_export()
             {
-              if compat_mode {
-                // See https://github.com/evanw/esbuild/issues/447
-                if rec.meta.intersects(
-                  ImportRecordMeta::CONTAINS_IMPORT_DEFAULT
-                    | ImportRecordMeta::CONTAINS_IMPORT_STAR,
-                ) {
-                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                  // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                  unsafe {
-                    let importee_mut = addr_of!(*importee).cast_mut();
-                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                  }
-                }
-              } else {
-                self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+              // See https://github.com/evanw/esbuild/issues/447
+              if rec.meta.intersects(
+                ImportRecordMeta::CONTAINS_IMPORT_DEFAULT | ImportRecordMeta::CONTAINS_IMPORT_STAR,
+              ) {
+                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                 unsafe {
                   let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::Esm;
+                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
                 }
               }
             }
@@ -180,20 +170,12 @@ impl<'a> LinkStage<'a> {
               self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
             }
             ExportsKind::None => {
-              if compat_mode {
-                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                }
-              } else {
-                self.metas[importee.idx].wrap_kind = WrapKind::Esm;
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::Esm;
-                }
+              self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+              // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+              // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+              unsafe {
+                let importee_mut = addr_of!(*importee).cast_mut();
+                (*importee_mut).exports_kind = ExportsKind::CommonJs;
               }
             }
           },
@@ -209,20 +191,12 @@ impl<'a> LinkStage<'a> {
                   self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                 }
                 ExportsKind::None => {
-                  if compat_mode {
-                    self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                    // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                    // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-                    unsafe {
-                      let importee_mut = addr_of!(*importee).cast_mut();
-                      (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                    }
-                  } else {
-                    self.metas[importee.idx].wrap_kind = WrapKind::Esm;
-                    unsafe {
-                      let importee_mut = addr_of!(*importee).cast_mut();
-                      (*importee_mut).exports_kind = ExportsKind::Esm;
-                    }
+                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                  // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+                  // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+                  unsafe {
+                    let importee_mut = addr_of!(*importee).cast_mut();
+                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
                   }
                 }
               }
@@ -244,32 +218,6 @@ impl<'a> LinkStage<'a> {
       {
         self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
       }
-
-      // TODO: should have a better place to put this
-      if is_entry && matches!(self.options.format, OutputFormat::Cjs) && importer.has_star_export()
-      {
-        importer
-          .import_records
-          .iter()
-          .filter(|rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
-          .for_each(|rec| {
-            match &self.module_table.modules[rec.resolved_module] {
-              Module::Normal(_) => {}
-              Module::External(ext) => {
-                self.metas[importer.idx]
-                  .require_bindings_for_star_exports
-                  .entry(rec.resolved_module)
-                  .or_insert_with(|| {
-                    // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
-                    self.symbols.create_facade_root_symbol_ref(
-                      importer.idx,
-                      legitimize_identifier_name(&ext.name).into_owned().into(),
-                    )
-                  });
-              }
-            }
-          });
-      };
     });
   }
 
@@ -314,12 +262,16 @@ impl<'a> LinkStage<'a> {
                     // export * from 'external' would be just removed. So it references nothing.
                     rec.namespace_ref.set_name(
                       &mut symbols.lock().unwrap(),
-                      &format!("import_{}", legitimize_identifier_name(&importee.name)),
+                      &concat_string!("import_", legitimize_identifier_name(&importee.name)),
                     );
                   } else {
                     // import ... from 'external' or export ... from 'external'
-                    let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
-                    if cjs_format && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT) {
+                    if matches!(
+                      self.options.format,
+                      OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd
+                    ) && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+                    {
+                      stmt_info.side_effect = true;
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
@@ -390,7 +342,7 @@ impl<'a> LinkStage<'a> {
                         declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                         rec.namespace_ref.set_name(
                           &mut symbols.lock().unwrap(),
-                          &format!("import_{}", &importee.repr_name),
+                          &concat_string!("import_", importee.repr_name),
                         );
                       }
                     }

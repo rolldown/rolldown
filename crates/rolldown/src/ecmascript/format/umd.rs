@@ -102,13 +102,27 @@ pub fn render_umd<'code>(
     }
   }
 
+  let mut module_sources_peekable = module_sources.iter().peekable();
+  match module_sources_peekable.peek() {
+    Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
+      if let (_, _module_id, Some(emitted_sources)) =
+        module_sources_peekable.next().expect("Must have module")
+      {
+        for source in emitted_sources.iter() {
+          source_joiner.append_source(source);
+        }
+      }
+    }
+    _ => {}
+  }
+
   source_joiner.append_source(import_code);
 
   // chunk content
   // TODO indent chunk content
-  module_sources.iter().for_each(|(_, _, module_render_output)| {
+  module_sources_peekable.for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources {
+      for source in emitted_sources.as_ref() {
         source_joiner.append_source(source);
       }
     }

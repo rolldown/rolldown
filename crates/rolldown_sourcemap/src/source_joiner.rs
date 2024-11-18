@@ -28,8 +28,16 @@ impl<'source> SourceJoiner<'source> {
     self.prepend_source.push(source);
   }
 
-  pub fn join(self) -> (String, Option<SourceMap>) {
-    let mut final_source = String::new();
+  pub fn join(&self) -> (String, Option<SourceMap>) {
+    let sources_len = self.prepend_source.len() + self.inner.len();
+    let sources_iter = self.prepend_source.iter().chain(self.inner.iter()).enumerate();
+
+    let size_hint_of_ret_source = sources_iter.clone().map(|(_idx, source)| source.content().len()).sum::<usize>()
+        + /* Each source we will emit a '\n' but exclude last one */ (sources_len - /* Exclude the last source  */ 1);
+    let mut ret_source = String::with_capacity(size_hint_of_ret_source);
+
+    let mut line_offset = 0;
+
     let mut sourcemap_builder = self.enable_sourcemap.then(|| {
       ConcatSourceMapBuilder::with_capacity(
         self.names_len,
@@ -38,18 +46,19 @@ impl<'source> SourceJoiner<'source> {
         self.token_chunks_len,
       )
     });
-    let mut line_offset = 0;
-    let source_len = self.prepend_source.len() + self.inner.len();
-
-    for (index, source) in self.prepend_source.iter().chain(self.inner.iter()).enumerate() {
-      source.join(&mut final_source, &mut sourcemap_builder, line_offset);
-      if index < source_len - 1 {
-        final_source.push('\n');
+    for (index, source) in sources_iter {
+      if let Some(sourcemap_builder) = &mut sourcemap_builder {
+        source.sourcemap().inspect(|map| {
+          sourcemap_builder.add_sourcemap(map, line_offset);
+        });
+      }
+      ret_source.push_str(source.content());
+      if index < sources_len - 1 {
+        ret_source.push('\n');
         line_offset += source.lines_count() + 1; // +1 for the newline
       }
     }
-
-    (final_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
+    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {

@@ -1,6 +1,9 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
-  ast::ast::{self, IdentifierReference, Statement},
+  ast::{
+    ast::{self, IdentifierReference, Statement},
+    Comment,
+  },
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
@@ -12,8 +15,8 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
-use rolldown_std_utils::OptionExt;
-use rolldown_utils::ecmascript::is_validate_identifier_name;
+use rolldown_utils::{ecmascript::is_validate_identifier_name, path_ext::PathExt};
+use sugar_path::SugarPath;
 
 mod rename;
 
@@ -23,6 +26,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
+  pub comments: oxc::allocator::Vec<'ast, Comment>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -62,16 +66,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       WrapKind::Cjs => {
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
+
+        // `__toESM`
         let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+
+        // `require_foo`
         let importee_wrapper_ref_name =
           self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+        // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
+
+        // If the module is an ESM module that follows the Node.js ESM spec, such as
+        // - extension is `.mjs`
+        // - `package.json` has `"type": "module"`
+        // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
+        let should_consider_node_esm_spec = self.ctx.module.ecma_view.def_format.is_esm();
+
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret,
-          self.snippet.to_esm_call_with_interop(
+          self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
             self.snippet.call_expr_expr(importee_wrapper_ref_name),
-            importee.interop(),
+            should_consider_node_esm_spec,
           ),
         );
         return false;
@@ -110,35 +127,42 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
 
-    let mut expr = match self.ctx.options.format {
-      rolldown_common::OutputFormat::Cjs => {
-        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_id.unwrap_or_else(|| {
-          // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
-          // belong to the chunk they are declared in and won't link to other chunks.
-          let symbol_name = canonical_ref.name(self.ctx.symbol_db);
-          eprintln!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",);
-          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
-        });
-        let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
-          .expect("This module should be in a chunk");
-        let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
-        if is_symbol_in_other_chunk {
-          // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
-          // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
-          // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
+    let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
+      self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+    } else {
+      match self.ctx.options.format {
+        rolldown_common::OutputFormat::Cjs => {
+          let chunk_idx_of_canonical_symbol =
+            canonical_symbol.chunk_id.unwrap_or_else(|| {
+              // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
+              // belong to the chunk they are declared in and won't link to other chunks.
+              let symbol_name = canonical_ref.name(self.ctx.symbol_db);
+              eprintln!(
+                "{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",
+              );
+              panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+            });
+          let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+            .expect("This module should be in a chunk");
+          let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
+          if is_symbol_in_other_chunk {
+            // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
+            // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
+            // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
 
-          let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-            .exports_to_other_chunks[&canonical_ref];
+            let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
+              .exports_to_other_chunks[&canonical_ref];
 
-          let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
-            .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
+            let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+              .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-          self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
-        } else {
-          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+            self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
+          } else {
+            self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+          }
         }
+        _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
       }
-      _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
     };
 
     if let Some(ns_alias) = namespace_alias {
@@ -385,18 +409,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
   }
 
-  /// Check if it is exact `new URL('path', import.meta.url)` pattern
-  fn is_new_url_with_string_literal_and_import_meta_url(
+  pub fn handle_new_url_with_string_literal_and_import_meta_url(
     &self,
-    expr: &ast::Expression<'ast>,
-  ) -> bool {
+    expr: &mut ast::Expression<'ast>,
+  ) -> Option<()> {
     let ast::Expression::NewExpression(expr) = expr else {
-      return false;
+      return None;
     };
     let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
 
     if !is_callee_global_url {
-      return false;
+      return None;
     }
 
     let is_second_arg_import_meta_url = expr
@@ -405,42 +428,37 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .map_or(false, |arg| arg.as_expression().is_some_and(ExpressionExt::is_import_meta_url));
 
     if !is_second_arg_import_meta_url {
-      return false;
+      return None;
     }
 
-    let is_first_arg_string_literal = expr
-      .arguments
-      .first()
-      .map_or(false, |arg| arg.as_expression().is_some_and(ast::Expression::is_string_literal));
+    let span = expr.span();
+    let first_arg_string_literal =
+      expr.arguments.first_mut().and_then(|arg| arg.as_expression_mut()).and_then(
+        |item| match item {
+          ast::Expression::StringLiteral(lit) => Some(lit),
+          _ => None,
+        },
+      )?;
 
-    is_first_arg_string_literal
-  }
+    let &rec_idx = self.ctx.module.new_url_references.get(&span)?;
+    let rec = &self.ctx.module.import_records[rec_idx];
 
-  pub fn handle_new_url_with_string_literal_and_import_meta_url(
-    &self,
-    expr: &mut ast::Expression<'ast>,
-  ) {
-    if self.is_new_url_with_string_literal_and_import_meta_url(expr) {
-      let span = expr.span();
-      if let Some(rec_idx) = self.ctx.module.new_url_references.get(&span) {
-        let rec = &self.ctx.module.import_records[*rec_idx];
-        let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else { return };
-        let Some(chunk_idx) = &self.ctx.chunk_graph.module_to_chunk[importee.idx] else {
-          return;
-        };
-        let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
-        let asset_filename = &chunk.asset_preliminary_filenames[&importee.idx];
-        match expr {
-          ast::Expression::NewExpression(new_expr) => {
-            if let Some(ast::Expression::StringLiteral(string_lit)) =
-              new_expr.arguments.get_mut(0).unpack().as_expression_mut()
-            {
-              string_lit.value = self.snippet.atom(asset_filename);
-            }
-          }
-          _ => {}
-        }
-      }
-    }
+    let importee = &self.ctx.modules[rec.resolved_module].as_normal()?;
+    let chunk_idx = &self.ctx.chunk_graph.module_to_chunk[importee.idx]?;
+    let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
+    let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
+    let cur_chunk_idx =
+      self.ctx.chunk_graph.module_to_chunk[self.ctx.id].expect("This module should be in a chunk");
+    let current_chunk_filename = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("This chunk should have a filename");
+
+    let importer_dir = current_chunk_filename.as_path().parent().unwrap();
+    let importee_filename = asset_filename;
+    let import_path = importee_filename.relative(importer_dir).as_path().expect_to_slash();
+
+    first_arg_string_literal.value = self.snippet.atom(&import_path);
+    None
   }
 }

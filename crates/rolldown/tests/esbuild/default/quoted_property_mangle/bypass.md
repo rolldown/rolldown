@@ -13,10 +13,10 @@ console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
 ```js
 "use strict";
 
-const ns = __toESM(require("ext"));
+const ext = __toESM(require("ext"));
 
 //#region entry.js
-console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
+console.log(ext.mustBeUnquoted, ext["mustBeUnquoted2"]);
 
 //#endregion
 ```
@@ -26,8 +26,9 @@ console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
 @@ -1,2 +1,2 @@
- var ns = __toESM(require("ext"));
+-var ns = __toESM(require("ext"));
 -console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
-+console.log(ns.mustBeUnquoted, ns["mustBeUnquoted2"]);
++var ext = __toESM(require("ext"));
++console.log(ext.mustBeUnquoted, ext["mustBeUnquoted2"]);
 
 ```

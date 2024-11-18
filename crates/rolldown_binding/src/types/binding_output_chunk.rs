@@ -49,7 +49,7 @@ impl BindingOutputChunk {
     self.inner.filename.to_string()
   }
 
-  #[napi(getter)]
+  #[napi(getter, ts_return_type = "Record<string, RenderedModule>")]
   pub fn modules(&self) -> HashMap<String, BindingRenderedModule> {
     self
       .inner
@@ -108,6 +108,7 @@ pub struct JsOutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub filename: String,
+  #[napi(ts_type = "Record<string, RenderedModule>")]
   pub modules: HashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,

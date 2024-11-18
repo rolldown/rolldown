@@ -23,6 +23,10 @@ export default defineTest({
         augmentChunkHash: (chunk) => {
           fn()
           if (chunk.fileName.includes('entry')) {
+            expect(Object.values(chunk.modules)[0].code).toBe(
+              '//#region entry.js\nconsole.log();\n\n//#endregion',
+            )
+            expect(Object.values(chunk.modules)[0].renderedLength).toBe(47)
             return 'entry-hash'
           }
         },

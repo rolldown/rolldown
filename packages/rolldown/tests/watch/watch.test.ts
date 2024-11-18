@@ -165,7 +165,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   fs.writeFileSync(foo, 'console.log(2)')
   // wait for watcher to detect the change
   await new Promise((resolve) => {
-    setTimeout(resolve, 50)
+    setTimeout(resolve, 60)
   })
   expect(changeFn).toBeCalled()
 
@@ -197,6 +197,7 @@ test.sequential('watch include/exclude', async () => {
   await watcher.close()
 })
 
+// TODO make the test stable, failed at https://github.com/rolldown/rolldown/actions/runs/11812958121/job/32909172765
 test.sequential('(perf)watching same file multiply times', async () => {
   const watcher = await watch({
     input,
@@ -209,7 +210,7 @@ test.sequential('(perf)watching same file multiply times', async () => {
   for (let i = 2; i < 20; i++) {
     const change = `console.log(${i})`
     fs.writeFileSync(input, change)
-    // wait for watcher to detect the change, the time should be less than 50ms
+    // wait for watcher to detect the change, the time should be less than 60ms
     await waitBuildFinished()
     expect(fs.readFileSync(output, 'utf-8').includes(change)).toBe(true)
   }
@@ -222,9 +223,9 @@ test.sequential('(perf)watching same file multiply times', async () => {
 test.sequential('error handling', async () => {
   // first build error, the watching could be work with recover error
   fs.writeFileSync(input, 'conso le.log(1)')
-  // wait 50ms avoid the change event emit at first build
+  // wait 60ms avoid the change event emit at first build
   await new Promise((resolve) => {
-    setTimeout(resolve, 50)
+    setTimeout(resolve, 60)
   })
   const watcher = await watch({
     input,
@@ -263,8 +264,8 @@ test.sequential('error handling', async () => {
 })
 
 async function waitBuildFinished() {
-  // sleep 50ms
+  // sleep 60ms
   await new Promise((resolve) => {
-    setTimeout(resolve, 50)
+    setTimeout(resolve, 60)
   })
 }

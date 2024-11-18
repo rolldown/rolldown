@@ -27,10 +27,11 @@ snapshot_kind: text
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.node_path,global.node_fs));
 })(this, function(node_path, node_fs) {
 "use strict";
-const { default: nodePath } = node_path;
+
+node_path = __toESM(node_path);
 
 //#region main.js
-console.log(nodePath);
+console.log(node_path.default);
 
 //#endregion
 });

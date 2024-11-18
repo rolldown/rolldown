@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -53,11 +54,11 @@ exports.foo = foo
 
 ```js
 
-const { foo } = __toESM(require("bar"));
+const bar = __toESM(require("bar"));
 
 //#region import-in-cjs.js
-exports.foo = foo;
-module.exports = foo;
+exports.foo = bar.foo;
+module.exports = bar.foo;
 
 //#endregion
 ```

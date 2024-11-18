@@ -7,7 +7,7 @@ use rolldown_common::{
   BundleEndEventData, BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent,
   WatcherEventData,
 };
-use rolldown_error::DiagnosticOptions;
+use rolldown_error::{BuildResult, DiagnosticOptions, ResultExt};
 use rolldown_utils::pattern_filter;
 use std::{
   path::Path,
@@ -21,7 +21,7 @@ use std::{
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
-use crate::Bundler;
+use crate::{BundleOutput, Bundler};
 
 use anyhow::Result;
 
@@ -106,7 +106,7 @@ impl Watcher {
     }
   }
 
-  pub async fn run(&self) -> Result<()> {
+  pub async fn run(&self) -> BuildResult<()> {
     let start_time = Instant::now();
     let mut bundler = self.bundler.lock().await;
     self.emitter.emit(WatcherEvent::ReStart, WatcherEventData::default()).await?;
@@ -118,21 +118,27 @@ impl Watcher {
 
     bundler.plugin_driver.clear();
 
-    let mut output = {
+    let output = {
       if bundler.options.watch.skip_write {
         // TODO Here should be call scan
-        bundler.generate().await?
+        bundler.generate().await
       } else {
-        bundler.write().await?
+        bundler.write().await
       }
     };
+    let mut output = match output {
+      Ok(output) => output,
+      Err(e) => BundleOutput { errors: e.into_vec(), ..Default::default() },
+    };
+
     let mut inner = self.inner.lock().await;
-    for file in &output.watch_files {
+    // FIXME(hyf0): probably should have a more official API/better way to get watch files
+    for file in bundler.plugin_driver.watch_files.iter() {
       // we should skip the file that is already watched, here here some reasons:
       // - The watching files has a ms level overhead.
       // - Watching the same files multiple times will cost more overhead.
       // TODO: tracking https://github.com/notify-rs/notify/issues/653
-      if self.watch_files.contains(file) {
+      if self.watch_files.contains(file.as_str()) {
         continue;
       }
       let path = Path::new(file.as_str());
@@ -147,7 +153,7 @@ impl Watcher {
         )
         .inner()
         {
-          inner.watch(path, RecursiveMode::Recursive)?;
+          inner.watch(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
           self.watch_files.insert(file.clone());
         }
       }

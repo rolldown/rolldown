@@ -58,6 +58,7 @@ pub use crate::{
     css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
+    comment_annotation::{get_leading_comment, ROLLDOWN_IGNORE},
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer},

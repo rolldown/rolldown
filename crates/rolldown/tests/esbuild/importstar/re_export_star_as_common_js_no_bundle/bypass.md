@@ -15,12 +15,12 @@ var out = __toESM(require("foo"));
 ```js
 "use strict";
 
-const out = __toESM(require("foo"));
+const foo = __toESM(require("foo"));
 
 Object.defineProperty(exports, 'out', {
   enumerable: true,
   get: function () {
-    return out;
+    return foo;
   }
 });
 ```
@@ -33,14 +33,14 @@ Object.defineProperty(exports, 'out', {
 -var entry_exports = {};
 -__export(entry_exports, {
 -    out: () => out
--});
--module.exports = __toCommonJS(entry_exports);
- var out = __toESM(require("foo"));
++var foo = __toESM(require("foo"));
 +Object.defineProperty(exports, 'out', {
 +    enumerable: true,
 +    get: function () {
-+        return out;
++        return foo;
 +    }
-+});
+ });
+-module.exports = __toCommonJS(entry_exports);
+-var out = __toESM(require("foo"));
 
 ```

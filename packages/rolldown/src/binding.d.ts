@@ -3,6 +3,11 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 
+export interface RenderedModule {
+  readonly code: string | null
+  renderedLength: number
+}
+
 export declare class BindingCallableBuiltinPlugin {
   name: string
   constructor(plugin: BindingBuiltinPlugin)
@@ -40,7 +45,7 @@ export declare class BindingOutputChunk {
   get moduleIds(): Array<string>
   get exports(): Array<string>
   get fileName(): string
-  get modules(): Record<string, BindingRenderedModule>
+  get modules(): Record<string, RenderedModule>
   get imports(): Array<string>
   get dynamicImports(): Array<string>
   get code(): string
@@ -53,16 +58,21 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
+  get errors(): Array<unknown>
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, fn: () => void): Promise<void>
+  load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
   addWatchFile(file: string): void
+}
+
+export declare class BindingRenderedModule {
+  get code(): string | null
 }
 
 export declare class BindingTransformPluginContext {
@@ -78,7 +88,7 @@ export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
-  scan(): Promise<void>
+  scan(): Promise<BindingOutputs>
   close(): Promise<void>
   watch(): Promise<BindingWatcher>
   get closed(): boolean
@@ -425,10 +435,6 @@ export interface BindingPluginWithIndex {
   plugin: BindingPluginOptions
 }
 
-export interface BindingRenderedModule {
-  code?: string
-}
-
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
@@ -572,7 +578,7 @@ export interface JsOutputChunk {
   moduleIds: Array<string>
   exports: Array<string>
   filename: string
-  modules: Record<string, BindingRenderedModule>
+  modules: Record<string, RenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
   code: string
@@ -711,7 +717,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: Record<string, BindingRenderedModule>
+  modules: Record<string, RenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
 }

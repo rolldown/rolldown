@@ -49,6 +49,12 @@ impl Deref for Rstr {
   }
 }
 
+impl AsRef<str> for Rstr {
+  fn as_ref(&self) -> &str {
+    self.0.as_str()
+  }
+}
+
 impl Display for Rstr {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.as_str().fmt(f)

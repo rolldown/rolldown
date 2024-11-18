@@ -422,7 +422,7 @@ impl Plugin for ViteResolvePlugin {
 // rolldown uses esbuild interop helper, so copy the proxy module from https://github.com/vitejs/vite/blob/main/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L259
 fn get_development_build_browser_external_module_code(id_without_prefix: &str) -> String {
   format!(
-    r#"\
+    "\
 module.exports = Object.create(new Proxy({{}}, {{
   get(_, key) {{
     if (
@@ -431,30 +431,29 @@ module.exports = Object.create(new Proxy({{}}, {{
       key !== 'constructor' &&
       key !== 'splice'
     ) {{
-      throw new Error(`Module "{id_without_prefix}" has been externalized for browser compatibility. Cannot access "{id_without_prefix}.${{key}}" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
+      throw new Error(`Module \"{id_without_prefix}\" has been externalized for browser compatibility. Cannot access \"{id_without_prefix}.${{key}}\" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
     }}
   }}
 }}))\
-    "#
+    "
   )
 }
 fn get_development_dev_browser_external_module_code(id_without_prefix: &str) -> String {
   format!(
-    r#"\
+    "\
 export default new Proxy({{}}, {{
   get(_, key) {{
-      throw new Error(`Module "{id_without_prefix}" has been externalized for browser compatibility. Cannot access "{id_without_prefix}.${{key}}" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
-    }}
+    throw new Error(`Module \"{id_without_prefix}\" has been externalized for browser compatibility. Cannot access \"{id_without_prefix}.${{key}}\" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
   }}
 }})\
-    "#
+    "
   )
 }
 fn get_development_optional_peer_dep_module_code(peer_dep: &str, parent_dep: &str) -> String {
   format!(
-    r#"\
-throw new Error(`Could not resolve "{peer_dep}" imported by "{parent_dep}". Is it installed?`)\
-    "#
+    "\
+throw new Error(`Could not resolve \"{peer_dep}\" imported by \"{parent_dep}\". Is it installed?`)\
+    "
   )
 }
 

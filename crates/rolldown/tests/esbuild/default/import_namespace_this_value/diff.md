@@ -13,7 +13,6 @@ console.log(ns[foo](), new ns[foo]());
 "use strict";
 const require_chunk = require('./chunk.js');
 const external = __toESM(require("external"));
-const external = __toESM(require("external"));
 
 //#region a.js
 console.log(external[foo](), new external[foo]());
@@ -25,19 +24,12 @@ console.log(external[foo](), new external[foo]());
 ===================================================================
 --- esbuild	/out/a.js
 +++ rolldown	a.js
-@@ -1,2 +1,9 @@
+@@ -1,2 +1,3 @@
 -var ns = __toESM(require("external"));
 -console.log(ns[foo](), new ns[foo]());
-+"use strict";
-+const require_chunk = require('./chunk.js');
-+const external = __toESM(require("external"));
-+const external = __toESM(require("external"));
-+
-+//#region a.js
++var require_chunk = require('./chunk.js');
++var external = __toESM(require("external"));
 +console.log(external[foo](), new external[foo]());
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/b.js
@@ -52,7 +44,6 @@ console.log(ns.foo(), new ns.foo());
 "use strict";
 const require_chunk = require('./chunk.js');
 const external = __toESM(require("external"));
-const external = __toESM(require("external"));
 
 //#region b.js
 console.log(external.foo(), new external.foo());
@@ -64,19 +55,12 @@ console.log(external.foo(), new external.foo());
 ===================================================================
 --- esbuild	/out/b.js
 +++ rolldown	b.js
-@@ -1,2 +1,9 @@
+@@ -1,2 +1,3 @@
 -var ns = __toESM(require("external"));
 -console.log(ns.foo(), new ns.foo());
-+"use strict";
-+const require_chunk = require('./chunk.js');
-+const external = __toESM(require("external"));
-+const external = __toESM(require("external"));
-+
-+//#region b.js
++var require_chunk = require('./chunk.js');
++var external = __toESM(require("external"));
 +console.log(external.foo(), new external.foo());
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/c.js

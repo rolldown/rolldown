@@ -237,6 +237,7 @@ pub struct BindingViteResolvePluginResolveOptions {
   pub as_src: bool,
   pub prefer_relative: bool,
   pub root: String,
+  pub scan: bool,
 
   pub main_fields: Vec<String>,
   pub conditions: Vec<String>,
@@ -255,6 +256,7 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
       as_src: value.as_src,
       prefer_relative: value.prefer_relative,
       root: value.root,
+      scan: value.scan,
 
       main_fields: value.main_fields,
       conditions: value.conditions,

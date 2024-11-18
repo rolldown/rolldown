@@ -14,7 +14,8 @@ use crate::{
     self, normalize_oxc_resolver_result, resolve_bare_import, AdditionalOptions, Resolver,
   },
   utils::{
-    clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path, normalize_path, BROWSER_EXTERNAL_ID
+    clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
+    normalize_path, BROWSER_EXTERNAL_ID,
   },
   CallablePlugin, ResolveOptionsExternal, ResolveOptionsNoExternal,
 };
@@ -22,8 +23,8 @@ use anyhow::anyhow;
 use derive_more::Debug;
 use rolldown_common::{side_effects::HookSideEffects, ImportKind, WatcherChangeKind};
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
+  typedmap::TypedMapKey, HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn,
+  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
 };
 use sugar_path::SugarPath;
 
@@ -64,6 +65,7 @@ pub struct ViteResolveResolveOptions {
   pub as_src: bool,
   pub prefer_relative: bool,
   pub root: String,
+  pub scan: bool,
 
   pub main_fields: Vec<String>,
   pub conditions: Vec<String>,
@@ -72,6 +74,13 @@ pub struct ViteResolveResolveOptions {
   pub try_index: bool,
   pub try_prefix: Option<String>,
   pub preserve_symlinks: bool,
+}
+
+#[derive(Hash, PartialEq, Eq)]
+pub struct ResolveIdOptionsScan;
+
+impl TypedMapKey for ResolveIdOptionsScan {
+  type Value = bool;
 }
 
 #[derive(Debug)]
@@ -140,7 +149,9 @@ impl ViteResolvePlugin {
   }
 
   async fn resolve_id_internal(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
-    // TODO(sapphi-red): handle `resolveOpts.scan`
+    let scan =
+      args.custom.get::<ResolveIdOptionsScan>(&ResolveIdOptionsScan {}).map_or(false, |v| *v)
+        || self.resolve_options.scan;
 
     if args.specifier.starts_with('\0')
       || args.specifier.starts_with("virtual:")
@@ -221,8 +232,7 @@ impl ViteResolvePlugin {
       )?;
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
-          // TODO(sapphi-red): skip for scan
-          if is_in_node_modules(&result.id) {
+          if !scan && is_in_node_modules(&result.id) {
             let finalized = finalize_bare_specifier(&result.id, args.specifier, args.importer)
               .await?
               .unwrap_or(result.id);

@@ -6,7 +6,7 @@ export type BindingStringOrRegex = string | RegExp
 export declare class BindingCallableBuiltinPlugin {
   name: string
   constructor(plugin: BindingBuiltinPlugin)
-  resolveId(id: string, importer?: string | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
+  resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
   load(id: string): Promise<BindingHookJsLoadOutput | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
@@ -181,6 +181,10 @@ export interface BindingHookJsLoadOutput {
   code: string
   map?: string
   sideEffects: boolean | 'no-treeshake'
+}
+
+export interface BindingHookJsResolveIdOptions {
+  scan?: boolean
 }
 
 export interface BindingHookJsResolveIdOutput {
@@ -489,6 +493,7 @@ export interface BindingViteResolvePluginResolveOptions {
   asSrc: boolean
   preferRelative: boolean
   root: string
+  scan: boolean
   mainFields: Array<string>
   conditions: Array<string>
   externalConditions: Array<string>

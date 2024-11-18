@@ -3,8 +3,12 @@ use std::sync::Arc;
 use napi::{bindgen_prelude::FromNapiValue, Either};
 use napi_derive::napi;
 use rolldown_common::{side_effects, WatcherChangeKind};
-use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput};
-use rolldown_plugin_vite_resolve::{CallablePluginAsyncTrait, ViteResolvePlugin};
+use rolldown_plugin::{
+  typedmap::TypedDashMap, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
+};
+use rolldown_plugin_vite_resolve::{
+  CallablePluginAsyncTrait, ResolveIdOptionsScan, ViteResolvePlugin,
+};
 
 use super::binding_builtin_plugin::{
   BindingBuiltinPlugin, BindingBuiltinPluginName, BindingViteResolvePluginConfig,
@@ -61,6 +65,7 @@ impl BindingCallableBuiltinPlugin {
     &self,
     id: String,
     importer: Option<String>,
+    options: Option<BindingHookJsResolveIdOptions>,
   ) -> napi::Result<Option<BindingHookJsResolveIdOutput>> {
     Ok(
       self
@@ -70,7 +75,7 @@ impl BindingCallableBuiltinPlugin {
           importer: importer.as_deref(),
           is_entry: false,
           kind: rolldown_common::ImportKind::Import,
-          custom: Arc::default(),
+          custom: options.map(Into::into).unwrap_or_default(),
         })
         .await?
         .map(Into::into),
@@ -90,6 +95,20 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<()> {
     self.inner.watch_change(&path, bindingify_watcher_change_kind(event.event)?).await?;
     Ok(())
+  }
+}
+
+#[derive(Debug)]
+#[napi(object)]
+pub struct BindingHookJsResolveIdOptions {
+  pub scan: Option<bool>,
+}
+
+impl From<BindingHookJsResolveIdOptions> for Arc<TypedDashMap> {
+  fn from(value: BindingHookJsResolveIdOptions) -> Self {
+    let map = TypedDashMap::default();
+    map.insert(ResolveIdOptionsScan {}, value.scan.unwrap_or(false));
+    Arc::new(map)
   }
 }
 

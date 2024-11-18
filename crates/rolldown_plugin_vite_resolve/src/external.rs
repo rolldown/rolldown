@@ -10,7 +10,7 @@ use crate::{
   },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ResolveOptionsExternal {
   True,
   Vec(Vec<String>),
@@ -26,7 +26,7 @@ impl ResolveOptionsExternal {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ResolveOptionsNoExternal {
   True,
   // TODO(sapphi-red): support RegExp
@@ -60,7 +60,7 @@ pub struct ExternalDeciderOptions {
 pub struct ExternalDecider {
   options: ExternalDeciderOptions,
   runtime: String,
-  resolver: oxc_resolver::Resolver,
+  resolver: Arc<oxc_resolver::Resolver>,
   package_json_cache: Arc<PackageJsonCache>,
   processed_ids: DashMap<String, bool>,
 }
@@ -69,7 +69,7 @@ impl ExternalDecider {
   pub fn new(
     options: ExternalDeciderOptions,
     runtime: String,
-    resolver: oxc_resolver::Resolver,
+    resolver: Arc<oxc_resolver::Resolver>,
     package_json_cache: Arc<PackageJsonCache>,
   ) -> Self {
     Self { options, runtime, resolver, package_json_cache, processed_ids: DashMap::default() }
@@ -101,7 +101,7 @@ impl ExternalDecider {
     if self.options.external.is_external_explicitly(pkg_name) {
       return self.is_externalizable(id, importer, true);
     }
-    if self.options.no_external.is_no_external(id) {
+    if self.options.no_external.is_no_external(pkg_name) {
       return false;
     }
     self.is_externalizable(
@@ -126,6 +126,7 @@ impl ExternalDecider {
       importer,
       &self.resolver,
       &self.package_json_cache,
+      &self.runtime,
       &self.options.root,
       false,
     );

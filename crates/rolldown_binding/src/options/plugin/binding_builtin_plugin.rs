@@ -14,7 +14,8 @@ use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_vite_resolve::{
-  ViteResolveOptions, ViteResolvePlugin, ViteResolveResolveOptions,
+  FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, ViteResolveOptions,
+  ViteResolvePlugin, ViteResolveResolveOptions,
 };
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
@@ -23,6 +24,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 use super::types::binding_limited_boolean::BindingTrueValue;
+use crate::types::js_callback::{JsCallback, JsCallbackExt};
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
@@ -147,18 +149,29 @@ pub struct BindingBuildImportAnalysisPluginConfig {
   pub is_relative_base: bool,
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
   pub environment_consumer: String,
+  pub environment_name: String,
   #[serde(with = "EitherDeserializeEnabler")]
   #[napi(ts_type = "true | string[]")]
   pub external: napi::Either<BindingTrueValue, Vec<String>>,
   #[serde(with = "EitherDeserializeEnabler")]
   #[napi(ts_type = "true | string[]")]
   pub no_external: napi::Either<BindingTrueValue, Vec<String>>,
+  #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
+  #[serde(skip_deserializing)]
+  #[napi(
+    ts_type = "(resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>"
+  )]
+  pub finalize_bare_specifier: Option<JsCallback<(String, String, Option<String>), Option<String>>>,
+  #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
+  pub finalize_other_specifiers: Option<JsCallback<(String, String), Option<String>>>,
 
   pub runtime: String,
 }
@@ -177,8 +190,37 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
     Self {
       resolve_options: value.resolve_options.into(),
       environment_consumer: value.environment_consumer,
+      environment_name: value.environment_name,
       external,
       no_external,
+      finalize_bare_specifier: value.finalize_bare_specifier.map(
+        |finalizer_fn| -> Arc<FinalizeBareSpecifierCallback> {
+          Arc::new(move |resolved_id: &str, raw_id: &str, importer: Option<&str>| {
+            let finalizer_fn = Arc::clone(&finalizer_fn);
+            let resolved_id = resolved_id.to_owned();
+            let raw_id = raw_id.to_owned();
+            let importer = importer.map(ToString::to_string);
+            Box::pin(async move {
+              finalizer_fn
+                .invoke_async((resolved_id, raw_id, importer))
+                .await
+                .map_err(anyhow::Error::from)
+            })
+          })
+        },
+      ),
+      finalize_other_specifiers: value.finalize_other_specifiers.map(
+        |finalizer_fn| -> Arc<FinalizeOtherSpecifiersCallback> {
+          Arc::new(move |resolved_id: &str, raw_id: &str| {
+            let finalizer_fn = Arc::clone(&finalizer_fn);
+            let resolved_id = resolved_id.to_owned();
+            let raw_id = raw_id.to_owned();
+            Box::pin(async move {
+              finalizer_fn.invoke_async((resolved_id, raw_id)).await.map_err(anyhow::Error::from)
+            })
+          })
+        },
+      ),
 
       runtime: value.runtime,
     }
@@ -190,10 +232,12 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 #[serde(rename_all = "camelCase")]
 #[allow(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
+  pub is_build: bool,
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
   pub root: String,
+  pub scan: bool,
 
   pub main_fields: Vec<String>,
   pub conditions: Vec<String>,
@@ -207,10 +251,12 @@ pub struct BindingViteResolvePluginResolveOptions {
 impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
     Self {
+      is_build: value.is_build,
       is_production: value.is_production,
       as_src: value.as_src,
       prefer_relative: value.prefer_relative,
       root: value.root,
+      scan: value.scan,
 
       main_fields: value.main_fields,
       conditions: value.conditions,

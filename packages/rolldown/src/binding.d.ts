@@ -8,6 +8,14 @@ export interface RenderedModule {
   renderedLength: number
 }
 
+export declare class BindingCallableBuiltinPlugin {
+  name: string
+  constructor(plugin: BindingBuiltinPlugin)
+  resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
+  load(id: string): Promise<BindingHookJsLoadOutput | null>
+  watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
+}
+
 export declare class BindingLog {
   code: string
   message: string
@@ -179,6 +187,22 @@ export interface BindingGlobImportPluginConfig {
   restoreQueryExtension?: boolean
 }
 
+export interface BindingHookJsLoadOutput {
+  code: string
+  map?: string
+  sideEffects: boolean | 'no-treeshake'
+}
+
+export interface BindingHookJsResolveIdOptions {
+  scan?: boolean
+}
+
+export interface BindingHookJsResolveIdOutput {
+  id: string
+  external?: boolean
+  sideEffects: boolean | 'no-treeshake'
+}
+
 export interface BindingHookLoadOutput {
   code: string
   sideEffects?: BindingHookSideEffects
@@ -267,6 +291,10 @@ export interface BindingJsonSourcemap {
   sources?: Array<string | undefined | null>
   sourcesContent?: Array<string | undefined | null>
   names?: Array<string>
+}
+
+export interface BindingJsWatchChangeEvent {
+  event: string
 }
 
 export declare enum BindingLogLevel {
@@ -457,16 +485,21 @@ export interface BindingTreeshake {
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
   environmentConsumer: string
+  environmentName: string
   external: true | string[]
   noExternal: true | string[]
+  finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
+  finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   runtime: string
 }
 
 export interface BindingViteResolvePluginResolveOptions {
+  isBuild: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean
   root: string
+  scan: boolean
   mainFields: Array<string>
   conditions: Array<string>
   externalConditions: Array<string>
@@ -499,6 +532,8 @@ export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
 }
+
+export declare function isCallableCompatibleBuiltinPlugin(plugin: BindingBuiltinPlugin): boolean
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
 export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult

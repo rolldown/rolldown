@@ -101,7 +101,7 @@ impl ExternalDecider {
     if self.options.external.is_external_explicitly(pkg_name) {
       return self.is_externalizable(id, importer, true);
     }
-    if self.options.no_external.is_no_external(id) {
+    if self.options.no_external.is_no_external(pkg_name) {
       return false;
     }
     self.is_externalizable(

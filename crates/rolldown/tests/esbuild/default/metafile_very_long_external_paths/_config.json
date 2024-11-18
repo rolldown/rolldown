@@ -23,5 +23,6 @@
       ".file": "asset"
     }
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "expectError": true
 }

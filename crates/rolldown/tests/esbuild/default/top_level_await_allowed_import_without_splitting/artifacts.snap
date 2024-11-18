@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"() {
+var entry_exports = {};
+var init_entry = __esm({ "entry.js"() {
 	Promise.resolve().then(function() {
 		return init_a(), a_exports;
 	});
@@ -17,10 +19,10 @@ var require_entry = __commonJS({ "entry.js"() {
 		return init_b(), b_exports;
 	});
 	Promise.resolve().then(function() {
-		return __toESM(require_c());
+		return init_c(), c_exports;
 	});
 	Promise.resolve().then(function() {
-		return __toESM(require_entry());
+		return init_entry(), entry_exports;
 	});
 	await 0;
 } });
@@ -35,18 +37,17 @@ var init_a = __esm({ "a.js"() {
 //#endregion
 //#region b.js
 var b_exports = {};
-var import_c;
 var init_b = __esm({ "b.js"() {
-	import_c = __toESM(require_c());
+	init_c();
 } });
 
 //#endregion
 //#region c.js
-var require_c = __commonJS({ "c.js"() {
+var c_exports = {};
+var init_c = __esm({ "c.js"() {
 	await 0;
 } });
 
 //#endregion
-export default require_entry();
-
+init_entry();
 ```

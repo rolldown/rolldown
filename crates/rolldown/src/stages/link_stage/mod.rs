@@ -4,7 +4,7 @@ use append_only_vec::AppendOnlyVec;
 use oxc::index::IndexVec;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, ModuleType, OutputFormat,
   ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
@@ -143,21 +143,29 @@ impl<'a> LinkStage<'a> {
           return;
         };
 
+        match importee.module_type {
+          ModuleType::Empty => {
+            // User have requirement on emitting bundle with tolerance on mistakes.
+            // - `Empty` module must be marked as `CommonJs` to ensure that the error is delayed to runtime.
+            // See usage at https://esbuild.github.io/content-types/#empty-file.
+            // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+            unsafe {
+              let importee_mut = addr_of!(*importee).cast_mut();
+              (*importee_mut).exports_kind = ExportsKind::CommonJs;
+            }
+          }
+          _ => {}
+        }
+
         match rec.kind {
           ImportKind::Import => {
             if matches!(importee.exports_kind, ExportsKind::None)
               && !importee.meta.has_lazy_export()
             {
-              // See https://github.com/evanw/esbuild/issues/447
-              if rec.meta.intersects(
-                ImportRecordMeta::CONTAINS_IMPORT_DEFAULT | ImportRecordMeta::CONTAINS_IMPORT_STAR,
-              ) {
-                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                }
+              // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+              unsafe {
+                let importee_mut = addr_of!(*importee).cast_mut();
+                (*importee_mut).exports_kind = ExportsKind::Esm;
               }
             }
           }
@@ -169,12 +177,12 @@ impl<'a> LinkStage<'a> {
               self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
             }
             ExportsKind::None => {
-              self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+              self.metas[importee.idx].wrap_kind = WrapKind::Esm;
               // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
               // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
               unsafe {
                 let importee_mut = addr_of!(*importee).cast_mut();
-                (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                (*importee_mut).exports_kind = ExportsKind::Esm;
               }
             }
           },
@@ -190,12 +198,11 @@ impl<'a> LinkStage<'a> {
                   self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                 }
                 ExportsKind::None => {
-                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
                   unsafe {
                     let importee_mut = addr_of!(*importee).cast_mut();
-                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                    (*importee_mut).exports_kind = ExportsKind::Esm;
                   }
                 }
               }

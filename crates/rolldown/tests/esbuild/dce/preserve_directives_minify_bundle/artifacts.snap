@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 
+"use strict";
 
 //#region nested.js
 "use A";

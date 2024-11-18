@@ -14,16 +14,16 @@ var init_something = __esm({ "something.js"() {} });
 
 //#endregion
 //#region c.js
-var require_c = __commonJS({ "c.js"() {
+var c_exports = {};
+var init_c = __esm({ "c.js"() {
 	await 0;
 } });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-var import_c;
 var init_b = __esm({ "b.js"() {
-	import_c = __toESM(require_c());
+	init_c();
 } });
 
 //#endregion
@@ -35,15 +35,15 @@ var init_a = __esm({ "a.js"() {
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"() {
+var entry_exports = {};
+var init_entry = __esm({ "entry.js"() {
 	init_a();
 	init_b();
-	require_c();
-	require_entry();
+	init_c();
+	init_entry();
 	await 0;
 } });
 
 //#endregion
-export default require_entry();
-
+init_entry();
 ```

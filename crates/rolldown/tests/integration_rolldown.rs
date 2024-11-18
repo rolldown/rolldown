@@ -34,7 +34,8 @@ async fn filename_with_hash() {
     let config_path = dunce::simplified(&config_path);
     let fixture_path = config_path.parent().unwrap();
 
-    let TestConfig { config: mut options, meta } = read_test_config(config_path);
+    let TestConfig { config: mut options, meta, config_variants: _not_supported } =
+      read_test_config(config_path);
 
     if options.cwd.is_none() {
       options.cwd = Some(fixture_path.to_path_buf());

@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use crate::{integration_test::IntegrationTest, test_config::read_test_config};
+use crate::{
+  integration_test::{IntegrationTest, NamedBundlerOptions},
+  test_config::read_test_config,
+};
 
 use rolldown_testing_config::TestConfig;
 
@@ -22,12 +25,21 @@ impl Fixture {
   }
 
   async fn run_inner(self) {
-    let TestConfig { config: mut options, meta } = read_test_config(&self.config_path);
+    let TestConfig { config: mut options, meta, config_variants } =
+      read_test_config(&self.config_path);
 
     if options.cwd.is_none() {
       options.cwd = Some(self.fixture_path.clone());
     }
 
-    IntegrationTest::new(meta).run(options).await;
+    let configs = [NamedBundlerOptions { options: options.clone(), name: None }]
+      .into_iter()
+      .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
+        options: variant.apply(&options),
+        name: Some(variant.to_string()),
+      }))
+      .collect::<Vec<_>>();
+
+    IntegrationTest::new(meta).run_multiple(configs, &self.fixture_path).await;
   }
 }

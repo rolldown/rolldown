@@ -1,5 +1,34 @@
+use std::fmt::Display;
+
+use rolldown_common::{BundlerOptions, OutputFormat};
 use schemars::JsonSchema;
 use serde::Deserialize;
+
+#[derive(Deserialize, JsonSchema, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ConfigVariant {
+  pub format: Option<OutputFormat>,
+}
+
+impl ConfigVariant {
+  pub fn apply(&self, config: &rolldown_common::BundlerOptions) -> BundlerOptions {
+    let mut config = config.clone();
+    if let Some(format) = &self.format {
+      config.format = Some(*format);
+    }
+    config
+  }
+}
+
+impl Display for ConfigVariant {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    if let Some(format) = &self.format {
+      write!(f, "(format: {format:?})")
+    } else {
+      write!(f, "()")
+    }
+  }
+}
 
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -7,6 +36,9 @@ use serde::Deserialize;
 pub struct TestConfig {
   #[serde(default)]
   pub config: rolldown_common::BundlerOptions,
+  #[serde(default)]
+  // Each config variant will be extended into the main config and executed.
+  pub config_variants: Vec<ConfigVariant>,
   #[serde(default, flatten)]
   pub meta: TestMeta,
 }

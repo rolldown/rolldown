@@ -26,6 +26,11 @@ pub struct IntegrationTest {
   test_meta: TestMeta,
 }
 
+pub struct NamedBundlerOptions {
+  pub name: Option<String>,
+  pub options: BundlerOptions,
+}
+
 fn default_test_input_item() -> rolldown::InputItem {
   rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }
 }
@@ -107,6 +112,80 @@ impl IntegrationTest {
     }
   }
 
+  pub async fn run_multiple(
+    &self,
+    multiple_options: Vec<NamedBundlerOptions>,
+    test_folder_path: &Path,
+  ) {
+    let mut snapshot_outputs = vec![];
+    for mut named_options in multiple_options {
+      self.apply_test_defaults(&mut named_options.options);
+
+      let mut bundler = Bundler::with_plugins(named_options.options, vec![]);
+
+      let debug_title = named_options.name.clone().unwrap_or_else(String::new);
+
+      let cwd = bundler.options().cwd.clone();
+
+      let bundle_output = if self.test_meta.write_to_disk {
+        let abs_output_dir = cwd.join(&bundler.options().dir);
+        if abs_output_dir.is_dir() {
+          std::fs::remove_dir_all(&abs_output_dir)
+            .context(format!("{abs_output_dir:?}"))
+            .expect("Failed to clean the output directory");
+        }
+        bundler.write().await
+      } else {
+        bundler.generate().await
+      };
+
+      if !debug_title.is_empty() {
+        snapshot_outputs.push("\n---\n\n".to_string());
+        snapshot_outputs.push(format!("Variant: {debug_title}\n\n"));
+      }
+
+      match bundle_output {
+        Ok(bundle_output) => {
+          assert!(
+            !self.test_meta.expect_error,
+            "Expected the bundling to be failed with diagnosable errors, but got success"
+          );
+
+          let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
+          snapshot_outputs.push(snapshot_content);
+
+          if !self.test_meta.expect_executed
+            || self.test_meta.expect_error
+            || !self.test_meta.write_to_disk
+          {
+            // do nothing
+          } else {
+            Self::execute_output_assets(&bundler);
+          }
+        }
+        Err(errs) => {
+          assert!(
+            self.test_meta.expect_error,
+            "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
+          );
+          let snapshot_content =
+            self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
+          snapshot_outputs.push(snapshot_content);
+        }
+      }
+    }
+
+    // Configure insta to use the fixture path as the snapshot path
+    let mut settings = insta::Settings::clone_current();
+    settings.set_snapshot_path(test_folder_path);
+    settings.set_prepend_module_to_snapshot(false);
+    settings.remove_input_file();
+    settings.set_omit_expression(true);
+    settings.bind(|| {
+      insta::assert_snapshot!("artifacts", snapshot_outputs.concat());
+    });
+  }
+
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {
     if options.external.is_none() {
       options.external = Some(IsExternal::from_vec(vec!["node:assert".to_string()]));
@@ -150,14 +229,14 @@ impl IntegrationTest {
     }
   }
 
-  #[allow(clippy::too_many_lines)]
-  #[allow(clippy::if_not_else)]
-  fn snapshot_bundle_output(
+  #[expect(clippy::too_many_lines)]
+  #[expect(clippy::if_not_else)]
+  fn render_bundle_output_to_string(
     &self,
     bundle_output: BundleOutput,
     errs: Vec<BuildDiagnostic>,
     cwd: &Path,
-  ) {
+  ) -> String {
     let mut errors = errs;
     let errors_section = if !errors.is_empty() {
       let mut snapshot = String::new();
@@ -338,7 +417,16 @@ impl IntegrationTest {
     .join("\n")
     .trim()
     .to_owned();
+    snapshot
+  }
 
+  fn snapshot_bundle_output(
+    &self,
+    bundle_output: BundleOutput,
+    errs: Vec<BuildDiagnostic>,
+    cwd: &Path,
+  ) {
+    let content = self.render_bundle_output_to_string(bundle_output, errs, cwd);
     // Configure insta to use the fixture path as the snapshot path
     let mut settings = insta::Settings::clone_current();
     settings.set_snapshot_path(cwd);
@@ -346,7 +434,7 @@ impl IntegrationTest {
     settings.remove_input_file();
     settings.set_omit_expression(true);
     settings.bind(|| {
-      insta::assert_snapshot!("artifacts", snapshot);
+      insta::assert_snapshot!("artifacts", content);
     });
   }
 

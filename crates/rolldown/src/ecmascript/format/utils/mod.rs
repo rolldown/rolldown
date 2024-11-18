@@ -38,7 +38,7 @@ pub fn render_chunk_external_imports(
 
         let need_to_esm_wrapper = match &external_stmt.specifiers {
           RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => !specifiers.is_empty(),
-          RenderImportDeclarationSpecifier::ImportStarSpecifier(_) => true,
+          RenderImportDeclarationSpecifier::ImportStarSpecifier() => true,
         };
         if need_to_esm_wrapper {
           let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx

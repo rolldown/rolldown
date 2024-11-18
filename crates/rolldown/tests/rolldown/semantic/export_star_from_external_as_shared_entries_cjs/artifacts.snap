@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,6 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 "use strict";
+require('./main.js');
+
+
 var node_fs = require("node:fs");
 Object.keys(node_fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
@@ -14,13 +18,15 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-require('./main.js');
 
 ```
 ## entry2.js
 
 ```js
 "use strict";
+require('./main.js');
+
+
 var node_fs = require("node:fs");
 Object.keys(node_fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
@@ -28,7 +34,6 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-require('./main.js');
 
 ```
 ## main.js

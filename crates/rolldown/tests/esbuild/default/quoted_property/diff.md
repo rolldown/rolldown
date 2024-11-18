@@ -1,13 +1,10 @@
-# Reason
-1. Currently there is no way to control *quoted* behavior, since we use `oxc` to convert ast to string
-2. we just generate same output as esbuild if disable `MinifySyntax`
 # Diff
 ## /out/entry.js
 ### esbuild
 ```js
 // entry.js
 var ns = __toESM(require("ext"));
-console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
+console.log(ns.mustBeUnquoted, ns["mustBeQuoted"]);
 ```
 ### rolldown
 ```js
@@ -16,7 +13,7 @@ console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
 const ext = __toESM(require("ext"));
 
 //#region entry.js
-console.log(ext.mustBeUnquoted, ext["mustBeUnquoted2"]);
+console.log(ext.mustBeUnquoted, ext["mustBeQuoted"]);
 
 //#endregion
 ```
@@ -27,8 +24,8 @@ console.log(ext.mustBeUnquoted, ext["mustBeUnquoted2"]);
 +++ rolldown	entry.js
 @@ -1,2 +1,2 @@
 -var ns = __toESM(require("ext"));
--console.log(ns.mustBeUnquoted, ns.mustBeUnquoted2);
+-console.log(ns.mustBeUnquoted, ns["mustBeQuoted"]);
 +var ext = __toESM(require("ext"));
-+console.log(ext.mustBeUnquoted, ext["mustBeUnquoted2"]);
++console.log(ext.mustBeUnquoted, ext["mustBeQuoted"]);
 
 ```

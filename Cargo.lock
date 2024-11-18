@@ -2949,6 +2949,7 @@ dependencies = [
  "async-scoped",
  "base-encode",
  "base64-simd 0.8.0",
+ "criterion2",
  "futures",
  "glob-match",
  "indexmap",
@@ -2963,6 +2964,7 @@ dependencies = [
  "regress",
  "rolldown_std_utils",
  "rustc-hash",
+ "simdutf8",
  "sugar_path",
  "xxhash-rust",
 ]

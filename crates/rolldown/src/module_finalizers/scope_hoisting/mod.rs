@@ -66,16 +66,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       WrapKind::Cjs => {
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
+
+        // `__toESM`
         let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+
+        // `require_foo`
         let importee_wrapper_ref_name =
           self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+        // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
+
+        // If the module is an ESM module that follows the Node.js ESM spec, such as
+        // - extension is `.mjs`
+        // - `package.json` has `"type": "module"`
+        // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
+        let should_consider_node_esm_spec = self.ctx.module.ecma_view.def_format.is_esm();
+
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret,
-          self.snippet.to_esm_call_with_interop(
+          self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
             self.snippet.call_expr_expr(importee_wrapper_ref_name),
-            importee.interop(),
+            should_consider_node_esm_spec,
           ),
         );
         return false;
@@ -114,35 +127,42 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
 
-    let mut expr = match self.ctx.options.format {
-      rolldown_common::OutputFormat::Cjs => {
-        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_id.unwrap_or_else(|| {
-          // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
-          // belong to the chunk they are declared in and won't link to other chunks.
-          let symbol_name = canonical_ref.name(self.ctx.symbol_db);
-          eprintln!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",);
-          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
-        });
-        let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
-          .expect("This module should be in a chunk");
-        let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
-        if is_symbol_in_other_chunk {
-          // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
-          // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
-          // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
+    let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
+      self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+    } else {
+      match self.ctx.options.format {
+        rolldown_common::OutputFormat::Cjs => {
+          let chunk_idx_of_canonical_symbol =
+            canonical_symbol.chunk_id.unwrap_or_else(|| {
+              // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
+              // belong to the chunk they are declared in and won't link to other chunks.
+              let symbol_name = canonical_ref.name(self.ctx.symbol_db);
+              eprintln!(
+                "{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",
+              );
+              panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+            });
+          let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+            .expect("This module should be in a chunk");
+          let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
+          if is_symbol_in_other_chunk {
+            // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
+            // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
+            // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
 
-          let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-            .exports_to_other_chunks[&canonical_ref];
+            let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
+              .exports_to_other_chunks[&canonical_ref];
 
-          let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
-            .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
+            let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+              .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-          self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
-        } else {
-          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+            self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
+          } else {
+            self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+          }
         }
+        _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
       }
-      _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
     };
 
     if let Some(ns_alias) = namespace_alias {

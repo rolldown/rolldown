@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use oxc::sourcemap::SourceMap;
 
 use crate::lines_count;
@@ -30,6 +32,7 @@ impl Source for String {
   }
 }
 
+#[derive(Debug)]
 pub struct SourceMapSource {
   content: String,
   sourcemap: SourceMap,

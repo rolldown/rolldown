@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-const { default: assert } = __toESM(require("node:assert"));
+const node_assert = __toESM(require("node:assert"));
 
 //#region foo/test.js
 var test_exports$1 = {};
@@ -23,8 +24,8 @@ let bar = 123;
 //#endregion
 //#region entry.js
 console.log(exports, module.exports);
-assert.deepEqual(test_exports$1, { foo: 123 });
-assert.deepEqual(test_exports, { bar: 123 });
+node_assert.default.deepEqual(test_exports$1, { foo: 123 });
+node_assert.default.deepEqual(test_exports, { bar: 123 });
 
 //#endregion
 ```

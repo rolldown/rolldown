@@ -24,7 +24,7 @@ console.log(exports, module.exports, test_exports, test_exports2);
 ### rolldown
 ```js
 
-const { default: assert } = __toESM(require("node:assert"));
+const node_assert = __toESM(require("node:assert"));
 
 //#region foo/test.js
 var test_exports$1 = {};
@@ -40,8 +40,8 @@ let bar = 123;
 //#endregion
 //#region entry.js
 console.log(exports, module.exports);
-assert.deepEqual(test_exports$1, { foo: 123 });
-assert.deepEqual(test_exports, { bar: 123 });
+node_assert.default.deepEqual(test_exports$1, { foo: 123 });
+node_assert.default.deepEqual(test_exports, { bar: 123 });
 
 //#endregion
 ```
@@ -50,10 +50,10 @@ assert.deepEqual(test_exports, { bar: 123 });
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,13 @@
+@@ -1,11 +1,18 @@
 -var test_exports = {};
 -__export(test_exports, {
-+var {default: assert} = __toESM(require("node:assert"));
++var node_assert = __toESM(require("node:assert"));
 +var test_exports$1 = {};
 +__export(test_exports$1, {
      foo: () => foo
@@ -68,6 +68,11 @@ assert.deepEqual(test_exports, { bar: 123 });
  var bar = 123;
 -console.log(exports, module.exports, test_exports, test_exports2);
 +console.log(exports, module.exports);
-+console.log(test_exports$1, test_exports);
++node_assert.default.deepEqual(test_exports$1, {
++    foo: 123
++});
++node_assert.default.deepEqual(test_exports, {
++    bar: 123
++});
 
 ```

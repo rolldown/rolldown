@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,13 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 "use strict";
-var a = require("a");
-Object.keys(a).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return a[k]; }
-  });
-});
 
 require("a");
 require("b");
@@ -29,4 +23,12 @@ Object.defineProperty(exports, 'inner', {
     return inner_exports;
   }
 });
+var a = require("a");
+Object.keys(a).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return a[k]; }
+  });
+});
+
 ```

@@ -13,6 +13,7 @@ use rolldown_common::{
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
+  concat_string,
   extract_hash_pattern::extract_hash_pattern,
   hash_placeholder::HashPlaceholderGenerator,
   path_buf_ext::PathBufExt,
@@ -197,7 +198,7 @@ impl<'a> GenerateStage<'a> {
               let next_count = *occ.get();
               occ.insert(next_count + 1);
               candidate =
-                ArcStr::from(format!("{}{}", name, itoa::Buffer::new().format(next_count)));
+                ArcStr::from(concat_string!(name, itoa::Buffer::new().format(next_count)).as_str());
             }
             Entry::Vacant(vac) => {
               // This is the first time we see this name

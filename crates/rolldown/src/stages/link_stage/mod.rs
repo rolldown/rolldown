@@ -9,6 +9,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
+  concat_string,
   ecmascript::legitimize_identifier_name,
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -244,32 +245,6 @@ impl<'a> LinkStage<'a> {
       {
         self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
       }
-
-      // TODO: should have a better place to put this
-      if is_entry && matches!(self.options.format, OutputFormat::Cjs) && importer.has_star_export()
-      {
-        importer
-          .import_records
-          .iter()
-          .filter(|rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
-          .for_each(|rec| {
-            match &self.module_table.modules[rec.resolved_module] {
-              Module::Normal(_) => {}
-              Module::External(ext) => {
-                self.metas[importer.idx]
-                  .require_bindings_for_star_exports
-                  .entry(rec.resolved_module)
-                  .or_insert_with(|| {
-                    // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
-                    self.symbols.create_facade_root_symbol_ref(
-                      importer.idx,
-                      legitimize_identifier_name(&ext.name).into_owned().into(),
-                    )
-                  });
-              }
-            }
-          });
-      };
     });
   }
 
@@ -314,12 +289,16 @@ impl<'a> LinkStage<'a> {
                     // export * from 'external' would be just removed. So it references nothing.
                     rec.namespace_ref.set_name(
                       &mut symbols.lock().unwrap(),
-                      &format!("import_{}", legitimize_identifier_name(&importee.name)),
+                      &concat_string!("import_", legitimize_identifier_name(&importee.name)),
                     );
                   } else {
                     // import ... from 'external' or export ... from 'external'
-                    let cjs_format = matches!(self.options.format, OutputFormat::Cjs);
-                    if cjs_format && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT) {
+                    if matches!(
+                      self.options.format,
+                      OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd
+                    ) && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+                    {
+                      stmt_info.side_effect = true;
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
@@ -390,7 +369,7 @@ impl<'a> LinkStage<'a> {
                         declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                         rec.namespace_ref.set_name(
                           &mut symbols.lock().unwrap(),
-                          &format!("import_{}", &importee.repr_name),
+                          &concat_string!("import_", importee.repr_name),
                         );
                       }
                     }

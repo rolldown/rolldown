@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -17,10 +18,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 (function(node_path) {
 
 "use strict";
-const { join } = node_path;
+
+node_path = __toESM(node_path);
 
 //#region main.js
-console.log(join("a", "b"));
+console.log((0, node_path.join)("a", "b"));
 
 //#endregion
 })(node_path);

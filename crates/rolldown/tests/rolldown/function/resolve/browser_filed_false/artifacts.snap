@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -13,7 +14,7 @@ var require_util = __commonJS({ "node_modules/package/util.js"() {} });
 
 //#endregion
 //#region node_modules/package/index.js
-var import_util = __toESM(require_util());
+var import_util = __toESM(require_util(), 1);
 console.log(import_util.default);
 
 //#endregion

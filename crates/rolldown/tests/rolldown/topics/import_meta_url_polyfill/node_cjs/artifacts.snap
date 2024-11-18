@@ -9,10 +9,10 @@ snapshot_kind: text
 ```js
 "use strict";
 
-const { default: assert } = __toESM(require("node:assert"));
+const node_assert = __toESM(require("node:assert"));
 
 //#region main.js
-assert.equal(require("url").pathToFileURL(__filename), require("url").pathToFileURL(__filename).href);
+node_assert.default.equal(require("url").pathToFileURL(__filename), require("url").pathToFileURL(__filename).href);
 
 //#endregion
 //# sourceMappingURL=main.js.map
@@ -22,14 +22,15 @@ assert.equal(require("url").pathToFileURL(__filename), require("url").pathToFile
 
 ```
 - ../main.js
-(2:0-2:7) "\nassert" --> (27:0-27:7) "\nassert"
-(2:7-2:13) ".equal" --> (27:7-27:13) ".equal"
-(2:13-2:21) "(require" --> (27:13-27:21) "(require"
-(2:21-2:27) "(\"url\"" --> (27:21-27:27) "(\"url\""
-(2:27-2:28) ")" --> (27:27-27:28) ")"
-(2:28-2:42) ".pathToFileURL" --> (27:28-27:42) ".pathToFileURL"
-(2:42-2:53) "(__filename" --> (27:42-27:53) "(__filename"
-(2:53-0:0) "" --> (27:53-27:55) "),"
-(0:0-2:71) "import assert from 'node:assert';\n\nassert.equal(require(\"url\").pathToFileURL(__filename), import.meta.url" --> (27:55-27:101) " require(\"url\").pathToFileURL(__filename).href"
-(2:71-2:72) ")" --> (27:101-30:33) ");\n\n//#endregion\n//# sourceMappingURL=main.js.map"
+(2:0-0:0) "" --> (27:0-27:0) ""
+(0:0-2:7) "import assert from 'node:assert';\n\nassert" --> (27:0-27:20) "\nnode_assert.default"
+(2:7-2:13) ".equal" --> (27:20-27:26) ".equal"
+(2:13-2:21) "(require" --> (27:26-27:34) "(require"
+(2:21-2:27) "(\"url\"" --> (27:34-27:40) "(\"url\""
+(2:27-2:28) ")" --> (27:40-27:41) ")"
+(2:28-2:42) ".pathToFileURL" --> (27:41-27:55) ".pathToFileURL"
+(2:42-2:53) "(__filename" --> (27:55-27:66) "(__filename"
+(2:53-0:0) "" --> (27:66-27:68) "),"
+(0:0-2:71) "import assert from 'node:assert';\n\nassert.equal(require(\"url\").pathToFileURL(__filename), import.meta.url" --> (27:68-27:114) " require(\"url\").pathToFileURL(__filename).href"
+(2:71-2:72) ")" --> (27:114-30:33) ");\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

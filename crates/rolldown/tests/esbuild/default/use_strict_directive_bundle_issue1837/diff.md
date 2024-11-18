@@ -32,8 +32,8 @@
 (function(node_assert) {
 
 "use strict";
-const { default: assert } = node_assert;
 
+node_assert = __toESM(node_assert);
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
@@ -42,7 +42,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 
 //#endregion
 //#region entry.js
-assert.deepEqual(require_cjs(), { foo: process });
+node_assert.default.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
 })(node_assert);
@@ -61,7 +61,7 @@ assert.deepEqual(require_cjs(), { foo: process });
 -        }
 -    });
 +(function (node_assert) {
-+    const {default: assert} = node_assert;
++    node_assert = __toESM(node_assert);
      var require_cjs = __commonJS({
          "cjs.js"(exports) {
 -            "use strict";
@@ -73,7 +73,7 @@ assert.deepEqual(require_cjs(), { foo: process });
 -    init_shims();
 -    console.log(require_cjs());
 -})();
-+    assert.deepEqual(require_cjs(), {
++    node_assert.default.deepEqual(require_cjs(), {
 +        foo: process
 +    });
 +})(node_assert);

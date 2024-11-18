@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -34,19 +35,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 "use strict";
 
-const { default: foo } = __toESM(require("./foo"));
-const { default: bar } = __toESM(require("./bar"));
+const ___foo = __toESM(require("./foo"));
+const ___bar = __toESM(require("./bar"));
 
 Object.defineProperty(exports, 'bar', {
   enumerable: true,
   get: function () {
-    return bar;
+    return ___bar.default;
   }
 });
 Object.defineProperty(exports, 'foo', {
   enumerable: true,
   get: function () {
-    return foo;
+    return ___foo.default;
   }
 });
 ```

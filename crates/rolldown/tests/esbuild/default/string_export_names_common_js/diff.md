@@ -17,16 +17,16 @@ var all_the_stuff = __toESM(require("./foo"));
 ```js
 "use strict";
 
-const all the stuff = __toESM(require("./foo"));
-const { some import: someImport } = __toESM(require("./foo"));
+const ___foo = __toESM(require("./foo"));
+const ___foo = __toESM(require("./foo"));
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
   get: function () {
-    return all the stuff;
+    return ___foo;
   }
 });
-exports["some export"] = someImport
+exports["some export"] = ___foo["some import"]
 ```
 ### diff
 ```diff
@@ -40,19 +40,19 @@ exports["some export"] = someImport
 -    "some export": () => import_foo["some import"]
 +"use strict";
 +
-+const all the stuff = __toESM(require("./foo"));
-+const { some import: someImport } = __toESM(require("./foo"));
++const ___foo = __toESM(require("./foo"));
++const ___foo = __toESM(require("./foo"));
 +
 +Object.defineProperty(exports, 'all the stuff', {
 +  enumerable: true,
 +  get: function () {
-+    return all the stuff;
++    return ___foo;
 +  }
  });
 -module.exports = __toCommonJS(entry_exports);
 -var import_foo = require("./foo");
 -var all_the_stuff = __toESM(require("./foo"));
-+exports["some export"] = someImport
++exports["some export"] = ___foo["some import"]
 \ No newline at end of file
 
 ```

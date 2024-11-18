@@ -8,7 +8,6 @@ import {
   PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
-import { error, logPluginError } from '../log/logs'
 
 export function bindingifyWatchChange(
   plugin: Plugin,
@@ -23,19 +22,11 @@ export function bindingifyWatchChange(
 
   return {
     plugin: async (ctx, id, event) => {
-      try {
-        await handler.call(
-          new PluginContext(options, ctx, plugin, pluginContextData),
-          id,
-          { event: event as ChangeEvent },
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name || '<unknown>', {
-            hook: 'watchChange',
-          }),
-        )
-      }
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+        id,
+        { event: event as ChangeEvent },
+      )
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -54,17 +45,9 @@ export function bindingifyCloseWatcher(
 
   return {
     plugin: async (ctx) => {
-      try {
-        await handler.call(
-          new PluginContext(options, ctx, plugin, pluginContextData),
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name || '<unknown>', {
-            hook: 'closeWatcher',
-          }),
-        )
-      }
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+      )
     },
     meta: bindingifyPluginHookMeta(meta),
   }

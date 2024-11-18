@@ -5,7 +5,6 @@ import type {
 } from '../binding'
 
 import type {
-  FunctionPluginHooks,
   hookFilterExtension,
   Plugin,
   PluginHooks,
@@ -33,7 +32,6 @@ import {
   bindingifyResolveIdFilter,
   bindingifyTransformFilter,
 } from './bindingify-hook-filter'
-import { error, logPluginError } from '../log/logs'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -48,16 +46,10 @@ export function bindingifyBuildStart(
 
   return {
     plugin: async (ctx) => {
-      try {
-        await handler.call(
-          new PluginContext(options, ctx, plugin, pluginContextData),
-          options,
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name ?? '<unknown>', { hook: 'buildStart' }),
-        )
-      }
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+        options,
+      )
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -76,16 +68,10 @@ export function bindingifyBuildEnd(
 
   return {
     plugin: async (ctx, err) => {
-      try {
-        await handler.call(
-          new PluginContext(options, ctx, plugin, pluginContextData),
-          err ? new Error(err) : undefined,
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name ?? '<unknown>', { hook: 'buildEnd' }),
-        )
-      }
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+        err ? new Error(err) : undefined,
+      )
     },
     meta: bindingifyPluginHookMeta(meta),
   }
@@ -122,21 +108,12 @@ export function bindingifyResolveId(
           contextResolveOptions?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
       }
 
-      let ret: ReturnType<FunctionPluginHooks['resolveId']>
-      try {
-        ret = await handler.call(
-          new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
-          specifier,
-          importer ?? undefined,
-          newExtraOptions,
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name || '<unknown>', {
-            hook: 'resolveId',
-          }),
-        )
-      }
+      const ret = await handler.call(
+        new PluginContext(normalizedOptions, ctx, plugin, pluginContextData),
+        specifier,
+        importer ?? undefined,
+        newExtraOptions,
+      )
       if (ret == null) {
         return
       }
@@ -188,21 +165,11 @@ export function bindingifyResolveDynamicImport(
 
   return {
     plugin: async (ctx, specifier, importer) => {
-      let ret: ReturnType<FunctionPluginHooks['resolveDynamicImport']>
-      try {
-        ret = await handler.call(
-          new PluginContext(options, ctx, plugin, pluginContextData),
-          specifier,
-          importer ?? undefined,
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name ?? '<unknown>', {
-            hook: 'resolveDynamicImport',
-          }),
-        )
-      }
-
+      const ret = await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+        specifier,
+        importer ?? undefined,
+      )
       if (ret == null) {
         return
       }
@@ -252,30 +219,20 @@ export function bindingifyTransform(
 
   return {
     plugin: async (ctx, code, id, meta) => {
-      let ret: ReturnType<FunctionPluginHooks['transform']>
-      try {
-        ret = await handler.call(
-          new TransformPluginContext(
-            normalizedOptions,
-            ctx.inner(),
-            plugin,
-            pluginContextData,
-            ctx,
-            id,
-            code,
-          ),
-          code,
+      const ret = await handler.call(
+        new TransformPluginContext(
+          normalizedOptions,
+          ctx.inner(),
+          plugin,
+          pluginContextData,
+          ctx,
           id,
-          meta,
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name || '<unknown>', {
-            hook: 'transform',
-            id,
-          }),
-        )
-      }
+          code,
+        ),
+        code,
+        id,
+        meta,
+      )
 
       if (ret == null) {
         return undefined
@@ -316,20 +273,10 @@ export function bindingifyLoad(
 
   return {
     plugin: async (ctx, id) => {
-      let ret: ReturnType<FunctionPluginHooks['load']>
-      try {
-        ret = await handler.call(
-          new PluginContext(normalized_options, ctx, plugin, pluginContextData),
-          id,
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name || '<unknown>', {
-            hook: 'load',
-            id,
-          }),
-        )
-      }
+      const ret = await handler.call(
+        new PluginContext(normalized_options, ctx, plugin, pluginContextData),
+        id,
+      )
 
       if (ret == null) {
         return
@@ -394,22 +341,13 @@ export function bindingifyModuleParsed(
 
   return {
     plugin: async (ctx, moduleInfo) => {
-      try {
-        await handler.call(
-          new PluginContext(options, ctx, plugin, pluginContextData),
-          transformModuleInfo(
-            moduleInfo,
-            pluginContextData.moduleOptionMap.get(moduleInfo.id)!,
-          ),
-        )
-      } catch (e: any) {
-        return error(
-          logPluginError(e, plugin.name || '<unknown>', {
-            hook: 'moduleParsed',
-            id: moduleInfo.id,
-          }),
-        )
-      }
+      await handler.call(
+        new PluginContext(options, ctx, plugin, pluginContextData),
+        transformModuleInfo(
+          moduleInfo,
+          pluginContextData.moduleOptionMap.get(moduleInfo.id)!,
+        ),
+      )
     },
     meta: bindingifyPluginHookMeta(meta),
   }

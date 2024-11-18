@@ -42,7 +42,11 @@ async fn filename_with_hash() {
 
     let integration_test =
       IntegrationTest::new(TestMeta { write_to_disk: false, hash_in_filename: true, ..meta });
-    let assets = integration_test.bundle(options).await;
+    if meta.expect_error {
+      // Output is expected to be dirty. No need to record.
+      continue;
+    }
+    let assets = integration_test.bundle(options).await.unwrap();
 
     snapshot_output.push_str(&format!("# {}\n\n", fixture_path.relative(&cwd).to_slash_lossy()));
 

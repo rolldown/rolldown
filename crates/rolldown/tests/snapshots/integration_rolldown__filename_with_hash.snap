@@ -8,9 +8,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-mEgzwYM3.js
 
-# tests/esbuild/dce/const_value_inlining_assign
-
-
 # tests/esbuild/dce/const_value_inlining_bundle
 
 - circular-import-entry-!~{006}~.js => circular-import-entry-DdjRYX55.js
@@ -572,9 +569,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-TTdntTtv.js
 
-# tests/esbuild/default/assign_to_import
-
-
 # tests/esbuild/default/auto_external
 
 - entry-!~{000}~.js => entry-CdxfuoZX.js
@@ -732,12 +726,6 @@ snapshot_kind: text
 - entries_entry1.css
 - entries_entry2.css
 
-# tests/esbuild/default/errors_for_assert_type_json
-
-- js-entry-!~{000}~.js => js-entry-B9OtdPHf.js
-- ts-entry-!~{001}~.js => ts-entry-DZUV3RlK.js
-- foo-!~{002}~.js => foo-BiPjJqkk.js
-
 # tests/esbuild/default/es6_from_common_js
 
 - entry-!~{000}~.js => entry-TlCPihBu.js
@@ -787,10 +775,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-C8thpW7a.js
 
-# tests/esbuild/default/export_missing_es6
-
-- entry-!~{000}~.js => entry-B6XhmBQE.js
-
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
 - entry-!~{000}~.js => entry-GPrBFSZD.js
@@ -834,12 +818,6 @@ snapshot_kind: text
 # tests/esbuild/default/false_require
 
 - entry-!~{000}~.js => entry-8-6Piydq.js
-
-# tests/esbuild/default/forbid_const_assign_when_bundling
-
-
-# tests/esbuild/default/forbid_const_assign_when_lowering_using
-
 
 # tests/esbuild/default/forbid_string_export_names_bundle
 
@@ -925,10 +903,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-Ku_qaOyJ.js
 
-# tests/esbuild/default/import_missing_es6
-
-- entry-!~{000}~.js => entry-BAfDfcyO.js
-
 # tests/esbuild/default/import_missing_neither_es6_nor_common_js
 
 - bare-!~{005}~.js => bare-3FeQpbcR.js
@@ -939,10 +913,6 @@ snapshot_kind: text
 - star-capture-!~{004}~.js => star-capture-Dq2IzTeh.js
 - foo-!~{000}~.js => foo-CFBE40Ue.js
 - foo-!~{008}~.js => foo-DgPUoGrl.js
-
-# tests/esbuild/default/import_missing_unused_es6
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
 
 # tests/esbuild/default/import_namespace_this_value
 
@@ -1034,9 +1004,6 @@ snapshot_kind: text
 # tests/esbuild/default/jsx_automatic_imports_es6
 
 - entry-!~{000}~.js => entry-DyEtjvY3.js
-
-# tests/esbuild/default/jsx_automatic_syntax_in_js
-
 
 # tests/esbuild/default/jsx_import_meta_property
 
@@ -1471,12 +1438,6 @@ snapshot_kind: text
 - ts-entry-!~{001}~.js => ts-entry-CFvZ1qSC.js
 - foo-!~{002}~.js => foo-DZOcV_qA.js
 
-# tests/esbuild/default/package_alias
-
-
-# tests/esbuild/default/package_alias_match_longest
-
-
 # tests/esbuild/default/preserve_key_comment
 
 - entry-!~{000}~.js => entry-DBarLLJK.js
@@ -1540,9 +1501,6 @@ snapshot_kind: text
 # tests/esbuild/default/require_bad_argument_count
 
 - entry-!~{000}~.js => entry-DERZJJrF.js
-
-# tests/esbuild/default/require_bad_extension
-
 
 # tests/esbuild/default/require_child_dir_common_js
 
@@ -1681,9 +1639,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-dohL_8YN.js
 
-# tests/esbuild/default/top_level_await_cjs
-
-
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
@@ -1703,9 +1658,6 @@ snapshot_kind: text
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
 - entry-!~{000}~.js => entry-CMNK7FiZ.js
-
-# tests/esbuild/default/top_level_await_iife
-
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 
@@ -1803,9 +1755,6 @@ snapshot_kind: text
 - cjs-in-esm2-!~{001}~.js => cjs-in-esm2-CSc2NrEd.js
 - import-in-cjs-!~{002}~.js => import-in-cjs-DGQPE4IN.js
 - no-warnings-here-!~{003}~.js => no-warnings-here-83rFFOtF.js
-
-# tests/esbuild/default/warnings_inside_node_modules
-
 
 # tests/esbuild/default/with_statement_tainting_no_bundle
 
@@ -1915,18 +1864,6 @@ snapshot_kind: text
 - internal-ns-default-!~{008}~.js => internal-ns-default-JNy0Ko2y.js
 - internal-!~{00c}~.js => internal-DA-Z1nKh.js
 
-# tests/esbuild/importstar/import_default_namespace_combo_no_default
-
-- entry-dead-!~{005}~.js => entry-dead-DAjSb29o.js
-- entry-default-!~{003}~.js => entry-default-BuYO3Blg.js
-- entry-default-ns-!~{001}~.js => entry-default-ns-Wsq1sLdy.js
-- entry-default-ns-prop-!~{000}~.js => entry-default-ns-prop-DiIBWc2w.js
-- entry-default-prop-!~{002}~.js => entry-default-prop-ULWdRX1g.js
-- entry-prop-!~{004}~.js => entry-prop-1SfmzZd5.js
-- entry-typo-!~{006}~.js => entry-typo-BnwWPrCJ.js
-- entry-typo-indirect-!~{007}~.js => entry-typo-indirect-UlvUPHg8.js
-- foo-!~{008}~.js => foo-CkwHb4Sq.js
-
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
 - entry-!~{000}~.js => entry-BRarpRE9.js
@@ -1934,10 +1871,6 @@ snapshot_kind: text
 # tests/esbuild/importstar/import_export_self_as_namespace_es6
 
 - entry-!~{000}~.js => entry-CaRffxae.js
-
-# tests/esbuild/importstar/import_export_star_ambiguous_error
-
-- entry-!~{000}~.js => entry-xq6JAg47.js
 
 # tests/esbuild/importstar/import_export_star_ambiguous_warning
 
@@ -2075,10 +2008,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-DHRSEmgt.js
 
-# tests/esbuild/importstar/namespace_import_re_export_missing_es6
-
-- entry-!~{000}~.js => entry-CAWFBFog.js
-
 # tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
 - entry-!~{000}~.js => entry-BxVyImnH.js
@@ -2086,10 +2015,6 @@ snapshot_kind: text
 # tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6
 
 - entry-!~{000}~.js => entry-CC1P3B2B.js
-
-# tests/esbuild/importstar/namespace_import_re_export_unused_missing_es6
-
-- entry-!~{000}~.js => entry-6f3o4CxD.js
 
 # tests/esbuild/importstar/namespace_import_unused_missing_common_js
 
@@ -2278,10 +2203,6 @@ snapshot_kind: text
 # tests/esbuild/importstar_ts/ts_import_star_unused
 
 - entry-!~{000}~.js => entry-BoHW517J.js
-
-# tests/esbuild/importstar_ts/ts_re_export_type_only_file_es6
-
-- entry-!~{000}~.js => entry-BBoMoYAJ.js
 
 # tests/esbuild/loader/assert_type_json_wrong_loader
 
@@ -2505,10 +2426,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-COKat3-p.js
 
-# tests/esbuild/loader/loader_json_missing_es6
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
-
 # tests/esbuild/loader/loader_json_no_bundle
 
 - test-!~{000}~.js => test-Bw2RvJTU.js
@@ -2562,9 +2479,6 @@ snapshot_kind: text
 # tests/esbuild/loader/require_custom_extension_string
 
 - entry-!~{000}~.js => entry-laEsn-rb.js
-
-# tests/esbuild/loader/with_type_json_override_loader
-
 
 # tests/esbuild/lower/class_super_this_issue242_no_bundle
 
@@ -3094,28 +3008,13 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-DZxdCDyK.js
 
-# tests/esbuild/packagejson/package_json_exports_entry_point_require_only
-
-
 # tests/esbuild/packagejson/package_json_exports_error_invalid_module_specifier
 
 - entry-!~{000}~.js => entry-Bfllc88b.js
 
-# tests/esbuild/packagejson/package_json_exports_error_invalid_package_configuration
-
-
-# tests/esbuild/packagejson/package_json_exports_error_invalid_package_target
-
-
-# tests/esbuild/packagejson/package_json_exports_error_missing_trailing_slash
-
-
 # tests/esbuild/packagejson/package_json_exports_error_module_not_found
 
 - entry-!~{000}~.js => entry-IJlSlhWP.js
-
-# tests/esbuild/packagejson/package_json_exports_error_package_path_not_exported
-
 
 # tests/esbuild/packagejson/package_json_exports_error_unsupported_directory_import
 
@@ -3129,18 +3028,9 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-CmTMW8TQ.js
 
-# tests/esbuild/packagejson/package_json_exports_must_use_import
-
-
-# tests/esbuild/packagejson/package_json_exports_must_use_require
-
-
 # tests/esbuild/packagejson/package_json_exports_neutral
 
 - entry-!~{000}~.js => entry-Bw0wwgov.js
-
-# tests/esbuild/packagejson/package_json_exports_no_conditions_match
-
 
 # tests/esbuild/packagejson/package_json_exports_node
 
@@ -3166,9 +3056,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-COtB6ZDP.js
 
-# tests/esbuild/packagejson/package_json_exports_reverse_lookup
-
-
 # tests/esbuild/packagejson/package_json_exports_wildcard
 
 - entry-!~{000}~.js => entry-BUFllzZd.js
@@ -3176,9 +3063,6 @@ snapshot_kind: text
 # tests/esbuild/packagejson/package_json_import_self_using_import
 
 - entry-!~{000}~.js => entry-ocLIaS4K.js
-
-# tests/esbuild/packagejson/package_json_import_self_using_import_failure
-
 
 # tests/esbuild/packagejson/package_json_import_self_using_import_scoped
 
@@ -3188,9 +3072,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-DD09NvMn.js
 
-# tests/esbuild/packagejson/package_json_import_self_using_require_failure
-
-
 # tests/esbuild/packagejson/package_json_import_self_using_require_scoped
 
 - entry-!~{000}~.js => entry-DD09NvMn.js
@@ -3199,15 +3080,9 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-DRbe_hQ3.js
 
-# tests/esbuild/packagejson/package_json_imports_error_equals_hash
-
-
 # tests/esbuild/packagejson/package_json_imports_error_missing_remapped_package
 
 - entry-!~{000}~.js => entry-TxDDl0Ux.js
-
-# tests/esbuild/packagejson/package_json_imports_error_starts_with_hash_slash
-
 
 # tests/esbuild/packagejson/package_json_imports_error_unsupported_directory_import
 
@@ -3264,12 +3139,6 @@ snapshot_kind: text
 # tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485
 
 - entry-!~{000}~.js => entry-CRqbv7D3.js
-
-# tests/esbuild/packagejson/package_json_syntax_error_comment
-
-
-# tests/esbuild/packagejson/package_json_syntax_error_trailing_comma
-
 
 # tests/esbuild/packagejson/package_json_type_should_be_types
 
@@ -3415,10 +3284,6 @@ snapshot_kind: text
 - not-supported-!~{001}~.js => not-supported-DNJDzzLy.js
 - supported-!~{000}~.js => supported-RIzYgVa6.js
 
-# tests/esbuild/ts/export_type_issue379
-
-- entry-!~{000}~.js => entry-C8ehrr7n.js
-
 # tests/esbuild/ts/this_inside_function_ts
 
 - entry-!~{000}~.js => entry-CbhkK8a-.js
@@ -3557,9 +3422,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-BPwDgR43.js
 
-# tests/esbuild/ts/ts_experimental_decorators
-
-
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
 - entry-!~{000}~.js => entry-BspkPvls.js
@@ -3599,10 +3461,6 @@ snapshot_kind: text
 # tests/esbuild/ts/ts_export_equals
 
 - a-!~{000}~.js => a-BPCnKJzv.js
-
-# tests/esbuild/ts/ts_export_missing_es6
-
-- entry-!~{000}~.js => entry-Bc54Dyxu.js
 
 # tests/esbuild/ts/ts_export_namespace
 
@@ -3648,10 +3506,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-Cl_h88w9.js
 - entry.css
-
-# tests/esbuild/ts/ts_import_missing_es6
-
-- entry-!~{000}~.js => entry-gi43AkGp.js
 
 # tests/esbuild/ts/ts_import_missing_file
 
@@ -3919,55 +3773,6 @@ snapshot_kind: text
 # tests/rolldown/dce/defined_expr_in_paren_expr
 
 - main-!~{000}~.js => main-pmzA2dt0.js
-
-# tests/rolldown/errors/ambiguous_external_namespace
-
-- main-!~{000}~.js => main-e4408L-u.js
-
-# tests/rolldown/errors/assign_to_import
-
-
-# tests/rolldown/errors/export_undefined_variable
-
-
-# tests/rolldown/errors/forbid_const_assign
-
-
-# tests/rolldown/errors/invalid_export_mode/should_not_be_default
-
-
-# tests/rolldown/errors/invalid_export_mode/should_not_be_none
-
-
-# tests/rolldown/errors/invalid_export_option/default
-
-
-# tests/rolldown/errors/invalid_export_option/none
-
-
-# tests/rolldown/errors/invalid_option/unsupported_code_splitting_format
-
-- main-!~{000}~.js => main-DVPOHc-8.js
-- lib-!~{001}~.js => lib-DO19f8Aw.js
-
-# tests/rolldown/errors/json_parse_error/normal
-
-
-# tests/rolldown/errors/missing_export
-
-- main-!~{000}~.js => main-BqfeEdT8.js
-
-# tests/rolldown/errors/parse_error/jsx
-
-
-# tests/rolldown/errors/parse_error/normal
-
-
-# tests/rolldown/errors/resolve_unexport_path_of_package
-
-
-# tests/rolldown/errors/unresolved_entry
-
 
 # tests/rolldown/function/advanced_chunks/basic
 
@@ -4351,9 +4156,6 @@ snapshot_kind: text
 # tests/rolldown/function/format/umd/external_modules_with_globals
 
 - main-!~{000}~.js => main-CnXQSwM9.js
-
-# tests/rolldown/function/format/umd/missing_name_option
-
 
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 

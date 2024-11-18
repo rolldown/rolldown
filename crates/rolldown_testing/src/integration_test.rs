@@ -13,7 +13,7 @@ use rolldown::{
   OutputFormat, SourceMapType,
 };
 use rolldown_common::Output;
-use rolldown_error::DiagnosticOptions;
+use rolldown_error::{BuildResult, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
@@ -35,7 +35,7 @@ impl IntegrationTest {
     Self { test_meta }
   }
 
-  pub async fn bundle(&self, mut options: BundlerOptions) -> BundleOutput {
+  pub async fn bundle(&self, mut options: BundlerOptions) -> BuildResult<BundleOutput> {
     self.apply_test_defaults(&mut options);
 
     let mut bundler = Bundler::new(options);
@@ -46,9 +46,9 @@ impl IntegrationTest {
           .context(bundler.options().dir.clone())
           .expect("Failed to clean the output directory");
       }
-      bundler.write().await.unwrap()
+      bundler.write().await
     } else {
-      bundler.generate().await.unwrap()
+      bundler.generate().await
     }
   }
 
@@ -74,9 +74,14 @@ impl IntegrationTest {
           .context(format!("{abs_output_dir:?}"))
           .expect("Failed to clean the output directory");
       }
-      bundler.write().await.unwrap()
+      bundler.write().await
     } else {
-      bundler.generate().await.unwrap()
+      bundler.generate().await
+    };
+
+    let bundle_output = match bundle_output {
+      Ok(output) => output,
+      Err(errs) => BundleOutput { errors: errs.into_vec(), ..Default::default() },
     };
 
     assert!(

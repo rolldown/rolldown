@@ -11,8 +11,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_common::{
-  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
-  SharedNormalizedBundlerOptions,
+  side_effects::HookSideEffects, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId,
+  SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use tokio::sync::Mutex;
@@ -103,6 +103,7 @@ impl PluginContextImpl {
   pub async fn load(
     &self,
     specifier: &str,
+    side_effects: Option<HookSideEffects>,
     load_callback_fn: Box<LoadCallbackFn>,
   ) -> anyhow::Result<()> {
     self.context_load_modules.insert(specifier.into(), LoadCallback(Box::new(load_callback_fn)));
@@ -120,7 +121,7 @@ impl PluginContextImpl {
         module_def_format: ModuleDefFormat::Unknown,
         is_external: false,
         package_json: None,
-        side_effects: None,
+        side_effects,
         is_external_without_side_effects: false,
       }))
       .await?;

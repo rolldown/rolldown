@@ -314,8 +314,12 @@ impl ViteResolvePlugin {
         } else {
           return Ok(Some(HookLoadOutput {
             code: get_development_build_browser_external_module_code(
-              // trim leading `:`
-              &id_without_prefix[1..],
+              // trim leading `:` if it's not empty
+              if id_without_prefix.is_empty() {
+                id_without_prefix
+              } else {
+                &id_without_prefix[1..]
+              },
             ),
             ..Default::default()
           }));
@@ -329,8 +333,8 @@ impl ViteResolvePlugin {
       } else {
         return Ok(Some(HookLoadOutput {
           code: get_development_dev_browser_external_module_code(
-            // trim leading `:`
-            &id_without_prefix[1..],
+            // trim leading `:` if it's not empty
+            if id_without_prefix.is_empty() { id_without_prefix } else { &id_without_prefix[1..] },
           ),
           ..Default::default()
         }));

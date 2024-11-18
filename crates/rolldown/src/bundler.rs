@@ -174,22 +174,6 @@ impl Bundler {
   pub fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
     let watcher = Arc::new(Watcher::new(bundler)?);
 
-    // using async task to run first build, it could be report first build error.
-    let cloned_watcher = Arc::clone(&watcher);
-    let future = async move {
-      let _ = cloned_watcher.run().await;
-    };
-    #[cfg(target_family = "wasm")]
-    {
-      let handle = tokio::runtime::Handle::current();
-      // could not block_on/spawn the main thread in WASI
-      std::thread::spawn(move || {
-        handle.spawn(future);
-      });
-    }
-    #[cfg(not(target_family = "wasm"))]
-    tokio::spawn(future);
-
     wait_for_change(Arc::clone(&watcher));
 
     Ok(watcher)

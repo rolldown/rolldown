@@ -73,8 +73,6 @@ test.sequential('watch event', async () => {
     cwd: import.meta.dirname,
   })
 
-  await waitBuildFinished()
-
   const events: any[] = []
   watcher.on('event', (event) => {
     if (event.code === 'BUNDLE_END') {
@@ -99,7 +97,17 @@ test.sequential('watch event', async () => {
     }
   })
 
+  await waitBuildFinished()
+  // test first build event
+  expect(events.slice(0, 4)).toEqual([
+    { code: 'START' },
+    { code: 'BUNDLE_START' },
+    { code: 'BUNDLE_END' },
+    { code: 'END' },
+  ])
+
   // edit file
+  events.length = 0
   fs.writeFileSync(input, 'console.log(3)')
   await waitBuildFinished()
   await watcher.close()

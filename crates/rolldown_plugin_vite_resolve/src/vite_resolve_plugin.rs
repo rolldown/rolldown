@@ -223,7 +223,7 @@ impl ViteResolvePlugin {
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
           // TODO(sapphi-red): skip for scan
-          if !is_in_node_modules(&result.id) {
+          if is_in_node_modules(&result.id) {
             let finalized = finalize_bare_specifier(&result.id, args.specifier, args.importer)
               .await?
               .unwrap_or(result.id);

@@ -32,7 +32,7 @@ export default defineTest({
             fooHookCalls++
           }
         },
-        async transform(id) {
+        async transform(code, id) {
           if (id.endsWith('main.js')) {
             const moduleInfo = await this.load({
               id: path.join(__dirname, 'foo.js'),

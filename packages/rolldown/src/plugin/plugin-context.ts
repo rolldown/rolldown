@@ -74,17 +74,32 @@ export class PluginContext extends MinimalPluginContext {
         moduleSideEffects: options.moduleSideEffects || null,
       }
       data.updateModuleOption(id, rawOptions)
-      let resolveFn
-      // TODO: If is not resolved, we need to set a time to avoid waiting.
-      const promise = new Promise((resolve, _) => {
-        resolveFn = resolve
-      })
-      await context.load(
-        id,
-        bindingifySideEffects(options.moduleSideEffects),
-        resolveFn!,
-      )
-      await promise
+
+      async function createLoadModulePromise() {
+        if (data.loadModulePromiseMap.has(id)) {
+          return data.loadModulePromiseMap.get(id)!
+        }
+        let resolveFn
+        // TODO: If is not resolved, we need to set a time to avoid waiting.
+        const promise = new Promise<void>((resolve, _) => {
+          resolveFn = resolve
+        })
+        data.loadModulePromiseMap.set(id, promise)
+        try {
+          await context.load(
+            id,
+            bindingifySideEffects(options.moduleSideEffects),
+            resolveFn!,
+          )
+        } finally {
+          // If the load module has failed, avoid it re-load using unresolved promise.
+          data.loadModulePromiseMap.delete(id)
+        }
+        return promise
+      }
+
+      // Here using one promise to avoid pass more callback to rust side, it only accept one callback, other will be ignored.
+      await createLoadModulePromise()
       return data.getModuleInfo(id, context)!
     }
     this.resolve = async (source, importer, options) => {

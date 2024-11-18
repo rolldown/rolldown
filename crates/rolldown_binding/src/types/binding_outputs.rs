@@ -29,12 +29,10 @@ impl BindingOutputs {
   #[napi(getter)]
   pub fn errors(&mut self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
     if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = std::mem::take(&mut self.error) {
-      return Ok(
-        diagnostics
-          .into_iter()
-          .map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
-          .collect::<napi::Result<_>>()?,
-      );
+      return diagnostics
+        .into_iter()
+        .map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
+        .collect();
     }
     Ok(vec![])
   }

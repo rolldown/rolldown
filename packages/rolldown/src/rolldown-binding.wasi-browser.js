@@ -151,8 +151,8 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingSourcemap_struct_121']?.()
   __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_122']?.()
   __napiInstance.exports['__napi_register__BindingWatcher_struct_123']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_126']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEvent_127']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_127']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_128']?.()
 }
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 export const BindingLog = __napiModule.exports.BindingLog

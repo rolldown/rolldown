@@ -41,6 +41,12 @@ impl BindingWatcher {
     );
     Ok(())
   }
+
+  #[napi]
+  pub async fn start(&self) -> napi::Result<()> {
+    self.inner.start().await;
+    Ok(())
+  }
 }
 
 #[napi]

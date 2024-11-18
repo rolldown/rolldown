@@ -91,6 +91,8 @@ export class Watcher {
     this.controller.signal.addEventListener('abort', () => {
       clearInterval(timer)
     })
+    // run first build after listener is attached
+    process.nextTick(() => this.inner.start())
   }
 }
 

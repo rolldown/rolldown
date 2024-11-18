@@ -213,6 +213,10 @@ impl Watcher {
 
     Ok(())
   }
+
+  pub async fn start(&self) {
+    let _ = self.run().await;
+  }
 }
 
 pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {

@@ -82,6 +82,7 @@ export declare class BindingTransformPluginContext {
 export declare class BindingWatcher {
   close(): Promise<void>
   on(event: BindingWatcherEvent, listener: (data?: Record<string, string>) => void): void
+  start(): Promise<void>
 }
 
 export declare class Bundler {

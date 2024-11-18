@@ -239,7 +239,7 @@ impl ViteResolvePlugin {
               // if both noExternal and external are true, noExternal will take the higher priority and bundle it.
               // only if the id is explicitly listed in external, we will externalize it and skip this error.
               &&(matches!(self.external, ResolveOptionsExternal::True)
-              || self.external.is_external_explicitly(args.specifier))
+              || !self.external.is_external_explicitly(args.specifier))
           {
             let mut message = format!("Cannot bundle Node.js built-in \"{}\"", args.specifier);
             if let Some(importer) = args.importer {

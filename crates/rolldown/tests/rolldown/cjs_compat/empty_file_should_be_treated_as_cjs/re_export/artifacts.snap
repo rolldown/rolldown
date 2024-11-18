@@ -1,26 +1,31 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "default-empty.js".
+   ╭─[main.js:2:10]
+   │
+ 2 │ export { default as defaultImport } from './default-empty'
+   │          ───┬───  
+   │             ╰───── Missing export
+───╯
+
+```
+
 # Assets
 
 ## main.js
 
 ```js
 
-
 //#region star-empty.js
-var require_star_empty = __commonJS({ "star-empty.js"() {} });
+var star_empty_exports = {};
 
 //#endregion
-//#region default-empty.js
-var require_default_empty = __commonJS({ "default-empty.js"() {} });
-
-//#endregion
-//#region main.js
-var import_star_empty = __toESM(require_star_empty());
-var import_default_empty = __toESM(require_default_empty());
-
-//#endregion
-var defaultImport = import_default_empty.default;
-export { defaultImport, import_star_empty as staImport };
+export { defaultImport, star_empty_exports as staImport };
 ```

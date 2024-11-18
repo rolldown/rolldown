@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -31,11 +32,12 @@ module.exports = 1;
 
 //#endregion
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"() {} });
+var foo_exports = {};
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region esm-export-cjs-require.js
-require_foo();
+init_foo();
 
 //#endregion
 //#region esm-import-cjs-export.js
@@ -52,7 +54,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#endregion
 //#region esm-import-cjs-require.js
 var import_cjs = __toESM(require_cjs());
-require_foo();
+init_foo();
 assert.equal(import_cjs.a, undefined);
 
 //#endregion
@@ -67,32 +69,32 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 
 ```
 - ../esm-export-cjs-export.js
-(0:0-0:7) "module." --> (29:0-29:7) "\nmodule"
-(0:7-0:17) "exports = " --> (29:7-29:17) ".exports ="
-(0:17-1:24) "1;\nexport const value = 1;" --> (29:17-33:0) " 1;\n\n//#endregion\n//#region foo.js"
+(0:0-0:7) "module." --> (32:0-32:7) "\nmodule"
+(0:7-0:17) "exports = " --> (32:7-32:17) ".exports ="
+(0:17-1:24) "1;\nexport const value = 1;" --> (32:17-36:0) " 1;\n\n//#endregion\n//#region foo.js"
 - ../foo.js
-(0:0-0:0) "" --> (33:0-37:0) "\nvar require_foo = __commonJS({ \"foo.js\"() {} });\n\n//#endregion\n//#region esm-export-cjs-require.js"
+(0:0-0:0) "" --> (36:0-41:0) "\nvar foo_exports = {};\nvar init_foo = __esm({ \"foo.js\"() {} });\n\n//#endregion\n//#region esm-export-cjs-require.js"
 - ../esm-export-cjs-require.js
-(0:0-1:24) "require('./foo')\nexport const value = 1;" --> (37:0-41:0) "\nrequire_foo();\n\n//#endregion\n//#region esm-import-cjs-export.js"
+(0:0-1:24) "require('./foo')\nexport const value = 1;" --> (41:0-45:0) "\ninit_foo();\n\n//#endregion\n//#region esm-import-cjs-export.js"
 - ../esm-import-cjs-export.js
-(0:0-1:0) "import './foo'" --> (41:0-42:0) "\nvar require_esm_import_cjs_export = __commonJS({ \"esm-import-cjs-export.js\"(exports, module) {"
-(1:0-1:7) "\nmodule" --> (42:0-42:8) "\n\tmodule"
-(1:7-1:17) ".exports =" --> (42:8-42:18) ".exports ="
-(1:17-0:0) "" --> (42:18-43:0) " 1;"
-(0:0-1:19) "import './foo'\nmodule.exports = 1" --> (43:0-47:0) "\n} });\n\n//#endregion\n//#region cjs.js"
+(0:0-1:0) "import './foo'" --> (45:0-46:0) "\nvar require_esm_import_cjs_export = __commonJS({ \"esm-import-cjs-export.js\"(exports, module) {"
+(1:0-1:7) "\nmodule" --> (46:0-46:8) "\n\tmodule"
+(1:7-1:17) ".exports =" --> (46:8-46:18) ".exports ="
+(1:17-0:0) "" --> (46:18-47:0) " 1;"
+(0:0-1:19) "import './foo'\nmodule.exports = 1" --> (47:0-51:0) "\n} });\n\n//#endregion\n//#region cjs.js"
 - ../cjs.js
-(0:0-0:7) "module." --> (47:0-48:8) "\nvar require_cjs = __commonJS({ \"cjs.js\"(exports, module) {\n\tmodule"
-(0:7-0:17) "exports = " --> (48:8-48:18) ".exports ="
-(0:17-0:0) "module.exports = " --> (48:18-49:0) " 1;"
-(0:0-0:19) "module.exports = 1;" --> (49:0-53:0) "\n} });\n\n//#endregion\n//#region esm-import-cjs-require.js"
+(0:0-0:7) "module." --> (51:0-52:8) "\nvar require_cjs = __commonJS({ \"cjs.js\"(exports, module) {\n\tmodule"
+(0:7-0:17) "exports = " --> (52:8-52:18) ".exports ="
+(0:17-0:0) "module.exports = " --> (52:18-53:0) " 1;"
+(0:0-0:19) "module.exports = 1;" --> (53:0-57:0) "\n} });\n\n//#endregion\n//#region esm-import-cjs-require.js"
 - ../esm-import-cjs-require.js
-(0:0-2:0) "import assert from 'node:assert'\nimport { a } from './cjs'" --> (53:0-54:0) "\nvar import_cjs = __toESM(require_cjs());"
-(2:0-0:0) "" --> (54:0-54:0) ""
-(0:0-3:0) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')" --> (54:0-55:0) "\nrequire_foo();"
-(3:0-3:7) "\nassert" --> (55:0-55:7) "\nassert"
-(3:7-0:0) "" --> (55:7-55:13) ".equal"
-(0:0-3:16) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')\nassert.equal(a," --> (55:13-55:27) "(import_cjs.a,"
-(3:16-3:26) " undefined" --> (55:27-55:37) " undefined"
-(3:26-4:1) ")\n" --> (55:37-59:0) ");\n\n//#endregion\n//#region main.js"
-(0:0-3:34) "import \"./esm-export-cjs-export\"\nimport \"./esm-export-cjs-require\"\nimport \"./esm-import-cjs-export\"\nimport \"./esm-import-cjs-require\"" --> (59:0-62:33) "\nvar import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());\n\n//#endregion\n//# sourceMappingURL=main.js.map"
+(0:0-2:0) "import assert from 'node:assert'\nimport { a } from './cjs'" --> (57:0-58:0) "\nvar import_cjs = __toESM(require_cjs());"
+(2:0-0:0) "" --> (58:0-58:0) ""
+(0:0-3:0) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')" --> (58:0-59:0) "\ninit_foo();"
+(3:0-3:7) "\nassert" --> (59:0-59:7) "\nassert"
+(3:7-0:0) "" --> (59:7-59:13) ".equal"
+(0:0-3:16) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')\nassert.equal(a," --> (59:13-59:27) "(import_cjs.a,"
+(3:16-3:26) " undefined" --> (59:27-59:37) " undefined"
+(3:26-4:1) ")\n" --> (59:37-63:0) ");\n\n//#endregion\n//#region main.js"
+(0:0-3:34) "import \"./esm-export-cjs-export\"\nimport \"./esm-export-cjs-require\"\nimport \"./esm-import-cjs-export\"\nimport \"./esm-import-cjs-require\"" --> (63:0-66:33) "\nvar import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());\n\n//#endregion\n//# sourceMappingURL=main.js.map"
 ```

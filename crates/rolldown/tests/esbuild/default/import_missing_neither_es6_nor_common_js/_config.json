@@ -27,5 +27,6 @@
       }
     ]
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "expectError": true
 }

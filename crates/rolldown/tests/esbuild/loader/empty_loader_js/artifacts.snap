@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -18,15 +19,16 @@ var require_c = __commonJS({ "c.empty"() {} });
 
 //#endregion
 //#region d.empty
-var named = void 0;
+var require_d = __commonJS({ "d.empty"() {} });
 
 //#endregion
 //#region entry.js
 var import_b = __toESM(require_b());
 var import_c = __toESM(require_c());
+var import_d = __toESM(require_d());
 assert.deepEqual(import_b, { default: {} });
 assert.deepEqual(import_c.default, {});
-assert.equal(named, undefined);
+assert.equal(import_d.named, undefined);
 
 //#endregion
 //# sourceMappingURL=entry.js.map

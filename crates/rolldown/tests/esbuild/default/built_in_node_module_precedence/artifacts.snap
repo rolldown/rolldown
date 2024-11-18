@@ -10,13 +10,15 @@ snapshot_kind: text
 
 
 //#region node_modules/fs/abc.js
-var require_abc = __commonJS({ "node_modules/fs/abc.js"() {
+var abc_exports = {};
+var init_abc = __esm({ "node_modules/fs/abc.js"() {
 	console.log("include this");
 } });
 
 //#endregion
 //#region node_modules/fs/index.js
-var require_fs = __commonJS({ "node_modules/fs/index.js"() {
+var fs_exports = {};
+var init_fs = __esm({ "node_modules/fs/index.js"() {
 	console.log("include this too");
 } });
 
@@ -26,8 +28,8 @@ console.log([
 	require("fs"),
 	require("fs/promises"),
 	require("node:foo"),
-	require_abc(),
-	require_fs()
+	(init_abc(), __toCommonJS(abc_exports)),
+	(init_fs(), __toCommonJS(fs_exports))
 ]);
 
 //#endregion

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,19 +10,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region src/node_modules/sub/bar.js
-var require_bar = __commonJS({ "src/node_modules/sub/bar.js"() {
+var bar_exports = {};
+var init_bar = __esm({ "src/node_modules/sub/bar.js"() {
 	works();
 } });
 
 //#endregion
 //#region src/node_modules/pkg/sub/foo.js
-var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
-	require_bar();
+var foo_exports = {};
+var init_foo = __esm({ "src/node_modules/pkg/sub/foo.js"() {
+	init_bar();
 } });
 
 //#endregion
 //#region src/entry.js
-require_foo();
+init_foo();
 
 //#endregion
 ```

@@ -27,7 +27,7 @@ pub async fn load_source(
 
     (Some(load_hook_output.code), load_hook_output.module_type)
   } else if resolved_id.ignored {
-    (Some(String::new()), Some(ModuleType::Js))
+    (Some(String::new()), Some(ModuleType::Empty))
   } else {
     (None, None)
   };

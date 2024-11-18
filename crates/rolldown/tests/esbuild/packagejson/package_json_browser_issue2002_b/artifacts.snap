@@ -24,13 +24,14 @@ snapshot_kind: text
 
 
 //#region src/node_modules/pkg/sub/foo.js
-var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
+var foo_exports = {};
+var init_foo = __esm({ "src/node_modules/pkg/sub/foo.js"() {
 	__require("sub");
 } });
 
 //#endregion
 //#region src/entry.js
-require_foo();
+init_foo();
 
 //#endregion
 ```

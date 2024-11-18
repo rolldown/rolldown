@@ -14,7 +14,14 @@
       ".css": "css",
       ".file": "asset",
       ".svg": "dataurl"
-    }
+    },
+    "external": [
+      "extern-esm",
+			"extern-cjs",
+			"extern.css",
+			"extern.png"
+    ]
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "expectError": true
 }

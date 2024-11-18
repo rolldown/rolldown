@@ -1,25 +1,101 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[named.js:1:8]
+   │
+ 1 │ import fn, {x as a, y as b} from './foo'
+   │        ─┬  
+   │         ╰── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "x" is not exported by "foo.js".
+   ╭─[named.js:1:13]
+   │
+ 1 │ import fn, {x as a, y as b} from './foo'
+   │             ┬  
+   │             ╰── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "y" is not exported by "foo.js".
+   ╭─[named.js:1:21]
+   │
+ 1 │ import fn, {x as a, y as b} from './foo'
+   │                     ┬  
+   │                     ╰── Missing export
+───╯
+
+```
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[star.js:2:13]
+   │
+ 2 │ console.log(ns.default(ns.x, ns.y))
+   │             ─────┬────  
+   │                  ╰────── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `x` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[star.js:2:24]
+   │
+ 2 │ console.log(ns.default(ns.x, ns.y))
+   │                        ──┬─  
+   │                          ╰─── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `y` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[star.js:2:30]
+   │
+ 2 │ console.log(ns.default(ns.x, ns.y))
+   │                              ──┬─  
+   │                                ╰─── 
+───╯
+
+```
 # Assets
 
 ## bare.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { init_foo } from "./foo2.js";
 
 //#region bare.js
-var import_foo = __toESM(require_foo());
+init_foo();
 
 //#endregion
 ```
 ## foo.js
 
 ```js
-import { require_foo } from "./foo2.js";
+import { init_foo } from "./foo2.js";
 
-export default require_foo();
-
+init_foo();
 ```
 ## foo2.js
 
@@ -27,12 +103,13 @@ export default require_foo();
 
 
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"() {
+var foo_exports = {};
+var init_foo = __esm({ "foo.js"() {
 	console.log("no exports here");
 } });
 
 //#endregion
-export { __toESM, require_foo };
+export { __toCommonJS, foo_exports, init_foo };
 ```
 ## import.js
 
@@ -46,43 +123,43 @@ console.log(import("./foo.js"));
 ## named.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { init_foo } from "./foo2.js";
 
 //#region named.js
-var import_foo = __toESM(require_foo());
-console.log((0, import_foo.default)(import_foo.x, import_foo.y));
+init_foo();
+console.log(fn(a, b));
 
 //#endregion
 ```
 ## require.js
 
 ```js
-import { require_foo } from "./foo2.js";
+import { __toCommonJS, foo_exports, init_foo } from "./foo2.js";
 
 //#region require.js
-console.log(require_foo());
+console.log((init_foo(), __toCommonJS(foo_exports)));
 
 //#endregion
 ```
 ## star-capture.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { foo_exports, init_foo } from "./foo2.js";
 
 //#region star-capture.js
-var import_foo = __toESM(require_foo());
-console.log(import_foo);
+init_foo();
+console.log(foo_exports);
 
 //#endregion
 ```
 ## star.js
 
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { init_foo } from "./foo2.js";
 
 //#region star.js
-var import_foo = __toESM(require_foo());
-console.log(import_foo.default(import_foo.x, import_foo.y));
+init_foo();
+console.log((void 0)(void 0, void 0));
 
 //#endregion
 ```

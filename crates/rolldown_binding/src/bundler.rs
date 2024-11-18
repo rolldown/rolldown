@@ -134,16 +134,10 @@ impl Bundler {
   pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
 
-    let outputs = self.handle_result(bundler_core.write().await);
-
-    let outputs = match outputs {
+    let outputs = match bundler_core.write().await {
       Ok(outputs) => outputs,
-      Err(error) => return Ok(error),
+      Err(errs) => return Ok(self.handle_errors(errs.into_vec())),
     };
-
-    if !outputs.errors.is_empty() {
-      return Ok(self.handle_errors(outputs.errors));
-    }
 
     self.handle_warnings(outputs.warnings).await;
 
@@ -154,20 +148,14 @@ impl Bundler {
   pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
 
-    let outputs = self.handle_result(bundler_core.generate().await);
-
-    let outputs = match outputs {
-      Ok(outputs) => outputs,
-      Err(error) => return Ok(error),
+    let bundle_output = match bundler_core.generate().await {
+      Ok(output) => output,
+      Err(errs) => return Ok(self.handle_errors(errs.into_vec())),
     };
 
-    if !outputs.errors.is_empty() {
-      return Ok(self.handle_errors(outputs.errors));
-    }
+    self.handle_warnings(bundle_output.warnings).await;
 
-    self.handle_warnings(outputs.warnings).await;
-
-    Ok(outputs.assets.into())
+    Ok(bundle_output.assets.into())
   }
 
   #[allow(clippy::significant_drop_tightening)]

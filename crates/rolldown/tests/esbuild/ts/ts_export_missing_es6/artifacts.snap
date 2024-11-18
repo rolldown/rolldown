@@ -1,21 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# Errors
-
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "nope" is not exported by "bar.js".
-   ╭─[foo.ts:1:9]
-   │
- 1 │ export {nope} from './bar'
-   │         ──┬─  
-   │           ╰─── Missing export
-───╯
-
-```
-
 # Assets
 
 ## entry.js
@@ -23,6 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+//#region bar.js
+var nope = void 0;
+
+//#endregion
 //#region foo.ts
 var foo_exports = {};
 __export(foo_exports, { nope: () => nope });

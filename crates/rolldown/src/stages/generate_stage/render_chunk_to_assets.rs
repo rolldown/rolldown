@@ -7,7 +7,7 @@ use rolldown_common::{
   Asset, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk,
   SourceMapType,
 };
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -35,7 +35,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn render_chunk_to_assets(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-  ) -> anyhow::Result<BundleOutput> {
+  ) -> BuildResult<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
     let (mut instantiated_chunks, index_chunk_to_assets) =
@@ -189,9 +189,12 @@ impl<'a> GenerateStage<'a> {
 
     output.extend(output_assets);
 
+    if !errors.is_empty() {
+      return Err(errors.into());
+    }
+
     Ok(BundleOutput {
       assets: output,
-      errors,
       warnings,
       watch_files: self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect(),
     })

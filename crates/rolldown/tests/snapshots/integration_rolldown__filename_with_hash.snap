@@ -2204,6 +2204,10 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-BoHW517J.js
 
+# tests/esbuild/importstar_ts/ts_re_export_type_only_file_es6
+
+- entry-!~{000}~.js => entry-BBoMoYAJ.js
+
 # tests/esbuild/loader/assert_type_json_wrong_loader
 
 - entry-!~{000}~.js => entry-wreQ5_1W.js
@@ -3284,6 +3288,10 @@ snapshot_kind: text
 - not-supported-!~{001}~.js => not-supported-DNJDzzLy.js
 - supported-!~{000}~.js => supported-RIzYgVa6.js
 
+# tests/esbuild/ts/export_type_issue379
+
+- entry-!~{000}~.js => entry-DnnYiJnK.js
+
 # tests/esbuild/ts/this_inside_function_ts
 
 - entry-!~{000}~.js => entry-CbhkK8a-.js
@@ -3461,6 +3469,10 @@ snapshot_kind: text
 # tests/esbuild/ts/ts_export_equals
 
 - a-!~{000}~.js => a-BPCnKJzv.js
+
+# tests/esbuild/ts/ts_export_missing_es6
+
+- entry-!~{000}~.js => entry-4yp3dasi.js
 
 # tests/esbuild/ts/ts_export_namespace
 

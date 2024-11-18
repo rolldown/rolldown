@@ -5,7 +5,7 @@
         "name": "entry",
         "import": "entry.ts"
       }
-    ]
-  },
-  "expectError": true
+    ],
+    "shimMissingExports": true
+  }
 }

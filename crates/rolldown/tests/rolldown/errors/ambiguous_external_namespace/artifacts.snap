@@ -34,15 +34,3 @@ snapshot_kind: text
 ───╯
 
 ```
-
-# Assets
-
-## main.js
-
-```js
-
-//#region main.js
-console.log(value);
-
-//#endregion
-```

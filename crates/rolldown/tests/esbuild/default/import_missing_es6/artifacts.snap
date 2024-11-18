@@ -28,19 +28,3 @@ snapshot_kind: text
 ───╯
 
 ```
-
-# Assets
-
-## entry.js
-
-```js
-
-//#region foo.js
-const x = 123;
-
-//#endregion
-//#region entry.js
-console.log(fn(x, b));
-
-//#endregion
-```

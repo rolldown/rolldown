@@ -12,7 +12,7 @@ pub struct RenderImportSpecifier {
 #[derive(Debug)]
 pub enum RenderImportDeclarationSpecifier {
   ImportSpecifier(Vec<RenderImportSpecifier>),
-  ImportStarSpecifier(ArcStr),
+  ImportStarSpecifier(),
 }
 
 #[derive(Debug)]
@@ -23,44 +23,21 @@ pub struct ExternalRenderImportStmt {
 }
 
 #[derive(Debug)]
-pub struct NormalRenderImportStmt {
-  pub path: ArcStr,
-  pub specifiers: RenderImportDeclarationSpecifier,
-}
-
-#[derive(Debug)]
 pub enum RenderImportStmt {
-  NormalRenderImportStmt(NormalRenderImportStmt),
+  NormalRenderImportStmt(),
   ExternalRenderImportStmt(ExternalRenderImportStmt),
-}
-
-impl RenderImportStmt {
-  pub fn path(&self) -> &ArcStr {
-    match self {
-      Self::ExternalRenderImportStmt(e) => &e.path,
-      Self::NormalRenderImportStmt(n) => &n.path,
-    }
-  }
-
-  pub fn specifiers(&self) -> &RenderImportDeclarationSpecifier {
-    match self {
-      Self::ExternalRenderImportStmt(e) => &e.specifiers,
-      Self::NormalRenderImportStmt(n) => &n.specifiers,
-    }
-  }
 }
 
 pub fn collect_render_chunk_imports(
   chunk: &Chunk,
   graph: &LinkStageOutput,
-  chunk_graph: &ChunkGraph,
+  _chunk_graph: &ChunkGraph,
   format: &OutputFormat,
 ) -> Vec<RenderImportStmt> {
   let mut render_import_stmts = vec![];
 
   // render imports from other chunks
-  chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &chunk_graph.chunk_table[*exporter_id];
+  chunk.imports_from_other_chunks.iter().for_each(|(_, items)| {
     let mut specifiers = items
       .iter()
       .map(|item| {
@@ -81,11 +58,7 @@ pub fn collect_render_chunk_imports(
       .collect::<Vec<_>>();
     specifiers.sort_unstable();
 
-    render_import_stmts.push(RenderImportStmt::NormalRenderImportStmt(NormalRenderImportStmt {
-      // TODO: filename relative to importee
-      path: chunk.import_path_for(importee_chunk).into(),
-      specifiers: RenderImportDeclarationSpecifier::ImportSpecifier(specifiers),
-    }));
+    render_import_stmts.push(RenderImportStmt::NormalRenderImportStmt());
   });
 
   // render external imports
@@ -116,9 +89,7 @@ pub fn collect_render_chunk_imports(
               ExternalRenderImportStmt {
                 path: importee.name.clone(),
                 binding_name_token: importee.namespace_ref,
-                specifiers: RenderImportDeclarationSpecifier::ImportStarSpecifier(
-                  alias.as_str().into(),
-                ),
+                specifiers: RenderImportDeclarationSpecifier::ImportStarSpecifier(),
               },
             ));
             None

@@ -166,7 +166,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     if let RenderImportStmt::ExternalRenderImportStmt(stmt) = stmt {
       let has_specifiers = match &stmt.specifiers {
         RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => !specifiers.is_empty(),
-        RenderImportDeclarationSpecifier::ImportStarSpecifier(_) => true,
+        RenderImportDeclarationSpecifier::ImportStarSpecifier() => true,
       };
 
       let require_path_str = concat_string!("require(\"", &stmt.path, "\")");

@@ -877,7 +877,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry-!~{000}~.js => entry-C75NhbQo.js
+- entry-!~{000}~.js => entry-CqpH3eko.js
 
 # tests/esbuild/default/import_fs_node_es6
 
@@ -916,8 +916,8 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_namespace_this_value
 
-- a-!~{000}~.js => a-CyU7icqq.js
-- b-!~{001}~.js => b-C9w3c9b2.js
+- a-!~{000}~.js => a-BTBCWgsE.js
+- b-!~{001}~.js => b-BHzFVbNN.js
 - c-!~{002}~.js => c-DLZ6Rnj8.js
 - chunk-!~{003}~.js => chunk-D74pQ9g-.js
 
@@ -1600,7 +1600,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/string_export_names_common_js
 
-- entry-!~{000}~.js => entry-CJsg5VEV.js
+- entry-!~{000}~.js => entry-CD14SP2G.js
 
 # tests/esbuild/default/string_export_names_iife
 

@@ -36,7 +36,6 @@ snapshot_kind: text
 "use strict";
 
 const ___foo = __toESM(require("./foo"));
-const ___foo = __toESM(require("./foo"));
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,

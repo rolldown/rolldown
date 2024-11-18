@@ -6,6 +6,7 @@ import { PluginContextResolveOptions } from './plugin-context'
 export class PluginContextData {
   moduleOptionMap = new Map<string, ModuleOptions>()
   resolveOptionsMap = new Map<number, PluginContextResolveOptions>()
+  loadModulePromiseMap: Map<string, Promise<void>> = new Map()
 
   updateModuleOption(id: string, option: ModuleOptions) {
     const existing = this.moduleOptionMap.get(id)

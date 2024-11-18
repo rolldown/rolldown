@@ -76,8 +76,9 @@ export class PluginContext extends MinimalPluginContext {
       data.updateModuleOption(id, rawOptions)
 
       async function createLoadModulePromise() {
-        if (data.loadModulePromiseMap.has(id)) {
-          return data.loadModulePromiseMap.get(id)!
+        const loadPromise = data.loadModulePromiseMap.get(id)
+        if (loadPromise) {
+          return loadPromise
         }
         let resolveFn
         // TODO: If is not resolved, we need to set a time to avoid waiting.

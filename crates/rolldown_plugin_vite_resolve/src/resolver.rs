@@ -28,6 +28,7 @@ const RESOLVER_COUNT: u8 = 2_u8.pow(ADDITIONAL_OPTIONS_FIELD_COUNT as u32);
 
 const DEV_PROD_CONDITION: &str = "development|production";
 
+#[derive(Debug)]
 pub struct AdditionalOptions {
   is_require: bool,
   prefer_relative: bool,

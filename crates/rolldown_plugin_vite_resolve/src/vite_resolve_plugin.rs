@@ -14,8 +14,7 @@ use crate::{
     self, normalize_oxc_resolver_result, resolve_bare_import, AdditionalOptions, Resolver,
   },
   utils::{
-    is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path, normalize_path,
-    BROWSER_EXTERNAL_ID,
+    clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path, normalize_path, BROWSER_EXTERNAL_ID
   },
   CallablePlugin, ResolveOptionsExternal, ResolveOptionsNoExternal,
 };
@@ -279,6 +278,11 @@ impl ViteResolvePlugin {
           }));
         }
       }
+    }
+
+    // skip for now: https://github.com/oxc-project/oxc-resolver/pull/310
+    if clean_url(args.specifier) == "/" {
+      return Ok(None);
     }
 
     let base_dir = args

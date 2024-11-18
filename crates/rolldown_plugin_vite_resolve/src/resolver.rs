@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, sync::Arc};
 
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
@@ -6,7 +6,8 @@ use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use crate::{
   package_json_cache::PackageJsonCache,
   utils::{
-    can_externalize_file, clean_url, get_extension, is_bare_import, is_builtin, is_deep_import, normalize_path, BROWSER_EXTERNAL_ID
+    can_externalize_file, clean_url, get_extension, is_bare_import, is_builtin, is_deep_import,
+    normalize_path, BROWSER_EXTERNAL_ID,
   },
 };
 
@@ -55,13 +56,13 @@ impl From<[bool; RESOLVER_COUNT as usize]> for AdditionalOptions {
 
 #[derive(Debug)]
 pub struct Resolver {
-  base_resolver: oxc_resolver::Resolver,
   resolvers: [oxc_resolver::Resolver; RESOLVER_COUNT as usize],
+  external_resolver: Arc<oxc_resolver::Resolver>,
 }
 
 impl Resolver {
   // TODO(sapphi-red): tryPrefix support
-  pub fn new(base_options: &BaseOptions) -> Self {
+  pub fn new(base_options: &BaseOptions, external_conditions: &Vec<String>) -> Self {
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
     let resolvers = (0..RESOLVER_COUNT)
@@ -72,22 +73,25 @@ impl Resolver {
       .try_into()
       .unwrap();
 
-    Self { base_resolver, resolvers }
+    let external_resolver = base_resolver.clone_with_options(get_resolve_options(
+      &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
+      AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
+    ));
+
+    Self { resolvers, external_resolver: Arc::new(external_resolver) }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &oxc_resolver::Resolver {
     &self.resolvers[additional_options.as_u8() as usize]
   }
 
-  pub fn get_for_external(
-    &self,
-    base_options: &BaseOptions,
-    external_conditions: &Vec<String>,
-  ) -> oxc_resolver::Resolver {
-    self.base_resolver.clone_with_options(get_resolve_options(
-      &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
-      AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
-    ))
+  pub fn get_for_external(&self) -> Arc<oxc_resolver::Resolver> {
+    Arc::clone(&self.external_resolver)
+  }
+
+  pub fn clear_cache(&self) {
+    self.resolvers.iter().for_each(|v| v.clear_cache());
+    self.external_resolver.clear_cache();
   }
 }
 
@@ -205,7 +209,7 @@ pub fn normalize_oxc_resolver_result(
       if is_bare_import(id) && !is_builtin(id, runtime) && !id.contains('\0') {
         // TODO(sapphi-red): handle missing peerDep
         // https://github.com/vitejs/vite/blob/58f1df3288b0f9584bb413dd34b8d65671258f6f/packages/vite/src/node/plugins/resolve.ts#L728-L752
-        return Ok(None)
+        return Ok(None);
       }
       Ok(None)
     }
@@ -231,8 +235,7 @@ pub fn resolve_bare_import(
     if imp.is_absolute()
       && (
         // css processing appends `*` for importer
-        importer.ends_with('*') ||
-        fs::exists(clean_url(importer)).unwrap_or(false)
+        importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false)
       )
     {
       imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)

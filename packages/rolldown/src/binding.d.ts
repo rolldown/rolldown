@@ -8,6 +8,7 @@ export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   resolveId(id: string, importer?: string | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
   load(id: string): Promise<BindingHookJsLoadOutput | null>
+  watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
 export declare class BindingLog {
@@ -276,6 +277,10 @@ export interface BindingJsonSourcemap {
   sources?: Array<string | undefined | null>
   sourcesContent?: Array<string | undefined | null>
   names?: Array<string>
+}
+
+export interface BindingJsWatchChangeEvent {
+  event: string
 }
 
 export declare enum BindingLogLevel {

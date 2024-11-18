@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use napi::{bindgen_prelude::FromNapiValue, Either};
 use napi_derive::napi;
-use rolldown_common::side_effects;
+use rolldown_common::{side_effects, WatcherChangeKind};
 use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput};
 use rolldown_plugin_vite_resolve::{CallablePluginAsyncTrait, ViteResolvePlugin};
 
@@ -81,6 +81,16 @@ impl BindingCallableBuiltinPlugin {
   pub async fn load(&self, id: String) -> napi::Result<Option<BindingHookJsLoadOutput>> {
     Ok(self.inner.load(&HookLoadArgs { id: &id }).await?.map(Into::into))
   }
+
+  #[napi]
+  pub async fn watch_change(
+    &self,
+    path: String,
+    event: BindingJsWatchChangeEvent,
+  ) -> napi::Result<()> {
+    self.inner.watch_change(&path, bindingify_watcher_change_kind(event.event)?).await?;
+    Ok(())
+  }
 }
 
 #[napi(object)]
@@ -127,4 +137,18 @@ fn get_side_effects_binding(value: Option<side_effects::HookSideEffects>) -> Bin
     side_effects::HookSideEffects::True => Either::A(true),
     side_effects::HookSideEffects::NoTreeshake => Either::B("no-treeshake".to_string()),
   })
+}
+
+#[napi(object)]
+pub struct BindingJsWatchChangeEvent {
+  pub event: String,
+}
+
+fn bindingify_watcher_change_kind(value: String) -> napi::Result<WatcherChangeKind> {
+  match value.as_str() {
+    "create" => Ok(WatcherChangeKind::Create),
+    "delete" => Ok(WatcherChangeKind::Delete),
+    "update" => Ok(WatcherChangeKind::Update),
+    _ => Err(napi::Error::new(napi::Status::InvalidArg, "Invalid watcher change kind")),
+  }
 }

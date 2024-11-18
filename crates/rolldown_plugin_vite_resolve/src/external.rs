@@ -60,7 +60,7 @@ pub struct ExternalDeciderOptions {
 pub struct ExternalDecider {
   options: ExternalDeciderOptions,
   runtime: String,
-  resolver: oxc_resolver::Resolver,
+  resolver: Arc<oxc_resolver::Resolver>,
   package_json_cache: Arc<PackageJsonCache>,
   processed_ids: DashMap<String, bool>,
 }
@@ -69,7 +69,7 @@ impl ExternalDecider {
   pub fn new(
     options: ExternalDeciderOptions,
     runtime: String,
-    resolver: oxc_resolver::Resolver,
+    resolver: Arc<oxc_resolver::Resolver>,
     package_json_cache: Arc<PackageJsonCache>,
   ) -> Self {
     Self { options, runtime, resolver, package_json_cache, processed_ids: DashMap::default() }

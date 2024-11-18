@@ -21,10 +21,10 @@ use crate::{
 };
 use anyhow::anyhow;
 use derive_more::Debug;
-use rolldown_common::{side_effects::HookSideEffects, ImportKind};
+use rolldown_common::{side_effects::HookSideEffects, ImportKind, WatcherChangeKind};
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, PluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
 };
 use sugar_path::SugarPath;
 
@@ -89,7 +89,7 @@ pub struct ViteResolvePlugin {
 
   runtime: String,
 
-  resolver: Resolver,
+  resolver: Arc<Resolver>,
   package_json_cache: Arc<PackageJsonCache>,
   external_decider: ExternalDecider,
 }
@@ -108,7 +108,8 @@ impl ViteResolvePlugin {
       root: &options.resolve_options.root,
       preserve_symlinks: options.resolve_options.preserve_symlinks,
     };
-    let resolver = Resolver::new(&base_options);
+    let resolver =
+      Arc::new(Resolver::new(&base_options, &options.resolve_options.external_conditions));
 
     Self {
       external: options.external.clone(),
@@ -126,7 +127,7 @@ impl ViteResolvePlugin {
           root: options.resolve_options.root.clone(),
         },
         options.runtime,
-        resolver.get_for_external(&base_options, &options.resolve_options.external_conditions),
+        resolver.get_for_external(),
         package_json_cache.clone(),
       ),
 
@@ -361,7 +362,16 @@ impl ViteResolvePlugin {
     Ok(None)
   }
 
-  // TODO(sapphi-red): probably need to clear resolver cache when file is changed
+  fn watch_change_internal(&self, _path: &str, event: WatcherChangeKind) -> HookNoopReturn {
+    // TODO(sapphi-red): we need to avoid using cache for files not watched by vite or rollup
+    match event {
+      WatcherChangeKind::Create | WatcherChangeKind::Delete => {
+        self.resolver.clear_cache();
+      }
+      WatcherChangeKind::Update => {}
+    };
+    Ok(())
+  }
 }
 
 impl CallablePlugin for ViteResolvePlugin {
@@ -375,6 +385,10 @@ impl CallablePlugin for ViteResolvePlugin {
 
   async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     self.load_internal(args).await
+  }
+
+  async fn watch_change(&self, path: &str, event: WatcherChangeKind) -> HookNoopReturn {
+    self.watch_change_internal(path, event)
   }
 }
 
@@ -393,6 +407,15 @@ impl Plugin for ViteResolvePlugin {
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     self.load_internal(args).await
+  }
+
+  async fn watch_change(
+    &self,
+    _ctx: &PluginContext,
+    path: &str,
+    event: WatcherChangeKind,
+  ) -> rolldown_plugin::HookNoopReturn {
+    self.watch_change_internal(path, event)
   }
 }
 

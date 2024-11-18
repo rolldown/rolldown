@@ -50,9 +50,9 @@ impl ScanStage {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self) -> anyhow::Result<BuildResult<ScanStageOutput>> {
+  pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
+      return Err(anyhow::format_err!("You must supply options.input to rolldown").into());
     }
 
     let module_loader = ModuleLoader::new(
@@ -65,7 +65,7 @@ impl ScanStage {
     let user_entries = match self.resolve_user_defined_entries().await? {
       Ok(entries) => entries,
       Err(errors) => {
-        return Ok(Err(errors));
+        return Err(errors);
       }
     };
 
@@ -80,11 +80,11 @@ impl ScanStage {
     } = match module_loader.fetch_all_modules(user_entries).await? {
       Ok(output) => output,
       Err(errors) => {
-        return Ok(Err(errors));
+        return Err(errors);
       }
     };
 
-    Ok(Ok(ScanStageOutput {
+    Ok(ScanStageOutput {
       module_table,
       entry_points,
       symbol_ref_db,
@@ -93,7 +93,7 @@ impl ScanStage {
       index_ecma_ast,
       errors: vec![],
       dynamic_import_exports_usage_map,
-    }))
+    })
   }
 
   /// Resolve `InputOptions.input`

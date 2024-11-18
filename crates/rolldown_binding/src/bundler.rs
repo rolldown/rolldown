@@ -17,7 +17,7 @@ use crate::{
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
-use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
+use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 
 #[napi]
 pub struct Bundler {
@@ -119,13 +119,12 @@ impl Bundler {
     let output = self.handle_result(bundler_core.scan().await);
 
     match output {
-      Ok(Ok(output)) => {
+      Ok(output) => {
         self.handle_warnings(output.warnings).await;
       }
-      Ok(Err(errs)) => {
-        return Ok(self.handle_errors(errs.into_vec()));
+      Err(outputs) => {
+        return Ok(outputs);
       }
-      Err(error) => return Ok(error),
     }
 
     Ok(vec![].into())
@@ -197,8 +196,8 @@ impl Bundler {
     BindingOutputs::from_errors(errs, self.cwd.clone())
   }
 
-  fn handle_result<T>(&self, result: anyhow::Result<T>) -> Result<T, BindingOutputs> {
-    result.map_err(|e| self.handle_errors(vec![BuildDiagnostic::unhandleable_error(e)]))
+  fn handle_result<T>(&self, result: BuildResult<T>) -> Result<T, BindingOutputs> {
+    result.map_err(|e| self.handle_errors(e.into_vec()))
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]

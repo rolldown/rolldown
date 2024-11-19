@@ -44,24 +44,26 @@ export class Watcher {
         break
       case 'event':
         this.inner.on(BindingWatcherEvent.Event, async (data) => {
-          switch (data!.code) {
+          const code = data.bundleEventKind()
+          switch (code) {
             case 'BUNDLE_END':
+              const { duration, output } = data.bundleEndData()
               await listener({
                 code: 'BUNDLE_END',
-                duration: Number(data!.duration),
-                output: [data!.output], // rolldown doesn't support arraying configure output
+                duration,
+                output: [output], // rolldown doesn't support arraying configure output
               })
               break
 
             case 'ERROR':
               await listener({
                 code: 'ERROR',
-                error: { message: data!.error },
+                error: { message: data.error() },
               })
               break
 
             default:
-              await listener(data)
+              await listener({ code })
               break
           }
         })
@@ -75,7 +77,8 @@ export class Watcher {
 
       case 'change':
         this.inner.on(BindingWatcherEvent.Change, async (data) => {
-          await listener(data!.id, { event: data!.kind as ChangeEvent })
+          const { path, kind } = data.watchChangeData()
+          await listener(path, { event: kind as ChangeEvent })
         })
         break
       default:

@@ -63,7 +63,9 @@ init_foo();
 (2:10-0:0) "" --> (25:7-26:0) " 1;"
 (0:0-8:1) "import assert from \"node:assert\";\n\nconst a = 1;\n\nexport default function foo(a$1) {\n  assert.equal(a$1, a$1)\n  assert.equal(a, 1)\n}\n" --> (26:0-30:0) "\n} });\n\n//#endregion\n//#region bar.js"
 - ../bar.js
-(0:0-2:15) "import foo from './foo'\n\nexport default" --> (30:0-31:18) "\ninit_foo();\nvar bar_default ="
+(0:0-0:23) "import foo from './foo'" --> (30:0-30:10) "\ninit_foo("
+(0:23-0:0) "import foo from './foo'" --> (30:10-31:0) ");"
+(0:0-2:15) "import foo from './foo'\n\nexport default" --> (31:0-31:18) "\nvar bar_default ="
 (2:15-2:17) " {" --> (31:18-31:20) " {"
 (2:17-2:22) " foo " --> (31:20-31:31) " foo: foo$1"
 (2:22-2:23) "}" --> (31:31-35:0) " };\n\n//#endregion\n//#region main.js"

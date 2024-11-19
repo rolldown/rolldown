@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown_common::{ChunkKind, OutputExports};
+use rolldown_common::{ChunkKind, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
@@ -10,7 +10,6 @@ use crate::{
   },
   types::generator::GenerateContext,
   utils::chunk::{
-    collect_render_chunk_imports::ExternalRenderImportStmt,
     determine_export_mode::determine_export_mode,
     determine_use_strict::determine_use_strict,
     namespace_marker::render_namespace_markers,
@@ -23,7 +22,8 @@ use super::utils::{
 };
 
 pub fn render_umd<'code>(
-  ctx: &mut GenerateContext<'_>,
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
   module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
   footer: Option<&'code str>,
@@ -51,7 +51,7 @@ pub fn render_umd<'code>(
   };
 
   // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
-  let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
+  let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
 
   let named_exports = matches!(&export_mode, OutputExports::Named);
 
@@ -77,7 +77,7 @@ pub fn render_umd<'code>(
     ""
   };
   let iife_end = if need_global { ")" } else { "" };
-  let iife_export = render_iife_export(ctx, &externals, has_exports, named_exports)?;
+  let iife_export = render_iife_export(warnings, ctx, &externals, has_exports, named_exports)?;
   source_joiner.append_source(format!(
     "(function({wrapper_parameters}) {{
   {cjs_intro}
@@ -146,33 +146,34 @@ pub fn render_umd<'code>(
   Ok(source_joiner)
 }
 
-fn render_amd_dependencies(externals: &[ExternalRenderImportStmt], has_exports: bool) -> String {
+fn render_amd_dependencies(externals: &[&ExternalModule], has_exports: bool) -> String {
   let mut dependencies = Vec::with_capacity(externals.len());
   if has_exports {
     dependencies.reserve(1);
     dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(format!("'{}'", external.path.as_str()));
+    dependencies.push(format!("'{}'", external.name.as_str()));
   });
   dependencies.join(", ")
 }
 
-fn render_cjs_dependencies(externals: &[ExternalRenderImportStmt], has_exports: bool) -> String {
+fn render_cjs_dependencies(externals: &[&ExternalModule], has_exports: bool) -> String {
   let mut dependencies = Vec::with_capacity(externals.len());
   if has_exports {
     dependencies.reserve(1);
     dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(format!("require('{}')", external.path.as_str()));
+    dependencies.push(format!("require('{}')", external.name.as_str()));
   });
   dependencies.join(", ")
 }
 
 fn render_iife_export(
-  ctx: &mut GenerateContext<'_>,
-  externals: &[ExternalRenderImportStmt],
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
+  externals: &[&ExternalModule],
   has_exports: bool,
   named_exports: bool,
 ) -> BuildResult<String> {
@@ -181,15 +182,15 @@ fn render_iife_export(
   }
   let mut dependencies = Vec::with_capacity(externals.len());
   externals.iter().for_each(|external| {
-    if let Some(global) = ctx.options.globals.get(external.path.as_str()) {
+    if let Some(global) = ctx.options.globals.get(external.name.as_str()) {
       dependencies.push(format!(
         "global{}",
         global.split('.').map(render_property_access).collect::<String>()
       ));
     } else {
-      let target = legitimize_identifier_name(external.path.as_str()).to_string();
-      ctx.warnings.push(
-        BuildDiagnostic::missing_global_name(external.path.clone(), ArcStr::from(&target))
+      let target = legitimize_identifier_name(external.name.as_str()).to_string();
+      warnings.push(
+        BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
           .with_severity_warning(),
       );
       dependencies.push(format!("global{}", render_property_access(&target)));

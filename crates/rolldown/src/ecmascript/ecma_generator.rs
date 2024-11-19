@@ -125,6 +125,8 @@ impl Generator for EcmaGenerator {
         .await?
     };
 
+    let mut warnings = vec![];
+
     let source_joiner = match ctx.options.format {
       OutputFormat::Esm => render_esm(
         ctx,
@@ -137,6 +139,7 @@ impl Generator for EcmaGenerator {
       ),
       OutputFormat::Cjs => {
         match render_cjs(
+          &mut warnings,
           ctx,
           &rendered_module_sources,
           banner.as_deref(),
@@ -160,6 +163,7 @@ impl Generator for EcmaGenerator {
       ),
       OutputFormat::Iife => {
         match render_iife(
+          &mut warnings,
           ctx,
           &rendered_module_sources,
           banner.as_deref(),
@@ -174,6 +178,7 @@ impl Generator for EcmaGenerator {
       }
       OutputFormat::Umd => {
         match render_umd(
+          &mut warnings,
           ctx,
           &rendered_module_sources,
           banner.as_deref(),
@@ -186,6 +191,8 @@ impl Generator for EcmaGenerator {
         }
       }
     };
+
+    ctx.warnings.extend(warnings);
 
     let (content, mut map) = source_joiner.join();
 

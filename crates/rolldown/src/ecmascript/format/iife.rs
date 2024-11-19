@@ -23,7 +23,6 @@
 //! 10. Render the footer if it exists.
 
 use crate::ecmascript::format::utils::namespace::generate_identifier;
-use crate::utils::chunk::collect_render_chunk_imports::ExternalRenderImportStmt;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
@@ -35,7 +34,7 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{ChunkKind, OutputExports};
+use rolldown_common::{ChunkKind, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
@@ -43,8 +42,10 @@ use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use super::utils::{render_chunk_external_imports, render_factory_parameters};
 
 /// The main function for rendering the IIFE format chunks.
+#[allow(clippy::too_many_arguments)]
 pub fn render_iife<'code>(
-  ctx: &mut GenerateContext<'_>,
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
   module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
   footer: Option<&'code str>,
@@ -77,7 +78,7 @@ pub fn render_iife<'code>(
   };
 
   // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
-  let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
+  let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
 
   let named_exports = matches!(&export_mode, OutputExports::Named);
 
@@ -86,7 +87,7 @@ pub fn render_iife<'code>(
 
   // Generate the identifier for the IIFE wrapper function.
   // You can refer to the function for more details.
-  let (definition, assignment) = generate_identifier(ctx, export_mode)?;
+  let (definition, assignment) = generate_identifier(warnings, ctx, export_mode)?;
 
   let exports_prefix = if has_exports && named_exports {
     if ctx.options.extend {
@@ -178,7 +179,7 @@ pub fn render_iife<'code>(
   }
 
   // iife wrapper end
-  let factory_arguments = render_iife_factory_arguments(ctx, &externals, exports_prefix);
+  let factory_arguments = render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix);
   source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
@@ -189,8 +190,9 @@ pub fn render_iife<'code>(
 }
 
 fn render_iife_factory_arguments(
-  ctx: &mut GenerateContext<'_>,
-  externals: &[ExternalRenderImportStmt],
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
+  externals: &[&ExternalModule],
   exports_prefix: Option<&str>,
 ) -> String {
   let mut factory_arguments = if let Some(exports_prefix) = exports_prefix {
@@ -200,12 +202,12 @@ fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
-    if let Some(global) = globals.get(external.path.as_str()) {
+    if let Some(global) = globals.get(external.name.as_str()) {
       factory_arguments.push(legitimize_identifier_name(global).to_string());
     } else {
-      let target = legitimize_identifier_name(external.path.as_str()).to_string();
-      ctx.warnings.push(
-        BuildDiagnostic::missing_global_name(external.path.clone(), ArcStr::from(&target))
+      let target = legitimize_identifier_name(&external.name).to_string();
+      warnings.push(
+        BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
           .with_severity_warning(),
       );
       factory_arguments.push(target);

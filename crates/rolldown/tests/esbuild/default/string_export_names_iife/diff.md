@@ -18,11 +18,10 @@ var global;
 ```
 ### rolldown
 ```js
-(function(exports, ___foo, ___foo) {
+(function(exports, ___foo) {
 
 "use strict";
 
-___foo = __toESM(___foo);
 ___foo = __toESM(___foo);
 
 Object.defineProperty(exports, 'all the stuff', {
@@ -33,41 +32,34 @@ Object.defineProperty(exports, 'all the stuff', {
 });
 exports["some export"] = ___foo["some import"]
 return exports;
-})({}, ___foo, ___foo);
+})({}, ___foo);
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,16 @@
+@@ -1,11 +1,11 @@
 -var global;
 -(global ||= {}).name = (() => {
 -    var entry_exports = {};
 -    __export(entry_exports, {
 -        "all the stuff": () => all_the_stuff,
 -        "some export": () => import_foo["some import"]
--    });
++(function (exports, ___foo) {
++    ___foo = __toESM(___foo);
++    Object.defineProperty(exports, 'all the stuff', {
++        enumerable: true,
++        get: function () {
++            return ___foo;
++        }
+     });
 -    var import_foo = require("./foo");
 -    var all_the_stuff = __toESM(require("./foo"));
 -    return __toCommonJS(entry_exports);
 -})();
-+(function(exports, ___foo, ___foo) {
-+
-+"use strict";
-+
-+___foo = __toESM(___foo);
-+___foo = __toESM(___foo);
-+
-+Object.defineProperty(exports, 'all the stuff', {
-+  enumerable: true,
-+  get: function () {
-+    return ___foo;
-+  }
-+});
-+exports["some export"] = ___foo["some import"]
-+return exports;
-+})({}, ___foo, ___foo);
-\ No newline at end of file
++    exports["some export"] = ___foo["some import"];
++    return exports;
++})({}, ___foo);
 
 ```

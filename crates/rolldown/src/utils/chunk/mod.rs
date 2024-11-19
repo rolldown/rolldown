@@ -8,7 +8,6 @@ use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 use self::render_chunk_exports::get_chunk_export_names;
 
-pub mod collect_render_chunk_imports;
 pub mod deconflict_chunk_symbols;
 pub mod determine_export_mode;
 pub mod determine_use_strict;

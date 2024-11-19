@@ -10,12 +10,6 @@ snapshot_kind: text
 [MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "___foo".
 
 ```
-## MISSING_GLOBAL_NAME
-
-```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "___foo".
-
-```
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
@@ -51,11 +45,10 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-(function(exports, ___foo, ___foo) {
+(function(exports, ___foo) {
 
 "use strict";
 
-___foo = __toESM(___foo);
 ___foo = __toESM(___foo);
 
 Object.defineProperty(exports, 'all the stuff', {
@@ -66,5 +59,5 @@ Object.defineProperty(exports, 'all the stuff', {
 });
 exports["some export"] = ___foo["some import"]
 return exports;
-})({}, ___foo, ___foo);
+})({}, ___foo);
 ```

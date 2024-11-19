@@ -123,7 +123,7 @@ pub use crate::{
   types::symbol_ref::SymbolRef,
   types::symbol_ref_db::{SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
   types::watch::{
-    BundleEndEventData, BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent,
+    BundleEndEventData, BundleEventKind, WatcherChangeData, WatcherChangeKind, WatcherEvent,
     WatcherEventData,
   },
   types::wrap_kind::WrapKind,

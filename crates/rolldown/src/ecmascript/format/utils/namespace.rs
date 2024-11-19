@@ -64,16 +64,15 @@ pub fn generate_namespace_definition(
 ///
 /// As for the namespaced name (including `.`), please refer to the `generate_namespace_definition` function.
 pub fn generate_identifier(
-  ctx: &mut GenerateContext<'_>,
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
   export_mode: OutputExports,
 ) -> BuildResult<(String, String)> {
   // Handle the diagnostic warning
   if ctx.options.name.as_ref().map_or(true, String::is_empty)
     && !matches!(export_mode, OutputExports::None)
   {
-    ctx
-      .warnings
-      .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
+    warnings.push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
   }
 
   // Early return if `name` is None

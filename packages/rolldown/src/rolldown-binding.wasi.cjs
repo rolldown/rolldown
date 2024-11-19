@@ -177,7 +177,12 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingWatcher_struct_123']?.()
   __napiInstance.exports['__napi_register__BindingWatcher_impl_127']?.()
   __napiInstance.exports['__napi_register__BindingWatcherEvent_128']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEventData_struct_129']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEventData_impl_134']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_135']?.()
+  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_136']?.()
 }
+module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
@@ -188,6 +193,8 @@ module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
 module.exports.BindingRenderedModule = __napiModule.exports.BindingRenderedModule
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
+module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
+module.exports.BindingWatcherEventData = __napiModule.exports.BindingWatcherEventData
 module.exports.Bundler = __napiModule.exports.Bundler
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName

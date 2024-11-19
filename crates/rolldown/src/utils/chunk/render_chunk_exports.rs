@@ -14,7 +14,7 @@ use rolldown_utils::{
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(
-  ctx: &mut GenerateContext<'_>,
+  ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;

@@ -8,6 +8,11 @@ export interface RenderedModule {
   renderedLength: number
 }
 
+export declare class BindingBundleEndEventData {
+  output: string
+  duration: number
+}
+
 export declare class BindingCallableBuiltinPlugin {
   name: string
   constructor(plugin: BindingBuiltinPlugin)
@@ -81,8 +86,20 @@ export declare class BindingTransformPluginContext {
 
 export declare class BindingWatcher {
   close(): Promise<void>
-  on(event: BindingWatcherEvent, listener: (data?: Record<string, string>) => void): void
+  on(event: BindingWatcherEvent, listener: (data: BindingWatcherEventData) => void): void
   start(): Promise<void>
+}
+
+export declare class BindingWatcherChangeData {
+  path: string
+  kind: string
+}
+
+export declare class BindingWatcherEventData {
+  watchChangeData(): BindingWatcherChangeData
+  bundleEndData(): BindingBundleEndEventData
+  bundleEventKind(): string
+  error(): string
 }
 
 export declare class Bundler {

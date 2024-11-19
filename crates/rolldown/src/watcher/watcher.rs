@@ -4,7 +4,7 @@ use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
 use rolldown_common::{
-  BundleEndEventData, BundleEventKind, WatcherChange, WatcherChangeKind, WatcherEvent,
+  BundleEndEventData, BundleEventKind, WatcherChangeData, WatcherChangeKind, WatcherEvent,
   WatcherEventData,
 };
 use rolldown_error::{BuildResult, DiagnosticOptions, ResultExt};
@@ -165,7 +165,8 @@ impl Watcher {
             WatcherEvent::Event,
             BundleEventKind::BundleEnd(BundleEndEventData {
               output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
-              duration: start_time.elapsed().as_millis().to_string(),
+              #[allow(clippy::cast_possible_truncation)]
+              duration: start_time.elapsed().as_millis() as u32,
             })
             .into(),
           )
@@ -222,7 +223,7 @@ impl Watcher {
 pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
-    .emit(WatcherEvent::Change, WatcherChange { path: path.into(), kind }.into())
+    .emit(WatcherEvent::Change, WatcherChangeData { path: path.into(), kind }.into())
     .await
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
   let bundler = watcher.bundler.lock().await;

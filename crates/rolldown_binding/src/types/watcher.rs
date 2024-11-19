@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use napi_derive::napi;
 
@@ -24,19 +24,20 @@ impl BindingWatcher {
   }
 
   #[napi(
-    ts_args_type = "event: BindingWatcherEvent, listener: (data?: Record<string, string>) => void"
+    ts_args_type = "event: BindingWatcherEvent, listener: (data: BindingWatcherEventData) => void"
   )]
   pub fn on(
     &self,
     event: BindingWatcherEvent,
-    listener: MaybeAsyncJsCallback<Option<HashMap<&'static str, String>>, ()>,
+    listener: MaybeAsyncJsCallback<BindingWatcherEventData, ()>,
   ) -> napi::Result<()> {
     self.inner.emitter.on(
       event.into(),
       Box::new(move |data| {
         let listener = Arc::clone(&listener);
-        let data = data.inner().clone();
-        Box::pin(async move { listener.await_call(data).await.map_err(anyhow::Error::from) })
+        Box::pin(async move {
+          listener.await_call(BindingWatcherEventData::new(data)).await.map_err(anyhow::Error::from)
+        })
       }),
     );
     Ok(())
@@ -66,4 +67,70 @@ impl From<BindingWatcherEvent> for rolldown_common::WatcherEvent {
       BindingWatcherEvent::Change => rolldown_common::WatcherEvent::Change,
     }
   }
+}
+
+#[napi]
+pub struct BindingWatcherEventData {
+  inner: Arc<rolldown_common::WatcherEventData>,
+}
+
+#[napi]
+impl BindingWatcherEventData {
+  pub fn new(inner: Arc<rolldown_common::WatcherEventData>) -> Self {
+    Self { inner }
+  }
+
+  #[napi]
+  pub fn watch_change_data(&self) -> BindingWatcherChangeData {
+    if let rolldown_common::WatcherEventData::WatcherChange(data) = &*self.inner {
+      BindingWatcherChangeData { path: data.path.to_string(), kind: data.kind.to_string() }
+    } else {
+      unreachable!("Expected WatcherEventData::Change")
+    }
+  }
+
+  #[napi]
+  pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
+    if let rolldown_common::WatcherEventData::BundleEvent(
+      rolldown_common::BundleEventKind::BundleEnd(data),
+    ) = &*self.inner
+    {
+      BindingBundleEndEventData { output: data.output.to_string(), duration: data.duration }
+    } else {
+      unreachable!("Expected WatcherEventData::BundleEvent(BundleEventKind::BundleEnd)")
+    }
+  }
+
+  #[napi]
+  pub fn bundle_event_kind(&self) -> String {
+    if let rolldown_common::WatcherEventData::BundleEvent(kind) = &*self.inner {
+      kind.to_string()
+    } else {
+      unreachable!("Expected WatcherEventData::BundleEvent")
+    }
+  }
+
+  #[napi]
+  pub fn error(&self) -> String {
+    if let rolldown_common::WatcherEventData::BundleEvent(
+      rolldown_common::BundleEventKind::Error(err),
+    ) = &*self.inner
+    {
+      err.to_string()
+    } else {
+      unreachable!("Expected WatcherEventData::BundleEvent(BundleEventKind::Error)")
+    }
+  }
+}
+
+#[napi]
+pub struct BindingWatcherChangeData {
+  pub path: String,
+  pub kind: String,
+}
+
+#[napi]
+pub struct BindingBundleEndEventData {
+  pub output: String,
+  pub duration: u32,
 }

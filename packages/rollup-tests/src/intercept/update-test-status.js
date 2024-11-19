@@ -3,6 +3,7 @@ const {
   calcTestId,
   updateFailedTestsJson,
   loadIgnoredTests,
+  unsupportedFeaturesIgnoredTests,
   // loadOnlyTests,
 } = require('./utils')
 const fs = require('node:fs')
@@ -18,7 +19,7 @@ const status = {
   failed: 0,
   skipFailed: 0,
   ignored: ignoredTests.size,
-  skipped: 0,
+  ignoredByUnsupportedFeatures: unsupportedFeaturesIgnoredTests.length,
   passed: 0,
 }
 
@@ -33,7 +34,7 @@ beforeEach(function skipAlreadyFiledTests() {
   //   this.currentTest?.skip()
   // }
 
-  if (ignoredTests.has(id)) {
+  if (ignoredTests.has(id) || unsupportedFeaturesIgnoredTests.find((test) => test.includes(id))) {
     // status.ignored += 1
     this.currentTest?.skip()
   }

@@ -1,4 +1,4 @@
-const { loadFailedTests, calcTestId, loadIgnoredTests } = require('./utils')
+const { loadFailedTests, calcTestId, loadIgnoredTests, unsupportedFeaturesIgnoredTests } = require('./utils')
 const expectedStatus = require('../status.json');
 const alreadyFailedTests = new Set(loadFailedTests())
 
@@ -9,7 +9,7 @@ const status = {
   failed: 0,
   skipFailed: 0,
   ignored: ignoredTests.size,
-  skipped: 0,
+  ignoredByUnsupportedFeatures: unsupportedFeaturesIgnoredTests.length,
   passed: 0,
 }
 
@@ -25,7 +25,7 @@ beforeEach(function skipAlreadyFiledTests() {
   // status.total += 1
   const id = calcTestId(this.currentTest)
 
-  if (ignoredTests.has(id)) {
+  if (ignoredTests.has(id) || unsupportedFeaturesIgnoredTests.find((test) => test.includes(id))) {
     // status.ignored += 1
     this.currentTest?.skip()
   }

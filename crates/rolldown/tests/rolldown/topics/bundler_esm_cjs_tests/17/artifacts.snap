@@ -20,3 +20,26 @@ var init_entry = __esm({ "entry.js"() {
 //#endregion
 init_entry();
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+"use strict";
+
+
+//#region entry.js
+var entry_exports = {};
+var entry;
+var init_entry = __esm({ "entry.js"() {
+	entry = (init_entry(), __toCommonJS(entry_exports));
+	input.works = entry[Math.random() < 1 && "__esModule"] === true;
+} });
+
+//#endregion
+init_entry();
+```

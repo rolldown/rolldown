@@ -18,3 +18,24 @@ input.works = __esModule === false && foo_default.bar === 123;
 
 //#endregion
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+"use strict";
+
+//#region foo.js
+let __esModule = false;
+var foo_default = { bar: 123 };
+
+//#endregion
+//#region entry.js
+input.works = __esModule === false && foo_default.bar === 123;
+
+//#endregion
+```

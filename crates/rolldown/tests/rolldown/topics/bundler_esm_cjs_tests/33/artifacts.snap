@@ -23,3 +23,29 @@ var foo_default = 123;
 //#endregion
 export { foo_default as default };
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.js
+input.works = import("./foo.js").then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
+
+//#endregion
+```
+## foo.js
+
+```js
+"use strict";
+
+//#region foo.js
+var foo_default = 123;
+
+//#endregion
+module.exports = foo_default;
+```

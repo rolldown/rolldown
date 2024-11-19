@@ -20,3 +20,25 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 export default require_entry();
 
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+
+
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"(exports) {
+	const entry = require_entry();
+	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
+	exports.foo = 123;
+} });
+
+//#endregion
+export default require_entry();
+
+```

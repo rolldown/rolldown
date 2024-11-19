@@ -462,7 +462,16 @@ impl IntegrationTest {
       package_json.write_all(serde_json::to_string_pretty(&json).unwrap().as_bytes()).unwrap();
     }
 
-    let test_script = if is_output_cjs { cwd.join("_test.cjs") } else { cwd.join("_test.mjs") };
+    let mut test_script = cwd.join("_test.mjs");
+
+    let mut is_cjs_test_script = false;
+    if is_output_cjs {
+      let cjs_test_script = cwd.join("_test.cjs");
+      if cjs_test_script.is_dir() {
+        test_script = cjs_test_script;
+        is_cjs_test_script = true;
+      }
+    }
 
     let mut node_command = Command::new("node");
 
@@ -482,12 +491,12 @@ impl IntegrationTest {
         .collect::<Vec<_>>();
 
       compiled_entries.iter().for_each(|entry| {
-        if is_output_cjs {
+        if is_cjs_test_script {
           node_command.arg("--require");
         } else {
           node_command.arg("--import");
         }
-        if cfg!(target_os = "windows") && !is_output_cjs {
+        if cfg!(target_os = "windows") && !is_cjs_test_script {
           // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
           node_command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
         } else {

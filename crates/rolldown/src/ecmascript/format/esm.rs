@@ -126,7 +126,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             default_alias.push(imported.as_str().into());
             return None;
           }
-          Some(concat_string!(imported, " as ", alias))
+          Some(concat_string!(alias, " as ", imported))
         }
       })
       .collect::<Vec<_>>();

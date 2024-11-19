@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import { share_default } from "./share3.js";
+import { share_default$1 } from "./share4.js";
+
+//#region main.js
+console.log(share_default, share_default$1);
+import("./share.js");
+import("./share2.js");
+
+//#endregion
+```
+## share.js
+
+```js
+import { share_default } from "./share3.js";
+
+export { share_default as default };
+```
+## share2.js
+
+```js
+import { share_default$1 as share_default } from "./share4.js";
+
+export { share_default as default };
+```
+## share3.js
+
+```js
+
+//#region share.js
+var share_default = "shared";
+
+//#endregion
+export { share_default };
+```
+## share4.js
+
+```js
+
+//#region share.json
+var share_default = {};
+
+//#endregion
+export { share_default as share_default$1 };
+```

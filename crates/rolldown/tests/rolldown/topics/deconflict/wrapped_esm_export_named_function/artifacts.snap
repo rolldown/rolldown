@@ -57,7 +57,9 @@ init_foo();
 (0:10-0:0) "const a = " --> (24:7-25:0) " 1;"
 (0:0-4:2) "const a = 1;\n\nexport function foo(a$1) {\n    console.log(a$1, a)\n}" --> (25:0-29:0) "\n} });\n\n//#endregion\n//#region bar.js"
 - ../bar.js
-(0:0-2:15) "import { foo } from './foo'\n\nexport default" --> (29:0-30:18) "\ninit_foo();\nvar bar_default ="
+(0:0-0:27) "import { foo } from './foo'" --> (29:0-29:10) "\ninit_foo("
+(0:27-0:0) "import { foo } from './foo'" --> (29:10-30:0) ");"
+(0:0-2:15) "import { foo } from './foo'\n\nexport default" --> (30:0-30:18) "\nvar bar_default ="
 (2:15-2:17) " {" --> (30:18-30:20) " {"
 (2:17-2:22) " foo " --> (30:20-30:31) " foo: foo$1"
 (2:22-2:23) "}" --> (30:31-34:0) " };\n\n//#endregion\n//#region main.js"

@@ -36,12 +36,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     Some(expr)
-
-    // let canonical_name = self.canonical_name_for(canonical_ref);
-    // if id_ref.name != canonical_name.as_str() {
-    //   return Some(self.snippet.id_ref_expr(canonical_name, id_ref.span));
-    // }
-    // None
   }
 
   /// return `None` if
@@ -84,34 +78,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     expr: &mut ast::Expression<'ast>,
     is_callee: bool,
-  ) {
-    if let Some(id_ref) = expr.as_identifier_mut() {
-      if let Some(new_expr) = self.generate_finalized_expr_for_reference(id_ref, is_callee) {
-        *expr = new_expr;
-      } else {
-        // Nevertheless, this identifier is processed and don't need to be processed again.
-        *id_ref.reference_id.get_mut() = None;
-      }
+  ) -> Option<()> {
+    let id_ref = expr.as_identifier_mut()?;
+    if let Some(new_expr) = self.generate_finalized_expr_for_reference(id_ref, is_callee) {
+      *expr = new_expr;
+    } else {
+      // Nevertheless, this identifier is processed and don't need to be processed again.
+      *id_ref.reference_id.get_mut() = None;
     }
+    None
   }
 
   pub fn rewrite_simple_assignment_target(
     &mut self,
     simple_target: &mut ast::SimpleAssignmentTarget<'ast>,
-  ) {
+  ) -> Option<()> {
     // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
     let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) = simple_target
     else {
-      return;
+      return None;
     };
 
-    let Some(reference_id) = target_id_ref.reference_id.get() else {
-      return;
-    };
+    let reference_id = target_id_ref.reference_id.get()?;
 
-    let Some(symbol_id) = self.scope.symbol_id_for(reference_id) else {
-      return;
-    };
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
@@ -128,6 +118,48 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         target_id_ref.name = self.snippet.atom(canonical_name);
       }
       *target_id_ref.reference_id.get_mut() = None;
+    }
+    None
+  }
+
+  pub fn rewrite_object_pat_shorthand(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
+    for prop in pat.properties.iter_mut() {
+      match &mut prop.value.kind {
+        // Ensure `const { a } = ...;` will be rewritten to `const { a: a } = ...` instead of `const { a } = ...`
+        // Ensure `function foo({ a }) {}` will be rewritten to `function foo({ a: a }) {}` instead of `function foo({ a }) {}`
+        ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
+          if let Some(symbol_id) = ident.symbol_id.get() {
+            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            if ident.name != canonical_name.as_str() {
+              ident.name = self.snippet.atom(canonical_name);
+              prop.shorthand = false;
+            }
+            ident.symbol_id.get_mut().take();
+          }
+        }
+        // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a = 1 } = ...` instead of `const { a = 1 } = ...`
+        // Ensure `function foo({ a = 1 }) {}` will be rewritten to `function foo({ a: a = 1 }) {}` instead of `function foo({ a = 1 }) {}`
+        ast::BindingPatternKind::AssignmentPattern(assign_pat) if prop.shorthand => {
+          let ast::BindingPatternKind::BindingIdentifier(ident) = &mut assign_pat.left.kind else {
+            continue;
+          };
+          if let Some(symbol_id) = ident.symbol_id.get() {
+            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            if ident.name != canonical_name.as_str() {
+              ident.name = self.snippet.atom(canonical_name);
+              prop.shorthand = false;
+            }
+            ident.symbol_id.get_mut().take();
+          }
+        }
+        _ => {
+          // For other patterns:
+          // - `const [a] = ...` or `function foo([a]) {}`
+          // - `const { a: b } = ...` or `function foo({ a: b }) {}`
+          // - `const { a: b = 1 } = ...` or `function foo({ a: b = 1 }) {}`
+          // They could keep correct semantics after renaming, so we don't need to do anything special.
+        }
+      }
     }
   }
 }

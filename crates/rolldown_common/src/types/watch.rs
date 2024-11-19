@@ -1,14 +1,16 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use arcstr::ArcStr;
 
-#[allow(dead_code)]
-#[derive(Default)]
-pub struct WatcherEventData(Option<HashMap<&'static str, String>>);
+pub enum WatcherEventData {
+  Empty,
+  WatcherChange(WatcherChangeData),
+  BundleEvent(BundleEventKind),
+}
 
-impl WatcherEventData {
-  pub fn inner(&self) -> &Option<HashMap<&'static str, String>> {
-    &self.0
+impl Default for WatcherEventData {
+  fn default() -> Self {
+    Self::Empty
   }
 }
 
@@ -20,17 +22,14 @@ pub enum WatcherEvent {
   Change,
 }
 
-pub struct WatcherChange {
+pub struct WatcherChangeData {
   pub path: ArcStr,
   pub kind: WatcherChangeKind,
 }
 
-impl From<WatcherChange> for WatcherEventData {
-  fn from(event: WatcherChange) -> Self {
-    let mut map = HashMap::default();
-    map.insert("id", event.path.to_string());
-    map.insert("kind", event.kind.to_string());
-    Self(Some(map))
+impl From<WatcherChangeData> for WatcherEventData {
+  fn from(event: WatcherChangeData) -> Self {
+    WatcherEventData::WatcherChange(event)
   }
 }
 
@@ -56,25 +55,13 @@ impl Display for BundleEventKind {
 
 impl From<BundleEventKind> for WatcherEventData {
   fn from(kind: BundleEventKind) -> Self {
-    let mut map = HashMap::default();
-    map.insert("code", kind.to_string());
-    match kind {
-      BundleEventKind::BundleEnd(data) => {
-        map.insert("output", data.output);
-        map.insert("duration", data.duration);
-      }
-      BundleEventKind::Error(msg) => {
-        map.insert("error", msg);
-      }
-      _ => {}
-    }
-    Self(Some(map))
+    WatcherEventData::BundleEvent(kind)
   }
 }
 
 pub struct BundleEndEventData {
   pub output: String,
-  pub duration: String,
+  pub duration: u32,
 }
 
 #[derive(Copy, Clone)]

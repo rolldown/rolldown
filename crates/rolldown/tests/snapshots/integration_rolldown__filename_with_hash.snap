@@ -1604,7 +1604,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-S7XSEgIh.js
+- entry-!~{000}~.js => entry-FngsL3n8.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 

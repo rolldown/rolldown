@@ -6,7 +6,8 @@ use rolldown_rstr::Rstr;
 
 // Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
 pub fn determine_export_mode(
-  ctx: &mut GenerateContext<'_>,
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
   module: &NormalModule,
   exports: &[(Rstr, SymbolRef)],
 ) -> BuildResult<OutputExports> {
@@ -50,7 +51,7 @@ pub fn determine_export_mode(
           let name = &ctx.chunk.name;
           let chunk = ArcStr::from("chunk");
           let name = name.as_ref().unwrap_or(&chunk);
-          ctx.warnings.push(
+          warnings.push(
             BuildDiagnostic::mixed_export(
               ArcStr::from(module.stable_id.as_str()),
               ArcStr::from(name),

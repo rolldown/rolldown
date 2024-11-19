@@ -11,6 +11,12 @@
     "config": {
       "$ref": "#/definitions/BundlerOptions"
     },
+    "configVariants": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ConfigVariant"
+      }
+    },
     "expectError": {
       "description": "If `true`, the fixture are expected to fail to compile/build.",
       "default": false,
@@ -452,6 +458,22 @@
           ]
         }
       ]
+    },
+    "ConfigVariant": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OutputFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "Duration": {
       "type": "object",

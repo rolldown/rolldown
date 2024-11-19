@@ -3,13 +3,13 @@ use crate::{DiagnosticOptions, EventKind};
 
 #[derive(Debug)]
 pub enum InvalidOptionTypes {
-  UnsupportedCodeSplittingFormat,
+  UnsupportedCodeSplittingFormat(String),
+  InvalidOutputFile,
 }
 
 #[derive(Debug)]
 pub struct InvalidOption {
   pub invalid_option_types: InvalidOptionTypes,
-  pub option: String,
 }
 
 impl BuildEvent for InvalidOption {
@@ -19,9 +19,10 @@ impl BuildEvent for InvalidOption {
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     match &self.invalid_option_types {
-      InvalidOptionTypes::UnsupportedCodeSplittingFormat => {
-        format!("Invalid value \"{}\" for option \"format\". UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.", self.option)
+      InvalidOptionTypes::UnsupportedCodeSplittingFormat(format) => {
+        format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.")
       }
+      InvalidOptionTypes::InvalidOutputFile => "Invalid value for option \"output.file\" - when building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". To inline dynamic imports, set the \"inlineDynamicImports\" option.".to_string(),
     }
   }
 }

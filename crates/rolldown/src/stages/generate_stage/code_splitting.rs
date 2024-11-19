@@ -113,8 +113,7 @@ impl<'a> GenerateStage<'a> {
       && chunk_graph.chunk_table.len() > 1
     {
       self.link_output.errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionTypes::UnsupportedCodeSplittingFormat,
-        self.options.format.to_string(),
+        InvalidOptionTypes::UnsupportedCodeSplittingFormat(self.options.format.to_string()),
       ));
     }
 

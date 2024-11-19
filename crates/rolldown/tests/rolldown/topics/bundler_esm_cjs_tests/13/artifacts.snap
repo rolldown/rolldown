@@ -40,3 +40,68 @@ var init_foo = __esm({ "foo.js"() {
 //#endregion
 export { __toCommonJS, bar, foo_exports, init_foo };
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+"use strict";
+const require_foo = require('./foo2.js');
+
+//#region entry.js
+init_foo();
+const foo = (init_foo(), __toCommonJS(foo_exports));
+input.works = import("./foo.js").then((foo3) => foo.bar === 123 && require_foo.bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && require_foo.foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
+
+//#endregion
+```
+## foo.js
+
+```js
+"use strict";
+const require_foo = require('./foo2.js');
+
+init_foo();
+exports.bar = require_foo.bar
+```
+## foo2.js
+
+```js
+"use strict";
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { bar: () => bar });
+var bar;
+var init_foo = __esm({ "foo.js"() {
+	bar = 123;
+} });
+
+//#endregion
+Object.defineProperty(exports, '__toCommonJS', {
+  enumerable: true,
+  get: function () {
+    return __toCommonJS;
+  }
+});Object.defineProperty(exports, 'bar', {
+  enumerable: true,
+  get: function () {
+    return bar;
+  }
+});Object.defineProperty(exports, 'foo_exports', {
+  enumerable: true,
+  get: function () {
+    return foo_exports;
+  }
+});Object.defineProperty(exports, 'init_foo', {
+  enumerable: true,
+  get: function () {
+    return init_foo;
+  }
+});
+```

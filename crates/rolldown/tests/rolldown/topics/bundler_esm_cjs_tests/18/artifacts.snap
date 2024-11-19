@@ -23,3 +23,29 @@ var init_entry = __esm({ "entry.js"() {
 init_entry();
 export { entry_default as default };
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+"use strict";
+
+
+//#region entry.js
+var entry_exports = {};
+__export(entry_exports, { default: () => entry_default });
+var entry, entry_default;
+var init_entry = __esm({ "entry.js"() {
+	entry = (init_entry(), __toCommonJS(entry_exports));
+	input.works = entry.__esModule === true;
+	entry_default = 123;
+} });
+
+//#endregion
+init_entry();
+module.exports = entry_default;
+```

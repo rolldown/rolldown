@@ -24,3 +24,30 @@ input.works = foo_exports[Math.random() < 1 && "__esModule"] === false && foo_ex
 
 //#endregion
 ```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## entry.js
+
+```js
+"use strict";
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, {
+	__esModule: () => __esModule,
+	default: () => foo_default
+});
+let __esModule = false;
+var foo_default = { bar: 123 };
+
+//#endregion
+//#region entry.js
+input.works = foo_exports[Math.random() < 1 && "__esModule"] === false && foo_exports[Math.random() < 1 && "default"].bar === 123;
+
+//#endregion
+```

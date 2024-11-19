@@ -6,5 +6,10 @@
         "import": "./entry.mts"
       }
     ]
-  }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
 }

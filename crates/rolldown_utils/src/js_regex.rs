@@ -5,7 +5,7 @@ use crate::concat_string;
 /// According to the doc of `regress`, https://docs.rs/regress/0.10.0/regress/#comparison-to-regex-crate
 /// **regress supports features that regex does not, in particular backreferences and zero-width lookaround assertions.**
 /// these features are not commonly used, so in most cases the slow path will not be reached.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HybridRegex {
   Optimize(regex::Regex),
   Ecma(regress::Regex),

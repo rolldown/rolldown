@@ -10,7 +10,7 @@ use rustc_hash::FxHashMap;
 pub fn deconflict_chunk_symbols(
   chunk: &mut Chunk,
   link_output: &LinkStageOutput,
-  format: &OutputFormat,
+  format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
   let mut renamer =

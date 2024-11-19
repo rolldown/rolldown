@@ -1,7 +1,7 @@
 use crate::js_regex::HybridRegex;
 use glob_match::glob_match;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StringOrRegex {
   String(String),
   Regex(HybridRegex),

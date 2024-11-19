@@ -26,7 +26,7 @@ use serde::Deserialize;
 /// import object_assign from "es6-object-assign";
 /// console.log(object_assign({ a: 1 }, { b: 2 }));
 ///```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),

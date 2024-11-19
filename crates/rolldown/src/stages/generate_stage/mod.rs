@@ -78,7 +78,7 @@ impl<'a> GenerateStage<'a> {
       deconflict_chunk_symbols(
         chunk,
         self.link_output,
-        &self.options.format,
+        self.options.format,
         &index_chunk_id_to_name,
       );
     });

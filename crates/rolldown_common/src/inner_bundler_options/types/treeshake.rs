@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
@@ -22,13 +22,13 @@ impl Default for TreeshakeOptions {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ModuleSideEffects {
   ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
   Boolean(bool),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleSideEffectsRule {
   pub test: Option<HybridRegex>,
   pub external: Option<bool>,
@@ -75,7 +75,7 @@ impl TreeshakeOptions {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),

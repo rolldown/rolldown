@@ -2,7 +2,7 @@ use rolldown_common::EsModuleFlag;
 
 /// Combine the `es_module_flag` and whether it has a default export to determine if there need
 /// to have a namespace marker in the output.
-pub fn determine_es_module(es_module_flag: &EsModuleFlag, has_default_export: bool) -> bool {
+pub fn determine_es_module(es_module_flag: EsModuleFlag, has_default_export: bool) -> bool {
   match es_module_flag {
     EsModuleFlag::Always => true,
     EsModuleFlag::IfDefaultProp if has_default_export => true,
@@ -15,7 +15,7 @@ pub fn determine_es_module(es_module_flag: &EsModuleFlag, has_default_export: bo
 /// Since rolldown doesn't support `generatedCode.symbol` yet,
 /// it's not possible to use `Symbol.toStringTag` in the output.
 pub fn render_namespace_markers(
-  es_module_flag: &EsModuleFlag,
+  es_module_flag: EsModuleFlag,
   has_default_export: bool,
   // TODO namespace_to_string_tag
   namespace_to_string_tag: bool,

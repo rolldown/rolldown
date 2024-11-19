@@ -7,6 +7,7 @@ use rolldown_common::{
   ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
 };
 use rolldown_rstr::Rstr;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
 
 /// Module metadata about linking
@@ -55,7 +56,7 @@ pub struct LinkingMetadata {
   pub referenced_symbols_by_entry_point_chunk: Vec<SymbolRef>,
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
-  pub dependencies: Vec<ModuleIdx>,
+  pub dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: FxHashMap<Span, Option<(SymbolRef, Vec<CompactStr>)>>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,

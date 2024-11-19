@@ -48,7 +48,6 @@ snapshot_kind: text
 "use strict";
 const require_chunk = require('./chunk.js');
 const external = __toESM(require("external"));
-const external = __toESM(require("external"));
 
 //#region a.js
 console.log(external[foo](), new external[foo]());
@@ -60,7 +59,6 @@ console.log(external[foo](), new external[foo]());
 ```js
 "use strict";
 const require_chunk = require('./chunk.js');
-const external = __toESM(require("external"));
 const external = __toESM(require("external"));
 
 //#region b.js

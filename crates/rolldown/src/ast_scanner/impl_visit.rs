@@ -7,7 +7,7 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, ImportKind, ImportRecordMeta,
+  dynamic_import_usage::DynamicImportExportsUsage, EcmaModuleAstUsage, ImportKind, ImportRecordMeta,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
@@ -104,28 +104,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
-    if let Some(root_symbol_id) = self.resolve_identifier_to_root_symbol(ident) {
-      // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
-      // use this flag to avoid insert it as `Symbol` at the same time.
-      let mut is_inserted_before = false;
-      if self.result.named_imports.contains_key(&root_symbol_id) {
-        if let Some((span, props)) = self.try_extract_parent_static_member_expr_chain(usize::MAX) {
-          if !span.is_unspanned() {
-            is_inserted_before = true;
-            self.add_member_expr_reference(root_symbol_id, props, span);
-          }
-        }
-      }
-      if !is_inserted_before {
-        self.add_referenced_symbol(root_symbol_id);
-      }
-      self.check_import_assign(ident, root_symbol_id.symbol);
-    }
-    if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
-      if ids.contains(&ident.reference_id()) {
-        self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
-      }
-    }
+    self.process_identifier_ref_by_scope(ident);
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
   }
@@ -200,7 +179,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       Expression::Identifier(id_ref) if id_ref.name == "eval" => {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-        if self.resolve_identifier_to_root_symbol(id_ref).is_none() {
+        if self.resolve_identifier_reference(id_ref).is_global() {
           self.result.has_eval = true;
           self.result.warnings.push(
             BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), id_ref.span)
@@ -279,5 +258,45 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       Some((symbol_id, &self.scopes.resolved_references[symbol_id]));
     walk::walk_class(self, class);
     self.cur_class_decl_and_symbol_referenced_ids = previous_reference_id;
+  }
+
+  fn process_identifier_ref_by_scope(&mut self, ident: &IdentifierReference<'_>) {
+    match self.resolve_identifier_reference(ident) {
+      super::IdentifierReferenceKind::Global => {
+        if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
+          match ident.name.as_str() {
+            "module" => self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef),
+            "exports" => self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef),
+            _ => {}
+          }
+        }
+      }
+      super::IdentifierReferenceKind::Root(root_symbol_id) => {
+        // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
+        // use this flag to avoid insert it as `Symbol` at the same time.
+        let mut is_inserted_before = false;
+        if self.result.named_imports.contains_key(&root_symbol_id) {
+          if let Some((span, props)) = self.try_extract_parent_static_member_expr_chain(usize::MAX)
+          {
+            if !span.is_unspanned() {
+              is_inserted_before = true;
+              self.add_member_expr_reference(root_symbol_id, props, span);
+            }
+          }
+        }
+        if !is_inserted_before {
+          self.add_referenced_symbol(root_symbol_id);
+        }
+
+        self.check_import_assign(ident, root_symbol_id.symbol);
+
+        if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
+          if ids.contains(&ident.reference_id()) {
+            self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
+          }
+        }
+      }
+      super::IdentifierReferenceKind::Other => {}
+    };
   }
 }

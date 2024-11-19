@@ -1,0 +1,7 @@
+{
+  "visualizeSourcemap": true,
+  "config": {
+    "input": [{ "import": "main1.js" }, { "import": "main2.js" }],
+    "format":"cjs"
+  }
+}

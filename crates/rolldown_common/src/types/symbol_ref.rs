@@ -29,34 +29,26 @@ impl SymbolRef {
 
   /// Not all symbols have flags info, we only care about part of them.
   /// If you want to ensure the flags info exists, use `flags_mut` instead.
-  pub fn flags<'db>(&self, db: &'db dyn GetLocalDb) -> Option<&'db SymbolRefFlags> {
+  pub fn flags<'db, T: GetLocalDb>(&self, db: &'db T) -> Option<&'db SymbolRefFlags> {
     db.local_db(self.owner).flags.get(&self.symbol)
   }
 
-  pub fn flags_mut<'db>(&self, db: &'db mut dyn GetLocalDbMut) -> &'db mut SymbolRefFlags {
+  pub fn flags_mut<'db, T: GetLocalDbMut>(&self, db: &'db mut T) -> &'db mut SymbolRefFlags {
     db.local_db_mut(self.owner).flags.entry(self.symbol).or_default()
   }
 
   // `None` means we don't know if it's declared by `const`.
   pub fn is_declared_by_const(&self, db: &SymbolRefDb) -> Option<bool> {
     let flags = self.flags(db)?;
-    if flags.contains(SymbolRefFlags::IS_CONST) {
-      Some(true)
-    } else {
-      // Not having this flag means we don't know if it's declared by `const` instead of it's not declared by `const`.
-      None
-    }
+    // Not having this flag means we don't know if it's declared by `const` instead of it's not declared by `const`.
+    flags.contains(SymbolRefFlags::IS_CONST).then_some(true)
   }
 
   /// `None` means we don't know if it gets reassigned.
   pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> Option<bool> {
     let flags = self.flags(db)?;
-    if flags.contains(SymbolRefFlags::IS_NOT_REASSIGNED) {
-      Some(true)
-    } else {
-      // Not having this flag means we don't know
-      None
-    }
+    // Not having this flag means we don't know
+    flags.contains(SymbolRefFlags::IS_NOT_REASSIGNED).then_some(true)
   }
 
   pub fn is_declared_in_root_scope(&self, db: &SymbolRefDb) -> bool {

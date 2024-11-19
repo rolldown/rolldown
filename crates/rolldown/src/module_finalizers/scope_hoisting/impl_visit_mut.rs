@@ -202,12 +202,11 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     // 3. hoisted_names
     // 4. wrapped module declaration
     let declaration_of_module_namespace_object = if is_namespace_referenced {
-      let mut stmts = self.generate_declaration_of_module_namespace_object();
+      let stmts = self.generate_declaration_of_module_namespace_object();
       if needs_wrapper {
         stmts
       } else {
-        stmts.extend(program.body.take_in(self.alloc));
-        program.body.extend(stmts);
+        program.body.splice(0..0, stmts);
         vec![]
       }
     } else {
@@ -627,47 +626,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
-    for prop in pat.properties.iter_mut() {
-      match &mut prop.value.kind {
-        // Ensure `const { a } = ...;` will be rewritten to `const { a: a$1 } = ...` instead of `const { a$1 } = ...`
-        // Ensure `function foo({ a }) {}` will be rewritten to `function foo({ a: a$1 }) {}` instead of `function foo({ a$1 }) {}`
-        ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
-          if let Some(symbol_id) = ident.symbol_id.get() {
-            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
-            if ident.name != canonical_name.as_str() {
-              ident.name = self.snippet.atom(canonical_name);
-              prop.shorthand = false;
-            }
-            ident.symbol_id.get_mut().take();
-          }
-        }
-        // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a$1 = 1 } = ...` instead of `const { a$1 = 1 } = ...`
-        // Ensure `function foo({ a = 1 }) {}` will be rewritten to `function foo({ a: a$1 = 1 }) {}` instead of `function foo({ a$1 = 1 }) {}`
-        ast::BindingPatternKind::AssignmentPattern(assign_pat)
-          if prop.shorthand
-            && matches!(assign_pat.left.kind, ast::BindingPatternKind::BindingIdentifier(_)) =>
-        {
-          let ast::BindingPatternKind::BindingIdentifier(ident) = &mut assign_pat.left.kind else {
-            unreachable!()
-          };
-          if let Some(symbol_id) = ident.symbol_id.get() {
-            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
-            if ident.name != canonical_name.as_str() {
-              ident.name = self.snippet.atom(canonical_name);
-              prop.shorthand = false;
-            }
-            ident.symbol_id.get_mut().take();
-          }
-        }
-        _ => {
-          // For other patterns:
-          // - `const [a] = ...` or `function foo([a]) {}`
-          // - `const { a: b } = ...` or `function foo({ a: b }) {}`
-          // - `const { a: b = 1 } = ...` or `function foo({ a: b = 1 }) {}`
-          // They could keep correct semantics after renaming, so we don't need to do anything special.
-        }
-      }
-    }
+    self.rewrite_object_pat_shorthand(pat);
 
     walk_mut::walk_object_pattern(self, pat);
   }

@@ -430,20 +430,68 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 _ => {
                   // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
                   let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                  let wrap_ref_name =
-                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+                  // `init_xxx`
+                  let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
+                    importee_linking_info.wrapper_ref.unwrap(),
+                    false,
+                  );
                   if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                    *expr = self.snippet.call_expr_expr(wrap_ref_name);
+                    // `init_xxx()`
+                    *expr =
+                      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                        SPAN,
+                        wrap_ref_expr,
+                        NONE,
+                        self.snippet.builder.vec(),
+                        false,
+                      ));
                   } else {
                     if rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
-                      *expr = self.snippet.call_expr_expr(wrap_ref_name);
-                    } else {
-                      let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-                      let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-                      *expr = self.snippet.seq2_in_paren_expr(
-                        self.snippet.call_expr_expr(wrap_ref_name),
-                        self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                      // `init_xxx()`
+                      *expr = ast::Expression::CallExpression(
+                        self.snippet.builder.alloc_call_expression(
+                          SPAN,
+                          wrap_ref_expr,
+                          NONE,
+                          self.snippet.builder.vec(),
+                          false,
+                        ),
                       );
+                    } else {
+                      // `xxx_exports`
+                      let namespace_object_ref_expr =
+                        self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false);
+                      let to_commonjs_ref = self.canonical_ref_for_runtime("__toCommonJS");
+                      // `__toCommonJS`
+                      let to_commonjs_expr =
+                        self.finalized_expr_for_symbol_ref(to_commonjs_ref, false);
+
+                      // `init_xxx()`
+                      let wrap_ref_call_expr = ast::Expression::CallExpression(
+                        self.snippet.builder.alloc_call_expression(
+                          SPAN,
+                          wrap_ref_expr,
+                          NONE,
+                          self.snippet.builder.vec(),
+                          false,
+                        ),
+                      );
+
+                      // `__toCommonJS(xxx_exports)`
+                      let to_commonjs_call_expr = ast::Expression::CallExpression(
+                        self.snippet.builder.alloc_call_expression(
+                          SPAN,
+                          to_commonjs_expr,
+                          NONE,
+                          self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
+                          false,
+                        ),
+                      );
+
+                      // `(init_xxx(), __toCommonJS(xxx_exports))`
+                      *expr =
+                        self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, to_commonjs_call_expr);
                     }
                   }
                 }

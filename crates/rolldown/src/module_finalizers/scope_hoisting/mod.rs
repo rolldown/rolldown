@@ -2,7 +2,7 @@ use oxc::{
   allocator::{Allocator, IntoIn},
   ast::{
     ast::{self, IdentifierReference, Statement},
-    Comment,
+    Comment, NONE,
   },
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
@@ -46,6 +46,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
     let sym_ref = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(sym_ref)
+  }
+
+  pub fn canonical_ref_for_runtime(&self, name: &str) -> SymbolRef {
+    self.ctx.runtime.resolve_symbol(name)
   }
 
   /// If return true the import stmt should be removed,
@@ -101,8 +105,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         {
           return true;
         };
-        let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-        *stmt = self.snippet.call_expr_stmt(wrapper_ref_name);
+        // `init_foo`
+        let wrapper_ref_expr =
+          self.finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false);
+
+        // `init_foo()`
+        *stmt = self.snippet.builder.statement_expression(
+          SPAN,
+          ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+            stmt.span(),
+            wrapper_ref_expr,
+            NONE,
+            self.snippet.builder.vec(),
+            false,
+          )),
+        );
         return false;
       }
     }

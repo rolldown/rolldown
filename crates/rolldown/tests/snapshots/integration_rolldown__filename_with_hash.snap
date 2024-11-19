@@ -3778,6 +3778,14 @@ snapshot_kind: text
 - foo-!~{003}~.js => foo-CU-7PMni.js
 - foo-!~{000}~.js => foo-eksDMHqn.js
 
+# tests/rolldown/code_splitting/issue_2786
+
+- main-!~{004}~.js => main-CyI9V_Fj.js
+- share-!~{005}~.js => share-B2TJ0ttB.js
+- share-!~{007}~.js => share-C1AbB3vH.js
+- share-!~{002}~.js => share-QVUf7Emd.js
+- share-!~{000}~.js => share-chxR3Dor.js
+
 # tests/rolldown/dce/conditional_exports
 
 - main-!~{000}~.js => main-CGxPXVQf.js

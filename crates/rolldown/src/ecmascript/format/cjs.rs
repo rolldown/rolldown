@@ -9,13 +9,14 @@ use crate::{
   },
 };
 use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn render_cjs<'code>(
-  ctx: &mut GenerateContext<'_>,
+  warnings: &mut Vec<BuildDiagnostic>,
+  ctx: &GenerateContext<'_>,
   module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
   footer: Option<&'code str>,
@@ -48,7 +49,7 @@ pub fn render_cjs<'code>(
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
-        let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
+        let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
         // Only `named` export can we render the namespace markers.
         if matches!(&export_mode, OutputExports::Named) {
           if let Some(marker) =
@@ -156,7 +157,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
   // render external imports
   ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, _)| {
-    let importee = &ctx.link_output.module_table.modules[*importee_id]
+    let importee = ctx.link_output.module_table.modules[*importee_id]
       .as_external()
       .expect("Should be external module here");
 

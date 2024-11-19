@@ -51,16 +51,16 @@ Object.defineProperty(exports, 'shared', {
 
 ```
 - ../main1.js
-(3:0-3:9) "\nfunction" --> (4:0-4:9) "\nfunction"
-(3:9-3:16) " main()" --> (4:9-4:16) " main()"
-(3:16-4:2) " {\n " --> (4:16-5:0) " {"
-(4:2-0:0) "" --> (5:0-5:1) "\n"
-(0:0-4:2) "import {shared} from './shared.js'\n// import('./main2.js')\n\nfunction main() {\n " --> (5:1-5:16) "\trequire_shared"
-(4:2-4:10) " shared(" --> (5:16-5:24) ".shared("
-(4:10-5:1) ");\n" --> (5:24-6:0) ");"
-(5:1-7:0) "}\n" --> (6:0-7:0) "\n}"
-(7:0-7:6) "\nmain(" --> (7:0-7:6) "\nmain("
-(7:6-8:1) ")\n" --> (7:6-10:34) ");\n\n//#endregion\n//# sourceMappingURL=main1.js.map"
+(2:0-2:9) "\nfunction" --> (4:0-4:9) "\nfunction"
+(2:9-2:16) " main()" --> (4:9-4:16) " main()"
+(2:16-3:2) " {\n " --> (4:16-5:0) " {"
+(3:2-0:0) "" --> (5:0-5:1) "\n"
+(0:0-3:2) "import {shared} from './shared.js'\n\nfunction main() {\n " --> (5:1-5:16) "\trequire_shared"
+(3:2-3:10) " shared(" --> (5:16-5:24) ".shared("
+(3:10-4:1) ");\n" --> (5:24-6:0) ");"
+(4:1-6:0) "}\n" --> (6:0-7:0) "\n}"
+(6:0-6:6) "\nmain(" --> (7:0-7:6) "\nmain("
+(6:6-7:1) ")\n" --> (7:6-10:34) ");\n\n//#endregion\n//# sourceMappingURL=main1.js.map"
 
 - ../shared.js
 (0:7-0:16) "function " --> (3:0-3:9) "\nfunction"

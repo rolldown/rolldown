@@ -516,7 +516,7 @@ impl<'a> LinkStage<'a> {
       // Symbols from runtime are referenced by bundler not import statements.
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         let canonical_ref = self.symbols.canonical_ref_for(*symbol_ref);
-        meta.dependencies.push(canonical_ref.owner);
+        meta.dependencies.insert(canonical_ref.owner);
       });
 
       let Module::Normal(module) = &self.module_table.modules[module_idx] else {
@@ -530,14 +530,14 @@ impl<'a> LinkStage<'a> {
           match reference_ref {
             rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
               let canonical_ref = self.symbols.canonical_ref_for(*sym_ref);
-              meta.dependencies.push(canonical_ref.owner);
+              meta.dependencies.insert(canonical_ref.owner);
             }
             rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
               if let Some(sym_ref) =
                 member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs)
               {
                 let canonical_ref = self.symbols.canonical_ref_for(sym_ref);
-                meta.dependencies.push(canonical_ref.owner);
+                meta.dependencies.insert(canonical_ref.owner);
               } else {
                 // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
                 // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.

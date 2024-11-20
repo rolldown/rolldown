@@ -131,7 +131,7 @@ export default defineConfig({
       { icon: 'x', link: 'https://twitter.com/rolldown_rs' },
       {
         icon: 'bluesky',
-        link: 'https://bsky.app/profile/rolldown.bsky.social',
+        link: 'https://bsky.app/profile/rolldown.rs',
       },
       { icon: 'discord', link: 'https://chat.rolldown.rs' },
       { icon: 'github', link: 'https://github.com/rolldown/rolldown' },

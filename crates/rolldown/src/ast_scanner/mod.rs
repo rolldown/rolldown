@@ -708,13 +708,3 @@ pub enum IdentifierReferenceKind {
   /// rest
   Other,
 }
-
-impl IdentifierReferenceKind {
-  /// Returns `true` if the identifier reference kind is [`Global`].
-  ///
-  /// [`Global`]: IdentifierReferenceKind::Global
-  #[must_use]
-  pub fn is_global(&self) -> bool {
-    matches!(self, Self::Global)
-  }
-}

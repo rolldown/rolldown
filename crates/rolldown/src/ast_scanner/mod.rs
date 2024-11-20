@@ -174,7 +174,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .scope_stack
       .iter()
       .filter_map(|item| *item)
-      .rev()
       .all(|scope| self.scopes.get_flags(scope).is_top())
   }
 
@@ -658,20 +657,32 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     None
   }
 
-  /// return a `Some(SymbolRef)` if the identifier referenced a top level `IdentBinding`
-  fn resolve_identifier_reference(
+  /// resolve the symbol from the identifier reference, and return if it is a root symbol
+  fn resolve_identifier_to_root_symbol(
     &mut self,
     ident: &IdentifierReference,
-  ) -> IdentifierReferenceKind {
-    match self.resolve_symbol_from_reference(ident) {
+  ) -> Option<SymbolRef> {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
+    match symbol_id {
       Some(symbol_id) => {
         if self.is_root_symbol(symbol_id) {
-          IdentifierReferenceKind::Root((self.idx, symbol_id).into())
+          Some((self.idx, symbol_id).into())
         } else {
-          IdentifierReferenceKind::Other
+          None
         }
       }
-      None => IdentifierReferenceKind::Global,
+      None => {
+        // atom cmp is not `O(1)`, so if the module already contains both `module` and `exports`,
+        // don't need to check it again.
+        if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
+          match ident.name.as_str() {
+            "module" => self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef),
+            "exports" => self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef),
+            _ => {}
+          }
+        }
+        None
+      }
     }
   }
 
@@ -698,14 +709,4 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     symbol_id.is_none()
   }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum IdentifierReferenceKind {
-  /// global variable
-  Global,
-  /// top level variable
-  Root(SymbolRef),
-  /// rest
-  Other,
 }

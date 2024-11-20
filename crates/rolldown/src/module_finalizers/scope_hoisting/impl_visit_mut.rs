@@ -3,7 +3,7 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{self, Expression, SimpleAssignmentTarget, VariableDeclarationKind},
+    ast::{self, Expression, ImportExpression, SimpleAssignmentTarget, VariableDeclarationKind},
     visit::walk_mut,
     VisitMut, NONE,
   },
@@ -12,7 +12,7 @@ use oxc::{
 use rolldown_common::{
   ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind,
 };
-use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
+use rolldown_ecmascript_utils::{AllocatorExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -379,142 +379,15 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     walk_mut::walk_call_expression(self, expr);
   }
 
-  #[allow(clippy::collapsible_else_if, clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
-    if let Some(call_expr) = expr.as_call_expression_mut() {
-      if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_unspanned() {
-        //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NomralModule#imports`.
-        //  we just keep these `require` calls as it is
-        if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
-          let rec = &self.ctx.module.import_records[rec_id];
-          // use `__require` instead of `require`
-          if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
-            *call_expr.callee.get_inner_expression_mut() =
-              self.snippet.builder.expression_identifier_reference(
-                SPAN,
-                self.canonical_name_for_runtime("__require").as_str(),
-              );
-          }
-          match &self.ctx.modules[rec.resolved_module] {
-            Module::Normal(importee) => {
-              match importee.module_type {
-                ModuleType::Json => {
-                  // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
-                  // And to make sure the runtime behavior is correct, we need to rewrite `require('xxx.json')` to `require('xxx.json').default` to align with the runtime behavior of nodejs.
-
-                  // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
-                  let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                  let wrap_ref_name =
-                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                    *expr = self.snippet.call_expr_expr(wrap_ref_name);
-                  } else {
-                    let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-                    let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-                    *expr = self.snippet.seq2_in_paren_expr(
-                      self.snippet.call_expr_expr(wrap_ref_name),
-                      ast::Expression::StaticMemberExpression(
-                        ast::StaticMemberExpression {
-                          object: self
-                            .snippet
-                            .call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
-                          property: self.snippet.id_name("default", SPAN),
-                          ..TakeIn::dummy(self.alloc)
-                        }
-                        .into_in(self.alloc),
-                      ),
-                    );
-                  }
-                }
-                _ => {
-                  // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
-                  let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-
-                  // `init_xxx`
-                  let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
-                    importee_linking_info.wrapper_ref.unwrap(),
-                    false,
-                  );
-                  if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                    // `init_xxx()`
-                    *expr =
-                      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                        SPAN,
-                        wrap_ref_expr,
-                        NONE,
-                        self.snippet.builder.vec(),
-                        false,
-                      ));
-                  } else {
-                    if rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
-                      // `init_xxx()`
-                      *expr = ast::Expression::CallExpression(
-                        self.snippet.builder.alloc_call_expression(
-                          SPAN,
-                          wrap_ref_expr,
-                          NONE,
-                          self.snippet.builder.vec(),
-                          false,
-                        ),
-                      );
-                    } else {
-                      // `xxx_exports`
-                      let namespace_object_ref_expr =
-                        self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false);
-                      let to_commonjs_ref = self.canonical_ref_for_runtime("__toCommonJS");
-                      // `__toCommonJS`
-                      let to_commonjs_expr =
-                        self.finalized_expr_for_symbol_ref(to_commonjs_ref, false);
-
-                      // `init_xxx()`
-                      let wrap_ref_call_expr = ast::Expression::CallExpression(
-                        self.snippet.builder.alloc_call_expression(
-                          SPAN,
-                          wrap_ref_expr,
-                          NONE,
-                          self.snippet.builder.vec(),
-                          false,
-                        ),
-                      );
-
-                      // `__toCommonJS(xxx_exports)`
-                      let to_commonjs_call_expr = ast::Expression::CallExpression(
-                        self.snippet.builder.alloc_call_expression(
-                          SPAN,
-                          to_commonjs_expr,
-                          NONE,
-                          self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
-                          false,
-                        ),
-                      );
-
-                      // `(init_xxx(), __toCommonJS(xxx_exports))`
-                      *expr =
-                        self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, to_commonjs_call_expr);
-                    }
-                  }
-                }
-              }
-            }
-            Module::External(importee) => {
-              let request_path =
-                call_expr.arguments.get_mut(0).expect("require should have an argument");
-
-              // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
-              *request_path = ast::Argument::StringLiteral(
-                self.snippet.alloc_string_literal(&importee.name, request_path.span()),
-              );
-            }
-          }
+    match expr {
+      ast::Expression::CallExpression(call_expr) => {
+        if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
+          *expr = new_expr;
         }
       }
-    }
-
-    self.try_rewrite_identifier_reference_expr(expr, false);
-
-    // rewrite `foo_exports.bar` to `bar` directly
-    match expr {
-      Expression::StaticMemberExpression(ref inner_expr) => {
+      // rewrite `foo_exports.bar` to `bar` directly
+      ast::Expression::StaticMemberExpression(ref inner_expr) => {
         if let Some(resolved) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
@@ -532,75 +405,16 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           }
         };
       }
+      // inline dynamic import
+      ast::Expression::ImportExpression(import_expr) => {
+        if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
+          *expr = new_expr;
+        }
+      }
       _ => {}
     };
 
-    // inline dynamic import
-    if self.ctx.options.inline_dynamic_imports {
-      if let Expression::ImportExpression(import_expr) = expr {
-        let rec_id = self.ctx.module.imports[&import_expr.span];
-        let rec = &self.ctx.module.import_records[rec_id];
-        let importee_id = rec.resolved_module;
-        match &self.ctx.modules[importee_id] {
-          Module::Normal(importee) => {
-            let importee_linking_info = &self.ctx.linking_infos[importee_id];
-            match importee_linking_info.wrap_kind {
-              WrapKind::Esm => {
-                // Rewrite `import('./foo.mjs')` to `(init_foo(), foo_exports)`
-                let importee_linking_info = &self.ctx.linking_infos[importee_id];
-
-                // `init_foo`
-                let importee_wrapper_ref_name =
-                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-
-                // `foo_exports`
-                let importee_namespace_name =
-                  self.canonical_name_for(importee.namespace_object_ref);
-
-                // `(init_foo(), foo_exports)`
-                *expr = self.snippet.promise_resolve_then_call_expr(
-                  expr.span(),
-                  self.snippet.builder.vec1(self.snippet.return_stmt(
-                    self.snippet.seq2_in_paren_expr(
-                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                      self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-                    ),
-                  )),
-                );
-              }
-              WrapKind::Cjs => {
-                //  `__toESM(require_foo())`
-                let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
-                let importee_wrapper_ref_name =
-                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-
-                *expr = self.snippet.promise_resolve_then_call_expr(
-                  expr.span(),
-                  self.snippet.builder.vec1(self.snippet.return_stmt(
-                    self.snippet.to_esm_call_with_interop(
-                      to_esm_fn_name,
-                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                      importee.interop(),
-                    ),
-                  )),
-                );
-              }
-              WrapKind::None => {
-                // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
-                // must be wrapped, so we could make sure the module is executed lazily.
-                if cfg!(debug_assertions) {
-                  unreachable!()
-                }
-              }
-            }
-          }
-          Module::External(_) => {
-            // iife format doesn't support external module
-          }
-        }
-        return;
-      }
-    }
+    self.try_rewrite_identifier_reference_expr(expr, false);
 
     self.handle_new_url_with_string_literal_and_import_meta_url(expr);
     self.handle_import_meta_prop_expr(expr);
@@ -758,5 +572,207 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       )),
       false,
     ))
+  }
+
+  #[allow(clippy::too_many_lines, clippy::collapsible_else_if)]
+  fn try_rewrite_global_require_call(
+    &mut self,
+    call_expr: &mut ast::CallExpression<'ast>,
+  ) -> Option<Expression<'ast>> {
+    if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_unspanned() {
+      //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NomralModule#imports`.
+      //  we just keep these `require` calls as it is
+      if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
+        let rec = &self.ctx.module.import_records[rec_id];
+        // use `__require` instead of `require`
+        if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
+          *call_expr.callee.get_inner_expression_mut() =
+            self.snippet.builder.expression_identifier_reference(
+              SPAN,
+              self.canonical_name_for_runtime("__require").as_str(),
+            );
+        }
+        let rewrite_ast = match &self.ctx.modules[rec.resolved_module] {
+          Module::Normal(importee) => {
+            match importee.module_type {
+              ModuleType::Json => {
+                // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
+                // And to make sure the runtime behavior is correct, we need to rewrite `require('xxx.json')` to `require('xxx.json').default` to align with the runtime behavior of nodejs.
+
+                // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
+                let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+                let wrap_ref_name =
+                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                  Some(self.snippet.call_expr_expr(wrap_ref_name))
+                } else {
+                  let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                  let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                  Some(
+                    self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(wrap_ref_name),
+                      ast::Expression::StaticMemberExpression(
+                        ast::StaticMemberExpression {
+                          object: self
+                            .snippet
+                            .call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                          property: self.snippet.id_name("default", SPAN),
+                          ..TakeIn::dummy(self.alloc)
+                        }
+                        .into_in(self.alloc),
+                      ),
+                    ),
+                  )
+                }
+              }
+              _ => {
+                // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+                let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+
+                // `init_xxx`
+                let wrap_ref_expr = self
+                  .finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false);
+                if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                  // `init_xxx()`
+                  Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                    SPAN,
+                    wrap_ref_expr,
+                    NONE,
+                    self.snippet.builder.vec(),
+                    false,
+                  )))
+                } else {
+                  if rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
+                    // `init_xxx()`
+                    Some(ast::Expression::CallExpression(
+                      self.snippet.builder.alloc_call_expression(
+                        SPAN,
+                        wrap_ref_expr,
+                        NONE,
+                        self.snippet.builder.vec(),
+                        false,
+                      ),
+                    ))
+                  } else {
+                    // `xxx_exports`
+                    let namespace_object_ref_expr =
+                      self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false);
+                    let to_commonjs_ref = self.canonical_ref_for_runtime("__toCommonJS");
+                    // `__toCommonJS`
+                    let to_commonjs_expr =
+                      self.finalized_expr_for_symbol_ref(to_commonjs_ref, false);
+
+                    // `init_xxx()`
+                    let wrap_ref_call_expr =
+                      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                        SPAN,
+                        wrap_ref_expr,
+                        NONE,
+                        self.snippet.builder.vec(),
+                        false,
+                      ));
+
+                    // `__toCommonJS(xxx_exports)`
+                    let to_commonjs_call_expr =
+                      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                        SPAN,
+                        to_commonjs_expr,
+                        NONE,
+                        self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
+                        false,
+                      ));
+
+                    // `(init_xxx(), __toCommonJS(xxx_exports))`
+                    Some(self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, to_commonjs_call_expr))
+                  }
+                }
+              }
+            }
+          }
+          Module::External(importee) => {
+            let request_path =
+              call_expr.arguments.get_mut(0).expect("require should have an argument");
+
+            // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
+            *request_path = ast::Argument::StringLiteral(
+              self.snippet.alloc_string_literal(&importee.name, request_path.span()),
+            );
+            None
+          }
+        };
+        return rewrite_ast;
+      }
+    }
+    None
+  }
+
+  fn try_rewrite_inline_dynamic_import_expr(
+    &mut self,
+    import_expr: &mut ImportExpression<'ast>,
+  ) -> Option<Expression<'ast>> {
+    if self.ctx.options.inline_dynamic_imports {
+      let rec_id = self.ctx.module.imports[&import_expr.span];
+      let rec = &self.ctx.module.import_records[rec_id];
+      let importee_id = rec.resolved_module;
+      match &self.ctx.modules[importee_id] {
+        Module::Normal(importee) => {
+          let importee_linking_info = &self.ctx.linking_infos[importee_id];
+          let new_expr = match importee_linking_info.wrap_kind {
+            WrapKind::Esm => {
+              // Rewrite `import('./foo.mjs')` to `(init_foo(), foo_exports)`
+              let importee_linking_info = &self.ctx.linking_infos[importee_id];
+
+              // `init_foo`
+              let importee_wrapper_ref_name =
+                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+              // `foo_exports`
+              let importee_namespace_name = self.canonical_name_for(importee.namespace_object_ref);
+
+              // `(init_foo(), foo_exports)`
+              Some(self.snippet.promise_resolve_then_call_expr(
+                import_expr.span,
+                self.snippet.builder.vec1(self.snippet.return_stmt(
+                  self.snippet.seq2_in_paren_expr(
+                    self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                    self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                  ),
+                )),
+              ))
+            }
+            WrapKind::Cjs => {
+              //  `__toESM(require_foo())`
+              let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+              let importee_wrapper_ref_name =
+                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+              Some(self.snippet.promise_resolve_then_call_expr(
+                import_expr.span,
+                self.snippet.builder.vec1(self.snippet.return_stmt(
+                  self.snippet.to_esm_call_with_interop(
+                    to_esm_fn_name,
+                    self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                    importee.interop(),
+                  ),
+                )),
+              ))
+            }
+            WrapKind::None => {
+              // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
+              // must be wrapped, so we could make sure the module is executed lazily.
+              if cfg!(debug_assertions) {
+                unreachable!()
+              }
+              None
+            }
+          };
+          return new_expr;
+        }
+        Module::External(_) => {
+          // iife format doesn't support external module
+        }
+      }
+    }
+    None
   }
 }

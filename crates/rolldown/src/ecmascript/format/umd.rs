@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use futures::executor::block_on;
 use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
@@ -214,21 +215,23 @@ fn render_iife_export(
     return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
   }
   let mut dependencies = Vec::with_capacity(externals.len());
-  externals.iter().for_each(|external| {
-    if let Some(global) = ctx.options.globals.get(external.name.as_str()) {
-      dependencies.push(format!(
-        "global{}",
-        global.split('.').map(render_property_access).collect::<String>()
-      ));
-    } else {
-      let target = legitimize_identifier_name(external.name.as_str()).to_string();
-      warnings.push(
-        BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
-          .with_severity_warning(),
-      );
-      dependencies.push(format!("global{}", render_property_access(&target)));
-    }
-  });
+
+  for external in externals {
+    let global = block_on(ctx.options.globals.call(external.name.as_str()));
+    let target = match &global {
+      Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
+      None => {
+        let target = legitimize_identifier_name(external.name.as_str()).to_string();
+        warnings.push(
+          BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
+            .with_severity_warning(),
+        );
+        render_property_access(&target)
+      }
+    };
+    dependencies.push(format!("global{target}"));
+  }
+
   let deps = dependencies.join(",");
   if has_exports {
     let (stmt, namespace) = generate_namespace_definition(

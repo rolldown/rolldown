@@ -58,6 +58,21 @@ fn normalize_chunk_file_names_option(
     .transpose()
 }
 
+fn normalize_globals_option(
+  option: Option<crate::options::GlobalsOutputOption>,
+) -> Option<rolldown_common::GlobalsOutputOption> {
+  option.map(move |value| match value {
+    Either::A(hash_map) => {
+      rolldown_common::GlobalsOutputOption::FxHashMap(hash_map.into_iter().collect())
+    }
+    Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
+      let func = Arc::clone(&func);
+      let name = name.to_string();
+      Box::pin(async move { func.invoke_async(name).await.map_err(anyhow::Error::from) })
+    })),
+  })
+}
+
 #[allow(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
@@ -176,7 +191,7 @@ pub fn normalize_binding_options(
       "hex" => HashCharacters::Hex,
       _ => panic!("Invalid hash characters: {format_str}"),
     }),
-    globals: output_options.globals,
+    globals: normalize_globals_option(output_options.globals),
     module_types,
     experimental: input_options.experimental.map(|inner| ExperimentalOptions {
       strict_execution_order: inner.strict_execution_order,

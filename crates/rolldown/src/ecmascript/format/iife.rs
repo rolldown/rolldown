@@ -34,6 +34,7 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
+use futures::executor::block_on;
 use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
@@ -232,17 +233,20 @@ fn render_iife_factory_arguments(
     vec![]
   };
   let globals = &ctx.options.globals;
-  externals.iter().for_each(|external| {
-    if let Some(global) = globals.get(external.name.as_str()) {
-      factory_arguments.push(legitimize_identifier_name(global).to_string());
-    } else {
-      let target = legitimize_identifier_name(&external.name).to_string();
-      warnings.push(
-        BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
-          .with_severity_warning(),
-      );
-      factory_arguments.push(target);
-    }
-  });
+  for external in externals {
+    let global = block_on(globals.call(external.name.as_str()));
+    let target = match &global {
+      Some(global_name) => legitimize_identifier_name(global_name).to_string(),
+      None => {
+        let target = legitimize_identifier_name(&external.name).to_string();
+        warnings.push(
+          BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
+            .with_severity_warning(),
+        );
+        target
+      }
+    };
+    factory_arguments.push(target);
+  }
   factory_arguments.join(", ")
 }

@@ -1,10 +1,10 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::{
-    ast::{self, IdentifierReference, Statement},
+    ast::{self, Expression, IdentifierReference, Statement},
     Comment, NONE,
   },
-  span::{Atom, GetSpan, GetSpanMut, SPAN},
+  span::{Atom, GetSpan, SPAN},
 };
 use rolldown_common::{
   AstScopes, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, Platform, SymbolRef, WrapKind,
@@ -358,81 +358,77 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   // Handle `import.meta.xxx` expression
-  pub fn handle_import_meta_prop_expr(&self, expr: &mut ast::Expression<'ast>) {
-    match expr {
-      // Check if the `expr` is `import.meta.xxx`. Doesn't include `import.meta`.
-      ast::Expression::StaticMemberExpression(member_expr)
-        if member_expr.object.is_import_meta() =>
-      {
-        let original_expr_span = member_expr.span;
-        match member_expr.property.name.as_str() {
-          // Try to polyfill `import.meta.url`
-          "url" => {
-            match (self.ctx.options.platform, &self.ctx.options.format) {
-              (Platform::Node, OutputFormat::Cjs) => {
-                // Replace it with `require('url').pathToFileURL(__filename).href`
+  pub fn try_rewrite_import_meta_prop_expr(
+    &self,
+    member_expr: &ast::StaticMemberExpression<'ast>,
+  ) -> Option<Expression<'ast>> {
+    if member_expr.object.is_import_meta() {
+      let original_expr_span = member_expr.span;
+      match member_expr.property.name.as_str() {
+        // Try to polyfill `import.meta.url`
+        "url" => {
+          let new_expr = match (self.ctx.options.platform, &self.ctx.options.format) {
+            (Platform::Node, OutputFormat::Cjs) => {
+              // Replace it with `require('url').pathToFileURL(__filename).href`
 
-                // require('url')
-                let require_call = self.snippet.builder.alloc_call_expression(
-                  SPAN,
-                  self.snippet.builder.expression_identifier_reference(SPAN, "require"),
-                  oxc::ast::NONE,
-                  self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                    self.snippet.builder.alloc_string_literal(SPAN, "url"),
-                  )),
+              // require('url')
+              let require_call = self.snippet.builder.alloc_call_expression(
+                SPAN,
+                self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+                oxc::ast::NONE,
+                self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                  self.snippet.builder.alloc_string_literal(SPAN, "url"),
+                )),
+                false,
+              );
+
+              // require('url').pathToFileURL
+              let require_path_to_file_url = self.snippet.builder.alloc_static_member_expression(
+                SPAN,
+                ast::Expression::CallExpression(require_call),
+                self.snippet.builder.identifier_name(SPAN, "pathToFileURL"),
+                false,
+              );
+
+              // require('url').pathToFileURL(__filename)
+              let require_path_to_file_url_call = self.snippet.builder.alloc_call_expression(
+                SPAN,
+                ast::Expression::StaticMemberExpression(require_path_to_file_url),
+                oxc::ast::NONE,
+                self.snippet.builder.vec1(ast::Argument::Identifier(
+                  self.snippet.builder.alloc_identifier_reference(SPAN, "__filename"),
+                )),
+                false,
+              );
+
+              // require('url').pathToFileURL(__filename).href
+              let require_path_to_file_url_href =
+                self.snippet.builder.alloc_static_member_expression(
+                  original_expr_span,
+                  ast::Expression::CallExpression(require_path_to_file_url_call),
+                  self.snippet.builder.identifier_name(SPAN, "href"),
                   false,
                 );
-
-                // require('url').pathToFileURL
-                let require_path_to_file_url = self.snippet.builder.alloc_static_member_expression(
-                  SPAN,
-                  ast::Expression::CallExpression(require_call),
-                  self.snippet.builder.identifier_name(SPAN, "pathToFileURL"),
-                  false,
-                );
-
-                // require('url').pathToFileURL(__filename)
-                let require_path_to_file_url_call = self.snippet.builder.alloc_call_expression(
-                  SPAN,
-                  ast::Expression::StaticMemberExpression(require_path_to_file_url),
-                  oxc::ast::NONE,
-                  self.snippet.builder.vec1(ast::Argument::Identifier(
-                    self.snippet.builder.alloc_identifier_reference(SPAN, "__filename"),
-                  )),
-                  false,
-                );
-
-                // require('url').pathToFileURL(__filename).href
-                let require_path_to_file_url_href =
-                  self.snippet.builder.alloc_static_member_expression(
-                    SPAN,
-                    ast::Expression::CallExpression(require_path_to_file_url_call),
-                    self.snippet.builder.identifier_name(SPAN, "href"),
-                    false,
-                  );
-                *expr = ast::Expression::StaticMemberExpression(require_path_to_file_url_href);
-                *expr.span_mut() = original_expr_span;
-              }
-              _ => {
-                // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
-                // so users may handle it in their own way.
-              }
+              Some(ast::Expression::StaticMemberExpression(require_path_to_file_url_href))
             }
-          }
-          _ => {}
+            _ => {
+              // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
+              // so users may handle it in their own way.
+              None
+            }
+          };
+          return new_expr;
         }
+        _ => {}
       }
-      _ => {}
-    };
+    }
+    None
   }
 
   pub fn handle_new_url_with_string_literal_and_import_meta_url(
     &self,
-    expr: &mut ast::Expression<'ast>,
+    expr: &mut ast::NewExpression<'ast>,
   ) -> Option<()> {
-    let ast::Expression::NewExpression(expr) = expr else {
-      return None;
-    };
     let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
 
     if !is_callee_global_url {

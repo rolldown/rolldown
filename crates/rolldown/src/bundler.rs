@@ -48,7 +48,7 @@ impl Bundler {
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     let dir = self.options.cwd.join(&self.options.dir);
 
-    let mut output: BundleOutput = self.bundle_up(/* is_write */ true).await?;
+    let mut output = self.bundle_up(/* is_write */ true).await?;
 
     self.fs.create_dir_all(&dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
@@ -76,7 +76,10 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    self.bundle_up(/* is_write */ false).await
+    self.bundle_up(/* is_write */ false).await.map(|mut output| {
+      output.warnings.append(&mut self.warnings);
+      output
+    })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -96,7 +99,7 @@ impl Bundler {
 
     let mut error_for_build_end_hook = None;
 
-    let mut scan_stage_output = match ScanStage::new(
+    let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
@@ -122,8 +125,6 @@ impl Bundler {
       .plugin_driver
       .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
       .await?;
-
-    scan_stage_output.warnings.append(&mut self.warnings);
 
     Ok(scan_stage_output)
   }
@@ -168,8 +169,6 @@ impl Bundler {
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
-
-    output.warnings.append(&mut self.warnings);
 
     Ok(output)
   }

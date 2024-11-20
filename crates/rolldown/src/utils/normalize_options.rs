@@ -89,11 +89,13 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     experimental.strict_execution_order = Some(true);
   }
 
-  let inline_dynamic_imports = match raw_options.format {
-    Some(OutputFormat::Umd | OutputFormat::Iife) => {
-      let format_name = match raw_options.format {
-        Some(OutputFormat::Umd) => "umd",
-        Some(OutputFormat::Iife) => "iife",
+  let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
+
+  let inline_dynamic_imports = match format {
+    OutputFormat::Umd | OutputFormat::Iife => {
+      let format_name = match format {
+        OutputFormat::Umd => "umd",
+        OutputFormat::Iife => "iife",
         _ => unreachable!(),
       };
 
@@ -137,7 +139,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     es_module: raw_options.es_module.unwrap_or_default(),
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     file: raw_options.file,
-    format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
+    format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
     globals,

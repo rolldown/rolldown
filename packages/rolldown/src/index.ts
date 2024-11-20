@@ -54,6 +54,7 @@ import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
 import { WatchOptions } from './options/watch-option'
+import { Watcher } from './watcher'
 
 export { defineConfig, rolldown, watch }
 export const VERSION: string = version
@@ -105,6 +106,7 @@ export type {
   OutputBundle,
   JsxOptions,
   WatchOptions,
+  Watcher,
 }
 
 // Exports for compatibility

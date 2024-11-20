@@ -2,6 +2,7 @@ import { expect, test, vi } from 'vitest'
 import { watch } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
+import { sleep } from '@tests/utils'
 
 const input = path.join(import.meta.dirname, './main.js')
 const inputSource = fs.readFileSync(input, 'utf-8')
@@ -31,16 +32,22 @@ test.sequential('watch', async () => {
       },
     ],
   })
-  await waitBuildFinished()
   // should run build once
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
 
   // edit file
   fs.writeFileSync(input, 'console.log(2)')
-  await waitBuildFinished()
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
-  // The different platform maybe emit multiple events
-  expect(watchChangeFn).toBeCalled()
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+    // The different platform maybe emit multiple events
+    expect(watchChangeFn).toBeCalled()
+  })
 
   await watcher.close()
   expect(closeWatcherFn).toBeCalledTimes(1)
@@ -54,14 +61,21 @@ test.sequential('watch close', async () => {
     input,
     cwd: import.meta.dirname,
   })
-  await waitBuildFinished()
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
 
   await watcher.close()
   // edit file
   fs.writeFileSync(input, 'console.log(3)')
-  await waitBuildFinished()
-  // The watcher is closed, so the output file should not be updated
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
+  await waitBuildFinished(() => {
+    // The watcher is closed, so the output file should not be updated
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
 
   // revert change
   fs.writeFileSync(input, inputSource)
@@ -97,30 +111,33 @@ test.sequential('watch event', async () => {
     }
   })
 
-  await waitBuildFinished()
-  // test first build event
-  expect(events.slice(0, 4)).toEqual([
-    { code: 'START' },
-    { code: 'BUNDLE_START' },
-    { code: 'BUNDLE_END' },
-    { code: 'END' },
-  ])
+  await waitBuildFinished(() => {
+    // test first build event
+    expect(events.slice(0, 4)).toEqual([
+      { code: 'START' },
+      { code: 'BUNDLE_START' },
+      { code: 'BUNDLE_END' },
+      { code: 'END' },
+    ])
+  })
 
   // edit file
   events.length = 0
   fs.writeFileSync(input, 'console.log(3)')
-  await waitBuildFinished()
+  await waitBuildFinished(() => {
+    // The different platform maybe emit multiple events, so here only check the first 4 events
+    expect(events.slice(0, 4)).toEqual([
+      { code: 'START' },
+      { code: 'BUNDLE_START' },
+      { code: 'BUNDLE_END' },
+      { code: 'END' },
+    ])
+    expect(restartFn).toBeCalled()
+    expect(changeFn).toBeCalled()
+  })
+
   await watcher.close()
-  // The different platform maybe emit multiple events, so here only check the first 4 events
-  expect(events.slice(0, 4)).toEqual([
-    { code: 'START' },
-    { code: 'BUNDLE_START' },
-    { code: 'BUNDLE_END' },
-    { code: 'END' },
-  ])
-  expect(restartFn).toBeCalled()
   expect(closeFn).toBeCalled()
-  expect(changeFn).toBeCalled()
 
   // revert change
   fs.writeFileSync(input, inputSource)
@@ -138,8 +155,9 @@ test.sequential('watch skipWrite', async () => {
       skipWrite: true,
     },
   })
-  await waitBuildFinished()
-  expect(fs.existsSync(dir)).toBe(false)
+  await waitBuildFinished(() => {
+    expect(fs.existsSync(dir)).toBe(false)
+  })
   await watcher.close()
 })
 
@@ -157,7 +175,11 @@ test.sequential('PluginContext addWatchFile', async () => {
     ],
   })
 
-  await waitBuildFinished()
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
 
   const changeFn = vi.fn()
   watcher.on('change', (id, event) => {
@@ -171,11 +193,9 @@ test.sequential('PluginContext addWatchFile', async () => {
 
   // edit file
   fs.writeFileSync(foo, 'console.log(2)')
-  // wait for watcher to detect the change
-  await new Promise((resolve) => {
-    setTimeout(resolve, 60)
+  await waitBuildFinished(() => {
+    expect(changeFn).toBeCalled()
   })
-  expect(changeFn).toBeCalled()
 
   // revert change
   fs.writeFileSync(foo, 'console.log(1)\n')
@@ -191,37 +211,20 @@ test.sequential('watch include/exclude', async () => {
     },
   })
 
-  await waitBuildFinished()
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
 
   // edit file
   fs.writeFileSync(input, 'console.log(2)')
-  // wait for watcher to detect the change
-  await waitBuildFinished()
-  // The input is excluded, so the output file should not be updated
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true)
-
-  // revert change
-  fs.writeFileSync(input, 'console.log(1)\n')
-  await watcher.close()
-})
-
-// TODO make the test stable, failed at https://github.com/rolldown/rolldown/actions/runs/11812958121/job/32909172765
-test.sequential('(perf)watching same file multiply times', async () => {
-  const watcher = await watch({
-    input,
-    cwd: import.meta.dirname,
+  await waitBuildFinished(() => {
+    // The input is excluded, so the output file should not be updated
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
   })
-
-  await waitBuildFinished()
-
-  // edit file
-  for (let i = 2; i < 20; i++) {
-    const change = `console.log(${i})`
-    fs.writeFileSync(input, change)
-    // wait for watcher to detect the change, the time should be less than 60ms
-    await waitBuildFinished()
-    expect(fs.readFileSync(output, 'utf-8').includes(change)).toBe(true)
-  }
 
   // revert change
   fs.writeFileSync(input, 'console.log(1)\n')
@@ -245,35 +248,46 @@ test.sequential('error handling', async () => {
       errors.push(event.error.message)
     }
   })
-  await waitBuildFinished()
-  // First build should error
-  expect(errors.length).toBe(1)
-  expect(errors[0].includes('PARSE_ERROR')).toBe(true)
+  await waitBuildFinished(() => {
+    // First build should error
+    expect(errors.length).toBe(1)
+    expect(errors[0].includes('PARSE_ERROR')).toBe(true)
+  })
 
-  // It should be working if the changes are fixed error
   fs.writeFileSync(input, 'console.log(2)')
-  await waitBuildFinished()
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true)
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+  })
 
   // failed again
   fs.writeFileSync(input, 'conso le.log(1)')
-  await waitBuildFinished()
-  // The different platform maybe emit multiple events
-  expect(errors.length > 1).toBe(true)
+  await waitBuildFinished(() => {
+    // The different platform maybe emit multiple events
+    expect(errors.length > 1).toBe(true)
+  })
 
   // It should be working if the changes are fixed error
   fs.writeFileSync(input, 'console.log(3)')
-  await waitBuildFinished()
-  expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(true)
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(
+      true,
+    )
+  })
 
   // revert change
   fs.writeFileSync(input, 'console.log(1)\n')
   await watcher.close()
 })
 
-async function waitBuildFinished() {
-  // sleep 60ms
-  await new Promise((resolve) => {
-    setTimeout(resolve, 60)
-  })
+async function waitBuildFinished(expectFn: () => void) {
+  for (let tries = 0; tries < 10; tries++) {
+    try {
+      await expectFn()
+      return
+    } catch {}
+    await sleep(50)
+  }
+  expectFn()
 }

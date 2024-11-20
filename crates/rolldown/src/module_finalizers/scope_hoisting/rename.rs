@@ -31,6 +31,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       ast::Expression::StaticMemberExpression(it) => {
         it.span = id_ref.span;
+        it.property.span = id_ref.span;
       }
       _ => {}
     }

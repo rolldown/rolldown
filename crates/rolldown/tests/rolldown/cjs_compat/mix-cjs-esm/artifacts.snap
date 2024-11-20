@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -91,7 +92,8 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 (0:0-3:0) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')" --> (54:0-55:0) "\nrequire_foo();"
 (3:0-3:7) "\nassert" --> (55:0-55:7) "\nassert"
 (3:7-0:0) "" --> (55:7-55:13) ".equal"
-(0:0-3:16) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')\nassert.equal(a," --> (55:13-55:27) "(import_cjs.a,"
+(0:0-3:13) "import assert from 'node:assert'\nimport { a } from './cjs'\nrequire('./foo')\nassert.equal" --> (55:13-55:24) "(import_cjs"
+(3:13-3:16) "(a," --> (55:24-55:27) ".a,"
 (3:16-3:26) " undefined" --> (55:27-55:37) " undefined"
 (3:26-4:1) ")\n" --> (55:37-59:0) ");\n\n//#endregion\n//#region main.js"
 (0:0-3:34) "import \"./esm-export-cjs-export\"\nimport \"./esm-export-cjs-require\"\nimport \"./esm-import-cjs-export\"\nimport \"./esm-import-cjs-require\"" --> (59:0-62:33) "\nvar import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());\n\n//#endregion\n//# sourceMappingURL=main.js.map"

@@ -4573,6 +4573,14 @@ snapshot_kind: text
 - assets/main.js => assets/main.js
 - assets/main.js.map
 
+# tests/rolldown/sourcemap/live_binding
+
+- main1-!~{000}~.js => main1-CB35tRtv.js
+- main2-!~{001}~.js => main2-BnQB515V.js
+- shared-!~{002}~.js => shared-BuIUQBnE.js
+- main1-CB35tRtv.js.map
+- shared-BuIUQBnE.js.map
+
 # tests/rolldown/topics/bundler_esm_cjs_tests/0
 
 - entry-!~{000}~.js => entry-BHE7Uujs.js

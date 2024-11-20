@@ -23,7 +23,8 @@ node_assert.default.equal(require("url").pathToFileURL(__filename), require("url
 ```
 - ../main.js
 (2:0-0:0) "" --> (27:0-27:0) ""
-(0:0-2:7) "import assert from 'node:assert';\n\nassert" --> (27:0-27:20) "\nnode_assert.default"
+(0:0-2:0) "import assert from 'node:assert';\n" --> (27:0-27:12) "\nnode_assert"
+(2:0-2:7) "\nassert" --> (27:12-27:20) ".default"
 (2:7-2:13) ".equal" --> (27:20-27:26) ".equal"
 (2:13-2:21) "(require" --> (27:26-27:34) "(require"
 (2:21-2:27) "(\"url\"" --> (27:34-27:40) "(\"url\""

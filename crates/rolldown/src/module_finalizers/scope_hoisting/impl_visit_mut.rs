@@ -12,7 +12,7 @@ use oxc::{
 use rolldown_common::{
   ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind,
 };
-use rolldown_ecmascript_utils::{AllocatorExt, StatementExt, TakeIn};
+use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -374,7 +374,13 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    self.try_rewrite_identifier_reference_expr(&mut expr.callee, true);
+    if let Some(new_expr) = expr
+      .callee
+      .as_identifier_mut()
+      .and_then(|ident_ref| self.try_rewrite_identifier_reference_expr(ident_ref, true))
+    {
+      expr.callee = new_expr;
+    }
 
     walk_mut::walk_call_expression(self, expr);
   }
@@ -387,7 +393,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         }
       }
       // rewrite `foo_exports.bar` to `bar` directly
-      ast::Expression::StaticMemberExpression(ref inner_expr) => {
+      ast::Expression::StaticMemberExpression(inner_expr) => {
         if let Some(resolved) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
@@ -403,7 +409,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               *expr = self.snippet.void_zero();
             }
           }
-        };
+          // these two branch are exclusive since `import.meta` is a global member_expr
+        } else if let Some(new_expr) = self.try_rewrite_import_meta_prop_expr(inner_expr) {
+          *expr = new_expr;
+        }
       }
       // inline dynamic import
       ast::Expression::ImportExpression(import_expr) => {
@@ -411,13 +420,16 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           *expr = new_expr;
         }
       }
+      ast::Expression::NewExpression(new_expr) => {
+        self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
+      }
+      ast::Expression::Identifier(ident_ref) => {
+        if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, false) {
+          *expr = new_expr;
+        }
+      }
       _ => {}
     };
-
-    self.try_rewrite_identifier_reference_expr(expr, false);
-
-    self.handle_new_url_with_string_literal_and_import_meta_url(expr);
-    self.handle_import_meta_prop_expr(expr);
 
     walk_mut::walk_expression(self, expr);
   }

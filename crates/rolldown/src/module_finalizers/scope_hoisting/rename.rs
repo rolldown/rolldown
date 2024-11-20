@@ -1,6 +1,5 @@
-use oxc::ast::ast::{self, IdentifierReference};
+use oxc::ast::ast::{self, Expression, IdentifierReference};
 use rolldown_common::SymbolRef;
-use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
@@ -77,17 +76,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   pub fn try_rewrite_identifier_reference_expr(
     &mut self,
-    expr: &mut ast::Expression<'ast>,
+    ident_ref: &mut ast::IdentifierReference<'ast>,
     is_callee: bool,
-  ) -> Option<()> {
-    let id_ref = expr.as_identifier_mut()?;
-    if let Some(new_expr) = self.generate_finalized_expr_for_reference(id_ref, is_callee) {
-      *expr = new_expr;
+  ) -> Option<Expression<'ast>> {
+    if let Some(new_expr) = self.generate_finalized_expr_for_reference(ident_ref, is_callee) {
+      Some(new_expr)
     } else {
       // Nevertheless, this identifier is processed and don't need to be processed again.
-      id_ref.reference_id.take();
+      ident_ref.reference_id.take();
+      None
     }
-    None
   }
 
   pub fn rewrite_simple_assignment_target(

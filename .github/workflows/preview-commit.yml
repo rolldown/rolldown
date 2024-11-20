@@ -3,6 +3,7 @@ name: Publish to pkg.pr.new
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   build:

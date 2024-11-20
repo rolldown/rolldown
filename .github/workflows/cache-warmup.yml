@@ -5,9 +5,10 @@ on:
     branches:
       - main
 
+# Only do cache warmup on main branch's latest commit
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.ref_name != 'main' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   debug-build:

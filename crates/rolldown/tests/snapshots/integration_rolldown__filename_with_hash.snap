@@ -1830,7 +1830,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/export_self_common_js_minified
 
-- entry-!~{000}~.js => entry-Dj7aBFDg.js
+- entry-!~{000}~.js => entry-C4kmCXnq.js
 
 # tests/esbuild/importstar/export_self_es6
 
@@ -1898,7 +1898,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_self_common_js
 
-- entry-!~{000}~.js => entry-BK2tRkSk.js
+- entry-!~{000}~.js => entry-Cua-elBI.js
 
 # tests/esbuild/importstar/import_star_and_common_js
 

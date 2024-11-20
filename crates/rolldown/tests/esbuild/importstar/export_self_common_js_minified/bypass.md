@@ -1,5 +1,5 @@
 # Reason 
-1. Wrong impl when module.exports self
+1. Rolldown doesn't minify symbols.
 # Diff
 ## /out.js
 ### esbuild
@@ -22,7 +22,7 @@ var require_entry = __commonJS({ "entry.js"(exports, module) {
 } });
 
 //#endregion
-export default require_entry();
+module.exports = require_entry();
 
 ```
 ### diff
@@ -45,6 +45,6 @@ export default require_entry();
 +    }
  });
 -module.exports = r();
-+export default require_entry();
++module.exports = require_entry();
 
 ```

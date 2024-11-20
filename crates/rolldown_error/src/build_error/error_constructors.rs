@@ -241,8 +241,8 @@ impl BuildDiagnostic {
     Self::new_inner(ForbidConstAssign { filename, source, name, reference_span, re_assign_span })
   }
 
-  pub fn invalid_option(situation: InvalidOptionTypes, option: String) -> Self {
-    Self::new_inner(InvalidOption { invalid_option_types: situation, option })
+  pub fn invalid_option(situation: InvalidOptionTypes) -> Self {
+    Self::new_inner(InvalidOption { invalid_option_types: situation })
   }
 
   #[cfg(feature = "napi")]

@@ -102,8 +102,8 @@ pub fn render_cjs<'code>(
     let entry_meta = &ctx.link_output.metas[entry_id];
     match entry_meta.wrap_kind {
       WrapKind::Esm => {
-        // init_xxx()
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        // init_xxx
         let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
           *wrapper_ref,
           ctx.chunk_idx,
@@ -113,11 +113,17 @@ pub fn render_cjs<'code>(
         source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
       }
       WrapKind::Cjs => {
-        // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        let wrapper_ref_name =
-          ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
-        source_joiner.append_source(concat_string!("export default ", wrapper_ref_name, "();\n"));
+
+        // require_xxx
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+
+        // module.exports = require_xxx();
+        source_joiner.append_source(concat_string!("module.exports = ", wrapper_ref_name, "();\n"));
       }
       WrapKind::None => {}
     }

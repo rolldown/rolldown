@@ -11,7 +11,5 @@
     {
       "format": "cjs"
     }
-  ],
-  // FIXME(hyf): Wrong in cjs format
-  "expectExecuted": false
+  ]
 }

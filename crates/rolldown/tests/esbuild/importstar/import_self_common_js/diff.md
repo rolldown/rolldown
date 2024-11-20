@@ -1,5 +1,5 @@
 # Reason 
-1. Format cjs should not appear `export`
+1. We rewrite `console.log` to assertions.
 # Diff
 ## /out.js
 ### esbuild
@@ -27,7 +27,7 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 } });
 
 //#endregion
-export default require_entry();
+module.exports = require_entry();
 
 ```
 ### diff
@@ -45,7 +45,6 @@ export default require_entry();
 +        node_assert.default.equal(import_entry.foo, undefined);
      }
  });
--module.exports = require_entry();
-+export default require_entry();
+ module.exports = require_entry();
 
 ```

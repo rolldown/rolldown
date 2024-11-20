@@ -174,6 +174,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .scope_stack
       .iter()
       .filter_map(|item| *item)
+      .rev()
       .all(|scope| self.scopes.get_flags(scope).is_top())
   }
 

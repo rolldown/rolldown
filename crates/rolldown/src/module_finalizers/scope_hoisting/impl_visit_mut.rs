@@ -706,30 +706,31 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
     walk_mut::walk_simple_assignment_target(self, target);
   }
-
-  /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
-  /// using this style to avoid nested if else unti we support if let chain
   fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
-    let ast::Declaration::ClassDeclaration(class) = it else {
-      walk_mut::walk_declaration(self, it);
-      return;
-    };
+    if let Some(decl) = self.get_transformed_class_decl(it) {
+      *it = decl;
+    }
+    // deconflict class name
+    walk_mut::walk_declaration(self, it);
+  }
+}
 
-    let Some(scope_id) = class.scope_id.get() else {
-      walk_mut::walk_declaration(self, it);
-      return;
+impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
+  /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
+  fn get_transformed_class_decl(
+    &mut self,
+    it: &mut ast::Declaration<'ast>,
+  ) -> Option<ast::Declaration<'ast>> {
+    let ast::Declaration::ClassDeclaration(class) = it else {
+      return None;
     };
+    let scope_id = class.scope_id.get()?;
 
     if self.scope.get_parent_id(scope_id) != Some(self.scope.root_scope_id()) {
-      walk_mut::walk_declaration(self, it);
-      return;
+      return None;
     };
 
-    // eliminate class name and transformed it into class expr
-    let Some(id) = class.id.take() else {
-      walk_mut::walk_declaration(self, it);
-      return;
-    };
+    let id = class.id.take()?;
 
     if let Some(symbol_id) = id.symbol_id.get() {
       if self.ctx.module.self_referenced_class_decl_symbol_ids.contains(&symbol_id) {
@@ -741,8 +742,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         class.id = Some(id);
       }
     }
-
-    let var_decl = self.snippet.builder.declaration_variable(
+    Some(self.snippet.builder.declaration_variable(
       SPAN,
       VariableDeclarationKind::Var,
       self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
@@ -757,10 +757,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         false,
       )),
       false,
-    );
-    *it = var_decl;
-
-    // deconflict class name
-    walk_mut::walk_declaration(self, it);
+    ))
   }
 }

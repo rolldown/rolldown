@@ -298,10 +298,6 @@
 - crates/rolldown/tests/esbuild/default/use_strict_directive_minify_no_bundle
 ## alias
 - crates/rolldown/tests/esbuild/default/warnings_inside_node_modules
-## Rolldown doesn't minify symbols.
-- crates/rolldown/tests/esbuild/importstar/export_self_common_js_minified
-## We rewrite `console.log` to assertions.
-- crates/rolldown/tests/esbuild/importstar/import_self_common_js
 ## esbuild did not needs `__toESM`
 - crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision
 ## rolldown don't have `jsx.Preserve` and `jsx.Parse` option

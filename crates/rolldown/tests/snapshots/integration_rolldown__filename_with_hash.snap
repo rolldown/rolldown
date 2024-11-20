@@ -5148,6 +5148,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-C19YJ4Pg.js
 
+# tests/rolldown/warnings/invalid_option/unsupported_code_splitting_format
+
+- main-!~{000}~.js => main-Bo8v6kU9.js
+
 # tests/rolldown/warnings/missing_global_name
 
 - main-!~{000}~.js => main-DpALC9fS.js

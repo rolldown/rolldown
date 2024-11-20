@@ -11,7 +11,7 @@ use crate::events::assign_to_import::AssignToImport;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::import_is_undefined::ImportIsUndefined;
-use crate::events::invalid_option::{InvalidOption, InvalidOptionTypes};
+use crate::events::invalid_option::{InvalidOption, InvalidOptionType};
 use crate::events::json_parse::JsonParse;
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -241,8 +241,8 @@ impl BuildDiagnostic {
     Self::new_inner(ForbidConstAssign { filename, source, name, reference_span, re_assign_span })
   }
 
-  pub fn invalid_option(situation: InvalidOptionTypes) -> Self {
-    Self::new_inner(InvalidOption { invalid_option_types: situation })
+  pub fn invalid_option(invalid_option_type: InvalidOptionType) -> Self {
+    Self::new_inner(InvalidOption { invalid_option_type })
   }
 
   #[cfg(feature = "napi")]

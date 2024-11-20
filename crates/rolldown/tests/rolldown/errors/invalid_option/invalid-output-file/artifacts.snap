@@ -7,6 +7,6 @@ snapshot_kind: text
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid value for option "output.file" - when building multiple chunks, the "output.dir" option must be used, not "output.file". To inline dynamic imports, set the "inlineDynamicImports" option.
+[INVALID_OPTION] Error: Invalid value for option "output.file" - When building multiple chunks, the "output.dir" option must be used, not "output.file". You may set `output.inlineDynamicImports` to `true` when using dynamic imports.
 
 ```

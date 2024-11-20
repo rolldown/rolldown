@@ -12,7 +12,7 @@ use crate::{
 use anyhow::Result;
 
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
@@ -24,11 +24,12 @@ use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
   pub closed: bool,
-  pub(crate) options: SharedOptions,
-  pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: OsFileSystem,
+  pub(crate) options: SharedOptions,
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
+  pub(crate) plugin_driver: SharedPluginDriver,
+  pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
 }
 
@@ -47,7 +48,7 @@ impl Bundler {
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     let dir = self.options.cwd.join(&self.options.dir);
 
-    let mut output = self.bundle_up(/* is_write */ true).await?;
+    let mut output: BundleOutput = self.bundle_up(/* is_write */ true).await?;
 
     self.fs.create_dir_all(&dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
@@ -67,6 +68,8 @@ impl Bundler {
     }
 
     self.plugin_driver.write_bundle(&mut output.assets).await?;
+
+    output.warnings.append(&mut self.warnings);
 
     Ok(output)
   }
@@ -93,7 +96,7 @@ impl Bundler {
 
     let mut error_for_build_end_hook = None;
 
-    let scan_stage_output = match ScanStage::new(
+    let mut scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
@@ -119,6 +122,8 @@ impl Bundler {
       .plugin_driver
       .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
       .await?;
+
+    scan_stage_output.warnings.append(&mut self.warnings);
 
     Ok(scan_stage_output)
   }
@@ -163,6 +168,8 @@ impl Bundler {
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
+
+    output.warnings.append(&mut self.warnings);
 
     Ok(output)
   }

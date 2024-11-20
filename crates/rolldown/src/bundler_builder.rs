@@ -23,7 +23,8 @@ impl BundlerBuilder {
   pub fn build(mut self) -> Bundler {
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
-    let NormalizeOptionsReturn { options, resolve_options } = normalize_options(self.options);
+    let NormalizeOptionsReturn { options, resolve_options, warnings } =
+      normalize_options(self.options);
 
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
@@ -41,6 +42,7 @@ impl BundlerBuilder {
       resolver,
       options,
       fs: OsFileSystem,
+      warnings,
       _log_guard: maybe_guard,
     }
   }

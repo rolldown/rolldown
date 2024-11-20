@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "iife",
-    "name": "wrap"
-  },
-  "expectError": true
-}

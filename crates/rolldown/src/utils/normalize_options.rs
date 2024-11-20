@@ -1,10 +1,14 @@
 use oxc::transformer::InjectGlobalVariablesConfig;
-use rolldown_common::{Comments, InjectImport, ModuleType, NormalizedBundlerOptions, Platform};
+use rolldown_common::{
+  Comments, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
+};
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
   pub resolve_options: rolldown_resolver::ResolveOptions,
+  pub warnings: Vec<BuildDiagnostic>,
 }
 
 #[allow(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
@@ -12,6 +16,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   // Take out resolve options
   let platform = raw_options.platform.unwrap_or(Platform::Browser);
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
+
+  let mut warnings: Vec<BuildDiagnostic> = Vec::new();
 
   let mut loaders = FxHashMap::from(
     [
@@ -83,6 +89,26 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     experimental.strict_execution_order = Some(true);
   }
 
+  let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
+
+  let inline_dynamic_imports = match format {
+    OutputFormat::Umd | OutputFormat::Iife => {
+      let format_name = match format {
+        OutputFormat::Umd => "umd",
+        OutputFormat::Iife => "iife",
+        _ => unreachable!(),
+      };
+
+      if matches!(raw_options.inline_dynamic_imports, Some(false)) {
+        warnings.push(BuildDiagnostic::invalid_option(
+          InvalidOptionType::UnsupportedCodeSplittingFormat(format_name.to_string()),
+        ));
+      }
+      true
+    }
+    _ => raw_options.inline_dynamic_imports.unwrap_or(false),
+  };
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -113,7 +139,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     es_module: raw_options.es_module.unwrap_or_default(),
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     file: raw_options.file,
-    format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
+    format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
     globals,
@@ -130,7 +156,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     oxc_inject_global_variables_config,
     extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
-    inline_dynamic_imports: raw_options.inline_dynamic_imports.unwrap_or(false),
+    inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default(),
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
@@ -142,5 +168,5 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     target: raw_options.target.unwrap_or_default(),
   };
 
-  NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }
+  NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }
 }

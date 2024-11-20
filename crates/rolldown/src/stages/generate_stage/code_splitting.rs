@@ -5,7 +5,6 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, ModuleTable, OutputFormat};
-use rolldown_error::{BuildDiagnostic, InvalidOptionTypes};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -107,14 +106,6 @@ impl<'a> GenerateStage<'a> {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
-    }
-
-    if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd)
-      && chunk_graph.chunk_table.len() > 1
-    {
-      self.link_output.errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionTypes::UnsupportedCodeSplittingFormat(self.options.format.to_string()),
-      ));
     }
 
     // Sort modules in each chunk by execution order

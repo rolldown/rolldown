@@ -13,7 +13,7 @@ pub use crate::{
   event_kind::EventKind,
   events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
   events::commonjs_variable_in_esm::CjsExportSpan,
-  events::invalid_option::InvalidOptionTypes,
+  events::invalid_option::InvalidOptionType,
   events::unloadable_dependency::UnloadableDependencyContext,
   events::DiagnosableArcstr,
   locator::line_column_to_byte_offset,

@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Error: Invalid value "iife" for option "output.format" - UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.
+
+```
+# Assets
+
+## main.js
+
+```js
+(function() {
+
+
+
+//#region main.js
+Promise.resolve().then(function() {
+	return init_lib(), lib_exports;
+}).then(console.log);
+
+//#endregion
+//#region lib.js
+var lib_exports = {};
+__export(lib_exports, { default: () => lib_default });
+var lib_default;
+var init_lib = __esm({ "lib.js"() {
+	lib_default = 2;
+} });
+
+//#endregion
+})();
+```

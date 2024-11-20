@@ -12,7 +12,7 @@ use crate::{
 use anyhow::Result;
 
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
@@ -24,11 +24,12 @@ use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
   pub closed: bool,
-  pub(crate) options: SharedOptions,
-  pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: OsFileSystem,
+  pub(crate) options: SharedOptions,
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
+  pub(crate) plugin_driver: SharedPluginDriver,
+  pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
 }
 
@@ -68,12 +69,17 @@ impl Bundler {
 
     self.plugin_driver.write_bundle(&mut output.assets).await?;
 
+    output.warnings.append(&mut self.warnings);
+
     Ok(output)
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    self.bundle_up(/* is_write */ false).await
+    self.bundle_up(/* is_write */ false).await.map(|mut output| {
+      output.warnings.append(&mut self.warnings);
+      output
+    })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

@@ -13,8 +13,6 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
-use crate::utils::call_expression_ext::CallExpressionExt;
-
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -174,72 +172,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_assignment_expression(self, node);
   }
 
-  fn visit_call_expression(&mut self, expr: &ast::CallExpression<'ast>) {
-    match &expr.callee {
-      Expression::Identifier(id_ref) if id_ref.name == "eval" => {
-        // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
-        // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-        if self.resolve_identifier_reference(id_ref).is_global() {
-          self.result.has_eval = true;
-          self.result.warnings.push(
-            BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), id_ref.span)
-              .with_severity_warning(),
-          );
-        }
-      }
-      _ => {}
-    }
-    if expr.is_global_require_call(self.scopes) {
-      if let Some(ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
-        let id = self.add_import_record(
-          request.value.as_str(),
-          ImportKind::Require,
-          request.span(),
-          if request.span().is_empty() {
-            ImportRecordMeta::IS_UNSPANNED_IMPORT
-          } else {
-            let mut is_require_used = true;
-            let mut meta = ImportRecordMeta::empty();
-            // traverse nearest ExpressionStatement and check if there are potential used
-            for ancestor in self.visit_path.iter().rev() {
-              match ancestor {
-                AstKind::ParenthesizedExpression(_) => {}
-                AstKind::ExpressionStatement(_) => {
-                  meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
-                  break;
-                }
-                AstKind::SequenceExpression(seq_expr) => {
-                  // the child node has require and it is potential used
-                  // the state may changed according to the child node position
-                  // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
-                  //    in the last position, it is still used if it meant any other astKind
-                  // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
-                  //    not in the last position, the state should change to unused
-                  let last = seq_expr.expressions.last().expect("should have at least one child");
-
-                  if !last.span().is_empty() && !expr.span.is_empty() {
-                    is_require_used = last.span().contains_inclusive(expr.span);
-                  } else {
-                    is_require_used = true;
-                  }
-                }
-                _ => {
-                  if is_require_used {
-                    break;
-                  }
-                }
-              }
-            }
-            meta
-          },
-        );
-        self.result.imports.insert(expr.span, id);
-      }
-    }
-
-    walk::walk_call_expression(self, expr);
-  }
-
   fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
     self.handle_new_url_with_string_literal_and_import_meta_url(it);
     walk::walk_new_expression(self, it);
@@ -260,16 +192,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.cur_class_decl_and_symbol_referenced_ids = previous_reference_id;
   }
 
-  fn process_identifier_ref_by_scope(&mut self, ident: &IdentifierReference<'_>) {
-    match self.resolve_identifier_reference(ident) {
+  fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {
+    match self.resolve_identifier_reference(ident_ref) {
       super::IdentifierReferenceKind::Global => {
         if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
-          match ident.name.as_str() {
+          match ident_ref.name.as_str() {
             "module" => self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef),
             "exports" => self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef),
             _ => {}
           }
         }
+        self.process_global_identifier_ref_by_ancestor(ident_ref);
       }
       super::IdentifierReferenceKind::Root(root_symbol_id) => {
         // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
@@ -288,15 +221,96 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.add_referenced_symbol(root_symbol_id);
         }
 
-        self.check_import_assign(ident, root_symbol_id.symbol);
+        self.check_import_assign(ident_ref, root_symbol_id.symbol);
 
         if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
-          if ids.contains(&ident.reference_id()) {
+          if ids.contains(&ident_ref.reference_id()) {
             self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
           }
         }
       }
       super::IdentifierReferenceKind::Other => {}
     };
+  }
+
+  fn process_global_identifier_ref_by_ancestor(
+    &mut self,
+    ident_ref: &IdentifierReference,
+  ) -> Option<()> {
+    let parent = self.visit_path.last()?;
+    match parent {
+      AstKind::CallExpression(call_expr) => {
+        match ident_ref.name.as_str() {
+          "eval" => {
+            // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
+            // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
+            self.result.has_eval = true;
+            self.result.warnings.push(
+              BuildDiagnostic::eval(
+                self.file_path.to_string(),
+                self.source.clone(),
+                ident_ref.span,
+              )
+              .with_severity_warning(),
+            );
+          }
+          "require" => {
+            self.process_global_require_call(call_expr);
+          }
+          _ => {}
+        }
+      }
+      _ => {}
+    }
+    None
+  }
+
+  fn process_global_require_call(&mut self, expr: &ast::CallExpression<'ast>) {
+    if let Some(ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
+      let id = self.add_import_record(
+        request.value.as_str(),
+        ImportKind::Require,
+        request.span(),
+        if request.span().is_empty() {
+          ImportRecordMeta::IS_UNSPANNED_IMPORT
+        } else {
+          let mut is_require_used = true;
+          let mut meta = ImportRecordMeta::empty();
+          // traverse nearest ExpressionStatement and check if there are potential used
+          // skip one for CallExpression it self
+          for ancestor in self.visit_path.iter().rev().skip(1) {
+            match ancestor {
+              AstKind::ParenthesizedExpression(_) => {}
+              AstKind::ExpressionStatement(_) => {
+                meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
+                break;
+              }
+              AstKind::SequenceExpression(seq_expr) => {
+                // the child node has require and it is potential used
+                // the state may changed according to the child node position
+                // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
+                //    in the last position, it is still used if it meant any other astKind
+                // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
+                //    not in the last position, the state should change to unused
+                let last = seq_expr.expressions.last().expect("should have at least one child");
+
+                if !last.span().is_empty() && !expr.span.is_empty() {
+                  is_require_used = last.span().contains_inclusive(expr.span);
+                } else {
+                  is_require_used = true;
+                }
+              }
+              _ => {
+                if is_require_used {
+                  break;
+                }
+              }
+            }
+          }
+          meta
+        },
+      );
+      self.result.imports.insert(expr.span, id);
+    }
   }
 }

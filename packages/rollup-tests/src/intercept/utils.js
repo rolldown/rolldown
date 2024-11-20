@@ -32,8 +32,21 @@ function updateFailedTestsJson(failuresInThisRound) {
   fs.writeFileSync(path.join(__dirname, '../failed-tests.json'), formatted)
 }
 
+function loadUnsupportedFeaturesIgnoredTests() {
+  const unsupportedIgnoredTests = []
+  const content = fs.readFileSync(path.join(__dirname, '../ignored-by-supported-features.md'), 'utf-8')
+  const matches = content.match(/- (.*)/g)
+  if (matches) {
+    for (const id of matches) {
+      unsupportedIgnoredTests.push(id.replace('- ', '').trim())
+    }
+  }
+  return unsupportedIgnoredTests
+}
+
 const ignoreTests = new Set(require('../ignored-tests').ignoreTests)
 const onlyTests = new Set(require('../only-tests').onlyTests)
+const unsupportedFeaturesIgnoredTests = loadUnsupportedFeaturesIgnoredTests()
 
 module.exports = {
   calcTestId,
@@ -41,4 +54,5 @@ module.exports = {
   loadIgnoredTests: () => ignoreTests,
   loadOnlyTests: () => onlyTests,
   updateFailedTestsJson,
+  unsupportedFeaturesIgnoredTests,
 }

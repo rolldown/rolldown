@@ -25,169 +25,11 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     // we don't want oxc to generate hashbang statement in module level since we already handle
     // them in chunk level
     program.hashbang.take();
-    let old_body = self.alloc.take(&mut program.body);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
 
-    let mut stmt_infos = self.ctx.module.stmt_infos.iter();
-    // Skip the first statement info, which is the namespace variable declaration
-    stmt_infos.next();
-
-    old_body.into_iter().enumerate().zip(stmt_infos).for_each(
-      |((_top_stmt_idx, mut top_stmt), stmt_info)| {
-        debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
-        if !stmt_info.is_included {
-          return;
-        }
-
-        if let Some(import_decl) = top_stmt.as_import_declaration() {
-          let rec_id = self.ctx.module.imports[&import_decl.span];
-          if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
-            return;
-          }
-        } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
-          let rec_id = self.ctx.module.imports[&export_all_decl.span];
-          // "export * as ns from 'path'"
-          if let Some(_alias) = &export_all_decl.exported {
-            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
-              return;
-            }
-          } else {
-            // "export * from 'path'"
-            let rec = &self.ctx.module.import_records[rec_id];
-            match &self.ctx.modules[rec.resolved_module] {
-              Module::Normal(importee) => {
-                let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
-                  let wrapper_ref_name =
-                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
-                }
-
-                match importee.exports_kind {
-                  ExportsKind::Esm => {
-                    if importee_linking_info.has_dynamic_exports {
-                      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                      let importer_namespace_name =
-                        self.canonical_name_for(self.ctx.module.namespace_object_ref);
-                      // __reExport(exports, otherExports)
-                      let importee_namespace_name =
-                        self.canonical_name_for(importee.namespace_object_ref);
-                      program.body.push(
-                        self
-                          .snippet
-                          .call_expr_with_2arg_expr(
-                            re_export_fn_name,
-                            importer_namespace_name,
-                            importee_namespace_name,
-                          )
-                          .into_in(self.alloc),
-                      );
-                    }
-                  }
-                  ExportsKind::CommonJs => {
-                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                    let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
-                    // __reExport(exports, __toESM(require_xxxx()))
-                    let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
-                    let importee_wrapper_ref_name =
-                      self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                    program.body.push(
-                      self
-                        .snippet
-                        .alloc_call_expr_with_2arg_expr_expr(
-                          re_export_fn_name,
-                          self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                          self.snippet.to_esm_call_with_interop(
-                            to_esm_fn_name,
-                            self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                            importee.interop(),
-                          ),
-                        )
-                        .into_in(self.alloc),
-                    );
-                  }
-                  ExportsKind::None => {}
-                }
-              }
-              Module::External(_importee) => {
-                match self.ctx.options.format {
-                  rolldown_common::OutputFormat::Esm
-                  | rolldown_common::OutputFormat::Iife
-                  | rolldown_common::OutputFormat::Umd
-                  | rolldown_common::OutputFormat::Cjs => {
-                    // Just remove the statement
-                    return;
-                  }
-                  rolldown_common::OutputFormat::App => {
-                    unreachable!()
-                  }
-                }
-              }
-            }
-
-            return;
-          }
-        } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
-          use ast::ExportDefaultDeclarationKind;
-          match &mut default_decl.declaration {
-            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-              let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
-              let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
-            }
-            ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-              // "export default function() {}" => "function default() {}"
-              // "export default function foo() {}" => "function foo() {}"
-              if func.id.is_none() {
-                let canonical_name_for_default_export_ref =
-                  self.canonical_name_for(self.ctx.module.default_export_ref);
-                func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
-              }
-              top_stmt = ast::Statement::FunctionDeclaration(func.take_in(self.alloc));
-            }
-            ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-              // "export default class {}" => "class default {}"
-              // "export default class Foo {}" => "class Foo {}"
-              if class.id.is_none() {
-                let canonical_name_for_default_export_ref =
-                  self.canonical_name_for(self.ctx.module.default_export_ref);
-                class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
-              }
-              top_stmt = ast::Statement::ClassDeclaration(class.take_in(self.alloc));
-            }
-            _ => {}
-          }
-        } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
-          if named_decl.source.is_none() {
-            if let Some(decl) = &mut named_decl.declaration {
-              // `export var foo = 1` => `var foo = 1`
-              // `export function foo() {}` => `function foo() {}`
-              // `export class Foo {}` => `class Foo {}`
-              top_stmt = ast::Statement::from(decl.take_in(self.alloc));
-            } else {
-              // `export { foo }`
-              // Remove this statement by ignoring it
-              return;
-            }
-          } else {
-            // `export { foo } from 'path'`
-            let rec_id = self.ctx.module.imports[&named_decl.span];
-            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
-              return;
-            }
-          }
-        }
-
-        program.body.push(top_stmt);
-      },
-    );
+    self.remove_unused_top_level_stmt(program);
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -786,5 +628,167 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
     None
+  }
+
+  #[allow(clippy::too_many_lines)]
+  fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) {
+    let old_body = self.alloc.take(&mut program.body);
+
+    // the first statement info is the namespace variable declaration
+    // skip first statement info to make sure `program.body` has same index as `stmt_infos`
+    old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(
+      |((_top_stmt_idx, mut top_stmt), stmt_info)| {
+        debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
+        if !stmt_info.is_included {
+          return;
+        }
+
+        if let Some(import_decl) = top_stmt.as_import_declaration() {
+          let rec_id = self.ctx.module.imports[&import_decl.span];
+          if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+            return;
+          }
+        } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
+          let rec_id = self.ctx.module.imports[&export_all_decl.span];
+          // "export * as ns from 'path'"
+          if let Some(_alias) = &export_all_decl.exported {
+            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+              return;
+            }
+          } else {
+            // "export * from 'path'"
+            let rec = &self.ctx.module.import_records[rec_id];
+            match &self.ctx.modules[rec.resolved_module] {
+              Module::Normal(importee) => {
+                let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+                if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
+                  let wrapper_ref_name =
+                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
+                }
+
+                match importee.exports_kind {
+                  ExportsKind::Esm => {
+                    if importee_linking_info.has_dynamic_exports {
+                      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                      let importer_namespace_name =
+                        self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                      // __reExport(exports, otherExports)
+                      let importee_namespace_name =
+                        self.canonical_name_for(importee.namespace_object_ref);
+                      program.body.push(
+                        self
+                          .snippet
+                          .call_expr_with_2arg_expr(
+                            re_export_fn_name,
+                            importer_namespace_name,
+                            importee_namespace_name,
+                          )
+                          .into_in(self.alloc),
+                      );
+                    }
+                  }
+                  ExportsKind::CommonJs => {
+                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                    let importer_namespace_name =
+                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                    // __reExport(exports, __toESM(require_xxxx()))
+                    let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+                    let importee_wrapper_ref_name =
+                      self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                    program.body.push(
+                      self
+                        .snippet
+                        .alloc_call_expr_with_2arg_expr_expr(
+                          re_export_fn_name,
+                          self.snippet.id_ref_expr(importer_namespace_name, SPAN),
+                          self.snippet.to_esm_call_with_interop(
+                            to_esm_fn_name,
+                            self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                            importee.interop(),
+                          ),
+                        )
+                        .into_in(self.alloc),
+                    );
+                  }
+                  ExportsKind::None => {}
+                }
+              }
+              Module::External(_importee) => {
+                match self.ctx.options.format {
+                  rolldown_common::OutputFormat::Esm
+                  | rolldown_common::OutputFormat::Iife
+                  | rolldown_common::OutputFormat::Umd
+                  | rolldown_common::OutputFormat::Cjs => {
+                    // Just remove the statement
+                    return;
+                  }
+                  rolldown_common::OutputFormat::App => {
+                    unreachable!()
+                  }
+                }
+              }
+            }
+
+            return;
+          }
+        } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
+          use ast::ExportDefaultDeclarationKind;
+          match &mut default_decl.declaration {
+            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+              let expr = decl.to_expression_mut();
+              // "export default foo;" => "var default = foo;"
+              let canonical_name_for_default_export_ref =
+                self.canonical_name_for(self.ctx.module.default_export_ref);
+              top_stmt = self
+                .snippet
+                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+            }
+            ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+              // "export default function() {}" => "function default() {}"
+              // "export default function foo() {}" => "function foo() {}"
+              if func.id.is_none() {
+                let canonical_name_for_default_export_ref =
+                  self.canonical_name_for(self.ctx.module.default_export_ref);
+                func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+              }
+              top_stmt = ast::Statement::FunctionDeclaration(func.take_in(self.alloc));
+            }
+            ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+              // "export default class {}" => "class default {}"
+              // "export default class Foo {}" => "class Foo {}"
+              if class.id.is_none() {
+                let canonical_name_for_default_export_ref =
+                  self.canonical_name_for(self.ctx.module.default_export_ref);
+                class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+              }
+              top_stmt = ast::Statement::ClassDeclaration(class.take_in(self.alloc));
+            }
+            _ => {}
+          }
+        } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
+          if named_decl.source.is_none() {
+            if let Some(decl) = &mut named_decl.declaration {
+              // `export var foo = 1` => `var foo = 1`
+              // `export function foo() {}` => `function foo() {}`
+              // `export class Foo {}` => `class Foo {}`
+              top_stmt = ast::Statement::from(decl.take_in(self.alloc));
+            } else {
+              // `export { foo }`
+              // Remove this statement by ignoring it
+              return;
+            }
+          } else {
+            // `export { foo } from 'path'`
+            let rec_id = self.ctx.module.imports[&named_decl.span];
+            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+              return;
+            }
+          }
+        }
+
+        program.body.push(top_stmt);
+      },
+    );
   }
 }

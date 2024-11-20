@@ -84,7 +84,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       *expr = new_expr;
     } else {
       // Nevertheless, this identifier is processed and don't need to be processed again.
-      *id_ref.reference_id.get_mut() = None;
+      id_ref.reference_id.take();
     }
     None
   }

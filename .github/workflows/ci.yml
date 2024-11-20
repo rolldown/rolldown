@@ -157,16 +157,3 @@ jobs:
 
       - name: Lint Toml
         run: pnpm lint-toml
-
-  pkg-preview:
-    name: Pkg Preview
-    needs:
-      - cargo-deny
-      - rust-validation
-      - cargo-test
-      - node-test
-      - wasi-test
-      - node-validation
-      - repo-validation
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    uses: ./.github/workflows/preview-commit.yml

@@ -1,4 +1,6 @@
 {
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "jsdoc", "unicorn", "typescript", "oxc"],
   "rules": {
     "no-unused-vars": [
       "warn",
@@ -11,5 +13,18 @@
         "allowComputed": true
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/packages/rolldown/src/**"],
+      "rules": {
+        "no-console": [
+          "warn",
+          {
+            "allow": ["warn", "error", "debug", "info"]
+          }
+        ]
+      }
+    }
+  ]
 }

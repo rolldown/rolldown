@@ -657,32 +657,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     None
   }
 
-  /// resolve the symbol from the identifier reference, and return if it is a root symbol
-  fn resolve_identifier_to_root_symbol(
+  /// return a `Some(SymbolRef)` if the identifier referenced a top level `IdentBinding`
+  fn resolve_identifier_reference(
     &mut self,
     ident: &IdentifierReference,
-  ) -> Option<SymbolRef> {
-    let symbol_id = self.resolve_symbol_from_reference(ident);
-    match symbol_id {
+  ) -> IdentifierReferenceKind {
+    match self.resolve_symbol_from_reference(ident) {
       Some(symbol_id) => {
         if self.is_root_symbol(symbol_id) {
-          Some((self.idx, symbol_id).into())
+          IdentifierReferenceKind::Root((self.idx, symbol_id).into())
         } else {
-          None
+          IdentifierReferenceKind::Other
         }
       }
-      None => {
-        // atom cmp is not `O(1)`, so if the module already contains both `module` and `exports`,
-        // don't need to check it again.
-        if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
-          match ident.name.as_str() {
-            "module" => self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef),
-            "exports" => self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef),
-            _ => {}
-          }
-        }
-        None
-      }
+      None => IdentifierReferenceKind::Global,
     }
   }
 
@@ -708,5 +696,25 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn is_global_identifier_reference(&self, ident: &IdentifierReference) -> bool {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     symbol_id.is_none()
+  }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum IdentifierReferenceKind {
+  /// global variable
+  Global,
+  /// top level variable
+  Root(SymbolRef),
+  /// rest
+  Other,
+}
+
+impl IdentifierReferenceKind {
+  /// Returns `true` if the identifier reference kind is [`Global`].
+  ///
+  /// [`Global`]: IdentifierReferenceKind::Global
+  #[must_use]
+  pub fn is_global(&self) -> bool {
+    matches!(self, Self::Global)
   }
 }

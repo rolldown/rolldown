@@ -1,4 +1,4 @@
-import { BindingWatcher, BindingWatcherEvent } from './binding'
+import { BindingWatcher } from './binding'
 import { MaybePromise } from './types/utils'
 
 export class Watcher {
@@ -6,6 +6,10 @@ export class Watcher {
   controller: AbortController
   inner: BindingWatcher
   stopWorkers?: () => Promise<void>
+  listeners: Map<
+    WatcherEvent,
+    Array<(...parameters: any[]) => MaybePromise<void>>
+  > = new Map()
   constructor(inner: BindingWatcher, stopWorkers?: () => Promise<void>) {
     this.closed = false
     this.controller = new AbortController()
@@ -36,53 +40,11 @@ export class Watcher {
     event: WatcherEvent,
     listener: (...parameters: any[]) => MaybePromise<void>,
   ): this {
-    switch (event) {
-      case 'close':
-        this.inner.on(BindingWatcherEvent.Close, async () => {
-          await listener()
-        })
-        break
-      case 'event':
-        this.inner.on(BindingWatcherEvent.Event, async (data) => {
-          const code = data.bundleEventKind()
-          switch (code) {
-            case 'BUNDLE_END':
-              const { duration, output } = data.bundleEndData()
-              await listener({
-                code: 'BUNDLE_END',
-                duration,
-                output: [output], // rolldown doesn't support arraying configure output
-              })
-              break
-
-            case 'ERROR':
-              await listener({
-                code: 'ERROR',
-                error: { message: data.error() },
-              })
-              break
-
-            default:
-              await listener({ code })
-              break
-          }
-        })
-        break
-
-      case 'restart':
-        this.inner.on(BindingWatcherEvent.ReStart, async () => {
-          await listener()
-        })
-        break
-
-      case 'change':
-        this.inner.on(BindingWatcherEvent.Change, async (data) => {
-          const { path, kind } = data.watchChangeData()
-          await listener(path, { event: kind as ChangeEvent })
-        })
-        break
-      default:
-        throw new Error(`Unknown event: ${event}`)
+    const listeners = this.listeners.get(event)
+    if (listeners) {
+      listeners.push(listener)
+    } else {
+      this.listeners.set(event, [listener])
     }
     return this
   }
@@ -95,7 +57,58 @@ export class Watcher {
       clearInterval(timer)
     })
     // run first build after listener is attached
-    process.nextTick(() => this.inner.start())
+    process.nextTick(() =>
+      this.inner.start(async (event) => {
+        const listeners = this.listeners.get(event.eventKind() as WatcherEvent)
+        if (listeners) {
+          switch (event.eventKind()) {
+            case 'close':
+            case 'restart':
+              for (const listener of listeners) {
+                await listener()
+              }
+              break
+
+            case 'event':
+              for (const listener of listeners) {
+                const code = event.bundleEventKind()
+                switch (code) {
+                  case 'BUNDLE_END':
+                    const { duration, output } = event.bundleEndData()
+                    await listener({
+                      code: 'BUNDLE_END',
+                      duration,
+                      output: [output], // rolldown doesn't support arraying configure output
+                    })
+                    break
+
+                  case 'ERROR':
+                    await listener({
+                      code: 'ERROR',
+                      error: { message: event.error() },
+                    })
+                    break
+
+                  default:
+                    await listener({ code })
+                    break
+                }
+              }
+              break
+
+            case 'change':
+              for (const listener of listeners) {
+                const { path, kind } = event.watchChangeData()
+                await listener(path, { event: kind as ChangeEvent })
+              }
+              break
+
+            default:
+              throw new Error(`Unknown event: ${event}`)
+          }
+        }
+      }),
+    )
   }
 }
 

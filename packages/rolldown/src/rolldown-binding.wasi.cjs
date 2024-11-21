@@ -175,12 +175,11 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingSourcemap_struct_121']?.()
   __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_122']?.()
   __napiInstance.exports['__napi_register__BindingWatcher_struct_123']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_127']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEvent_128']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEventData_struct_129']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEventData_impl_134']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_135']?.()
-  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_136']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_126']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_struct_127']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_impl_133']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_134']?.()
+  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_135']?.()
 }
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
@@ -194,14 +193,13 @@ module.exports.BindingRenderedModule = __napiModule.exports.BindingRenderedModul
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
 module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
-module.exports.BindingWatcherEventData = __napiModule.exports.BindingWatcherEventData
+module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.Bundler = __napiModule.exports.Bundler
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
-module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.isCallableCompatibleBuiltinPlugin = __napiModule.exports.isCallableCompatibleBuiltinPlugin
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 module.exports.registerPlugins = __napiModule.exports.registerPlugins

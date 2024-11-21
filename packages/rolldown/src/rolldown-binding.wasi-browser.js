@@ -151,12 +151,11 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingSourcemap_struct_121']?.()
   __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_122']?.()
   __napiInstance.exports['__napi_register__BindingWatcher_struct_123']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_127']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEvent_128']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEventData_struct_129']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEventData_impl_134']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_135']?.()
-  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_136']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_126']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_struct_127']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_impl_133']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_134']?.()
+  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_135']?.()
 }
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
@@ -170,14 +169,13 @@ export const BindingRenderedModule = __napiModule.exports.BindingRenderedModule
 export const BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 export const BindingWatcher = __napiModule.exports.BindingWatcher
 export const BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
-export const BindingWatcherEventData = __napiModule.exports.BindingWatcherEventData
+export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const Bundler = __napiModule.exports.Bundler
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
-export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const isCallableCompatibleBuiltinPlugin = __napiModule.exports.isCallableCompatibleBuiltinPlugin
 export const isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 export const registerPlugins = __napiModule.exports.registerPlugins

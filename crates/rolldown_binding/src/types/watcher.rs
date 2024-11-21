@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use napi::tokio;
 use napi_derive::napi;
 
 use crate::utils::handle_result;
@@ -23,102 +24,100 @@ impl BindingWatcher {
     handle_result(self.inner.close().await)
   }
 
-  #[napi(
-    ts_args_type = "event: BindingWatcherEvent, listener: (data: BindingWatcherEventData) => void"
-  )]
-  pub fn on(
+  #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
+  pub async fn start(
     &self,
-    event: BindingWatcherEvent,
-    listener: MaybeAsyncJsCallback<BindingWatcherEventData, ()>,
+    listener: MaybeAsyncJsCallback<BindingWatcherEvent, ()>,
   ) -> napi::Result<()> {
-    self.inner.emitter.on(
-      event.into(),
-      Box::new(move |data| {
-        let listener = Arc::clone(&listener);
-        Box::pin(async move {
-          listener.await_call(BindingWatcherEventData::new(data)).await.map_err(anyhow::Error::from)
-        })
-      }),
-    );
-    Ok(())
-  }
+    let rx = Arc::clone(&self.inner.emitter.rx);
+    let future = async move {
+      let mut run = true;
+      let rx = rx.lock().await;
+      while run {
+        match rx.recv() {
+          Ok(event) => {
+            if let rolldown_common::WatcherEvent::Close = &event {
+              run = false;
+            }
+            if let Err(e) = listener.await_call(BindingWatcherEvent::new(event)).await {
+              eprintln!("watcher listener error: {e:?}");
+            }
+          }
+          Err(e) => {
+            eprintln!("watcher receiver error: {e:?}");
+          }
+        }
+      }
+    };
+    #[cfg(target_family = "wasm")]
+    {
+      let handle = tokio::runtime::Handle::current();
+      // could not block_on/spawn the main thread in WASI
+      std::thread::spawn(move || {
+        handle.spawn(future);
+      });
+    }
+    #[cfg(not(target_family = "wasm"))]
+    tokio::spawn(future);
 
-  #[napi]
-  pub async fn start(&self) -> napi::Result<()> {
     self.inner.start().await;
     Ok(())
   }
 }
 
 #[napi]
-pub enum BindingWatcherEvent {
-  Close,
-  Event,
-  ReStart,
-  Change,
-}
-
-impl From<BindingWatcherEvent> for rolldown_common::WatcherEvent {
-  fn from(event: BindingWatcherEvent) -> Self {
-    match event {
-      BindingWatcherEvent::Close => rolldown_common::WatcherEvent::Close,
-      BindingWatcherEvent::Event => rolldown_common::WatcherEvent::Event,
-      BindingWatcherEvent::ReStart => rolldown_common::WatcherEvent::ReStart,
-      BindingWatcherEvent::Change => rolldown_common::WatcherEvent::Change,
-    }
-  }
+pub struct BindingWatcherEvent {
+  inner: rolldown_common::WatcherEvent,
 }
 
 #[napi]
-pub struct BindingWatcherEventData {
-  inner: Arc<rolldown_common::WatcherEventData>,
-}
-
-#[napi]
-impl BindingWatcherEventData {
-  pub fn new(inner: Arc<rolldown_common::WatcherEventData>) -> Self {
+impl BindingWatcherEvent {
+  pub fn new(inner: rolldown_common::WatcherEvent) -> Self {
     Self { inner }
   }
 
   #[napi]
+  pub fn event_kind(&self) -> String {
+    self.inner.to_string()
+  }
+
+  #[napi]
   pub fn watch_change_data(&self) -> BindingWatcherChangeData {
-    if let rolldown_common::WatcherEventData::WatcherChange(data) = &*self.inner {
+    if let rolldown_common::WatcherEvent::Change(data) = &self.inner {
       BindingWatcherChangeData { path: data.path.to_string(), kind: data.kind.to_string() }
     } else {
-      unreachable!("Expected WatcherEventData::Change")
+      unreachable!("Expected WatcherEvent::Change")
     }
   }
 
   #[napi]
   pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
-    if let rolldown_common::WatcherEventData::BundleEvent(
-      rolldown_common::BundleEventKind::BundleEnd(data),
-    ) = &*self.inner
+    if let rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::BundleEnd(data)) =
+      &self.inner
     {
       BindingBundleEndEventData { output: data.output.to_string(), duration: data.duration }
     } else {
-      unreachable!("Expected WatcherEventData::BundleEvent(BundleEventKind::BundleEnd)")
+      unreachable!("Expected WatcherEvent::Event(BundleEventKind::BundleEnd)")
     }
   }
 
   #[napi]
   pub fn bundle_event_kind(&self) -> String {
-    if let rolldown_common::WatcherEventData::BundleEvent(kind) = &*self.inner {
+    if let rolldown_common::WatcherEvent::Event(kind) = &self.inner {
       kind.to_string()
     } else {
-      unreachable!("Expected WatcherEventData::BundleEvent")
+      unreachable!("Expected WatcherEvent::Event")
     }
   }
 
   #[napi]
   pub fn error(&self) -> String {
-    if let rolldown_common::WatcherEventData::BundleEvent(
-      rolldown_common::BundleEventKind::Error(err),
-    ) = &*self.inner
+    if let rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::Error(err)) =
+      &self.inner
     {
       err.to_string()
     } else {
-      unreachable!("Expected WatcherEventData::BundleEvent(BundleEventKind::Error)")
+      unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
     }
   }
 }

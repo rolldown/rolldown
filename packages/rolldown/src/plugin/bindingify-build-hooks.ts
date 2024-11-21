@@ -9,6 +9,7 @@ import type {
   Plugin,
   PluginHooks,
   PrivateResolveIdExtraOptions,
+  SourceDescription,
 } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
@@ -286,27 +287,11 @@ export function bindingifyLoad(
         return { code: ret }
       }
 
-      if (!ret.map) {
-        return { code: ret.code, moduleType: ret.moduleType }
-      }
-
-      let map =
-        typeof ret.map === 'object'
-          ? ret.map
-          : (JSON.parse(ret.map) as ExistingRawSourceMap)
-      if (!isEmptySourcemapFiled(map.sources)) {
-        // normalize original sourcemap sources
-        // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
-        const directory = path.dirname(id) || '.'
-        const sourceRoot = map.sourceRoot || '.'
-        map.sources = map.sources!.map((source) =>
-          path.resolve(directory, sourceRoot, source!),
-        )
-      }
+      let map = preProcessSourceMap(ret, id)
 
       const result = {
         code: ret.code,
-        map: bindingifySourcemap(map),
+        map: map !== undefined ? bindingifySourcemap(map) : undefined,
         moduleType: ret.moduleType,
       }
 
@@ -326,6 +311,29 @@ export function bindingifyLoad(
     // @ts-ignore
     filter: bindingifyLoadFilter(options.filter),
   }
+}
+
+function preProcessSourceMap(
+  ret: SourceDescription,
+  id: string,
+): ExistingRawSourceMap | null | undefined {
+  if (!ret.map) {
+    return
+  }
+  let map =
+    typeof ret.map === 'object'
+      ? ret.map
+      : (JSON.parse(ret.map) as ExistingRawSourceMap)
+  if (!isEmptySourcemapFiled(map.sources)) {
+    // normalize original sourcemap sources
+    // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
+    const directory = path.dirname(id) || '.'
+    const sourceRoot = map.sourceRoot || '.'
+    map.sources = map.sources!.map((source) =>
+      path.resolve(directory, sourceRoot, source!),
+    )
+  }
+  return map
 }
 
 export function bindingifyModuleParsed(

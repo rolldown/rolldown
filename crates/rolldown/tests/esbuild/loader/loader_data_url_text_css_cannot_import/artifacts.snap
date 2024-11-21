@@ -1,12 +1,13 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve ./other.css in data:text/css,@import './other.css';
+[UNRESOLVED_IMPORT] Warning: Could not resolve './other.css' in data:text/css,@import './other.css';
 
 ```
 # Assets

@@ -19,6 +19,12 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve './file' in entry.css
+
+```
+## UNRESOLVED_IMPORT
+
+```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve './file' in entry.js
    ╭─[entry.js:2:15]
    │
@@ -26,6 +32,12 @@ snapshot_kind: text
    │               ────┬───  
    │                   ╰───── Module not found, treating it as an external dependency
 ───╯
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve './file2' in entry.css
 
 ```
 ## UNRESOLVED_IMPORT
@@ -43,6 +55,12 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg' in entry.css
+
+```
+## UNRESOLVED_IMPORT
+
+```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg' in entry.js
    ╭─[entry.js:1:15]
    │
@@ -55,6 +73,12 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg2' in entry.css
+
+```
+## UNRESOLVED_IMPORT
+
+```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg2' in entry.js
    ╭─[entry.js:6:10]
    │
@@ -62,30 +86,6 @@ snapshot_kind: text
    │             ───┬──  
    │                ╰──── Module not found, treating it as an external dependency
 ───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve ./file in entry.css
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve ./file2 in entry.css
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve pkg in entry.css
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve pkg2 in entry.css
 
 ```
 # Assets

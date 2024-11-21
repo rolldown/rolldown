@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -18,13 +19,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in app.jsx
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in app.jsx
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in in2.jsx
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in in2.jsx
 
 ```
 # Assets

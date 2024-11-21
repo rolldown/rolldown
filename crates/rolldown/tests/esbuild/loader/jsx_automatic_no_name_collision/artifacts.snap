@@ -19,7 +19,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react in entry.jsx
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'react' in entry.jsx
 
 ```
 # Assets

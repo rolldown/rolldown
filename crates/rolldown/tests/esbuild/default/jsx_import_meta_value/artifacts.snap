@@ -1,18 +1,19 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in factory.jsx
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in factory.jsx
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve react/jsx-runtime in fragment.jsx
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in fragment.jsx
 
 ```
 # Assets

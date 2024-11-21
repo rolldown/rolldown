@@ -4,7 +4,7 @@ use oxc::{index::IndexVec, span::Span};
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, path_ext::PathExt};
+use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name, path_ext::PathExt};
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
@@ -375,7 +375,7 @@ impl ModuleTask {
                   source.clone(),
                   self.resolved_id.id.clone(),
                   if dep.is_unspanned() || is_css_module {
-                    DiagnosableArcstr::String(specifier.as_str().into())
+                    DiagnosableArcstr::String(concat_string!("'", specifier.as_str(), "'").into())
                   } else {
                     DiagnosableArcstr::Span(dep.state.span)
                   },

@@ -1,12 +1,13 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve css-pkg in entry.css
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'css-pkg' in entry.css
 
 ```
 # Assets

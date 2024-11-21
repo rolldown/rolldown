@@ -31,13 +31,13 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve extern.css in entry.css
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'extern.css' in entry.css
 
 ```
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve extern.png in entry.css
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'extern.png' in entry.css
 
 ```
 # Assets

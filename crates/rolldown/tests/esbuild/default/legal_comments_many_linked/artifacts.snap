@@ -7,7 +7,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve some-pkg/css in entry.css
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'some-pkg/css' in entry.css
 
 ```
 # Assets

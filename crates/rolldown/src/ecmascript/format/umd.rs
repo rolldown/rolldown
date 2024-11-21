@@ -1,5 +1,4 @@
 use arcstr::ArcStr;
-use futures::executor::block_on;
 use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
@@ -23,14 +22,14 @@ use super::utils::{
 };
 
 #[expect(clippy::too_many_lines)]
-pub fn render_umd<'code>(
-  warnings: &mut Vec<BuildDiagnostic>,
+pub async fn render_umd<'code>(
   ctx: &GenerateContext<'_>,
-  module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
-  footer: Option<&'code str>,
   intro: Option<&'code str>,
   outro: Option<&'code str>,
+  footer: Option<&'code str>,
+  module_sources: &'code RenderedModuleSources,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 
@@ -79,7 +78,8 @@ pub fn render_umd<'code>(
     ""
   };
   let iife_end = if need_global { ")" } else { "" };
-  let iife_export = render_iife_export(warnings, ctx, &externals, has_exports, named_exports)?;
+  let iife_export =
+    render_iife_export(warnings, ctx, &externals, has_exports, named_exports).await?;
   source_joiner.append_source(format!(
     "(function({wrapper_parameters}) {{
   {cjs_intro}
@@ -204,7 +204,7 @@ fn render_cjs_dependencies(externals: &[&ExternalModule], has_exports: bool) -> 
   dependencies.join(", ")
 }
 
-fn render_iife_export(
+async fn render_iife_export(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
@@ -217,7 +217,7 @@ fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
 
   for external in externals {
-    let global = block_on(ctx.options.globals.call(external.name.as_str()));
+    let global = ctx.options.globals.call(external.name.as_str()).await;
     let target = match &global {
       Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
       None => {

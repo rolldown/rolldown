@@ -34,7 +34,6 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use futures::executor::block_on;
 use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
@@ -44,15 +43,15 @@ use super::utils::{render_chunk_external_imports, render_factory_parameters};
 
 /// The main function for rendering the IIFE format chunks.
 #[expect(clippy::too_many_arguments, clippy::too_many_lines)]
-pub fn render_iife<'code>(
-  warnings: &mut Vec<BuildDiagnostic>,
+pub async fn render_iife<'code>(
   ctx: &GenerateContext<'_>,
-  module_sources: &'code RenderedModuleSources,
+  hashbang: Option<&'code str>,
   banner: Option<&'code str>,
-  footer: Option<&'code str>,
   intro: Option<&'code str>,
   outro: Option<&'code str>,
-  hashbang: Option<&'code str>,
+  footer: Option<&'code str>,
+  module_sources: &'code RenderedModuleSources,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 
@@ -211,7 +210,8 @@ pub fn render_iife<'code>(
   }
 
   // iife wrapper end
-  let factory_arguments = render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix);
+  let factory_arguments =
+    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await;
   source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
@@ -221,7 +221,7 @@ pub fn render_iife<'code>(
   Ok(source_joiner)
 }
 
-fn render_iife_factory_arguments(
+async fn render_iife_factory_arguments(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
@@ -234,7 +234,7 @@ fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = block_on(globals.call(external.name.as_str()));
+    let global = globals.call(external.name.as_str()).await;
     let target = match &global {
       Some(global_name) => legitimize_identifier_name(global_name).to_string(),
       None => {

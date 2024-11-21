@@ -15,14 +15,14 @@ use rolldown_utils::concat_string;
 
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn render_cjs<'code>(
-  warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
-  module_sources: &'code RenderedModuleSources,
+  hashbang: Option<&'code str>,
   banner: Option<&'code str>,
-  footer: Option<&'code str>,
   intro: Option<&'code str>,
   outro: Option<&'code str>,
-  hashbang: Option<&'code str>,
+  footer: Option<&'code str>,
+  module_sources: &'code RenderedModuleSources,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 

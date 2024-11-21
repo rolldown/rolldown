@@ -130,23 +130,23 @@ impl Generator for EcmaGenerator {
     let source_joiner = match ctx.options.format {
       OutputFormat::Esm => render_esm(
         ctx,
-        &rendered_module_sources,
+        hashbang,
         banner.as_deref(),
-        footer.as_deref(),
         intro.as_deref(),
         outro.as_deref(),
-        hashbang,
+        footer.as_deref(),
+        &rendered_module_sources,
       ),
       OutputFormat::Cjs => {
         match render_cjs(
-          &mut warnings,
           ctx,
-          &rendered_module_sources,
+          hashbang,
           banner.as_deref(),
-          footer.as_deref(),
           intro.as_deref(),
           outro.as_deref(),
-          hashbang,
+          footer.as_deref(),
+          &rendered_module_sources,
+          &mut warnings,
         ) {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
@@ -154,38 +154,42 @@ impl Generator for EcmaGenerator {
       }
       OutputFormat::App => render_app(
         ctx,
-        &rendered_module_sources,
+        hashbang,
         banner.as_deref(),
-        footer.as_deref(),
         intro.as_deref(),
         outro.as_deref(),
-        hashbang,
+        footer.as_deref(),
+        &rendered_module_sources,
       ),
       OutputFormat::Iife => {
         match render_iife(
-          &mut warnings,
           ctx,
-          &rendered_module_sources,
+          hashbang,
           banner.as_deref(),
-          footer.as_deref(),
           intro.as_deref(),
           outro.as_deref(),
-          hashbang,
-        ) {
+          footer.as_deref(),
+          &rendered_module_sources,
+          &mut warnings,
+        )
+        .await
+        {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
       OutputFormat::Umd => {
         match render_umd(
-          &mut warnings,
           ctx,
-          &rendered_module_sources,
           banner.as_deref(),
-          footer.as_deref(),
           intro.as_deref(),
           outro.as_deref(),
-        ) {
+          footer.as_deref(),
+          &rendered_module_sources,
+          &mut warnings,
+        )
+        .await
+        {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }

@@ -7,7 +7,6 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-"use strict";
 require('./main.js');
 
 
@@ -23,7 +22,6 @@ Object.keys(node_fs).forEach(function (k) {
 ## entry2.js
 
 ```js
-"use strict";
 require('./main.js');
 
 
@@ -39,7 +37,6 @@ Object.keys(node_fs).forEach(function (k) {
 ## main.js
 
 ```js
-"use strict";
 require("node:fs");
 
 ```

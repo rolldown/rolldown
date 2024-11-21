@@ -7,7 +7,6 @@ snapshot_kind: text
 ## main.js
 
 ```js
-"use strict";
 require("node:fs");
 require("node:path");
 

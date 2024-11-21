@@ -14,7 +14,6 @@ var mod = (() => {
 ```js
 (function(foo) {
 
-"use strict";
 
 
 var foo = require("foo");

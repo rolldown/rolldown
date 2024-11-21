@@ -22,7 +22,6 @@ main();
 ## main2.js
 
 ```js
-"use strict";
 const require_shared = require('./shared.js');
 
 exports.shared = require_shared.shared

@@ -2074,7 +2074,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_common_js_no_bundle
 
-- entry-!~{000}~.js => entry-NfHgMT4S.js
+- entry-!~{000}~.js => entry-CV94t1UM.js
 
 # tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
@@ -2086,7 +2086,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_external_common_js
 
-- entry-!~{000}~.js => entry-NfHgMT4S.js
+- entry-!~{000}~.js => entry-CV94t1UM.js
 
 # tests/esbuild/importstar/re_export_star_external_es6
 
@@ -2094,11 +2094,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_external_iife
 
-- entry-!~{000}~.js => entry-D9Fu0SSh.js
+- entry-!~{000}~.js => entry-4DiH0ZQw.js
 
 # tests/esbuild/importstar/re_export_star_iife_no_bundle
 
-- entry-!~{000}~.js => entry-D9Fu0SSh.js
+- entry-!~{000}~.js => entry-4DiH0ZQw.js
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
@@ -4111,18 +4111,18 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.js => main-siy4jyic.js
+- main-!~{000}~.js => main-fYGzYGiR.js
 
 # tests/rolldown/function/format/cjs/share_chunk_without_symbol
 
-- entry1-!~{000}~.js => entry1-pwisENYS.js
-- entry2-!~{001}~.js => entry2-Dvd57Xhb.js
+- entry1-!~{000}~.js => entry1-Bf2XwgoE.js
+- entry2-!~{001}~.js => entry2-1vShj1WI.js
 - main-!~{002}~.js => main-e6AWdJbi.js
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.js => entry1-D_FxaItA.js
-- entry2-!~{001}~.js => entry2-CEILy7Yy.js
+- entry1-!~{000}~.js => entry1-BAekiC4O.js
+- entry2-!~{001}~.js => entry2-BOI4dDJZ.js
 - main-!~{002}~.js => main-3rVF2glE.js
 
 # tests/rolldown/function/format/esm/import_export_unicode
@@ -4530,6 +4530,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-V_qoe-l0.js
 
+# tests/rolldown/misc/use_strict/empty_file
+
+- main-!~{000}~.js => main-Fv4vYntb.js
+
 # tests/rolldown/misc/use_strict/ignore_treeshaked_modules
 
 - main-!~{000}~.js => main-9PNMQzt-.js
@@ -4555,9 +4559,9 @@ snapshot_kind: text
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-Ber6gQNm.js
-- entry2-!~{001}~.js => entry2-CXESVBTS.js
-- main-!~{002}~.js => main-BFNcOq71.js
+- entry-!~{000}~.js => entry-Cxqg_a1c.js
+- entry2-!~{001}~.js => entry2-DTnAx45R.js
+- main-!~{002}~.js => main-Ch0Y77Hv.js
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
@@ -4580,7 +4584,7 @@ snapshot_kind: text
 # tests/rolldown/sourcemap/live_binding
 
 - main1-!~{000}~.js => main1-CB35tRtv.js
-- main2-!~{001}~.js => main2-BnQB515V.js
+- main2-!~{001}~.js => main2-B-fR7tRn.js
 - shared-!~{002}~.js => shared-BuIUQBnE.js
 - main1-CB35tRtv.js.map
 - shared-BuIUQBnE.js.map
@@ -4849,7 +4853,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
 
-- main-!~{000}~.js => main-BjS-VFfH.js
+- main-!~{000}~.js => main-3kqVcoRg.js
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
@@ -5037,8 +5041,8 @@ snapshot_kind: text
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-CtSdlhRC.js
-- entry2-!~{001}~.js => entry2-tZPhe9FZ.js
+- entry-!~{000}~.js => entry-D8lyh8F8.js
+- entry2-!~{001}~.js => entry2-CoQWESLQ.js
 - main-!~{002}~.js => main-DallkI37.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped

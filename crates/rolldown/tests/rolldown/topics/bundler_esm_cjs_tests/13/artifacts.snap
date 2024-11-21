@@ -62,7 +62,6 @@ input.works = import("./foo.js").then((foo3) => foo.bar === 123 && require_foo.b
 ## foo.js
 
 ```js
-"use strict";
 const require_foo = require('./foo2.js');
 
 require_foo.init_foo();

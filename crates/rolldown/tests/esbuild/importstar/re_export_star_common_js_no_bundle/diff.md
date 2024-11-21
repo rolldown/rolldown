@@ -10,7 +10,6 @@ __reExport(entry_exports, require("foo"), module.exports);
 ```
 ### rolldown
 ```js
-"use strict";
 require("foo");
 
 

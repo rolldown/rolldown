@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
-use rolldown_common::{ChunkKind, ExternalModule, OutputExports};
+use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
 use crate::{
   ecmascript::{
@@ -21,6 +21,7 @@ use super::utils::{
   namespace::render_property_access, render_chunk_external_imports, render_factory_parameters,
 };
 
+#[expect(clippy::too_many_lines)]
 pub fn render_umd<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
@@ -126,6 +127,38 @@ pub fn render_umd<'code>(
       }
     }
   });
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    let entry_meta = &ctx.link_output.metas[entry_id];
+    match entry_meta.wrap_kind {
+      WrapKind::Esm => {
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        // init_xxx
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+        ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
+      }
+      WrapKind::Cjs => {
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+
+        // require_xxx
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+
+        // require_xxx();
+        // FIXME: should set the umd's exports with `require_xxx()`
+        source_joiner.append_source(concat_string!(wrapper_ref_name, "();\n"));
+      }
+      WrapKind::None => {}
+    }
+  }
 
   //  exports
   if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {

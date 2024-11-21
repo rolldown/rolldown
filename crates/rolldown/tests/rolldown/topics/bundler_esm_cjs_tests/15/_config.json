@@ -13,10 +13,9 @@
     },
     {
       "format": "iife"
+    },
+    {
+      "format": "umd"
     }
-    // FIXME(hyf0): execute failed
-    // {
-    //   "format": "umd"
-    // }
   ]
 }

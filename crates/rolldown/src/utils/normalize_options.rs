@@ -1,6 +1,7 @@
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  Comments, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
+  Comments, GlobalsOutputOption, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat,
+  Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -61,8 +62,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   loaders.extend(user_defined_loaders);
 
-  let globals: FxHashMap<String, String> =
-    raw_options.globals.map(|globals| globals.into_iter().collect()).unwrap_or_default();
+  let globals = raw_options.globals.unwrap_or(GlobalsOutputOption::FxHashMap(FxHashMap::default()));
 
   let oxc_inject_global_variables_config = InjectGlobalVariablesConfig::new(
     raw_options

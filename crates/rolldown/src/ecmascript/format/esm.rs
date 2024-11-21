@@ -11,12 +11,12 @@ use crate::{
 
 pub fn render_esm<'code>(
   ctx: &mut GenerateContext<'_>,
-  module_sources: &'code RenderedModuleSources,
+  hashbang: Option<&'code str>,
   banner: Option<&'code str>,
-  footer: Option<&'code str>,
   intro: Option<&'code str>,
   outro: Option<&'code str>,
-  hashbang: Option<&'code str>,
+  footer: Option<&'code str>,
+  module_sources: &'code RenderedModuleSources,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
 

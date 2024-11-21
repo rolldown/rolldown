@@ -1,7 +1,8 @@
 mod types;
 
-use crate::types::js_callback::{JsCallback, MaybeAsyncJsCallback};
 use std::collections::HashMap;
+
+use crate::types::js_callback::{JsCallback, MaybeAsyncJsCallback};
 
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -14,6 +15,7 @@ use types::binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 
 pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 pub type ChunkFileNamesOutputOption = Either<String, JsCallback<PreRenderedChunk, String>>;
+pub type GlobalsOutputOption = Either<HashMap<String, String>, JsCallback<String, String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Debug)]
@@ -69,7 +71,10 @@ pub struct BindingOutputOptions {
   pub format: Option<String>,
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;
-  pub globals: Option<HashMap<String, String>>,
+  #[debug(skip)]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "Record<string, string> | ((name: string) => string)")]
+  pub globals: Option<GlobalsOutputOption>,
   #[napi(ts_type = "'base64' | 'base36' | 'hex'")]
   pub hash_characters: Option<String>,
   // hoistTransitiveImports: boolean;

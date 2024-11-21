@@ -22,14 +22,14 @@ use super::utils::{
 };
 
 #[expect(clippy::too_many_lines)]
-pub fn render_umd<'code>(
-  warnings: &mut Vec<BuildDiagnostic>,
+pub async fn render_umd<'code>(
   ctx: &GenerateContext<'_>,
-  module_sources: &'code RenderedModuleSources,
   banner: Option<&'code str>,
-  footer: Option<&'code str>,
   intro: Option<&'code str>,
   outro: Option<&'code str>,
+  footer: Option<&'code str>,
+  module_sources: &'code RenderedModuleSources,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
 
@@ -78,7 +78,8 @@ pub fn render_umd<'code>(
     ""
   };
   let iife_end = if need_global { ")" } else { "" };
-  let iife_export = render_iife_export(warnings, ctx, &externals, has_exports, named_exports)?;
+  let iife_export =
+    render_iife_export(warnings, ctx, &externals, has_exports, named_exports).await?;
   source_joiner.append_source(format!(
     "(function({wrapper_parameters}) {{
   {cjs_intro}
@@ -203,7 +204,7 @@ fn render_cjs_dependencies(externals: &[&ExternalModule], has_exports: bool) -> 
   dependencies.join(", ")
 }
 
-fn render_iife_export(
+async fn render_iife_export(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
@@ -214,21 +215,23 @@ fn render_iife_export(
     return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
   }
   let mut dependencies = Vec::with_capacity(externals.len());
-  externals.iter().for_each(|external| {
-    if let Some(global) = ctx.options.globals.get(external.name.as_str()) {
-      dependencies.push(format!(
-        "global{}",
-        global.split('.').map(render_property_access).collect::<String>()
-      ));
-    } else {
-      let target = legitimize_identifier_name(external.name.as_str()).to_string();
-      warnings.push(
-        BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
-          .with_severity_warning(),
-      );
-      dependencies.push(format!("global{}", render_property_access(&target)));
-    }
-  });
+
+  for external in externals {
+    let global = ctx.options.globals.call(external.name.as_str()).await;
+    let target = match &global {
+      Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
+      None => {
+        let target = legitimize_identifier_name(external.name.as_str()).to_string();
+        warnings.push(
+          BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
+            .with_severity_warning(),
+        );
+        render_property_access(&target)
+      }
+    };
+    dependencies.push(format!("global{target}"));
+  }
+
   let deps = dependencies.join(",");
   if has_exports {
     let (stmt, namespace) = generate_namespace_definition(

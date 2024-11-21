@@ -9,6 +9,7 @@ import type {
 import type {
   AddonFunction,
   ChunkFileNamesFunction,
+  GlobalsFunction,
   ModuleFormat,
   OutputCliOptions,
   OutputOptions,
@@ -37,6 +38,11 @@ const chunkFileNamesFunctionSchema = z
   .function()
   .args(zodExt.phantom<PreRenderedChunk>())
   .returns(z.string()) satisfies z.ZodType<ChunkFileNamesFunction>
+
+const GlobalsFunctionSchema = z
+  .function()
+  .args(z.string())
+  .returns(z.string()) satisfies z.ZodType<GlobalsFunction>
 
 const outputOptionsSchema = z.strictObject({
   dir: z
@@ -112,6 +118,7 @@ const outputOptionsSchema = z.strictObject({
   name: z.string().describe('Name for UMD / IIFE format outputs').optional(),
   globals: z
     .record(z.string())
+    .or(GlobalsFunctionSchema)
     .describe(
       'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
     )
@@ -177,6 +184,12 @@ export const outputCliOptionsSchema = outputOptionsSchema
       .boolean()
       .describe(
         'Always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable)',
+      )
+      .optional(),
+    globals: z
+      .record(z.string())
+      .describe(
+        'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
       )
       .optional(),
     advancedChunks: z

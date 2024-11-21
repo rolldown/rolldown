@@ -5,6 +5,7 @@ use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
+use types::output_option::GlobalsOutputOption;
 use types::target::ESTarget;
 use types::watch_option::WatchOption;
 
@@ -76,7 +77,12 @@ pub struct BundlerOptions {
   pub file: Option<String>,
   pub format: Option<OutputFormat>,
   pub exports: Option<OutputExports>,
-  pub globals: Option<HashMap<String, String>>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_globals"),
+    schemars(with = "Option<HashMap<String, String>>")
+  )]
+  pub globals: Option<GlobalsOutputOption>,
   pub sourcemap: Option<SourceMapType>,
   pub es_module: Option<EsModuleFlag>,
   pub drop_labels: Option<Vec<String>>,
@@ -179,6 +185,15 @@ where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<String>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_globals<'de, D>(deserializer: D) -> Result<Option<GlobalsOutputOption>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<HashMap<String, String>>::deserialize(deserializer)?;
   Ok(deserialized.map(From::from))
 }
 

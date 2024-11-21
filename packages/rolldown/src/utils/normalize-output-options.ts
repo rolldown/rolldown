@@ -47,7 +47,6 @@ export function normalizeOutputOptions(
     intro: getAddon(opts, 'intro'),
     outro: getAddon(opts, 'outro'),
     esModule,
-    // TODO support functions
     globals,
     entryFileNames,
     chunkFileNames,

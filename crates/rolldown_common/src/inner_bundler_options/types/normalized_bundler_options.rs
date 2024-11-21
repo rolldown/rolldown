@@ -21,7 +21,9 @@ use super::{
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{EsModuleFlag, HashCharacters, InjectImport, InputItem, ModuleType};
+use crate::{
+  EsModuleFlag, GlobalsOutputOption, HashCharacters, InjectImport, InputItem, ModuleType,
+};
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
 #[derive(Debug)]
@@ -49,7 +51,7 @@ pub struct NormalizedBundlerOptions {
   pub exports: OutputExports,
   pub es_module: EsModuleFlag,
   pub hash_characters: HashCharacters,
-  pub globals: FxHashMap<String, String>,
+  pub globals: GlobalsOutputOption,
   pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,

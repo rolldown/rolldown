@@ -4,12 +4,12 @@ use crate::{ecmascript::ecma_generator::RenderedModuleSources, types::generator:
 
 pub fn render_app<'code>(
   _ctx: &GenerateContext<'_>,
-  module_sources: &'code RenderedModuleSources,
+  hashbang: Option<&'code str>,
   banner: Option<&'code str>,
-  footer: Option<&'code str>,
   intro: Option<&'code str>,
   outro: Option<&'code str>,
-  hashbang: Option<&'code str>,
+  footer: Option<&'code str>,
+  module_sources: &'code RenderedModuleSources,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
 

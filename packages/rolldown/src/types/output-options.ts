@@ -18,6 +18,8 @@ export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
 
+export type GlobalsFunction = (name: string) => string
+
 export interface OutputOptions {
   dir?: string
   file?: string
@@ -49,7 +51,7 @@ export interface OutputOptions {
   cssChunkFileNames?: string | ChunkFileNamesFunction
   minify?: boolean
   name?: string
-  globals?: Record<string, string>
+  globals?: Record<string, string> | GlobalsFunction
   externalLiveBindings?: boolean
   inlineDynamicImports?: boolean
   advancedChunks?: {
@@ -78,6 +80,7 @@ interface OverwriteOutputOptionsForCli {
   intro?: string
   outro?: string
   esModule?: boolean
+  globals?: Record<string, string>
   advancedChunks?: {
     minSize?: number
     minShareCount?: number

@@ -67,3 +67,31 @@ return require_entry();
 
 })();
 ```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## entry.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+
+
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"(exports) {
+	const entry = require_entry();
+	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
+	exports.foo = 123;
+} });
+
+//#endregion
+require_entry();
+
+});
+```

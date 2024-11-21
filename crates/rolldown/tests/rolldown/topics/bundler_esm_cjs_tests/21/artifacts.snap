@@ -50,3 +50,32 @@ input.works = foo.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true
 
 //#endregion
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { bar: () => bar });
+var bar;
+var init_foo = __esm({ "foo.js"() {
+	bar = 123;
+} });
+
+//#endregion
+//#region entry.js
+const foo = (init_foo(), __toCommonJS(foo_exports));
+input.works = foo.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true;
+
+//#endregion
+})();
+```

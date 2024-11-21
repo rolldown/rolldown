@@ -133,3 +133,50 @@ Object.defineProperty(exports, '__toCommonJS', {
   }
 });
 ```
+---
+
+Variant: (format: Iife)
+
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `__esModule` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[entry.js:5:23]
+   │
+ 5 │   foo2.bar === 123 && foo2.__esModule === void 0 &&
+   │                       ───────┬───────  
+   │                              ╰───────── 
+───╯
+
+```
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+"use strict";
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { bar: () => bar });
+var bar;
+var init_foo = __esm({ "foo.js"() {
+	bar = 123;
+} });
+
+//#endregion
+//#region entry.js
+init_foo();
+const foo = (init_foo(), __toCommonJS(foo_exports));
+input.works = Promise.resolve().then(function() {
+	return init_foo(), foo_exports;
+}).then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
+
+//#endregion
+})();
+```

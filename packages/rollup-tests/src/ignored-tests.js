@@ -36,10 +36,6 @@ const ignoreTests = [
   // The dyanmic import at format cjs is not compatible with rollup
   // The test passed, but the snapshot is same with rollup
   "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
-  // output.dynamicImportInCjs is not supported
-  "rollup@function@dynamic-import-this-function: uses correct \"this\" in dynamic imports when not using arrow functions",
-  "rollup@function@dynamic-import-this-arrow: uses correct \"this\" in dynamic imports when using arrow functions",
-  "rollup@function@dynamic-import-expression: Dynamic import expression replacement",
 
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
@@ -48,8 +44,6 @@ const ignoreTests = [
   "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@non-js-extensions: non .js extensions are preserved",
-  "rollup@function@no-external-live-bindings: Allows omitting the code that handles external live bindings",
-  "rollup@function@no-external-live-bindings-compact: Allows omitting the code that handles external live bindings",
   "rollup@function@namespace-member-side-effects@unknown-access: respects side effects when accessing unknown namespace members",
   "rollup@function@namespace-member-side-effects@assignment: checks side effects when reassigning namespace members",
   "rollup@function@name-conflict-promise: avoids name conflicts with local variables named Promise",
@@ -63,20 +57,12 @@ const ignoreTests = [
   "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",
   "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",
   "rollup@function@external-conflict: external paths from custom resolver remain external (#633)",
-  "rollup@function@external-live-binding-compact: handles external live-bindings",
-  "rollup@function@external-live-binding: handles external live-bindings",
-  "rollup@function@external-dynamic-import-live-binding-compact: supports external dynamic imports with live bindings in compact mode",
-  "rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings",
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
   "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
   "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
  
-  // The `this` related
-  "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions", 
-  "rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es",
-
   // `return init_foo(), foo_exports;` is not expected 
   "rollup@form@dynamic-import-inlining: dynamic import inlining",
   "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
@@ -86,8 +72,6 @@ const ignoreTests = [
   // /*@__PURE__*/ related
   "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",
   "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", 
-  // treeshake.annotations false is not supported
-  "rollup@form@pure-comments-disabled: does not rely on pure annotations if they are disabled",
 
   // deconfilct
   "rollup@function@deshadow-respect-existing: respect existing variable names when deshadowing",
@@ -133,7 +117,6 @@ const ignoreTests = [
   "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
  
   // import.meta.ROLLUP_FILE_URL_<referenceId> is not supported
-  "rollup@function@emit-file@file-references-in-bundle: lists referenced files in the bundle",
   "rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es",
   "rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es",
 
@@ -144,32 +127,6 @@ const ignoreTests = [
   "rollup@function@options-hook: allows to read and modify options in the options hook",
   "rollup@function@output-options-hook: allows to read and modify options in the options hook",
 
-  // Should error if call `this.error` at hooks
-  "rollup@function@plugin-error@buildEnd: buildStart hooks can use this.error",
-  "rollup@function@plugin-error@buildStart: buildStart hooks can use this.error",
-  "rollup@function@plugin-error@generateBundle: buildStart hooks can use this.error",
-  "rollup@function@plugin-error@load: buildStart hooks can use this.error",
-  "rollup@function@plugin-error@renderChunk: buildStart hooks can use this.error",
-  "rollup@function@plugin-error@renderStart: buildStart hooks can use this.error",
-  "rollup@function@plugin-error@resolveId: buildStart hooks can use this.error",
-  "rollup@function@load-module-error@buildEnd: buildStart hooks can use this.error",
-  "rollup@function@load-module-error@buildStart: buildStart hooks can use this.error",
-  "rollup@function@load-module-error@generateBundle: buildStart hooks can use this.error",
-  "rollup@function@load-module-error@renderChunk: buildStart hooks can use this.error",
-  "rollup@function@load-module-error@renderStart: buildStart hooks can use this.error",
-  "rollup@function@load-module-error@resolveId: buildStart hooks can use this.error",
-  "rollup@function@logging@this-error-onlog: can turn logs into errors via this.error in the onLog hook",
-  "rollup@function@plugin-error-only-first-render-chunk: throws error only with first plugin renderChunk",
-  "rollup@function@plugin-error-only-first-transform: throws error only with first plugin transform",
-  "rollup@function@plugin-error-module-parsed: errors in moduleParsed abort the build",
-  // PluginContext.error accpet more arguments with transform hooks 
-  "rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)",
-  "rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)",
- 
-  // Should error if call `this.error` at hooks and the error object is not compatible with rollup
-  "rollup@function@load-module-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
-  "rollup@function@plugin-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)",
-  
   // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
@@ -177,12 +134,8 @@ const ignoreTests = [
   "rollup@function@custom-module-options: supports adding custom options to modules",
   "rollup@function@custom-external-module-options: supports adding custom options to external modules",
 
-  // The `output.file` is not supported
-  "rollup@function@file-and-dir: throws when using both the file and the dir option",
-
   // Should delete use strict from function body
   "rollup@function@function-use-strict-directive-removed: should delete use strict from function body",
-
 
   // The sourcemap related
   "rollup@function@handles-stringified-sourcemaps: handles transforms that return stringified source maps (#377)",
@@ -300,63 +253,6 @@ const ignoreTests = [
   "rollup@form@external-imports: prefixes global names with `global.` when creating UMD bundle (#57)@generates es",
   "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properites",
 
-  // The error/warning msg info is not compatible with rollup
-  // TODO check the error is not break bundle
-  "rollup@function@throws-not-found-module: throws error if module is not found",
-  "rollup@function@shims-missing-exports: shims missing exports",
-  "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
-  "rollup@function@reexport-missing-error: reexporting a missing identifier should print an error",
-  "rollup@function@recursive-reexports: handles recursive namespace reexports",
-  "rollup@function@paths-are-case-sensitive: insists on correct casing for imports",
-  "rollup@function@no-relative-external: missing relative imports are an error, not a warning",
-  "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
-  "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
-  "rollup@function@namespace-missing-export: replaces missing namespace members with undefined and warns about them",
-  "rollup@function@warn-misplaced-annotations: warns for misplaced annotations",
-  "rollup@function@warn-missing-iife-name: warns if no name is provided for an IIFE bundle",
-  "rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode",
-  "rollup@function@warn-on-empty-bundle: warns if empty bundle is generated  (#444)",
-  "rollup@function@warn-on-eval: warns about use of eval",
-  "rollup@function@warn-on-namespace-conflict: warns on duplicate export * from",
-  "rollup@function@warn-on-top-level-this: warns on top-level this (#770)",
-  "rollup@function@warn-on-unused-missing-imports: warns on missing (but unused) imports",
-  "rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps",
-  "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
-  "rollup@function@warnings-to-string: provides a string conversion for warnings",
-  "rollup@function@plugin-error-with-numeric-code: rollup do not break if get a plugin error that contains numeric code",
-  "rollup@function@load-module-error@load: throws when a module cannot be loaded",
-  "rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports",
-  "rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports",
-  "rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw",
-  "rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build",
-  "rollup@function@external-entry-point: throws for entry points that are resolved as false by plugins",
-  "rollup@function@external-entry-point-object: throws for entry points that are resolved as an external object by plugins",
-  "rollup@function@export-type-mismatch-c: cannot have named exports if explicit export type is default",
-  "rollup@function@export-type-mismatch: cannot have named exports if explicit export type is default",
-  "rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with \".json\" extension",
-  "rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension",
-  "rollup@function@error-missing-umd-name: throws an error if no name is provided for a UMD bundle",
-  "rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file",
-  "rollup@function@dynamic-import-relative-not-found: throws if a dynamic relative import is not found",
-  "rollup@function@dynamic-import-not-found: warns if a dynamic import is not found",
-  "rollup@function@does-not-hang-on-missing-module: does not hang on missing module (#53)",
-  "rollup@function@default-not-reexported: default export is not re-exported with export *",
-  "rollup@function@banner-and-footer: adds a banner/footer",
-  "rollup@function@circular-missed-reexports-2: handles circular reexports",
-  "rollup@function@circular-missed-reexports: handles circular reexports",
-  "rollup@function@check-resolve-for-entry: checks that entry is resolved",
-  "rollup@function@cycles-export-star: does not stack overflow on `export * from X` cycles",
-  "rollup@function@cycles-defaults: cycles work with default exports",
-  "rollup@function@cycles-stack-overflow: does not stack overflow on crazy cyclical dependencies",
-  "rollup@function@cycles-default-anonymous-function-hoisted: Anonymous function declarations are hoisted",
-  "rollup@function@cycles-immediate: handles cycles where imports are immediately used",
-  "rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully",
-  "rollup@function@custom-path-resolver-plural-b: resolver error is not caught",
-  "rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import",
-  "rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces",
-  "rollup@function@can-import-self: a module importing its own bindings",
-  "rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed",
-  "rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined",
 
   // The treeshaking is not compatible with rollup
   "rollup@form@conditional-put-parens-around-sequence: put parens around sequences if conditional simplified (#1311)",

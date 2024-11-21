@@ -2,24 +2,22 @@ use std::fmt::Display;
 
 use arcstr::ArcStr;
 
-pub enum WatcherEventData {
-  Empty,
-  WatcherChange(WatcherChangeData),
-  BundleEvent(BundleEventKind),
-}
-
-impl Default for WatcherEventData {
-  fn default() -> Self {
-    Self::Empty
-  }
-}
-
-#[derive(PartialEq, Eq, Hash)]
 pub enum WatcherEvent {
   Close,
-  Event,
+  Event(BundleEvent),
   ReStart,
-  Change,
+  Change(WatcherChangeData),
+}
+
+impl Display for WatcherEvent {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match self {
+      WatcherEvent::Close => write!(f, "close"),
+      WatcherEvent::Event(_) => write!(f, "event"),
+      WatcherEvent::ReStart => write!(f, "restart"),
+      WatcherEvent::Change(_) => write!(f, "change"),
+    }
+  }
 }
 
 pub struct WatcherChangeData {
@@ -27,13 +25,7 @@ pub struct WatcherChangeData {
   pub kind: WatcherChangeKind,
 }
 
-impl From<WatcherChangeData> for WatcherEventData {
-  fn from(event: WatcherChangeData) -> Self {
-    WatcherEventData::WatcherChange(event)
-  }
-}
-
-pub enum BundleEventKind {
+pub enum BundleEvent {
   Start,
   BundleStart,
   BundleEnd(BundleEndEventData),
@@ -41,21 +33,15 @@ pub enum BundleEventKind {
   Error(String),
 }
 
-impl Display for BundleEventKind {
+impl Display for BundleEvent {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
-      BundleEventKind::Start => write!(f, "START"),
-      BundleEventKind::BundleStart => write!(f, "BUNDLE_START"),
-      BundleEventKind::BundleEnd(_) => write!(f, "BUNDLE_END"),
-      BundleEventKind::End => write!(f, "END"),
-      BundleEventKind::Error(_) => write!(f, "ERROR"),
+      BundleEvent::Start => write!(f, "START"),
+      BundleEvent::BundleStart => write!(f, "BUNDLE_START"),
+      BundleEvent::BundleEnd(_) => write!(f, "BUNDLE_END"),
+      BundleEvent::End => write!(f, "END"),
+      BundleEvent::Error(_) => write!(f, "ERROR"),
     }
-  }
-}
-
-impl From<BundleEventKind> for WatcherEventData {
-  fn from(kind: BundleEventKind) -> Self {
-    WatcherEventData::BundleEvent(kind)
   }
 }
 

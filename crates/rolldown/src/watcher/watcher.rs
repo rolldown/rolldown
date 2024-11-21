@@ -4,8 +4,7 @@ use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
 use rolldown_common::{
-  BundleEndEventData, BundleEventKind, WatcherChangeData, WatcherChangeKind, WatcherEvent,
-  WatcherEventData,
+  BundleEndEventData, BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent,
 };
 use rolldown_error::{BuildResult, DiagnosticOptions, ResultExt};
 use rolldown_utils::pattern_filter;
@@ -109,12 +108,12 @@ impl Watcher {
   pub async fn run(&self) -> BuildResult<()> {
     let start_time = Instant::now();
     let mut bundler = self.bundler.lock().await;
-    self.emitter.emit(WatcherEvent::ReStart, WatcherEventData::default()).await?;
+    self.emitter.emit(WatcherEvent::ReStart)?;
 
     self.running.store(true, Ordering::Relaxed);
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::Start.into()).await?;
+    self.emitter.emit(WatcherEvent::Event(BundleEvent::Start))?;
 
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::BundleStart.into()).await?;
+    self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
 
     bundler.plugin_driver.clear();
 
@@ -159,38 +158,24 @@ impl Watcher {
 
     match output {
       Ok(_output) => {
-        self
-          .emitter
-          .emit(
-            WatcherEvent::Event,
-            BundleEventKind::BundleEnd(BundleEndEventData {
-              output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
-              #[allow(clippy::cast_possible_truncation)]
-              duration: start_time.elapsed().as_millis() as u32,
-            })
-            .into(),
-          )
-          .await?;
+        self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleEnd(BundleEndEventData {
+          output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
+          #[allow(clippy::cast_possible_truncation)]
+          duration: start_time.elapsed().as_millis() as u32,
+        })))?;
       }
       Err(mut errs) => {
-        self
-          .emitter
-          .emit(
-            WatcherEvent::Event,
-            BundleEventKind::Error(
-              errs
-                .remove(0)
-                .into_diagnostic_with(&DiagnosticOptions { cwd: bundler.options.cwd.clone() })
-                .to_color_string(),
-            )
-            .into(),
-          )
-          .await?;
+        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(
+          errs
+            .remove(0)
+            .into_diagnostic_with(&DiagnosticOptions { cwd: bundler.options.cwd.clone() })
+            .to_color_string(),
+        )))?;
       }
     }
 
     self.running.store(false, Ordering::Relaxed);
-    self.emitter.emit(WatcherEvent::Event, BundleEventKind::End.into()).await?;
+    self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
 
     Ok(())
   }
@@ -207,7 +192,7 @@ impl Watcher {
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::run`
     std::mem::drop(inner);
     // emit close event
-    self.emitter.emit(WatcherEvent::Close, WatcherEventData::default()).await?;
+    self.emitter.emit(WatcherEvent::Close)?;
     // call close watcher hook
     let bundler = self.bundler.lock().await;
     bundler.plugin_driver.close_watcher().await?;
@@ -223,8 +208,7 @@ impl Watcher {
 pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
-    .emit(WatcherEvent::Change, WatcherChangeData { path: path.into(), kind }.into())
-    .await
+    .emit(WatcherEvent::Change(WatcherChangeData { path: path.into(), kind }))
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
   let bundler = watcher.bundler.lock().await;
   let _ = bundler

@@ -86,8 +86,7 @@ export declare class BindingTransformPluginContext {
 
 export declare class BindingWatcher {
   close(): Promise<void>
-  on(event: BindingWatcherEvent, listener: (data: BindingWatcherEventData) => void): void
-  start(): Promise<void>
+  start(listener: (data: BindingWatcherEvent) => void): Promise<void>
 }
 
 export declare class BindingWatcherChangeData {
@@ -95,7 +94,8 @@ export declare class BindingWatcherChangeData {
   kind: string
 }
 
-export declare class BindingWatcherEventData {
+export declare class BindingWatcherEvent {
+  eventKind(): string
   watchChangeData(): BindingWatcherChangeData
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
@@ -525,13 +525,6 @@ export interface BindingViteResolvePluginResolveOptions {
   tryIndex: boolean
   tryPrefix?: string
   preserveSymlinks: boolean
-}
-
-export declare enum BindingWatcherEvent {
-  Close = 0,
-  Event = 1,
-  ReStart = 2,
-  Change = 3
 }
 
 export interface BindingWatchOption {

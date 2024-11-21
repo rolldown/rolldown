@@ -1,5 +1,5 @@
 # Reason
-1. don't rewrite top level binding
+1. the name `foo` binding of function expression can't not referenced anywhere, rolldown have same behavior as esbuild
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -27,7 +27,7 @@ let x = function foo(foo) {
 +++ rolldown	entry.js
 @@ -1,4 +1,4 @@
 -let x = function (foo) {
-+var x = function foo(foo) {
++let x = function foo(foo) {
      var foo;
      return foo;
  };

@@ -2,7 +2,6 @@ import { bindingifyInputOptions } from '../options/bindingify-input-options'
 import { Bundler } from '../binding'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { normalizeInputOptions } from './normalize-input-options'
-import { normalizeOutputOptions } from './normalize-output-options'
 import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { PluginDriver } from '../plugin/plugin-driver'
 import type { InputOptions } from '../types/input-options'
@@ -27,21 +26,23 @@ export async function createBundler(
 
   try {
     outputOptions = pluginDriver.callOutputOptionsHook(
-      normalizedInputOptions,
+      normalizedInputOptions.plugins,
       outputOptions,
     )
-    const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
 
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
       normalizedInputOptions,
-      normalizedOutputOptions,
+      outputOptions,
     )
+
+    // Convert `NormalizedOutputOptions` to `BindingInputOptions`
+    const bindingOutputOptions = bindingifyOutputOptions(outputOptions)
 
     return {
       bundler: new Bundler(
         bindingInputOptions,
-        bindingifyOutputOptions(normalizedOutputOptions),
+        bindingOutputOptions,
         parallelPluginInitResult?.registry,
       ),
       stopWorkers: parallelPluginInitResult?.stopWorkers,

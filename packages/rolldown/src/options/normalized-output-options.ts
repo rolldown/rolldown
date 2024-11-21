@@ -1,14 +1,5 @@
-import type { SourcemapIgnoreListOption } from '../rollup'
-import type { AddonFunction, OutputOptions } from '../types/output-options'
-import type { RolldownPlugin } from '../plugin'
+import type { OutputOptions } from '../types/output-options'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd'
 
-export interface NormalizedOutputOptions extends OutputOptions {
-  plugins: RolldownPlugin[]
-  sourcemapIgnoreList: SourcemapIgnoreListOption
-  banner: AddonFunction
-  footer: AddonFunction
-  intro: AddonFunction
-  outro: AddonFunction
-}
+export interface NormalizedOutputOptions extends OutputOptions {}

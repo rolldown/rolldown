@@ -35,12 +35,12 @@ export function bindingifyOutputOptions(
     exports,
     hashCharacters,
     sourcemap: bindingifySourcemap(sourcemap),
-    sourcemapIgnoreList,
+    sourcemapIgnoreList: bindingifySourcemapIgnoreList(sourcemapIgnoreList),
     sourcemapPathTransform,
-    banner,
-    footer,
-    intro,
-    outro,
+    banner: bindingifyAddon(banner),
+    footer: bindingifyAddon(footer),
+    intro: bindingifyAddon(intro),
+    outro: bindingifyAddon(outro),
     extend: outputOptions.extend,
     globals,
     esModule,
@@ -56,6 +56,19 @@ export function bindingifyOutputOptions(
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
     advancedChunks: outputOptions.advancedChunks,
+  }
+}
+
+type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro'
+
+function bindingifyAddon(
+  configAddon: NormalizedOutputOptions[AddonKeys],
+): BindingOutputOptions[AddonKeys] {
+  return async (chunk) => {
+    if (typeof configAddon === 'function') {
+      return configAddon(chunk)
+    }
+    return configAddon || ''
   }
 }
 
@@ -100,4 +113,15 @@ function bindingifySourcemap(
     default:
       throw new Error(`unknown sourcemap: ${sourcemap}`)
   }
+}
+
+function bindingifySourcemapIgnoreList(
+  sourcemapIgnoreList: NormalizedOutputOptions['sourcemapIgnoreList'],
+): BindingOutputOptions['sourcemapIgnoreList'] {
+  return typeof sourcemapIgnoreList === 'function'
+    ? sourcemapIgnoreList
+    : sourcemapIgnoreList === false
+      ? () => false
+      : (relativeSourcePath: string, _sourcemapPath: string) =>
+          relativeSourcePath.includes('node_modules')
 }

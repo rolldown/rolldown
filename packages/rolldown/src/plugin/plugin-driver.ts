@@ -2,10 +2,9 @@ import { getLogHandler, normalizeLog } from '../log/logHandler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { Plugin, RolldownPluginRec } from './'
 import { error, logPluginError } from '../log/logs'
-import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
-import { InputOptions, OutputOptions, VERSION } from '..'
+import { InputOptions, OutputOptions, RolldownPlugin, VERSION } from '..'
 import { getLogger, getOnLog } from '../log/logger'
 import { BuiltinPlugin } from './builtin-plugin'
 
@@ -73,15 +72,15 @@ export class PluginDriver {
   }
 
   public callOutputOptionsHook(
-    inputOptions: NormalizedInputOptions,
+    rawPlugins: RolldownPlugin[],
     outputOptions: OutputOptions,
   ): OutputOptions {
-    const plugins = getSortedPlugins(
+    const sortedPlugins = getSortedPlugins(
       'outputOptions',
-      getObjectPlugins(inputOptions.plugins),
+      getObjectPlugins(rawPlugins),
     )
 
-    for (const plugin of plugins) {
+    for (const plugin of sortedPlugins) {
       const options = plugin.outputOptions
       if (options) {
         const { handler } = normalizeHook(options)

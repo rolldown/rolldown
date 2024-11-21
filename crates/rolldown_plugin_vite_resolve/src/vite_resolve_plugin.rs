@@ -150,8 +150,7 @@ impl ViteResolvePlugin {
 
   async fn resolve_id_internal(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     let scan =
-      args.custom.get::<ResolveIdOptionsScan>(&ResolveIdOptionsScan {}).map_or(false, |v| *v)
-        || self.resolve_options.scan;
+      args.custom.get(&ResolveIdOptionsScan {}).map_or(false, |v| *v) || self.resolve_options.scan;
 
     if args.specifier.starts_with('\0')
       || args.specifier.starts_with("virtual:")

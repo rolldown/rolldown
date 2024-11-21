@@ -34,7 +34,7 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{ChunkKind, ExternalModule, OutputExports};
+use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
@@ -42,7 +42,7 @@ use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use super::utils::{render_chunk_external_imports, render_factory_parameters};
 
 /// The main function for rendering the IIFE format chunks.
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn render_iife<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
@@ -163,6 +163,37 @@ pub fn render_iife<'code>(
       }
     }
   });
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    let entry_meta = &ctx.link_output.metas[entry_id];
+    match entry_meta.wrap_kind {
+      WrapKind::Esm => {
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        // init_xxx
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+        ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
+      }
+      WrapKind::Cjs => {
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+
+        // require_xxx
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+
+        // return require_xxx();
+        source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
+      }
+      WrapKind::None => {}
+    }
+  }
 
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {

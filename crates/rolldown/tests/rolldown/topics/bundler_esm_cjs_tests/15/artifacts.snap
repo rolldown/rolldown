@@ -42,3 +42,28 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 module.exports = require_entry();
 
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+
+
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"(exports) {
+	const entry = require_entry();
+	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
+	exports.foo = 123;
+} });
+
+//#endregion
+return require_entry();
+
+})();
+```

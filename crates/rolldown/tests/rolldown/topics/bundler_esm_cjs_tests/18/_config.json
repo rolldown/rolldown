@@ -10,10 +10,9 @@
   "configVariants": [
     {
       "format": "cjs"
+    },
+    {
+      "format": "iife"
     }
-    // FIXME(hyf0): Execute failed.
-    // {
-    //   "format": "iife"
-    // }
   ]
 }

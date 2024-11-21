@@ -93,16 +93,13 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let inline_dynamic_imports = match format {
     OutputFormat::Umd | OutputFormat::Iife => {
-      let format_name = match format {
-        OutputFormat::Umd => "umd",
-        OutputFormat::Iife => "iife",
-        _ => unreachable!(),
-      };
-
       if matches!(raw_options.inline_dynamic_imports, Some(false)) {
-        warnings.push(BuildDiagnostic::invalid_option(
-          InvalidOptionType::UnsupportedCodeSplittingFormat(format_name.to_string()),
-        ));
+        warnings.push(
+          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
+            format.to_string(),
+          ))
+          .with_severity_warning(),
+        );
       }
       true
     }

@@ -16,5 +16,4 @@ export interface NormalizedOutputOptions extends OutputOptions {
   outro: AddonFunction
   esModule: boolean | 'if-default-prop'
   assetFileNames: string
-  inlineDynamicImports: boolean
 }

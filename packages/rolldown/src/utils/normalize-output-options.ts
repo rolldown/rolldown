@@ -55,7 +55,7 @@ export function normalizeOutputOptions(
     extend: opts.extend,
     name,
     externalLiveBindings: opts.externalLiveBindings ?? true,
-    inlineDynamicImports: opts.inlineDynamicImports ?? false,
+    inlineDynamicImports: opts.inlineDynamicImports,
     advancedChunks: opts.advancedChunks,
   }
 }

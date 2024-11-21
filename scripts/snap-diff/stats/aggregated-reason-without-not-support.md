@@ -167,7 +167,9 @@
 - crates/rolldown/tests/esbuild/default/false_require
 ## query and hashban in specifier
 - crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter
-## commonjs don't have `import.meta`, should rewrite
+## rolldown keep unsupported `import.meta` as it is in cjs format.
+- crates/rolldown/tests/esbuild/default/import_meta_common_js
+## rolldown polyfill `import.meta.url` with `require("url").pathToFileURL(__filename).href` in cjs format and node platform.
 - crates/rolldown/tests/esbuild/default/import_meta_common_js
 ## rolldown extract common module
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js

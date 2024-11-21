@@ -889,7 +889,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_meta_common_js
 
-- entry-!~{000}~.js => entry-Cxp0X4dp.js
+- entry-!~{000}~.js => entry-CfLCQKbg.js
 
 # tests/esbuild/default/import_meta_es6
 

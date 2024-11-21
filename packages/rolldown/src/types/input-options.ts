@@ -74,6 +74,13 @@ export interface InputOptions {
     tsconfigFilename?: string
   }
   cwd?: string
+  /**
+   * Expected platform where the code run.
+   *
+   * @default
+   * - 'node' if the format is 'cjs'
+   * - 'browser' for other formats
+   */
   platform?: 'node' | 'browser' | 'neutral'
   shimMissingExports?: boolean
   treeshake?: boolean | TreeshakingOptions

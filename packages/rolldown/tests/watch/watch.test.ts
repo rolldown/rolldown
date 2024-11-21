@@ -143,6 +143,28 @@ test.sequential('watch event', async () => {
   fs.writeFileSync(input, inputSource)
 })
 
+test.sequential('watch event avoid deadlock #2806', async () => {
+  const watcher = await watch({
+    input,
+    cwd: import.meta.dirname,
+  })
+
+  const testFn = vi.fn()
+  let listening = false
+  watcher.on('event', (event) => {
+    if (event.code === 'BUNDLE_END' && !listening) {
+      listening = true
+      watcher.on('event', testFn) // shouldn't deadlock
+    }
+  })
+
+  await waitBuildFinished(() => {
+    expect(testFn).toBeCalled()
+  })
+
+  await watcher.close()
+})
+
 test.sequential('watch skipWrite', async () => {
   const dir = path.join(import.meta.dirname, './skipWrite-dist/')
   const watcher = await watch({

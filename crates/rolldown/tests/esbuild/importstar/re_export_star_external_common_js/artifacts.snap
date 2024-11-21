@@ -7,7 +7,6 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-"use strict";
 require("foo");
 
 

@@ -29,7 +29,6 @@ snapshot_kind: text
 ```js
 (function(foo) {
 
-"use strict";
 
 
 var foo = require("foo");

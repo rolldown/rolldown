@@ -7,8 +7,5 @@ snapshot_kind: text
 ## main.js
 
 ```js
-require("foo");
-require("bar");
-require("baz");
 
 ```

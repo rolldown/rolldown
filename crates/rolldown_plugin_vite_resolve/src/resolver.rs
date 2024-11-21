@@ -55,6 +55,12 @@ impl From<[bool; RESOLVER_COUNT as usize]> for AdditionalOptions {
   }
 }
 
+impl From<u8> for AdditionalOptions {
+  fn from(value: u8) -> Self {
+    u8_to_bools(value).into()
+  }
+}
+
 #[derive(Debug)]
 pub struct Resolver {
   resolvers: [oxc_resolver::Resolver; RESOLVER_COUNT as usize],
@@ -67,9 +73,7 @@ impl Resolver {
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
     let resolvers = (0..RESOLVER_COUNT)
-      .map(|v| {
-        base_resolver.clone_with_options(get_resolve_options(base_options, u8_to_bools(v).into()))
-      })
+      .map(|v| base_resolver.clone_with_options(get_resolve_options(base_options, v.into())))
       .collect::<Vec<oxc_resolver::Resolver>>()
       .try_into()
       .unwrap();

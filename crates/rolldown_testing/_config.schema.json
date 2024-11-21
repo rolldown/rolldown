@@ -551,6 +551,12 @@
             "boolean",
             "null"
           ]
+        },
+        "viteMode": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

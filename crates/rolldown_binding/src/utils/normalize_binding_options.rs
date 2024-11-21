@@ -196,6 +196,7 @@ pub fn normalize_binding_options(
     experimental: input_options.experimental.map(|inner| ExperimentalOptions {
       strict_execution_order: inner.strict_execution_order,
       disable_live_bindings: inner.disable_live_bindings,
+      vite_mode: inner.vite_mode,
     }),
     minify: output_options.minify,
     extend: output_options.extend,

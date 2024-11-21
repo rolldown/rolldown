@@ -3,6 +3,8 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
+use crate::ROLLDOWN_IGNORE;
+
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
@@ -12,6 +14,7 @@ use serde::Deserialize;
 pub struct ExperimentalOptions {
   pub strict_execution_order: Option<bool>,
   pub disable_live_bindings: Option<bool>,
+  pub vite_mode: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -21,5 +24,14 @@ impl ExperimentalOptions {
 
   pub fn is_disable_live_bindings_enabled(&self) -> bool {
     self.disable_live_bindings.unwrap_or(false)
+  }
+
+  #[inline]
+  pub fn get_ignore_comment(&self) -> &'static str {
+    if self.vite_mode.unwrap_or_default() {
+      "@vite-ignore"
+    } else {
+      ROLLDOWN_IGNORE
+    }
   }
 }

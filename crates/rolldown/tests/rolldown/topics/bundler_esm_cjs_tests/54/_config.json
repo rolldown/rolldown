@@ -13,6 +13,9 @@
     },
     {
       "format": "iife"
+    },
+    {
+      "format": "umd"
     }
   ]
 }

@@ -79,3 +79,35 @@ input.works = foo[Math.random() < 1 && "__esModule"] === true;
 //#endregion
 })();
 ```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## entry.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { __esModule: () => __esModule });
+var __esModule;
+var init_foo = __esm({ "foo.js"() {
+	__esModule = 0;
+} });
+
+//#endregion
+//#region entry.js
+const foo = (init_foo(), __toCommonJS(foo_exports));
+input.works = foo[Math.random() < 1 && "__esModule"] === true;
+
+//#endregion
+});
+```

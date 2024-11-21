@@ -81,3 +81,36 @@ input.works = foo_exports[Math.random() < 1 && "default"].bar === 123;
 //#endregion
 })();
 ```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## entry.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+"use strict";
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, {
+	__esModule: () => __esModule,
+	default: () => foo_default
+});
+let __esModule = true;
+var foo_default = { bar: 123 };
+
+//#endregion
+//#region entry.js
+input.works = foo_exports[Math.random() < 1 && "default"].bar === 123;
+
+//#endregion
+});
+```

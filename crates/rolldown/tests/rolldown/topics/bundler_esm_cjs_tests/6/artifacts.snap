@@ -102,3 +102,43 @@ input.works = void 0 === void 0 && bar === 123;
 //#endregion
 })();
 ```
+---
+
+Variant: (format: Umd)
+
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `__esModule` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[entry.js:3:3]
+   │
+ 3 │   foo.__esModule === void 0 && foo.bar === 123
+   │   ───────┬──────  
+   │          ╰──────── 
+───╯
+
+```
+# Assets
+
+## entry.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+"use strict";
+
+//#region foo.js
+let bar = 123;
+
+//#endregion
+//#region entry.js
+input.works = void 0 === void 0 && bar === 123;
+
+//#endregion
+});
+```

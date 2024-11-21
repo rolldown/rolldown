@@ -25,7 +25,7 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, ROLLDOWN_IGNORE,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -96,6 +96,7 @@ pub struct AstScanner<'me, 'ast> {
   scope_stack: Vec<Option<ScopeId>>,
   options: Option<&'me SharedOptions>,
   dynamic_import_usage_info: DynamicImportUsageInfo,
+  ignore_comment: &'static str,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -162,6 +163,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
       visit_path: vec![],
+      ignore_comment: options.map_or(ROLLDOWN_IGNORE, |opt| opt.experimental.get_ignore_comment()),
       options,
       scope_stack: vec![],
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),

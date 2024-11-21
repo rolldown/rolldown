@@ -193,6 +193,7 @@ export interface BindingEmittedAsset {
 export interface BindingExperimentalOptions {
   strictExecutionOrder?: boolean
   disableLiveBindings?: boolean
+  viteMode?: boolean
 }
 
 export interface BindingGeneralHookFilter {

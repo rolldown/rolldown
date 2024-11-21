@@ -129,6 +129,7 @@ export function bindingifyInputOptions(
     experimental: {
       strictExecutionOrder: options.experimental?.strictExecutionOrder,
       disableLiveBindings: options.experimental?.disableLiveBindings,
+      viteMode: options.experimental?.viteMode,
     },
     profilerNames: options?.profilerNames,
     jsx: bindingifyJsx(options.jsx),

@@ -5012,6 +5012,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-CPsayYKk.js
 
+# tests/rolldown/topics/new_url/opt_out_vite_mode
+
+- main-!~{000}~.js => main-DbBlnAAU.js
+
 # tests/rolldown/topics/new_url/should_prefer_relative
 
 - main-!~{000}~.js => main-DaLi9F1d.js

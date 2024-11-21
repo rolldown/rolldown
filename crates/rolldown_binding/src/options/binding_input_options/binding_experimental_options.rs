@@ -6,4 +6,5 @@ use serde::Deserialize;
 pub struct BindingExperimentalOptions {
   pub strict_execution_order: Option<bool>,
   pub disable_live_bindings: Option<bool>,
+  pub vite_mode: Option<bool>,
 }

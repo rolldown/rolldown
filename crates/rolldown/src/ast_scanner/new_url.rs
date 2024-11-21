@@ -1,7 +1,5 @@
 use oxc::ast::{ast::NewExpression, Comment};
-use rolldown_common::{
-  get_leading_comment, ImportKind, ImportRecordMeta, ModuleType, ROLLDOWN_IGNORE,
-};
+use rolldown_common::{get_leading_comment, ImportKind, ImportRecordMeta, ModuleType};
 use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::AstScanner;
@@ -39,7 +37,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       first_arg_string_literal.span,
       Some(|comment: &Comment| {
         let original_source = &self.source.as_str()[comment.content_span()];
-        original_source.contains(ROLLDOWN_IGNORE)
+        original_source.contains(self.ignore_comment)
       }),
     )
     .is_some();

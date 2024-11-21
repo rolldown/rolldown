@@ -104,6 +104,7 @@ export interface InputOptions {
     enableComposingJsPlugins?: boolean
     strictExecutionOrder?: boolean
     disableLiveBindings?: boolean
+    viteMode?: boolean
   }
   define?: Record<string, string>
   /**

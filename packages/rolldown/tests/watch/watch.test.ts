@@ -129,7 +129,10 @@ test.sequential('watch event', async () => {
   })
 
   await watcher.close()
-  expect(closeFn).toBeCalled()
+  // the listener is called with async
+  await waitUtil(() => {
+    expect(closeFn).toBeCalled()
+  })
 
   // revert change
   fs.writeFileSync(input, inputSource)

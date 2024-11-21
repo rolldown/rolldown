@@ -71,6 +71,7 @@
     "compat",
     "concat",
     "conflictless",
+    "conso",
     "consola",
     "Corasick",
     "corepack",
@@ -139,18 +140,20 @@
     "oxlintignore",
     "peekable",
     "Pluginable",
+    "pnpx",
     "proto",
     "quasis",
     "realpath",
     "Renamer",
+    "renderable",
     "replacen",
     "repr",
     "rolldown",
     "rollup",
     "rollupjs",
     "romejs",
-    "Rstr",
     "rsplit",
+    "Rstr",
     "rustc",
     "rustdoc",
     "rustup",
@@ -204,9 +207,7 @@
     "Yunfei",
     "कुत्तेपरपानी",
     "पतलूनमे",
-    "मेरेशॉर्ट्सखाओ",
-    "conso", // for watcher error test
-    "pnpx"
+    "मेरेशॉर्ट्सखाओ"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

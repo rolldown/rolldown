@@ -4530,6 +4530,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-V_qoe-l0.js
 
+# tests/rolldown/misc/use_strict/ignore_treeshaked_modules
+
+- main-!~{000}~.js => main-9PNMQzt-.js
+
 # tests/rolldown/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 
 - main-!~{000}~.js => main-Cio9eETQ.js

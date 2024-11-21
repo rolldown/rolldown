@@ -1,5 +1,6 @@
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, SymbolRef,
+  Chunk, ChunkIdx, InstantiatedChunk, Module, ModuleRenderOutput, NormalModule,
+  NormalizedBundlerOptions, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -70,6 +71,17 @@ impl<'a> GenerateContext<'a> {
       }
       _ => symbol_db.canonical_name_for(canonical_ref, canonical_names).to_string(),
     }
+  }
+
+  pub fn renderable_ecma_modules(&self) -> impl Iterator<Item = &NormalModule> {
+    self.chunk.modules.iter().copied().filter_map(move |id| {
+      let module = &self.link_output.module_table.modules[id];
+      let Module::Normal(module) = module else { return None };
+      if !module.is_included() {
+        return None;
+      }
+      Some(&**module)
+    })
   }
 }
 

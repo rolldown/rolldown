@@ -1,3 +1,4 @@
+import { unimplemented } from '../utils/misc'
 import type { BindingOutputOptions } from '../binding'
 import type { NormalizedOutputOptions } from './normalized-output-options'
 
@@ -30,18 +31,7 @@ export function bindingifyOutputOptions(
     dir,
     // Handle case: rollup/test/sourcemaps/samples/sourcemap-file-hashed/_config.js
     file: file == null ? undefined : file,
-    format: (function () {
-      switch (format) {
-        case 'es':
-          return 'es'
-        case 'cjs':
-          return 'cjs'
-        case 'iife':
-          return 'iife'
-        case 'umd':
-          return 'umd'
-      }
-    })(),
+    format: bindingifyFormat(format),
     exports,
     hashCharacters,
     sourcemap: bindingifySourcemap(sourcemap),
@@ -53,7 +43,7 @@ export function bindingifyOutputOptions(
     outro,
     extend: outputOptions.extend,
     globals,
-    esModule: bindingifyEsModule(esModule),
+    esModule,
     name,
     assetFileNames,
     entryFileNames,
@@ -69,37 +59,45 @@ export function bindingifyOutputOptions(
   }
 }
 
+function bindingifyFormat(
+  format: NormalizedOutputOptions['format'],
+): BindingOutputOptions['format'] {
+  switch (format) {
+    case undefined:
+    case 'es':
+    case 'esm':
+    case 'module': {
+      return 'es'
+    }
+    case 'cjs':
+    case 'commonjs': {
+      return 'cjs'
+    }
+    case 'iife': {
+      return 'iife'
+    }
+    case 'umd': {
+      return 'umd'
+    }
+    default:
+      unimplemented(`output.format: ${format}`)
+  }
+}
+
 function bindingifySourcemap(
   sourcemap: NormalizedOutputOptions['sourcemap'],
 ): BindingOutputOptions['sourcemap'] {
   switch (sourcemap) {
     case true:
       return 'file'
-
     case 'inline':
       return 'inline'
-
     case false:
     case undefined:
       return undefined
-
     case 'hidden':
       return 'hidden'
-
     default:
       throw new Error(`unknown sourcemap: ${sourcemap}`)
-  }
-}
-
-function bindingifyEsModule(
-  esModule: NormalizedOutputOptions['esModule'],
-): BindingOutputOptions['esModule'] {
-  switch (esModule) {
-    case true:
-    case false:
-    case 'if-default-prop':
-      return esModule
-    default:
-      throw new Error(`unknown esModule: ${esModule}`)
   }
 }

@@ -1,4 +1,3 @@
-import { unimplemented } from './misc'
 import type { OutputOptions } from '../types/output-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 
@@ -13,6 +12,8 @@ export function normalizeOutputOptions(
     sourcemap,
     sourcemapIgnoreList,
     sourcemapPathTransform,
+    minify,
+    extend,
     globals,
     assetFileNames,
     entryFileNames,
@@ -22,14 +23,17 @@ export function normalizeOutputOptions(
     name,
     esModule,
     file,
+    externalLiveBindings,
+    inlineDynamicImports,
+    advancedChunks,
   } = opts
   return {
-    dir: dir,
+    dir,
     file,
-    format: getFormat(format),
-    exports: exports ?? 'auto',
-    hashCharacters: hashCharacters ?? 'base64',
-    sourcemap: sourcemap ?? false,
+    format,
+    exports,
+    hashCharacters,
+    sourcemap,
     sourcemapIgnoreList:
       typeof sourcemapIgnoreList === 'function'
         ? sourcemapIgnoreList
@@ -42,50 +46,21 @@ export function normalizeOutputOptions(
     footer: getAddon(opts, 'footer'),
     intro: getAddon(opts, 'intro'),
     outro: getAddon(opts, 'outro'),
-    esModule: esModule ?? 'if-default-prop',
+    esModule,
     // TODO support functions
-    globals: globals ?? {},
-    entryFileNames: entryFileNames ?? '[name].js',
-    chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
-    cssEntryFileNames: cssEntryFileNames ?? '[name].css',
-    cssChunkFileNames: cssChunkFileNames ?? '[name]-[hash].css',
-    assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
+    globals,
+    entryFileNames,
+    chunkFileNames,
+    cssEntryFileNames,
+    cssChunkFileNames,
+    assetFileNames,
     plugins: [],
-    minify: opts.minify,
-    extend: opts.extend,
+    minify,
+    extend,
     name,
-    externalLiveBindings: opts.externalLiveBindings ?? true,
-    inlineDynamicImports: opts.inlineDynamicImports,
-    advancedChunks: opts.advancedChunks,
-  }
-}
-
-function getFormat(
-  format: OutputOptions['format'],
-): NormalizedOutputOptions['format'] {
-  switch (format) {
-    case undefined:
-    case 'es':
-    case 'esm':
-    case 'module': {
-      return 'es'
-    }
-
-    case 'cjs':
-    case 'commonjs': {
-      return 'cjs'
-    }
-
-    case 'iife': {
-      return 'iife'
-    }
-
-    case 'umd': {
-      return 'umd'
-    }
-
-    default:
-      unimplemented(`output.format: ${format}`)
+    externalLiveBindings,
+    inlineDynamicImports,
+    advancedChunks,
   }
 }
 

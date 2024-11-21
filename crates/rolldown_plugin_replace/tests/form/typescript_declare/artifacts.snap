@@ -19,8 +19,8 @@ console.log(replaced);
 
 ```
 - ../input.ts
-(1:0-1:8) "\nconsole" --> (2:0-2:8) "\nconsole"
-(1:8-1:12) ".log" --> (2:8-2:12) ".log"
-(1:12-1:17) "(NAME" --> (2:12-2:21) "(replaced"
-(1:17-2:1) ")\n" --> (2:21-5:34) ");\n\n//#endregion\n//# sourceMappingURL=input.js.map"
+(1:0) "console." --> (2:0) "console."
+(1:8) "log(" --> (2:8) "log("
+(1:12) "NAME)" --> (2:12) "replaced)"
+(1:17) "\n" --> (2:21) ";\n"
 ```

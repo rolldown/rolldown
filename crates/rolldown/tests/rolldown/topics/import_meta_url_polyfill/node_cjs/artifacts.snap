@@ -22,16 +22,16 @@ node_assert.default.equal(require("url").pathToFileURL(__filename), require("url
 
 ```
 - ../main.js
-(2:0-0:0) "" --> (27:0-27:0) ""
-(0:0-2:0) "import assert from 'node:assert';\n" --> (27:0-27:12) "\nnode_assert"
-(2:0-2:7) "\nassert" --> (27:12-27:20) ".default"
-(2:7-2:13) ".equal" --> (27:20-27:26) ".equal"
-(2:13-2:21) "(require" --> (27:26-27:34) "(require"
-(2:21-2:27) "(\"url\"" --> (27:34-27:40) "(\"url\""
-(2:27-2:28) ")" --> (27:40-27:41) ")"
-(2:28-2:42) ".pathToFileURL" --> (27:41-27:55) ".pathToFileURL"
-(2:42-2:53) "(__filename" --> (27:55-27:66) "(__filename"
-(2:53-0:0) "" --> (27:66-27:68) "),"
-(0:0-2:71) "import assert from 'node:assert';\n\nassert.equal(require(\"url\").pathToFileURL(__filename), import.meta.url" --> (27:68-27:114) " require(\"url\").pathToFileURL(__filename).href"
-(2:71-2:72) ")" --> (27:114-30:33) ");\n\n//#endregion\n//# sourceMappingURL=main.js.map"
+(2:0) "assert.equal(require(\"url\").pathToFileURL(__filename), import.meta.url)" --> (27:0) ""
+(0:0) "import assert from 'node:assert';\n" --> (27:0) "node_assert."
+(2:0) "assert." --> (27:12) "default."
+(2:7) "equal(" --> (27:20) "equal("
+(2:13) "require(" --> (27:26) "require("
+(2:21) "\"url\")" --> (27:34) "\"url\")"
+(2:27) "." --> (27:40) "."
+(2:28) "pathToFileURL(" --> (27:41) "pathToFileURL("
+(2:42) "__filename)" --> (27:55) "__filename)"
+(2:53) ", import.meta.url)" --> (27:66) ", "
+(0:0) "import assert from 'node:assert';\n" --> (27:68) "require(\"url\").pathToFileURL(__filename).href)"
+(2:71) "" --> (27:114) ";\n"
 ```

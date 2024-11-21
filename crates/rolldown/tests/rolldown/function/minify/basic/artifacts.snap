@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -14,20 +15,20 @@ import assert from "node:assert";const a$1="shared.js",a="index.js";assert.equal
 
 ```
 - ../shared.js
-(0:0-0:6) "const " --> (0:33-0:39) "const "
-(0:6-0:10) "a = " --> (0:39-0:43) "a$1="
-(0:10-2:13) "'shared.js'\n\nexport { a }" --> (0:43-0:55) "\"shared.js\","
+(0:0) "const " --> (0:33) "const "
+(0:6) "a = " --> (0:39) "a$1="
+(0:10) "'shared.js'\n" --> (0:43) "\"shared.js\","
 - ../main.js
-(2:6-2:10) " a =" --> (0:55-0:57) "a="
-(2:10-3:0) " 'index.js'" --> (0:57-0:68) "\"index.js\";"
-(3:0-3:7) "\nassert" --> (0:68-0:75) "assert."
-(3:7-3:13) ".equal" --> (0:75-0:81) "equal("
-(3:13-3:16) "(a," --> (0:81-0:83) "a,"
-(3:16-3:27) " 'index.js'" --> (0:83-0:94) "\"index.js\")"
-(3:27-4:0) ")" --> (0:94-0:95) ";"
-(4:0-4:7) "\nassert" --> (0:95-0:102) "assert."
-(4:7-4:13) ".equal" --> (0:102-0:108) "equal("
-(4:13-4:17) "(a2," --> (0:108-0:112) "a$1,"
-(4:17-4:29) " 'shared.js'" --> (0:112-0:124) "\"shared.js\")"
-(4:29-6:1) ")\n\n" --> (0:124-1:33) ";\n//# sourceMappingURL=main.js.map"
+(2:6) "a = " --> (0:55) "a="
+(2:10) "'index.js'\n" --> (0:57) "\"index.js\";"
+(3:0) "assert." --> (0:68) "assert."
+(3:7) "equal(" --> (0:75) "equal("
+(3:13) "a, " --> (0:81) "a,"
+(3:16) "'index.js')" --> (0:83) "\"index.js\")"
+(3:27) "\n" --> (0:94) ";"
+(4:0) "assert." --> (0:95) "assert."
+(4:7) "equal(" --> (0:102) "equal("
+(4:13) "a2, " --> (0:108) "a$1,"
+(4:17) "'shared.js')" --> (0:112) "\"shared.js\")"
+(4:29) "\n" --> (0:124) ";\n"
 ```

@@ -307,6 +307,9 @@ impl<'a> SideEffectDetector<'a> {
 
       Expression::ChainExpression(expr) => match &expr.expression {
         ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
+        ChainElement::TSNonNullExpression(expr) => {
+          self.detect_side_effect_of_expr(&expr.expression)
+        }
         match_member_expression!(ChainElement) => {
           self.detect_side_effect_of_member_expr(expr.expression.to_member_expression())
         }

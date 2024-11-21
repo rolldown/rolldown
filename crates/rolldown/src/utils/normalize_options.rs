@@ -13,8 +13,16 @@ pub struct NormalizeOptionsReturn {
 
 #[allow(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
 pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOptionsReturn {
+  let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
+
+  let platform = raw_options.platform.unwrap_or(match format {
+    OutputFormat::Cjs => Platform::Node,
+    OutputFormat::Esm | OutputFormat::App | OutputFormat::Iife | OutputFormat::Umd => {
+      Platform::Browser
+    }
+  });
+
   // Take out resolve options
-  let platform = raw_options.platform.unwrap_or(Platform::Browser);
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
 
   let mut warnings: Vec<BuildDiagnostic> = Vec::new();
@@ -88,8 +96,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   if experimental.strict_execution_order.is_none() && is_advanced_chunks_enabled {
     experimental.strict_execution_order = Some(true);
   }
-
-  let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
   let inline_dynamic_imports = match format {
     OutputFormat::Umd | OutputFormat::Iife => {

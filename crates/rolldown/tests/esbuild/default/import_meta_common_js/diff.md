@@ -1,5 +1,6 @@
 # Reason
-1. commonjs don't have `import.meta`, should rewrite
+1. rolldown keep unsupported `import.meta` as it is in cjs format.
+2. rolldown polyfill `import.meta.url` with `require("url").pathToFileURL(__filename).href` in cjs format and node platform.
 # Diff
 ## /out.js
 ### esbuild
@@ -12,7 +13,7 @@ console.log(import_meta.url, import_meta.path);
 ```js
 
 //#region entry.js
-console.log(import.meta.url, import.meta.path);
+console.log(require("url").pathToFileURL(__filename).href, import.meta.path);
 
 //#endregion
 ```
@@ -24,6 +25,6 @@ console.log(import.meta.url, import.meta.path);
 @@ -1,2 +1,1 @@
 -var import_meta = {};
 -console.log(import_meta.url, import_meta.path);
-+console.log(import.meta.url, import.meta.path);
++console.log(require("url").pathToFileURL(__filename).href, import.meta.path);
 
 ```

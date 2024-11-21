@@ -23,6 +23,15 @@ export interface OutputOptions {
   file?: string
   exports?: 'auto' | 'named' | 'default' | 'none'
   hashCharacters?: 'base64' | 'base36' | 'hex'
+  /**
+   * Expected format of generated code.
+   * - `'es'`, `'esm'` and `'module'` are the same format, all stand for ES module.
+   * - `'cjs'` and `'commonjs'` are the same format, all stand for CommonJS module.
+   * - `'iife'` stands for [Immediately Invoked Function Expression](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
+   * - `'umd'` stands for [Universal Module Definition](https://github.com/umdjs/umd).
+   *
+   * @default 'esm'
+   */
   format?: ModuleFormat
   sourcemap?: boolean | 'inline' | 'hidden'
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption

@@ -211,6 +211,10 @@ impl NormalModule {
       }
     }
   }
+
+  pub fn is_included(&self) -> bool {
+    self.ecma_view.meta.is_included()
+  }
 }
 
 #[derive(Debug)]

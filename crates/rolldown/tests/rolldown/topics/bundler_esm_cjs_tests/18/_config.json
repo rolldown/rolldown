@@ -5,7 +5,9 @@
         "name": "entry",
         "import": "./entry.js"
       }
-    ]
+    ],
+    // UMD requires a name
+    "name": "exports"
   },
   "configVariants": [
     {
@@ -13,10 +15,9 @@
     },
     {
       "format": "iife"
+    },
+    {
+      "format": "umd"
     }
-    // FIXME(hyf0): execute failed
-    // {
-    //   "format": "umd"
-    // }
   ]
 }

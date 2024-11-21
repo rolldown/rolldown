@@ -53,20 +53,12 @@ module.exports = entry_default;
 
 Variant: (format: Iife)
 
-# warnings
-
-## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
-
-```text
-[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-(function() {
+var exports = (function() {
 
 "use strict";
 
@@ -85,4 +77,36 @@ var init_entry = __esm({ "entry.js"() {
 init_entry();
 return entry_default;
 })();
+```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## entry.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
+  typeof define === 'function' && define.amd ? define([], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.exports = factory()));
+})(this, function() {
+"use strict";
+
+
+//#region entry.js
+var entry_exports = {};
+__export(entry_exports, { default: () => entry_default });
+var entry, entry_default;
+var init_entry = __esm({ "entry.js"() {
+	entry = (init_entry(), __toCommonJS(entry_exports));
+	input.works = entry.__esModule === true;
+	entry_default = 123;
+} });
+
+//#endregion
+init_entry();
+return entry_default;
+});
 ```

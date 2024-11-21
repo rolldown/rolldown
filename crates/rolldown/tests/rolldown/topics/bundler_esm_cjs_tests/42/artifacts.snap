@@ -60,3 +60,29 @@ input.works = foo_default.bar === 123;
 //#endregion
 })();
 ```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## entry.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+"use strict";
+
+//#region foo.js
+var foo_default = { bar: 123 };
+
+//#endregion
+//#region entry.js
+input.works = foo_default.bar === 123;
+
+//#endregion
+});
+```

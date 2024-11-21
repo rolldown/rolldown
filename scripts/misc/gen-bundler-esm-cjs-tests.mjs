@@ -334,7 +334,11 @@ for (const [i, input] of inputs.entries()) {
             },
           ],
         },
-        configVariants: [{ format: 'cjs' }, { format: 'iife' }],
+        configVariants: [
+          { format: 'cjs' },
+          { format: 'iife' },
+          { format: 'umd' },
+        ],
       },
       null,
       2,

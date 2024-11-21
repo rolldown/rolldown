@@ -79,3 +79,36 @@ var init_foo = __esm({ "foo.js"() {
 //#endregion
 })();
 ```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## entry.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+
+
+//#region entry.js
+input.works = Promise.resolve().then(function() {
+	return init_foo(), foo_exports;
+}).then((foo) => foo.default === 123 && foo.__esModule === void 0);
+
+//#endregion
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { default: () => foo_default });
+var foo_default;
+var init_foo = __esm({ "foo.js"() {
+	foo_default = 123;
+} });
+
+//#endregion
+});
+```

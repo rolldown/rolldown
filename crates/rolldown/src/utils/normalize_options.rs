@@ -108,33 +108,27 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
-    cwd: raw_options
-      .cwd
-      .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
+    cwd: raw_options.cwd.unwrap_or(std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
     treeshake: raw_options.treeshake,
     platform,
     name: raw_options.name,
-    entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string().into()),
-    chunk_filenames: raw_options
-      .chunk_filenames
-      .unwrap_or_else(|| "[name]-[hash].js".to_string().into()),
+    entry_filenames: raw_options.entry_filenames.unwrap_or("[name].js".to_string().into()),
+    chunk_filenames: raw_options.chunk_filenames.unwrap_or("[name]-[hash].js".to_string().into()),
     asset_filenames: raw_options
       .asset_filenames
-      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string())
+      .unwrap_or("assets/[name]-[hash][extname]".to_string())
       .into(),
-    css_entry_filenames: raw_options
-      .css_entry_filenames
-      .unwrap_or_else(|| "[name].css".to_string().into()),
+    css_entry_filenames: raw_options.css_entry_filenames.unwrap_or("[name].css".to_string().into()),
     css_chunk_filenames: raw_options
       .css_chunk_filenames
-      .unwrap_or_else(|| "[name]-[hash].css".to_string().into()),
+      .unwrap_or("[name]-[hash].css".to_string().into()),
     banner: raw_options.banner,
     footer: raw_options.footer,
     intro: raw_options.intro,
     outro: raw_options.outro,
     es_module: raw_options.es_module.unwrap_or_default(),
-    dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
+    dir: raw_options.dir.unwrap_or("dist".to_string()),
     file: raw_options.file,
     format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),

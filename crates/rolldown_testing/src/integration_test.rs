@@ -10,7 +10,7 @@ use std::{
 use anyhow::Context;
 use rolldown::{
   plugin::__inner::SharedPluginable, BundleOutput, Bundler, BundlerOptions, IsExternal,
-  OutputFormat, SourceMapType,
+  OutputFormat, Platform, SourceMapType,
 };
 use rolldown_common::Output;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
@@ -442,10 +442,12 @@ impl IntegrationTest {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().dir);
 
-    let is_output_cjs = matches!(bundler.options().format, OutputFormat::Cjs);
+    let is_expect_executed_under_esm = matches!(bundler.options().format, OutputFormat::Esm)
+      || (!matches!(bundler.options().format, OutputFormat::Cjs)
+        && matches!(bundler.options().platform, Platform::Browser));
 
     // add a dummy `package.json` to allow `import and export` when output module format is `esm`
-    if !is_output_cjs {
+    if is_expect_executed_under_esm {
       let package_json_path = dist_folder.join("package.json");
       let mut package_json = std::fs::File::options()
         .create(true)

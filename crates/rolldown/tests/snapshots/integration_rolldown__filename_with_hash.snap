@@ -1657,7 +1657,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-CMNK7FiZ.js
+- entry-!~{000}~.js => entry-CjA06sAA.js
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 

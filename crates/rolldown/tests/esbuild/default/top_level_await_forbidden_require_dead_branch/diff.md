@@ -1,5 +1,6 @@
 # Reason
 1. should not appear `__commonJS`
+2. Rolldown's iife output will return exports
 # Diff
 ## /out.js
 ### esbuild
@@ -72,6 +73,8 @@ var require_entry = __commonJS({ "entry.js"() {
 } });
 
 //#endregion
+return require_entry();
+
 })();
 ```
 ### diff
@@ -79,7 +82,7 @@ var require_entry = __commonJS({ "entry.js"() {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,21 @@
+@@ -1,31 +1,22 @@
 -(() => {
 -    var c_exports = {};
 -    var init_c = __esm({
@@ -118,6 +121,7 @@ var require_entry = __commonJS({ "entry.js"() {
          }
      });
 -    init_entry();
++    return require_entry();
  })();
 
 ```

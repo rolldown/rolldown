@@ -219,6 +219,8 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 ## should not appear `__commonJS`
 - crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
+## Rolldown's iife output will return exports
+- crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 ## inject path
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
 ## should not drop `'use strict'`

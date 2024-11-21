@@ -28,10 +28,10 @@ export { main_default as default };
 
 ```
 - ../foo.txt
-(0:0-0:0) "" --> (2:0-2:18) "\nvar foo_default ="
-(0:0-0:12) "import.meta." --> (2:18-2:43) " \"assets/foo-C-m4uiP6.txt"
-(0:12-0:37) "__ROLLDOWN_ASSET_FILENAME" --> (2:43-6:0) "\";\n\n//#endregion\n//#region main.js"
+(0:0) "import.meta." --> (2:0) "var foo_default = "
+(0:0) "import.meta." --> (2:18) "\"assets/foo-C-m4uiP6.txt\""
+(0:12) "__ROLLDOWN_ASSET_FILENAME" --> (2:43) ";\n"
 - ../main.js
-(0:0-2:15) "import filePath from './foo.txt'\n\nexport default" --> (6:0-6:19) "\nvar main_default ="
-(2:15-2:24) " filePath" --> (6:19-10:33) " foo_default;\n\n//#endregion\nexport { main_default as default };\n//# sourceMappingURL=main.js.map"
+(0:0) "import filePath from './foo.txt'\n" --> (6:0) "var main_default = "
+(2:15) "filePath" --> (6:19) "foo_default;\n"
 ```

@@ -171,10 +171,16 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates share the same version
-oxc                = { version = "0.36.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
-oxc_index          = { version = "0.36.0", features = ["rayon"] }
-oxc_sourcemap      = { version = "0.36.0" }
-oxc_transform_napi = { version = "0.36.0" }
+oxc = { path = "../oxc/crates/oxc", features = [
+  "sourcemap_concurrent",
+  "transformer",
+  "minifier",
+  "semantic",
+  "codegen",
+] }
+oxc_index = { path = "../oxc/crates/oxc_index", features = ["rayon"] }
+oxc_sourcemap = { path = "../oxc/crates/oxc_sourcemap" }
+oxc_transform_napi = { path = "../oxc/napi/transform" }
 
 [profile.release]
 codegen-units = 1

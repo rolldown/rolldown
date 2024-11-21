@@ -50,3 +50,32 @@ input.works = foo.default === 123 && foo.__esModule === true;
 
 //#endregion
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { default: () => foo_default });
+var foo_default;
+var init_foo = __esm({ "foo.js"() {
+	foo_default = 123;
+} });
+
+//#endregion
+//#region entry.js
+const foo = (init_foo(), __toCommonJS(foo_exports));
+input.works = foo.default === 123 && foo.__esModule === true;
+
+//#endregion
+})();
+```

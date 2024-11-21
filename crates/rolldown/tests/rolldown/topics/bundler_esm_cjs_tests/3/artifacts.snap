@@ -31,3 +31,23 @@ input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0;
 
 //#endregion
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+"use strict";
+
+//#region foo.js
+var foo_exports = {};
+input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0;
+
+//#endregion
+})();
+```

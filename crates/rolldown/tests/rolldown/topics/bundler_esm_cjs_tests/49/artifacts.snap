@@ -50,3 +50,32 @@ input.works = import_foo.default === void 0;
 
 //#endregion
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports, module) {
+	module[Math.random() < 1 && "exports"] = {
+		bar: 123,
+		__esModule: true
+	};
+} });
+
+//#endregion
+//#region entry.js
+var import_foo = __toESM(require_foo());
+input.works = import_foo.default === void 0;
+
+//#endregion
+})();
+```

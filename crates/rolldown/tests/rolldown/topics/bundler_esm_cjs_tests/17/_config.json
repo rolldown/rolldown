@@ -11,5 +11,9 @@
     {
       "format": "cjs"
     }
+    // FIXME(hyf0): Execute failed.
+    // {
+    //   "format": "iife"
+    // }
   ]
 }

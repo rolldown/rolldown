@@ -99,7 +99,7 @@ impl IntegrationTest {
         {
           // do nothing
         } else {
-          Self::execute_output_assets(&bundler);
+          Self::execute_output_assets(&bundler, "");
         }
       }
       Err(errs) => {
@@ -160,7 +160,7 @@ impl IntegrationTest {
           {
             // do nothing
           } else {
-            Self::execute_output_assets(&bundler);
+            Self::execute_output_assets(&bundler, &debug_title);
           }
         }
         Err(errs) => {
@@ -438,7 +438,7 @@ impl IntegrationTest {
     });
   }
 
-  fn execute_output_assets(bundler: &Bundler) {
+  fn execute_output_assets(bundler: &Bundler, test_title: &str) {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().dir);
 
@@ -503,8 +503,12 @@ impl IntegrationTest {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
 
-      println!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{node_command:?}\n⬆️⬆️ end  ⬆️⬆️");
-      panic!("⬇️⬇️ stderr ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",);
+      println!(
+        "⬇️⬇️ Failed to execute command {test_title} ⬇️⬇️\n{node_command:?}\n⬆️⬆️ end  ⬆️⬆️"
+      );
+      panic!(
+        "⬇️⬇️ stderr {test_title} ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",
+      );
     }
   }
 }

@@ -10,6 +10,9 @@
   "configVariants": [
     {
       "format": "cjs"
+    },
+    {
+      "format": "iife"
     }
   ]
 }

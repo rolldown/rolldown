@@ -48,3 +48,31 @@ input.works = import_foo.foo === 123 && keys.includes("foo") && !keys.includes("
 
 //#endregion
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports) {
+	exports[Math.random() < 1 && "__esModule"] = true;
+	exports[Math.random() < 1 && "foo"] = 123;
+} });
+
+//#endregion
+//#region entry.js
+var import_foo = __toESM(require_foo());
+let keys = Object.keys(import_foo);
+input.works = import_foo.foo === 123 && keys.includes("foo") && !keys.includes("default");
+
+//#endregion
+})();
+```

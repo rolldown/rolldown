@@ -44,3 +44,29 @@ input.works = typeof import_foo === "object";
 
 //#endregion
 ```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## entry.js
+
+```js
+(function() {
+
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports, module) {
+	module.exports = "123";
+} });
+
+//#endregion
+//#region entry.js
+var import_foo = __toESM(require_foo());
+input.works = typeof import_foo === "object";
+
+//#endregion
+})();
+```

@@ -154,15 +154,29 @@ test.sequential('watch event avoid deadlock #2806', async () => {
   watcher.on('event', (event) => {
     if (event.code === 'BUNDLE_END' && !listening) {
       listening = true
-      watcher.on('event', testFn) // shouldn't deadlock
+      // shouldn't deadlock
+      watcher.on('event', () => {
+        if (event.code === 'BUNDLE_END') {
+          testFn()
+        }
+      })
     }
   })
 
+  await waitBuildFinished(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
+
+  fs.writeFileSync(input, 'console.log(2)')
   await waitBuildFinished(() => {
     expect(testFn).toBeCalled()
   })
 
   await watcher.close()
+  // revert change
+  fs.writeFileSync(input, inputSource)
 })
 
 test.sequential('watch skipWrite', async () => {

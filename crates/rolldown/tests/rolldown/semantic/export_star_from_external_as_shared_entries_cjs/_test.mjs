@@ -1,3 +1,4 @@
+const require = (await import('node:module')).createRequire(import.meta.url);
 const { readFile: readFile2 } = require('./dist/entry.js')
 const { readFile: readFile3 } = require('./dist/entry2.js')
 const { readFile } = require('node:fs')

@@ -1,3 +1,4 @@
+const require = (await import('node:module')).createRequire(import.meta.url);
 const fs = require('node:fs');
 const assert = require('node:assert');
 const path = require('node:path');

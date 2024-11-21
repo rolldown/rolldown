@@ -1,3 +1,4 @@
+const require = (await import('node:module')).createRequire(import.meta.url);
 const assert = require('assert')
 const main = require('./dist/main.js')
 

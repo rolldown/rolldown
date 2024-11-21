@@ -109,10 +109,6 @@ runTestSuiteWithSamples(
 					.then(bundle => {
 						let unintendedError;
 
-						if (config.error) {
-							throw new Error('Expected an error while rolling up');
-						}
-
 						let result;
 
 						return bundle
@@ -122,8 +118,8 @@ runTestSuiteWithSamples(
 								...(config.options || {}).output
 							})
 							.then(({ output }) => {
-								if (config.generateError) {
-									unintendedError = new Error('Expected an error while generating output');
+								if (config.error || config.generateError) {
+									unintendedError = new Error('Expected an error while bundling');
 								}
 
 								result = output;

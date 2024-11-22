@@ -27,8 +27,8 @@ pub fn deconflict_chunk_symbols(
         renamer.add_symbol_in_root_scope(external_module.namespace_ref);
       });
 
-    match chunk.kind {
-      ChunkKind::EntryPoint { module, .. } => {
+    match chunk.entry_module_idx() {
+      Some(module) => {
         let entry_module =
           link_output.module_table.modules[module].as_normal().expect("should be normal module");
         link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
@@ -41,7 +41,7 @@ pub fn deconflict_chunk_symbols(
           },
         );
       }
-      ChunkKind::Common => {}
+      None => {}
     }
   }
 

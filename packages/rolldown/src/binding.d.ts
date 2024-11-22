@@ -518,6 +518,7 @@ export interface BindingViteResolvePluginResolveOptions {
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean
+  isRequire?: boolean
   root: string
   scan: boolean
   mainFields: Array<string>

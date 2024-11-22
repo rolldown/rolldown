@@ -4,6 +4,7 @@ use cow_utils::CowUtils;
 use oxc_resolver::NODEJS_BUILTINS;
 
 pub const BROWSER_EXTERNAL_ID: &str = "__vite-browser-external";
+pub const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 
 const NODE_BUILTIN_NAMESPACE: &str = "node:";
 const NPM_BUILTIN_NAMESPACE: &str = "npm:";

@@ -39,9 +39,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
-      self.current_stmt_info.side_effect =
-        SideEffectDetector::new(self.scopes, self.source, self.comments)
-          .detect_side_effect_of_stmt(stmt);
+      self.current_stmt_info.side_effect = SideEffectDetector::new(
+        self.scopes,
+        self.source,
+        self.comments,
+        // In `NormalModule` the options is always `Some`, for `RuntimeModule` always enable annotations
+        self.options.is_some_and(|opt| !opt.treeshake.annotations()),
+      )
+      .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
         self.current_stmt_info.debug_label = Some(stmt.to_source_string());

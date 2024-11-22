@@ -151,8 +151,6 @@
 - crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators
 ## don't support dce iife
 - crates/rolldown/tests/esbuild/dce/dce_of_iife
-## rolldown don't have `ignoreDCEAnnotations` option
-- crates/rolldown/tests/esbuild/dce/disable_tree_shaking
 ## annotation codegen
 - crates/rolldown/tests/esbuild/dce/no_side_effects_comment
 ## rolldown should not shake the namespace iife

@@ -13,6 +13,7 @@ pub struct BindingTreeshake {
   #[napi(ts_type = "boolean | BindingModuleSideEffectsRule[]")]
   #[serde(skip_deserializing, default = "default_module_side_effects")]
   pub module_side_effects: BindingModuleSideEffects,
+  pub annotations: Option<bool>,
 }
 
 fn default_module_side_effects() -> BindingModuleSideEffects {
@@ -32,10 +33,8 @@ pub struct BindingModuleSideEffectsRule {
 
 impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
   fn try_from(value: BindingTreeshake) -> anyhow::Result<Self> {
-    match value.module_side_effects {
-      Either::A(value) => {
-        Ok(Self::Option(InnerOptions { module_side_effects: ModuleSideEffects::Boolean(value) }))
-      }
+    let module_side_effects = match value.module_side_effects {
+      Either::A(value) => ModuleSideEffects::Boolean(value),
       Either::B(rules) => {
         let mut ret = Vec::with_capacity(rules.len());
         for rule in rules {
@@ -49,12 +48,11 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
             external: rule.external,
           });
         }
-
-        Ok(Self::Option(InnerOptions {
-          module_side_effects: ModuleSideEffects::ModuleSideEffectsRules(ret),
-        }))
+        ModuleSideEffects::ModuleSideEffectsRules(ret)
       }
-    }
+    };
+
+    Ok(Self::Option(InnerOptions { module_side_effects, annotations: value.annotations }))
   }
 
   type Error = anyhow::Error;

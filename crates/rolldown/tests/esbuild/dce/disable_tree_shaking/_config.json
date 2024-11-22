@@ -6,6 +6,12 @@
         "import": "entry.jsx"
       }
     ],
+    "treeshake": {
+      "annotations": false
+    },
+    "jsx": {
+      "runtime": "classic"
+    },
     "external": [
       "react/jsx-runtime"
     ]

@@ -499,6 +499,7 @@ export interface BindingTransformPluginConfig {
 
 export interface BindingTreeshake {
   moduleSideEffects: boolean | BindingModuleSideEffectsRule[]
+  annotations?: boolean
 }
 
 export interface BindingViteResolvePluginConfig {

@@ -10,6 +10,7 @@ export function normalizeTreeshakeOptions(
   if (config === true || config === undefined) {
     return {
       moduleSideEffects: true,
+      annotations: true,
     }
   }
   let normalizedConfig: NormalizedTreeshakingOptions = {
@@ -25,5 +26,7 @@ export function normalizeTreeshakeOptions(
   } else {
     normalizedConfig.moduleSideEffects = config.moduleSideEffects
   }
+
+  normalizedConfig.annotations = config.annotations ?? true
   return normalizedConfig
 }

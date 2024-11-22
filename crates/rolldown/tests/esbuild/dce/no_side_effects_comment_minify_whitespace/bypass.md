@@ -1,34 +1,15 @@
 # Reason
-1. annotation codegen
+1. could be done in minifier
 # Diff
 ## /out/expr-fn.js
 ### esbuild
 ```js
-//! These should all have "no side effects"
-x([
-  /* @__NO_SIDE_EFFECTS__ */ function() {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ function y() {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ function* () {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ function* y2() {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ async function() {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ async function y3() {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ async function* () {
-  },
-  /* @__NO_SIDE_EFFECTS__ */ async function* y4() {
-  }
-]);
+x([function(){},function y(){},function*(){},function*y2(){},async function(){},async function y3(){},async function*(){},async function*y4(){}]);
 ```
 ### rolldown
 ```js
 
 //#region expr-fn.js
-//! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ function() {},
 	/* #__NO_SIDE_EFFECTS__ */ function y() {},
@@ -52,22 +33,31 @@ x([
 +x([function () {}, function y() {}, function* () {}, function* y() {}, async function () {}, async function y() {}, async function* () {}, async function* y() {}]);
 
 ```
+## /out/stmt-fn.js
+### esbuild
+```js
+function a(){}function*b(){}async function c(){}async function*d(){}
+```
+### rolldown
+```js
+
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/stmt-fn.js
++++ rolldown	stmt-fn.js
+@@ -1,4 +0,0 @@
+-function a() {}
+-function* b() {}
+-async function c() {}
+-async function* d() {}
+
+```
 ## /out/stmt-export-fn.js
 ### esbuild
 ```js
-//! These should all have "no side effects"
-// @__NO_SIDE_EFFECTS__
-export function a() {
-}
-// @__NO_SIDE_EFFECTS__
-export function* b() {
-}
-// @__NO_SIDE_EFFECTS__
-export async function c() {
-}
-// @__NO_SIDE_EFFECTS__
-export async function* d() {
-}
+export function a(){}export function*b(){}export async function c(){}export async function*d(){}
 ```
 ### rolldown
 ```js
@@ -101,80 +91,30 @@ export { a, b, c, d };
 ## /out/stmt-local.js
 ### esbuild
 ```js
-//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-var v0 = function() {
-}, v1 = function() {
-};
-let l0 = function() {
-}, l1 = function() {
-};
-const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {
-}, c1 = function() {
-};
-var v2 = () => {
-}, v3 = () => {
-};
-let l2 = () => {
-}, l3 = () => {
-};
-const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
-}, c3 = () => {
-};
+var v0=function(){},v1=function(){};let l0=function(){},l1=function(){};const c0=function(){},c1=function(){};var v2=()=>{},v3=()=>{};let l2=()=>{},l3=()=>{};const c2=()=>{},c3=()=>{};
 ```
 ### rolldown
 ```js
 
-//#region stmt-local.js
-//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-var v0 = function() {}, v1 = function() {};
-let l0 = function() {}, l1 = function() {};
-const c0 = /* #__NO_SIDE_EFFECTS__ */ function() {}, c1 = function() {};
-var v2 = () => {}, v3 = () => {};
-let l2 = () => {}, l3 = () => {};
-const c2 = /* #__NO_SIDE_EFFECTS__ */ () => {}, c3 = () => {};
-
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/stmt-local.js
 +++ rolldown	stmt-local.js
-@@ -1,6 +1,6 @@
- var v0 = function () {}, v1 = function () {};
+@@ -1,6 +0,0 @@
+-var v0 = function () {}, v1 = function () {};
 -let l0 = function () {}, l1 = function () {};
 -const c0 = function () {}, c1 = function () {};
-+var l0 = function () {}, l1 = function () {};
-+var c0 = function () {}, c1 = function () {};
- var v2 = () => {}, v3 = () => {};
+-var v2 = () => {}, v3 = () => {};
 -let l2 = () => {}, l3 = () => {};
 -const c2 = () => {}, c3 = () => {};
-+var l2 = () => {}, l3 = () => {};
-+var c2 = () => {}, c3 = () => {};
 
 ```
 ## /out/stmt-export-local.js
 ### esbuild
 ```js
-//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-export var v0 = function() {
-}, v1 = function() {
-};
-export let l0 = function() {
-}, l1 = function() {
-};
-export const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {
-}, c1 = function() {
-};
-export var v2 = () => {
-}, v3 = () => {
-};
-export let l2 = () => {
-}, l3 = () => {
-};
-export const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
-}, c3 = () => {
-};
+export var v0=function(){},v1=function(){};export let l0=function(){},l1=function(){};export const c0=function(){},c1=function(){};export var v2=()=>{},v3=()=>{};export let l2=()=>{},l3=()=>{};export const c2=()=>{},c3=()=>{};
 ```
 ### rolldown
 ```js
@@ -226,93 +166,78 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ## /out/ns-export-fn.js
 ### esbuild
 ```js
-var ns;
-((ns2) => {
-  //! These should all have "no side effects"
-  // @__NO_SIDE_EFFECTS__
-  function a() {
-  }
-  ns2.a = a;
-  // @__NO_SIDE_EFFECTS__
-  function* b() {
-  }
-  ns2.b = b;
-  // @__NO_SIDE_EFFECTS__
-  async function c() {
-  }
-  ns2.c = c;
-  // @__NO_SIDE_EFFECTS__
-  async function* d() {
-  }
-  ns2.d = d;
-})(ns || (ns = {}));
+var ns;(ns2=>{function a(){}ns2.a=a;function*b(){}ns2.b=b;async function c(){}ns2.c=c;async function*d(){}ns2.d=d})(ns||(ns={}));
 ```
 ### rolldown
 ```js
 
+//#region ns-export-fn.ts
+let ns;
+(function(_ns) {
+	function a() {}
+	_ns.a = a;
+	function* b() {}
+	_ns.b = b;
+	async function c() {}
+	_ns.c = c;
+	async function* d() {}
+	_ns.d = d;
+})(ns || (ns = {}));
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/ns-export-fn.js
-+++ rolldown	
-@@ -1,11 +0,0 @@
--var ns;
++++ rolldown	ns-export-fn.js
+@@ -1,11 +1,11 @@
+ var ns;
 -(ns2 => {
--    function a() {}
++(function (_ns) {
+     function a() {}
 -    ns2.a = a;
--    function* b() {}
++    _ns.a = a;
+     function* b() {}
 -    ns2.b = b;
--    async function c() {}
++    _ns.b = b;
+     async function c() {}
 -    ns2.c = c;
--    async function* d() {}
++    _ns.c = c;
+     async function* d() {}
 -    ns2.d = d;
--})(ns || (ns = {}));
++    _ns.d = d;
+ })(ns || (ns = {}));
 
 ```
 ## /out/ns-export-local.js
 ### esbuild
 ```js
-var ns;
-((ns2) => {
-  //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-  ns2.v0 = function() {
-  };
-  ns2.v1 = function() {
-  };
-  ns2.l0 = function() {
-  };
-  ns2.l1 = function() {
-  };
-  ns2.c0 = /* @__NO_SIDE_EFFECTS__ */ function() {
-  };
-  ns2.c1 = function() {
-  };
-  ns2.v2 = () => {
-  };
-  ns2.v3 = () => {
-  };
-  ns2.l2 = () => {
-  };
-  ns2.l3 = () => {
-  };
-  ns2.c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
-  };
-  ns2.c3 = () => {
-  };
-})(ns || (ns = {}));
+var ns;(ns2=>{ns2.v0=function(){};ns2.v1=function(){};ns2.l0=function(){};ns2.l1=function(){};ns2.c0=function(){};ns2.c1=function(){};ns2.v2=()=>{};ns2.v3=()=>{};ns2.l2=()=>{};ns2.l3=()=>{};ns2.c2=()=>{};ns2.c3=()=>{}})(ns||(ns={}));
 ```
 ### rolldown
 ```js
 
+//#region ns-export-local.ts
+let ns;
+(function(_ns) {
+	var v0 = _ns.v0 = function() {}, v1 = _ns.v1 = function() {};
+	let l0 = _ns.l0 = function() {}, l1 = _ns.l1 = function() {};
+	const c0 = _ns.c0 = function() {}, c1 = _ns.c1 = function() {};
+	var v2 = _ns.v2 = () => {}, v3 = _ns.v3 = () => {};
+	let l2 = _ns.l2 = () => {}, l3 = _ns.l3 = () => {};
+	const c2 = _ns.c2 = () => {}, c3 = _ns.c3 = () => {};
+})(ns || (ns = {}));
+
+//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/ns-export-local.js
-+++ rolldown	
-@@ -1,15 +0,0 @@
--var ns;
++++ rolldown	ns-export-local.js
+@@ -1,15 +1,9 @@
+ var ns;
 -(ns2 => {
 -    ns2.v0 = function () {};
 -    ns2.v1 = function () {};
@@ -326,16 +251,20 @@ var ns;
 -    ns2.l3 = () => {};
 -    ns2.c2 = () => {};
 -    ns2.c3 = () => {};
--})(ns || (ns = {}));
++(function (_ns) {
++    var v0 = _ns.v0 = function () {}, v1 = _ns.v1 = function () {};
++    let l0 = _ns.l0 = function () {}, l1 = _ns.l1 = function () {};
++    const c0 = _ns.c0 = function () {}, c1 = _ns.c1 = function () {};
++    var v2 = _ns.v2 = () => {}, v3 = _ns.v3 = () => {};
++    let l2 = _ns.l2 = () => {}, l3 = _ns.l3 = () => {};
++    const c2 = _ns.c2 = () => {}, c3 = _ns.c3 = () => {};
+ })(ns || (ns = {}));
 
 ```
 ## /out/stmt-export-default-before-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function() {
-}
+export default function(){}
 ```
 ### rolldown
 ```js
@@ -360,10 +289,7 @@ export { stmt_export_default_before_fn_anon_default as default };
 ## /out/stmt-export-default-before-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function f() {
-}
+export default function f(){}
 ```
 ### rolldown
 ```js
@@ -388,10 +314,7 @@ export { f as default };
 ## /out/stmt-export-default-before-gen-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function* () {
-}
+export default function*(){}
 ```
 ### rolldown
 ```js
@@ -416,10 +339,7 @@ export { stmt_export_default_before_gen_fn_anon_default as default };
 ## /out/stmt-export-default-before-gen-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function* f() {
-}
+export default function*f(){}
 ```
 ### rolldown
 ```js
@@ -444,10 +364,7 @@ export { f as default };
 ## /out/stmt-export-default-before-async-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function() {
-}
+export default async function(){}
 ```
 ### rolldown
 ```js
@@ -472,10 +389,7 @@ export { stmt_export_default_before_async_fn_anon_default as default };
 ## /out/stmt-export-default-before-async-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function f() {
-}
+export default async function f(){}
 ```
 ### rolldown
 ```js
@@ -500,10 +414,7 @@ export { f as default };
 ## /out/stmt-export-default-before-async-gen-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function* () {
-}
+export default async function*(){}
 ```
 ### rolldown
 ```js
@@ -528,10 +439,7 @@ export { stmt_export_default_before_async_gen_fn_anon_default as default };
 ## /out/stmt-export-default-before-async-gen-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function* f() {
-}
+export default async function*f(){}
 ```
 ### rolldown
 ```js
@@ -556,10 +464,7 @@ export { f as default };
 ## /out/stmt-export-default-after-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function() {
-}
+export default function(){}
 ```
 ### rolldown
 ```js
@@ -584,10 +489,7 @@ export { stmt_export_default_after_fn_anon_default as default };
 ## /out/stmt-export-default-after-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function f() {
-}
+export default function f(){}
 ```
 ### rolldown
 ```js
@@ -612,10 +514,7 @@ export { f as default };
 ## /out/stmt-export-default-after-gen-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function* () {
-}
+export default function*(){}
 ```
 ### rolldown
 ```js
@@ -640,10 +539,7 @@ export { stmt_export_default_after_gen_fn_anon_default as default };
 ## /out/stmt-export-default-after-gen-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default function* f() {
-}
+export default function*f(){}
 ```
 ### rolldown
 ```js
@@ -668,10 +564,7 @@ export { f as default };
 ## /out/stmt-export-default-after-async-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function() {
-}
+export default async function(){}
 ```
 ### rolldown
 ```js
@@ -696,10 +589,7 @@ export { stmt_export_default_after_async_fn_anon_default as default };
 ## /out/stmt-export-default-after-async-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function f() {
-}
+export default async function f(){}
 ```
 ### rolldown
 ```js
@@ -724,10 +614,7 @@ export { f as default };
 ## /out/stmt-export-default-after-async-gen-fn-anon.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function* () {
-}
+export default async function*(){}
 ```
 ### rolldown
 ```js
@@ -752,10 +639,7 @@ export { stmt_export_default_after_async_gen_fn_anon_default as default };
 ## /out/stmt-export-default-after-async-gen-fn-name.js
 ### esbuild
 ```js
-/*! This should have "no side effects" */
-// @__NO_SIDE_EFFECTS__
-export default async function* f() {
-}
+export default async function*f(){}
 ```
 ### rolldown
 ```js

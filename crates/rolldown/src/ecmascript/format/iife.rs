@@ -34,7 +34,7 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
+use rolldown_common::{ExternalModule, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
@@ -70,12 +70,10 @@ pub async fn render_iife<'code>(
   let has_exports = !export_items.is_empty();
   let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
 
-  let entry_module = match ctx.chunk.kind {
-    ChunkKind::EntryPoint { module, .. } => {
-      &ctx.link_output.module_table.modules[module].as_normal().expect("should be normal module")
-    }
-    ChunkKind::Common => unreachable!("iife should be entry point chunk"),
-  };
+  let entry_module = ctx
+    .chunk
+    .entry_module(&ctx.link_output.module_table)
+    .expect("iife format only have entry chunk");
 
   // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
   let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
@@ -164,7 +162,7 @@ pub async fn render_iife<'code>(
     }
   });
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+  if let Some(entry_id) = ctx.chunk.entry_module_idx() {
     let entry_meta = &ctx.link_output.metas[entry_id];
     match entry_meta.wrap_kind {
       WrapKind::Esm => {

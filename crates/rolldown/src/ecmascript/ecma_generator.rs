@@ -64,21 +64,15 @@ impl Generator for EcmaGenerator {
       ctx.chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk"),
       ctx.chunk_graph,
     );
-    let hashbang = match ctx.chunk.kind {
-      rolldown_common::ChunkKind::EntryPoint { is_user_defined, module, .. } if is_user_defined => {
-        let module = &ctx.link_output.module_table.modules[module];
-        match module {
-          rolldown_common::Module::Normal(normal_module) => {
-            let source = &normal_module.source;
-            normal_module
-              .ecma_view
-              .hashbang_range
-              .map(|range| &source.as_str()[range.start as usize..range.end as usize])
-          }
-          rolldown_common::Module::External(_) => None,
-        }
+    let hashbang = match ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table) {
+      Some(normal_module) => {
+        let source = &normal_module.source;
+        normal_module
+          .ecma_view
+          .hashbang_range
+          .map(|range| &source.as_str()[range.start as usize..range.end as usize])
       }
-      _ => None,
+      None => None,
     };
 
     let banner = {

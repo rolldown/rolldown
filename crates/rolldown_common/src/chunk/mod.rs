@@ -2,8 +2,9 @@ use std::{borrow::Cow, path::PathBuf};
 
 // cSpell:disable
 use crate::{
-  ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, ModuleIdx, NamedImport,
-  NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
+  ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, ModuleIdx, ModuleTable,
+  NamedImport, NormalModule, NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolNameRefToken,
+  SymbolRef,
 };
 pub mod chunk_table;
 pub mod types;
@@ -181,5 +182,33 @@ impl Chunk {
     });
 
     Ok(PreliminaryFilename::new(rendered, hash_placeholder))
+  }
+
+  pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {
+    match &self.kind {
+      ChunkKind::EntryPoint { module, is_user_defined, .. } if *is_user_defined => Some(*module),
+      _ => None,
+    }
+  }
+
+  pub fn user_defined_entry_module<'module>(
+    &self,
+    module_table: &'module ModuleTable,
+  ) -> Option<&'module NormalModule> {
+    self.user_defined_entry_module_idx().and_then(|idx| module_table.modules[idx].as_normal())
+  }
+
+  pub fn entry_module_idx(&self) -> Option<ModuleIdx> {
+    match &self.kind {
+      ChunkKind::EntryPoint { module, .. } => Some(*module),
+      ChunkKind::Common => None,
+    }
+  }
+
+  pub fn entry_module<'module>(
+    &self,
+    module_table: &'module ModuleTable,
+  ) -> Option<&'module NormalModule> {
+    self.entry_module_idx().and_then(|idx| module_table.modules[idx].as_normal())
   }
 }

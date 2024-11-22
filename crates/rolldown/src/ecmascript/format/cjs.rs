@@ -8,7 +8,7 @@ use crate::{
     determine_use_strict::determine_use_strict, render_chunk_exports::render_chunk_exports,
   },
 };
-use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
+use rolldown_common::{ExportsKind, OutputExports, WrapKind};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
@@ -44,8 +44,8 @@ pub fn render_cjs<'code>(
   // Note that the determined `export_mode` should be used in `render_chunk_exports` to render exports.
   // We also need to get the export mode for rendering the namespace markers.
   // So we determine the export mode (from auto) here and use it in the following code.
-  let export_mode = if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
-    if let Module::Normal(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+  let export_mode =
+    if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
@@ -64,12 +64,9 @@ pub fn render_cjs<'code>(
         None
       }
     } else {
-      unreachable!("Entry module should be an ECMAScript module");
-    }
-  } else {
-    // No need for common chunks to determine the export mode.
-    None
-  };
+      // No need for common chunks to determine the export mode.
+      None
+    };
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
@@ -98,7 +95,7 @@ pub fn render_cjs<'code>(
     }
   });
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+  if let Some(entry_id) = ctx.chunk.entry_module_idx() {
     let entry_meta = &ctx.link_output.metas[entry_id];
     match entry_meta.wrap_kind {
       WrapKind::Esm => {

@@ -44,12 +44,10 @@ pub async fn render_umd<'code>(
   let has_exports = !export_items.is_empty();
   let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
 
-  let entry_module = match ctx.chunk.kind {
-    ChunkKind::EntryPoint { module, .. } => {
-      &ctx.link_output.module_table.modules[module].as_normal().expect("should be normal module")
-    }
-    ChunkKind::Common => unreachable!("umd should be entry point chunk"),
-  };
+  let entry_module = ctx
+    .chunk
+    .entry_module(&ctx.link_output.module_table)
+    .expect("iife format only have entry chunk");
 
   // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
   let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;

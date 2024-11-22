@@ -99,7 +99,7 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
-  error(): string
+  errors(): Array<unknown>
 }
 
 export declare class Bundler {

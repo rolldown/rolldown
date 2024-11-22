@@ -1,12 +1,18 @@
-import { expect, test, vi } from 'vitest'
+import { expect, test, vi, afterEach } from 'vitest'
 import { watch, Watcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
 import { sleep } from '@tests/utils'
 
 const input = path.join(import.meta.dirname, './main.js')
-const inputSource = fs.readFileSync(input, 'utf-8')
 const output = path.join(import.meta.dirname, './dist/main.js')
+
+afterEach(async () => {
+  // revert change
+  fs.writeFileSync(input, 'console.log(1)\n')
+  // avoid emit the change event at next test
+  await sleep(50)
+})
 
 test.sequential('watch', async () => {
   const watchChangeFn = vi.fn()
@@ -47,9 +53,6 @@ test.sequential('watch', async () => {
 
   await watcher.close()
   expect(closeWatcherFn).toBeCalledTimes(1)
-
-  // revert change
-  fs.writeFileSync(input, inputSource)
 })
 
 test.sequential('watch close', async () => {
@@ -68,9 +71,6 @@ test.sequential('watch close', async () => {
       true,
     )
   })
-
-  // revert change
-  fs.writeFileSync(input, inputSource)
 })
 
 test.sequential('watch event', async () => {
@@ -133,9 +133,6 @@ test.sequential('watch event', async () => {
   await waitUtil(() => {
     expect(closeFn).toBeCalled()
   })
-
-  // revert change
-  fs.writeFileSync(input, inputSource)
 })
 
 test.sequential('watch event avoid deadlock #2806', async () => {
@@ -166,8 +163,6 @@ test.sequential('watch event avoid deadlock #2806', async () => {
   })
 
   await watcher.close()
-  // revert change
-  fs.writeFileSync(input, inputSource)
 })
 
 test.sequential('watch skipWrite', async () => {
@@ -220,8 +215,6 @@ test.sequential('PluginContext addWatchFile', async () => {
     expect(changeFn).toBeCalled()
   })
 
-  // revert change
-  fs.writeFileSync(foo, 'console.log(1)\n')
   await watcher.close()
 })
 
@@ -245,8 +238,6 @@ test.sequential('watch include/exclude', async () => {
     )
   })
 
-  // revert change
-  fs.writeFileSync(input, 'console.log(1)\n')
   await watcher.close()
 })
 
@@ -295,8 +286,40 @@ test.sequential('error handling', async () => {
     )
   })
 
-  // revert change
-  fs.writeFileSync(input, 'console.log(1)\n')
+  await watcher.close()
+})
+
+test.sequential('error handling + plugin error', async () => {
+  const watcher = await watch({
+    input,
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        transform() {
+          this.error('plugin error')
+        },
+      },
+    ],
+  })
+  const errors: string[] = []
+  watcher.on('event', (event) => {
+    if (event.code === 'ERROR') {
+      errors.push(event.error.message)
+    }
+  })
+  await waitUtil(() => {
+    // First build should error
+    expect(errors.length).toBe(1)
+    expect(errors[0].includes('plugin error')).toBe(true)
+  })
+
+  errors.length = 0
+  fs.writeFileSync(input, 'console.log(2)')
+  await waitUtil(() => {
+    expect(errors.length).toBe(1)
+    expect(errors[0].includes('plugin error')).toBe(true)
+  })
+
   await watcher.close()
 })
 

@@ -94,7 +94,7 @@ pub struct BindingOutputsDiagnostics {
   cwd: std::path::PathBuf,
 }
 
-fn into_js_diagnostic(
+pub fn into_js_diagnostic(
   diagnostic: BuildDiagnostic,
   cwd: std::path::PathBuf,
   env: Env,

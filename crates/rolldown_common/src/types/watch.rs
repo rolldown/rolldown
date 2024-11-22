@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use arcstr::ArcStr;
 
+use crate::OutputsDiagnostics;
+
 pub enum WatcherEvent {
   Close,
   Event(BundleEvent),
@@ -30,7 +32,7 @@ pub enum BundleEvent {
   BundleStart,
   BundleEnd(BundleEndEventData),
   End,
-  Error(String),
+  Error(OutputsDiagnostics),
 }
 
 impl Display for BundleEvent {

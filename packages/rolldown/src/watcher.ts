@@ -1,5 +1,6 @@
 import { BindingWatcher } from './binding'
 import { MaybePromise } from './types/utils'
+import { normalizeErrors } from './utils/error'
 
 export class Watcher {
   closed: boolean
@@ -83,9 +84,10 @@ export class Watcher {
                     break
 
                   case 'ERROR':
+                    const errors = event.errors()
                     await listener({
                       code: 'ERROR',
-                      error: { message: event.error() },
+                      error: normalizeErrors(errors),
                     })
                     break
 
@@ -131,7 +133,5 @@ export type RollupWatcherEvent =
   | { code: 'END' }
   | {
       code: 'ERROR'
-      error: {
-        message: string
-      } /* the error is not compilable with rollup * /  /**  result: RollupBuild | null **/
+      error: Error /* the error is not compilable with rollup * /  /**  result: RollupBuild | null **/
     }

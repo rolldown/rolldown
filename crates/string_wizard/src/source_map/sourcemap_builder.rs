@@ -30,13 +30,20 @@ impl SourcemapBuilder {
     self.source_id = self.source_map_builder.set_source_and_content(id, content);
   }
 
-  pub fn add_chunk(&mut self, chunk: &Chunk, locator: &Locator, source: &str, name: Option<&str>) {
+  pub fn add_chunk(
+    &mut self,
+    chunk: &Chunk,
+    chunk_start_utf16: usize,
+    locator: &Locator,
+    source: &str,
+    name: Option<&str>,
+  ) {
     let name_id = if chunk.keep_in_mappings {
       name.map(|name| self.source_map_builder.add_name(name))
     } else {
       None
     };
-    let mut loc = locator.locate(chunk.start());
+    let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
       if !edited_content.is_empty() {
         self.source_map_builder.add_token(

@@ -1,0 +1,10 @@
+---
+source: crates/string_wizard/tests/magic_string_replace.rs
+expression: visualizer.into_visualizer_text()
+snapshot_kind: text
+---
+- 测 2 测 4
+(0:0) "测" --> (0:0) "试"
+(0:1) " 2 " --> (0:1) " 2 "
+(0:4) "测" --> (0:4) "试"
+(0:5) " 4" --> (0:5) " 4"

@@ -1,7 +1,5 @@
 // cSpell:disable
 const ignoreTests = [
-  // The giving code is not valid JavaScript.
-  'rollup@function@circular-default-exports: handles circular default exports',
 
   // --- following tests will hang forever ---
 
@@ -27,73 +25,30 @@ const ignoreTests = [
   // The output plugins is not working
   "rollup@form@per-output-plugins: allows specifying per-output plugins@generates es",
 
-  // The treeshake is not working as expected
-  "rollup@form@tdz-access-in-declaration: detect accessing TDZ variables within the declaration",
-  "rollup@function@tree-shake-variable-declarations-2: remove unused variables from declarations (#1831)",
-  "rollup@function@can-import-self-treeshake: direct self import", // check chunk why is empty
-  "rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable",// check chunk why is empty
-
-  // The dyanmic import at format cjs is not compatible with rollup
-  // The test passed, but the snapshot is same with rollup
-  "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
-
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
  
   // The result is not working as expected
-  "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
-  "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@non-js-extensions: non .js extensions are preserved",
-  "rollup@function@namespace-member-side-effects@unknown-access: respects side effects when accessing unknown namespace members",
-  "rollup@function@namespace-member-side-effects@assignment: checks side effects when reassigning namespace members",
-  "rollup@function@name-conflict-promise: avoids name conflicts with local variables named Promise",
-  "rollup@function@module-side-effects@writable: ModuleInfo.moduleSideEffects should be writable during build time",
-  "rollup@function@module-side-effects@transform: handles setting moduleSideEffects in the transform hook",
-  "rollup@function@module-side-effects@resolve-id-external: does not include modules without used exports if moduleSideEffect is false",
-  "rollup@function@module-side-effects@resolve-id: does not include modules without used exports if moduleSideEffect is false",
-  "rollup@function@module-side-effects@load: handles setting moduleSideEffects in the load hook",
-  "rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules",
-  "rollup@function@module-side-effects@array: supports setting module side effects via an array",
-  "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",
-  "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",
-  "rollup@function@external-conflict: external paths from custom resolver remain external (#633)",
-  "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals",
-  "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",
-  "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es",
+  "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",// https://github.com/rolldown/rolldown/issues/2864
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
+  "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",// https://github.com/oxc-project/oxc/issues/7209
   "rollup@form@mutations-in-imports: track mutations of imports",
  
-  // `return init_foo(), foo_exports;` is not expected 
-  "rollup@form@dynamic-import-inlining: dynamic import inlining",
-  "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
-  "rollup@form@inline-with-reexport: handles inlining dynamic imports when the imported module contains reexports",
-  "rollup@form@nested-inlined-dynamic-import: deconflicts variables when nested dynamic imports are inlined@generates es",
-
   // /*@__PURE__*/ related
   "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",
   "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", 
 
   // deconfilct
-  "rollup@function@deshadow-respect-existing: respect existing variable names when deshadowing",
   "rollup@function@class-name-conflict-2: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict-3: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
   "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
-  "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
-  "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",
-  "rollup@form@import-specifier-deshadowing: deshadows aliased import bindings@generates es",
 
   // comment related
   "rollup@form@comment-before-import: preserves comments before imports@generates es",
   "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
-
-  // Format cjs
-  "rollup@function@default-export-with-null-prototype: default exports of objects with null prototypes are supported",
-
-  // The result is not working as expected, Cannot set property dirname of #<Object> which has only a getter
-  "rollup@function@override-external-namespace: allows overriding imports of external namespace reexports",
-  "rollup@function@override-static-external-namespace: allows overriding imports of external namespace reexports without external live-bindings",
 
   // Logging is not working as expected
   "rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs",
@@ -110,8 +65,6 @@ const ignoreTests = [
   // The output code/sourcemap is not same as rollup,
   "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
   "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
-  // invalid output.exports should not panic
-  "rollup@function@export-type-mismatch-b: export type must be auto, default, named or none",
 
   // The input option is emtpy string
   "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
@@ -123,9 +76,6 @@ const ignoreTests = [
   // Should check the hook typing is correct
   "rollup@function@non-function-hook-async: throws when providing a value for an async function hook",
   "rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook",
-  // The normalziedOptions is not compatible with rollup
-  "rollup@function@options-hook: allows to read and modify options in the options hook",
-  "rollup@function@output-options-hook: allows to read and modify options in the options hook",
 
   // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
@@ -145,10 +95,21 @@ const ignoreTests = [
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
   "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",
   "rollup@form@render-chunk-plugin-sourcemaps: supports returning undefined source maps from render chunk hooks, when source maps are enabled@generates es", // file not expected
-  "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // file not expected
-  "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // file not expected
 
   // Passed, but the output snapshot is same as rollup
+  "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // the mappping is not same as rollup
+  "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // the mappping is not same as rollup
+  "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",// rollup not deconflict
+  "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
+  "rollup@form@import-specifier-deshadowing: deshadows aliased import bindings@generates es", // rollup not deconflict
+  "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
+  "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es", // has extra import external
+  "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals", // has extra import external
+  "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",// has extra import external
+  "rollup@form@dynamic-import-inlining: dynamic import inlining",
+  "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
+  "rollup@form@inline-with-reexport: handles inlining dynamic imports when the imported module contains reexports",
+  "rollup@form@nested-inlined-dynamic-import: deconflicts variables when nested dynamic imports are inlined@generates es",
   "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
   "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
   "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
@@ -289,6 +250,12 @@ const ignoreTests = [
   "rollup@form@unmodified-default-exports: does not treat property assignment as rebinding for sake of unbound default exports",
   "rollup@form@wrap-simplified-expressions: wraps simplified expressions that have become callees if necessary@generates es", // const folding
   "rollup@form@try-statement-deoptimization@supports-core-js: supports core-js feature detection (#2869)",
+  "rollup@form@pure-comments-disabled: does not rely on pure annotations if they are disabled",
+  "rollup@form@tdz-access-in-declaration: detect accessing TDZ variables within the declaration",
+  "rollup@function@tree-shake-variable-declarations-2: remove unused variables from declarations (#1831)",
+  "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
+  "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
+  "rollup@function@namespace-member-side-effects@assignment: checks side effects when reassigning namespace members",
 ]
 
 // Generated by packages/rollup-tests/test/form/found-tree-shaking-not-align.js

@@ -2,6 +2,10 @@
 
 ## Plugin related
 
+### The `NormalziedOptions` at hooks is not compatible with rollup
+ - rollup@function@options-hook: allows to read and modify options in the options hook
+ - rollup@function@output-options-hook: allows to read and modify options in the options hook
+
 ### The `transform` hook return `meta` is not supported
  - rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps
 
@@ -53,6 +57,7 @@
  - rollup@form@supports-es6-shim: supports es6-shim (`@rollup/plugin-commonjs` is not supported)
  - rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook (load entry module at resolveId hook)
  - rollup@function@preload-module: allows pre-loading modules via this.load (load entry module at resolveId hook)
+ - rollup@function@module-side-effects@writable: ModuleInfo.moduleSideEffects should be writable during build time(load entry module at resolveId hook)
 
 ### The `maxParallelFileOps` is not supported
  - rollup@function@max-parallel-file-operations@default: maxParallelFileOps not set
@@ -278,8 +283,12 @@
 ### The `output.treeshake.preset` is not supported 
  - rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option
 
-### The `treeshake.annotations: false` is not supported
- - rollup@form@pure-comments-disabled: does not rely on pure annotations if they are disabled
+### The `output.treeshake.moduleSideEffect` is not compatible with rollup
+ - rollup@function@module-side-effects@transform: handles setting moduleSideEffects in the transform hook
+ - rollup@function@module-side-effects@load: handles setting moduleSideEffects in the load hook
+ - rollup@function@module-side-effects@array: supports setting module side effects via an array
+ - rollup@function@module-side-effects@resolve-id-external: does not include modules without used exports if moduleSideEffect is false
+ - rollup@function@module-side-effects@resolve-id: does not include modules without used exports if moduleSideEffect is false
 
 ### The `ModuleInfo` is not compatible with rollup
  - rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled
@@ -405,8 +414,14 @@
  - rollup@function@plugin-error-only-first-render-chunk: throws error only with first plugin renderChunk
  - rollup@function@plugin-error-only-first-transform: throws error only with first plugin transform
  - rollup@function@plugin-error-module-parsed: errors in moduleParsed abort the build
+ - rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules
 
 ### The error/warning not implement
+ - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none
+ - rollup@function@circular-default-exports: handles circular default exports
+ - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (chunk empty warning)
+ - rollup@function@can-import-self-treeshake: direct self import (chunk empty warning)
+ - rollup@function@external-conflict: external paths from custom resolver remain external (#633)
  - rollup@function@shims-missing-exports: shims missing exports
  - rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined
  - rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed

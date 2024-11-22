@@ -64,6 +64,7 @@ pub struct ViteResolveResolveOptions {
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
+  pub is_require: Option<bool>,
   pub root: String,
   pub scan: bool,
 
@@ -212,8 +213,7 @@ impl ViteResolvePlugin {
     }
 
     let additional_options = AdditionalOptions::new(
-      // TODO(sapphi-red): does `resolveOptions.isRequire` needs to be respected here?
-      args.kind == ImportKind::Require,
+      self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
       self.resolve_options.prefer_relative || args.importer.map_or(false, |i| i.ends_with(".html")),
       is_from_ts_importer(args.importer),
     );

@@ -236,6 +236,7 @@ pub struct BindingViteResolvePluginResolveOptions {
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
+  pub is_require: Option<bool>,
   pub root: String,
   pub scan: bool,
 
@@ -255,6 +256,7 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
       is_production: value.is_production,
       as_src: value.as_src,
       prefer_relative: value.prefer_relative,
+      is_require: value.is_require,
       root: value.root,
       scan: value.scan,
 

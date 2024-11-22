@@ -153,8 +153,6 @@
   missing
 ## [multiple_entry_points_same_name_collision](../../../crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision/diff.md)
   diff
-## [named_function_expression_argument_collision](../../../crates/rolldown/tests/esbuild/default/named_function_expression_argument_collision/diff.md)
-  diff
 ## [nested_require_without_call](../../../crates/rolldown/tests/esbuild/default/nested_require_without_call/diff.md)
   diff
 ## [non_determinism_issue2537](../../../crates/rolldown/tests/esbuild/default/non_determinism_issue2537/diff.md)
@@ -164,8 +162,6 @@
 ## [package_alias](../../../crates/rolldown/tests/esbuild/default/package_alias/diff.md)
   diff
 ## [package_alias_match_longest](../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest/diff.md)
-  diff
-## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property/diff.md)
   diff
 ## [rename_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle/diff.md)
   diff
@@ -198,8 +194,6 @@
 ## [top_level_await_allowed_import_with_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting/diff.md)
   diff
 ## [top_level_await_allowed_import_without_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting/diff.md)
-  diff
-## [top_level_await_forbidden_require_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch/diff.md)
   diff
 ## [use_strict_directive_bundle_iife_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_iife_issue2264/diff.md)
   diff
@@ -326,6 +320,7 @@
 ## [minify_identifiers_import_path_frequency_analysis](../../../crates/rolldown/tests/esbuild/default/minify_identifiers_import_path_frequency_analysis/bypass.md)
 ## [minify_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_private_identifiers_no_bundle/bypass.md)
 ## [minify_sibling_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_sibling_labels_no_bundle/bypass.md)
+## [named_function_expression_argument_collision](../../../crates/rolldown/tests/esbuild/default/named_function_expression_argument_collision/bypass.md)
 ## [nested_common_js](../../../crates/rolldown/tests/esbuild/default/nested_common_js/bypass.md)
 ## [nested_es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/nested_es6_from_common_js/bypass.md)
 ## [no_warn_common_js_exports_in_esm_pass_through](../../../crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through/bypass.md)
@@ -333,6 +328,7 @@
 ## [node_modules](../../../crates/rolldown/tests/esbuild/default/node_modules/bypass.md)
 ## [object_literal_proto_setter_edge_cases](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases/bypass.md)
 ## [object_literal_proto_setter_edge_cases_minify_syntax](../../../crates/rolldown/tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax/bypass.md)
+## [quoted_property](../../../crates/rolldown/tests/esbuild/default/quoted_property/bypass.md)
 ## [quoted_property_mangle](../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle/bypass.md)
 ## [re_export_common_js_as_es6](../../../crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6/bypass.md)
 ## [re_export_default_external_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_external_common_js/bypass.md)
@@ -351,6 +347,7 @@
 ## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)
 ## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/bypass.md)
 ## [top_level_await_cjs_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch/bypass.md)
+## [top_level_await_forbidden_require_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch/bypass.md)
 ## [top_level_await_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch/bypass.md)
 ## [top_level_await_no_bundle_common_js_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_common_js_dead_branch/bypass.md)
 ## [top_level_await_no_bundle_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_iife_dead_branch/bypass.md)

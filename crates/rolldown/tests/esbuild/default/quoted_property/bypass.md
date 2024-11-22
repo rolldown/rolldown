@@ -1,3 +1,5 @@
+# Reason
+1. different naming style of `ns`
 # Diff
 ## /out/entry.js
 ### esbuild

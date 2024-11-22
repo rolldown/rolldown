@@ -198,6 +198,7 @@ function bindingifyWatch(
 ): BindingInputOptions['watch'] {
   if (watch) {
     let value = {
+      buildDelay: watch.buildDelay,
       skipWrite: watch.skipWrite,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),

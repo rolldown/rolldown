@@ -53,6 +53,7 @@ export interface WatchOptions {
   }
   include?: StringOrRegExp | StringOrRegExp[]
   exclude?: StringOrRegExp | StringOrRegExp[]
+  buildDelay?: number
   chokidar?: any
 }
 

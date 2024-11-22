@@ -11,6 +11,7 @@ use crate::options::plugin::types::binding_js_or_regex::{
 #[serde(rename_all = "camelCase")]
 pub struct BindingWatchOption {
   pub skip_write: Option<bool>,
+  pub build_delay: Option<u32>,
   pub notify: Option<BindingNotifyOption>,
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
@@ -19,8 +20,10 @@ pub struct BindingWatchOption {
 impl TryFrom<BindingWatchOption> for rolldown_common::WatchOption {
   type Error = anyhow::Error;
 
+  #[allow(clippy::cast_lossless)]
   fn try_from(value: BindingWatchOption) -> Result<Self, Self::Error> {
     Ok(Self {
+      build_delay: value.build_delay.map(|m| Duration::from_millis(m as u64)),
       skip_write: value.skip_write.unwrap_or_default(),
       notify: value.notify.map(Into::into),
       include: value.include.map(bindingify_string_or_regex_array).transpose()?,

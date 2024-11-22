@@ -945,6 +945,16 @@
         "skipWrite"
       ],
       "properties": {
+        "buildDelay": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Duration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "exclude": {
           "type": [
             "array",

@@ -530,6 +530,7 @@ export interface BindingViteResolvePluginResolveOptions {
 
 export interface BindingWatchOption {
   skipWrite?: boolean
+  buildDelay?: number
   notify?: BindingNotifyOption
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>

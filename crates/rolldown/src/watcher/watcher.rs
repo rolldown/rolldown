@@ -1,8 +1,7 @@
 use arcstr::ArcStr;
 use dashmap::DashSet;
-use notify::{
-  event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
-};
+use notify::{event::ModifyKind, Config, RecommendedWatcher, RecursiveMode};
+use notify_debouncer_full::{new_debouncer_opt, DebounceEventResult, Debouncer, FileIdMap};
 use rolldown_common::{
   BundleEndEventData, BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent,
 };
@@ -15,7 +14,7 @@ use std::{
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
-  time::Instant,
+  time::{Duration, Instant},
 };
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -27,14 +26,14 @@ use anyhow::Result;
 use super::emitter::{SharedWatcherEmitter, WatcherEmitter};
 
 enum WatcherChannelMsg {
-  NotifyEvent(notify::Result<notify::Event>),
+  NotifyEvent(DebounceEventResult),
   Close,
 }
 
 pub struct Watcher {
   pub emitter: SharedWatcherEmitter,
   bundler: Arc<Mutex<Bundler>>,
-  inner: Arc<Mutex<RecommendedWatcher>>,
+  inner: Arc<Mutex<Debouncer<RecommendedWatcher, FileIdMap>>>,
   running: AtomicBool,
   rerun: AtomicBool,
   watch_files: DashSet<ArcStr>,
@@ -47,7 +46,7 @@ impl Watcher {
     let (tx, rx) = channel();
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
-    let watch_option = {
+    let inner = {
       let config = Config::default();
       let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
       if let Some(notify) = &bundler_guard.options.watch.notify {
@@ -56,16 +55,18 @@ impl Watcher {
         }
         config.with_compare_contents(notify.compare_contents);
       }
-      config
+      new_debouncer_opt::<_, RecommendedWatcher, FileIdMap>(
+        bundler_guard.options.watch.build_delay.unwrap_or(Duration::from_millis(20)),
+        None,
+        move |res| {
+          if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
+            eprintln!("send watch event error {e:?}");
+          };
+        },
+        FileIdMap::new(),
+        config,
+      )?
     };
-    let inner = RecommendedWatcher::new(
-      move |res| {
-        if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
-          eprintln!("send watch event error {e:?}");
-        };
-      },
-      watch_option,
-    )?;
 
     Ok(Self {
       emitter: Arc::new(WatcherEmitter::new()),
@@ -225,24 +226,26 @@ pub fn wait_for_change(watcher: Arc<Watcher>) {
       let rx = watcher.rx.lock().await;
       match rx.recv() {
         Ok(msg) => match msg {
-          WatcherChannelMsg::NotifyEvent(event) => match event {
-            Ok(event) => {
-              for path in event.paths {
-                let id = path.to_string_lossy();
-                match event.kind {
-                  notify::EventKind::Create(_) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
+          WatcherChannelMsg::NotifyEvent(events) => match events {
+            Ok(events) => {
+              for event in events {
+                for path in &event.paths {
+                  let id = path.to_string_lossy();
+                  match event.kind {
+                    notify::EventKind::Create(_) => {
+                      on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
+                    }
+                    notify::EventKind::Modify(
+                      ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
+                    ) => {
+                      on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
+                      watcher.invalidate();
+                    }
+                    notify::EventKind::Remove(_) => {
+                      on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
+                    }
+                    _ => {}
                   }
-                  notify::EventKind::Modify(
-                    ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
-                  ) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
-                    watcher.invalidate();
-                  }
-                  notify::EventKind::Remove(_) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
-                  }
-                  _ => {}
                 }
               }
             }

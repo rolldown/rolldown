@@ -284,7 +284,7 @@ export interface BindingInputOptions {
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
-  logLevel?: BindingLogLevel
+  logLevel: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
   treeshake?: BindingTreeshake

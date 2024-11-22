@@ -2,11 +2,12 @@ use std::fmt::{self, Display, Formatter};
 
 use napi_derive::napi;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 #[napi]
 pub enum BindingLogLevel {
   Silent,
   Warn,
+  #[default]
   Info,
   Debug,
 }

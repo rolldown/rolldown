@@ -1,12 +1,11 @@
-import { bindingifyInputOptions } from '../options/bindingify-input-options'
 import { Bundler } from '../binding'
-import { initializeParallelPlugins } from './initialize-parallel-plugins'
-import { normalizeInputOptions } from './normalize-input-options'
-import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { PluginDriver } from '../plugin/plugin-driver'
 import { TreeshakingOptionsSchema } from '../treeshake'
-import { normalizePluginOption } from './normalize-plugin-option'
+import { bindingifyInputOptions } from '../options/bindingify-input-options'
+import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { composeJsPlugins } from './compose-js-plugins'
+import { normalizePluginOption } from './normalize-plugin-option'
+import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import type { InputOptions } from '../types/input-options'
 import type { OutputOptions } from '../types/output-options'
 
@@ -26,12 +25,6 @@ export async function createBundler(
     plugins = composeJsPlugins(plugins)
   }
 
-  // Convert `InputOptions` to `NormalizedInputOptions`.
-  const normalizedInputOptions = await normalizeInputOptions(
-    inputOptions,
-    plugins,
-  )
-
   const parallelPluginInitResult = await initializeParallelPlugins(plugins)
 
   try {
@@ -39,9 +32,9 @@ export async function createBundler(
 
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
-      normalizedInputOptions,
-      outputOptions,
       plugins,
+      inputOptions,
+      outputOptions,
     )
 
     // Convert `NormalizedOutputOptions` to `BindingInputOptions`

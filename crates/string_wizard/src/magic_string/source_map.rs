@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use rustc_hash::FxHashMap;
+
 use crate::{
   source_map::{locator::Locator, sourcemap_builder::SourcemapBuilder},
   MagicString,
@@ -30,6 +32,10 @@ impl<'s> MagicString<'s> {
       source_builder.advance(frag);
     });
 
+    // pre-compute utf16 index of chunk.start
+    let utf16_index_map =
+      precompute_utf16_index_map(&self.source, self.iter_chunks().map(|chunk| chunk.start()));
+
     self.iter_chunks().for_each(|chunk| {
       chunk.intro.iter().for_each(|frag| {
         source_builder.advance(frag);
@@ -41,7 +47,13 @@ impl<'s> MagicString<'s> {
         None
       };
 
-      source_builder.add_chunk(chunk, &locator, &self.source, name);
+      source_builder.add_chunk(
+        chunk,
+        utf16_index_map[&chunk.start()],
+        &locator,
+        &self.source,
+        name,
+      );
 
       chunk.outro.iter().for_each(|frag| {
         source_builder.advance(frag);
@@ -50,4 +62,19 @@ impl<'s> MagicString<'s> {
 
     source_builder.into_source_map()
   }
+}
+
+fn precompute_utf16_index_map(
+  source: &str,
+  byte_indices: impl Iterator<Item = usize>,
+) -> FxHashMap<usize, usize> {
+  let mut byte_indices: Vec<usize> = byte_indices.collect();
+  byte_indices.sort();
+  let mut utf16_indices: Vec<(usize, usize)> = vec![(0, 0); byte_indices.len() + 1];
+  for (i, &index) in byte_indices.iter().enumerate() {
+    let (prev, prev_utf16) = utf16_indices[i];
+    let count_utf16: usize = source[prev..index].chars().map(|c| c.len_utf16()).sum();
+    utf16_indices[i + 1] = (index, prev_utf16 + count_utf16);
+  }
+  utf16_indices.into_iter().collect()
 }

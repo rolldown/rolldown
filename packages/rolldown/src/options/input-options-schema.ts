@@ -19,7 +19,7 @@ import type {
   ModuleTypes,
   InputOptions,
   WatchOptions,
-} from '../types/input-options'
+} from '../options/input-options'
 
 const inputOptionSchema = z
   .string()

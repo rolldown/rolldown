@@ -7,8 +7,8 @@ import { setNestedProperty } from './utils'
 import { CliOptions, cliOptionsSchema } from './schema'
 import { inputCliOptionsSchema } from '../../options/input-options-schema'
 import { outputCliOptionsSchema } from '../../options/output-options-schema'
-import type { InputOptions } from '../../types/input-options'
-import type { OutputOptions } from '../../types/output-options'
+import type { InputOptions } from '../../options/input-options'
+import type { OutputOptions } from '../../options/output-options'
 
 export interface NormalizedCliOptions {
   input: InputOptions

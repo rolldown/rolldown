@@ -1,3 +1,3 @@
-import type { InputOptions } from '../types/input-options'
+import type { InputOptions } from '../options/input-options'
 
 export interface NormalizedInputOptions extends InputOptions {}

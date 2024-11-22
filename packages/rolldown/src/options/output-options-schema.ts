@@ -13,7 +13,7 @@ import type {
   ModuleFormat,
   OutputCliOptions,
   OutputOptions,
-} from '../types/output-options'
+} from '../options/output-options'
 
 const ModuleFormatSchema = z
   .literal('es')

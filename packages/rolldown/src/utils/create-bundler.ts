@@ -6,8 +6,8 @@ import { bindingifyOutputOptions } from './bindingify-output-options'
 import { composeJsPlugins } from './compose-js-plugins'
 import { normalizePluginOption } from './normalize-plugin-option'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
-import type { InputOptions } from '../types/input-options'
-import type { OutputOptions } from '../types/output-options'
+import type { InputOptions } from '../options/input-options'
+import type { OutputOptions } from '../options/output-options'
 
 export async function createBundler(
   inputOptions: InputOptions,

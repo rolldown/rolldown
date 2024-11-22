@@ -1,4 +1,4 @@
-import type { StringOrRegExp } from './utils'
+import type { StringOrRegExp } from '../types/utils'
 import type { RenderedChunk, PreRenderedChunk } from '../binding'
 import {
   SourcemapIgnoreListOption,

@@ -17,7 +17,7 @@ import {
 } from './logging'
 import { error, logPluginError } from './logs'
 import { getLogHandler, normalizeLog } from './logHandler'
-import type { InputOptions } from '../types/input-options'
+import type { InputOptions } from '../options/input-options'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import path from 'node:path'
 import { VERSION } from '..'

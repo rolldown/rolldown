@@ -4,9 +4,11 @@ import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { normalizeInputOptions } from './normalize-input-options'
 import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { PluginDriver } from '../plugin/plugin-driver'
+import { TreeshakingOptionsSchema } from '../treeshake'
+import { normalizePluginOption } from './normalize-plugin-option'
+import { composeJsPlugins } from './compose-js-plugins'
 import type { InputOptions } from '../types/input-options'
 import type { OutputOptions } from '../types/output-options'
-import { TreeshakingOptionsSchema } from '../treeshake'
 
 export async function createBundler(
   inputOptions: InputOptions,
@@ -17,23 +19,29 @@ export async function createBundler(
   if (inputOptions.treeshake !== undefined) {
     TreeshakingOptionsSchema.parse(inputOptions.treeshake)
   }
-  // Convert `InputOptions` to `NormalizedInputOptions`.
-  const normalizedInputOptions = await normalizeInputOptions(inputOptions)
 
-  const parallelPluginInitResult = await initializeParallelPlugins(
-    normalizedInputOptions.plugins,
+  // Convert `RolldownPluginRec` to `RolldownPlugin`
+  let plugins = await normalizePluginOption(inputOptions.plugins)
+  if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
+    plugins = composeJsPlugins(plugins)
+  }
+
+  // Convert `InputOptions` to `NormalizedInputOptions`.
+  const normalizedInputOptions = await normalizeInputOptions(
+    inputOptions,
+    plugins,
   )
 
+  const parallelPluginInitResult = await initializeParallelPlugins(plugins)
+
   try {
-    outputOptions = pluginDriver.callOutputOptionsHook(
-      normalizedInputOptions.plugins,
-      outputOptions,
-    )
+    outputOptions = pluginDriver.callOutputOptionsHook(plugins, outputOptions)
 
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
       normalizedInputOptions,
       outputOptions,
+      plugins,
     )
 
     // Convert `NormalizedOutputOptions` to `BindingInputOptions`

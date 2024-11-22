@@ -1,4 +1,9 @@
-use std::{fs, path::Path, sync::Arc};
+use std::{
+  ffi::OsString,
+  fs,
+  path::{self, Path},
+  sync::Arc,
+};
 
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
@@ -69,7 +74,6 @@ pub struct Resolvers {
 }
 
 impl Resolvers {
-  // TODO(sapphi-red): tryPrefix support
   pub fn new(
     base_options: &BaseOptions,
     external_conditions: &Vec<String>,
@@ -86,6 +90,7 @@ impl Resolvers {
           Arc::clone(&package_json_cache),
           runtime.clone(),
           base_options.root.to_owned(),
+          base_options.try_prefix.to_owned(),
         )
       })
       .collect::<Vec<_>>()
@@ -100,6 +105,7 @@ impl Resolvers {
       Arc::clone(&package_json_cache),
       runtime,
       base_options.root.to_owned(),
+      base_options.try_prefix.to_owned(),
     );
 
     Self { resolvers, external_resolver: Arc::new(external_resolver) }
@@ -211,6 +217,7 @@ pub struct Resolver {
   package_json_peer_dep: PackageJsonPeerDep,
   runtime: String,
   root: String,
+  try_prefix: Option<String>,
 }
 
 impl Resolver {
@@ -219,6 +226,7 @@ impl Resolver {
     package_json_cache: Arc<PackageJsonCache>,
     runtime: String,
     root: String,
+    try_prefix: Option<String>,
   ) -> Self {
     Self {
       inner,
@@ -226,6 +234,7 @@ impl Resolver {
       package_json_peer_dep: PackageJsonPeerDep::default(),
       runtime,
       root,
+      try_prefix,
     }
   }
 
@@ -234,7 +243,32 @@ impl Resolver {
     directory: P,
     specifier: &str,
   ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
-    self.inner.resolve(directory, specifier)
+    let Some(try_prefix) = &self.try_prefix else {
+      return self.inner.resolve(directory, specifier);
+    };
+
+    let mut path = Path::new(specifier).components();
+    let Some(path::Component::Normal(filename)) = path.next_back() else {
+      return self.inner.resolve(directory, specifier);
+    };
+
+    let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
+    filename_with_prefix.push(try_prefix);
+    filename_with_prefix.push(filename);
+
+    let path_with_prefix = path.as_path().join(filename_with_prefix);
+    let Some(path_with_prefix) = path_with_prefix.to_str() else {
+      return self.inner.resolve(directory, specifier);
+    };
+
+    let result_with_prefix = self.inner.resolve(directory.as_ref(), path_with_prefix);
+    match result_with_prefix {
+      Err(
+        oxc_resolver::ResolveError::NotFound(_)
+        | oxc_resolver::ResolveError::ExtensionAlias(_, _, _),
+      ) => self.inner.resolve(directory, specifier),
+      _ => result_with_prefix,
+    }
   }
 
   pub fn normalize_oxc_resolver_result(

@@ -6,7 +6,7 @@ import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
 import { InputOptions, OutputOptions, RolldownPlugin, VERSION } from '..'
 import { getLogger, getOnLog } from '../log/logger'
-import { BuiltinPlugin } from './builtin-plugin'
+import { BuiltinPlugin } from '../builtin-plugin/constructors'
 
 export class PluginDriver {
   public async callOptionsHook(

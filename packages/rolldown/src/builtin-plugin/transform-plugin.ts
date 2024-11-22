@@ -1,3 +1,6 @@
+import { BindingBuiltinPluginName } from '../binding'
+import { BuiltinPlugin } from './constructors'
+
 import { BindingTransformPluginConfig } from '../binding'
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex'
 
@@ -11,7 +14,7 @@ export type TransformPluginConfig = Omit<
   exclude?: TransformPattern
 }
 
-export function normalizeEcmaTransformPluginConfig(
+function normalizeEcmaTransformPluginConfig(
   config?: TransformPluginConfig,
 ): BindingTransformPluginConfig | undefined {
   if (!config) {
@@ -25,4 +28,15 @@ export function normalizeEcmaTransformPluginConfig(
   }
 
   return normalizedConfig
+}
+
+class TransformPlugin extends BuiltinPlugin {
+  constructor(config?: TransformPluginConfig) {
+    let normalizedConfig = normalizeEcmaTransformPluginConfig(config)
+    super(BindingBuiltinPluginName.TransformPlugin, normalizedConfig)
+  }
+}
+
+export function transformPlugin(config?: TransformPluginConfig) {
+  return new TransformPlugin(config)
 }

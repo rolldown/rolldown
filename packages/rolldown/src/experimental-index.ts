@@ -12,13 +12,16 @@ export {
   importGlobPlugin,
   manifestPlugin,
   loadFallbackPlugin,
-  transformPlugin,
-  aliasPlugin,
   jsonPlugin,
   buildImportAnalysisPlugin,
-  replacePlugin,
   viteResolvePlugin,
+} from './builtin-plugin/constructors'
+
+export { transformPlugin } from './builtin-plugin/transform-plugin'
+export { replacePlugin } from './builtin-plugin/replace-plugin'
+export { aliasPlugin } from './builtin-plugin/alias-plugin'
+export {
   isCallableCompatibleBuiltinPlugin,
   makeBuiltinPluginCallable,
   isCallableBuiltinPlugin,
-} from './plugin/builtin-plugin'
+} from './builtin-plugin/utils'

@@ -4,10 +4,8 @@ import { getLogger, getOnLog } from '../log/logger'
 import { getObjectPlugins } from '../plugin/plugin-driver'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import { PluginContextData } from '../plugin/plugin-context-data'
-import {
-  bindingifyBuiltInPlugin,
-  BuiltinPlugin,
-} from '../plugin/builtin-plugin'
+import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils'
+import { BuiltinPlugin } from '../builtin-plugin/constructors'
 import { arraify, unsupported } from './misc'
 import { normalizedStringOrRegex } from './normalize-string-or-regex'
 import type { RolldownPlugin } from '..'

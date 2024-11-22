@@ -1,21 +1,11 @@
 import {
-  normalizeEcmaTransformPluginConfig,
-  TransformPluginConfig,
-} from '../options/normalized-ecma-transform-plugin-config'
-
-import { AliasPluginConfig } from '../options/normalized-alias-plugin-config'
-import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
-  BindingBuiltinPlugin,
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
   BindingJsonPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
-  BindingReplacePluginConfig,
   type BindingViteResolvePluginConfig,
-  BindingCallableBuiltinPlugin,
-  isCallableCompatibleBuiltinPlugin as isCallableCompatibleBuiltinPluginInternal,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -70,19 +60,6 @@ export class LoadFallbackPlugin extends BuiltinPlugin {
   }
 }
 
-export class AliasPlugin extends BuiltinPlugin {
-  constructor(config?: AliasPluginConfig) {
-    super(BindingBuiltinPluginName.AliasPlugin, config)
-  }
-}
-
-export class TransformPlugin extends BuiltinPlugin {
-  constructor(config?: TransformPluginConfig) {
-    let normalizedConfig = normalizeEcmaTransformPluginConfig(config)
-    super(BindingBuiltinPluginName.TransformPlugin, normalizedConfig)
-  }
-}
-
 export class JsonPlugin extends BuiltinPlugin {
   constructor(config?: BindingJsonPluginConfig) {
     super(BindingBuiltinPluginName.JsonPlugin, config)
@@ -92,12 +69,6 @@ export class JsonPlugin extends BuiltinPlugin {
 export class BuildImportAnalysisPlugin extends BuiltinPlugin {
   constructor(config?: BindingBuildImportAnalysisPluginConfig) {
     super(BindingBuiltinPluginName.BuildImportAnalysisPlugin, config)
-  }
-}
-
-export class ReplacePlugin extends BuiltinPlugin {
-  constructor(config?: BindingReplacePluginConfig) {
-    super(BindingBuiltinPluginName.ReplacePlugin, config)
   }
 }
 
@@ -133,16 +104,8 @@ export function wasmFallbackPlugin() {
   return new WasmFallbackPlugin()
 }
 
-export function transformPlugin(config?: TransformPluginConfig) {
-  return new TransformPlugin(config)
-}
-
 export function loadFallbackPlugin() {
   return new LoadFallbackPlugin()
-}
-
-export function aliasPlugin(config: AliasPluginConfig) {
-  return new AliasPlugin(config)
 }
 
 export function jsonPlugin(config?: BindingJsonPluginConfig) {
@@ -166,90 +129,4 @@ export function viteResolvePlugin(
         ? 'bun'
         : 'node',
   })
-}
-
-/**
- * ## Usage
- *
- * ```js
- * replacePlugin({
- *   'process.env.NODE_ENV': JSON.stringify('production'),
- *    __buildDate__: () => JSON.stringify(new Date()),
- *    __buildVersion: 15
- * })
- * ```
- *
- * ### With options
- *
- * ```js
- * replacePlugin({
- *   'process.env.NODE_ENV': JSON.stringify('production'),
- *   __buildDate__: () => JSON.stringify(new Date()),
- *   __buildVersion: 15
- * }, {
- *   preventAssignment: false,
- * })
- * ```
- *
- */
-export function replacePlugin(
-  values: BindingReplacePluginConfig['values'] = {},
-  options: Omit<BindingReplacePluginConfig, 'values'> = {},
-) {
-  return new ReplacePlugin({ ...options, values })
-}
-
-export function isCallableCompatibleBuiltinPlugin(
-  plugin: any,
-): plugin is BuiltinPlugin {
-  return (
-    plugin instanceof BuiltinPlugin &&
-    isCallableCompatibleBuiltinPluginInternal(bindingifyBuiltInPlugin(plugin))
-  )
-}
-
-type BindingCallableBuiltinPluginLike = {
-  [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K]
-}
-
-export function makeBuiltinPluginCallable(plugin: BuiltinPlugin) {
-  let callablePlugin = new BindingCallableBuiltinPlugin(
-    bindingifyBuiltInPlugin(plugin),
-  )
-
-  const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & {
-    _original: BindingCallableBuiltinPlugin
-  } = {
-    _original: callablePlugin,
-  }
-  for (const key in callablePlugin) {
-    if (key === 'name') {
-      wrappedPlugin[key] = callablePlugin[key]
-    } else {
-      // @ts-expect-error
-      wrappedPlugin[key] = function (...args) {
-        // @ts-expect-error
-        return callablePlugin[key](...args)
-      }
-    }
-  }
-  return wrappedPlugin as BindingCallableBuiltinPluginLike & {
-    _original: BindingCallableBuiltinPlugin
-  }
-}
-
-export function isCallableBuiltinPlugin(plugin: any): boolean {
-  return (
-    '_original' in plugin &&
-    plugin._original instanceof BindingCallableBuiltinPlugin
-  )
-}
-
-export function bindingifyBuiltInPlugin(
-  plugin: BuiltinPlugin,
-): BindingBuiltinPlugin {
-  return {
-    __name: plugin.name,
-    options: plugin.options,
-  }
 }

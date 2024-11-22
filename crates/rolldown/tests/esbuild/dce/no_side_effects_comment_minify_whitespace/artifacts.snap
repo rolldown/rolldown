@@ -9,7 +9,6 @@ snapshot_kind: text
 ```js
 
 //#region expr-arrow.js
-//! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ (y) => y,
 	/* #__NO_SIDE_EFFECTS__ */ () => {},
@@ -26,7 +25,6 @@ x([
 ```js
 
 //#region expr-fn.js
-//! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ function() {},
 	/* #__NO_SIDE_EFFECTS__ */ function y() {},
@@ -37,6 +35,42 @@ x([
 	/* #__NO_SIDE_EFFECTS__ */ async function* () {},
 	/* #__NO_SIDE_EFFECTS__ */ async function* y() {}
 ]);
+
+//#endregion
+```
+## ns-export-fn.js
+
+```js
+
+//#region ns-export-fn.ts
+let ns;
+(function(_ns) {
+	function a() {}
+	_ns.a = a;
+	function* b() {}
+	_ns.b = b;
+	async function c() {}
+	_ns.c = c;
+	async function* d() {}
+	_ns.d = d;
+})(ns || (ns = {}));
+
+//#endregion
+```
+## ns-export-local.js
+
+```js
+
+//#region ns-export-local.ts
+let ns;
+(function(_ns) {
+	var v0 = _ns.v0 = function() {}, v1 = _ns.v1 = function() {};
+	let l0 = _ns.l0 = function() {}, l1 = _ns.l1 = function() {};
+	const c0 = _ns.c0 = function() {}, c1 = _ns.c1 = function() {};
+	var v2 = _ns.v2 = () => {}, v3 = _ns.v3 = () => {};
+	let l2 = _ns.l2 = () => {}, l3 = _ns.l3 = () => {};
+	const c2 = _ns.c2 = () => {}, c3 = _ns.c3 = () => {};
+})(ns || (ns = {}));
 
 //#endregion
 ```
@@ -238,31 +272,9 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 
 ```js
 
-//#region stmt-fn.js
-//! These should all have "no side effects"
-// #__NO_SIDE_EFFECTS__
-function a() {}
-// #__NO_SIDE_EFFECTS__
-function* b() {}
-// #__NO_SIDE_EFFECTS__
-async function c() {}
-// #__NO_SIDE_EFFECTS__
-async function* d() {}
-
-//#endregion
 ```
 ## stmt-local.js
 
 ```js
 
-//#region stmt-local.js
-//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-var v0 = function() {}, v1 = function() {};
-let l0 = function() {}, l1 = function() {};
-const c0 = /* #__NO_SIDE_EFFECTS__ */ function() {}, c1 = function() {};
-var v2 = () => {}, v3 = () => {};
-let l2 = () => {}, l3 = () => {};
-const c2 = /* #__NO_SIDE_EFFECTS__ */ () => {}, c3 = () => {};
-
-//#endregion
 ```

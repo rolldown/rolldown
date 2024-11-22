@@ -90,6 +90,7 @@
         "name": "stmt-export-default-after-async-gen-fn-name",
         "import": "stmt-export-default-after-async-gen-fn-name.js"
       }
-    ]
+    ],
+    "treeshake": false
   }
 }

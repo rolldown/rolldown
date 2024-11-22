@@ -8,8 +8,9 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
-import type { RolldownPluginRec } from '../plugin'
 import { TreeshakingOptionsSchema } from '../treeshake'
+import type { RolldownPluginRec } from '../plugin'
+import type { StringOrRegExp } from '../types/utils'
 import type {
   ExternalOption,
   InputCliOptions,
@@ -19,7 +20,6 @@ import type {
   InputOptions,
   WatchOptions,
 } from '../types/input-options'
-import type { StringOrRegExp } from '../types/utils'
 
 const inputOptionSchema = z
   .string()

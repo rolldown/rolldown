@@ -65,7 +65,7 @@ pub struct BindingInputOptions {
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
   #[serde(skip_deserializing)]
-  pub log_level: Option<BindingLogLevel>,
+  pub log_level: BindingLogLevel,
   #[debug(skip)]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]

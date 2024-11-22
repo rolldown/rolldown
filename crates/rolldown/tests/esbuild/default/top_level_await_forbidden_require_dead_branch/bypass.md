@@ -1,6 +1,6 @@
 # Reason
-1. should not appear `__commonJS`
-2. Rolldown's iife output will return exports
+1.  rolldown use `__commonJS` to wrap due to `oxc` DCE the dead branch, esbuild generate same output if remove the block
+2. different iife impl
 # Diff
 ## /out.js
 ### esbuild

@@ -111,10 +111,6 @@
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
-## Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the sub tree should be eliminated
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
-## Our side effects normalization is not right
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 ## jsx element don't have pure annotation
@@ -185,8 +181,6 @@
 - crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
 ## wrong tree shaking result
 - crates/rolldown/tests/esbuild/default/mangle_no_quoted_props
-## don't rewrite top level binding
-- crates/rolldown/tests/esbuild/default/named_function_expression_argument_collision
 ## should read `tsconfig.json`
 - crates/rolldown/tests/esbuild/default/non_determinism_issue2537
 ## resolve alias
@@ -219,10 +213,6 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## Can't disable bundle splitting
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
-## should not appear `__commonJS`
-- crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
-## Rolldown's iife output will return exports
-- crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 ## inject path
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
 ## should not drop `'use strict'`

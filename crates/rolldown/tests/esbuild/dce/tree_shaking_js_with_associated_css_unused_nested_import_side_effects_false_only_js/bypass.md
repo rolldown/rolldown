@@ -1,5 +1,5 @@
 # Reason
-1. Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the sub tree should be eliminated
+1. Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the whole sub tree (including css file) should be eliminated
 # Diff
 ## /out/test.css
 ### esbuild

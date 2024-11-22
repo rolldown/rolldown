@@ -174,10 +174,6 @@
 - crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
 ## side effects detector not align
 - crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
-## Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the sub tree should be eliminated
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
-## Our side effects normalization is not right
-- crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
 ## seems esbuild mark static field as side effects whatever, should investigate
 - crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 ## jsx element don't have pure annotation

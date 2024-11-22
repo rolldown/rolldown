@@ -408,8 +408,6 @@ console.log(require.resolve(
 	"foo"
 	/* after */
 ));
-let [] = [];
-let [] = [];
 let [ ...s] = [...s];
 let [ ...s2] = [...s2];
 let {} = {};
@@ -417,8 +415,6 @@ let {} = {};
 let { ...s3 } = { ...s3 };
 let { ...s4 } = { ...s4 };
 let [x] = [x];
-let [x2] = [x2];
-let [x3] = [x3];
 let { y } = { y };
 let { y2 } = { y2 };
 let { y3 } = { y3 };
@@ -481,7 +477,7 @@ switch (a) {}
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,117 @@
+@@ -1,350 +1,113 @@
 +
 +
 +//#region entry.js
@@ -532,8 +528,6 @@ switch (a) {}
 +	"foo"
 +	/* after */
 +));
-+let [] = [];
-+let [] = [];
 +let [ ...s] = [...s];
 +let [ ...s2] = [...s2];
 +let {} = {};
@@ -541,8 +535,6 @@ switch (a) {}
 +let { ...s3 } = { ...s3 };
 +let { ...s4 } = { ...s4 };
 +let [x] = [x];
-+let [x2] = [x2];
-+let [x3] = [x3];
 +let { y } = { y };
 +let { y2 } = { y2 };
 +let { y3 } = { y3 };

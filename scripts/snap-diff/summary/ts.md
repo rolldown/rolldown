@@ -11,8 +11,6 @@
   diff
 ## [this_inside_function_ts_use_define_for_class_fields](../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields/diff.md)
   diff
-## [ts_abstract_class_field_use_define](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define/diff.md)
-  diff
 ## [ts_common_js_variable_in_esm_type_module](../../../crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module/diff.md)
   diff
 ## [ts_computed_class_field_use_define_false](../../../crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false/diff.md)
@@ -113,6 +111,7 @@
 ## [ts_side_effects_false_warning_type_declarations](../../../crates/rolldown/tests/esbuild/ts/ts_side_effects_false_warning_type_declarations)
 # Bypassed Cases
 ## [ts_abstract_class_field_use_assign](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_assign/bypass.md)
+## [ts_abstract_class_field_use_define](../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define/bypass.md)
 ## [ts_enum_define](../../../crates/rolldown/tests/esbuild/ts/ts_enum_define/bypass.md)
 ## [ts_export_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_export_namespace/bypass.md)
 ## [ts_import_equals_bundle](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle/bypass.md)

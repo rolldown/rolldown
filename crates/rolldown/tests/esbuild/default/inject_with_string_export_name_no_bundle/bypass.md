@@ -1,5 +1,5 @@
 # Reason
-1. should not replace the function it self in `inject files`
+1. replace the function it self in `inject files`, this align with `@rollup/plugin-inject`
 # Diff
 ## /out.js
 ### esbuild

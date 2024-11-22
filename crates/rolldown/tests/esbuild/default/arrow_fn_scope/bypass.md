@@ -1,5 +1,5 @@
 # Reason
-1. the deconflict of no top level is sub optimal
+1. generate same output as esbuild in `bundle` mode
 # Diff
 ## /out.js
 ### esbuild

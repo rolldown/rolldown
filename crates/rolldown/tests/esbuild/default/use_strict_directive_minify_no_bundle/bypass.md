@@ -1,5 +1,5 @@
 # Reason
-1. should not drop `'use strict'`
+1. generate same output as esbuild when `bundle` mode
 # Diff
 ## /out.js
 ### esbuild

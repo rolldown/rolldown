@@ -1,5 +1,5 @@
 # Reason
-1. obviously, the output is incorrect
+1. should not reuse `__toESM(require('./foo'))`
 # Diff
 ## /out.js
 ### esbuild

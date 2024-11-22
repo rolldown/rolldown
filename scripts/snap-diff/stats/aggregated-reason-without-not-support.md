@@ -33,10 +33,6 @@
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call_inside_try
-## different iife impl
-- crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
-- crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
-- crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
 ## rolldown has redundant `require('external')`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
@@ -53,12 +49,9 @@
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
-## rolldown split chunks
-- crates/rolldown/tests/esbuild/default/import_namespace_this_value
-- crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision
-## should not replace the function it self in `inject files`
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_bundle
-- crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle
+## different iife impl
+- crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
+- crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
 ## rolldown has redundant `import "external"`
 - crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
@@ -109,8 +102,6 @@
 - crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
 ## related to minifier
 - crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
-## the deconflict of no top level is sub optimal
-- crates/rolldown/tests/esbuild/default/arrow_fn_scope
 ## for `__require` diff, we don't have `ModePassThrough`
 - crates/rolldown/tests/esbuild/default/comment_preservation
 ## esbuild will wrap `Promise.resolve().then() for original specifier`
@@ -157,6 +148,8 @@
 - crates/rolldown/tests/esbuild/default/import_meta_common_js
 ## rolldown extract common module
 - crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js
+## rolldown split chunks
+- crates/rolldown/tests/esbuild/default/import_namespace_this_value
 ## not align
 - crates/rolldown/tests/esbuild/default/indirect_require_message
 ## generate wrong syntax when Exported is `StringLiteral`
@@ -183,7 +176,7 @@
 - crates/rolldown/tests/esbuild/default/require_json
 ## require `.json`, the json file should not wrapped in `__esm`
 - crates/rolldown/tests/esbuild/default/require_shim_substitution
-## obviously, the output is incorrect
+## should not reuse `__toESM(require('./foo'))`
 - crates/rolldown/tests/esbuild/default/string_export_names_common_js
 ## string export name not correct
 - crates/rolldown/tests/esbuild/default/string_export_names_iife
@@ -203,8 +196,6 @@
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting
 ## inject path
 - crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
-## should not drop `'use strict'`
-- crates/rolldown/tests/esbuild/default/use_strict_directive_minify_no_bundle
 ## alias
 - crates/rolldown/tests/esbuild/default/warnings_inside_node_modules
 ## esbuild did not needs `__toESM`

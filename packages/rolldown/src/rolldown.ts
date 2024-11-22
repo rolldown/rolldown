@@ -2,7 +2,7 @@ import type { InputOptions } from './types/input-options'
 import { RolldownBuild } from './rolldown-build'
 import { Watcher } from './watcher'
 import { createBundler } from './utils/create-bundler'
-import { WatchOptions } from './options/watch-option'
+import { WatchOptions } from './options/watch-options'
 import { handleOutputErrors } from './utils/transform-to-rollup-output'
 
 // Compat to `rollup.rollup`, it is included scan module graph and linker.

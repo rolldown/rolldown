@@ -53,7 +53,7 @@ import { MinimalPluginContext } from './log/logger'
 import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
-import { WatchOptions } from './options/watch-option'
+import { WatchOptions } from './options/watch-options'
 import { Watcher } from './watcher'
 
 export { defineConfig, rolldown, watch }

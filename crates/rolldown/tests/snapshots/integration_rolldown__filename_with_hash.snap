@@ -138,7 +138,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/disable_tree_shaking
 
-- entry-!~{000}~.js => entry-N1_vKQIz.js
+- entry-!~{000}~.js => entry-C_j8m6ko.js
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 

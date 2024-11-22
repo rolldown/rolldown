@@ -24,6 +24,7 @@ export const ModuleSideEffectsOptionSchema = z
 export const TreeshakingOptionsSchema = z
   .object({
     moduleSideEffects: ModuleSideEffectsOptionSchema.optional(),
+    annotations: z.boolean().optional(),
   })
   .passthrough()
 

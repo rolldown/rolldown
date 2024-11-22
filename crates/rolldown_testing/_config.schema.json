@@ -630,6 +630,12 @@
     "InnerOptions": {
       "type": "object",
       "properties": {
+        "annotations": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "moduleSideEffects": {
           "type": [
             "boolean",

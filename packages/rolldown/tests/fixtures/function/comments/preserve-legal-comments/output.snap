@@ -8,7 +8,11 @@ console.log("in c");
 /*! Legal comments2 */
 foo;
 bar;
-var main_default = () => {};
+var main_default = () => {
+	/**
+	* @preserve
+	*/
+};
 
 //#endregion
 export { main_default as default, x };

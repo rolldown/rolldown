@@ -1086,14 +1086,14 @@ snapshot_kind: text
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
 
-- entry-!~{000}~.js => entry-4QYOp6uq.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-Dtx_l0_J.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
 
-- entry-!~{000}~.js => entry-4QYOp6uq.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-Dtx_l0_J.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_external
@@ -1116,32 +1116,32 @@ snapshot_kind: text
 
 # tests/esbuild/default/legal_comments_many_end_of_file
 
+- entry-!~{000}~.js => entry-CBVmlScX.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-DRLSYdrK.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_many_linked
 
-- entry-!~{000}~.js => entry-6ivaYhal.js
+- entry-!~{000}~.js => entry-CP27rx2q.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_modify_indent
 
-- entry-!~{000}~.js => entry-70M81U8g.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-ZVZfs6zc.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 
-- entry-!~{000}~.js => entry-4QYOp6uq.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-Dtx_l0_J.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 
-- entry-!~{000}~.js => entry-4QYOp6uq.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-Dtx_l0_J.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_none

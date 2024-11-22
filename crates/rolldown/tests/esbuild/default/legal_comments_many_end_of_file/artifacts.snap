@@ -18,10 +18,14 @@ snapshot_kind: text
 
 //#region a.js
 console.log("in a");
+//! Duplicate comment
+//! Duplicate comment
 
 //#endregion
 //#region b.js
 console.log("in b");
+//! Duplicate comment
+//! Duplicate comment
 
 //#endregion
 //#region c.js
@@ -31,6 +35,7 @@ function foo() {
 	* Copyright notice 2
 	*/
 	console.log("in c");
+	// @preserve This is another comment
 }
 foo();
 
@@ -46,6 +51,11 @@ function bar() {
 //! Duplicate third-party comment
 //! Duplicate third-party comment
 bar();
+
+//#endregion
+//#region node_modules/some-pkg/js/index.js
+//! Duplicate third-party comment
+//! Duplicate third-party comment
 
 //#endregion
 ```

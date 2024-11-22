@@ -20,13 +20,13 @@ console.log(first, second, third);
 
 ```
 - ../input.js
-(0:0-0:12) "condition ? " --> (2:0-2:8) "\nfirst ?"
-(0:12-0:25) "exprIfTrue : " --> (2:8-2:17) " second :"
-(0:25-1:0) "exprIfFalse;" --> (2:17-3:0) " third;"
-(1:0-1:8) "\nconsole" --> (3:0-3:8) "\nconsole"
-(1:8-1:12) ".log" --> (3:8-3:12) ".log"
-(1:12-1:23) "(condition," --> (3:12-3:19) "(first,"
-(1:23-1:35) " exprIfTrue," --> (3:19-3:27) " second,"
-(1:35-1:47) " exprIfFalse" --> (3:27-3:33) " third"
-(1:47-2:1) ");\n" --> (3:33-6:34) ");\n\n//#endregion\n//# sourceMappingURL=input.js.map"
+(0:0) "condition ? " --> (2:0) "first ? "
+(0:12) "exprIfTrue : " --> (2:8) "second : "
+(0:25) "exprIfFalse;\n" --> (2:17) "third;\n"
+(1:0) "console." --> (3:0) "console."
+(1:8) "log(" --> (3:8) "log("
+(1:12) "condition, " --> (3:12) "first, "
+(1:23) "exprIfTrue, " --> (3:19) "second, "
+(1:35) "exprIfFalse)" --> (3:27) "third)"
+(1:47) ";\n" --> (3:33) ";\n"
 ```

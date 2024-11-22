@@ -1,5 +1,5 @@
 # Reason
-1. throw should be kept
+1. `b` has `sideEffects: false`, so the `throw` should be stripped, same as webpack
 # Diff
 ## /out.js
 ### esbuild

@@ -132,8 +132,7 @@ fn get_resolve_options(
   let mut extensions = base_options.extensions.clone();
   extensions.push(".node".to_string());
 
-  let mut main_fields = base_options.main_fields.clone();
-  main_fields.push("main".to_string());
+  let main_fields = base_options.main_fields.clone();
 
   oxc_resolver::ResolveOptions {
     alias_fields: if base_options.main_fields.iter().any(|field| field == "browser") {

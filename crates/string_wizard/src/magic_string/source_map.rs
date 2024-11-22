@@ -32,7 +32,6 @@ impl<'s> MagicString<'s> {
       source_builder.advance(frag);
     });
 
-    // pre-compute utf16 index of chunk.start
     let utf16_index_map =
       precompute_utf16_index_map(&self.source, self.iter_chunks().map(|chunk| chunk.start()));
 
@@ -70,11 +69,13 @@ fn precompute_utf16_index_map(
 ) -> FxHashMap<usize, usize> {
   let mut byte_indices: Vec<usize> = byte_indices.collect();
   byte_indices.sort();
-  let mut utf16_indices: Vec<(usize, usize)> = vec![(0, 0); byte_indices.len() + 1];
-  for (i, &index) in byte_indices.iter().enumerate() {
-    let (prev, prev_utf16) = utf16_indices[i];
-    let count_utf16: usize = source[prev..index].chars().map(|c| c.len_utf16()).sum();
-    utf16_indices[i + 1] = (index, prev_utf16 + count_utf16);
+  let mut index = 0;
+  let mut index_utf16 = 0;
+  let mut map: FxHashMap<usize, usize> = Default::default();
+  for &i in &byte_indices {
+    index_utf16 += source[index..i].chars().map(|c| c.len_utf16()).sum::<usize>();
+    index = i;
+    map.insert(i, index_utf16);
   }
-  utf16_indices.into_iter().collect()
+  map
 }

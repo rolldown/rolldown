@@ -11,7 +11,7 @@ afterEach(async () => {
   // revert change
   fs.writeFileSync(input, 'console.log(1)\n')
   // TODO: find a way to avoid emit the change event at next test
-  // await sleep(100)
+  await sleep(60)
 })
 
 test.sequential('watch', async () => {
@@ -265,17 +265,14 @@ test.sequential('error handling', async () => {
   })
 
   fs.writeFileSync(input, 'console.log(2)')
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    )
-  })
+  await waitBuildFinished(watcher)
 
   // failed again
   fs.writeFileSync(input, 'conso le.log(1)')
   await waitUtil(() => {
     // The different platform maybe emit multiple events
     expect(errors.length > 1).toBe(true)
+    expect(errors[0].includes('PARSE_ERROR')).toBe(true)
   })
 
   // It should be working if the changes are fixed error
@@ -309,14 +306,15 @@ test.sequential('error handling + plugin error', async () => {
   })
   await waitUtil(() => {
     // First build should error
-    // expect(errors.length).toBe(1) // the revert change maybe emit the change event caused it failed
+    expect(errors.length).toBe(1) // the revert change maybe emit the change event caused it failed
     expect(errors[0].includes('plugin error')).toBe(true)
   })
 
   errors.length = 0
   fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {
-    expect(errors.length).toBe(1)
+    // The different platform maybe emit multiple events
+    expect(errors.length > 1).toBe(true)
     expect(errors[0].includes('plugin error')).toBe(true)
   })
 

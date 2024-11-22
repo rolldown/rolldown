@@ -4433,6 +4433,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DfNBBl1O.js
 
+# tests/rolldown/issues/2833
+
+- main-!~{000}~.js => main-Dr53fwGV.js
+
 # tests/rolldown/issues/376
 
 - main-!~{000}~.js => main-CfuHZZW7.js

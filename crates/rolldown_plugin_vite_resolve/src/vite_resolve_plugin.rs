@@ -311,9 +311,11 @@ impl ViteResolvePlugin {
       &resolver.resolve(base_dir, args.specifier),
     )?;
     if let Some(mut resolved) = resolved {
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
-          resolved.id = finalized;
+      if !scan {
+        if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
+          if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
+            resolved.id = finalized;
+          }
         }
       }
       return Ok(Some(resolved));

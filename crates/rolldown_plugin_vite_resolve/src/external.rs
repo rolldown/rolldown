@@ -4,6 +4,7 @@ use dashmap::DashMap;
 
 use crate::{
   package_json_cache::PackageJsonCache,
+  package_json_peer::PackageJsonPeerDep,
   resolver::resolve_bare_import,
   utils::{
     can_externalize_file, get_npm_package_name, is_bare_import, is_builtin, is_in_node_modules,
@@ -62,6 +63,7 @@ pub struct ExternalDecider {
   runtime: String,
   resolver: Arc<oxc_resolver::Resolver>,
   package_json_cache: Arc<PackageJsonCache>,
+  package_json_peer_dep: PackageJsonPeerDep,
   processed_ids: DashMap<String, bool>,
 }
 
@@ -72,7 +74,14 @@ impl ExternalDecider {
     resolver: Arc<oxc_resolver::Resolver>,
     package_json_cache: Arc<PackageJsonCache>,
   ) -> Self {
-    Self { options, runtime, resolver, package_json_cache, processed_ids: DashMap::default() }
+    Self {
+      options,
+      runtime,
+      resolver,
+      package_json_cache,
+      package_json_peer_dep: PackageJsonPeerDep::default(),
+      processed_ids: DashMap::default(),
+    }
   }
 
   pub fn is_external(&self, id: &str, importer: Option<&str>) -> bool {
@@ -126,6 +135,7 @@ impl ExternalDecider {
       importer,
       &self.resolver,
       &self.package_json_cache,
+      &self.package_json_peer_dep,
       &self.runtime,
       &self.options.root,
       false,

@@ -5,9 +5,10 @@ use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 
 use crate::{
   package_json_cache::PackageJsonCache,
+  package_json_peer::PackageJsonPeerDep,
   utils::{
-    can_externalize_file, clean_url, get_extension, is_bare_import, is_builtin, is_deep_import,
-    normalize_path, BROWSER_EXTERNAL_ID,
+    can_externalize_file, clean_url, get_extension, get_npm_package_name, is_bare_import,
+    is_builtin, is_deep_import, normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
   },
 };
 
@@ -187,7 +188,10 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 
 pub fn normalize_oxc_resolver_result(
   package_json_cache: &PackageJsonCache,
+  package_json_peer_dep: &PackageJsonPeerDep,
   runtime: &str,
+  importer: Option<&str>,
+  root: &str,
   result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
 ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
   match result {
@@ -212,9 +216,21 @@ pub fn normalize_oxc_resolver_result(
       // if import can't be found, check if it's an optional peer dep.
       // if so, we can resolve to a special id that errors only when imported.
       if is_bare_import(id) && !is_builtin(id, runtime) && !id.contains('\0') {
-        // TODO(sapphi-red): handle missing peerDep
-        // https://github.com/vitejs/vite/blob/58f1df3288b0f9584bb413dd34b8d65671258f6f/packages/vite/src/node/plugins/resolve.ts#L728-L752
-        return Ok(None);
+        if let Some(pkg_name) = get_npm_package_name(id) {
+          let base_dir = get_base_dir(importer).unwrap_or(root);
+          if base_dir != root {
+            if let Some(package_json) =
+              package_json_peer_dep.get_nearest_package_json_optional_peer_deps(base_dir)
+            {
+              if package_json.optional_peer_dependencies.contains(pkg_name) {
+                return Ok(Some(HookResolveIdOutput {
+                  id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name),
+                  ..Default::default()
+                }));
+              }
+            }
+          }
+        }
       }
       Ok(None)
     }
@@ -225,34 +241,29 @@ pub fn normalize_oxc_resolver_result(
   }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn resolve_bare_import(
   specifier: &str,
   importer: Option<&str>,
   resolver: &oxc_resolver::Resolver,
   package_json_cache: &PackageJsonCache,
+  package_json_peer_dep: &PackageJsonPeerDep,
   runtime: &str,
   root: &str,
   external: bool,
 ) -> HookResolveIdReturn {
   // TODO(sapphi-red): support `dedupe`
-  let base_dir = if let Some(importer) = importer {
-    let imp = Path::new(importer);
-    if imp.is_absolute()
-      && (
-        // css processing appends `*` for importer
-        importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false)
-      )
-    {
-      imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
-    } else {
-      root
-    }
-  } else {
-    root
-  };
+  let base_dir = get_base_dir(importer).unwrap_or(root);
 
   let oxc_resolved_result = resolver.resolve(base_dir, specifier);
-  let resolved = normalize_oxc_resolver_result(package_json_cache, runtime, &oxc_resolved_result)?;
+  let resolved = normalize_oxc_resolver_result(
+    package_json_cache,
+    package_json_peer_dep,
+    runtime,
+    importer,
+    root,
+    &oxc_resolved_result,
+  )?;
   if let Some(mut resolved) = resolved {
     if !external || !can_externalize_file(&resolved.id) {
       return Ok(Some(resolved));
@@ -278,4 +289,19 @@ pub fn resolve_bare_import(
     return Ok(Some(resolved));
   }
   Ok(None)
+}
+
+fn get_base_dir(importer: Option<&str>) -> Option<&str> {
+  if let Some(importer) = importer {
+    let imp = Path::new(importer);
+    if imp.is_absolute()
+      && (
+        // css processing appends `*` for importer
+        importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false)
+      )
+    {
+      return Some(imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer));
+    }
+  }
+  None
 }

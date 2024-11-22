@@ -2846,6 +2846,8 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",
+ "serde",
+ "serde_json",
  "sugar_path",
 ]
 

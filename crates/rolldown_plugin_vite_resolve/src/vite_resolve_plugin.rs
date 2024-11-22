@@ -10,12 +10,13 @@ use std::{
 use crate::{
   external::{self, ExternalDecider, ExternalDeciderOptions},
   package_json_cache::PackageJsonCache,
+  package_json_peer::PackageJsonPeerDep,
   resolver::{
     self, normalize_oxc_resolver_result, resolve_bare_import, AdditionalOptions, Resolver,
   },
   utils::{
     clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
-    normalize_path, BROWSER_EXTERNAL_ID,
+    normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
   },
   CallablePlugin, ResolveOptionsExternal, ResolveOptionsNoExternal,
 };
@@ -28,7 +29,6 @@ use rolldown_plugin::{
 };
 use sugar_path::SugarPath;
 
-const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
 const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
@@ -99,6 +99,7 @@ pub struct ViteResolvePlugin {
 
   resolver: Arc<Resolver>,
   package_json_cache: Arc<PackageJsonCache>,
+  package_json_peer_dep: PackageJsonPeerDep,
   external_decider: ExternalDecider,
 }
 
@@ -128,6 +129,7 @@ impl ViteResolvePlugin {
       finalize_other_specifiers: options.finalize_other_specifiers,
       runtime: options.runtime.clone(),
       package_json_cache: package_json_cache.clone(),
+      package_json_peer_dep: PackageJsonPeerDep::default(),
       external_decider: ExternalDecider::new(
         ExternalDeciderOptions {
           external: options.external,
@@ -226,6 +228,7 @@ impl ViteResolvePlugin {
         args.importer,
         resolver,
         &self.package_json_cache,
+        &self.package_json_peer_dep,
         &self.runtime,
         &self.resolve_options.root,
         external,
@@ -301,7 +304,10 @@ impl ViteResolvePlugin {
       .unwrap_or(&self.resolve_options.root);
     let resolved = normalize_oxc_resolver_result(
       &self.package_json_cache,
+      &self.package_json_peer_dep,
       &self.runtime,
+      args.importer,
+      &self.resolve_options.root,
       &resolver.resolve(base_dir, args.specifier),
     )?;
     if let Some(mut resolved) = resolved {
@@ -363,7 +369,7 @@ impl ViteResolvePlugin {
           ..Default::default()
         }));
       } else {
-        let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ".").collect::<Vec<&str>>()[..] else {
+        let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ":").collect::<Vec<&str>>()[..] else {
           unreachable!()
         };
         return Ok(Some(HookLoadOutput {

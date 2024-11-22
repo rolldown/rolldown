@@ -1,41 +1,48 @@
-import { BindingInputOptions, BindingLogLevel } from '../binding'
-import type {
-  BindingInjectImportNamed,
-  BindingInjectImportNamespace,
-  BindingWatchOption,
-} from '../binding'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
-import type { NormalizedInputOptions } from './normalized-input-options'
 import { arraify, unsupported } from '../utils/misc'
-import type { NormalizedOutputOptions } from './normalized-output-options'
-import type { LogLevelOption } from '../log/logging'
+import { BindingLogLevel } from '../binding'
 import {
   bindingifyBuiltInPlugin,
   BuiltinPlugin,
 } from '../plugin/builtin-plugin'
 import { PluginContextData } from '../plugin/plugin-context-data'
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex'
+import type { NormalizedInputOptions } from './normalized-input-options'
+import type { NormalizedOutputOptions } from './normalized-output-options'
+import type {
+  BindingWatchOption,
+  BindingInputOptions,
+  BindingInjectImportNamed,
+  BindingInjectImportNamespace,
+} from '../binding'
+import { RolldownPlugin } from '..'
 
 export function bindingifyInputOptions(
-  options: NormalizedInputOptions,
+  inputOptions: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
+  plugins: RolldownPlugin[],
 ): BindingInputOptions {
   const pluginContextData = new PluginContextData()
   return {
-    input: bindingifyInput(options.input),
-    plugins: options.plugins.map((plugin) => {
+    input: bindingifyInput(inputOptions.input),
+    plugins: plugins.map((plugin) => {
       if ('_parallel' in plugin) {
         return undefined
       }
       if (plugin instanceof BuiltinPlugin) {
         return bindingifyBuiltInPlugin(plugin)
       }
-      return bindingifyPlugin(plugin, options, outputOptions, pluginContextData)
+      return bindingifyPlugin(
+        plugin,
+        inputOptions,
+        outputOptions,
+        pluginContextData,
+      )
     }),
-    cwd: options.cwd ?? process.cwd(),
-    external: options.external
+    cwd: inputOptions.cwd ?? process.cwd(),
+    external: inputOptions.external
       ? (function bindingifyExternal() {
-          const external = options.external
+          const external = inputOptions.external
           if (typeof external === 'function') {
             return (id, importer, isResolved) => {
               if (id.startsWith('\0')) return false
@@ -53,9 +60,9 @@ export function bindingifyInputOptions(
           }
         })()
       : undefined,
-    resolve: options.resolve
+    resolve: inputOptions.resolve
       ? (function bindingifyResolve() {
-          const { alias, extensionAlias, ...rest } = options.resolve
+          const { alias, extensionAlias, ...rest } = inputOptions.resolve
 
           return {
             alias: alias
@@ -74,18 +81,23 @@ export function bindingifyInputOptions(
           }
         })()
       : undefined,
-    platform: options.platform,
-    shimMissingExports: options.shimMissingExports,
+    platform: inputOptions.platform,
+    shimMissingExports: inputOptions.shimMissingExports,
     // @ts-ignore TODO The typing should import from binding
-    logLevel: bindingifyLogLevel(options.logLevel),
+    logLevel: bindingifyLogLevel(inputOptions.logLevel),
     onLog: (level, log) => {
-      options.onLog(level, { code: log.code, message: log.message })
+      inputOptions.onLog(level, { code: log.code, message: log.message })
     },
-    treeshake: options.treeshake,
-    moduleTypes: options.moduleTypes,
-    define: options.define ? Object.entries(options.define) : undefined,
-    inject: options.inject
-      ? Object.entries(options.inject).map(
+    // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
+    // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
+    // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in rust side), to represent `false | NormalizedTreeshakingOptions`
+    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
+    moduleTypes: inputOptions.moduleTypes,
+    define: inputOptions.define
+      ? Object.entries(inputOptions.define)
+      : undefined,
+    inject: inputOptions.inject
+      ? Object.entries(inputOptions.inject).map(
           ([alias, item]):
             | BindingInjectImportNamed
             | BindingInjectImportNamespace => {
@@ -127,49 +139,53 @@ export function bindingifyInputOptions(
         )
       : undefined,
     experimental: {
-      strictExecutionOrder: options.experimental?.strictExecutionOrder,
-      disableLiveBindings: options.experimental?.disableLiveBindings,
-      viteMode: options.experimental?.viteMode,
+      strictExecutionOrder: inputOptions.experimental?.strictExecutionOrder,
+      disableLiveBindings: inputOptions.experimental?.disableLiveBindings,
+      viteMode: inputOptions.experimental?.viteMode,
     },
-    profilerNames: options?.profilerNames,
-    jsx: bindingifyJsx(options.jsx),
-    watch: bindingifyWatch(options.watch),
-    dropLabels: options.dropLabels,
+    profilerNames: inputOptions?.profilerNames,
+    jsx: bindingifyJsx(inputOptions.jsx),
+    watch: bindingifyWatch(inputOptions.watch),
+    dropLabels: inputOptions.dropLabels,
   }
 }
 
 function bindingifyLogLevel(
-  logLevel: LogLevelOption,
-): BindingLogLevel | undefined {
+  logLevel?: NormalizedInputOptions['logLevel'],
+): BindingInputOptions['logLevel'] {
   switch (logLevel) {
     case 'silent':
       return BindingLogLevel.Silent
     case 'warn':
       return BindingLogLevel.Warn
     case 'info':
+    case undefined:
       return BindingLogLevel.Info
     case 'debug':
       return BindingLogLevel.Debug
-
     default:
-      throw new Error(`Unexpected log level: ${logLevel}`)
+      return undefined
   }
 }
 
 function bindingifyInput(
   input: NormalizedInputOptions['input'],
 ): BindingInputOptions['input'] {
-  if (Array.isArray(input)) {
-    return input.map((src) => {
-      return {
-        import: src,
-      }
-    })
-  } else {
-    return Object.entries(input).map((value) => {
-      return { name: value[0], import: value[1] }
-    })
+  if (input === undefined) {
+    return []
   }
+
+  if (typeof input === 'string') {
+    return [{ import: input }]
+  }
+
+  if (Array.isArray(input)) {
+    return input.map((src) => ({ import: src }))
+  }
+
+  return Object.entries(input).map((value) => {
+    return { name: value[0], import: value[1] }
+  })
 }
 
 function bindingifyJsx(
@@ -215,4 +231,34 @@ function bindingifyWatch(
     }
     return value
   }
+}
+
+function bindingifyTreeshakeOptions(
+  config: NormalizedInputOptions['treeshake'],
+): BindingInputOptions['treeshake'] {
+  if (config === false) {
+    return undefined
+  }
+  if (config === true || config === undefined) {
+    return {
+      moduleSideEffects: true,
+      annotations: true,
+    }
+  }
+  let normalizedConfig: BindingInputOptions['treeshake'] = {
+    moduleSideEffects: true,
+  }
+  if (config.moduleSideEffects === undefined) {
+    normalizedConfig.moduleSideEffects = true
+  } else if (config.moduleSideEffects === 'no-external') {
+    normalizedConfig.moduleSideEffects = [
+      { external: true, sideEffects: false },
+      { external: false, sideEffects: true },
+    ]
+  } else {
+    normalizedConfig.moduleSideEffects = config.moduleSideEffects
+  }
+
+  normalizedConfig.annotations = config.annotations ?? true
+  return normalizedConfig
 }

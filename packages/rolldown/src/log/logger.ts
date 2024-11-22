@@ -39,7 +39,7 @@ export class MinimalPluginContext {
   constructor(options: NormalizedInputOptions, plugin: Plugin) {
     const onLog = options.onLog
     const pluginName = plugin.name || 'unknown'
-    const logLevel = options.logLevel
+    const logLevel = options.logLevel || LOG_LEVEL_INFO
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
       'PLUGIN_LOG',

@@ -18,7 +18,7 @@ export default defineTest({
         name: 'test-plugin-render-start',
         renderStart: (outputOptions, inputOptions) => {
           renderStartFn()
-          expect((inputOptions.input as string[])[0]).toBe(entry)
+          expect(inputOptions.input).toBe(entry)
           expect(outputOptions.entryFileNames).toBe(entryFileNames)
         },
       },

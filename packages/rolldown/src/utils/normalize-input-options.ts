@@ -3,19 +3,12 @@ import { getLogger, getOnLog } from '../log/logger'
 import { LOG_LEVEL_INFO } from '../log/logging'
 import type { InputOptions } from '../types/input-options'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import { normalizePluginOption } from './normalize-plugin-option'
-import { normalizeTreeshakeOptions } from './normalize-tree-shake'
-import { composeJsPlugins } from './compose-js-plugins'
+import type { RolldownPlugin } from '..'
 
 export async function normalizeInputOptions(
   config: InputOptions,
+  plugins: RolldownPlugin[],
 ): Promise<NormalizedInputOptions> {
-  const { input, ...rest } = config
-  let plugins = await normalizePluginOption(config.plugins)
-  if (rest.experimental?.enableComposingJsPlugins ?? false) {
-    plugins = composeJsPlugins(plugins)
-  }
-  const treeshake = normalizeTreeshakeOptions(config.treeshake)
   const logLevel = config.logLevel || LOG_LEVEL_INFO
   const onLog = getLogger(
     getObjectPlugins(plugins),
@@ -23,11 +16,7 @@ export async function normalizeInputOptions(
     logLevel,
   )
   return {
-    ...rest,
-    input: input ? (typeof input === 'string' ? [input] : input) : [],
-    plugins,
-    logLevel,
+    ...config,
     onLog,
-    treeshake,
   }
 }

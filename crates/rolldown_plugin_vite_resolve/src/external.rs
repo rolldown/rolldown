@@ -3,9 +3,7 @@ use std::{path::Path, sync::Arc};
 use dashmap::DashMap;
 
 use crate::{
-  package_json_cache::PackageJsonCache,
-  package_json_peer::PackageJsonPeerDep,
-  resolver::resolve_bare_import,
+  resolver::Resolver,
   utils::{
     can_externalize_file, get_npm_package_name, is_bare_import, is_builtin, is_in_node_modules,
   },
@@ -54,34 +52,19 @@ impl ResolveOptionsNoExternal {
 pub struct ExternalDeciderOptions {
   pub external: ResolveOptionsExternal,
   pub no_external: ResolveOptionsNoExternal,
-  pub root: String,
 }
 
 #[derive(Debug)]
 pub struct ExternalDecider {
   options: ExternalDeciderOptions,
   runtime: String,
-  resolver: Arc<oxc_resolver::Resolver>,
-  package_json_cache: Arc<PackageJsonCache>,
-  package_json_peer_dep: PackageJsonPeerDep,
+  resolver: Arc<Resolver>,
   processed_ids: DashMap<String, bool>,
 }
 
 impl ExternalDecider {
-  pub fn new(
-    options: ExternalDeciderOptions,
-    runtime: String,
-    resolver: Arc<oxc_resolver::Resolver>,
-    package_json_cache: Arc<PackageJsonCache>,
-  ) -> Self {
-    Self {
-      options,
-      runtime,
-      resolver,
-      package_json_cache,
-      package_json_peer_dep: PackageJsonPeerDep::default(),
-      processed_ids: DashMap::default(),
-    }
+  pub fn new(options: ExternalDeciderOptions, runtime: String, resolver: Arc<Resolver>) -> Self {
+    Self { options, runtime, resolver, processed_ids: DashMap::default() }
   }
 
   pub fn is_external(&self, id: &str, importer: Option<&str>) -> bool {
@@ -130,16 +113,7 @@ impl ExternalDecider {
       return false;
     }
 
-    let result = resolve_bare_import(
-      id,
-      importer,
-      &self.resolver,
-      &self.package_json_cache,
-      &self.package_json_peer_dep,
-      &self.runtime,
-      &self.options.root,
-      false,
-    );
+    let result = self.resolver.resolve_bare_import(id, importer, false);
     if let Ok(result) = result {
       let resolved = match result {
         Some(result) => result,

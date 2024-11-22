@@ -63,35 +63,53 @@ impl From<u8> for AdditionalOptions {
 }
 
 #[derive(Debug)]
-pub struct Resolver {
-  resolvers: [oxc_resolver::Resolver; RESOLVER_COUNT as usize],
-  external_resolver: Arc<oxc_resolver::Resolver>,
+pub struct Resolvers {
+  resolvers: [Resolver; RESOLVER_COUNT as usize],
+  external_resolver: Arc<Resolver>,
 }
 
-impl Resolver {
+impl Resolvers {
   // TODO(sapphi-red): tryPrefix support
-  pub fn new(base_options: &BaseOptions, external_conditions: &Vec<String>) -> Self {
+  pub fn new(
+    base_options: &BaseOptions,
+    external_conditions: &Vec<String>,
+    runtime: String,
+  ) -> Self {
+    let package_json_cache = Arc::new(PackageJsonCache::default());
+
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
     let resolvers = (0..RESOLVER_COUNT)
-      .map(|v| base_resolver.clone_with_options(get_resolve_options(base_options, v.into())))
-      .collect::<Vec<oxc_resolver::Resolver>>()
+      .map(|v| {
+        Resolver::new(
+          base_resolver.clone_with_options(get_resolve_options(base_options, v.into())),
+          Arc::clone(&package_json_cache),
+          runtime.clone(),
+          base_options.root.to_owned(),
+        )
+      })
+      .collect::<Vec<_>>()
       .try_into()
       .unwrap();
 
-    let external_resolver = base_resolver.clone_with_options(get_resolve_options(
-      &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
-      AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
-    ));
+    let external_resolver = Resolver::new(
+      base_resolver.clone_with_options(get_resolve_options(
+        &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
+        AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
+      )),
+      Arc::clone(&package_json_cache),
+      runtime,
+      base_options.root.to_owned(),
+    );
 
     Self { resolvers, external_resolver: Arc::new(external_resolver) }
   }
 
-  pub fn get(&self, additional_options: AdditionalOptions) -> &oxc_resolver::Resolver {
+  pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
     &self.resolvers[additional_options.as_u8() as usize]
   }
 
-  pub fn get_for_external(&self) -> Arc<oxc_resolver::Resolver> {
+  pub fn get_for_external(&self) -> Arc<Resolver> {
     Arc::clone(&self.external_resolver)
   }
 
@@ -186,109 +204,138 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
   ret
 }
 
-pub fn normalize_oxc_resolver_result(
-  package_json_cache: &PackageJsonCache,
-  package_json_peer_dep: &PackageJsonPeerDep,
-  runtime: &str,
-  importer: Option<&str>,
-  root: &str,
-  result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
-) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
-  match result {
-    Ok(result) => {
-      let raw_path = result.full_path().to_str().unwrap().to_string();
-      let path = raw_path.strip_prefix("\\\\?\\").unwrap_or(&raw_path);
-      let path = normalize_path(path);
+#[derive(Debug)]
+pub struct Resolver {
+  inner: oxc_resolver::Resolver,
+  package_json_cache: Arc<PackageJsonCache>,
+  package_json_peer_dep: PackageJsonPeerDep,
+  runtime: String,
+  root: String,
+}
 
-      let side_effects = result
-        .package_json()
-        .and_then(|pkg_json| {
-          package_json_cache.cached_package_json(pkg_json).check_side_effects_for(&raw_path)
-        })
-        .map(
-          |side_effects| if side_effects { HookSideEffects::True } else { HookSideEffects::False },
-        );
-      Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
+impl Resolver {
+  pub fn new(
+    inner: oxc_resolver::Resolver,
+    package_json_cache: Arc<PackageJsonCache>,
+    runtime: String,
+    root: String,
+  ) -> Self {
+    Self {
+      inner,
+      package_json_cache,
+      package_json_peer_dep: PackageJsonPeerDep::default(),
+      runtime,
+      root,
     }
-    Err(oxc_resolver::ResolveError::NotFound(id)) => {
-      // TODO(sapphi-red): maybe need to do the same thing for id mapped from browser field
+  }
 
-      // if import can't be found, check if it's an optional peer dep.
-      // if so, we can resolve to a special id that errors only when imported.
-      if is_bare_import(id) && !is_builtin(id, runtime) && !id.contains('\0') {
-        if let Some(pkg_name) = get_npm_package_name(id) {
-          let base_dir = get_base_dir(importer).unwrap_or(root);
-          if base_dir != root {
-            if let Some(package_json) =
-              package_json_peer_dep.get_nearest_package_json_optional_peer_deps(base_dir)
-            {
-              if package_json.optional_peer_dependencies.contains(pkg_name) {
-                return Ok(Some(HookResolveIdOutput {
-                  id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name),
-                  ..Default::default()
-                }));
+  pub fn resolve_raw<P: AsRef<Path>>(
+    &self,
+    directory: P,
+    specifier: &str,
+  ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
+    self.inner.resolve(directory, specifier)
+  }
+
+  pub fn normalize_oxc_resolver_result(
+    &self,
+    importer: Option<&str>,
+    result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
+  ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
+    match result {
+      Ok(result) => {
+        let raw_path = result.full_path().to_str().unwrap().to_string();
+        let path = raw_path.strip_prefix("\\\\?\\").unwrap_or(&raw_path);
+        let path = normalize_path(path);
+
+        let side_effects = result
+          .package_json()
+          .and_then(|pkg_json| {
+            self.package_json_cache.cached_package_json(pkg_json).check_side_effects_for(&raw_path)
+          })
+          .map(
+            |side_effects| {
+              if side_effects {
+                HookSideEffects::True
+              } else {
+                HookSideEffects::False
+              }
+            },
+          );
+        Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
+      }
+      Err(oxc_resolver::ResolveError::NotFound(id)) => {
+        // TODO(sapphi-red): maybe need to do the same thing for id mapped from browser field
+
+        // if import can't be found, check if it's an optional peer dep.
+        // if so, we can resolve to a special id that errors only when imported.
+        if is_bare_import(id) && !is_builtin(id, &self.runtime) && !id.contains('\0') {
+          if let Some(pkg_name) = get_npm_package_name(id) {
+            let base_dir = get_base_dir(importer).unwrap_or(&self.root);
+            if base_dir != self.root {
+              if let Some(package_json) =
+                self.package_json_peer_dep.get_nearest_package_json_optional_peer_deps(base_dir)
+              {
+                if package_json.optional_peer_dependencies.contains(pkg_name) {
+                  return Ok(Some(HookResolveIdOutput {
+                    id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name),
+                    ..Default::default()
+                  }));
+                }
               }
             }
           }
         }
+        Ok(None)
       }
-      Ok(None)
+      Err(oxc_resolver::ResolveError::Ignored(_)) => {
+        Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.to_string(), ..Default::default() }))
+      }
+      Err(err) => Err(err.to_owned()),
     }
-    Err(oxc_resolver::ResolveError::Ignored(_)) => {
-      Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.to_string(), ..Default::default() }))
-    }
-    Err(err) => Err(err.to_owned()),
   }
-}
 
-#[allow(clippy::too_many_arguments)]
-pub fn resolve_bare_import(
-  specifier: &str,
-  importer: Option<&str>,
-  resolver: &oxc_resolver::Resolver,
-  package_json_cache: &PackageJsonCache,
-  package_json_peer_dep: &PackageJsonPeerDep,
-  runtime: &str,
-  root: &str,
-  external: bool,
-) -> HookResolveIdReturn {
-  // TODO(sapphi-red): support `dedupe`
-  let base_dir = get_base_dir(importer).unwrap_or(root);
+  pub fn resolve_bare_import(
+    &self,
+    specifier: &str,
+    importer: Option<&str>,
+    external: bool,
+  ) -> HookResolveIdReturn {
+    // TODO(sapphi-red): support `dedupe`
+    let base_dir = get_base_dir(importer).unwrap_or(&self.root);
 
-  let oxc_resolved_result = resolver.resolve(base_dir, specifier);
-  let resolved = normalize_oxc_resolver_result(
-    package_json_cache,
-    package_json_peer_dep,
-    runtime,
-    importer,
-    root,
-    &oxc_resolved_result,
-  )?;
-  if let Some(mut resolved) = resolved {
-    if !external || !can_externalize_file(&resolved.id) {
-      return Ok(Some(resolved));
-    }
+    let oxc_resolved_result = self.resolve_raw(base_dir, specifier);
+    let resolved = self.normalize_oxc_resolver_result(importer, &oxc_resolved_result)?;
+    if let Some(mut resolved) = resolved {
+      if !external || !can_externalize_file(&resolved.id) {
+        return Ok(Some(resolved));
+      }
 
-    let id = specifier;
-    let mut resolved_id = id;
-    if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
-      if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-        let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
-        if !has_exports_field {
-          // id date-fns/locale
-          // resolve.id ...date-fns/esm/locale/index.js
-          if let Some(index) = resolved.id.find(id) {
-            resolved_id = &resolved.id[index..];
+      let id = specifier;
+      let mut resolved_id = id;
+      if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
+        if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
+          let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
+          if !has_exports_field {
+            // id date-fns/locale
+            // resolve.id ...date-fns/esm/locale/index.js
+            if let Some(index) = resolved.id.find(id) {
+              resolved_id = &resolved.id[index..];
+            }
           }
         }
       }
-    }
-    resolved.id = resolved_id.to_string();
-    resolved.external = Some(true);
+      resolved.id = resolved_id.to_string();
+      resolved.external = Some(true);
 
-    return Ok(Some(resolved));
+      return Ok(Some(resolved));
+    }
+    Ok(None)
   }
-  Ok(None)
+
+  pub fn clear_cache(&self) {
+    self.inner.clear_cache();
+  }
 }
 
 fn get_base_dir(importer: Option<&str>) -> Option<&str> {

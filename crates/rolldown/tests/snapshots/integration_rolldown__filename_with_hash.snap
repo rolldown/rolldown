@@ -77,7 +77,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/dce_of_destructuring
 
-- entry-!~{000}~.js => entry-BY3ohwpE.js
+- entry-!~{000}~.js => entry-w3lu2YQ2.js
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
@@ -608,7 +608,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-DWPKgdF7.js
+- entry-!~{000}~.js => entry-YOfo_Nst.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 

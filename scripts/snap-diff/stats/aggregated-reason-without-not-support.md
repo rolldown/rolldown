@@ -76,9 +76,6 @@
 ## static class field lowering
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
-## should not convert `ClassDeclaration` to `ClassExpr`
-- crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields
-- crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define
 ## sub optimal
 - crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
 - crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
@@ -87,8 +84,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
 ## dce decorator
 - crates/rolldown/tests/esbuild/dce/dce_of_decorators
-## side effects detect
-- crates/rolldown/tests/esbuild/dce/dce_of_destructuring
 ## lower decorator
 - crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators
 ## don't support dce iife
@@ -265,6 +260,8 @@
 - crates/rolldown/tests/esbuild/ts/export_type_issue379
 ## transform `FunctionDeclaration` to `FunctionExpr`
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
+## should not convert `ClassDeclaration` to `ClassExpr`
+- crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields
 ## should convert `FunctionDeclaration` to `FunctionExpr`
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields
 ## redundant wrap function

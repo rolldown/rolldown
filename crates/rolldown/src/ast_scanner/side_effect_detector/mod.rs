@@ -326,13 +326,7 @@ impl<'a> SideEffectDetector<'a> {
         unreachable!("jsx should be transpiled")
       }
 
-      Expression::ArrayExpression(expr) => expr.elements.iter().any(|elem| match elem {
-        ArrayExpressionElement::SpreadElement(_) => true,
-        ArrayExpressionElement::Elision(_) => false,
-        match_expression!(ArrayExpressionElement) => {
-          self.detect_side_effect_of_expr(elem.to_expression())
-        }
-      }),
+      Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
         let is_pure = maybe_side_effect_free_global_constructor(self.scope, expr)
           || self.is_pure_function_or_constructor_call(expr.span);
@@ -347,6 +341,23 @@ impl<'a> SideEffectDetector<'a> {
       }
       Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
     }
+  }
+
+  fn detect_side_effect_of_array_expr(&mut self, expr: &ast::ArrayExpression<'_>) -> bool {
+    expr.elements.iter().any(|elem| match elem {
+      ArrayExpressionElement::SpreadElement(ele) => {
+        // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2466-L2477
+        // Spread of an inline array such as "[...[x]]" is side-effect free
+        match &ele.argument {
+          Expression::ArrayExpression(arr) => self.detect_side_effect_of_array_expr(arr),
+          _ => true,
+        }
+      }
+      ArrayExpressionElement::Elision(_) => false,
+      match_expression!(ArrayExpressionElement) => {
+        self.detect_side_effect_of_expr(elem.to_expression())
+      }
+    })
   }
 
   fn detect_side_effect_of_var_decl(&mut self, var_decl: &ast::VariableDeclaration) -> bool {
@@ -364,13 +375,31 @@ impl<'a> SideEffectDetector<'a> {
             }
           }
         }
-        let is_destructuring = matches!(
-          declarator.id.kind,
-          BindingPatternKind::ArrayPattern(_) | BindingPatternKind::ObjectPattern(_)
-        );
-
-        is_destructuring
-          || declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+        match &declarator.id.kind {
+          // Destructuring the initializer has no side effects if the
+          // initializer is an array, since we assume the iterator is then
+          // the built-in side-effect free array iterator.
+          BindingPatternKind::ObjectPattern(_) => true,
+          BindingPatternKind::ArrayPattern(pat) => {
+            for p in &pat.elements {
+              match &p {
+                Some(binding_pat)
+                  if matches!(binding_pat.kind, BindingPatternKind::BindingIdentifier(_)) =>
+                {
+                  continue;
+                }
+                None => continue,
+                _ => {
+                  return true;
+                }
+              }
+            }
+            declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+          }
+          BindingPatternKind::BindingIdentifier(_) | BindingPatternKind::AssignmentPattern(_) => {
+            declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+          }
+        }
       }),
     }
   }

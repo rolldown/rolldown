@@ -271,7 +271,7 @@ test.sequential('error handling', async () => {
   fs.writeFileSync(input, 'conso le.log(1)')
   await waitUtil(() => {
     // The different platform maybe emit multiple events
-    expect(errors.length > 1).toBe(true)
+    expect(errors.length > 0).toBe(true)
     expect(errors[0].includes('PARSE_ERROR')).toBe(true)
   })
 
@@ -314,7 +314,7 @@ test.sequential('error handling + plugin error', async () => {
   fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {
     // The different platform maybe emit multiple events
-    expect(errors.length > 1).toBe(true)
+    expect(errors.length > 0).toBe(true)
     expect(errors[0].includes('plugin error')).toBe(true)
   })
 

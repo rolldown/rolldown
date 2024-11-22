@@ -1,0 +1,6 @@
+---
+source: crates/string_wizard/tests/magic_string_replace.rs
+expression: output
+snapshot_kind: text
+---
+试 2 试 4

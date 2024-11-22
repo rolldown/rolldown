@@ -36,7 +36,9 @@ impl SourcemapBuilder {
     } else {
       None
     };
-    let mut loc = locator.locate(chunk.start());
+    // TODO: how to optimize?
+    let mut loc = locator.locate(source[..chunk.start()].chars().map(|c| c.len_utf16()).sum());
+    // let mut loc = locator.locate(chunk.start());
     if let Some(edited_content) = &chunk.edited_content {
       if !edited_content.is_empty() {
         self.source_map_builder.add_token(

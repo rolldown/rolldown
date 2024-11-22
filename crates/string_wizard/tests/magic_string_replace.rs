@@ -46,7 +46,6 @@ mod replace_all {
 }
 
 #[test]
-#[ignore = "can't handle non-ascii characters"]
 fn replace_sourcemap_with_chinese() {
   let code = "测 2 测 4";
   let mut s = MagicString::new(code);
@@ -67,7 +66,7 @@ fn replace_sourcemap_with_chinese() {
   let visualizer = SourcemapVisualizer::new(&output, &sourcemap);
   assert_eq!(s.to_string(), "试 2 试 4");
   insta::assert_snapshot!("output", output);
-  insta::assert_snapshot!("sourcemap", visualizer.into_visualizer_text());
+  insta::assert_snapshot!("sourcemap_with_chinese", visualizer.into_visualizer_text());
 }
 
 #[test]

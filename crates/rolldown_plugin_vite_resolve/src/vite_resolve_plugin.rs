@@ -9,13 +9,10 @@ use std::{
 
 use crate::{
   external::{self, ExternalDecider, ExternalDeciderOptions},
-  package_json_cache::PackageJsonCache,
-  resolver::{
-    self, normalize_oxc_resolver_result, resolve_bare_import, AdditionalOptions, Resolver,
-  },
+  resolver::{self, AdditionalOptions, Resolvers},
   utils::{
     clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
-    normalize_path, BROWSER_EXTERNAL_ID,
+    normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
   },
   CallablePlugin, ResolveOptionsExternal, ResolveOptionsNoExternal,
 };
@@ -28,7 +25,6 @@ use rolldown_plugin::{
 };
 use sugar_path::SugarPath;
 
-const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 const FS_PREFIX: &str = "/@fs/";
 const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
@@ -64,6 +60,7 @@ pub struct ViteResolveResolveOptions {
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
+  pub is_require: Option<bool>,
   pub root: String,
   pub scan: bool,
 
@@ -97,14 +94,12 @@ pub struct ViteResolvePlugin {
 
   runtime: String,
 
-  resolver: Arc<Resolver>,
-  package_json_cache: Arc<PackageJsonCache>,
+  resolvers: Resolvers,
   external_decider: ExternalDecider,
 }
 
 impl ViteResolvePlugin {
   pub fn new(options: ViteResolveOptions) -> Self {
-    let package_json_cache = Arc::new(PackageJsonCache::default());
     let base_options = resolver::BaseOptions {
       main_fields: &options.resolve_options.main_fields,
       conditions: &options.resolve_options.conditions,
@@ -116,8 +111,11 @@ impl ViteResolvePlugin {
       root: &options.resolve_options.root,
       preserve_symlinks: options.resolve_options.preserve_symlinks,
     };
-    let resolver =
-      Arc::new(Resolver::new(&base_options, &options.resolve_options.external_conditions));
+    let resolvers = Resolvers::new(
+      &base_options,
+      &options.resolve_options.external_conditions,
+      options.runtime.clone(),
+    );
 
     Self {
       external: options.external.clone(),
@@ -127,19 +125,13 @@ impl ViteResolvePlugin {
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
       runtime: options.runtime.clone(),
-      package_json_cache: package_json_cache.clone(),
       external_decider: ExternalDecider::new(
-        ExternalDeciderOptions {
-          external: options.external,
-          no_external: options.no_external,
-          root: options.resolve_options.root.clone(),
-        },
+        ExternalDeciderOptions { external: options.external, no_external: options.no_external },
         options.runtime,
-        resolver.get_for_external(),
-        package_json_cache.clone(),
+        resolvers.get_for_external(),
       ),
 
-      resolver,
+      resolvers,
       resolve_options: options.resolve_options,
     }
   }
@@ -210,26 +202,17 @@ impl ViteResolvePlugin {
     }
 
     let additional_options = AdditionalOptions::new(
-      // TODO(sapphi-red): does `resolveOptions.isRequire` needs to be respected here?
-      args.kind == ImportKind::Require,
+      self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
       self.resolve_options.prefer_relative || args.importer.map_or(false, |i| i.ends_with(".html")),
       is_from_ts_importer(args.importer),
     );
-    let resolver = self.resolver.get(additional_options);
+    let resolver = self.resolvers.get(additional_options);
 
     if is_bare_import(args.specifier) {
       let external = self.resolve_options.is_build
         && self.environment_consumer == "server"
         && self.external_decider.is_external(args.specifier, args.importer);
-      let result = resolve_bare_import(
-        args.specifier,
-        args.importer,
-        resolver,
-        &self.package_json_cache,
-        &self.runtime,
-        &self.resolve_options.root,
-        external,
-      )?;
+      let result = resolver.resolve_bare_import(args.specifier, args.importer, external)?;
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
           if !scan && is_in_node_modules(&result.id) {
@@ -299,15 +282,16 @@ impl ViteResolvePlugin {
       .importer
       .map(|i| Path::new(i).parent().map(|i| i.to_str().unwrap()).unwrap_or(i))
       .unwrap_or(&self.resolve_options.root);
-    let resolved = normalize_oxc_resolver_result(
-      &self.package_json_cache,
-      &self.runtime,
-      &resolver.resolve(base_dir, args.specifier),
+    let resolved = resolver.normalize_oxc_resolver_result(
+      args.importer,
+      &resolver.resolve_raw(base_dir, args.specifier),
     )?;
     if let Some(mut resolved) = resolved {
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
-          resolved.id = finalized;
+      if !scan {
+        if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
+          if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
+            resolved.id = finalized;
+          }
         }
       }
       return Ok(Some(resolved));
@@ -363,7 +347,7 @@ impl ViteResolvePlugin {
           ..Default::default()
         }));
       } else {
-        let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ".").collect::<Vec<&str>>()[..] else {
+        let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ":").collect::<Vec<&str>>()[..] else {
           unreachable!()
         };
         return Ok(Some(HookLoadOutput {
@@ -380,7 +364,7 @@ impl ViteResolvePlugin {
     // TODO(sapphi-red): we need to avoid using cache for files not watched by vite or rollup
     match event {
       WatcherChangeKind::Create | WatcherChangeKind::Delete => {
-        self.resolver.clear_cache();
+        self.resolvers.clear_cache();
       }
       WatcherChangeKind::Update => {}
     };

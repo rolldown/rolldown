@@ -30,16 +30,16 @@ export interface PluginContextMeta {
 }
 
 export class MinimalPluginContext {
-  debug: LoggingFunction
   info: LoggingFunction
-  meta: PluginContextMeta
   warn: LoggingFunction
+  debug: LoggingFunction
+  meta: PluginContextMeta
   readonly error: (error: RollupError | string) => never
 
   constructor(options: NormalizedInputOptions, plugin: Plugin) {
-    const onLog = options.onLog
+    const onLog = options.onLog as LogHandler
     const pluginName = plugin.name || 'unknown'
-    const logLevel = options.logLevel
+    const logLevel = options.logLevel || LOG_LEVEL_INFO
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
       'PLUGIN_LOG',
@@ -135,7 +135,7 @@ export const getOnLog = (
   config: InputOptions,
   logLevel: LogLevelOption,
   printLog = defaultPrintLog,
-): NormalizedInputOptions['onLog'] => {
+): LogHandler => {
   const { onwarn, onLog } = config
   const defaultOnLog = getDefaultOnLog(printLog, onwarn)
   if (onLog) {

@@ -99,7 +99,7 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
-  error(): string
+  errors(): Array<unknown>
 }
 
 export declare class Bundler {
@@ -284,7 +284,7 @@ export interface BindingInputOptions {
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
-  logLevel?: BindingLogLevel
+  logLevel: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
   treeshake?: BindingTreeshake
@@ -499,6 +499,7 @@ export interface BindingTransformPluginConfig {
 
 export interface BindingTreeshake {
   moduleSideEffects: boolean | BindingModuleSideEffectsRule[]
+  annotations?: boolean
 }
 
 export interface BindingViteResolvePluginConfig {
@@ -517,6 +518,7 @@ export interface BindingViteResolvePluginResolveOptions {
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean
+  isRequire?: boolean
   root: string
   scan: boolean
   mainFields: Array<string>

@@ -28,6 +28,7 @@ pub mod named_import;
 pub mod namespace_alias;
 pub mod output;
 pub mod output_chunk;
+pub mod outputs_diagnostics;
 pub mod package_json;
 pub mod rendered_module;
 pub mod resolved_export;

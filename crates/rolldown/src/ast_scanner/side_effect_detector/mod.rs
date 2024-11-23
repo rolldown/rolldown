@@ -27,6 +27,7 @@ pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
   pub source: &'a str,
   pub comments: &'a oxc::allocator::Vec<'a, Comment>,
+  pub ignore_annotations: bool,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -34,8 +35,9 @@ impl<'a> SideEffectDetector<'a> {
     scope: &'a AstScopes,
     source: &'a str,
     comments: &'a oxc::allocator::Vec<'a, Comment>,
+    ignore_annotations: bool,
   ) -> Self {
-    Self { scope, source, comments }
+    Self { scope, source, comments, ignore_annotations }
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
@@ -142,7 +144,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_call_expr(&mut self, expr: &CallExpression) -> bool {
-    let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+    let is_pure = !self.ignore_annotations && self.is_pure_function_or_constructor_call(expr.span);
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
         Argument::SpreadElement(_) => true,
@@ -563,7 +565,7 @@ mod test {
     };
 
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments())
+      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments(), false)
         .detect_side_effect_of_stmt(stmt)
     });
 

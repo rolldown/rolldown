@@ -565,8 +565,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     import_expr: &mut ImportExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     if self.ctx.options.inline_dynamic_imports {
-      let rec_id = self.ctx.module.imports[&import_expr.span];
-      let rec = &self.ctx.module.import_records[rec_id];
+      let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
+      let rec = &self.ctx.module.import_records[*rec_id];
       let importee_id = rec.resolved_module;
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {

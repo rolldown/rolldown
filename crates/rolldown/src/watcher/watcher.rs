@@ -4,9 +4,10 @@ use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
 use rolldown_common::{
-  BundleEndEventData, BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent,
+  BundleEndEventData, BundleEvent, OutputsDiagnostics, WatcherChangeData, WatcherChangeKind,
+  WatcherEvent,
 };
-use rolldown_error::{BuildResult, DiagnosticOptions, ResultExt};
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::pattern_filter;
 use std::{
   path::Path,
@@ -164,13 +165,11 @@ impl Watcher {
           duration: start_time.elapsed().as_millis() as u32,
         })))?;
       }
-      Err(mut errs) => {
-        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(
-          errs
-            .remove(0)
-            .into_diagnostic_with(&DiagnosticOptions { cwd: bundler.options.cwd.clone() })
-            .to_color_string(),
-        )))?;
+      Err(errs) => {
+        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {
+          diagnostics: errs.into_vec(),
+          cwd: bundler.options.cwd.clone(),
+        })))?;
       }
     }
 
@@ -211,11 +210,12 @@ pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKi
     .emit(WatcherEvent::Change(WatcherChangeData { path: path.into(), kind }))
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
   let bundler = watcher.bundler.lock().await;
-  let _ = bundler
-    .plugin_driver
-    .watch_change(path, kind)
-    .await
-    .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
+  let _ = bundler.plugin_driver.watch_change(path, kind).await.map_err(|e| {
+    watcher.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {
+      diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
+      cwd: bundler.options.cwd.clone(),
+    })))
+  });
 }
 
 pub fn wait_for_change(watcher: Arc<Watcher>) {

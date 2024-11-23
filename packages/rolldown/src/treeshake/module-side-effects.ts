@@ -14,8 +14,6 @@ export const ModuleSideEffectsRuleSchema = z
     return data.test !== undefined || data.external !== undefined
   }, 'Either `test` or `external` should be set.')
 
-export type ModuleSideEffectsRule = z.infer<typeof ModuleSideEffectsRuleSchema>
-
 export const ModuleSideEffectsOptionSchema = z
   .boolean()
   .or(z.array(ModuleSideEffectsRuleSchema))
@@ -24,6 +22,7 @@ export const ModuleSideEffectsOptionSchema = z
 export const TreeshakingOptionsSchema = z
   .object({
     moduleSideEffects: ModuleSideEffectsOptionSchema.optional(),
+    annotations: z.boolean().optional(),
   })
   .passthrough()
 

@@ -18,7 +18,10 @@ pub enum TreeshakeOptions {
 impl Default for TreeshakeOptions {
   /// Used for snapshot testing
   fn default() -> Self {
-    TreeshakeOptions::Option(InnerOptions { module_side_effects: ModuleSideEffects::Boolean(true) })
+    TreeshakeOptions::Option(InnerOptions {
+      module_side_effects: ModuleSideEffects::Boolean(true),
+      annotations: Some(true),
+    })
   }
 }
 
@@ -73,6 +76,12 @@ impl TreeshakeOptions {
   pub fn enabled(&self) -> bool {
     matches!(self, TreeshakeOptions::Option(_))
   }
+  pub fn annotations(&self) -> bool {
+    match self {
+      TreeshakeOptions::Boolean(v) => *v,
+      TreeshakeOptions::Option(inner) => inner.annotations.unwrap_or_default(),
+    }
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +97,7 @@ pub struct InnerOptions {
     schemars(with = "Option<bool>")
   )]
   pub module_side_effects: ModuleSideEffects,
+  pub annotations: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

@@ -84,11 +84,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
 - crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
-## throw should be kept
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
-- crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
 ## not support import attributes
 - crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions
 - crates/rolldown/tests/esbuild/default/metafile_import_with_type_json
@@ -151,8 +146,6 @@
 - crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators
 ## don't support dce iife
 - crates/rolldown/tests/esbuild/dce/dce_of_iife
-## rolldown don't have `ignoreDCEAnnotations` option
-- crates/rolldown/tests/esbuild/dce/disable_tree_shaking
 ## annotation codegen
 - crates/rolldown/tests/esbuild/dce/no_side_effects_comment
 ## rolldown should not shake the namespace iife

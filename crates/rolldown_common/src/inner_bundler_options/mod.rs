@@ -208,6 +208,7 @@ where
     None | Some(Value::Bool(true)) => {
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
+        annotations: Some(true),
       }))
     }
     Some(Value::Object(obj)) => {
@@ -218,7 +219,17 @@ where
           _ => Err(serde::de::Error::custom("moduleSideEffects should be a `true` or `false`")),
         },
       )?;
-      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions { module_side_effects }))
+      let annotations = obj.get("annotations").map_or_else(
+        || Ok(Some(true)),
+        |v| match v {
+          Value::Bool(b) => Ok(Some(*b)),
+          _ => Err(serde::de::Error::custom("annotations should be a `true` or `false`")),
+        },
+      )?;
+      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
+        module_side_effects,
+        annotations,
+      }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),
   }

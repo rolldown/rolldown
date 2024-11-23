@@ -23,7 +23,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 pub struct Bundler {
   inner: Arc<Mutex<NativeBundler>>,
   on_log: BindingOnLog,
-  log_level: Option<BindingLogLevel>,
+  log_level: BindingLogLevel,
   cwd: PathBuf,
 }
 
@@ -39,7 +39,7 @@ impl Bundler {
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
-    let log_level = input_options.log_level.take();
+    let log_level = input_options.log_level;
     let on_log = input_options.on_log.take();
 
     #[cfg(target_family = "wasm")]
@@ -190,10 +190,8 @@ impl Bundler {
 
   #[allow(clippy::print_stdout, unused_must_use)]
   async fn handle_warnings(&self, warnings: Vec<BuildDiagnostic>) {
-    if let Some(log_level) = self.log_level {
-      if log_level == BindingLogLevel::Silent {
-        return;
-      }
+    if self.log_level == BindingLogLevel::Silent {
+      return;
     }
 
     if let Some(on_log) = self.on_log.as_ref() {

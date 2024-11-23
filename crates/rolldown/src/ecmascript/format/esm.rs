@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use rolldown_common::{ChunkKind, ExportsKind, Module, Specifier, WrapKind};
+use rolldown_common::{ExportsKind, Module, Specifier, WrapKind};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
 
@@ -34,23 +34,21 @@ pub fn render_esm<'code>(
 
   source_joiner.append_source(render_esm_chunk_imports(ctx));
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
-    if let Module::Normal(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
-      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-        entry_module
-          .star_export_module_ids()
-          .filter_map(|importee| {
-            let importee = &ctx.link_output.module_table.modules[importee];
-            match importee {
-              Module::External(ext) => Some(&ext.name),
-              Module::Normal(_) => None,
-            }
-          })
-          .dedup()
-          .for_each(|ext_name| {
-            source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
-          });
-      }
+  if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
+    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+      entry_module
+        .star_export_module_ids()
+        .filter_map(|importee| {
+          let importee = &ctx.link_output.module_table.modules[importee];
+          match importee {
+            Module::External(ext) => Some(&ext.name),
+            Module::Normal(_) => None,
+          }
+        })
+        .dedup()
+        .for_each(|ext_name| {
+          source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
+        });
     }
   }
 
@@ -63,7 +61,7 @@ pub fn render_esm<'code>(
     }
   });
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+  if let Some(entry_id) = ctx.chunk.entry_module_idx() {
     let entry_meta = &ctx.link_output.metas[entry_id];
     match entry_meta.wrap_kind {
       WrapKind::Esm => {

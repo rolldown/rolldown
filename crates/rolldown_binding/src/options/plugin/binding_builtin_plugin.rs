@@ -304,9 +304,9 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::WasmHelperPlugin => Arc::new(WasmHelperPlugin {}),
-      BindingBuiltinPluginName::WasmFallbackPlugin => Arc::new(WasmFallbackPlugin {}),
-      BindingBuiltinPluginName::ImportGlobPlugin => {
+      BindingBuiltinPluginName::WasmHelper => Arc::new(WasmHelperPlugin {}),
+      BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin {}),
+      BindingBuiltinPluginName::ImportGlob => {
         let config = if let Some(options) = plugin.options {
           BindingGlobImportPluginConfig::from_unknown(options)?.into()
         } else {
@@ -314,8 +314,8 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ImportGlobPlugin { config })
       }
-      BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
-      BindingBuiltinPluginName::ModulePreloadPolyfillPlugin => {
+      BindingBuiltinPluginName::DynamicImportVars => Arc::new(DynamicImportVarsPlugin {}),
+      BindingBuiltinPluginName::ModulePreloadPolyfill => {
         let skip = if let Some(options) = plugin.options {
           let config = BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?;
           config.skip.unwrap_or_default()
@@ -324,7 +324,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ModulePreloadPolyfillPlugin { skip })
       }
-      BindingBuiltinPluginName::ManifestPlugin => {
+      BindingBuiltinPluginName::Manifest => {
         let config = if let Some(options) = plugin.options {
           BindingManifestPluginConfig::from_unknown(options)?.into()
         } else {
@@ -332,8 +332,8 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ManifestPlugin { config })
       }
-      BindingBuiltinPluginName::LoadFallbackPlugin => Arc::new(LoadFallbackPlugin {}),
-      BindingBuiltinPluginName::TransformPlugin => {
+      BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin {}),
+      BindingBuiltinPluginName::Transform => {
         let plugin = if let Some(options) = plugin.options {
           BindingTransformPluginConfig::from_unknown(options)?.try_into()?
         } else {
@@ -341,7 +341,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::AliasPlugin => {
+      BindingBuiltinPluginName::Alias => {
         let plugin = if let Some(options) = plugin.options {
           BindingAliasPluginConfig::from_unknown(options)?.try_into()?
         } else {
@@ -350,7 +350,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
 
-      BindingBuiltinPluginName::JsonPlugin => {
+      BindingBuiltinPluginName::Json => {
         let config = if let Some(options) = plugin.options {
           BindingJsonPluginConfig::from_unknown(options)?
         } else {
@@ -361,7 +361,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           is_build: config.is_build.unwrap_or_default(),
         })
       }
-      BindingBuiltinPluginName::BuildImportAnalysisPlugin => {
+      BindingBuiltinPluginName::BuildImportAnalysis => {
         let config: BindingBuildImportAnalysisPluginConfig = if let Some(options) = plugin.options {
           BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
         } else {
@@ -372,7 +372,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
       }
-      BindingBuiltinPluginName::ReplacePlugin => {
+      BindingBuiltinPluginName::Replace => {
         let config = if let Some(options) = plugin.options {
           Some(BindingReplacePluginConfig::from_unknown(options)?)
         } else {
@@ -389,7 +389,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           }
         })))
       }
-      BindingBuiltinPluginName::ViteResolvePlugin => {
+      BindingBuiltinPluginName::ViteResolve => {
         let config = if let Some(options) = plugin.options {
           BindingViteResolvePluginConfig::from_unknown(options)?
         } else {

@@ -20,61 +20,61 @@ export class BuiltinPlugin {
 
 export class ModulePreloadPolyfillPlugin extends BuiltinPlugin {
   constructor(config?: BindingModulePreloadPolyfillPluginConfig) {
-    super(BindingBuiltinPluginName.ModulePreloadPolyfillPlugin, config)
+    super(BindingBuiltinPluginName.ModulePreloadPolyfill, config)
   }
 }
 
 export class DynamicImportVarsPlugin extends BuiltinPlugin {
   constructor() {
-    super(BindingBuiltinPluginName.DynamicImportVarsPlugin)
+    super(BindingBuiltinPluginName.DynamicImportVars)
   }
 }
 
 export class ImportGlobPlugin extends BuiltinPlugin {
   constructor(config?: BindingGlobImportPluginConfig) {
-    super(BindingBuiltinPluginName.ImportGlobPlugin, config)
+    super(BindingBuiltinPluginName.ImportGlob, config)
   }
 }
 
 export class ManifestPlugin extends BuiltinPlugin {
   constructor(config?: BindingManifestPluginConfig) {
-    super(BindingBuiltinPluginName.ManifestPlugin, config)
+    super(BindingBuiltinPluginName.Manifest, config)
   }
 }
 
 export class WasmHelperPlugin extends BuiltinPlugin {
   constructor() {
-    super(BindingBuiltinPluginName.WasmHelperPlugin)
+    super(BindingBuiltinPluginName.WasmHelper)
   }
 }
 
 export class WasmFallbackPlugin extends BuiltinPlugin {
   constructor() {
-    super(BindingBuiltinPluginName.WasmFallbackPlugin)
+    super(BindingBuiltinPluginName.WasmFallback)
   }
 }
 
 export class LoadFallbackPlugin extends BuiltinPlugin {
   constructor() {
-    super(BindingBuiltinPluginName.LoadFallbackPlugin)
+    super(BindingBuiltinPluginName.LoadFallback)
   }
 }
 
 export class JsonPlugin extends BuiltinPlugin {
   constructor(config?: BindingJsonPluginConfig) {
-    super(BindingBuiltinPluginName.JsonPlugin, config)
+    super(BindingBuiltinPluginName.Json, config)
   }
 }
 
 export class BuildImportAnalysisPlugin extends BuiltinPlugin {
   constructor(config?: BindingBuildImportAnalysisPluginConfig) {
-    super(BindingBuiltinPluginName.BuildImportAnalysisPlugin, config)
+    super(BindingBuiltinPluginName.BuildImportAnalysis, config)
   }
 }
 
 export class ViteResolvePlugin extends BuiltinPlugin {
   constructor(config?: BindingViteResolvePluginConfig) {
-    super(BindingBuiltinPluginName.ViteResolvePlugin, config)
+    super(BindingBuiltinPluginName.ViteResolve, config)
   }
 }
 

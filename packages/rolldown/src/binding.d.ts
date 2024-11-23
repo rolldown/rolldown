@@ -168,19 +168,19 @@ export interface BindingBuiltinPlugin {
 }
 
 export declare enum BindingBuiltinPluginName {
-  WasmHelperPlugin = 0,
-  ImportGlobPlugin = 1,
-  DynamicImportVarsPlugin = 2,
-  ModulePreloadPolyfillPlugin = 3,
-  ManifestPlugin = 4,
-  LoadFallbackPlugin = 5,
-  TransformPlugin = 6,
-  WasmFallbackPlugin = 7,
-  AliasPlugin = 8,
-  JsonPlugin = 9,
-  BuildImportAnalysisPlugin = 10,
-  ReplacePlugin = 11,
-  ViteResolvePlugin = 12
+  WasmHelper = 0,
+  ImportGlob = 1,
+  DynamicImportVars = 2,
+  ModulePreloadPolyfill = 3,
+  Manifest = 4,
+  LoadFallback = 5,
+  Transform = 6,
+  WasmFallback = 7,
+  Alias = 8,
+  Json = 9,
+  BuildImportAnalysis = 10,
+  Replace = 11,
+  ViteResolve = 12
 }
 
 export interface BindingEmittedAsset {

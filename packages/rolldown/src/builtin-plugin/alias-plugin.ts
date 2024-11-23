@@ -1,4 +1,3 @@
-import { BindingBuiltinPluginName } from '../binding'
 import { BuiltinPlugin } from './constructors'
 
 type AliasPluginAlias = {
@@ -13,7 +12,7 @@ type AliasPluginConfig = {
 
 class AliasPlugin extends BuiltinPlugin {
   constructor(config?: AliasPluginConfig) {
-    super(BindingBuiltinPluginName.Alias, config)
+    super('builtin:alias', config)
   }
 }
 

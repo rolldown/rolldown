@@ -91,9 +91,8 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 (2:0) "require('./foo')\n" --> (54:0) ""
 (0:0) "import assert from 'node:assert'\n" --> (54:0) "require_foo();\n"
 (3:0) "assert." --> (55:0) "assert."
-(3:7) "equal(a, undefined)\n" --> (55:7) "equal("
-(0:0) "import assert from 'node:assert'\n" --> (55:13) "import_cjs."
-(3:13) "a, " --> (55:24) "a, "
+(3:7) "equal(" --> (55:7) "equal("
+(3:13) "a, " --> (55:13) "import_cjs.a, "
 (3:16) "undefined)" --> (55:27) "undefined)"
 (3:26) "\n" --> (55:37) ";\n"
 - ../main.js

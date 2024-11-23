@@ -22,9 +22,7 @@ node_assert.default.equal(require("url").pathToFileURL(__filename), require("url
 
 ```
 - ../main.js
-(2:0) "assert.equal(require(\"url\").pathToFileURL(__filename), import.meta.url)" --> (27:0) ""
-(0:0) "import assert from 'node:assert';\n" --> (27:0) "node_assert."
-(2:0) "assert." --> (27:12) "default."
+(2:0) "assert." --> (27:0) "node_assert.default."
 (2:7) "equal(" --> (27:20) "equal("
 (2:13) "require(" --> (27:26) "require("
 (2:21) "\"url\")" --> (27:34) "\"url\")"

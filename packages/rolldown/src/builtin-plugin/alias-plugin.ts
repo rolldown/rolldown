@@ -13,7 +13,7 @@ type AliasPluginConfig = {
 
 class AliasPlugin extends BuiltinPlugin {
   constructor(config?: AliasPluginConfig) {
-    super(BindingBuiltinPluginName.AliasPlugin, config)
+    super(BindingBuiltinPluginName.Alias, config)
   }
 }
 

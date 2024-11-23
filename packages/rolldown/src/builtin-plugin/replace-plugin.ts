@@ -7,7 +7,7 @@ import { BuiltinPlugin } from './constructors'
 
 class ReplacePlugin extends BuiltinPlugin {
   constructor(config?: BindingReplacePluginConfig) {
-    super(BindingBuiltinPluginName.ReplacePlugin, config)
+    super(BindingBuiltinPluginName.Replace, config)
   }
 }
 

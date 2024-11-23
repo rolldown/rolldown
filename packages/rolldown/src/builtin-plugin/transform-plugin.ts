@@ -33,7 +33,7 @@ function normalizeEcmaTransformPluginConfig(
 class TransformPlugin extends BuiltinPlugin {
   constructor(config?: TransformPluginConfig) {
     let normalizedConfig = normalizeEcmaTransformPluginConfig(config)
-    super(BindingBuiltinPluginName.TransformPlugin, normalizedConfig)
+    super(BindingBuiltinPluginName.Transform, normalizedConfig)
   }
 }
 

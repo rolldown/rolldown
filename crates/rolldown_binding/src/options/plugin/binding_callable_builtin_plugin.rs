@@ -19,7 +19,7 @@ use super::{
 pub fn is_callable_compatible_builtin_plugin(plugin: BindingBuiltinPlugin) -> bool {
   #[allow(clippy::match_like_matches_macro)]
   match plugin.__name {
-    BindingBuiltinPluginName::ViteResolvePlugin => true,
+    BindingBuiltinPluginName::ViteResolve => true,
     _ => false,
   }
 }
@@ -29,7 +29,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn CallablePluginAsyncTrait> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::ViteResolvePlugin => {
+      BindingBuiltinPluginName::ViteResolve => {
         let config = if let Some(options) = plugin.options {
           BindingViteResolvePluginConfig::from_unknown(options)?
         } else {

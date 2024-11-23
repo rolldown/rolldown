@@ -1,5 +1,6 @@
 use oxc::ast::ast::{self, Expression, IdentifierReference};
 use rolldown_common::SymbolRef;
+use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
@@ -28,9 +29,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       ast::Expression::Identifier(it) => {
         it.span = id_ref.span;
       }
-      ast::Expression::StaticMemberExpression(it) => {
+      ast::Expression::StaticMemberExpression(ref mut it) => {
         it.span = id_ref.span;
         it.property.span = id_ref.span;
+        if let Some(object) = it.object.as_identifier_mut() {
+          object.span = id_ref.span;
+        }
       }
       _ => {}
     }

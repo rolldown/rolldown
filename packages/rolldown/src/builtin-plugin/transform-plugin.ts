@@ -29,13 +29,9 @@ function normalizeEcmaTransformPluginConfig(
   return normalizedConfig
 }
 
-class TransformPlugin extends BuiltinPlugin {
-  constructor(config?: TransformPluginConfig) {
-    let normalizedConfig = normalizeEcmaTransformPluginConfig(config)
-    super('builtin:transform', normalizedConfig)
-  }
-}
-
 export function transformPlugin(config?: TransformPluginConfig) {
-  return new TransformPlugin(config)
+  return new BuiltinPlugin(
+    'builtin:transform',
+    normalizeEcmaTransformPluginConfig(config),
+  )
 }

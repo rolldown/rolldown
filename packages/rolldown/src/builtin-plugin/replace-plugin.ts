@@ -12,8 +12,10 @@ class ReplacePlugin extends BuiltinPlugin {
 }
 
 /**
- * ## Usage
+ * Replaces targeted strings in files while bundling.
  *
+ * @example
+ * // Basic usage
  * ```js
  * replacePlugin({
  *   'process.env.NODE_ENV': JSON.stringify('production'),
@@ -21,9 +23,8 @@ class ReplacePlugin extends BuiltinPlugin {
  *    __buildVersion: 15
  * })
  * ```
- *
- * ### With options
- *
+ * @example
+ * // With options
  * ```js
  * replacePlugin({
  *   'process.env.NODE_ENV': JSON.stringify('production'),

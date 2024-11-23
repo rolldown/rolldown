@@ -5,8 +5,8 @@
 import { logger } from '../utils'
 import { setNestedProperty } from './utils'
 import { CliOptions, cliOptionsSchema } from './schema'
-import { inputCliOptionsSchema } from '../../options/input-options'
-import { outputCliOptionsSchema } from '../../options/output-options'
+import { inputCliOptionsSchema } from '../../options/input-options-schema'
+import { outputCliOptionsSchema } from '../../options/output-options-schema'
 import type { InputOptions } from '../../types/input-options'
 import type { OutputOptions } from '../../types/output-options'
 

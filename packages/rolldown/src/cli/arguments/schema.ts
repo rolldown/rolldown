@@ -1,6 +1,6 @@
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { inputCliOptionsSchema } from '../../options/input-options'
-import { outputCliOptionsSchema } from '../../options/output-options'
+import { inputCliOptionsSchema } from '../../options/input-options-schema'
+import { outputCliOptionsSchema } from '../../options/output-options-schema'
 import type { ObjectSchema } from './types'
 import { z } from 'zod'
 

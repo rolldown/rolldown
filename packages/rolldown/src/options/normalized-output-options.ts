@@ -1,4 +1,4 @@
-import type { OutputOptions } from '../types/output-options'
+import type { OutputOptions } from '../options/output-options'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd'
 

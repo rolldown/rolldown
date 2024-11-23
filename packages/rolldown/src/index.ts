@@ -9,8 +9,8 @@ import type {
   InputOption,
   ExternalOption,
   JsxOptions,
-} from './types/input-options'
-import type { ModuleFormat, OutputOptions } from './types/output-options'
+} from './options/input-options'
+import type { ModuleFormat, OutputOptions } from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {
   AsyncPluginHooks,

@@ -7,7 +7,7 @@ import {
   RollupLogWithString,
 } from '../log/logging'
 import { TreeshakingOptions } from '../treeshake'
-import { NullValue, StringOrRegExp } from './utils'
+import { NullValue, StringOrRegExp } from '../types/utils'
 
 export type InputOption = string | string[] | Record<string, string>
 

@@ -1,4 +1,3 @@
-import { BindingBuiltinPluginName } from '../binding'
 import { BuiltinPlugin } from './constructors'
 
 import { BindingTransformPluginConfig } from '../binding'
@@ -33,7 +32,7 @@ function normalizeEcmaTransformPluginConfig(
 class TransformPlugin extends BuiltinPlugin {
   constructor(config?: TransformPluginConfig) {
     let normalizedConfig = normalizeEcmaTransformPluginConfig(config)
-    super(BindingBuiltinPluginName.Transform, normalizedConfig)
+    super('builtin:transform', normalizedConfig)
   }
 }
 

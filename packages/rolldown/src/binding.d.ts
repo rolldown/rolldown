@@ -167,21 +167,19 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export declare enum BindingBuiltinPluginName {
-  WasmHelper = 0,
-  ImportGlob = 1,
-  DynamicImportVars = 2,
-  ModulePreloadPolyfill = 3,
-  Manifest = 4,
-  LoadFallback = 5,
-  Transform = 6,
-  WasmFallback = 7,
-  Alias = 8,
-  Json = 9,
-  BuildImportAnalysis = 10,
-  Replace = 11,
-  ViteResolve = 12
-}
+export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
+'builtin:import-glob'|
+'builtin:dynamic-import-vars'|
+'builtin:module-preload-polyfill'|
+'builtin:manifest'|
+'builtin:load-fallback'|
+'builtin:transform'|
+'builtin:wasm-fallback'|
+'builtin:alias'|
+'builtin:json'|
+'builtin:build-import-analysis'|
+'builtin:replace'|
+'builtin:vite-resolve';
 
 export interface BindingEmittedAsset {
   name?: string

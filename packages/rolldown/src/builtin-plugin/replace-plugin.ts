@@ -1,13 +1,10 @@
-import {
-  BindingBuiltinPluginName,
-  BindingReplacePluginConfig,
-} from '../binding'
+import { BindingReplacePluginConfig } from '../binding'
 
 import { BuiltinPlugin } from './constructors'
 
 class ReplacePlugin extends BuiltinPlugin {
   constructor(config?: BindingReplacePluginConfig) {
-    super(BindingBuiltinPluginName.Replace, config)
+    super('builtin:replace', config)
   }
 }
 

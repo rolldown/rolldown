@@ -10,12 +10,6 @@ type AliasPluginConfig = {
   entries: AliasPluginAlias[]
 }
 
-class AliasPlugin extends BuiltinPlugin {
-  constructor(config?: AliasPluginConfig) {
-    super('builtin:alias', config)
-  }
-}
-
 export function aliasPlugin(config: AliasPluginConfig) {
-  return new AliasPlugin(config)
+  return new BuiltinPlugin('builtin:alias', config)
 }

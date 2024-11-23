@@ -1,6 +1,6 @@
-import { unimplemented } from '../utils/misc'
+import { unimplemented } from './misc'
 import type { BindingOutputOptions } from '../binding'
-import type { NormalizedOutputOptions } from './normalized-output-options'
+import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 
 export function bindingifyOutputOptions(
   outputOptions: NormalizedOutputOptions,

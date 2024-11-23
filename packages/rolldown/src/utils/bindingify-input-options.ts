@@ -8,11 +8,11 @@ import {
   bindingifyBuiltInPlugin,
   BuiltinPlugin,
 } from '../plugin/builtin-plugin'
-import { arraify, unsupported } from '../utils/misc'
-import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex'
+import { arraify, unsupported } from './misc'
+import { normalizedStringOrRegex } from './normalize-string-or-regex'
 import type { RolldownPlugin } from '..'
-import type { NormalizedInputOptions } from './normalized-input-options'
-import type { NormalizedOutputOptions } from './normalized-output-options'
+import type { NormalizedInputOptions } from '../options/normalized-input-options'
+import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type {
   BindingWatchOption,
   BindingInputOptions,

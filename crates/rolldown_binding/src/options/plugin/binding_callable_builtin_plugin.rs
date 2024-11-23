@@ -10,8 +10,9 @@ use rolldown_plugin_vite_resolve::{
   CallablePluginAsyncTrait, ResolveIdOptionsScan, ViteResolvePlugin,
 };
 
-use super::binding_builtin_plugin::{
-  BindingBuiltinPlugin, BindingBuiltinPluginName, BindingViteResolvePluginConfig,
+use super::{
+  binding_builtin_plugin::{BindingBuiltinPlugin, BindingViteResolvePluginConfig},
+  types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
 
 #[napi]

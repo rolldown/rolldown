@@ -22,6 +22,7 @@ use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 
+use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
 use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 use super::types::binding_limited_boolean::BindingTrueValue;
 use crate::types::js_callback::{JsCallback, JsCallbackExt};
@@ -43,25 +44,6 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
       .field("options", &"<JsUnknown>")
       .finish()
   }
-}
-
-#[allow(clippy::enum_variant_names)]
-#[derive(Debug, Deserialize)]
-#[napi]
-pub enum BindingBuiltinPluginName {
-  WasmHelperPlugin,
-  ImportGlobPlugin,
-  DynamicImportVarsPlugin,
-  ModulePreloadPolyfillPlugin,
-  ManifestPlugin,
-  LoadFallbackPlugin,
-  TransformPlugin,
-  WasmFallbackPlugin,
-  AliasPlugin,
-  JsonPlugin,
-  BuildImportAnalysisPlugin,
-  ReplacePlugin,
-  ViteResolvePlugin,
 }
 
 #[napi_derive::napi(object)]

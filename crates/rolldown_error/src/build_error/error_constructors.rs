@@ -11,6 +11,7 @@ use crate::events::assign_to_import::AssignToImport;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::import_is_undefined::ImportIsUndefined;
+use crate::events::invalid_define_config::InvalidDefineConfig;
 use crate::events::invalid_option::{InvalidOption, InvalidOptionType};
 use crate::events::json_parse::JsonParse;
 use crate::events::missing_global_name::MissingGlobalName;
@@ -281,6 +282,10 @@ impl BuildDiagnostic {
     let start_offset = line_column_to_byte_offset(source.as_str(), line - 1, column - 1);
     let span = Span::new(start_offset as u32, start_offset as u32);
     Self::new_inner(JsonParse { filename, source, span, message })
+  }
+
+  pub fn invalid_define_config(message: String) -> Self {
+    Self::new_inner(InvalidDefineConfig { message })
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {

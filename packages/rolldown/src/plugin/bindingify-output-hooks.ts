@@ -1,7 +1,5 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
-import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { Plugin } from './index'
 import {
   ChangedOutputs,
   collectChangedBundle,
@@ -9,21 +7,17 @@ import {
 } from '../utils/transform-to-rollup-output'
 import { PluginContext } from './plugin-context'
 import { bindingifySourcemap } from '../types/sourcemap'
-import { NormalizedOutputOptions } from '../options/normalized-output-options'
-import { PluginContextData } from './plugin-context-data'
 import {
   PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
+import type { BindingifyPluginArgs } from './bindingify-plugin'
 
 export function bindingifyRenderStart(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  outputOptions: NormalizedOutputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderStart']> {
-  const hook = plugin.renderStart
+  const hook = args.plugin.renderStart
   if (!hook) {
     return {}
   }
@@ -32,22 +26,23 @@ export function bindingifyRenderStart(
   return {
     plugin: async (ctx) => {
       handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        outputOptions,
-        options,
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
+        args.outputOptions,
+        args.options,
       )
     },
     meta: bindingifyPluginHookMeta(meta),
   }
 }
-
 export function bindingifyRenderChunk(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  outputOptions: NormalizedOutputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk']> {
-  const hook = plugin.renderChunk
+  const hook = args.plugin.renderChunk
   if (!hook) {
     return {}
   }
@@ -60,10 +55,15 @@ export function bindingifyRenderChunk(
       })
 
       const ret = await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         code,
         chunk,
-        outputOptions,
+        args.outputOptions,
       )
 
       if (ret == null) {
@@ -88,11 +88,9 @@ export function bindingifyRenderChunk(
 }
 
 export function bindingifyAugmentChunkHash(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['augmentChunkHash']> {
-  const hook = plugin.augmentChunkHash
+  const hook = args.plugin.augmentChunkHash
   if (!hook) {
     return {}
   }
@@ -105,7 +103,12 @@ export function bindingifyAugmentChunkHash(
       })
 
       return await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         chunk,
       )
     },
@@ -114,11 +117,9 @@ export function bindingifyAugmentChunkHash(
 }
 
 export function bindingifyRenderError(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderError']> {
-  const hook = plugin.renderError
+  const hook = args.plugin.renderError
   if (!hook) {
     return {}
   }
@@ -127,7 +128,12 @@ export function bindingifyRenderError(
   return {
     plugin: async (ctx, err) => {
       handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         new Error(err),
       )
     },
@@ -136,12 +142,9 @@ export function bindingifyRenderError(
 }
 
 export function bindingifyGenerateBundle(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  outputOptions: NormalizedOutputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {
-  const hook = plugin.generateBundle
+  const hook = args.plugin.generateBundle
   if (!hook) {
     return {}
   }
@@ -155,8 +158,13 @@ export function bindingifyGenerateBundle(
       } as ChangedOutputs
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        outputOptions,
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
+        args.outputOptions,
         output,
         isWrite,
       )
@@ -165,13 +173,11 @@ export function bindingifyGenerateBundle(
     meta: bindingifyPluginHookMeta(meta),
   }
 }
+
 export function bindingifyWriteBundle(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  outputOptions: NormalizedOutputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['writeBundle']> {
-  const hook = plugin.writeBundle
+  const hook = args.plugin.writeBundle
   if (!hook) {
     return {}
   }
@@ -185,8 +191,13 @@ export function bindingifyWriteBundle(
       } as ChangedOutputs
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
-        outputOptions,
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
+        args.outputOptions,
         output,
       )
       return collectChangedBundle(changed, output)
@@ -196,11 +207,9 @@ export function bindingifyWriteBundle(
 }
 
 export function bindingifyCloseBundle(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
-  const hook = plugin.closeBundle
+  const hook = args.plugin.closeBundle
   if (!hook) {
     return {}
   }
@@ -209,7 +218,12 @@ export function bindingifyCloseBundle(
   return {
     plugin: async (ctx) => {
       await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -217,11 +231,9 @@ export function bindingifyCloseBundle(
 }
 
 export function bindingifyBanner(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['banner']> {
-  const hook = plugin.banner
+  const hook = args.plugin.banner
   if (!hook) {
     return {}
   }
@@ -234,7 +246,12 @@ export function bindingifyBanner(
       }
 
       return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         chunk,
       )
     },
@@ -243,11 +260,9 @@ export function bindingifyBanner(
 }
 
 export function bindingifyFooter(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['footer']> {
-  const hook = plugin.footer
+  const hook = args.plugin.footer
   if (!hook) {
     return {}
   }
@@ -261,7 +276,12 @@ export function bindingifyFooter(
       }
 
       return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         chunk,
       )
     },
@@ -270,11 +290,9 @@ export function bindingifyFooter(
 }
 
 export function bindingifyIntro(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['intro']> {
-  const hook = plugin.intro
+  const hook = args.plugin.intro
   if (!hook) {
     return {}
   }
@@ -288,7 +306,12 @@ export function bindingifyIntro(
       }
 
       return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         chunk,
       )
     },
@@ -297,11 +320,9 @@ export function bindingifyIntro(
 }
 
 export function bindingifyOutro(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['outro']> {
-  const hook = plugin.outro
+  const hook = args.plugin.outro
   if (!hook) {
     return {}
   }
@@ -315,7 +336,12 @@ export function bindingifyOutro(
       }
 
       return handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          args.options,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+        ),
         chunk,
       )
     },

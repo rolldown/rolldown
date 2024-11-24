@@ -171,10 +171,16 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates share the same version
-oxc                = { version = "0.37.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
-oxc_index          = { version = "0.37.0", features = ["rayon"] }
-oxc_sourcemap      = { version = "0.37.0" }
-oxc_transform_napi = { version = "0.37.0" }
+oxc = { git = "https://github.com/hi-ogawa/oxc", branch = "fix-no-emit-empty-span", features = [
+  "sourcemap_concurrent",
+  "transformer",
+  "minifier",
+  "semantic",
+  "codegen",
+] }
+oxc_index = { git = "https://github.com/hi-ogawa/oxc", branch = "fix-no-emit-empty-span", features = ["rayon"] }
+oxc_sourcemap = { git = "https://github.com/hi-ogawa/oxc", branch = "fix-no-emit-empty-span" }
+oxc_transform_napi = { git = "https://github.com/hi-ogawa/oxc", branch = "fix-no-emit-empty-span" }
 
 [profile.release]
 codegen-units = 1

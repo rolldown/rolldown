@@ -71,30 +71,21 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 (0:0) "module." --> (29:0) "module."
 (0:7) "exports = " --> (29:7) "exports = "
 (0:17) "1;\n" --> (29:17) "1;\n"
-- ../foo.js
-(0:0) "" --> (33:0) "var require_foo = __commonJS({ \"foo.js\"() {} });\n"
 - ../esm-export-cjs-require.js
 (0:0) "require('./foo')\n" --> (37:0) "require_foo();\n"
 - ../esm-import-cjs-export.js
-(0:0) "import './foo'\n" --> (41:0) "var require_esm_import_cjs_export = __commonJS({ \"esm-import-cjs-export.js\"(exports, module) {\n"
 (1:0) "module." --> (42:0) "\tmodule."
 (1:7) "exports = " --> (42:8) "exports = "
 (1:17) "1" --> (42:18) "1;\n"
-(0:0) "import './foo'\n" --> (43:0) "} });\n"
 - ../cjs.js
-(0:0) "module." --> (47:0) "var require_cjs = __commonJS({ \"cjs.js\"(exports, module) {\n"
+(0:0) "module." --> (48:0) "\tmodule."
 (0:7) "exports = " --> (48:8) "exports = "
 (0:17) "1;" --> (48:18) "1;\n"
-(0:0) "module.exports = 1;" --> (49:0) "} });\n"
 - ../esm-import-cjs-require.js
-(0:0) "import assert from 'node:assert'\n" --> (53:0) "var import_cjs = __toESM(require_cjs());\n"
-(2:0) "require('./foo')\n" --> (54:0) ""
-(0:0) "import assert from 'node:assert'\n" --> (54:0) "require_foo();\n"
+(2:0) "require('./foo')\n" --> (54:0) "require_foo();\n"
 (3:0) "assert." --> (55:0) "assert."
 (3:7) "equal(" --> (55:7) "equal("
 (3:13) "a, " --> (55:13) "import_cjs.a, "
 (3:16) "undefined)" --> (55:27) "undefined)"
 (3:26) "\n" --> (55:37) ";\n"
-- ../main.js
-(0:0) "import \"./esm-export-cjs-export\"\n" --> (59:0) "var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());\n"
 ```

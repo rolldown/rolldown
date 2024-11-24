@@ -1683,8 +1683,7 @@ checksum = "fb37767f6569cd834a413442455e0f066d0d522de8630436e2a1761d9726ba56"
 [[package]]
 name = "oxc"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fc2b8d593792ca631b252b043dcaa6e65195432922fde0c4d2397cfba25d02d"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "napi",
  "napi-derive",
@@ -1749,8 +1748,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3137194d5acbead2fd78db27c03b27faa2dfa53628514b1843ae31b2ba304d28"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1759,8 +1757,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a142fb8a722e9eb9bf4c9ef37bc7f37e9cc7fc38acba1889d8fb9f2df8ca85a"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "bitflags 2.6.0",
  "cow-utils",
@@ -1777,8 +1774,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_macros"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ba3432be9886577f6ea36a3ecba6a9b7f2f0bc16aae8a759a0d43f91e0cb4d5"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1788,8 +1784,7 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c93679c94786c3fb504e6c295bf2dc452ad74240fbb2325c12fbbc97c6e9796"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "bitflags 2.6.0",
  "itertools 0.13.0",
@@ -1803,8 +1798,7 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d43f6c181f267e0d50bc0a3a08c049a99279df5268b2166f752148a1fa112dc"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
@@ -1823,8 +1817,7 @@ dependencies = [
 [[package]]
 name = "oxc_data_structures"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c88e59bbe4955cd0dcf7808bfe743f1ee4a9fec8e9f217cdf37df15de84dc24"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "assert-unchecked",
 ]
@@ -1832,8 +1825,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2bc8acd3740a2b2b32e1826d966b65f11b9ef5bebb460ebc7cbadf898d7efec"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "oxc-miette",
  "rustc-hash",
@@ -1842,8 +1834,7 @@ dependencies = [
 [[package]]
 name = "oxc_ecmascript"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd5642b9d2de373f6c3143bc24f69a824b7d56e86e8060f68b1d4c8a8e922340"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -1855,14 +1846,12 @@ dependencies = [
 [[package]]
 name = "oxc_estree"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b00fbdfd3e49faee78dada84e8cd79fdcf0bbb9a4c3f77a312b823d867e1894b"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 
 [[package]]
 name = "oxc_index"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4852baa0de945b11def319a618cb31546f71b0a782f22c2e80f32f0ed356804d"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "rayon",
 ]
@@ -1870,8 +1859,7 @@ dependencies = [
 [[package]]
 name = "oxc_isolated_declarations"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "889d3b6b23389c998785cdeaa52d2cb5e112272067ea26f094d175c70bb68485"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "bitflags 2.6.0",
  "oxc_allocator",
@@ -1886,8 +1874,7 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4356e1fdbc0538b9a7f3cd20fb596158904891f2f5c2ac5c73d318a320220ec"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "itertools 0.13.0",
  "oxc_ast",
@@ -1899,8 +1886,7 @@ dependencies = [
 [[package]]
 name = "oxc_minifier"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3fdc63a3cec49858f9f2aeaccdc0ba9ef357cd1f4d4960b6afaf7288061d00"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "cow-utils",
  "oxc_allocator",
@@ -1918,8 +1904,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bf3395e8cad18ec9cda1bd530720d8e2747c5e4767573ba9bb3f0c798d944a4"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
@@ -1940,8 +1925,7 @@ dependencies = [
 [[package]]
 name = "oxc_regular_expression"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab44622a5b4cb09e12eda5f70d9c033c3a820b26f92a1bc86e596e137dc42089"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "oxc_allocator",
  "oxc_ast_macros",
@@ -1975,8 +1959,7 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc4b663c28a86d18d36ddf3847b6b33ee09fc808659c30966e95dd3810195f91"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "assert-unchecked",
  "indexmap",
@@ -1996,8 +1979,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caec4e61c40c79463875e0e8fcacae0d1ca2a2f91a6301074c2632652281afaf"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",
@@ -2011,8 +1993,7 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "363c6c4329272836347089768df8c87c298f3bd329668306e1f50fc1f8804b7c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "compact_str",
  "oxc-miette",
@@ -2024,8 +2005,7 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8697e0c9c99df9f5863196f82cb705685d747b1732733b80f5203cf70d46335a"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
@@ -2045,8 +2025,7 @@ dependencies = [
 [[package]]
 name = "oxc_transform_napi"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30af906711ec89fd9a387966ab76090977f3660fff2077348a27d96733606356"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "napi",
  "napi-build",
@@ -2057,8 +2036,7 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4474cd73176facb658c9a09cc94f4023ffeb0d962caa62894c98998e2cc767c6"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "base64",
  "compact_str",
@@ -2088,8 +2066,7 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba91926e02d42f6301d13a8541403cdd9f66b89457aeac15fc12d481fa9e4d2a"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
 dependencies = [
  "compact_str",
  "itoa",

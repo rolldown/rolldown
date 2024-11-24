@@ -708,7 +708,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/define_assign_warning
 
-- read-!~{000}~.js => read-Do5Yp3wz.js
+- read-!~{000}~.js => read-Bc2LJUbQ.js
 - write-!~{001}~.js => write-B-BpzbIV.js
 
 # tests/esbuild/default/define_import_meta
@@ -727,7 +727,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/define_optional_chain
 
-- entry-!~{000}~.js => entry-D6vy25H-.js
+- entry-!~{000}~.js => entry-lm0-kYcV.js
 
 # tests/esbuild/default/define_optional_chain_lowered
 
@@ -735,7 +735,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/define_optional_chain_panic_issue3551
 
-- dot-define-!~{001}~.js => dot-define-C9DHntWH.js
+- dot-define-!~{001}~.js => dot-define-CYBAXetp.js
 - id-define-!~{000}~.js => id-define-CpgAxsba.js
 
 # tests/esbuild/default/define_this

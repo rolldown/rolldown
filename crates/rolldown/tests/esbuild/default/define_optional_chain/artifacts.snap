@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,12 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 console.log([
 	1,
-	a?.b.c,
-	a.b?.c
+	1,
+	1
 ], [
-	a["b"]["c"],
-	a?.["b"]["c"],
-	a["b"]?.["c"]
+	1,
+	1,
+	1
 ], [
 	a[b][c],
 	a?.[b][c],

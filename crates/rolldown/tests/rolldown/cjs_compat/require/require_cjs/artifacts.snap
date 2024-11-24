@@ -27,14 +27,12 @@ var cjs = require_cjs();
 
 ```
 - ../cjs.js
-(0:0) "module." --> (9:0) "var require_cjs = __commonJS({ \"cjs.js\"(exports, module) {\n"
+(0:0) "module." --> (10:0) "\tmodule."
 (0:7) "exports = " --> (10:8) "exports = "
 (0:17) "{}" --> (10:18) "{"
 (0:19) "\n" --> (10:19) "};\n"
-(0:0) "module.exports = {}\n" --> (11:0) "} });\n"
 - ../main.js
 (0:0) "require('./cjs.js');\n" --> (15:0) "require_cjs();\n"
 (1:0) "var " --> (16:0) "var "
-(1:4) "cjs = require('./cjs.js');\n" --> (16:4) "cjs = "
-(0:0) "require('./cjs.js');\n" --> (16:10) "require_cjs();\n"
+(1:4) "cjs = require('./cjs.js');\n" --> (16:4) "cjs = require_cjs();\n"
 ```

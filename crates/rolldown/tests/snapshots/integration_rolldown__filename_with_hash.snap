@@ -674,7 +674,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation_transform_jsx
 
-- entry-!~{000}~.js => entry-DwugxH6C.js
+- entry-!~{000}~.js => entry-kFDnhV5c.js
 
 # tests/esbuild/default/common_js_from_es6
 

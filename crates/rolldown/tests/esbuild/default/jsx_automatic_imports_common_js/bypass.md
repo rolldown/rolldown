@@ -1,5 +1,5 @@
 # Reason
-1. different naming style
+1. different naming style for `oxc_transformer`
 # Diff
 ## /out.js
 ### esbuild

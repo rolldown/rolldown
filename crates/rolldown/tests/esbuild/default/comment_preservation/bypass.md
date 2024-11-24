@@ -1,6 +1,5 @@
 # Reason
-1. comments codegen
-2. for `__require` diff, we don't have `ModePassThrough`
+1. comments codegen related to `oxc`
 # Diff
 ## /out/entry.js
 ### esbuild

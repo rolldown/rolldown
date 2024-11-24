@@ -79,7 +79,7 @@ fn test_collapse_sourcemaps() {
   use crate::{collapse_sourcemaps, SourceJoiner, SourceMapSource};
   use oxc::{
     allocator::Allocator,
-    codegen::{CodeGenerator, CodegenReturn},
+    codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
     parser::Parser,
     sourcemap::SourcemapVisualizer,
     span::SourceType,
@@ -93,24 +93,24 @@ fn test_collapse_sourcemaps() {
   let source_text = "const foo = 1; console.log(foo);\n".to_string();
   let source_type = SourceType::from_path(&filename).unwrap();
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text } =
-    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
-  source_joiner.append_source(Box::new(SourceMapSource::new(
-    source_text.clone(),
-    source_map.unwrap(),
-    source_text.matches('\n').count() as u32,
-  )));
+  let CodegenReturn { map, code, .. } = CodeGenerator::new()
+    .with_options(CodegenOptions {
+      source_map_path: Some(filename.into()),
+      ..CodegenOptions::default()
+    })
+    .build(&ret1.program);
+  source_joiner.append_source(SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone()));
 
   let filename = "bar.js".to_string();
   let source_text = "const bar = 2; console.log(bar);\n".to_string();
   let ret2: oxc::parser::ParserReturn = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text } =
-    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret2.program);
-  source_joiner.append_source(Box::new(SourceMapSource::new(
-    source_text.clone(),
-    source_map.unwrap(),
-    source_text.matches('\n').count() as u32,
-  )));
+  let CodegenReturn { map, code, .. } = CodeGenerator::new()
+    .with_options(CodegenOptions {
+      source_map_path: Some(filename.into()),
+      ..CodegenOptions::default()
+    })
+    .build(&ret2.program);
+  source_joiner.append_source(SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone()));
 
   let (source_text, source_map) = source_joiner.join();
 
@@ -120,29 +120,33 @@ fn test_collapse_sourcemaps() {
 
   let filename = "chunk.js".to_string();
   let ret3 = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text } =
-    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret3.program);
-  sourcemap_chain.push(source_map.as_ref().unwrap());
+  let CodegenReturn { map, code, .. } = CodeGenerator::new()
+    .with_options(CodegenOptions {
+      source_map_path: Some(filename.into()),
+      ..CodegenOptions::default()
+    })
+    .build(&ret3.program);
+  sourcemap_chain.push(map.as_ref().unwrap());
 
   let map = collapse_sourcemaps(sourcemap_chain);
   assert_eq!(
-    SourcemapVisualizer::new(&source_text, &map).into_visualizer_text(),
+    SourcemapVisualizer::new(&code, &map).into_visualizer_text(),
     r#"- foo.js
-(0:0-0:6) "const " --> (0:0-0:6) "const "
-(0:6-0:12) "foo = " --> (0:6-0:12) "foo = "
-(0:12-0:15) "1; " --> (0:12-1:0) "1;"
-(0:15-0:23) "console." --> (1:0-1:8) "\nconsole"
-(0:23-0:27) "log(" --> (1:8-1:12) ".log"
-(0:27-0:31) "foo)" --> (1:12-1:16) "(foo"
-(0:31-1:1) ";\n" --> (1:16-2:0) ");"
+(0:0) "const " --> (0:0) "const "
+(0:6) "foo = " --> (0:6) "foo = "
+(0:12) "1; " --> (0:12) "1;\n"
+(0:15) "console." --> (1:0) "console."
+(0:23) "log(" --> (1:8) "log("
+(0:27) "foo)" --> (1:12) "foo)"
+(0:31) ";\n" --> (1:16) ";\n"
 - bar.js
-(0:0-0:6) "const " --> (2:0-2:6) "\nconst"
-(0:6-0:12) "bar = " --> (2:6-2:12) " bar ="
-(0:12-0:15) "2; " --> (2:12-3:0) " 2;"
-(0:15-0:23) "console." --> (3:0-3:8) "\nconsole"
-(0:23-0:27) "log(" --> (3:8-3:12) ".log"
-(0:27-0:31) "bar)" --> (3:12-3:16) "(bar"
-(0:31-1:1) ";\n" --> (3:16-4:1) ");\n"
+(0:0) "const " --> (2:0) "const "
+(0:6) "bar = " --> (2:6) "bar = "
+(0:12) "2; " --> (2:12) "2;\n"
+(0:15) "console." --> (3:0) "console."
+(0:23) "log(" --> (3:8) "log("
+(0:27) "bar)" --> (3:12) "bar)"
+(0:31) ";\n" --> (3:16) ";\n"
 "#
   );
 }

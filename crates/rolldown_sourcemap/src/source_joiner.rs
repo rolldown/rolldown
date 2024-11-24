@@ -72,10 +72,10 @@ impl<'source> SourceJoiner<'source> {
 
 #[test]
 fn test_concat_sourcemaps() {
-  use crate::{RawSource, SourceJoiner, SourceMapSource};
+  use crate::{SourceJoiner, SourceMapSource};
   use oxc::{
     allocator::Allocator,
-    codegen::{CodeGenerator, CodegenReturn},
+    codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
     parser::Parser,
     sourcemap::SourcemapVisualizer,
     span::SourceType,
@@ -83,35 +83,43 @@ fn test_concat_sourcemaps() {
 
   let mut source_joiner = SourceJoiner::default();
   source_joiner.append_source("\nconsole.log()".to_string());
-  source_joiner.prepend_source("// banner".to_string());
+  source_joiner.prepend_source(Box::new("// banner".to_string()));
 
   let filename = "foo.js".to_string();
   let allocator = Allocator::default();
   let source_text = "const foo = 1; console.log(foo);\n".to_string();
   let source_type = SourceType::from_path(&filename).unwrap();
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
-  let CodegenReturn { source_map, source_text } =
-    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
-  source_joiner.append_source(Box::new(SourceMapSource::new(
-    source_text.clone(),
-    source_map.unwrap(),
-    source_text.matches('\n').count() as u32,
-  )));
+
+  let CodegenReturn { map, code, .. } = CodeGenerator::new()
+    .with_options(CodegenOptions {
+      source_map_path: Some(filename.into()),
+      ..CodegenOptions::default()
+    })
+    .build(&ret1.program);
+  source_joiner.append_source(SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone()));
 
   let (content, map) = source_joiner.join();
 
-  assert_eq!(content, "// banner\n\nconsole.log()\nconst foo = 1;\nconsole.log(foo);\n");
+  assert_eq!(
+    &content,
+    r#"// banner
 
+console.log()
+const foo = 1;
+console.log(foo);
+"#
+  );
   assert_eq!(
     SourcemapVisualizer::new(&content, &map.unwrap()).into_visualizer_text(),
     r#"- foo.js
-(0:0-0:6) "const " --> (3:0-3:6) "\nconst"
-(0:6-0:12) "foo = " --> (3:6-3:12) " foo ="
-(0:12-0:15) "1; " --> (3:12-4:0) " 1;"
-(0:15-0:23) "console." --> (4:0-4:8) "\nconsole"
-(0:23-0:27) "log(" --> (4:8-4:12) ".log"
-(0:27-0:31) "foo)" --> (4:12-4:16) "(foo"
-(0:31-1:1) ";\n" --> (4:16-5:1) ");\n"
+(0:0) "const " --> (3:0) "const "
+(0:6) "foo = " --> (3:6) "foo = "
+(0:12) "1; " --> (3:12) "1;\n"
+(0:15) "console." --> (4:0) "console."
+(0:23) "log(" --> (4:8) "log("
+(0:27) "foo)" --> (4:12) "foo)"
+(0:31) ";\n" --> (4:16) ";\n"
 "#
   );
 }

@@ -1683,7 +1683,7 @@ checksum = "fb37767f6569cd834a413442455e0f066d0d522de8630436e2a1761d9726ba56"
 [[package]]
 name = "oxc"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "napi",
  "napi-derive",
@@ -1748,7 +1748,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1757,7 +1757,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "bitflags 2.6.0",
  "cow-utils",
@@ -1774,7 +1774,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_macros"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1784,7 +1784,7 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "bitflags 2.6.0",
  "itertools 0.13.0",
@@ -1798,7 +1798,7 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
@@ -1817,7 +1817,7 @@ dependencies = [
 [[package]]
 name = "oxc_data_structures"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "assert-unchecked",
 ]
@@ -1825,7 +1825,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "oxc-miette",
  "rustc-hash",
@@ -1834,7 +1834,7 @@ dependencies = [
 [[package]]
 name = "oxc_ecmascript"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -1846,12 +1846,12 @@ dependencies = [
 [[package]]
 name = "oxc_estree"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 
 [[package]]
 name = "oxc_index"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "rayon",
 ]
@@ -1859,7 +1859,7 @@ dependencies = [
 [[package]]
 name = "oxc_isolated_declarations"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "bitflags 2.6.0",
  "oxc_allocator",
@@ -1874,7 +1874,7 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "itertools 0.13.0",
  "oxc_ast",
@@ -1886,7 +1886,7 @@ dependencies = [
 [[package]]
 name = "oxc_minifier"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "cow-utils",
  "oxc_allocator",
@@ -1904,7 +1904,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
@@ -1925,7 +1925,7 @@ dependencies = [
 [[package]]
 name = "oxc_regular_expression"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "oxc_allocator",
  "oxc_ast_macros",
@@ -1959,7 +1959,7 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "assert-unchecked",
  "indexmap",
@@ -1979,7 +1979,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",
@@ -1993,7 +1993,7 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "compact_str",
  "oxc-miette",
@@ -2005,7 +2005,7 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
@@ -2025,7 +2025,7 @@ dependencies = [
 [[package]]
 name = "oxc_transform_napi"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "napi",
  "napi-build",
@@ -2036,7 +2036,7 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "base64",
  "compact_str",
@@ -2066,7 +2066,7 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.37.0"
-source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#97762afbd1ef7eddd01d46b256ccc16fbc0f2c0c"
+source = "git+https://github.com/hi-ogawa/oxc?branch=fix-no-emit-empty-span#41d401148b773bd7256f74e7cceb95fe5576440f"
 dependencies = [
  "compact_str",
  "itoa",

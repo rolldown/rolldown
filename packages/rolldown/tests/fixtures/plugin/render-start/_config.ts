@@ -8,7 +8,6 @@ const entryFileNames = '[name]-render-start.js'
 const renderStartFn = vi.fn()
 
 export default defineTest({
-  skip: true, // FIXME(hyf0): Will be fixed in the next PR
   config: {
     input: entry,
     output: {
@@ -19,7 +18,7 @@ export default defineTest({
         name: 'test-plugin-render-start',
         renderStart: (outputOptions, inputOptions) => {
           renderStartFn()
-          // expect(inputOptions.input).toBe(entry)
+          expect(inputOptions.input).toStrictEqual([entry])
           expect(outputOptions.entryFileNames).toBe(entryFileNames)
         },
       },

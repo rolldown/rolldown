@@ -38,6 +38,7 @@ export declare class BindingModuleInfo {
 
 export declare class BindingNormalizedInputOptions {
   get shimMissingExports(): boolean
+  get input(): Array<string> | Record<string, string>
 }
 
 export declare class BindingOutputAsset {

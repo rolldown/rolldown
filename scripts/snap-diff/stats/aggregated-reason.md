@@ -103,9 +103,6 @@
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
-## comments codegen
-- crates/rolldown/tests/esbuild/default/comment_preservation
-- crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
@@ -165,8 +162,6 @@
 - crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
 ## related to minifier
 - crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
-## for `__require` diff, we don't have `ModePassThrough`
-- crates/rolldown/tests/esbuild/default/comment_preservation
 ## not support `jsx.preserve`
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## esbuild will wrap `Promise.resolve().then() for original specifier`
@@ -227,10 +222,6 @@
 - crates/rolldown/tests/esbuild/default/inject_import_meta
 ## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
 - crates/rolldown/tests/esbuild/default/inject_no_bundle
-## different naming style
-- crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js
-## wrong tree shaking result
-- crates/rolldown/tests/esbuild/default/mangle_no_quoted_props
 ## not support preserve `jsx`
 - crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread
 ## should read `tsconfig.json`

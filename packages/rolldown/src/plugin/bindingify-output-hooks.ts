@@ -161,7 +161,7 @@ export function bindingifyGenerateBundle(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx, bundle, isWrite) => {
+    plugin: async (ctx, bundle, isWrite, opts) => {
       const changed = {
         updated: new Set(),
         deleted: new Set(),
@@ -175,8 +175,7 @@ export function bindingifyGenerateBundle(
           args.onLog,
           args.logLevel,
         ),
-        // TODO(hyf0): pass `BindingNormalizedOptions` in `renderChunk` hook
-        {} as NormalizedOutputOptions,
+        new NormalizedOutputOptionsImpl(opts),
         output,
         isWrite,
       )

@@ -2,12 +2,16 @@ import type {
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '../binding'
-import type { LoggingFunctionWithPosition, RollupError } from '../rollup'
+import type {
+  LoggingFunctionWithPosition,
+  LogHandler,
+  LogLevelOption,
+  RollupError,
+} from '../rollup'
 import { normalizeLog } from '../log/logHandler'
 import { PluginContext } from './plugin-context'
 import { augmentCodeLocation, error, logPluginError } from '../log/logs'
 import { PluginContextData } from './plugin-context-data'
-import { NormalizedInputOptions } from '..'
 import type { Plugin } from './index'
 
 export class TransformPluginContext extends PluginContext {
@@ -18,15 +22,16 @@ export class TransformPluginContext extends PluginContext {
   // getCombinedSourcemap: () => SourceMap
 
   constructor(
-    options: NormalizedInputOptions,
     context: BindingPluginContext,
     plugin: Plugin,
     data: PluginContextData,
     inner: BindingTransformPluginContext,
     moduleId: string,
     moduleSource: string,
+    onLog: LogHandler,
+    LogLevelOption: LogLevelOption,
   ) {
-    super(options, context, plugin, data)
+    super(context, plugin, data, onLog, LogLevelOption)
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {

@@ -1,5 +1,4 @@
 import type { BindingPluginContext } from '../binding'
-import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type {
   CustomPluginOptions,
   ModuleOptions,
@@ -14,6 +13,7 @@ import { PluginContextData } from './plugin-context-data'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import { PartialNull } from '../types/utils'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
+import type { LogHandler, LogLevelOption } from '../rollup'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -57,12 +57,13 @@ export class PluginContext extends MinimalPluginContext {
   readonly parse: (input: string, options?: any) => any
 
   constructor(
-    options: NormalizedInputOptions,
     context: BindingPluginContext,
     plugin: Plugin,
     data: PluginContextData,
+    onLog: LogHandler,
+    logLevel: LogLevelOption,
   ) {
-    super(options, plugin)
+    super(onLog, logLevel, plugin)
     this.load = async ({ id, ...options }) => {
       // resolveDependencies always true at rolldown
       const moduleInfo = data.getModuleInfo(id, context)

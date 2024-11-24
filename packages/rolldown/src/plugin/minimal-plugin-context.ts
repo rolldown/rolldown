@@ -1,9 +1,13 @@
-import type { LoggingFunction, LogHandler, RollupError } from '../rollup'
+import type {
+  LoggingFunction,
+  LogHandler,
+  LogLevelOption,
+  RollupError,
+} from '../rollup'
 import type { Plugin } from '../plugin'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { getLogHandler, normalizeLog } from '../log/logHandler'
-import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { VERSION } from '..'
 
 export interface PluginContextMeta {
@@ -19,10 +23,8 @@ export class MinimalPluginContext {
   meta: PluginContextMeta
   readonly error: (error: RollupError | string) => never
 
-  constructor(options: NormalizedInputOptions, plugin: Plugin) {
-    const onLog = options.onLog as LogHandler
+  constructor(onLog: LogHandler, logLevel: LogLevelOption, plugin: Plugin) {
     const pluginName = plugin.name || 'unknown'
-    const logLevel = options.logLevel || LOG_LEVEL_INFO
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
       'PLUGIN_LOG',

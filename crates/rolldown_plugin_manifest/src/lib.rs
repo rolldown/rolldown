@@ -34,8 +34,7 @@ impl Plugin for ManifestPlugin {
   async fn generate_bundle(
     &self,
     ctx: &PluginContext,
-    bundle: &mut Vec<Output>,
-    _is_write: bool,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> HookNoopReturn {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
@@ -53,11 +52,11 @@ impl Plugin for ManifestPlugin {
       }
     }
 
-    for file in bundle.iter() {
+    for file in args.bundle.iter() {
       match file {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk);
-          let chunk_manifest = Rc::new(self.create_chunk(bundle, chunk, name.clone()));
+          let chunk_manifest = Rc::new(self.create_chunk(args.bundle, chunk, name.clone()));
           manifest.insert(name.clone(), chunk_manifest);
         }
         Output::Asset(asset) => {

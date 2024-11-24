@@ -33,6 +33,7 @@ pub use crate::{
   types::hook_filter::{
     GeneralHookFilter, LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter,
   },
+  types::hook_generate_bundle_args::HookGenerateBundleArgs,
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,

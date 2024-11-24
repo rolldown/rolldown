@@ -54,4 +54,15 @@ impl BindingNormalizedOptions {
       rolldown::ChunkFilenamesOutputOption::Fn(_) => None,
     }
   }
+
+  #[napi(getter, ts_return_type = "'es' | 'cjs' | 'app' | 'iife' | 'umd'")]
+  pub fn format(&self) -> String {
+    match self.inner.format {
+      rolldown::OutputFormat::Esm => "es".to_string(),
+      rolldown::OutputFormat::Cjs => "cjs".to_string(),
+      rolldown::OutputFormat::App => "app".to_string(),
+      rolldown::OutputFormat::Iife => "iife".to_string(),
+      rolldown::OutputFormat::Umd => "umd".to_string(),
+    }
+  }
 }

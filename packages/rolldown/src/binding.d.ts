@@ -40,6 +40,7 @@ export declare class BindingNormalizedOptions {
   get shimMissingExports(): boolean
   get input(): Array<string> | Record<string, string>
   get entryFilenames(): string | null
+  get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd'
 }
 
 export declare class BindingOutputAsset {

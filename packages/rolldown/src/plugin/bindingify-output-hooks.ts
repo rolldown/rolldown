@@ -27,10 +27,11 @@ export function bindingifyRenderStart(
     plugin: async (ctx) => {
       handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         args.outputOptions,
         args.options,
@@ -56,10 +57,11 @@ export function bindingifyRenderChunk(
 
       const ret = await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         code,
         chunk,
@@ -104,10 +106,11 @@ export function bindingifyAugmentChunkHash(
 
       return await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         chunk,
       )
@@ -129,10 +132,11 @@ export function bindingifyRenderError(
     plugin: async (ctx, err) => {
       handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         new Error(err),
       )
@@ -159,10 +163,11 @@ export function bindingifyGenerateBundle(
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         args.outputOptions,
         output,
@@ -192,10 +197,11 @@ export function bindingifyWriteBundle(
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         args.outputOptions,
         output,
@@ -219,10 +225,11 @@ export function bindingifyCloseBundle(
     plugin: async (ctx) => {
       await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
       )
     },
@@ -247,10 +254,11 @@ export function bindingifyBanner(
 
       return handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         chunk,
       )
@@ -277,10 +285,11 @@ export function bindingifyFooter(
 
       return handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         chunk,
       )
@@ -307,10 +316,11 @@ export function bindingifyIntro(
 
       return handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         chunk,
       )
@@ -337,10 +347,11 @@ export function bindingifyOutro(
 
       return handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         chunk,
       )

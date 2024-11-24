@@ -45,10 +45,11 @@ export function bindingifyBuildStart(
     plugin: async (ctx) => {
       await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         args.options,
       )
@@ -69,10 +70,11 @@ export function bindingifyBuildEnd(
     plugin: async (ctx, err) => {
       await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         err ? new Error(err) : undefined,
       )
@@ -111,10 +113,11 @@ export function bindingifyResolveId(
 
       const ret = await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         specifier,
         importer ?? undefined,
@@ -171,10 +174,11 @@ export function bindingifyResolveDynamicImport(
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         specifier,
         importer ?? undefined,
@@ -227,13 +231,14 @@ export function bindingifyTransform(
     plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
         new TransformPluginContext(
-          args.options,
           ctx.inner(),
           args.plugin,
           args.pluginContextData,
           ctx,
           id,
           code,
+          args.onLog,
+          args.logLevel,
         ),
         code,
         id,
@@ -279,10 +284,11 @@ export function bindingifyLoad(
     plugin: async (ctx, id) => {
       const ret = await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         id,
       )
@@ -357,10 +363,11 @@ export function bindingifyModuleParsed(
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
         new PluginContext(
-          args.options,
           ctx,
           args.plugin,
           args.pluginContextData,
+          args.onLog,
+          args.logLevel,
         ),
         transformModuleInfo(
           moduleInfo,

@@ -44,6 +44,8 @@ export function bindingifyInputOptions(
       inputOptions,
       outputOptions,
       pluginContextData,
+      onLog,
+      logLevel,
     )
   })
 

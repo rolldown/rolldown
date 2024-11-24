@@ -1,20 +1,17 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
-import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { ChangeEvent, Plugin } from './index'
+import type { ChangeEvent } from './index'
 import { PluginContext } from './plugin-context'
-import { PluginContextData } from './plugin-context-data'
 import {
   PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
+import { BindingifyPluginArgs } from './bindingify-plugin'
 
 export function bindingifyWatchChange(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['watchChange']> {
-  const hook = plugin.watchChange
+  const hook = args.plugin.watchChange
   if (!hook) {
     return {}
   }
@@ -23,7 +20,13 @@ export function bindingifyWatchChange(
   return {
     plugin: async (ctx, id, event) => {
       await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+          args.onLog,
+          args.logLevel,
+        ),
         id,
         { event: event as ChangeEvent },
       )
@@ -33,11 +36,9 @@ export function bindingifyWatchChange(
 }
 
 export function bindingifyCloseWatcher(
-  plugin: Plugin,
-  options: NormalizedInputOptions,
-  pluginContextData: PluginContextData,
+  args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeWatcher']> {
-  const hook = plugin.closeWatcher
+  const hook = args.plugin.closeWatcher
   if (!hook) {
     return {}
   }
@@ -46,7 +47,13 @@ export function bindingifyCloseWatcher(
   return {
     plugin: async (ctx) => {
       await handler.call(
-        new PluginContext(options, ctx, plugin, pluginContextData),
+        new PluginContext(
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+          args.onLog,
+          args.logLevel,
+        ),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

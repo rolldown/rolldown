@@ -32,12 +32,15 @@ import {
   bindingifyWatchChange,
 } from './bindingify-watch-hooks'
 import { error, logPluginError } from '../log/logs'
+import type { LogHandler, LogLevelOption } from '../rollup'
 
 export interface BindingifyPluginArgs {
   plugin: Plugin
   options: NormalizedInputOptions
   outputOptions: NormalizedOutputOptions
   pluginContextData: PluginContextData
+  onLog: LogHandler
+  logLevel: LogLevelOption
 }
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
@@ -46,12 +49,16 @@ export function bindingifyPlugin(
   options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
+  logLevel: LogLevelOption,
 ): BindingPluginOptions {
   const args: BindingifyPluginArgs = {
     plugin,
     options,
     outputOptions,
     pluginContextData,
+    onLog,
+    logLevel,
   }
 
   const { plugin: buildStart, meta: buildStartMeta } =
@@ -112,14 +119,11 @@ export function bindingifyPlugin(
 
   const { plugin: outro, meta: outroMeta } = bindingifyOutro(args)
 
-  const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(
-    plugin,
-    options,
-    pluginContextData,
-  )
+  const { plugin: watchChange, meta: watchChangeMeta } =
+    bindingifyWatchChange(args)
 
   const { plugin: closeWatcher, meta: closeWatcherMeta } =
-    bindingifyCloseWatcher(plugin, options, pluginContextData)
+    bindingifyCloseWatcher(args)
 
   const result: BindingPluginOptions = {
     name: plugin.name ?? 'unknown',

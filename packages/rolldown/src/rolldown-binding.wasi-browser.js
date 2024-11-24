@@ -133,8 +133,8 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingLogLevel_80']?.()
   __napiInstance.exports['__napi_register__BindingModuleInfo_struct_81']?.()
   __napiInstance.exports['__napi_register__BindingModuleInfo_impl_83']?.()
-  __napiInstance.exports['__napi_register__BindingNormalizedInputOptions_struct_84']?.()
-  __napiInstance.exports['__napi_register__BindingNormalizedInputOptions_impl_87']?.()
+  __napiInstance.exports['__napi_register__BindingNormalizedOptions_struct_84']?.()
+  __napiInstance.exports['__napi_register__BindingNormalizedOptions_impl_87']?.()
   __napiInstance.exports['__napi_register__BindingOutputAsset_struct_88']?.()
   __napiInstance.exports['__napi_register__BindingOutputAsset_impl_93']?.()
   __napiInstance.exports['__napi_register__JsOutputAsset_struct_94']?.()
@@ -163,7 +163,7 @@ export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEv
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 export const BindingLog = __napiModule.exports.BindingLog
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo
-export const BindingNormalizedInputOptions = __napiModule.exports.BindingNormalizedInputOptions
+export const BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions
 export const BindingOutputAsset = __napiModule.exports.BindingOutputAsset
 export const BindingOutputChunk = __napiModule.exports.BindingOutputChunk
 export const BindingOutputs = __napiModule.exports.BindingOutputs

@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use crate::types::{
   binding_module_info::BindingModuleInfo,
-  binding_normalized_input_options::BindingNormalizedInputOptions,
+  binding_normalized_options::BindingNormalizedOptions,
   binding_outputs::{BindingOutputs, JsChangedOutputs},
   binding_rendered_chunk::RenderedChunk,
   js_callback::MaybeAsyncJsCallback,
@@ -38,10 +38,10 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedInputOptions) => MaybePromise<VoidNullable>"
+    ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>"
   )]
   pub build_start:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedInputOptions), ()>>,
+    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
   pub build_start_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]
@@ -126,9 +126,9 @@ pub struct BindingPluginOptions {
   pub augment_chunk_hash_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedInputOptions) => void")]
+  #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void")]
   pub render_start:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedInputOptions), ()>>,
+    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
   pub render_start_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]

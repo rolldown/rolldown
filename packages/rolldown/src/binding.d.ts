@@ -36,7 +36,7 @@ export declare class BindingModuleInfo {
   get code(): string | null
 }
 
-export declare class BindingNormalizedInputOptions {
+export declare class BindingNormalizedOptions {
   get shimMissingExports(): boolean
   get input(): Array<string> | Record<string, string>
 }
@@ -402,7 +402,7 @@ export interface BindingPluginHookMeta {
 
 export interface BindingPluginOptions {
   name: string
-  buildStart?: (ctx: BindingPluginContext, opts: BindingNormalizedInputOptions) => MaybePromise<VoidNullable>
+  buildStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>
   buildStartMeta?: BindingPluginHookMeta
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
@@ -423,7 +423,7 @@ export interface BindingPluginOptions {
   renderChunkMeta?: BindingPluginHookMeta
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta
-  renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedInputOptions) => void
+  renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: string) => void
   renderErrorMeta?: BindingPluginHookMeta
@@ -692,7 +692,7 @@ export interface JsxOptions {
   /**
    * Enable React Fast Refresh .
    *
-   * Conforms to the implementation in {@link https://github.com/facebook/react/tree/v18.3.1/packages/react-refresh}
+   * Conforms to the implementation in {@link https://github.com/facebook/react/tree/main/packages/react-refresh}
    *
    * @default false
    */

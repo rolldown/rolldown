@@ -5,12 +5,12 @@ use napi_derive::napi;
 use rolldown::SharedNormalizedBundlerOptions;
 
 #[napi]
-pub struct BindingNormalizedInputOptions {
+pub struct BindingNormalizedOptions {
   inner: SharedNormalizedBundlerOptions,
 }
 
 #[napi]
-impl BindingNormalizedInputOptions {
+impl BindingNormalizedOptions {
   pub fn new(inner: SharedNormalizedBundlerOptions) -> Self {
     Self { inner }
   }

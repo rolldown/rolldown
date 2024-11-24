@@ -1,11 +1,11 @@
 import type { LogHandler } from '../rollup'
-import { BindingNormalizedInputOptions } from '../binding'
+import { BindingNormalizedOptions } from '../binding'
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
 export class NormalizedInputOptions {
-  inner: BindingNormalizedInputOptions
+  inner: BindingNormalizedOptions
   constructor(
-    inner: BindingNormalizedInputOptions,
+    inner: BindingNormalizedOptions,
     public onLog: LogHandler,
   ) {
     this.inner = inner

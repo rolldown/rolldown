@@ -1,7 +1,6 @@
 use crate::types::{
-  binding_module_info::BindingModuleInfo,
-  binding_normalized_input_options::BindingNormalizedInputOptions, binding_outputs::update_outputs,
-  js_callback::MaybeAsyncJsCallbackExt,
+  binding_module_info::BindingModuleInfo, binding_normalized_options::BindingNormalizedOptions,
+  binding_outputs::update_outputs, js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{
   Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, ResolvedIdHookFilter,
@@ -62,11 +61,8 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start {
-      cb.await_call((
-        ctx.clone().into(),
-        BindingNormalizedInputOptions::new(Arc::clone(args.options)),
-      ))
-      .await?;
+      cb.await_call((ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))))
+        .await?;
     }
     Ok(())
   }
@@ -217,11 +213,8 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookRenderStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.render_start {
-      cb.await_call((
-        ctx.clone().into(),
-        BindingNormalizedInputOptions::new(Arc::clone(args.options)),
-      ))
-      .await?;
+      cb.await_call((ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))))
+        .await?;
     }
     Ok(())
   }

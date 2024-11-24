@@ -3,9 +3,9 @@ import { registerPlugins } from './binding'
 import type { WorkerData } from './utils/initialize-parallel-plugins'
 import type { defineParallelPluginImplementation } from './parallel-plugin'
 import { bindingifyPlugin } from './plugin/bindingify-plugin'
-import type { NormalizedOutputOptions } from './options/normalized-output-options'
 import { PluginContextData } from './plugin/plugin-context-data'
 import type { InputOptions } from './options/input-options'
+import type { OutputOptions } from './options/output-options'
 
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
 
@@ -26,7 +26,7 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
           plugin: bindingifyPlugin(
             plugin,
             {} as InputOptions,
-            {} as NormalizedOutputOptions,
+            {} as OutputOptions,
             // TODO need to find a way to share pluginContextData
             new PluginContextData(),
             () => {},

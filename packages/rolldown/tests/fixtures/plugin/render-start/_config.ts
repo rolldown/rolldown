@@ -19,7 +19,6 @@ export default defineTest({
         renderStart: (outputOptions, inputOptions) => {
           renderStartFn()
           expect(inputOptions.input).toStrictEqual([entry])
-          // @ts-expect-error TODO(hyf0): will be fixed in https://github.com/rolldown/rolldown/pull/2899
           expect(outputOptions.entryFileNames).toBe(entryFileNames)
         },
       },

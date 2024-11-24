@@ -24,7 +24,7 @@ import {
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
-import type { NormalizedOutputOptions } from '../options/normalized-output-options'
+import type { OutputOptions } from '../options/output-options'
 import { PluginContextData } from './plugin-context-data'
 import {
   bindingifyCloseWatcher,
@@ -37,7 +37,7 @@ import type { InputOptions } from '../options/input-options'
 export interface BindingifyPluginArgs {
   plugin: Plugin
   options: InputOptions
-  outputOptions: NormalizedOutputOptions
+  outputOptions: OutputOptions
   pluginContextData: PluginContextData
   onLog: LogHandler
   logLevel: LogLevelOption
@@ -47,7 +47,7 @@ export interface BindingifyPluginArgs {
 export function bindingifyPlugin(
   plugin: Plugin,
   options: InputOptions,
-  outputOptions: NormalizedOutputOptions,
+  outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
   onLog: LogHandler,
   logLevel: LogLevelOption,

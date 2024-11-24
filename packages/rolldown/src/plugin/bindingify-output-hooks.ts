@@ -14,6 +14,10 @@ import {
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
 import type { BindingifyPluginArgs } from './bindingify-plugin'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
+import {
+  NormalizedOutputOptions,
+  NormalizedOutputOptionsImpl,
+} from '../options/normalized-output-options'
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -34,7 +38,7 @@ export function bindingifyRenderStart(
           args.onLog,
           args.logLevel,
         ),
-        args.outputOptions,
+        new NormalizedOutputOptionsImpl(opts),
         new NormalizedInputOptions(opts, args.onLog),
       )
     },
@@ -66,7 +70,8 @@ export function bindingifyRenderChunk(
         ),
         code,
         chunk,
-        args.outputOptions,
+        // TODO(hyf0): pass `BindingNormalizedOptions` in `renderChunk` hook
+        {} as NormalizedOutputOptions,
       )
 
       if (ret == null) {
@@ -170,7 +175,8 @@ export function bindingifyGenerateBundle(
           args.onLog,
           args.logLevel,
         ),
-        args.outputOptions,
+        // TODO(hyf0): pass `BindingNormalizedOptions` in `renderChunk` hook
+        {} as NormalizedOutputOptions,
         output,
         isWrite,
       )
@@ -204,7 +210,8 @@ export function bindingifyWriteBundle(
           args.onLog,
           args.logLevel,
         ),
-        args.outputOptions,
+        // TODO(hyf0): pass `BindingNormalizedOptions` in `renderChunk` hook
+        {} as NormalizedOutputOptions,
         output,
       )
       return collectChangedBundle(changed, output)

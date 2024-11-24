@@ -166,7 +166,7 @@ impl Bundler {
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets);
 
-    self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
+    self.plugin_driver.generate_bundle(&mut output.assets, is_write, &self.options).await?;
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 

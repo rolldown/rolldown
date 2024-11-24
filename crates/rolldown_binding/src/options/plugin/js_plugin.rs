@@ -365,8 +365,14 @@ impl Plugin for JsPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
-      let changed =
-        cb.await_call((ctx.clone().into(), args.bundle.clone().into(), args.is_write)).await?;
+      let changed = cb
+        .await_call((
+          ctx.clone().into(),
+          args.bundle.clone().into(),
+          args.is_write,
+          BindingNormalizedOptions::new(Arc::clone(args.options)),
+        ))
+        .await?;
       update_outputs(args.bundle, changed)?;
     }
     Ok(())

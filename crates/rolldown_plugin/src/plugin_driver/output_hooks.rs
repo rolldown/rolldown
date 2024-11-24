@@ -114,11 +114,16 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn generate_bundle(&self, bundle: &mut Vec<Output>, is_write: bool) -> HookNoopReturn {
+  pub async fn generate_bundle(
+    &self,
+    bundle: &mut Vec<Output>,
+    is_write: bool,
+    opts: &SharedNormalizedBundlerOptions,
+  ) -> HookNoopReturn {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
     {
-      let mut args = crate::HookGenerateBundleArgs { is_write, bundle };
+      let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
       plugin.call_generate_bundle(ctx, &mut args).await?;
       ctx.file_emitter.add_additional_files(bundle);
     }

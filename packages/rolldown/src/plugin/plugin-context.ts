@@ -6,7 +6,7 @@ import type {
   Plugin,
   ResolvedId,
 } from './index'
-import { MinimalPluginContext } from '../log/logger'
+import { MinimalPluginContext } from '../plugin/minimal-plugin-context'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
 import { unimplemented, unsupported } from '../utils/misc'
 import { ModuleInfo } from '../types/module-info'

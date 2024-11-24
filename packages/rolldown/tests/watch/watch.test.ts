@@ -210,7 +210,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   })
 
   // edit file
-  fs.writeFileSync(foo, 'console.log(2)')
+  fs.writeFileSync(foo, 'console.log(2)\n')
   await waitUtil(() => {
     expect(changeFn).toBeCalled()
   })

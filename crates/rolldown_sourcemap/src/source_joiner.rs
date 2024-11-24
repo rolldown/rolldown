@@ -103,12 +103,12 @@ fn test_concat_sourcemaps() {
 
   assert_eq!(
     &content,
-    r#"// banner
+    r"// banner
 
 console.log()
 const foo = 1;
 console.log(foo);
-"#
+"
   );
   assert_eq!(
     SourcemapVisualizer::new(&content, &map.unwrap()).into_visualizer_text(),

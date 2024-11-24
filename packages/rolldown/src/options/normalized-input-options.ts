@@ -14,4 +14,8 @@ export class NormalizedInputOptions {
   get shimMissingExports() {
     return this.inner.shimMissingExports
   }
+
+  get input() {
+    return this.inner.input
+  }
 }

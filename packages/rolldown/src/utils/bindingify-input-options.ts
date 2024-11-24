@@ -10,7 +10,7 @@ import { arraify, unsupported } from './misc'
 import { normalizedStringOrRegex } from './normalize-string-or-regex'
 import type { RolldownPlugin } from '..'
 import type { InputOptions } from '../options/input-options'
-import type { NormalizedOutputOptions } from '../options/normalized-output-options'
+import type { OutputOptions } from '../options/output-options'
 import type {
   BindingWatchOption,
   BindingInputOptions,
@@ -21,7 +21,7 @@ import type {
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
   inputOptions: InputOptions,
-  outputOptions: NormalizedOutputOptions,
+  outputOptions: OutputOptions,
 ): BindingInputOptions {
   const pluginContextData = new PluginContextData()
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO

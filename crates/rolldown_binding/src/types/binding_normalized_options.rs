@@ -45,4 +45,13 @@ impl BindingNormalizedOptions {
       Either::A(self.inner.input.iter().map(|input| input.import.clone()).collect())
     }
   }
+
+  // For `Fn` variant, we can't convert it to JS, so we just return `None`.
+  #[napi(getter)]
+  pub fn entry_filenames(&self) -> Option<String> {
+    match &self.inner.entry_filenames {
+      rolldown::ChunkFilenamesOutputOption::String(inner) => Some(inner.clone()),
+      rolldown::ChunkFilenamesOutputOption::Fn(_) => None,
+    }
+  }
 }

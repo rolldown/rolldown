@@ -39,6 +39,7 @@ export declare class BindingModuleInfo {
 export declare class BindingNormalizedOptions {
   get shimMissingExports(): boolean
   get input(): Array<string> | Record<string, string>
+  get entryFilenames(): string | null
 }
 
 export declare class BindingOutputAsset {
@@ -692,7 +693,7 @@ export interface JsxOptions {
   /**
    * Enable React Fast Refresh .
    *
-   * Conforms to the implementation in {@link https://github.com/facebook/react/tree/main/packages/react-refresh}
+   * Conforms to the implementation in {@link https://github.com/facebook/react/tree/v18.3.1/packages/react-refresh}
    *
    * @default false
    */

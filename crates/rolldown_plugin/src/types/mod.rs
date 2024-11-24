@@ -1,11 +1,13 @@
 pub mod hook_addon_args;
 pub mod hook_build_end_args;
+pub mod hook_build_start_args;
 pub mod hook_filter;
 pub mod hook_load_args;
 pub mod hook_load_output;
 pub mod hook_render_chunk_args;
 pub mod hook_render_chunk_output;
 pub mod hook_render_error;
+pub mod hook_render_start_args;
 pub mod hook_resolve_id_args;
 pub mod hook_resolve_id_output;
 pub mod hook_resolve_id_skipped;

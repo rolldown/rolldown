@@ -36,6 +36,10 @@ export declare class BindingModuleInfo {
   get code(): string | null
 }
 
+export declare class BindingNormalizedInputOptions {
+  get shimMissingExports(): boolean
+}
+
 export declare class BindingOutputAsset {
   get fileName(): string
   get originalFileName(): string | null
@@ -397,7 +401,7 @@ export interface BindingPluginHookMeta {
 
 export interface BindingPluginOptions {
   name: string
-  buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  buildStart?: (ctx: BindingPluginContext, opts: BindingNormalizedInputOptions) => MaybePromise<VoidNullable>
   buildStartMeta?: BindingPluginHookMeta
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
@@ -418,7 +422,7 @@ export interface BindingPluginOptions {
   renderChunkMeta?: BindingPluginHookMeta
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta
-  renderStart?: (ctx: BindingPluginContext) => void
+  renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedInputOptions) => void
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: string) => void
   renderErrorMeta?: BindingPluginHookMeta

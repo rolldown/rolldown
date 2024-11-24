@@ -2,14 +2,14 @@ use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use anyhow::{Ok, Result};
-use rolldown_common::{Output, RollupRenderedChunk};
+use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
-  pub async fn render_start(&self) -> HookNoopReturn {
+  pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
     {
-      plugin.call_render_start(ctx).await?;
+      plugin.call_render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await?;
     }
     Ok(())
   }

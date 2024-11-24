@@ -1,5 +1,6 @@
 use crate::types::{
-  binding_module_info::BindingModuleInfo, binding_outputs::update_outputs,
+  binding_module_info::BindingModuleInfo,
+  binding_normalized_input_options::BindingNormalizedInputOptions, binding_outputs::update_outputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{
@@ -58,9 +59,14 @@ impl Plugin for JsPlugin {
   async fn build_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start {
-      cb.await_call(ctx.clone().into()).await?;
+      cb.await_call((
+        ctx.clone().into(),
+        BindingNormalizedInputOptions::new(Arc::clone(args.options)),
+      ))
+      .await?;
     }
     Ok(())
   }
@@ -208,9 +214,14 @@ impl Plugin for JsPlugin {
   async fn render_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookRenderStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.render_start {
-      cb.await_call(ctx.clone().into()).await?;
+      cb.await_call((
+        ctx.clone().into(),
+        BindingNormalizedInputOptions::new(Arc::clone(args.options)),
+      ))
+      .await?;
     }
     Ok(())
   }

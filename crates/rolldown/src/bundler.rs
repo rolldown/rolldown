@@ -95,7 +95,7 @@ impl Bundler {
   }
 
   pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
-    self.plugin_driver.build_start().await?;
+    self.plugin_driver.build_start(&self.options).await?;
 
     let mut error_for_build_end_hook = None;
 
@@ -147,7 +147,7 @@ impl Bundler {
 
     let mut link_stage_output = self.try_build().await?;
 
-    self.plugin_driver.render_start().await?;
+    self.plugin_driver.render_start(&self.options).await?;
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)

@@ -9,7 +9,7 @@ import { BuiltinPlugin } from '../builtin-plugin/constructors'
 import { arraify, unsupported } from './misc'
 import { normalizedStringOrRegex } from './normalize-string-or-regex'
 import type { RolldownPlugin } from '..'
-import type { NormalizedInputOptions } from '../options/normalized-input-options'
+import type { InputOptions } from '../options/input-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type {
   BindingWatchOption,
@@ -20,7 +20,7 @@ import type {
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
-  inputOptions: NormalizedInputOptions,
+  inputOptions: InputOptions,
   outputOptions: NormalizedOutputOptions,
 ): BindingInputOptions {
   const pluginContextData = new PluginContextData()
@@ -81,7 +81,7 @@ export function bindingifyInputOptions(
 }
 
 function bindingifyExternal(
-  external: NormalizedInputOptions['external'],
+  external: InputOptions['external'],
 ): BindingInputOptions['external'] {
   if (external) {
     if (typeof external === 'function') {
@@ -103,7 +103,7 @@ function bindingifyExternal(
 }
 
 function bindingifyResolve(
-  resolve: NormalizedInputOptions['resolve'],
+  resolve: InputOptions['resolve'],
 ): BindingInputOptions['resolve'] {
   if (resolve) {
     const { alias, extensionAlias, ...rest } = resolve
@@ -127,7 +127,7 @@ function bindingifyResolve(
 }
 
 function bindingifyInject(
-  inject: NormalizedInputOptions['inject'],
+  inject: InputOptions['inject'],
 ): BindingInputOptions['inject'] {
   if (inject) {
     return Object.entries(inject).map(
@@ -174,7 +174,7 @@ function bindingifyInject(
 }
 
 function bindingifyLogLevel(
-  logLevel: NormalizedInputOptions['logLevel'],
+  logLevel: InputOptions['logLevel'],
 ): BindingInputOptions['logLevel'] {
   switch (logLevel) {
     case 'silent':
@@ -191,7 +191,7 @@ function bindingifyLogLevel(
 }
 
 function bindingifyInput(
-  input: NormalizedInputOptions['input'],
+  input: InputOptions['input'],
 ): BindingInputOptions['input'] {
   if (input === undefined) {
     return []
@@ -210,9 +210,7 @@ function bindingifyInput(
   })
 }
 
-function bindingifyJsx(
-  input: NormalizedInputOptions['jsx'],
-): BindingInputOptions['jsx'] {
+function bindingifyJsx(input: InputOptions['jsx']): BindingInputOptions['jsx'] {
   if (input) {
     const mode = input.mode ?? 'classic'
     return {
@@ -232,7 +230,7 @@ function bindingifyJsx(
 }
 
 function bindingifyWatch(
-  watch: NormalizedInputOptions['watch'],
+  watch: InputOptions['watch'],
 ): BindingInputOptions['watch'] {
   if (watch) {
     let value = {
@@ -256,7 +254,7 @@ function bindingifyWatch(
 }
 
 function bindingifyTreeshakeOptions(
-  config: NormalizedInputOptions['treeshake'],
+  config: InputOptions['treeshake'],
 ): BindingInputOptions['treeshake'] {
   if (config === false) {
     return undefined

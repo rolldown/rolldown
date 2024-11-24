@@ -79,9 +79,10 @@ impl Plugin for ParallelJsPlugin {
   async fn build_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.first_plugin().build_start.is_some() {
-      self.run_all(|plugin| plugin.call_build_start(ctx)).await?;
+      self.run_all(|plugin| plugin.call_build_start(ctx, args)).await?;
     }
     Ok(())
   }

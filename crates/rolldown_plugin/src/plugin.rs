@@ -4,8 +4,10 @@ use super::plugin_context::PluginContext;
 use crate::{
   plugin_hook_meta::PluginHookMeta,
   types::{
+    hook_build_start_args::HookBuildStartArgs,
     hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
     hook_render_error::HookRenderErrorArgs,
+    hook_render_start_args::HookRenderStartArgs,
     hook_transform_ast_args::HookTransformAstArgs,
     hook_transform_output::HookTransformOutput,
   },
@@ -36,6 +38,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn build_start(
     &self,
     _ctx: &PluginContext,
+    _args: &HookBuildStartArgs<'_>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }
@@ -124,6 +127,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn render_start(
     &self,
     _ctx: &PluginContext,
+    _args: &HookRenderStartArgs<'_>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }

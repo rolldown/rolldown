@@ -8,8 +8,9 @@ use crate::{
     hook_render_error::HookRenderErrorArgs,
     hook_transform_ast_args::HookTransformAstArgs,
   },
-  HookAddonArgs, HookBuildEndArgs, HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs,
-  HookResolveIdArgs, HookTransformArgs, Plugin, SharedTransformPluginContext,
+  HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookInjectionOutputReturn, HookLoadArgs,
+  HookRenderChunkArgs, HookRenderStartArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
+  SharedTransformPluginContext,
 };
 use anyhow::Ok;
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk, WatcherChangeKind};
@@ -38,7 +39,11 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   // --- Build hooks ---
 
-  async fn call_build_start(&self, _ctx: &PluginContext) -> HookNoopReturn;
+  async fn call_build_start(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookBuildStartArgs,
+  ) -> HookNoopReturn;
 
   fn call_build_start_meta(&self) -> Option<PluginHookMeta>;
 
@@ -99,7 +104,11 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   // --- Generate hooks ---
 
-  async fn call_render_start(&self, _ctx: &PluginContext) -> HookNoopReturn;
+  async fn call_render_start(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookRenderStartArgs,
+  ) -> HookNoopReturn;
 
   fn call_render_start_meta(&self) -> Option<PluginHookMeta>;
 
@@ -220,8 +229,12 @@ impl<T: Plugin> Pluginable for T {
     Plugin::name(self)
   }
 
-  async fn call_build_start(&self, ctx: &PluginContext) -> HookNoopReturn {
-    Plugin::build_start(self, ctx).await
+  async fn call_build_start(
+    &self,
+    ctx: &PluginContext,
+    args: &HookBuildStartArgs,
+  ) -> HookNoopReturn {
+    Plugin::build_start(self, ctx, args).await
   }
 
   fn call_build_start_meta(&self) -> Option<PluginHookMeta> {
@@ -297,8 +310,12 @@ impl<T: Plugin> Pluginable for T {
     Plugin::build_end_meta(self)
   }
 
-  async fn call_render_start(&self, ctx: &PluginContext) -> HookNoopReturn {
-    Plugin::render_start(self, ctx).await
+  async fn call_render_start(
+    &self,
+    ctx: &PluginContext,
+    args: &HookRenderStartArgs,
+  ) -> HookNoopReturn {
+    Plugin::render_start(self, ctx, args).await
   }
 
   fn call_render_start_meta(&self) -> Option<PluginHookMeta> {

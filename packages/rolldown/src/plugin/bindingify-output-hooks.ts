@@ -13,6 +13,7 @@ import {
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
 import type { BindingifyPluginArgs } from './bindingify-plugin'
+import { NormalizedInputOptions } from '../options/normalized-input-options'
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -24,7 +25,7 @@ export function bindingifyRenderStart(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx) => {
+    plugin: async (ctx, opts) => {
       handler.call(
         new PluginContext(
           ctx,
@@ -34,7 +35,7 @@ export function bindingifyRenderStart(
           args.logLevel,
         ),
         args.outputOptions,
-        args.options,
+        new NormalizedInputOptions(opts, args.onLog),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

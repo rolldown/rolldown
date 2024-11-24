@@ -31,6 +31,7 @@ import {
   bindingifyTransformFilter,
 } from './bindingify-hook-filter'
 import type { BindingifyPluginArgs } from './bindingify-plugin'
+import { NormalizedInputOptions } from '../options/normalized-input-options'
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
@@ -42,7 +43,7 @@ export function bindingifyBuildStart(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx) => {
+    plugin: async (ctx, opts) => {
       await handler.call(
         new PluginContext(
           ctx,
@@ -51,7 +52,7 @@ export function bindingifyBuildStart(
           args.onLog,
           args.logLevel,
         ),
-        args.options,
+        new NormalizedInputOptions(opts, args.onLog),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

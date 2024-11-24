@@ -2,6 +2,6 @@
 |----| ---- |
 | failed | 0|
 | skipFailed | 0|
-| ignored | 445|
+| ignored | 446|
 | ignoredByUnsupportedFeatures | 396|
-| passed | 675|
+| passed | 674|

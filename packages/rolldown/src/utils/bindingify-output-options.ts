@@ -1,9 +1,9 @@
 import { unimplemented } from './misc'
 import type { BindingOutputOptions } from '../binding'
-import type { NormalizedOutputOptions } from '../options/normalized-output-options'
+import type { OutputOptions } from '../options/output-options'
 
 export function bindingifyOutputOptions(
-  outputOptions: NormalizedOutputOptions,
+  outputOptions: OutputOptions,
 ): BindingOutputOptions {
   const {
     dir,
@@ -62,7 +62,7 @@ export function bindingifyOutputOptions(
 type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro'
 
 function bindingifyAddon(
-  configAddon: NormalizedOutputOptions[AddonKeys],
+  configAddon: OutputOptions[AddonKeys],
 ): BindingOutputOptions[AddonKeys] {
   return async (chunk) => {
     if (typeof configAddon === 'function') {
@@ -73,7 +73,7 @@ function bindingifyAddon(
 }
 
 function bindingifyFormat(
-  format: NormalizedOutputOptions['format'],
+  format: OutputOptions['format'],
 ): BindingOutputOptions['format'] {
   switch (format) {
     case undefined:
@@ -98,7 +98,7 @@ function bindingifyFormat(
 }
 
 function bindingifySourcemap(
-  sourcemap: NormalizedOutputOptions['sourcemap'],
+  sourcemap: OutputOptions['sourcemap'],
 ): BindingOutputOptions['sourcemap'] {
   switch (sourcemap) {
     case true:
@@ -116,7 +116,7 @@ function bindingifySourcemap(
 }
 
 function bindingifySourcemapIgnoreList(
-  sourcemapIgnoreList: NormalizedOutputOptions['sourcemapIgnoreList'],
+  sourcemapIgnoreList: OutputOptions['sourcemapIgnoreList'],
 ): BindingOutputOptions['sourcemapIgnoreList'] {
   return typeof sourcemapIgnoreList === 'function'
     ? sourcemapIgnoreList

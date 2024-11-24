@@ -24,7 +24,6 @@ import {
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
-import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import { PluginContextData } from './plugin-context-data'
 import {
@@ -33,10 +32,11 @@ import {
 } from './bindingify-watch-hooks'
 import { error, logPluginError } from '../log/logs'
 import type { LogHandler, LogLevelOption } from '../rollup'
+import type { InputOptions } from '../options/input-options'
 
 export interface BindingifyPluginArgs {
   plugin: Plugin
-  options: NormalizedInputOptions
+  options: InputOptions
   outputOptions: NormalizedOutputOptions
   pluginContextData: PluginContextData
   onLog: LogHandler
@@ -46,7 +46,7 @@ export interface BindingifyPluginArgs {
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
   plugin: Plugin,
-  options: NormalizedInputOptions,
+  options: InputOptions,
   outputOptions: NormalizedOutputOptions,
   pluginContextData: PluginContextData,
   onLog: LogHandler,

@@ -29,6 +29,7 @@ pub use crate::{
   transform_plugin_context::{SharedTransformPluginContext, TransformPluginContext},
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,
+  types::hook_build_start_args::HookBuildStartArgs,
   types::hook_filter::{
     GeneralHookFilter, LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter,
   },
@@ -37,6 +38,7 @@ pub use crate::{
   types::hook_render_chunk_args::HookRenderChunkArgs,
   types::hook_render_chunk_output::HookRenderChunkOutput,
   types::hook_render_error::HookRenderErrorArgs,
+  types::hook_render_start_args::HookRenderStartArgs,
   types::hook_resolve_id_args::HookResolveIdArgs,
   types::hook_resolve_id_output::HookResolveIdOutput,
   types::hook_transform_args::HookTransformArgs,

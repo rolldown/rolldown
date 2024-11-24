@@ -368,6 +368,7 @@ module.exports.BindingBundleEndEventData = nativeBinding.BindingBundleEndEventDa
 module.exports.BindingCallableBuiltinPlugin = nativeBinding.BindingCallableBuiltinPlugin
 module.exports.BindingLog = nativeBinding.BindingLog
 module.exports.BindingModuleInfo = nativeBinding.BindingModuleInfo
+module.exports.BindingNormalizedInputOptions = nativeBinding.BindingNormalizedInputOptions
 module.exports.BindingOutputAsset = nativeBinding.BindingOutputAsset
 module.exports.BindingOutputChunk = nativeBinding.BindingOutputChunk
 module.exports.BindingOutputs = nativeBinding.BindingOutputs

@@ -10,7 +10,9 @@ use crate::{
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
-use rolldown_common::{side_effects::HookSideEffects, ModuleInfo, ModuleType};
+use rolldown_common::{
+  side_effects::HookSideEffects, ModuleInfo, ModuleType, SharedNormalizedBundlerOptions,
+};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 
@@ -18,7 +20,7 @@ use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
-  pub async fn build_start(&self) -> HookNoopReturn {
+  pub async fn build_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
     // let ret = {
     //   #[cfg(not(target_arch = "wasm32"))]
     //   {
@@ -51,7 +53,7 @@ impl PluginDriver {
 
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
     {
-      plugin.call_build_start(ctx).await?;
+      plugin.call_build_start(ctx, &crate::HookBuildStartArgs { options: opts }).await?;
     }
 
     Ok(())

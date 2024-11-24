@@ -15,7 +15,6 @@ workspace = true
 [lib]
 bench   = false
 doctest = false
-test    = false
 
 [dependencies]
 memchr         = { workspace = true }

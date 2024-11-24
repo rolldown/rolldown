@@ -77,7 +77,7 @@ impl ModuleLoader {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-  ) -> anyhow::Result<Self> {
+  ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel(1024);
@@ -86,15 +86,12 @@ impl ModuleLoader {
       replace_global_define_config: if options.define.is_empty() {
         None
       } else {
-        Some(ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
-          // TODO: maybe we should give better diagnostics here. since oxc return
-          // `Vec<OxcDiagnostic>`
-          anyhow::format_err!(
-            "Failed to generate defines config from {:?}. Got {:#?}",
-            options.define,
-            errs
-          )
-        })?)
+        ReplaceGlobalDefinesConfig::new(&options.define).map(Some).map_err(|errs| {
+          errs
+            .into_iter()
+            .map(|err| BuildDiagnostic::invalid_define_config(err.message.to_string()))
+            .collect::<Vec<BuildDiagnostic>>()
+        })?
       },
     };
     let common_data = Arc::new(TaskContext {

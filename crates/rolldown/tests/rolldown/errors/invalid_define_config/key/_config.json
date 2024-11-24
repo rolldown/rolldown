@@ -1,0 +1,10 @@
+{
+  "config": {
+    "define": {
+      "6": "undefined",
+      "a.6.b": "undefined",
+      "abc.*": "undefined"
+    }
+  },
+  "expectError": true
+}

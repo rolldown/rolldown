@@ -1,0 +1,12 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Errors
+
+## INVALID_DEFINE_CONFIG
+
+```text
+[INVALID_DEFINE_CONFIG] Error: Invalid assignment in object literal
+
+```

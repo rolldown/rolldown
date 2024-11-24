@@ -1,0 +1,8 @@
+{
+  "config": {
+    "define": {
+      "key": "{ a = 1 }"
+    }
+  },
+  "expectError": true
+}

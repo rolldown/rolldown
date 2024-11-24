@@ -35,6 +35,7 @@ pub enum EventKind {
   UnhandleableError,
   AssignToImport,
   JsonParse,
+  InvalidDefineConfig,
 }
 
 impl Display for EventKind {
@@ -72,6 +73,7 @@ impl Display for EventKind {
       EventKind::UnsupportedFeature => write!(f, "UNSUPPORTED_FEATURE"),
       EventKind::AssignToImport => write!(f, "ASSIGN_TO_IMPORT"),
       EventKind::JsonParse => write!(f, "JSON_PARSE"),
+      EventKind::InvalidDefineConfig => write!(f, "INVALID_DEFINE_CONFIG"),
     }
   }
 }

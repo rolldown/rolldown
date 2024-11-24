@@ -10,7 +10,7 @@ use oxc::{
   sourcemap::SourceMap,
   span::SourceType,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
 use crate::ecma_ast::{
   program_cell::{ProgramCell, ProgramCellDependent, ProgramCellOwner},
@@ -30,22 +30,12 @@ impl EcmaCompiler {
         });
         let ret = parser.parse();
         if ret.panicked || !ret.errors.is_empty() {
-          Err(
-            ret
-              .errors
-              .into_iter()
-              .map(|mut error| {
-                let error = &mut *error;
-                BuildDiagnostic::oxc_parse_error(
-                  source.clone(),
-                  filename.to_string(),
-                  error.help.take().unwrap_or_default().into(),
-                  error.message.to_string(),
-                  error.labels.take().unwrap_or_default(),
-                )
-              })
-              .collect::<Vec<_>>(),
-          )
+          Err(BuildDiagnostic::from_oxc_diagnostics(
+            ret.errors,
+            &source.clone(),
+            filename,
+            &Severity::Error,
+          ))
         } else {
           Ok(ProgramCellDependent { program: ret.program })
         }

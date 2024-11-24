@@ -118,7 +118,8 @@ impl PluginDriver {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
     {
-      plugin.call_generate_bundle(ctx, bundle, is_write).await?;
+      let mut args = crate::HookGenerateBundleArgs { is_write, bundle };
+      plugin.call_generate_bundle(ctx, &mut args).await?;
       ctx.file_emitter.add_additional_files(bundle);
     }
     Ok(())

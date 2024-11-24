@@ -11,9 +11,9 @@ use crate::{
     hook_transform_ast_args::HookTransformAstArgs,
     hook_transform_output::HookTransformOutput,
   },
-  HookAddonArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
-  HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
-  SharedTransformPluginContext,
+  HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
+  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs, SharedTransformPluginContext,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk, WatcherChangeKind};
@@ -223,8 +223,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn generate_bundle(
     &self,
     _ctx: &PluginContext,
-    _bundle: &mut Vec<Output>,
-    _is_write: bool,
+    _args: &mut HookGenerateBundleArgs,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }

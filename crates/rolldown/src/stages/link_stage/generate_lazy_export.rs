@@ -52,12 +52,8 @@ impl<'link> LinkStage<'link> {
 
     dbg!(&module_idx_to_exports_kind);
     for (ast_idx, exports_kind, is_json_module) in module_idx_to_exports_kind.into_iter() {
-      dbg!(ast_idx);
-      let Some((ecma_ast, module_idx)) = self.ast_table.get_mut(ast_idx) else {
-        continue;
-      };
+      let Some((ecma_ast, module_idx)) = self.ast_table.get_mut(ast_idx) else { unreachable!() };
       let module_idx = *module_idx;
-      dbg!(&module_idx);
       if matches!(exports_kind, ExportsKind::CommonJs) {
         ecma_ast.program.with_mut(|fields| {
           let snippet = AstSnippet::new(fields.allocator);
@@ -70,7 +66,7 @@ impl<'link> LinkStage<'link> {
           };
           *stmt = snippet.module_exports_expr_stmt(expr);
         });
-        return;
+        continue;
       }
       // ExportsKind == Esm && ModuleType == Json
       if is_json_module {

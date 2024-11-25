@@ -17,7 +17,7 @@ var require_test = __commonJS({ "test.txt"(exports, module) {
 //#endregion
 //#region test.base64.txt
 var require_test_base64 = __commonJS({ "test.base64.txt"(exports, module) {
-	"dGVzdC5iYXNlNjQudHh0";
+	module.exports = "dGVzdC5iYXNlNjQudHh0";
 } });
 
 //#endregion

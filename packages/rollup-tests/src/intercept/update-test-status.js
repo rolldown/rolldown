@@ -2,26 +2,13 @@ const {
   loadFailedTests,
   calcTestId,
   updateFailedTestsJson,
-  loadIgnoredTests,
-  unsupportedFeaturesIgnoredTests,
-  // loadOnlyTests,
+  shouldIgnoredTest,
+  status
 } = require('./utils')
 const fs = require('node:fs')
 const path = require('node:path')
 
 const alreadyFailedTests = new Set(loadFailedTests())
-// const onlyTests = loadOnlyTests()
-const ignoredTests = loadIgnoredTests()
-
-// The windows has special test, so here total is different at different platform.
-const status = {
-  // total: 0,
-  failed: 0,
-  skipFailed: 0,
-  ignored: ignoredTests.size,
-  ignoredByUnsupportedFeatures: unsupportedFeaturesIgnoredTests.length,
-  passed: 0,
-}
 
 beforeEach(function skipAlreadyFiledTests() {
   if (!this.currentTest) {
@@ -34,7 +21,7 @@ beforeEach(function skipAlreadyFiledTests() {
   //   this.currentTest?.skip()
   // }
 
-  if (ignoredTests.has(id) || unsupportedFeaturesIgnoredTests.find((test) => test.includes(id))) {
+  if (shouldIgnoredTest(id)) {
     // status.ignored += 1
     this.currentTest?.skip()
   }

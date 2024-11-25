@@ -67,8 +67,6 @@
   missing
 ## loader_from_extension_with_query_parameter
   missing
-## [loader_json_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6/diff.md)
-  diff
 ## [loader_json_invalid_identifier_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6/diff.md)
   diff
 ## [loader_json_no_bundle](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle/diff.md)
@@ -109,6 +107,7 @@
 ## [loader_data_url_text_css](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css/bypass.md)
 ## [loader_data_url_text_java_script_plus_character](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script_plus_character/bypass.md)
 ## [loader_file_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_file_common_js_and_es6/bypass.md)
+## [loader_json_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6/bypass.md)
 ## [loader_json_no_bundle_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6/bypass.md)
 ## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names/bypass.md)
 ## [loader_text_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6/bypass.md)

@@ -12,7 +12,6 @@ use oxc::{
 use rolldown_common::{
   ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind,
 };
-use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -27,13 +26,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     // them in chunk level
     program.hashbang.take();
 
-    let interested = self.ctx.module.module_type == ModuleType::Json;
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
+
     self.remove_unused_top_level_stmt(program);
-    if interested {
-      println!("{}", program.to_source_string());
-    }
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -638,7 +634,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) {
     let old_body = self.alloc.take(&mut program.body);
 
-    let interested = self.ctx.module.module_type == ModuleType::Json;
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(
@@ -772,9 +767,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             _ => {}
           }
         } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
-          // if interested {
-          //   dbg!(&named_decl);
-          // }
           if named_decl.source.is_none() {
             if let Some(decl) = &mut named_decl.declaration {
               // `export var foo = 1` => `var foo = 1`

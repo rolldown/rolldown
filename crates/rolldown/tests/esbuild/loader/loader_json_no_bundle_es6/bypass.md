@@ -24,7 +24,7 @@ var test_default = {
 };
 
 //#endregion
-export { test_default as default, invalid_identifier, test };
+export { test_default as default, invalid_identifier as 'invalid-identifier', test };
 ```
 ### diff
 ```diff
@@ -41,6 +41,6 @@ export { test_default as default, invalid_identifier, test };
 +    "invalid-identifier": invalid_identifier
  };
 -export {test_default as default, test};
-+export {test_default as default, invalid_identifier, test};
++export {test_default as default, invalid_identifier as undefined, test};
 
 ```

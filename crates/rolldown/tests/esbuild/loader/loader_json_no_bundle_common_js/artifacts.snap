@@ -2,11 +2,21 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
+# warnings
+
+## MIXED_EXPORT
+
+```text
+[MIXED_EXPORT] Warning: Entry module "test" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `test.json.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
 # Assets
 
 ## test.js
 
 ```js
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region test.json
 var test = 123;
@@ -17,4 +27,22 @@ var test_default = {
 };
 
 //#endregion
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return test_default;
+  }
+});
+Object.defineProperty(exports, 'invalid-identifier', {
+  enumerable: true,
+  get: function () {
+    return invalid_identifier;
+  }
+});
+Object.defineProperty(exports, 'test', {
+  enumerable: true,
+  get: function () {
+    return test;
+  }
+});
 ```

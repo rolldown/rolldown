@@ -95,16 +95,19 @@ impl StmtInfo {
     }
   }
 
+  #[must_use]
   pub fn with_stmt_idx(mut self, stmt_idx: usize) -> Self {
     self.stmt_idx = Some(stmt_idx);
     self
   }
 
+  #[must_use]
   pub fn with_declared_symbols(mut self, declared_symbols: Vec<SymbolRef>) -> Self {
     self.declared_symbols = declared_symbols;
     self
   }
 
+  #[must_use]
   pub fn with_referenced_symbols(mut self, referenced_symbols: Vec<SymbolOrMemberExprRef>) -> Self {
     self.referenced_symbols = referenced_symbols;
     self

@@ -2741,7 +2741,6 @@ dependencies = [
  "regex",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_utils",
  "rustc-hash",
  "urlencoding",
 ]

@@ -97,10 +97,6 @@
 - crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js
-## sub optimal
-- crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
-- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
-- crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## cross module constant folding
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
@@ -128,6 +124,9 @@
 ## static class field lowering
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
+## sub optimal
+- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
+- crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## lowering decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
@@ -285,8 +284,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
 ## abs output base
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
-## esbuild will inline declaration 
-- crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module

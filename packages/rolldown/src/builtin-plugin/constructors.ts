@@ -7,14 +7,16 @@ import {
   BindingBuildImportAnalysisPluginConfig,
   type BindingViteResolvePluginConfig,
 } from '../binding'
+import { makeBuiltinPluginCallable } from './utils'
 
 export class BuiltinPlugin {
   constructor(
     public name: BindingBuiltinPluginName,
-    public options?: unknown,
+    // NOTE: has `_` to avoid conflict with `options` hook
+    public _options?: unknown,
   ) {
     this.name = name
-    this.options = options
+    this._options = _options
   }
 }
 
@@ -61,7 +63,7 @@ export function buildImportAnalysisPlugin(
 export function viteResolvePlugin(
   config: Omit<BindingViteResolvePluginConfig, 'runtime'>,
 ) {
-  return new BuiltinPlugin('builtin:vite-resolve', {
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', {
     ...config,
     runtime: process.versions.deno
       ? 'deno'
@@ -69,4 +71,5 @@ export function viteResolvePlugin(
         ? 'bun'
         : 'node',
   })
+  return makeBuiltinPluginCallable(builtinPlugin)
 }

@@ -20,8 +20,3 @@ export {
 export { transformPlugin } from './builtin-plugin/transform-plugin'
 export { replacePlugin } from './builtin-plugin/replace-plugin'
 export { aliasPlugin } from './builtin-plugin/alias-plugin'
-export {
-  isCallableCompatibleBuiltinPlugin,
-  makeBuiltinPluginCallable,
-  isCallableBuiltinPlugin,
-} from './builtin-plugin/utils'

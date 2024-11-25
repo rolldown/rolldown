@@ -17,5 +17,5 @@ var test_default = {
 };
 
 //#endregion
-export { test_default as default };
+export { test_default as default, invalid_identifier, test };
 ```

@@ -5,7 +5,6 @@
         "name": "test",
         "import": "test.json"
       }
-    ],
-    "format": "iife"
+    ]
   }
 }

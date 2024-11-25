@@ -134,6 +134,9 @@ fn json_object_expr_to_esm(
       match property {
         ast::ObjectPropertyKind::ObjectProperty(ref mut property) => {
           let key = property.key.static_name().expect("should be static name");
+          if key.is_empty() {
+            continue;
+          }
           let legal_ident = legitimize_identifier_name(&key).to_rstr();
           declaration_binding_names.push(legal_ident.clone());
           let value = std::mem::replace(

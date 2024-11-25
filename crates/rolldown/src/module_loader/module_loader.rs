@@ -177,6 +177,9 @@ impl ModuleLoader {
             }
           };
 
+          let id = ModuleId::new(&resolved_id.id);
+          self.shared_context.plugin_driver.set_module_info(&id.clone(), Arc::new(id.into()));
+
           self.symbol_ref_db.store_local_db(
             idx,
             SymbolRefDbForModule::new(SymbolTable::default(), idx, ScopeId::new(0)),

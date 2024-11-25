@@ -36,7 +36,7 @@ impl RuntimeModuleTask {
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub fn run(mut self) -> anyhow::Result<()> {
-    let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-without-comments.js"));
+    let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-base.js"));
 
     let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
 

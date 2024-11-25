@@ -4493,8 +4493,8 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2903
 
-- main-!~{000}~.js => main-xMEzHYlw.js
-- main2-!~{001}~.js => main2-Q_U62K28.js
+- main-!~{000}~.js => main-Be69oBDG.js
+- main2-!~{001}~.js => main2-EKxH9I8y.js
 - chunk-!~{002}~.js => chunk-CrpGerW8.js
 
 # tests/rolldown/issues/376

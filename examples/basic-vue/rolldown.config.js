@@ -8,4 +8,19 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  output: {
+    plugins: [
+      {
+        name: 'test-plugin',
+        outputOptions: function (options) {
+          console.log(options.banner)
+          options.banner = '/* banner */'
+          return options
+        },
+      },
+    ],
+  },
+  experimental: {
+    enableComposingJsPlugins: true,
+  },
 })

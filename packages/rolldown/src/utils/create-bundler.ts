@@ -21,27 +21,27 @@ export async function createBundler(
 
   const inputPlugins = await normalizePluginOption(inputOptions.plugins)
 
-  try {
-    const outputPlugins = await normalizePluginOption(outputOptions.plugins)
+  const outputPlugins = await normalizePluginOption(outputOptions.plugins)
 
-    // The `outputOptions` hook is called with the input plugins and the output plugins
-    outputOptions = pluginDriver.callOutputOptionsHook(
-      [...inputPlugins, ...outputPlugins],
-      outputOptions,
-    )
+  // The `outputOptions` hook is called with the input plugins and the output plugins
+  outputOptions = pluginDriver.callOutputOptionsHook(
+    [...inputPlugins, ...outputPlugins],
+    outputOptions,
+  )
 
+  let plugins = [
+    ...inputPlugins,
     // TODO give warning if `outputOptions.plugins` using build hooks
-    let plugins = [
-      ...inputPlugins,
-      ...(await normalizePluginOption(outputOptions.plugins)),
-    ]
+    ...(await normalizePluginOption(outputOptions.plugins)),
+  ]
 
-    if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
-      plugins = composeJsPlugins(plugins)
-    }
+  if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
+    plugins = composeJsPlugins(plugins)
+  }
 
-    const parallelPluginInitResult = await initializeParallelPlugins(plugins)
+  const parallelPluginInitResult = await initializeParallelPlugins(plugins)
 
+  try {
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
       plugins,

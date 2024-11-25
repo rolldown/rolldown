@@ -6,7 +6,6 @@ use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
 };
-use rolldown_utils::concat_string;
 use rustc_hash::FxBuildHasher;
 
 use crate::utils::{is_data_url, parse_data_url};
@@ -76,15 +75,9 @@ impl Plugin for DataUrlPlugin {
         let Some(resolved) = self.resolved_data_url.get(args.id) else {
           return Ok(None);
         };
-        let code = match resolved.module_type {
-          ModuleType::Json => concat_string!("(", resolved.data, ")"),
-          ModuleType::Js | ModuleType::Css => resolved.data.clone(),
-          _ => {
-            unreachable!()
-          }
-        };
+
         Ok(Some(HookLoadOutput {
-          code,
+          code: resolved.data.clone(),
           module_type: Some(resolved.module_type.clone()),
           ..Default::default()
         }))

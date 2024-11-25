@@ -163,10 +163,10 @@ impl Plugin for ParallelJsPlugin {
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    bundle: &mut Vec<rolldown_common::Output>,
+    args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.first_plugin().write_bundle.is_some() {
-      self.run_single(|plugin| plugin.call_write_bundle(ctx, bundle)).await
+      self.run_single(|plugin| plugin.call_write_bundle(ctx, args)).await
     } else {
       Ok(())
     }

@@ -150,10 +150,14 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
-  pub write_bundle:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs), JsChangedOutputs>>,
+  pub write_bundle: Option<
+    MaybeAsyncJsCallback<
+      (BindingPluginContext, BindingOutputs, BindingNormalizedOptions),
+      JsChangedOutputs,
+    >,
+  >,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]

@@ -70,7 +70,7 @@ function writeTestStatusToMarkdown() {
   let markdown = '|  | number |\n|----| ---- |\n'
   const statusKeys = /** @type {Array<keyof typeof status>} */ (Object.keys(status))
   for (const key of statusKeys) {
-    markdown += `| ${key} | ${status[key]}|\n`
+    markdown += `| ${key} | ${status[key]} |\n`
   }
   fs.writeFileSync(path.join(__dirname, '../status.md'), markdown)
 }

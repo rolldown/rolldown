@@ -1,8 +1,13 @@
 import type { LogHandler } from '../rollup'
 import { BindingNormalizedOptions } from '../binding'
 
+export interface NormalizedInputOptions {
+  shimMissingExports: boolean
+  input: string[] | Record<string, string>
+}
+
 // TODO: I guess we make these getters enumerable so it act more like a plain object
-export class NormalizedInputOptions {
+export class NormalizedInputOptionsImpl implements NormalizedInputOptions {
   inner: BindingNormalizedOptions
   constructor(
     inner: BindingNormalizedOptions,

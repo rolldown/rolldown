@@ -13,7 +13,7 @@ import {
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
 import type { BindingifyPluginArgs } from './bindingify-plugin'
-import { NormalizedInputOptions } from '../options/normalized-input-options'
+import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import {
   NormalizedOutputOptions,
   NormalizedOutputOptionsImpl,
@@ -39,7 +39,7 @@ export function bindingifyRenderStart(
           args.logLevel,
         ),
         new NormalizedOutputOptionsImpl(opts),
-        new NormalizedInputOptions(opts, args.onLog),
+        new NormalizedInputOptionsImpl(opts, args.onLog),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

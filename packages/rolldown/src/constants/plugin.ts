@@ -1,5 +1,15 @@
 import { Plugin } from '../plugin'
 
+export const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
+  'augmentChunkHash',
+  'outputOptions',
+  'renderChunk',
+  'renderStart',
+  'renderError',
+  'writeBundle',
+  'generateBundle',
+] as const
+
 export const ENUMERATED_PLUGIN_HOOK_NAMES = [
   // build hooks
   'options',
@@ -8,17 +18,11 @@ export const ENUMERATED_PLUGIN_HOOK_NAMES = [
   'load',
   'transform',
   'moduleParsed',
-  'augmentChunkHash',
   'buildEnd',
   'onLog',
   'resolveDynamicImport',
   // generate hooks
-  'generateBundle',
-  'outputOptions',
-  'renderChunk',
-  'renderStart',
-  'renderError',
-  'writeBundle',
+  ...ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES,
   'footer',
   'banner',
   'intro',

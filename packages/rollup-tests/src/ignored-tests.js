@@ -49,9 +49,6 @@ const ignoreTests = [
   "rollup@form@comment-before-import: preserves comments before imports@generates es",
   "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
 
-  // The output plugins hooks is not working as expected
-  "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
-
   // Nested plugin is not supported
   "rollup@function@nested-and-async-plugin: works when nested plugin",
 

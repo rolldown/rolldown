@@ -21,6 +21,10 @@ export default defineTest({
             const moduleInfo = this.getModuleInfo(id)!
             expect(moduleInfo.isEntry).toBe(true)
           }
+          if (id.endsWith('static.js')) {
+            const moduleInfo = this.getModuleInfo(id)!
+            expect(moduleInfo.meta).toBeInstanceOf(Object)
+          }
         },
         renderStart() {
           let count = 0

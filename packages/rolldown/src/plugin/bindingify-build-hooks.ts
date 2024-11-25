@@ -372,7 +372,7 @@ export function bindingifyModuleParsed(
         ),
         transformModuleInfo(
           moduleInfo,
-          args.pluginContextData.moduleOptionMap.get(moduleInfo.id)!,
+          args.pluginContextData.getModuleOption(moduleInfo.id),
         ),
       )
     },

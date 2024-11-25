@@ -1337,7 +1337,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_import_with_type_json
 
-- entry-!~{000}~.js => entry-CjFRMQnK.js
+- entry-!~{000}~.js => entry-FluVqhpm.js
 
 # tests/esbuild/default/metafile_no_bundle
 
@@ -1367,7 +1367,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/minified_bundle_common_js
 
-- entry-!~{000}~.js => entry-BAh6_KVO.js
+- entry-!~{000}~.js => entry-Cx8bNN-y.js
 
 # tests/esbuild/default/minified_bundle_ending_with_important_semicolon
 
@@ -1578,7 +1578,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_json
 
-- entry-!~{000}~.js => entry-B-VQSVEj.js
+- entry-!~{000}~.js => entry-D5vFG9Kw.js
 
 # tests/esbuild/default/require_main_cache_common_js
 
@@ -1602,7 +1602,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_shim_substitution
 
-- entry-!~{000}~.js => entry-YUy7Dxs2.js
+- entry-!~{000}~.js => entry-CEQ3L27e.js
 
 # tests/esbuild/default/require_txt
 
@@ -2305,7 +2305,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_bundle_with_import_attributes
 
-- entry-!~{000}~.js => entry-CVbV8P-y.js
+- entry-!~{000}~.js => entry-BB5aTz7z.js
 
 # tests/esbuild/loader/loader_bundle_with_type_json_only_default_export
 
@@ -2349,7 +2349,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry-!~{000}~.js => entry-Cpd7HTNm.js
+- entry-!~{000}~.js => entry-DdVoDrhG.js
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -2478,45 +2478,45 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 
-- entry-!~{000}~.js => entry-MzzCGLa9.js
+- entry-!~{000}~.js => entry-DyUnS7Vp.js
 
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
-- entry-!~{000}~.js => entry-COKat3-p.js
+- entry-!~{000}~.js => entry-DgvjnOvQ.js
 
 # tests/esbuild/loader/loader_json_no_bundle
 
-- test-!~{000}~.js => test-Bw2RvJTU.js
+- test-!~{000}~.js => test-DPfewUC2.js
 
 # tests/esbuild/loader/loader_json_no_bundle_common_js
 
-- test-!~{000}~.js => test-DbWxpeGA.js
+- test-!~{000}~.js => test-cP8z_Wvh.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6
 
-- test-!~{000}~.js => test-Bw2RvJTU.js
+- test-!~{000}~.js => test-DPfewUC2.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
 
-- test-!~{000}~.js => test-Bw2RvJTU.js
+- test-!~{000}~.js => test-DPfewUC2.js
 
 # tests/esbuild/loader/loader_json_no_bundle_iife
 
-- test-!~{000}~.js => test-DIZx-fNr.js
+- test-!~{000}~.js => test-DQMIR9Pf.js
 
 # tests/esbuild/loader/loader_json_prototype
 
-- entry-!~{000}~.js => entry-DJ4KxgCF.js
+- entry-!~{000}~.js => entry-DfYkjxFB.js
 
 # tests/esbuild/loader/loader_json_prototype_es5
 
-- entry-!~{000}~.js => entry-DQLJV3NK.js
+- entry-!~{000}~.js => entry-Z6-cObSG.js
 
 # tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
 
-- a-!~{000}~.js => a-hlm5N8eY.js
-- b-!~{001}~.js => b-DuCGumdL.js
-- data-!~{002}~.js => data-DBZJsDWs.js
+- a-!~{000}~.js => a-22m5I_6W.js
+- b-!~{001}~.js => b-Bs4OVPg_.js
+- data-!~{002}~.js => data-C5XJBlnK.js
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
@@ -3599,7 +3599,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_minified_bundle_common_js
 
-- entry-!~{000}~.js => entry-DKyYEM1z.js
+- entry-!~{000}~.js => entry-BcIMx7W4.js
 
 # tests/esbuild/ts/ts_minified_bundle_es6
 
@@ -4324,7 +4324,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/json/correct_semantic_of_import_and_require
 
-- main-!~{000}~.js => main-BTnXwMuv.js
+- main-!~{000}~.js => main-Re9iqfcx.js
 
 # tests/rolldown/function/module_types/json/customize
 
@@ -4332,15 +4332,15 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/json/object
 
-- main-!~{000}~.js => main-DzXFrlAz.js
+- main-!~{000}~.js => main-BtchV8nx.js
 
 # tests/rolldown/function/module_types/json/object_with_invalid_key
 
-- main-!~{000}~.js => main-DHUmJJl9.js
+- main-!~{000}~.js => main-CiXafVp1.js
 
 # tests/rolldown/function/module_types/json/object_with_reserved_key
 
-- main-!~{000}~.js => main-DgXGOpgH.js
+- main-!~{000}~.js => main-Cru-KVL2.js
 
 # tests/rolldown/function/module_types/jsx
 
@@ -5197,7 +5197,7 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/json_object
 
-- main-!~{000}~.js => main-DlxTcwjW.js
+- main-!~{000}~.js => main-DmP_iUaI.js
 
 # tests/rolldown/tree_shaking/multi-declarator
 

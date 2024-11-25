@@ -1,5 +1,5 @@
 # Reason
-1. require json should not wrapped in `__esm`
+1. skip quote
 # Diff
 ## /out.js
 ### esbuild
@@ -23,28 +23,17 @@ console.log(require_test());
 
 
 //#region test.json
-var test_exports = {};
-__export(test_exports, {
-	a: () => a,
-	b: () => b,
-	c: () => c,
-	default: () => test_default
-});
-var a, b, c, test_default;
-var init_test = __esm({ "test.json"() {
-	a = true;
-	b = 123;
-	c = [null];
-	test_default = {
-		a,
-		b,
-		c
+var require_test = __commonJS({ "test.json"(exports, module) {
+	module.exports = {
+		"a": true,
+		"b": 123,
+		"c": [null]
 	};
 } });
 
 //#endregion
 //#region entry.js
-console.log((init_test(), __toCommonJS(test_exports).default));
+console.log(require_test());
 
 //#endregion
 ```
@@ -53,34 +42,19 @@ console.log((init_test(), __toCommonJS(test_exports).default));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,10 +1,21 @@
--var require_test = __commonJS({
--    "test.json"(exports, module) {
--        module.exports = {
+@@ -1,10 +1,10 @@
+ var require_test = __commonJS({
+     "test.json"(exports, module) {
+         module.exports = {
 -            a: true,
 -            b: 123,
 -            c: [null]
-+var test_exports = {};
-+__export(test_exports, {
-+    a: () => a,
-+    b: () => b,
-+    c: () => c,
-+    default: () => test_default
-+});
-+var a, b, c, test_default;
-+var init_test = __esm({
-+    "test.json"() {
-+        a = true;
-+        b = 123;
-+        c = [null];
-+        test_default = {
-+            a,
-+            b,
-+            c
++            "a": true,
++            "b": 123,
++            "c": [null]
          };
      }
  });
--console.log(require_test());
-+console.log((init_test(), __toCommonJS(test_exports).default));
+ console.log(require_test());
 
 ```

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -23,15 +24,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region example.json
-var example_exports = {};
-__export(example_exports, {
-	default: () => example_default,
-	works: () => works
-});
-var works, example_default;
-var init_example = __esm({ "example.json"() {
-	works = true;
-	example_default = { works };
+var require_example = __commonJS({ "example.json"(exports, module) {
+	module.exports = { "works": true };
 } });
 
 //#endregion
@@ -40,8 +34,8 @@ var require_entry = __commonJS({ "entry.js"(exports, module) {
 	console.log([
 		require,
 		typeof require,
-		(init_example(), __toCommonJS(example_exports).default),
-		(init_example(), __toCommonJS(example_exports).default),
+		require_example(),
+		require_example(),
 		require(window.SOME_PATH),
 		module.require("./example.json"),
 		module.require("./example.json", { type: "json" }),

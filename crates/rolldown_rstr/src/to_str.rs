@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use oxc::span::{Atom, CompactStr};
 
 use crate::Rstr;
@@ -13,6 +15,12 @@ impl ToRstr for Atom<'_> {
 }
 
 impl ToRstr for &str {
+  fn to_rstr(&self) -> Rstr {
+    Rstr(CompactStr::new(self))
+  }
+}
+
+impl ToRstr for Cow<'_, str> {
   fn to_rstr(&self) -> Rstr {
     Rstr(CompactStr::new(self))
   }

@@ -1,5 +1,6 @@
 # Reason
 1. could be done in minifier
+2. without minifier https://hyrious.me/esbuild-repl/?version=0.23.0&b=e%00entry.js%00const+%7Bfoo%7D+%3D+require%28%27.%2Fa%27%29%0A%09%09%09%09console.log%28foo%28%29%2C+require%28%27.%2Fj.json%27%29%29&b=%00a.js%00exports.foo+%3D+function%28%29+%7B%0A%09%09%09%09%09return+123%0A%09%09%09%09%7D&b=%00j.json%00%09%7B%22test%22%3A+true%7D&o=%7B%0A++treeShaking%3A+true%2C%0A++external%3A+%5B%22c%22%2C+%22a%22%2C+%22b%22%5D%2C%0A%22bundle%22%3A+true%2C%0Aformat%3A+%22esm%22%0A%7D
 # Diff
 ## /out.js
 ### esbuild
@@ -19,21 +20,14 @@ var require_a = __commonJS({ "a.js"(exports) {
 
 //#endregion
 //#region j.json
-var j_exports = {};
-__export(j_exports, {
-	default: () => j_default,
-	test: () => test
-});
-var test, j_default;
-var init_j = __esm({ "j.json"() {
-	test = true;
-	j_default = { test };
+var require_j = __commonJS({ "j.json"(exports, module) {
+	module.exports = { "test": true };
 } });
 
 //#endregion
 //#region entry.js
 const { foo } = require_a();
-console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
+console.log(foo(), require_j());
 
 //#endregion
 ```
@@ -42,7 +36,7 @@ console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,12 +1,23 @@
+@@ -1,12 +1,16 @@
 -var t = e(r => {
 -    r.foo = function () {
 -        return 123;
@@ -58,23 +52,16 @@ console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 -    c.exports = {
 -        test: !0
 -    };
-+var j_exports = {};
-+__export(j_exports, {
-+    default: () => j_default,
-+    test: () => test
++var require_j = __commonJS({
++    "j.json"(exports, module) {
++        module.exports = {
++            "test": true
++        };
++    }
  });
 -var {foo: f} = t();
 -console.log(f(), n());
-+var test, j_default;
-+var init_j = __esm({
-+    "j.json"() {
-+        test = true;
-+        j_default = {
-+            test
-+        };
-+    }
-+});
 +var {foo} = require_a();
-+console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
++console.log(foo(), require_j());
 
 ```

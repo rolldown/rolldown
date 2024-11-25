@@ -2,8 +2,8 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, BindingIdentifier, Expression, FunctionType, ImportOrExportKind, NumberBase,
-      ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
+      self, Argument, BindingIdentifier, Declaration, Expression, FunctionType, ImportOrExportKind,
+      NumberBase, ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
     AstBuilder, NONE,
   },
@@ -794,5 +794,43 @@ impl<'ast> AstSnippet<'ast> {
         expr,
       ),
     )
+  }
+
+  pub fn expr_without_parentheses(&self, mut expr: Expression<'ast>) -> Expression<'ast> {
+    while let Expression::ParenthesizedExpression(mut paren_expr) = expr {
+      expr = self.builder.move_expression(&mut paren_expr.expression);
+    }
+    expr
+  }
+
+  #[inline]
+  pub fn statement_module_declaration_export_named_declaration<T: AsRef<str>>(
+    &self,
+    declaration: Option<Declaration<'ast>>,
+    specifiers: &[(T /*local*/, T /*exported*/, bool /*legal ident*/)],
+  ) -> Statement<'ast> {
+    Statement::from(self.builder.module_declaration_export_named_declaration(
+      SPAN,
+      declaration,
+      {
+        let mut vec = self.builder.vec_with_capacity(specifiers.len());
+        for (local, exported, legal_ident) in specifiers {
+          vec.push(self.builder.export_specifier(
+            SPAN,
+            self.builder.module_export_name_identifier_reference(SPAN, local.as_ref()),
+            if *legal_ident {
+              self.builder.module_export_name_identifier_name(SPAN, exported.as_ref())
+            } else {
+              self.builder.module_export_name_string_literal(SPAN, exported.as_ref())
+            },
+            ImportOrExportKind::Value,
+          ));
+        }
+        vec
+      },
+      None,
+      ImportOrExportKind::Value,
+      NONE,
+    ))
   }
 }

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,22 +11,15 @@ import assert from "node:assert";
 
 
 //#region codes.json
-var codes_exports = {};
-__export(codes_exports, {
-	default: () => codes_default,
-	foo: () => foo
-});
-var foo, codes_default;
-var init_codes = __esm({ "codes.json"() {
-	foo = "bar";
-	codes_default = { foo };
+var require_codes = __commonJS({ "codes.json"(exports, module) {
+	module.exports = { "foo": "bar" };
 } });
 
 //#endregion
 //#region main.js
-init_codes();
-const codes2 = (init_codes(), __toCommonJS(codes_exports).default);
-assert.strictEqual(codes_default, codes2);
+var import_codes = __toESM(require_codes());
+const codes2 = require_codes();
+assert.strictEqual(import_codes.default, codes2);
 
 //#endregion
 ```

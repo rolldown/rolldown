@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region foo.json
-const key_0 = null;
-var foo_default = { "null": key_0 };
+var null$1 = null;
+var foo_default = { "null": null$1 };
 
 //#endregion
 //#region main.js

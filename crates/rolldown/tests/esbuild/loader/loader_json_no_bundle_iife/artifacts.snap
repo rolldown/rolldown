@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -26,11 +27,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region test.json
-const test = 123;
-const key_1 = true;
+var test = 123;
+var invalid_identifier = true;
 var test_default = {
-	test,
-	"invalid-identifier": key_1
+	"test": test,
+	"invalid-identifier": invalid_identifier
 };
 
 //#endregion
@@ -40,8 +41,18 @@ Object.defineProperty(exports, 'default', {
     return test_default;
   }
 });
-exports["invalid-identifier"] = key_1
-exports.test = test
+Object.defineProperty(exports, 'invalid-identifier', {
+  enumerable: true,
+  get: function () {
+    return invalid_identifier;
+  }
+});
+Object.defineProperty(exports, 'test', {
+  enumerable: true,
+  get: function () {
+    return test;
+  }
+});
 return exports;
 })({});
 ```

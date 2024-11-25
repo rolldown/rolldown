@@ -9,9 +9,9 @@ use oxc::{
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes, RUNTIME_MODULE_ID};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
+use rolldown_loader_utils::{binary_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
-use rolldown_utils::mime::guess_mime;
+use rolldown_utils::{concat_string, mime::guess_mime};
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
@@ -47,7 +47,7 @@ pub fn parse_to_ecma_ast(
   is_user_defined_entry: bool,
 ) -> BuildResult<ParseToEcmaAstResult> {
   let (has_lazy_export, source, parsed_type) =
-    pre_process_source(module_type, source, is_user_defined_entry, stable_id, path, options)?;
+    pre_process_source(module_type, source, is_user_defined_entry, path, options)?;
 
   let oxc_source_type = {
     let default = pure_esm_js_oxc_source_type();
@@ -82,7 +82,6 @@ fn pre_process_source(
   module_type: &ModuleType,
   source: StrOrBytes,
   is_user_defined_entry: bool,
-  stable_id: &str,
   path: &Path,
   options: &NormalizedBundlerOptions,
 ) -> BuildResult<(bool, String, OxcParseType)> {
@@ -101,22 +100,9 @@ fn pre_process_source(
       }
     }
     ModuleType::Json => {
+      has_lazy_export = true;
       let content = source.try_into_string()?;
-      let content = match json_to_esm(&content) {
-        Ok(content) => content,
-        Err(err) => {
-          return Err(
-            BuildDiagnostic::json_parse(
-              stable_id.into(),
-              content.into(),
-              err.line(),
-              err.column(),
-              err.to_string().into(),
-            )
-            .into(),
-          );
-        }
-      };
+      let content = concat_string!("(", content, ")");
       (content, OxcParseType::Js)
     }
     ModuleType::Text => {

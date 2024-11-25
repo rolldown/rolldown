@@ -106,6 +106,9 @@
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
+## skip quote
+- crates/rolldown/tests/esbuild/default/require_json
+- crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
@@ -118,9 +121,6 @@
 ## not support public path
 - crates/rolldown/tests/esbuild/loader/loader_file_public_path_css
 - crates/rolldown/tests/esbuild/loader/loader_file_public_path_js
-## should inline variable
-- crates/rolldown/tests/esbuild/loader/loader_json_prototype
-- crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
 ## static class field lowering
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
@@ -236,9 +236,9 @@
 - crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template
 ## `__require` rewrite
 - crates/rolldown/tests/esbuild/default/require_bad_argument_count
-## require json should not wrapped in `__esm`
-- crates/rolldown/tests/esbuild/default/require_json
-## require `.json`, the json file should not wrapped in `__esm`
+## not support require second argument
+- crates/rolldown/tests/esbuild/default/require_shim_substitution
+## wrong `export default require_entry()`;
 - crates/rolldown/tests/esbuild/default/require_shim_substitution
 ## should not reuse `__toESM(require('./foo'))`
 - crates/rolldown/tests/esbuild/default/string_export_names_common_js
@@ -284,12 +284,12 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
 ## abs output base
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
-## Wrong wrapkind, when json is imported by `require`
-- crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
+## `__proto__` should use computed property
+- crates/rolldown/tests/esbuild/loader/loader_json_prototype
 ## should not transform `export * as ns from 'mod'` above es2019
 - crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision
 ## pure transformation is handled by `oxc-transform`
@@ -336,8 +336,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## resolve `mts` in ts
 - crates/rolldown/tests/esbuild/ts/ts_import_mts
-## commonjs json bundle
-- crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js
 ## needs support target
 - crates/rolldown/tests/esbuild/ts/ts_namespace_keep_names_target_es2015
 ## controversial

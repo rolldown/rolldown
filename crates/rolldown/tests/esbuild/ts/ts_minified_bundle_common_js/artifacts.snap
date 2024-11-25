@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -17,21 +18,14 @@ var require_a = __commonJS({ "a.ts"(exports) {
 
 //#endregion
 //#region j.json
-var j_exports = {};
-__export(j_exports, {
-	default: () => j_default,
-	test: () => test
-});
-var test, j_default;
-var init_j = __esm({ "j.json"() {
-	test = true;
-	j_default = { test };
+var require_j = __commonJS({ "j.json"(exports, module) {
+	module.exports = { "test": true };
 } });
 
 //#endregion
 //#region entry.ts
 const { foo } = require_a();
-console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
+console.log(foo(), require_j());
 
 //#endregion
 ```

@@ -1,5 +1,5 @@
 # Reason
-1. commonjs json bundle
+1. could be done in minifier
 # Diff
 ## /out.js
 ### esbuild
@@ -19,21 +19,14 @@ var require_a = __commonJS({ "a.ts"(exports) {
 
 //#endregion
 //#region j.json
-var j_exports = {};
-__export(j_exports, {
-	default: () => j_default,
-	test: () => test
-});
-var test, j_default;
-var init_j = __esm({ "j.json"() {
-	test = true;
-	j_default = { test };
+var require_j = __commonJS({ "j.json"(exports, module) {
+	module.exports = { "test": true };
 } });
 
 //#endregion
 //#region entry.ts
 const { foo } = require_a();
-console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
+console.log(foo(), require_j());
 
 //#endregion
 ```
@@ -42,7 +35,7 @@ console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,12 +1,23 @@
+@@ -1,12 +1,16 @@
 -var t = e(r => {
 -    r.foo = function () {
 -        return 123;
@@ -58,23 +51,16 @@ console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
 -    c.exports = {
 -        test: !0
 -    };
-+var j_exports = {};
-+__export(j_exports, {
-+    default: () => j_default,
-+    test: () => test
++var require_j = __commonJS({
++    "j.json"(exports, module) {
++        module.exports = {
++            "test": true
++        };
++    }
  });
 -var {foo: f} = t();
 -console.log(f(), n());
-+var test, j_default;
-+var init_j = __esm({
-+    "j.json"() {
-+        test = true;
-+        j_default = {
-+            test
-+        };
-+    }
-+});
 +var {foo} = require_a();
-+console.log(foo(), (init_j(), __toCommonJS(j_exports).default));
++console.log(foo(), require_j());
 
 ```

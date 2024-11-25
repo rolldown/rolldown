@@ -1,5 +1,5 @@
 # Reason
-1. should inline variable
+1. `__proto__` should use computed property
 # Diff
 ## /out.js
 ### esbuild
@@ -17,11 +17,10 @@ console.log(data_default);
 ```js
 
 //#region data.json
-const key_0 = "The property below should be converted to a computed property:";
-const __proto__ = { "foo": "bar" };
+var __proto__ = { "foo": "bar" };
 var data_default = {
-	"": key_0,
-	__proto__: __proto__
+	"": "The property below should be converted to a computed property:",
+	"__proto__": __proto__
 };
 
 //#endregion
@@ -35,18 +34,16 @@ console.log(data_default);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,9 @@
-+var key_0 = "The property below should be converted to a computed property:";
+@@ -1,7 +1,8 @@
 +var __proto__ = {
 +    "foo": "bar"
 +};
  var data_default = {
--    "": "The property below should be converted to a computed property:",
+     "": "The property below should be converted to a computed property:",
 -    ["__proto__"]: {
 -        foo: "bar"
 -    }
-+    "": key_0,
-+    __proto__: __proto__
++    "__proto__": __proto__
  };
  console.log(data_default);
 

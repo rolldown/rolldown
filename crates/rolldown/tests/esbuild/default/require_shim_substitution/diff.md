@@ -1,5 +1,6 @@
 # Reason
-1. require `.json`, the json file should not wrapped in `__esm`
+1. not support require second argument
+2. wrong `export default require_entry()`;
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -32,15 +33,8 @@ console.log([
 
 
 //#region example.json
-var example_exports = {};
-__export(example_exports, {
-	default: () => example_default,
-	works: () => works
-});
-var works, example_default;
-var init_example = __esm({ "example.json"() {
-	works = true;
-	example_default = { works };
+var require_example = __commonJS({ "example.json"(exports, module) {
+	module.exports = { "works": true };
 } });
 
 //#endregion
@@ -49,8 +43,8 @@ var require_entry = __commonJS({ "entry.js"(exports, module) {
 	console.log([
 		require,
 		typeof require,
-		(init_example(), __toCommonJS(example_exports).default),
-		(init_example(), __toCommonJS(example_exports).default),
+		require_example(),
+		require_example(),
 		require(window.SOME_PATH),
 		module.require("./example.json"),
 		module.require("./example.json", { type: "json" }),
@@ -71,22 +65,12 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,12 +1,22 @@
--var require_example = __commonJS({
--    "example.json"(exports, module) {
--        module.exports = {
+@@ -1,12 +1,15 @@
+ var require_example = __commonJS({
+     "example.json"(exports, module) {
+         module.exports = {
 -            works: true
-+var example_exports = {};
-+__export(example_exports, {
-+    default: () => example_default,
-+    works: () => works
-+});
-+var works, example_default;
-+var init_example = __esm({
-+    "example.json"() {
-+        works = true;
-+        example_default = {
-+            works
++            "works": true
          };
      }
  });
@@ -97,7 +81,7 @@ export default require_entry();
 -}), __require(window.SOME_PATH), __require.resolve("some-path"), __require.resolve(window.SOME_PATH), Promise.resolve().then(() => __toESM(__require("some-path"))), Promise.resolve().then(() => __toESM(__require(window.SOME_PATH)))]);
 +var require_entry = __commonJS({
 +    "entry.js"(exports, module) {
-+        console.log([require, typeof require, (init_example(), __toCommonJS(example_exports).default), (init_example(), __toCommonJS(example_exports).default), require(window.SOME_PATH), module.require("./example.json"), module.require("./example.json", {
++        console.log([require, typeof require, require_example(), require_example(), require(window.SOME_PATH), module.require("./example.json"), module.require("./example.json", {
 +            type: "json"
 +        }), module.require(window.SOME_PATH), require.resolve("some-path"), require.resolve(window.SOME_PATH), import("some-path"), import(window.SOME_PATH)]);
 +    }

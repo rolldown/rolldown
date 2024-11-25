@@ -27,20 +27,20 @@ console.log(invalid_identifier, test2_exports);
 var test_exports = {};
 __export(test_exports, {
 	default: () => test_default,
-	"invalid-identifier": () => key_0$1
+	"invalid-identifier": () => invalid_identifier$1
 });
-const key_0$1 = true;
-var test_default = { "invalid-identifier": key_0$1 };
+var invalid_identifier$1 = true;
+var test_default = { "invalid-identifier": invalid_identifier$1 };
 
 //#endregion
 //#region test2.json
 var test2_exports = {};
 __export(test2_exports, {
 	default: () => test2_default,
-	"invalid-identifier": () => key_0
+	"invalid-identifier": () => invalid_identifier
 });
-const key_0 = true;
-var test2_default = { "invalid-identifier": key_0 };
+var invalid_identifier = true;
+var test2_default = { "invalid-identifier": invalid_identifier };
 
 //#endregion
 //#region entry.js
@@ -58,23 +58,23 @@ console.log(test_exports["invalid-identifier"], test2_exports);
 +var test_exports = {};
 +__export(test_exports, {
 +    default: () => test_default,
-+    "invalid-identifier": () => key_0$1
++    "invalid-identifier": () => invalid_identifier$1
 +});
-+var key_0$1 = true;
++var invalid_identifier$1 = true;
 +var test_default = {
-+    "invalid-identifier": key_0$1
++    "invalid-identifier": invalid_identifier$1
 +};
  var test2_exports = {};
  __export(test2_exports, {
      default: () => test2_default,
 -    "invalid-identifier": () => invalid_identifier2
-+    "invalid-identifier": () => key_0
++    "invalid-identifier": () => invalid_identifier
  });
 -var invalid_identifier2 = true;
-+var key_0 = true;
++var invalid_identifier = true;
  var test2_default = {
 -    "invalid-identifier": invalid_identifier2
-+    "invalid-identifier": key_0
++    "invalid-identifier": invalid_identifier
  };
 -console.log(invalid_identifier, test2_exports);
 +console.log(test_exports["invalid-identifier"], test2_exports);

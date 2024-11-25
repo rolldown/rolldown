@@ -4,6 +4,7 @@ import {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../rollup'
+import { RolldownOutputPluginOption } from '../plugin'
 
 export type ModuleFormat =
   | 'es'
@@ -72,6 +73,7 @@ export interface OutputOptions {
    * - `preserve-legal`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
    */
   comments?: 'none' | 'preserve-legal'
+  plugins?: RolldownOutputPluginOption
 }
 
 interface OverwriteOutputOptionsForCli {

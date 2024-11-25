@@ -19,16 +19,28 @@ export async function createBundler(
     TreeshakingOptionsSchema.parse(inputOptions.treeshake)
   }
 
-  // Convert `RolldownPluginRec` to `RolldownPlugin`
-  let plugins = await normalizePluginOption(inputOptions.plugins)
-  if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
-    plugins = composeJsPlugins(plugins)
-  }
-
-  const parallelPluginInitResult = await initializeParallelPlugins(plugins)
+  const inputPlugins = await normalizePluginOption(inputOptions.plugins)
 
   try {
-    outputOptions = pluginDriver.callOutputOptionsHook(plugins, outputOptions)
+    const outputPlugins = await normalizePluginOption(outputOptions.plugins)
+
+    // The `outputOptions` hook is called with the input plugins and the output plugins
+    outputOptions = pluginDriver.callOutputOptionsHook(
+      [...inputPlugins, ...outputPlugins],
+      outputOptions,
+    )
+
+    // TODO give warning if `outputOptions.plugins` using build hooks
+    let plugins = [
+      ...inputPlugins,
+      ...(await normalizePluginOption(outputOptions.plugins)),
+    ]
+
+    if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
+      plugins = composeJsPlugins(plugins)
+    }
+
+    const parallelPluginInitResult = await initializeParallelPlugins(plugins)
 
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(

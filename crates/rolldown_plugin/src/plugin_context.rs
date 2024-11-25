@@ -182,12 +182,10 @@ impl PluginContextImpl {
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
-    // TODO external module
     self.modules.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
   }
 
   pub fn get_module_ids(&self) -> Vec<String> {
-    // TODO external module
     self.modules.iter().map(|v| v.key().to_string()).collect()
   }
 

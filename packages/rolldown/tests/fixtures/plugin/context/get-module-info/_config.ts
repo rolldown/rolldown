@@ -5,6 +5,7 @@ import path from 'node:path'
 const meta = { value: 1 }
 export default defineTest({
   config: {
+    external: ['external'],
     plugins: [
       {
         name: 'test-plugin-context',
@@ -34,6 +35,7 @@ export default defineTest({
             switch (moduleInfo.id) {
               case path.join(import.meta.dirname, 'main.js'):
                 expect(moduleInfo.importedIds).toStrictEqual([
+                  'external',
                   path.join(import.meta.dirname, 'static.js'),
                 ])
                 expect(moduleInfo.dynamicallyImportedIds).toStrictEqual([
@@ -59,9 +61,13 @@ export default defineTest({
                   path.join(import.meta.dirname, 'main.js'),
                 ])
                 break
+
+              case 'external':
+                expect(moduleInfo.id).toBe('external')
+                break
             }
           }
-          expect(count).toBe(3)
+          expect(count).toBe(4)
         },
       },
     ],

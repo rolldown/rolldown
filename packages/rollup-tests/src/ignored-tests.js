@@ -66,7 +66,6 @@ const ignoreTests = [
   // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@custom-module-options: supports adding custom options to modules",
-  "rollup@function@custom-external-module-options: supports adding custom options to external modules",
 
   // Should delete use strict from function body
   "rollup@function@function-use-strict-directive-removed: should delete use strict from function body",

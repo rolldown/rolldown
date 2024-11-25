@@ -17,8 +17,8 @@ x = [data_default, data_default, data_default2];
 ```js
 
 //#region data.json
-const some = "data";
-var data_default = { some };
+var some = "data";
+var data_default = { "some": some };
 
 //#endregion
 //#region entry.js
@@ -39,7 +39,7 @@ x = [
 +var some = "data";
  var data_default = {
 -    some: "data"
-+    some
++    "some": some
  };
 -var data_default2 = {
 -    some: "data"

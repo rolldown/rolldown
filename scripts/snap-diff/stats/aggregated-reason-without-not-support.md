@@ -37,6 +37,10 @@
 - crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle
 - crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js
+## sub optimal
+- crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
+- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
+- crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## cross module constant folding
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
@@ -46,6 +50,9 @@
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
+## skip quote
+- crates/rolldown/tests/esbuild/default/require_json
+- crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
@@ -55,15 +62,9 @@
 ## Wrong impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle
-## should inline variable
-- crates/rolldown/tests/esbuild/loader/loader_json_prototype
-- crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
 ## static class field lowering
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts
 - crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle
-## sub optimal
-- crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
-- crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## lowering decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators
@@ -163,9 +164,7 @@
 - crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 ## `__require` rewrite
 - crates/rolldown/tests/esbuild/default/require_bad_argument_count
-## require json should not wrapped in `__esm`
-- crates/rolldown/tests/esbuild/default/require_json
-## require `.json`, the json file should not wrapped in `__esm`
+## wrong `export default require_entry()`;
 - crates/rolldown/tests/esbuild/default/require_shim_substitution
 ## should not reuse `__toESM(require('./foo'))`
 - crates/rolldown/tests/esbuild/default/string_export_names_common_js
@@ -211,12 +210,14 @@
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_asset_names_css
 ## abs output base
 - crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js
-## Wrong wrapkind, when json is imported by `require`
+## esbuild will inline declaration 
 - crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6
 ## json tree shaking
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
+## `__proto__` should use computed property
+- crates/rolldown/tests/esbuild/loader/loader_json_prototype
 ## should not transform `export * as ns from 'mod'` above es2019
 - crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision
 ## pure transformation is handled by `oxc-transform`
@@ -261,8 +262,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 ## resolve `mts` in ts
 - crates/rolldown/tests/esbuild/ts/ts_import_mts
-## commonjs json bundle
-- crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js
 ## needs support target
 - crates/rolldown/tests/esbuild/ts/ts_namespace_keep_names_target_es2015
 ## controversial

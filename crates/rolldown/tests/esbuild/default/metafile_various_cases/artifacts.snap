@@ -82,7 +82,7 @@ var esm_default = 1;
 
 //#endregion
 //#region <data:application/json,2>
-2;
+var json_2_default = 2;
 
 //#endregion
 //#region cjs.js

@@ -7,7 +7,8 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
-  ModuleType, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRefDbForModule,
+  ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDbForModule,
 };
 use rolldown_ecmascript::{EcmaAst, ToSourceString, WithMutFields};
 use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
@@ -34,11 +35,7 @@ impl<'link> LinkStage<'link> {
       let default_symbol_ref = module.default_export_ref;
       let is_json = matches!(module.module_type, ModuleType::Json);
       if !is_json || module.exports_kind == ExportsKind::CommonJs {
-        module
-          .named_exports
-          .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
-        // needs to support `preferConst`, so default statement may not be the second stmt info
-        module.stmt_infos.declare_symbol_for_stmt(1.into(), default_symbol_ref);
+        update_module_default_export_info(module, default_symbol_ref, 1.into());
       }
       module_idx_to_exports_kind.push((module.ecma_ast_idx(), module.exports_kind, is_json));
 
@@ -70,10 +67,17 @@ impl<'link> LinkStage<'link> {
       }
       // ExportsKind == Esm && ModuleType == Json
       if is_json_module {
-        json_object_expr_to_esm(self, module_idx, ast_idx);
-        continue;
+        if json_object_expr_to_esm(self, module_idx, ast_idx) {
+          continue;
+        } else {
+          // if json is not a ObjectExpression, we will fallback to normal esm lazy export transform
+          let module = &mut self.module_table.modules[module_idx];
+          let module = module.as_normal_mut().unwrap();
+          update_module_default_export_info(module, module.default_export_ref, 1.into());
+        }
       }
 
+      let Some((ecma_ast, _)) = self.ast_table.get_mut(ast_idx) else { unreachable!() };
       ecma_ast.program.with_mut(|fields| {
         let snippet = AstSnippet::new(fields.allocator);
         let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
@@ -89,20 +93,32 @@ impl<'link> LinkStage<'link> {
   }
 }
 
+fn update_module_default_export_info(
+  module: &mut NormalModule,
+  default_symbol_ref: SymbolRef,
+  idx: StmtInfoIdx,
+) {
+  module
+    .named_exports
+    .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
+  // needs to support `preferConst`, so default statement may not be the second stmt info
+  module.stmt_infos.declare_symbol_for_stmt(idx, default_symbol_ref);
+}
+
+/// return if the json is a ObjectExpression
 fn json_object_expr_to_esm(
   link_staged: &mut LinkStage,
   module_idx: ModuleIdx,
   ast_idx: EcmaAstIdx,
-) {
+) -> bool {
   let module = &mut link_staged.module_table.modules[module_idx];
   let Module::Normal(module) = module else {
-    return;
+    return false;
   };
 
   let (ecma_ast, _) = &mut link_staged.ast_table[ast_idx];
-  let mut body_len = 0;
   let mut declaration_binding_names = vec![];
-  ecma_ast.program.with_mut(|fields| {
+  let transformed = ecma_ast.program.with_mut(|fields| {
     let mut index_map = FxIndexMap::default();
     let snippet = AstSnippet::new(fields.allocator);
     let program = fields.program;
@@ -115,7 +131,7 @@ fn json_object_expr_to_esm(
       }
     };
     if !matches!(expr.without_parentheses(), Expression::ObjectExpression(_)) {
-      return;
+      return false;
     }
     let Expression::ObjectExpression(mut obj_expr) =
       snippet.expr_without_parentheses(expr.take_in(snippet.alloc()))
@@ -165,9 +181,12 @@ fn json_object_expr_to_esm(
       ))
       .collect::<Vec<_>>();
     program.body.extend(stmts);
-    println!("{}", program.to_source_string());
-    body_len = program.body.len();
+    true
   });
+
+  if !transformed {
+    return false;
+  }
 
   // TODO: Stats
   // recreate semantic data
@@ -192,8 +211,6 @@ fn json_object_expr_to_esm(
   let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(name.into());
   module.namespace_object_ref = namespace_object_ref;
   module.default_export_ref = default_export_ref;
-  // dbg!(&default_export_ref);
-  // dbg!(&namespace_object_ref);
 
   // update module stmts info
   // clear stmt info, since we need to split `ObjectExpression` into multiple decl, the original stmt info is invalid.
@@ -208,24 +225,17 @@ fn json_object_expr_to_esm(
     module.stmt_infos.add_stmt_info(stmt_info);
     module.named_exports.insert(name.clone(), LocalExport { span: SPAN, referenced: symbol_ref });
   }
-  // dbg!(&module.named_exports);
   // declare default export statement
-  // dbg!(&all_declared_symbols);
   let stmt_info = StmtInfo::default()
     .with_stmt_idx(declaration_binding_names.len())
     .with_declared_symbols(vec![default_export_ref])
     .with_referenced_symbols(all_declared_symbols);
-  // dbg!(&stmt_info);
   module.stmt_infos.add_stmt_info(stmt_info);
-
   module
     .named_exports
     .insert("default".into(), LocalExport { span: SPAN, referenced: default_export_ref });
 
   module.ecma_view.scope = ast_scope;
   link_staged.symbols.store_local_db(module_idx, symbol_ref_db);
-
-  // ecma_ast.program.with_mut(|fields| {
-  //   fields.program.body = stmts;
-  // });
+  true
 }

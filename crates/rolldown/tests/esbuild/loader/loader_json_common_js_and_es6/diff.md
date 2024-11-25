@@ -1,5 +1,6 @@
 # Reason
-1. Wrong wrapkind, when json is imported by `require`
+1. esbuild will inline declaration 
+2. sub optimal
 # Diff
 ## /out.js
 ### esbuild
@@ -27,35 +28,28 @@ console.log(x_json, y_default, small, if2);
 
 
 //#region y.json
-const y1 = true;
-const y2 = false;
+var y1 = true;
+var y2 = false;
 var y_default = {
-	y1,
-	y2
+	"y1": y1,
+	"y2": y2
 };
 
 //#endregion
 //#region z.json
-const small = "some small text";
-const key_2 = "test keyword imports";
+var small = "some small text";
+var if$1 = "test keyword imports";
 
 //#endregion
 //#region x.json
-var x_exports = {};
-__export(x_exports, {
-	default: () => x_default,
-	x: () => x
-});
-var x, x_default;
-var init_x = __esm({ "x.json"() {
-	x = true;
-	x_default = { x };
+var require_x = __commonJS({ "x.json"(exports, module) {
+	module.exports = { "x": true };
 } });
 
 //#endregion
 //#region entry.js
-const x_json = (init_x(), __toCommonJS(x_exports).default);
-console.log(x_json, y_default, small, key_2);
+const x_json = require_x();
+console.log(x_json, y_default, small, if$1);
 
 //#endregion
 ```
@@ -64,42 +58,31 @@ console.log(x_json, y_default, small, key_2);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,15 +1,24 @@
--var require_x = __commonJS({
--    "x.json"(exports, module) {
--        module.exports = {
--            x: true
--        };
--    }
--});
+@@ -1,15 +1,17 @@
 +var y1 = true;
 +var y2 = false;
- var y_default = {
++var y_default = {
++    "y1": y1,
++    "y2": y2
++};
++var small = "some small text";
++var if$1 = "test keyword imports";
+ var require_x = __commonJS({
+     "x.json"(exports, module) {
+         module.exports = {
+-            x: true
++            "x": true
+         };
+     }
+ });
+-var y_default = {
 -    y1: true,
 -    y2: false
-+    y1,
-+    y2
- };
- var small = "some small text";
+-};
+-var small = "some small text";
 -var if2 = "test keyword imports";
--var x_json = require_x();
+ var x_json = require_x();
 -console.log(x_json, y_default, small, if2);
-+var key_2 = "test keyword imports";
-+var x_exports = {};
-+__export(x_exports, {
-+    default: () => x_default,
-+    x: () => x
-+});
-+var x, x_default;
-+var init_x = __esm({
-+    "x.json"() {
-+        x = true;
-+        x_default = {
-+            x
-+        };
-+    }
-+});
-+var x_json = (init_x(), __toCommonJS(x_exports).default);
-+console.log(x_json, y_default, small, key_2);
++console.log(x_json, y_default, small, if$1);
 
 ```

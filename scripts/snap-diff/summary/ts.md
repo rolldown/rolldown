@@ -75,8 +75,6 @@
   diff
 ## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts/diff.md)
   diff
-## [ts_minified_bundle_common_js](../../../crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js/diff.md)
-  diff
 ## [ts_minify_derived_class](../../../crates/rolldown/tests/esbuild/ts/ts_minify_derived_class/diff.md)
   diff
 ## [ts_minify_enum_cross_file_inline_strings_into_templates](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates/diff.md)
@@ -119,6 +117,7 @@
 ## [ts_import_equals_tree_shaking_false](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false/bypass.md)
 ## [ts_import_equals_tree_shaking_true](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true/bypass.md)
 ## [ts_import_equals_undefined_import](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import/bypass.md)
+## [ts_minified_bundle_common_js](../../../crates/rolldown/tests/esbuild/ts/ts_minified_bundle_common_js/bypass.md)
 ## [ts_minified_bundle_es6](../../../crates/rolldown/tests/esbuild/ts/ts_minified_bundle_es6/bypass.md)
 ## [ts_minify_enum](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum/bypass.md)
 ## [ts_minify_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_minify_namespace/bypass.md)

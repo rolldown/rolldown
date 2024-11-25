@@ -171,16 +171,17 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     let require_path_str = concat_string!("require(\"", &importee.name, "\")");
 
     if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
-      let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-        .link_output
-        .symbol_db
-        .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+      let to_esm_fn_name = ctx.finalized_string_pattern_for_symbol_ref(
+        ctx.link_output.runtime.resolve_symbol("__toESM"),
+        ctx.chunk_idx,
+        &ctx.chunk.canonical_names,
+      );
 
       let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
       s.push_str("const ");
       s.push_str(external_module_symbol_name);
       s.push_str(" = ");
-      s.push_str(to_esm_fn_name);
+      s.push_str(&to_esm_fn_name);
       s.push('(');
       s.push_str(&require_path_str);
       s.push_str(");\n");

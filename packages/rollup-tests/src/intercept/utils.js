@@ -34,7 +34,7 @@ function updateFailedTestsJson(failuresInThisRound) {
 
 function loadUnsupportedFeaturesIgnoredTests() {
   const unsupportedIgnoredTests = []
-  const content = fs.readFileSync(path.join(__dirname, '../ignored-by-supported-features.md'), 'utf-8')
+  const content = fs.readFileSync(path.join(__dirname, '../ignored-by-unsupported-features.md'), 'utf-8')
   const matches = content.match(/- (.*)/g)
   if (matches) {
     for (const id of matches) {
@@ -44,15 +44,37 @@ function loadUnsupportedFeaturesIgnoredTests() {
   return unsupportedIgnoredTests
 }
 
-const ignoreTests = new Set(require('../ignored-tests').ignoreTests)
+const ignoredTests = new Set(require('../ignored-tests').ignoreTests)
 const onlyTests = new Set(require('../only-tests').onlyTests)
 const unsupportedFeaturesIgnoredTests = loadUnsupportedFeaturesIgnoredTests()
+const ignoredTreeshakingTests = new Set(require('../ignored-treeshaking-tests'))
+const ignoredSnapshotDifferentTests = new Set(require('../ignored-passed-snapshot-different-tests'))
+
+// The windows has special test, so here total is different at different platform.
+const status = {
+  // total: 0,
+  failed: 0,
+  skipFailed: 0,
+  ignored: ignoredTests.size,
+  'ignored(unsupported features)': unsupportedFeaturesIgnoredTests.length,
+  'ignored(treeshaking)': ignoredTreeshakingTests.size,
+  'ignored(behavior passed, snapshot different)': ignoredSnapshotDifferentTests.size,
+  passed: 0,
+}
+
+/**
+ * @param {string} id
+ */
+function shouldIgnoredTest(id) {
+  return ignoredTests.has(id) || ignoredSnapshotDifferentTests.has(id) || ignoredTreeshakingTests.has(id) || unsupportedFeaturesIgnoredTests.find((test) => test.includes(id))
+}
 
 module.exports = {
   calcTestId,
   loadFailedTests,
-  loadIgnoredTests: () => ignoreTests,
+  loadIgnoredTests: () => ignoredTests,
   loadOnlyTests: () => onlyTests,
   updateFailedTestsJson,
-  unsupportedFeaturesIgnoredTests,
+  shouldIgnoredTest,
+  status
 }

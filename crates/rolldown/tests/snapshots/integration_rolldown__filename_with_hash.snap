@@ -662,7 +662,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-YOfo_Nst.js
+- entry-!~{000}~.js => entry-BuJFijAd.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -688,7 +688,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/conditional_require
 
-- a-!~{000}~.js => a-BWFF3_9f.js
+- a-!~{000}~.js => a-B5Im-XCp.js
 
 # tests/esbuild/default/conditional_require_resolve
 
@@ -1223,7 +1223,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_props_import_export
 
-- cjs-!~{001}~.js => cjs-B5MjO0Sz.js
+- cjs-!~{001}~.js => cjs-BKOWxals.js
 - esm-!~{000}~.js => esm-C-hv133d.js
 
 # tests/esbuild/default/mangle_props_import_export_bundled
@@ -1341,15 +1341,15 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_no_bundle
 
-- entry-!~{000}~.js => entry-Boa6ReWp.js
+- entry-!~{000}~.js => entry-BZAAYL7y.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-BlOmyO8m.js
-- entry-!~{001}~.js => entry-DbntsxXm.js
-- copy-!~{002}~.js => copy-DhX-t6KW.js
+- entry-!~{000}~.js => entry-BO5JmBfw.js
+- entry-!~{001}~.js => entry-DpeUZHDg.js
+- copy-!~{002}~.js => copy-CcFzMm3a.js
 - dynamic-!~{005}~.js => dynamic-CZVXMYjb.js
 - assets/file-C2vEMN7j.file
 - entry2.css
@@ -1554,7 +1554,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_bad_argument_count
 
-- entry-!~{000}~.js => entry-DERZJJrF.js
+- entry-!~{000}~.js => entry-6PgEATvh.js
 
 # tests/esbuild/default/require_child_dir_common_js
 
@@ -1566,7 +1566,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_fs_browser
 
-- entry-!~{000}~.js => entry-8YLmlfZB.js
+- entry-!~{000}~.js => entry-DS_BkQpo.js
 
 # tests/esbuild/default/require_fs_node
 
@@ -1610,7 +1610,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_with_call_inside_try
 
-- entry-!~{000}~.js => entry-kxw-v-Xa.js
+- entry-!~{000}~.js => entry-D4Fjss_B.js
 
 # tests/esbuild/default/require_with_template
 
@@ -2932,7 +2932,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_b
 
-- entry-!~{000}~.js => entry-BOmdlNqG.js
+- entry-!~{000}~.js => entry-CsXjuZaE.js
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_c
 
@@ -4143,7 +4143,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-DXTS1x3x.js
+- main-!~{000}~.js => main-BQNBnSKG.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
@@ -4153,7 +4153,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.js => main-B7nRLZBX.js
+- main-!~{000}~.js => main-CBnqjF7B.js
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -4596,7 +4596,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/require_deconflict
 
-- main-!~{000}~.js => main-Cg-xrqI8.js
+- main-!~{000}~.js => main-DGPYeOoA.js
 
 # tests/rolldown/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 

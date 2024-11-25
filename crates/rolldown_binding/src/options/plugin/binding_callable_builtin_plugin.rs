@@ -15,15 +15,6 @@ use super::{
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
 
-#[napi]
-pub fn is_callable_compatible_builtin_plugin(plugin: BindingBuiltinPlugin) -> bool {
-  #[allow(clippy::match_like_matches_macro)]
-  match plugin.__name {
-    BindingBuiltinPluginName::ViteResolve => true,
-    _ => false,
-  }
-}
-
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn CallablePluginAsyncTrait> {
   type Error = napi::Error;
 
@@ -48,7 +39,6 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn CallablePluginAsyncTrait> {
 
 #[napi]
 pub struct BindingCallableBuiltinPlugin {
-  pub name: String,
   inner: Arc<dyn CallablePluginAsyncTrait>,
 }
 
@@ -58,7 +48,7 @@ impl BindingCallableBuiltinPlugin {
   pub fn new(plugin: BindingBuiltinPlugin) -> napi::Result<Self> {
     let inner: Arc<dyn CallablePluginAsyncTrait> = plugin.try_into()?;
 
-    Ok(Self { name: inner.name().to_string(), inner })
+    Ok(Self { inner })
   }
 
   #[napi]

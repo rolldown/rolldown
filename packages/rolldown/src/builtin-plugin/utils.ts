@@ -1,8 +1,4 @@
-import {
-  BindingBuiltinPlugin,
-  BindingCallableBuiltinPlugin,
-  isCallableCompatibleBuiltinPlugin as isCallableCompatibleBuiltinPluginInternal,
-} from '../binding'
+import { BindingBuiltinPlugin, BindingCallableBuiltinPlugin } from '../binding'
 
 import { BuiltinPlugin } from './constructors'
 
@@ -10,37 +6,23 @@ type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K]
 }
 
-export function makeBuiltinPluginCallable(plugin: BuiltinPlugin) {
+export function makeBuiltinPluginCallable(
+  plugin: BuiltinPlugin,
+): BuiltinPlugin & BindingCallableBuiltinPluginLike {
   let callablePlugin = new BindingCallableBuiltinPlugin(
     bindingifyBuiltInPlugin(plugin),
   )
 
-  const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & {
-    _original: BindingCallableBuiltinPlugin
-  } = {
-    _original: callablePlugin,
-  }
+  const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> &
+    BuiltinPlugin = plugin
   for (const key in callablePlugin) {
-    if (key === 'name') {
-      wrappedPlugin[key] = callablePlugin[key]
-    } else {
+    // @ts-expect-error
+    wrappedPlugin[key] = function (...args) {
       // @ts-expect-error
-      wrappedPlugin[key] = function (...args) {
-        // @ts-expect-error
-        return callablePlugin[key](...args)
-      }
+      return callablePlugin[key](...args)
     }
   }
-  return wrappedPlugin as BindingCallableBuiltinPluginLike & {
-    _original: BindingCallableBuiltinPlugin
-  }
-}
-
-export function isCallableBuiltinPlugin(plugin: any): boolean {
-  return (
-    '_original' in plugin &&
-    plugin._original instanceof BindingCallableBuiltinPlugin
-  )
+  return wrappedPlugin as BuiltinPlugin & BindingCallableBuiltinPluginLike
 }
 
 export function bindingifyBuiltInPlugin(
@@ -48,15 +30,6 @@ export function bindingifyBuiltInPlugin(
 ): BindingBuiltinPlugin {
   return {
     __name: plugin.name,
-    options: plugin.options,
+    options: plugin._options,
   }
-}
-
-export function isCallableCompatibleBuiltinPlugin(
-  plugin: any,
-): plugin is BuiltinPlugin {
-  return (
-    plugin instanceof BuiltinPlugin &&
-    isCallableCompatibleBuiltinPluginInternal(bindingifyBuiltInPlugin(plugin))
-  )
 }

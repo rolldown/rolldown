@@ -4,7 +4,6 @@ mod binding_transform_context;
 mod js_plugin;
 pub mod types;
 
-pub use binding_callable_builtin_plugin::is_callable_compatible_builtin_plugin;
 pub use binding_plugin_options::*;
 pub use js_plugin::*;
 mod binding_builtin_plugin;

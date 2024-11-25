@@ -14,7 +14,6 @@ export declare class BindingBundleEndEventData {
 }
 
 export declare class BindingCallableBuiltinPlugin {
-  name: string
   constructor(plugin: BindingBuiltinPlugin)
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
   load(id: string): Promise<BindingHookJsLoadOutput | null>
@@ -554,8 +553,6 @@ export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
 }
-
-export declare function isCallableCompatibleBuiltinPlugin(plugin: BindingBuiltinPlugin): boolean
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
 export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult

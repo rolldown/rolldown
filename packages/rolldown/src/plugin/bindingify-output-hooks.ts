@@ -55,7 +55,7 @@ export function bindingifyRenderChunk(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx, code, chunk) => {
+    plugin: async (ctx, code, chunk, opts) => {
       Object.entries(chunk.modules).forEach(([key, module]) => {
         chunk.modules[key] = transformToRenderedModule(module)
       })
@@ -70,8 +70,7 @@ export function bindingifyRenderChunk(
         ),
         code,
         chunk,
-        // TODO(hyf0): pass `BindingNormalizedOptions` in `renderChunk` hook
-        {} as NormalizedOutputOptions,
+        new NormalizedOutputOptionsImpl(opts),
       )
 
       if (ret == null) {

@@ -314,10 +314,15 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk {
       Ok(
-        cb.await_call((ctx.clone().into(), args.code.to_string(), args.chunk.clone().into()))
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
+        cb.await_call((
+          ctx.clone().into(),
+          args.code.to_string(),
+          args.chunk.clone().into(),
+          BindingNormalizedOptions::new(Arc::clone(args.options)),
+        ))
+        .await?
+        .map(TryInto::try_into)
+        .transpose()?,
       )
     } else {
       Ok(None)

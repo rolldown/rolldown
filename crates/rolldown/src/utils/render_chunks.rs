@@ -1,6 +1,6 @@
 use anyhow::Result;
 use futures::future::try_join_all;
-use rolldown_common::InstantiationKind;
+use rolldown_common::{InstantiationKind, SharedNormalizedBundlerOptions};
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::collapse_sourcemaps;
 
@@ -10,6 +10,7 @@ use crate::type_alias::IndexInstantiatedChunks;
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
+  options: &SharedNormalizedBundlerOptions,
 ) -> Result<()> {
   try_join_all(assets.iter_mut().map(|asset| async move {
     // TODO(hyf0): To be refactor:
@@ -20,6 +21,7 @@ pub async fn render_chunks<'a>(
         .render_chunk(HookRenderChunkArgs {
           code: asset.content.clone().try_into_inner_string()?,
           chunk: &ecma_meta.rendered_chunk,
+          options,
         })
         .await?;
 

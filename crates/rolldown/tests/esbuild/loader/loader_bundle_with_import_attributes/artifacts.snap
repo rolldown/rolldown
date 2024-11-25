@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region data.json
-const works = true;
-var data_default = { works };
+var works = true;
+var data_default = { "works": works };
 
 //#endregion
 //#region entry.js

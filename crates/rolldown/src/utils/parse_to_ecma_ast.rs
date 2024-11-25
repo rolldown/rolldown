@@ -11,7 +11,7 @@ use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
-use rolldown_utils::mime::guess_mime;
+use rolldown_utils::{concat_string, mime::guess_mime};
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
@@ -101,22 +101,9 @@ fn pre_process_source(
       }
     }
     ModuleType::Json => {
+      has_lazy_export = true;
       let content = source.try_into_string()?;
-      let content = match json_to_esm(&content) {
-        Ok(content) => content,
-        Err(err) => {
-          return Err(
-            BuildDiagnostic::json_parse(
-              stable_id.into(),
-              content.into(),
-              err.line(),
-              err.column(),
-              err.to_string().into(),
-            )
-            .into(),
-          );
-        }
-      };
+      let content = concat_string!("(", content, ")");
       (content, OxcParseType::Js)
     }
     ModuleType::Text => {

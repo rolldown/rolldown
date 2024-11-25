@@ -2,8 +2,9 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, BindingIdentifier, Expression, FunctionType, ImportOrExportKind, NumberBase,
-      ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
+      self, Argument, BindingIdentifier, Declaration, Expression, FunctionType, ImportOrExportKind,
+      ModuleDeclaration, NumberBase, ObjectPropertyKind, PropertyKind, Statement,
+      VariableDeclarationKind,
     },
     AstBuilder, NONE,
   },
@@ -13,7 +14,7 @@ use rolldown_common::{EcmaModuleAstUsage, Interop};
 
 use crate::allocator_helpers::take_in::TakeIn;
 
-type PassedStr<'a> = &'a str;
+type PassedStr<'ast> = &'ast str;
 
 // `AstBuilder` is more suitable name, but it's already used in oxc.
 pub struct AstSnippet<'ast> {
@@ -794,5 +795,27 @@ impl<'ast> AstSnippet<'ast> {
         expr,
       ),
     )
+  }
+
+  pub fn expr_without_parentheses(&self, mut expr: Expression<'ast>) -> Expression<'ast> {
+    while let Expression::ParenthesizedExpression(mut paren_expr) = expr {
+      expr = self.builder.move_expression(&mut paren_expr.expression);
+    }
+    expr
+  }
+
+  #[inline]
+  pub fn statement_module_declaration_export_named_declaration(
+    &self,
+    declaration: Declaration<'ast>,
+  ) -> Statement<'ast> {
+    Statement::from(self.builder.module_declaration_export_named_declaration(
+      SPAN,
+      Some(declaration),
+      self.builder.vec(),
+      None,
+      ImportOrExportKind::Value,
+      NONE,
+    ))
   }
 }

@@ -50,11 +50,14 @@ impl<'link> LinkStage<'link> {
       }
     });
 
-    for (ast_idx, exports_kind, is_json_module) in module_idx_to_exports_kind {
+    dbg!(&module_idx_to_exports_kind);
+    for (ast_idx, exports_kind, is_json_module) in module_idx_to_exports_kind.into_iter() {
+      dbg!(ast_idx);
       let Some((ecma_ast, module_idx)) = self.ast_table.get_mut(ast_idx) else {
         continue;
       };
       let module_idx = *module_idx;
+      dbg!(&module_idx);
       if matches!(exports_kind, ExportsKind::CommonJs) {
         ecma_ast.program.with_mut(|fields| {
           let snippet = AstSnippet::new(fields.allocator);
@@ -69,11 +72,10 @@ impl<'link> LinkStage<'link> {
         });
         return;
       }
-
       // ExportsKind == Esm && ModuleType == Json
       if is_json_module {
         json_object_expr_to_esm(self, module_idx, ast_idx);
-        return;
+        continue;
       }
 
       ecma_ast.program.with_mut(|fields| {
@@ -101,7 +103,6 @@ fn json_object_expr_to_esm(
     return;
   };
 
-  //
   let (ecma_ast, _) = &mut link_staged.ast_table[ast_idx];
   let mut body_len = 0;
   let mut declaration_binding_names = vec![];
@@ -109,6 +110,7 @@ fn json_object_expr_to_esm(
     let mut index_map = FxIndexMap::default();
     let snippet = AstSnippet::new(fields.allocator);
     let program = fields.program;
+    println!("{}", program.to_source_string());
     let Some(stmts) = program.body.first_mut() else { unreachable!() };
     let expr = match stmts {
       ast::Statement::ExpressionStatement(stmt) => &mut stmt.expression,
@@ -194,8 +196,8 @@ fn json_object_expr_to_esm(
   let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(name.into());
   module.namespace_object_ref = namespace_object_ref;
   module.default_export_ref = default_export_ref;
-  dbg!(&default_export_ref);
-  dbg!(&namespace_object_ref);
+  // dbg!(&default_export_ref);
+  // dbg!(&namespace_object_ref);
 
   // update module stmts info
   // clear stmt info, since we need to split `ObjectExpression` into multiple decl, the original stmt info is invalid.
@@ -210,14 +212,14 @@ fn json_object_expr_to_esm(
     module.stmt_infos.add_stmt_info(stmt_info);
     module.named_exports.insert(name.clone(), LocalExport { span: SPAN, referenced: symbol_ref });
   }
-  dbg!(&module.named_exports);
+  // dbg!(&module.named_exports);
   // declare default export statement
-  dbg!(&all_declared_symbols);
+  // dbg!(&all_declared_symbols);
   let stmt_info = StmtInfo::default()
     .with_stmt_idx(declaration_binding_names.len())
     .with_declared_symbols(vec![default_export_ref])
     .with_referenced_symbols(all_declared_symbols);
-  dbg!(&stmt_info);
+  // dbg!(&stmt_info);
   module.stmt_infos.add_stmt_info(stmt_info);
 
   module

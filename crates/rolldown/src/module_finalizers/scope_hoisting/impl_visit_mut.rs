@@ -639,9 +639,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let old_body = self.alloc.take(&mut program.body);
 
     let interested = self.ctx.module.module_type == ModuleType::Json;
-    if interested {
-      dbg!(&self.ctx.module.stmt_infos);
-    }
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(

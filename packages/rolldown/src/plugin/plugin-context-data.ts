@@ -21,16 +21,22 @@ export class PluginContextData {
   }
 
   getModuleOption(id: string) {
-    return this.moduleOptionMap.get(id)
+    const option = this.moduleOptionMap.get(id)
+    if (!option) {
+      const raw: ModuleOptions = {
+        moduleSideEffects: null,
+        meta: {},
+      }
+      this.moduleOptionMap.set(id, raw)
+      return raw
+    }
+    return option
   }
 
   getModuleInfo(id: string, context: BindingPluginContext) {
     const bindingInfo = context.getModuleInfo(id)
     if (bindingInfo) {
-      const info = transformModuleInfo(
-        bindingInfo,
-        this.moduleOptionMap.get(id)!,
-      )
+      const info = transformModuleInfo(bindingInfo, this.getModuleOption(id))
       return info
     }
     return null

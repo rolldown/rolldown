@@ -58,6 +58,7 @@
  - rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook (load entry module at resolveId hook)
  - rollup@function@preload-module: allows pre-loading modules via this.load (load entry module at resolveId hook)
  - rollup@function@module-side-effects@writable: ModuleInfo.moduleSideEffects should be writable during build time(load entry module at resolveId hook)
+ - rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity
 
 ### The `maxParallelFileOps` is not supported
  - rollup@function@max-parallel-file-operations@default: maxParallelFileOps not set
@@ -304,6 +305,9 @@
 
 ## Features
 
+### The rollup treat non-js-extensions module as js module, but the rolldown wiill guess the module type by externsion
+ - rollup@function@non-js-extensions: non .js extensions are preserved
+
 ### The `syntheticNamedExports` is not supported
  - rollup@form@synthetic-named-exports: synthetic named exports
  - rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy
@@ -415,8 +419,12 @@
  - rollup@function@plugin-error-only-first-transform: throws error only with first plugin transform
  - rollup@function@plugin-error-module-parsed: errors in moduleParsed abort the build
  - rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules
+ - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
+ - rollup@function@logging@promote-log-to-error: allows turning logs into errors
 
 ### The error/warning not implement
+ - rollup@function@non-function-hook-async: throws when providing a value for an async function hook
+ - rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook
  - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none
  - rollup@function@circular-default-exports: handles circular default exports
  - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (chunk empty warning)

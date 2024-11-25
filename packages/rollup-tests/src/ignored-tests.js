@@ -29,7 +29,6 @@ const ignoreTests = [
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
  
   // The result is not working as expected
-  "rollup@function@non-js-extensions: non .js extensions are preserved",
   "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",// https://github.com/rolldown/rolldown/issues/2864
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",// https://github.com/oxc-project/oxc/issues/7209
@@ -50,12 +49,6 @@ const ignoreTests = [
   "rollup@form@comment-before-import: preserves comments before imports@generates es",
   "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
 
-  // Logging is not working as expected
-  "rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs",
-  "rollup@function@logging@log-from-options: can log from the options hook",
-  "rollup@function@logging@plugin-order: allows to order plugins when logging",
-  "rollup@function@logging@promote-log-to-error: allows turning logs into errors",
-
   // The output plugins hooks is not working as expected
   "rollup@function@options-in-renderstart: makes input and output options available in renderStart",
 
@@ -66,21 +59,12 @@ const ignoreTests = [
   "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
   "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
 
-  // The input option is emtpy string
-  "rollup@function@avoid-variable-be-empty: avoid variable from empty module name be empty",
- 
   // import.meta.ROLLUP_FILE_URL_<referenceId> is not supported
   "rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es",
   "rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es",
 
-  // Should check the hook typing is correct
-  "rollup@function@non-function-hook-async: throws when providing a value for an async function hook",
-  "rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook",
-
   // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
-  "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
-  "rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity",
   "rollup@function@custom-module-options: supports adding custom options to modules",
   "rollup@function@custom-external-module-options: supports adding custom options to external modules",
 

@@ -84,4 +84,8 @@ impl NormalizedBundlerOptions {
   pub fn is_sourcemap_enabled(&self) -> bool {
     self.sourcemap.is_some()
   }
+
+  pub fn is_esm_format_with_node_platform(&self) -> bool {
+    matches!(self.format, OutputFormat::Esm) && matches!(self.platform, Platform::Node)
+  }
 }

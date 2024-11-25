@@ -107,7 +107,7 @@ impl ModuleLoader {
     let symbols = SymbolRefDb::default();
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
-    let task = RuntimeModuleTask::new(runtime_id, tx.clone());
+    let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
     #[cfg(target_family = "wasm")]
     {
@@ -338,10 +338,36 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeModuleTaskResult { local_symbol_ref_db, mut module, runtime, ast } =
-            task_result;
+          let RuntimeModuleTaskResult {
+            local_symbol_ref_db,
+            mut module,
+            runtime,
+            ast,
+            raw_import_records,
+            resolved_deps,
+          } = task_result;
+          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
+            raw_import_records
+              .into_iter_enumerated()
+              .zip(resolved_deps)
+              .map(|((_rec_idx, raw_rec), info)| {
+                let id =
+                  self.try_spawn_new_task(info, None, false, raw_rec.asserted_module_type.clone());
+                // Dynamic imported module will be considered as an entry
+                self.intermediate_normal_modules.importers[id]
+                  .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
+
+                if matches!(raw_rec.kind, ImportKind::DynamicImport)
+                  && !user_defined_entry_ids.contains(&id)
+                {
+                  dynamic_import_entry_ids.insert(id);
+                }
+                raw_rec.into_resolved(id)
+              })
+              .collect::<IndexVec<ImportRecordIdx, _>>();
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
           module.ecma_ast_idx = Some(ast_idx);
+          module.import_records = import_records;
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
 
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);

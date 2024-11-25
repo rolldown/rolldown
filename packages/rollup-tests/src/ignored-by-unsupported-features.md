@@ -129,6 +129,7 @@
 
 ### The `input.context` is not supported
  - rollup@form@custom-context: allows custom context@generates es
+ - rollup@function@options-in-renderstart: makes input and output options available in renderStart
 
 ### `output.dynamicImportInCjs` is not supported
  - rollup@function@dynamic-import-this-function: uses correct "this" in dynamic imports when not using arrow functions

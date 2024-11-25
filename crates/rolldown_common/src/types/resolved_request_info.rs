@@ -34,4 +34,16 @@ impl ResolvedId {
       stable
     }
   }
+
+  pub fn new_external_without_side_effects(id: ArcStr) -> Self {
+    Self {
+      id,
+      ignored: false,
+      module_def_format: ModuleDefFormat::Unknown,
+      is_external: true,
+      package_json: None,
+      side_effects: None,
+      is_external_without_side_effects: true,
+    }
+  }
 }

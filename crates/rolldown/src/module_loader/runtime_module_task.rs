@@ -6,7 +6,8 @@ use rolldown_common::{
   ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, RuntimeModuleBrief, RuntimeModuleTaskResult, RUNTIME_MODULE_ID,
+  ModuleLoaderMsg, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  SharedNormalizedBundlerOptions, RUNTIME_MODULE_ID,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -20,6 +21,7 @@ pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   module_id: ModuleIdx,
   errors: Vec<BuildDiagnostic>,
+  options: SharedNormalizedBundlerOptions,
 }
 
 pub struct MakeEcmaAstResult {
@@ -30,13 +32,28 @@ pub struct MakeEcmaAstResult {
 }
 
 impl RuntimeModuleTask {
-  pub fn new(id: ModuleIdx, tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>) -> Self {
-    Self { module_id: id, tx, errors: Vec::new() }
+  pub fn new(
+    id: ModuleIdx,
+    tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
+    options: SharedNormalizedBundlerOptions,
+  ) -> Self {
+    Self { module_id: id, tx, errors: Vec::new(), options }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub fn run(mut self) -> anyhow::Result<()> {
-    let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-base.js"));
+    let source = if self.options.is_esm_format_with_node_platform() {
+      arcstr::literal!(concat!(
+        include_str!("../runtime/runtime-head-node.js"),
+        include_str!("../runtime/runtime-base.js"),
+        include_str!("../runtime/runtime-tail-node.js"),
+      ))
+    } else {
+      arcstr::literal!(concat!(
+        include_str!("../runtime/runtime-base.js"),
+        include_str!("../runtime/runtime-tail.js"),
+      ))
+    };
 
     let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
 
@@ -58,7 +75,7 @@ impl RuntimeModuleTask {
       stmt_infos,
       default_export_ref,
       imports,
-      import_records: _,
+      import_records: raw_import_records,
       exports_kind: _,
       warnings: _,
       has_eval,
@@ -129,6 +146,14 @@ impl RuntimeModuleTask {
         module,
         runtime,
         ast,
+        resolved_deps: raw_import_records
+          .iter()
+          .map(|rec| {
+            // We assume the runtime module only has external dependencies.
+            ResolvedId::new_external_without_side_effects(rec.module_request.to_string().into())
+          })
+          .collect(),
+        raw_import_records,
       }))
     {
       // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.

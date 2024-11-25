@@ -4143,7 +4143,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-CvhXrirm.js
+- main-!~{000}~.js => main-DXTS1x3x.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
@@ -4153,7 +4153,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.js => main-CAUF8iW7.js
+- main-!~{000}~.js => main-B7nRLZBX.js
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -4380,11 +4380,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-CbSuSMJE.js
+- main-!~{000}~.js => main-C19_NGhs.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-B0X2-Gko.js
+- main-!~{000}~.js => main-B0DHcS_I.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 
@@ -4486,6 +4486,10 @@ snapshot_kind: text
 # tests/rolldown/issues/2669
 
 - main-!~{000}~.js => main-DfNBBl1O.js
+
+# tests/rolldown/issues/2685
+
+- main-!~{000}~.js => main-DVonihTt.js
 
 # tests/rolldown/issues/2833
 

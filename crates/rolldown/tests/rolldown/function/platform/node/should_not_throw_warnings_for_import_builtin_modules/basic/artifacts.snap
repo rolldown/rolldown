@@ -7,6 +7,7 @@ snapshot_kind: text
 ## main.js
 
 ```js
+import { createRequire } from "module";
 import * as fs from "fs";
 import * as nodeFs from "node:fs";
 

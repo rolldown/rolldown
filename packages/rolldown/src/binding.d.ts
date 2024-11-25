@@ -39,8 +39,11 @@ export declare class BindingModuleInfo {
 export declare class BindingNormalizedOptions {
   get shimMissingExports(): boolean
   get input(): Array<string> | Record<string, string>
+  get dir(): string | null
   get entryFilenames(): string | null
   get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd'
+  get inlineDynamicImports(): boolean
+  get sourcemap(): boolean | 'inline' | 'hidden'
 }
 
 export declare class BindingOutputAsset {

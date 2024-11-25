@@ -46,6 +46,12 @@ impl BindingNormalizedOptions {
     }
   }
 
+  #[napi(getter)]
+  pub fn dir(&self) -> Option<String> {
+    // NOTE: rollup returns undefined when `dir` is not set
+    Some(self.inner.dir.clone())
+  }
+
   // For `Fn` variant, we can't convert it to JS, so we just return `None`.
   #[napi(getter)]
   pub fn entry_filenames(&self) -> Option<String> {
@@ -63,6 +69,21 @@ impl BindingNormalizedOptions {
       rolldown::OutputFormat::App => "app".to_string(),
       rolldown::OutputFormat::Iife => "iife".to_string(),
       rolldown::OutputFormat::Umd => "umd".to_string(),
+    }
+  }
+
+  #[napi(getter)]
+  pub fn inline_dynamic_imports(&self) -> bool {
+    self.inner.inline_dynamic_imports
+  }
+
+  #[napi(getter, ts_return_type = "boolean | 'inline' | 'hidden'")]
+  pub fn sourcemap(&self) -> Either<bool, String> {
+    match self.inner.sourcemap {
+      Some(rolldown::SourceMapType::File) => Either::A(true),
+      Some(rolldown::SourceMapType::Hidden) => Either::B("hidden".to_string()),
+      Some(rolldown::SourceMapType::Inline) => Either::B("inline".to_string()),
+      None => Either::A(false),
     }
   }
 }

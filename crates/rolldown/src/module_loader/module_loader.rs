@@ -11,9 +11,9 @@ use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
-  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleTable, ModuleType,
-  NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRefDb,
-  SymbolRefDbForModule, RUNTIME_MODULE_ID,
+  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleTable,
+  ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  SymbolRefDb, SymbolRefDbForModule, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -176,6 +176,20 @@ impl ModuleLoader {
               },
             }
           };
+
+          let id = ModuleId::new(&resolved_id.id);
+          self.shared_context.plugin_driver.set_module_info(
+            &id.clone(),
+            Arc::new(ModuleInfo {
+              code: None,
+              id,
+              is_entry: false,
+              importers: vec![],
+              dynamic_importers: vec![],
+              imported_ids: vec![],
+              dynamically_imported_ids: vec![],
+            }),
+          );
 
           self.symbol_ref_db.store_local_db(
             idx,

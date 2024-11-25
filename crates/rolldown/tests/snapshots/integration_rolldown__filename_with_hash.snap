@@ -970,9 +970,9 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_namespace_this_value
 
-- a-!~{000}~.js => a-BTBCWgsE.js
-- b-!~{001}~.js => b-BHzFVbNN.js
-- c-!~{002}~.js => c-DLZ6Rnj8.js
+- a-!~{000}~.js => a-Ccm5skrR.js
+- b-!~{001}~.js => b-DG7YT0yE.js
+- c-!~{002}~.js => c-DtjU8lpe.js
 - chunk-!~{003}~.js => chunk-D74pQ9g-.js
 
 # tests/esbuild/default/import_re_export_es6_issue149
@@ -4490,6 +4490,12 @@ snapshot_kind: text
 # tests/rolldown/issues/2833
 
 - main-!~{000}~.js => main-Dr53fwGV.js
+
+# tests/rolldown/issues/2903
+
+- main-!~{000}~.js => main-xMEzHYlw.js
+- main2-!~{001}~.js => main2-Q_U62K28.js
+- chunk-!~{002}~.js => chunk-CrpGerW8.js
 
 # tests/rolldown/issues/376
 

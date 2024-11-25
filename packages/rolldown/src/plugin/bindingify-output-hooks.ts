@@ -1,5 +1,4 @@
 import { normalizeHook } from '../utils/normalize-hook'
-import type { BindingPluginOptions } from '../binding'
 import {
   ChangedOutputs,
   collectChangedBundle,
@@ -12,12 +11,10 @@ import {
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
 import { transformToRenderedModule } from '../utils/transform-rendered-module'
-import type { BindingifyPluginArgs } from './bindingify-plugin'
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
-import {
-  NormalizedOutputOptions,
-  NormalizedOutputOptionsImpl,
-} from '../options/normalized-output-options'
+import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options'
+import type { BindingifyPluginArgs } from './bindingify-plugin'
+import type { BindingPluginOptions } from '../binding'
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -194,7 +191,7 @@ export function bindingifyWriteBundle(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx, bundle) => {
+    plugin: async (ctx, bundle, opts) => {
       const changed = {
         updated: new Set(),
         deleted: new Set(),
@@ -208,8 +205,7 @@ export function bindingifyWriteBundle(
           args.onLog,
           args.logLevel,
         ),
-        // TODO(hyf0): pass `BindingNormalizedOptions` in `renderChunk` hook
-        {} as NormalizedOutputOptions,
+        new NormalizedOutputOptionsImpl(opts),
         output,
       )
       return collectChangedBundle(changed, output)

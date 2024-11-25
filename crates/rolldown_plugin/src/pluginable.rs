@@ -7,13 +7,14 @@ use crate::{
     hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
     hook_render_error::HookRenderErrorArgs,
     hook_transform_ast_args::HookTransformAstArgs,
+    hook_write_bundle_args::HookWriteBundleArgs,
   },
   HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookGenerateBundleArgs,
   HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
   HookResolveIdArgs, HookTransformArgs, Plugin, SharedTransformPluginContext,
 };
 use anyhow::Ok;
-use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk, WatcherChangeKind};
+use rolldown_common::{ModuleInfo, RollupRenderedChunk, WatcherChangeKind};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;
 pub use crate::plugin::HookLoadReturn;
@@ -179,7 +180,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_write_bundle(
     &self,
     _ctx: &PluginContext,
-    _bundle: &mut Vec<Output>,
+    _args: &mut HookWriteBundleArgs,
   ) -> HookNoopReturn;
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
@@ -420,9 +421,9 @@ impl<T: Plugin> Pluginable for T {
   async fn call_write_bundle(
     &self,
     ctx: &PluginContext,
-    bundle: &mut Vec<Output>,
+    args: &mut HookWriteBundleArgs,
   ) -> HookNoopReturn {
-    Plugin::write_bundle(self, ctx, bundle).await
+    Plugin::write_bundle(self, ctx, args).await
   }
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta> {

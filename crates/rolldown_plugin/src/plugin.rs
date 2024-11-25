@@ -13,10 +13,10 @@ use crate::{
   },
   HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
   HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, SharedTransformPluginContext,
+  HookTransformArgs, HookWriteBundleArgs, SharedTransformPluginContext,
 };
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk, WatcherChangeKind};
+use rolldown_common::{ModuleInfo, RollupRenderedChunk, WatcherChangeKind};
 use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
@@ -235,7 +235,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn write_bundle(
     &self,
     _ctx: &PluginContext,
-    _bundle: &mut Vec<Output>,
+    _args: &mut HookWriteBundleArgs,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }

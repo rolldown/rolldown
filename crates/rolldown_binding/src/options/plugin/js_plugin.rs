@@ -390,11 +390,17 @@ impl Plugin for JsPlugin {
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    bundle: &mut Vec<rolldown_common::Output>,
+    args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
-      let changed = cb.await_call((ctx.clone().into(), bundle.clone().into())).await?;
-      update_outputs(bundle, changed)?;
+      let changed = cb
+        .await_call((
+          ctx.clone().into(),
+          args.bundle.clone().into(),
+          BindingNormalizedOptions::new(Arc::clone(args.options)),
+        ))
+        .await?;
+      update_outputs(args.bundle, changed)?;
     }
     Ok(())
   }

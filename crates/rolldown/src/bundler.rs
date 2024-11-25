@@ -67,7 +67,7 @@ impl Bundler {
         .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
     }
 
-    self.plugin_driver.write_bundle(&mut output.assets).await?;
+    self.plugin_driver.write_bundle(&mut output.assets, &self.options).await?;
 
     output.warnings.append(&mut self.warnings);
 

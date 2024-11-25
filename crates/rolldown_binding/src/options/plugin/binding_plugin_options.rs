@@ -107,11 +107,11 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
+    ts_type = "(ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
   )]
   pub render_chunk: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, String, RenderedChunk),
+      (BindingPluginContext, String, RenderedChunk, BindingNormalizedOptions),
       Option<BindingHookRenderChunkOutput>,
     >,
   >,

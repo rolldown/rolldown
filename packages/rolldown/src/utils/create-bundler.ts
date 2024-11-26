@@ -4,10 +4,16 @@ import { TreeshakingOptionsSchema } from '../treeshake'
 import { bindingifyInputOptions } from './bindingify-input-options'
 import { bindingifyOutputOptions } from './bindingify-output-options'
 import { composeJsPlugins } from './compose-js-plugins'
-import { normalizePluginOption } from './normalize-plugin-option'
+import {
+  checkOutputPluginOption,
+  normalizePluginOption,
+} from './normalize-plugin-option'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
+import { LOG_LEVEL_INFO } from '../log/logging'
+import { getLogger, getOnLog } from '../log/logger'
+import { getObjectPlugins } from '../plugin/plugin-driver'
 
 export async function createBundler(
   inputOptions: InputOptions,
@@ -29,10 +35,20 @@ export async function createBundler(
     outputOptions,
   )
 
+  const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
+  // Force `inputOptions.onLog` to `logHandler` because some rollup plugin hook tests use `options.onLog`.
+  const onLog = (inputOptions.onLog = getLogger(
+    getObjectPlugins(inputPlugins),
+    getOnLog(inputOptions, logLevel),
+    logLevel,
+  ))
+
   let plugins = [
     ...inputPlugins,
-    // TODO give warning if `outputOptions.plugins` using build hooks
-    ...(await normalizePluginOption(outputOptions.plugins)),
+    ...checkOutputPluginOption(
+      await normalizePluginOption(outputOptions.plugins),
+      onLog,
+    ),
   ]
 
   if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
@@ -47,6 +63,8 @@ export async function createBundler(
       plugins,
       inputOptions,
       outputOptions,
+      onLog,
+      logLevel,
     )
 
     // Convert `NormalizedOutputOptions` to `BindingInputOptions`

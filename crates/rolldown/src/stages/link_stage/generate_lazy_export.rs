@@ -1,6 +1,7 @@
 use indexmap::map::Entry;
 use oxc::{
   ast::ast::{self, Expression},
+  semantic::{SemanticBuilder, Stats},
   span::{CompactStr, SPAN},
 };
 use rolldown_common::{
@@ -200,9 +201,16 @@ fn json_object_expr_to_esm(
     return false;
   }
 
-  // TODO: Stats
   // recreate semantic data
-  let (mut symbol_table, scope) = ecma_ast.make_symbol_table_and_scope_tree();
+  #[allow(clippy::cast_possible_truncation)]
+  let (mut symbol_table, scope) = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
+    SemanticBuilder::new().with_scope_tree_child_ids(true).with_stats(Stats {
+      nodes: declaration_binding_names.len().next_power_of_two() as u32,
+      scopes: 1,
+      symbols: declaration_binding_names.len() as u32,
+      references: declaration_binding_names.len() as u32 * 2u32,
+    }),
+  );
 
   // let default_symbol_ref = module.default_export_ref;
 

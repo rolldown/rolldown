@@ -1,5 +1,5 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   IndexModules, Module, ModuleIdx, ModuleType, NormalModule, StmtInfoIdx, SymbolOrMemberExprRef,
@@ -140,7 +140,7 @@ impl LinkStage<'_> {
       .collect::<IndexVec<ModuleIdx, _>>();
 
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
-      oxc::index::index_vec![false; self.module_table.modules.len()];
+      oxc_index::index_vec![false; self.module_table.modules.len()];
 
     let context = &mut Context {
       modules: &self.module_table.modules,
@@ -246,7 +246,7 @@ impl LinkStage<'_> {
     }
 
     let mut index_side_effects_cache =
-      oxc::index::index_vec![SideEffectCache::None; self.module_table.modules.len()];
+      oxc_index::index_vec![SideEffectCache::None; self.module_table.modules.len()];
     let index_module_side_effects = self
       .module_table
       .modules

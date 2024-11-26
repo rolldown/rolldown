@@ -1,5 +1,6 @@
 use arcstr::ArcStr;
-use oxc::{index::IndexVec, span::Span};
+use oxc::span::Span;
+use oxc_index::IndexVec;
 
 use crate::{
   types::source_mutation::BoxedSourceMutation, ImportRecordIdx, ResolvedImportRecord,

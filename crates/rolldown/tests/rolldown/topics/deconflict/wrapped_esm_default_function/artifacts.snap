@@ -42,7 +42,6 @@ init_foo();
 
 ```
 - ../foo.js
-(0:0) "import assert from \"node:assert\";\n" --> (17:0) "var foo_exports = {};\n"
 (4:15) "function " --> (19:0) "function "
 (4:24) "foo(" --> (19:9) "foo$1("
 (4:28) "a$1) " --> (19:15) "a$1$1) "
@@ -58,14 +57,11 @@ init_foo();
 (6:18) "1)" --> (21:21) "1)"
 (6:20) "\n" --> (21:23) ";\n"
 (7:1) "\n" --> (22:0) "}\n"
-(0:0) "import assert from \"node:assert\";\n" --> (23:0) "var a$1;\n"
 (2:6) "a = " --> (25:1) "a$1 = "
 (2:10) "1;\n" --> (25:7) "1;\n"
-(0:0) "import assert from \"node:assert\";\n" --> (26:0) "} });\n"
 - ../bar.js
 (0:0) "import foo from './foo'" --> (30:0) "init_foo()"
 (0:23) "\n" --> (30:10) ";\n"
-(0:0) "import foo from './foo'\n" --> (31:0) "var bar_default = "
 (2:15) "{ " --> (31:18) "{ "
 (2:17) "foo }" --> (31:20) "foo: foo$1 "
 (2:22) "" --> (31:31) "};\n"
@@ -83,6 +79,5 @@ init_foo();
 (7:26) "foo, " --> (37:26) "foo, "
 (7:31) "'function')" --> (37:31) "\"function\")"
 (7:42) "\n" --> (37:42) ";\n"
-(9:0) "require('./foo')\n" --> (38:0) ""
-(0:0) "import assert from 'node:assert'\n" --> (38:0) "init_foo();\n"
+(9:0) "require('./foo')\n" --> (38:0) "init_foo();\n"
 ```

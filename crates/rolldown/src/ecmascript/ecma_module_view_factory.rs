@@ -1,8 +1,6 @@
 use arcstr::ArcStr;
-use oxc::{
-  index::IndexVec,
-  semantic::{ScopeTree, SymbolTable},
-};
+use oxc::semantic::{ScopeTree, SymbolTable};
+use oxc_index::IndexVec;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::{DeterminedSideEffects, HookSideEffects},

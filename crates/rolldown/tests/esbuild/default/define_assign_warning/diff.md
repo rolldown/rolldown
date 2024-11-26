@@ -2,46 +2,6 @@
 1. oxc define not support computed member expr
 2. not support member expr with write
 # Diff
-## /out/read.js
-### esbuild
-```js
-// read.js
-console.log(
-  [null, null, null],
-  [ident, ident, ident],
-  [dot.chain, dot.chain, dot.chain]
-);
-```
-### rolldown
-```js
-
-//#region read.js
-console.log([
-	null,
-	null,
-	b["c"]
-], [
-	ident,
-	ident,
-	e["f"]
-], [
-	dot.chain,
-	dot.chain,
-	h["i"]
-]);
-
-//#endregion
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/read.js
-+++ rolldown	read.js
-@@ -1,1 +1,1 @@
--console.log([null, null, null], [ident, ident, ident], [dot.chain, dot.chain, dot.chain]);
-+console.log([null, null, b["c"]], [ident, ident, e["f"]], [dot.chain, dot.chain, h["i"]]);
-
-```
 ## /out/write.js
 ### esbuild
 ```js

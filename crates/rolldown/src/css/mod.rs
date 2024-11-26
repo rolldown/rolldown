@@ -2,11 +2,8 @@ pub mod css_generator;
 
 use arcstr::ArcStr;
 
-use oxc::{
-  index::{Idx, IndexVec},
-  semantic::SymbolId,
-  span::Span,
-};
+use oxc::{semantic::SymbolId, span::Span};
+use oxc_index::{Idx, IndexVec};
 use rolldown_common::{
   CssRenderer, CssView, ImportKind, ImportRecordIdx, ModuleIdx, RawImportRecord, SymbolRef,
 };

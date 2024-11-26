@@ -1,5 +1,5 @@
 use indexmap::IndexSet;
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{Asset, AssetIdx, ChunkIdx, EcmaAstIdx, InstantiatedChunk, ModuleIdx};
 use rolldown_ecmascript::EcmaAst;
 

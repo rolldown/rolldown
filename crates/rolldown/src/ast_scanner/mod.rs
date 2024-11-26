@@ -7,7 +7,6 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
-use oxc::index::IndexVec;
 use oxc::semantic::{Reference, ReferenceId, ScopeId, SymbolTable};
 use oxc::span::SPAN;
 use oxc::{
@@ -21,6 +20,7 @@ use oxc::{
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
 };
+use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,

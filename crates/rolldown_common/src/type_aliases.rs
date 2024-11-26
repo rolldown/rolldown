@@ -1,4 +1,4 @@
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 
 use crate::{Chunk, ChunkIdx};
 

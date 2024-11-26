@@ -7,6 +7,6 @@ snapshot_kind: text
 ## INVALID_DEFINE_CONFIG
 
 ```text
-[INVALID_DEFINE_CONFIG] Error: `6` is not an identifier.
+[INVALID_DEFINE_CONFIG] Error: The define key `6` is not an identifier.
 
 ```

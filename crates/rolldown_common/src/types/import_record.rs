@@ -8,7 +8,7 @@ use rolldown_rstr::Rstr;
 
 use crate::{ImportKind, ModuleIdx, ModuleType, SymbolRef};
 
-oxc::index::define_index_type! {
+oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
 }
 

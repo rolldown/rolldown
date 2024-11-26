@@ -91,30 +91,6 @@ snapshot_kind: text
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[good0.js:1:28]
-   │
- 1 │ import x from "foo"; ({y = x} = 1)
-   │                            ┬  
-   │                            ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
-───╯
-
-```
-## ASSIGN_TO_IMPORT
-
-```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[good1.js:1:25]
-   │
- 1 │ import x from "foo"; ({[x]: y} = 1)
-   │                         ┬  
-   │                         ╰── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setX') and then import and call that function here instead.
-───╯
-
-```
-## ASSIGN_TO_IMPORT
-
-```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y z'
    ╭─[bad10.js:1:29]
    │

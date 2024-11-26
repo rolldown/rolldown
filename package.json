@@ -42,7 +42,8 @@
     "oxlint": "0.12.0",
     "prettier": "^3.3.1",
     "rolldown": "workspace:*",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "@babel/runtime": "7.26.0"
   },
   "prettier": {
     "printWidth": 80,

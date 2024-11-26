@@ -1,7 +1,8 @@
 use std::collections::hash_map::Entry;
 
 use arcstr::ArcStr;
-use oxc::{ast::VisitMut, index::IndexVec};
+use oxc::ast::VisitMut;
+use oxc_index::IndexVec;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;

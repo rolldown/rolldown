@@ -1,5 +1,5 @@
 use crate::{ExternalModule, ExternalModuleIdx, Module, ModuleIdx};
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 
 pub type IndexModules = IndexVec<ModuleIdx, Module>;
 pub type IndexExternalModules = IndexVec<ExternalModuleIdx, ExternalModule>;

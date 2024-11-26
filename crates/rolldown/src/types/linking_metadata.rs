@@ -1,7 +1,5 @@
-use oxc::{
-  index::IndexVec,
-  span::{CompactStr, Span},
-};
+use oxc::span::{CompactStr, Span};
+use oxc_index::IndexVec;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPointKind, ImportRecordIdx, ModuleIdx,
   ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,

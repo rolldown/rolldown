@@ -31,8 +31,8 @@ console.log(x_json, y_default, small, if2);
 var y1 = true;
 var y2 = false;
 var y_default = {
-	"y1": y1,
-	"y2": y2
+	y1,
+	y2
 };
 
 //#endregion
@@ -62,8 +62,8 @@ console.log(x_json, y_default, small, if$1);
 +var y1 = true;
 +var y2 = false;
 +var y_default = {
-+    "y1": y1,
-+    "y2": y2
++    y1,
++    y2
 +};
 +var small = "some small text";
 +var if$1 = "test keyword imports";

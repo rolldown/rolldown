@@ -1337,7 +1337,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_import_with_type_json
 
-- entry-!~{000}~.js => entry-FluVqhpm.js
+- entry-!~{000}~.js => entry-D7q62MC9.js
 
 # tests/esbuild/default/metafile_no_bundle
 
@@ -2305,7 +2305,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_bundle_with_import_attributes
 
-- entry-!~{000}~.js => entry-BB5aTz7z.js
+- entry-!~{000}~.js => entry-B_UCBVi0.js
 
 # tests/esbuild/loader/loader_bundle_with_type_json_only_default_export
 
@@ -2349,7 +2349,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry-!~{000}~.js => entry-DdVoDrhG.js
+- entry-!~{000}~.js => entry-DKWvIgJx.js
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -2478,7 +2478,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 
-- entry-!~{000}~.js => entry-DyUnS7Vp.js
+- entry-!~{000}~.js => entry-DSco5p2P.js
 
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
@@ -2486,37 +2486,37 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_no_bundle
 
-- test-!~{000}~.js => test-DPfewUC2.js
+- test-!~{000}~.js => test-mfbKE_YL.js
 
 # tests/esbuild/loader/loader_json_no_bundle_common_js
 
-- test-!~{000}~.js => test-cP8z_Wvh.js
+- test-!~{000}~.js => test-CiB_0WhV.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6
 
-- test-!~{000}~.js => test-DPfewUC2.js
+- test-!~{000}~.js => test-mfbKE_YL.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
 
-- test-!~{000}~.js => test-DPfewUC2.js
+- test-!~{000}~.js => test-mfbKE_YL.js
 
 # tests/esbuild/loader/loader_json_no_bundle_iife
 
-- test-!~{000}~.js => test-DQMIR9Pf.js
+- test-!~{000}~.js => test-Nn0-Ax_w.js
 
 # tests/esbuild/loader/loader_json_prototype
 
-- entry-!~{000}~.js => entry-DfYkjxFB.js
+- entry-!~{000}~.js => entry-DcP-3Eea.js
 
 # tests/esbuild/loader/loader_json_prototype_es5
 
-- entry-!~{000}~.js => entry-Z6-cObSG.js
+- entry-!~{000}~.js => entry-BufFrC-S.js
 
 # tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
 
-- a-!~{000}~.js => a-22m5I_6W.js
-- b-!~{001}~.js => b-Bs4OVPg_.js
-- data-!~{002}~.js => data-C5XJBlnK.js
+- a-!~{000}~.js => a-MdEEFcfN.js
+- b-!~{001}~.js => b-D1UGhCQt.js
+- data-!~{002}~.js => data-BZYlcjIS.js
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
@@ -4332,7 +4332,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/json/object
 
-- main-!~{000}~.js => main-BtchV8nx.js
+- main-!~{000}~.js => main-DnxIU-Hs.js
 
 # tests/rolldown/function/module_types/json/object_with_invalid_key
 
@@ -4340,7 +4340,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/json/object_with_reserved_key
 
-- main-!~{000}~.js => main-Cru-KVL2.js
+- main-!~{000}~.js => main-JgGfdFZ1.js
 
 # tests/rolldown/function/module_types/jsx
 

@@ -20,7 +20,7 @@ console.log(data_default);
 var __proto__ = { "foo": "bar" };
 var data_default = {
 	"": "The property below should be converted to a computed property:",
-	"__proto__": __proto__
+	__proto__: __proto__
 };
 
 //#endregion
@@ -43,7 +43,7 @@ console.log(data_default);
 -    ["__proto__"]: {
 -        foo: "bar"
 -    }
-+    "__proto__": __proto__
++    __proto__: __proto__
  };
  console.log(data_default);
 

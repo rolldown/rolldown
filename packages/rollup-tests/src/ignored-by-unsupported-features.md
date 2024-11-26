@@ -306,6 +306,10 @@
 
 ## Features
 
+### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
+ - rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es
+ - rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es
+
 ### The rollup treat non-js-extensions module as js module, but the rolldown wiill guess the module type by externsion
  - rollup@function@non-js-extensions: non .js extensions are preserved
 
@@ -362,6 +366,13 @@
 
 ### escaping external id is not supported
  - rollup@form@quote-id: handles escaping for external ids@generates es
+
+### remove `use strict` from function body
+ - rollup@function@function-use-strict-directive-removed: should delete use strict from function body
+
+### comment related
+ - rollup@form@comment-before-import: preserves comments before imports@generates es
+ - rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es
 
 ### The namespace object is not compatible with rollup
  - rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes
@@ -424,6 +435,7 @@
  - rollup@function@logging@promote-log-to-error: allows turning logs into errors
 
 ### The error/warning not implement
+ - rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming
  - rollup@function@non-function-hook-async: throws when providing a value for an async function hook
  - rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook
  - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none

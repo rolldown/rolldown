@@ -10,7 +10,10 @@ import type {
   PrivateResolveIdExtraOptions,
   SourceDescription,
 } from './index'
-import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
+import {
+  isEmptySourcemapFiled,
+  normalizeTransformHookSourcemap,
+} from '../utils/transform-sourcemap'
 import { transformModuleInfo } from '../utils/transform-module-info'
 import path from 'node:path'
 import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap'
@@ -261,7 +264,9 @@ export function bindingifyTransform(
 
       return {
         code: ret.code,
-        map: bindingifySourcemap(ret.map),
+        map: bindingifySourcemap(
+          normalizeTransformHookSourcemap(id, code, ret.map),
+        ),
         sideEffects: bindingifySideEffects(ret.moduleSideEffects),
         moduleType: ret.moduleType,
       }

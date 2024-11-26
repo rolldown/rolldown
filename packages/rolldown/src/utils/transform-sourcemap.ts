@@ -1,3 +1,5 @@
+import { ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap'
+
 export function isEmptySourcemapFiled(
   array: undefined | (string | null)[],
 ): boolean {
@@ -8,4 +10,28 @@ export function isEmptySourcemapFiled(
     return true
   }
   return false
+}
+
+export function normalizeTransformHookSourcemap(
+  id: string,
+  originalCode: string,
+  rawMap?: SourceMapInput,
+) {
+  if (!rawMap) {
+    return
+  }
+  // If sourcemap hasn't `sourcesContent` and `sources`, using original code to fill it.
+  // The rust side already has the feature at `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs#transform`.
+  // but it could be failed at `rolldown_sourcemap::SourceMap::from_json`, because the map is invalid.
+  let map =
+    typeof rawMap === 'object'
+      ? rawMap
+      : (JSON.parse(rawMap) as ExistingRawSourceMap)
+  if (map && isEmptySourcemapFiled(map.sourcesContent)) {
+    map.sourcesContent = [originalCode]
+  }
+  if (map && isEmptySourcemapFiled(map.sources)) {
+    map.sources = [id]
+  }
+  return map
 }

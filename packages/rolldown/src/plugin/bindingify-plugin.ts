@@ -126,7 +126,8 @@ export function bindingifyPlugin(
     bindingifyCloseWatcher(args)
 
   const result: BindingPluginOptions = {
-    name: plugin.name ?? 'unknown',
+    // The plugin name already normalized at `normalizePlugins`, see `packages/rolldown/src/utils/normalize-plugin-option.ts`
+    name: plugin.name!,
     buildStart,
     buildStartMeta,
     resolveId,

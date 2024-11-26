@@ -306,7 +306,7 @@
 
 ## Features
 
-### The `import.meta.ROLLUP_FILE_URL_<referenceId> is` not supported
+### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
  - rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es
  - rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es
 

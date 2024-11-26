@@ -1,7 +1,4 @@
 import { BindingLogLevel } from '../binding'
-import { LOG_LEVEL_INFO } from '../log/logging'
-import { getLogger, getOnLog } from '../log/logger'
-import { getObjectPlugins } from '../plugin/plugin-driver'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import { PluginContextData } from '../plugin/plugin-context-data'
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils'
@@ -17,20 +14,17 @@ import type {
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
 } from '../binding'
+import { LogHandler } from '../rollup'
+import { LogLevelOption } from '../log/logging'
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
+  onLog: LogHandler,
+  logLevel: LogLevelOption,
 ): BindingInputOptions {
   const pluginContextData = new PluginContextData()
-  const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
-  // Force `inputOptions.onLog` to `logHandler` because some rollup plugin hook tests use `options.onLog`.
-  const onLog = (inputOptions.onLog = getLogger(
-    getObjectPlugins(rawPlugins),
-    getOnLog(inputOptions, logLevel),
-    logLevel,
-  ))
 
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {

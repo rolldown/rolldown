@@ -22,9 +22,6 @@ const ignoreTests = [
   // It crashed at call `banner` function at rust. 
   "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
 
-  // The output plugins is not working
-  "rollup@form@per-output-plugins: allows specifying per-output plugins@generates es",
-
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
  

@@ -3,12 +3,23 @@ import { locate } from 'locate-character'
 import type { RollupLog } from '../rollup'
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
-  PLUGIN_ERROR = 'PLUGIN_ERROR'
+  PLUGIN_ERROR = 'PLUGIN_ERROR',
+  INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN'
 
 export function logInvalidLogPosition(pluginName: string): RollupLog {
   return {
     code: INVALID_LOG_POSITION,
     message: `Plugin "${pluginName}" tried to add a file position to a log or warning. This is only supported in the "transform" hook at the moment and will be ignored.`,
+  }
+}
+
+export function logInputHookInOutputPlugin(
+  pluginName: string,
+  hookName: string,
+): RollupLog {
+  return {
+    code: INPUT_HOOK_IN_OUTPUT_PLUGIN,
+    message: `The "${hookName}" hook used by the output plugin ${pluginName} is a build time hook and will not be run for that plugin. Either this plugin cannot be used as an output plugin, or it should have an option to configure it as an output plugin.`,
   }
 }
 

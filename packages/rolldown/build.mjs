@@ -1,6 +1,6 @@
 // @ts-check
 
-import { defineConfig } from 'npm-rolldown'
+import { defineConfig, rolldown } from 'npm-rolldown'
 import pkgJson from './package.json' with { type: 'json' }
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
@@ -28,7 +28,7 @@ const shared = defineConfig({
   ],
 })
 
-export default defineConfig([
+const configs = defineConfig([
   {
     ...shared,
     output: {
@@ -142,3 +142,7 @@ export default defineConfig([
     },
   },
 ])
+
+for (const config of configs) {
+  await (await rolldown(config)).write(config.output)
+}

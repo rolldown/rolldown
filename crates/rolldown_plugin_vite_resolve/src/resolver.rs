@@ -295,8 +295,6 @@ impl Resolver {
         Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
       }
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
-        // TODO(sapphi-red): maybe need to do the same thing for id mapped from browser field
-
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
         if is_bare_import(id) && !is_builtin(id, &self.runtime) && !id.contains('\0') {

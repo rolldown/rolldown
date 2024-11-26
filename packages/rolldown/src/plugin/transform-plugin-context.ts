@@ -31,7 +31,7 @@ export class TransformPluginContext extends PluginContext {
     onLog: LogHandler,
     LogLevelOption: LogLevelOption,
   ) {
-    super(context, plugin, data, onLog, LogLevelOption)
+    super(context, plugin, data, onLog, LogLevelOption, moduleId)
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {

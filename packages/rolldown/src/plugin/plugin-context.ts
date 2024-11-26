@@ -14,6 +14,8 @@ import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-co
 import { PartialNull } from '../types/utils'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
 import type { LogHandler, LogLevelOption } from '../rollup'
+import { LOG_LEVEL_WARN } from '../log/logging'
+import { logCycleLoading } from '../log/logs'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -62,9 +64,16 @@ export class PluginContext extends MinimalPluginContext {
     data: PluginContextData,
     onLog: LogHandler,
     logLevel: LogLevelOption,
+    currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin)
     this.load = async ({ id, ...options }) => {
+      if (id === currentLoadingModule) {
+        onLog(
+          LOG_LEVEL_WARN,
+          logCycleLoading(plugin.name!, currentLoadingModule),
+        )
+      }
       // resolveDependencies always true at rolldown
       const moduleInfo = data.getModuleInfo(id, context)
       if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {

@@ -290,6 +290,7 @@ export function bindingifyLoad(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          id,
         ),
         id,
       )

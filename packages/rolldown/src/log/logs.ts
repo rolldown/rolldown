@@ -4,7 +4,8 @@ import type { RollupLog } from '../rollup'
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
-  INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN'
+  INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
+  CYCLE_LOADING = 'CYCLE_LOADING'
 
 export function logInvalidLogPosition(pluginName: string): RollupLog {
   return {
@@ -20,6 +21,16 @@ export function logInputHookInOutputPlugin(
   return {
     code: INPUT_HOOK_IN_OUTPUT_PLUGIN,
     message: `The "${hookName}" hook used by the output plugin ${pluginName} is a build time hook and will not be run for that plugin. Either this plugin cannot be used as an output plugin, or it should have an option to configure it as an output plugin.`,
+  }
+}
+
+export function logCycleLoading(
+  pluginName: string,
+  moduleId: string,
+): RollupLog {
+  return {
+    code: CYCLE_LOADING,
+    message: `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
   }
 }
 

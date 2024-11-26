@@ -117,4 +117,6 @@ module.exports = [
     "rollup@form@external-empty-import-no-global: does not expect a global to be provided for empty imports (#1217)@generates es",
     "rollup@form@external-imports: prefixes global names with `global.` when creating UMD bundle (#57)@generates es",
     "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properites",
+    // passed, the rolldown give a specific warning
+    "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading"
 ]

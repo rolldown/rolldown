@@ -83,7 +83,11 @@ const configs = defineConfig([
               console.log('[build:done] Copying', file, `to ${copyTo}`)
               fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
               console.log(`[build:done] Cleaning ${file}`)
-              fsExtra.rmSync(file)
+              try {
+                // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.
+                // We could safely ignore the error.
+                fsExtra.rmSync(file)
+              } catch {}
             })
           } else {
             // Move the binary file to dist
@@ -92,7 +96,9 @@ const configs = defineConfig([
               console.log('[build:done] Copying', file, `to ${copyTo}`)
               fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
               console.log(`[build:done] Cleaning ${file}`)
-              fsExtra.rmSync(file)
+              try {
+                fsExtra.rmSync(file)
+              } catch {}
             })
           }
 

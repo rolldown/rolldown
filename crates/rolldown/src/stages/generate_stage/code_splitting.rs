@@ -3,7 +3,7 @@ use std::cmp::{Ordering, Reverse};
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, ModuleTable, OutputFormat};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -34,7 +34,7 @@ impl<'a> GenerateStage<'a> {
     let mut chunk_graph = ChunkGraph::new(&self.link_output.module_table);
     chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
 
-    let mut index_splitting_info: IndexSplittingInfo = oxc::index::index_vec![SplittingInfo {
+    let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
         bits: BitSet::new(entries_len),
         share_count: 0
       }; self.link_output.module_table.modules.len()];
@@ -74,7 +74,7 @@ impl<'a> GenerateStage<'a> {
     });
 
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
-      oxc::index::index_vec![false; self.link_output.module_table.modules.len()];
+      oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
 
     self.apply_advanced_chunks(&index_splitting_info, &mut module_to_assigned, &mut chunk_graph);
 
@@ -293,7 +293,7 @@ impl<'a> GenerateStage<'a> {
       sizes: f64,
     }
 
-    oxc::index::define_index_type! {
+    oxc_index::define_index_type! {
       pub struct ModuleGroupIdx = u32;
     }
 

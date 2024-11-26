@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@babel/runtime':
+        specifier: 7.26.0
+        version: 7.26.0
       '@ls-lint/ls-lint':
         specifier: ^2.2.3
         version: 2.2.3
@@ -176,6 +179,9 @@ importers:
 
   packages/rolldown:
     dependencies:
+      '@babel/runtime':
+        specifier: '>=7'
+        version: 7.26.0
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -2142,7 +2148,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 

@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
 use bitflags::bitflags;
-use oxc::{index::IndexVec, semantic::SymbolId, span::Span};
+use oxc::{semantic::SymbolId, span::Span};
+use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rustc_hash::{FxHashMap, FxHashSet};
 

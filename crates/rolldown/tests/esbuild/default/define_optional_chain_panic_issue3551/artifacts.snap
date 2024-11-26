@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,19 +10,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region dot-define.js
 1 .c;
-(a?.b).c;
+1 .c;
 1["c"];
-(a?.b)["c"];
+1["c"];
 1();
-(a?.b)();
+1();
 1 .c();
-(a?.b).c();
+1 .c();
 1["c"]();
-(a?.b)["c"]();
+1["c"]();
 delete 1 .c;
-delete (a?.b).c;
+delete 1 .c;
 delete 1["c"];
-delete (a?.b)["c"];
+delete 1["c"];
 
 //#endregion
 ```

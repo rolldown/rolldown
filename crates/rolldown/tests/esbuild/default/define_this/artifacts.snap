@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,17 +10,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region entry.js
 ok(
-	// These should be fully substituted
-	this,
-	this.foo,
-	this.foo.bar,
+	1,
+	2,
+	3,
 	// Should just substitute "this.foo"
-	this.foo.baz,
+	2 .baz,
 	// This should not be substituted
-	this.bar
+	1 .bar
 );
 (() => {
-	ok(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
+	ok(1, 2, 3, 2 .baz, 1 .bar);
 })();
 (function() {
 	doNotSubstitute(this, this.foo, this.foo.bar, this.foo.baz, this.bar);

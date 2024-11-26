@@ -4,9 +4,9 @@ use super::task_context::TaskContextMeta;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
 use arcstr::ArcStr;
-use oxc::index::IndexVec;
 use oxc::semantic::{ScopeId, SymbolTable};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
+use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{

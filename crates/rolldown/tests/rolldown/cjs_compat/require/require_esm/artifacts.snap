@@ -25,11 +25,8 @@ var esm = (init_esm(), __toCommonJS(esm_exports));
 # Sourcemap Visualizer
 
 ```
-- ../esm.js
-(0:0) "export { }\n" --> (23:0) "var esm_exports = {};\n"
 - ../main.js
 (0:0) "require('./esm.js');\n" --> (28:0) "init_esm();\n"
 (1:0) "var " --> (29:0) "var "
-(1:4) "esm = require('./esm.js');\n" --> (29:4) "esm = ("
-(0:0) "require('./esm.js');\n" --> (29:11) "init_esm(), __toCommonJS(esm_exports));\n"
+(1:4) "esm = require('./esm.js');\n" --> (29:4) "esm = (init_esm(), __toCommonJS(esm_exports));\n"
 ```

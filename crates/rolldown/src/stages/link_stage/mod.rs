@@ -1,7 +1,7 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use append_only_vec::AppendOnlyVec;
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
   ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,

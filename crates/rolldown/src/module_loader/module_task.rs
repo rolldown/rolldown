@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
 use futures::future::join_all;
-use oxc::{index::IndexVec, span::Span};
+use oxc::span::Span;
+use oxc_index::IndexVec;
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;

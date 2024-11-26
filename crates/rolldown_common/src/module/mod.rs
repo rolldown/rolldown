@@ -1,7 +1,7 @@
 pub mod external_module;
 pub mod normal_module;
 
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
 use crate::{

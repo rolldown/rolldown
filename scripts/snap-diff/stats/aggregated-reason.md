@@ -178,16 +178,10 @@
 - crates/rolldown/tests/esbuild/default/define_import_meta
 ## should warn when target do not support `imoprt.meta`
 - crates/rolldown/tests/esbuild/default/define_import_meta_es5
-## oxc define do not support optional chain
-- crates/rolldown/tests/esbuild/default/define_optional_chain
 ## lowering optional chain
 - crates/rolldown/tests/esbuild/default/define_optional_chain_lowered
 ## oxc define do not support  optional chain
 - crates/rolldown/tests/esbuild/default/define_optional_chain_lowered
-## define expr with optional chain
-- crates/rolldown/tests/esbuild/default/define_optional_chain_panic_issue3551
-## oxc define dont support this expr
-- crates/rolldown/tests/esbuild/default/define_this
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## Not sure if we needs to use `Object.define` pattern in iife

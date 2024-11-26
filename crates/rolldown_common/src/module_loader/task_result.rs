@@ -2,7 +2,7 @@ use crate::{
   dynamic_import_usage::DynamicImportExportsUsage, ImportRecordIdx, Module, ModuleIdx,
   RawImportRecord, ResolvedId, SymbolRefDbForModule,
 };
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 use rustc_hash::FxHashMap;

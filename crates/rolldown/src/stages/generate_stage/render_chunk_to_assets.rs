@@ -2,7 +2,7 @@ use std::path::Path;
 
 use futures::future::try_join_all;
 use indexmap::IndexSet;
-use oxc::index::{index_vec, IndexVec};
+use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
   Asset, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk,
   SourceMapType,

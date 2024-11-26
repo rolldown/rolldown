@@ -1,4 +1,4 @@
-use oxc::index::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 
 use crate::{ImportRecordIdx, NormalModule, RawImportRecord, ResolvedId, SymbolRefDbForModule};

@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
+use oxc::ast::VisitMut;
 use oxc::span::SourceType;
-use oxc::{ast::VisitMut, index::IndexVec};
+use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaView, EcmaViewMeta, ExportsKind,
   ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef,

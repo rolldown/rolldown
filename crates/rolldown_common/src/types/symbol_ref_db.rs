@@ -1,9 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
-use oxc::index::IndexVec;
 use oxc::semantic::{NodeId, ScopeId, SymbolFlags, SymbolTable};
 use oxc::span::SPAN;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
+use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;

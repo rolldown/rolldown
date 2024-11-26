@@ -25,13 +25,7 @@
   diff
 ## [define_import_meta_es5](../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5/diff.md)
   diff
-## [define_optional_chain](../../../crates/rolldown/tests/esbuild/default/define_optional_chain/diff.md)
-  diff
 ## [define_optional_chain_lowered](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_lowered/diff.md)
-  diff
-## [define_optional_chain_panic_issue3551](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_panic_issue3551/diff.md)
-  diff
-## [define_this](../../../crates/rolldown/tests/esbuild/default/define_this/diff.md)
   diff
 ## entry_names_no_slash_after_dir
   missing
@@ -192,6 +186,9 @@
 ## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)
 ## [const_with_let_no_mangle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
+## [define_optional_chain](../../../crates/rolldown/tests/esbuild/default/define_optional_chain)
+## [define_optional_chain_panic_issue3551](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_panic_issue3551)
+## [define_this](../../../crates/rolldown/tests/esbuild/default/define_this)
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
 ## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)

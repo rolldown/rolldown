@@ -56,12 +56,24 @@ impl PreProcessEcmaAst {
     }
 
     self.stats = semantic_ret.semantic.stats();
-    let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+    let (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
 
+    let (mut symbols, mut scopes) = ast.program.with_mut(|fields| {
+      let WithMutFields { allocator, program, .. } = fields;
+      // Use built-in define plugin.
+      if let Some(replace_global_define_config) = replace_global_define_config {
+        let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
+          .build(symbols, scopes, program);
+        self.ast_changed = true;
+        (ret.symbols, ret.scopes)
+      } else {
+        (symbols, scopes)
+      }
+    });
     // Transform TypeScript and jsx.
     if !matches!(parse_type, OxcParseType::Js) || !matches!(bundle_options.target, ESTarget::EsNext)
     {
-      let ret = ast.program.with_mut(move |fields| {
+      let ret = ast.program.with_mut(|fields| {
         let target: OxcESTarget = bundle_options.target.into();
         let mut transformer_options = TransformOptions::from(target);
         match parse_type {
@@ -99,14 +111,6 @@ impl PreProcessEcmaAst {
 
     ast.program.with_mut(|fields| -> BuildResult<()> {
       let WithMutFields { allocator, program, .. } = fields;
-      // Use built-in define plugin.
-      if let Some(replace_global_define_config) = replace_global_define_config {
-        let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
-          .build(symbols, scopes, program);
-        symbols = ret.symbols;
-        scopes = ret.scopes;
-        self.ast_changed = true;
-      }
       if !bundle_options.inject.is_empty() {
         // if the define replace something, we need to recreate the semantic data.
         // to correct the `root_unresolved_references`

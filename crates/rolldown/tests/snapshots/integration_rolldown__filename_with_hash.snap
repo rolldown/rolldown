@@ -731,7 +731,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/define_optional_chain_lowered
 
-- entry-!~{000}~.js => entry-BCuXcpgs.js
+- entry-!~{000}~.js => entry-D8Dibse-.js
 
 # tests/esbuild/default/define_optional_chain_panic_issue3551
 
@@ -1025,7 +1025,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_jsx
 
-- entry-!~{000}~.js => entry-CUIskHJp.js
+- entry-!~{000}~.js => entry-DfZF8im-.js
 
 # tests/esbuild/default/inject_jsx_dot_names
 

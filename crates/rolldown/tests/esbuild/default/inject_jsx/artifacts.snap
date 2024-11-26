@@ -8,13 +8,8 @@ snapshot_kind: text
 
 ```js
 
-//#region inject.js
-function el() {}
-function frag() {}
-
-//#endregion
 //#region entry.jsx
-console.log(el(frag, null, el("div", null)));
+console.log(React.createElement(React.Fragment, null, React.createElement("div", null)));
 
 //#endregion
 ```

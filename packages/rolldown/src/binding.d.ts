@@ -36,13 +36,28 @@ export declare class BindingModuleInfo {
 }
 
 export declare class BindingNormalizedOptions {
-  get shimMissingExports(): boolean
   get input(): Array<string> | Record<string, string>
+  get cwd(): string | null
+  get platform(): 'node' | 'browser' | 'neutral'
+  get shimMissingExports(): boolean
+  get name(): string | null
+  get cssEntryFilenames(): string | undefined
+  get cssChunkFilenames(): string | undefined
+  get entryFilenames(): string | undefined
+  get chunkFilenames(): string | undefined
+  get assetFilenames(): string
   get dir(): string | null
-  get entryFilenames(): string | null
+  get file(): string | null
   get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd'
+  get exports(): 'default' | 'named' | 'none' | 'auto'
+  get esModule(): boolean | 'if-default-prop'
   get inlineDynamicImports(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
+  get banner(): string | undefined | null | undefined
+  get footer(): string | undefined | null | undefined
+  get intro(): string | undefined | null | undefined
+  get outro(): string | undefined | null | undefined
+  get externalLiveBindings(): boolean
 }
 
 export declare class BindingOutputAsset {

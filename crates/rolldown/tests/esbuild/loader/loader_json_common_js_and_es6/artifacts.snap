@@ -13,8 +13,8 @@ snapshot_kind: text
 var y1 = true;
 var y2 = false;
 var y_default = {
-	"y1": y1,
-	"y2": y2
+	y1,
+	y2
 };
 
 //#endregion

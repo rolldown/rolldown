@@ -12,7 +12,7 @@ snapshot_kind: text
 var test = 123;
 var invalid_identifier = true;
 var test_default = {
-	"test": test,
+	test,
 	"invalid-identifier": invalid_identifier
 };
 

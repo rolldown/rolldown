@@ -106,9 +106,6 @@
 ## cjs module lexer can't recognize esbuild interop pattern
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 - crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
-## skip quote
-- crates/rolldown/tests/esbuild/default/require_json
-- crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle

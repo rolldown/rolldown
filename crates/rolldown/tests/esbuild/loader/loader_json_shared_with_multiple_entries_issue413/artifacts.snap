@@ -30,7 +30,7 @@ console.log("b:", data_default);
 
 //#region data.json
 var test = 123;
-var data_default = { "test": test };
+var data_default = { test };
 
 //#endregion
 export { data_default };

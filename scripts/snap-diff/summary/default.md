@@ -147,8 +147,6 @@
   diff
 ## [require_bad_argument_count](../../../crates/rolldown/tests/esbuild/default/require_bad_argument_count/diff.md)
   diff
-## [require_json](../../../crates/rolldown/tests/esbuild/default/require_json/diff.md)
-  diff
 ## [require_shim_substitution](../../../crates/rolldown/tests/esbuild/default/require_shim_substitution/diff.md)
   diff
 ## [require_without_call](../../../crates/rolldown/tests/esbuild/default/require_without_call/diff.md)
@@ -322,6 +320,7 @@
 ## [re_export_default_no_bundle_common_js](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_common_js/bypass.md)
 ## [re_export_default_no_bundle_es6](../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_es6/bypass.md)
 ## [require_child_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_child_dir_common_js/bypass.md)
+## [require_json](../../../crates/rolldown/tests/esbuild/default/require_json/bypass.md)
 ## [require_main_cache_common_js](../../../crates/rolldown/tests/esbuild/default/require_main_cache_common_js/bypass.md)
 ## [require_parent_dir_common_js](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_common_js/bypass.md)
 ## [require_parent_dir_es6](../../../crates/rolldown/tests/esbuild/default/require_parent_dir_es6/bypass.md)

@@ -30,7 +30,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var test = 123;
 var invalid_identifier = true;
 var test_default = {
-	"test": test,
+	test,
 	"invalid-identifier": invalid_identifier
 };
 

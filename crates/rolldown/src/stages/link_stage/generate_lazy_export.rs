@@ -148,17 +148,25 @@ fn json_object_expr_to_esm(
           if key.is_empty() {
             continue;
           }
-          let legal_ident = legitimize_identifier_name(&key).to_rstr();
+          let legitimized_ident = legitimize_identifier_name(&key).to_rstr();
+          let is_legal_ident = legitimized_ident.as_str() == key;
           declaration_binding_names.push((
-            legal_ident.clone(),
+            legitimized_ident.clone(),
             key.to_rstr(),
-            legal_ident.as_str() == key,
+            is_legal_ident,
           ));
+
           let value = std::mem::replace(
             &mut property.value,
-            snippet.builder.expression_identifier_reference(SPAN, legal_ident.as_str()),
+            snippet.builder.expression_identifier_reference(SPAN, legitimized_ident.as_str()),
           );
-          match index_map.entry(legal_ident) {
+          if is_legal_ident {
+            property.shorthand = is_legal_ident;
+            property.key = ast::PropertyKey::StaticIdentifier(
+              snippet.builder.alloc_identifier_name(SPAN, legitimized_ident.as_ref()),
+            );
+          }
+          match index_map.entry(legitimized_ident) {
             Entry::Occupied(mut occ) => {
               *occ.get_mut() = value;
             }

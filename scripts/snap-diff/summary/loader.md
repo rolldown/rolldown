@@ -77,8 +77,6 @@
   diff
 ## [loader_json_prototype](../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype/diff.md)
   diff
-## [loader_json_prototype_es5](../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5/diff.md)
-  diff
 ## [loader_json_shared_with_multiple_entries_issue413](../../../crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413/diff.md)
   diff
 ## [with_type_json_override_loader](../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader/diff.md)
@@ -92,6 +90,7 @@
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)
 ## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime)
+## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names)
 ## [require_custom_extension_base64](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64)
 ## [require_custom_extension_data_url](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url)
 ## [require_custom_extension_prefer_longest](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest)
@@ -109,5 +108,5 @@
 ## [loader_file_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_file_common_js_and_es6/bypass.md)
 ## [loader_json_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_common_js_and_es6/bypass.md)
 ## [loader_json_no_bundle_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6/bypass.md)
-## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names/bypass.md)
+## [loader_json_prototype_es5](../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5/bypass.md)
 ## [loader_text_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6/bypass.md)

@@ -67,15 +67,21 @@ pub fn render_esm<'code>(
       WrapKind::Esm => {
         // init_xxx()
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        let wrapper_ref_name =
-          ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
         source_joiner.append_source(concat_string!(wrapper_ref_name.as_str(), "();"));
       }
       WrapKind::Cjs => {
         // "export default require_xxx();"
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        let wrapper_ref_name =
-          ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          *wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
         source_joiner.append_source(concat_string!(
           "export default ",
           wrapper_ref_name.as_str(),

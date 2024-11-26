@@ -1,5 +1,5 @@
 # Reason
-1. Wrong output
+1. rolldown auto code splitting for shared json module
 # Diff
 ## /out/a.js
 ### esbuild

@@ -1,5 +1,5 @@
 # Reason
-1. json tree shaking
+1. json partial namespace memberExpr used tree shaking
 # Diff
 ## /out.js
 ### esbuild

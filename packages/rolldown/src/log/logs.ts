@@ -1,5 +1,5 @@
 import { getCodeFrame } from '../utils/code-frame'
-import { locate } from 'locate-character'
+import { locate } from './locate-character'
 import type { RollupLog } from '../rollup'
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',

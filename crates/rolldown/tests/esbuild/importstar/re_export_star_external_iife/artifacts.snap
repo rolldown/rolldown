@@ -4,12 +4,6 @@ snapshot_kind: text
 ---
 # warnings
 
-## MISSING_GLOBAL_NAME
-
-```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "foo" in "output.globals" – guessing "foo".
-
-```
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -27,7 +21,7 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-(function(foo) {
+(function() {
 
 
 
@@ -39,5 +33,5 @@ Object.keys(foo).forEach(function (k) {
   });
 });
 
-})(foo);
+})();
 ```

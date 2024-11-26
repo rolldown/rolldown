@@ -831,11 +831,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
-- entry-!~{000}~.js => entry-GPrBFSZD.js
+- entry-!~{000}~.js => entry-nvIopULT.js
 
 # tests/esbuild/default/export_wildcard_fs_node_es6
 
-- entry-!~{000}~.js => entry-B8nrrZHR.js
+- entry-!~{000}~.js => entry-DH7rQmEp.js
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
@@ -1678,7 +1678,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
-- entry-!~{000}~.js => entry-CDCn-ijz.js
+- entry-!~{000}~.js => entry-y0Br_NmR.js
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
@@ -2128,31 +2128,31 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_star_common_js_no_bundle
 
-- entry-!~{000}~.js => entry-CV94t1UM.js
+- entry-!~{000}~.js => entry-D8P6OEk2.js
 
 # tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
 
-- entry-!~{000}~.js => entry-BTqu0iSN.js
+- entry-!~{000}~.js => entry-BuFXkkE_.js
 
 # tests/esbuild/importstar/re_export_star_es6_no_bundle
 
-- entry-!~{000}~.js => entry-DXTfhcAs.js
+- entry-!~{000}~.js => entry-BHybIGuC.js
 
 # tests/esbuild/importstar/re_export_star_external_common_js
 
-- entry-!~{000}~.js => entry-CV94t1UM.js
+- entry-!~{000}~.js => entry-D8P6OEk2.js
 
 # tests/esbuild/importstar/re_export_star_external_es6
 
-- entry-!~{000}~.js => entry-DXTfhcAs.js
+- entry-!~{000}~.js => entry-BHybIGuC.js
 
 # tests/esbuild/importstar/re_export_star_external_iife
 
-- entry-!~{000}~.js => entry-4DiH0ZQw.js
+- entry-!~{000}~.js => entry-D3nqj0uH.js
 
 # tests/esbuild/importstar/re_export_star_iife_no_bundle
 
-- entry-!~{000}~.js => entry-4DiH0ZQw.js
+- entry-!~{000}~.js => entry-D3nqj0uH.js
 
 # tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export
 
@@ -2854,7 +2854,7 @@ snapshot_kind: text
 - hoist-export-function-indirect-!~{00b}~.js => hoist-export-function-indirect-BDIYf6RP.js
 - hoist-export-local-direct-!~{006}~.js => hoist-export-local-direct-CCsVqZLN.js
 - hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-CPuGWYZV.js
-- hoist-export-star-!~{003}~.js => hoist-export-star-BDRonPqc.js
+- hoist-export-star-!~{003}~.js => hoist-export-star-Livf4TU2.js
 - hoist-import-!~{002}~.js => hoist-import-BYxW8d9R.js
 - hoist-use-strict-!~{000}~.js => hoist-use-strict-D77G22ht.js
 
@@ -4071,11 +4071,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
-- main-!~{000}~.js => main-DlDliOpw.js
+- main-!~{000}~.js => main-BYLt1poo.js
 
 # tests/rolldown/function/external/double-namespace-reexport
 
-- main-!~{000}~.js => main-DFrzSUzo.js
+- main-!~{000}~.js => main-Bqb9AAeG.js
 
 # tests/rolldown/function/external/export_external
 
@@ -4635,23 +4635,23 @@ snapshot_kind: text
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
-- entry-!~{000}~.js => entry-UhkbimvR.js
-- entry2-!~{001}~.js => entry2-D4ILItpm.js
-- main-!~{002}~.js => main-BBc570F5.js
+- entry-!~{000}~.js => entry-BwonpDjl.js
+- entry2-!~{001}~.js => entry2-BcOrPL42.js
+- main-!~{002}~.js => main-DjORokmf.js
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-Cxqg_a1c.js
-- entry2-!~{001}~.js => entry2-DTnAx45R.js
-- main-!~{002}~.js => main-Ch0Y77Hv.js
+- entry-!~{000}~.js => entry-LF56xhXL.js
+- entry2-!~{001}~.js => entry2-BT2gMT21.js
+- main-!~{002}~.js => main-DjORokmf.js
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
-- entry-!~{000}~.js => entry-DW5XRdrE.js
+- entry-!~{000}~.js => entry-C5Af_H5C.js
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.js => entry-vnC5QI7m.js
+- entry-!~{000}~.js => entry-CPodRrWV.js
 
 # tests/rolldown/sourcemap/debug_ids
 
@@ -4935,7 +4935,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
 
-- main-!~{000}~.js => main-3kqVcoRg.js
+- main-!~{000}~.js => main-mcqoN11I.js
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 

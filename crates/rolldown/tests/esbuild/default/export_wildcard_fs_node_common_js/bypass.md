@@ -1,6 +1,5 @@
 # Reason
 1. cjs module lexer can't recognize esbuild interop pattern
-2. should not generate two redundant `require`
 # Diff
 ## /out.js
 ### esbuild
@@ -28,7 +27,6 @@ __reExport(entry_exports, require("./external"), module.exports);
 ### rolldown
 ```js
 "use strict";
-require("./external");
 
 //#region internal.js
 let foo = 123;
@@ -57,14 +55,13 @@ Object.keys(___external).forEach(function (k) {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,13 +1,21 @@
+@@ -1,13 +1,20 @@
 -var entry_exports = {};
 -__export(entry_exports, {
 -    foo: () => foo
 -});
 -module.exports = __toCommonJS(entry_exports);
 -__reExport(entry_exports, require("fs"), module.exports);
-+require("./external");
  var foo = 123;
 -__reExport(entry_exports, require("./external"), module.exports);
 -0 && (module.exports = {

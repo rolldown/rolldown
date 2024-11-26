@@ -21,7 +21,6 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import "./external";
 
 export * from "fs"
 

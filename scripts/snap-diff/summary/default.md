@@ -35,10 +35,6 @@
   diff
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
   diff
-## [export_wildcard_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js/diff.md)
-  diff
-## [export_wildcard_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6/diff.md)
-  diff
 ## [external_es6_converted_to_common_js](../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
   diff
 ## [false_require](../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
@@ -163,8 +159,6 @@
   diff
 ## this_with_es6_syntax
   missing
-## [to_esm_wrapper_omission](../../../crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission/diff.md)
-  diff
 ## [top_level_await_allowed_import_with_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting/diff.md)
   diff
 ## [top_level_await_allowed_import_without_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting/diff.md)
@@ -250,6 +244,8 @@
 ## [dynamic_import_with_template_iife](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_template_iife/bypass.md)
 ## [entry_names_chunk_names_ext_placeholder](../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder/bypass.md)
 ## [export_forms_es6](../../../crates/rolldown/tests/esbuild/default/export_forms_es6/bypass.md)
+## [export_wildcard_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js/bypass.md)
+## [export_wildcard_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6/bypass.md)
 ## [exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js/bypass.md)
 ## [external_module_exclusion_relative_path](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_relative_path/bypass.md)
 ## [hashbang_banner_use_strict_order](../../../crates/rolldown/tests/esbuild/default/hashbang_banner_use_strict_order/bypass.md)
@@ -329,6 +325,7 @@
 ## [source_map](../../../crates/rolldown/tests/esbuild/default/source_map/bypass.md)
 ## [strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552](../../../crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552/bypass.md)
 ## [switch_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/bypass.md)
+## [to_esm_wrapper_omission](../../../crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission/bypass.md)
 ## [top_level_await_cjs_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch/bypass.md)
 ## [top_level_await_forbidden_require_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch/bypass.md)
 ## [top_level_await_iife_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_iife_dead_branch/bypass.md)

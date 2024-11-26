@@ -7,16 +7,6 @@
   diff
 ## [re_export_star_as_iife_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle/diff.md)
   diff
-## [re_export_star_common_js_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle/diff.md)
-  diff
-## [re_export_star_entry_point_and_inner_file](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file/diff.md)
-  diff
-## [re_export_star_es6_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle/diff.md)
-  diff
-## [re_export_star_external_common_js](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js/diff.md)
-  diff
-## [re_export_star_external_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6/diff.md)
-  diff
 ## [re_export_star_external_iife](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife/diff.md)
   diff
 ## [re_export_star_iife_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle/diff.md)
@@ -47,6 +37,8 @@
 ## [re_export_other_file_import_export_self_as_namespace_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_other_file_import_export_self_as_namespace_es6)
 ## [re_export_star_as_es6_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_es6_no_bundle)
 ## [re_export_star_as_external_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_es6)
+## [re_export_star_es6_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle)
+## [re_export_star_external_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6)
 ## [re_export_star_name_collision_not_ambiguous_export](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export)
 ## [re_export_star_name_collision_not_ambiguous_import](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import)
 ## [re_export_star_name_shadowing_not_ambiguous](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous)
@@ -88,3 +80,6 @@
 ## [re_export_namespace_import_unused_missing_es6](../../../crates/rolldown/tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6/bypass.md)
 ## [re_export_star_as_common_js_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_common_js_no_bundle/bypass.md)
 ## [re_export_star_as_external_common_js](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_common_js/bypass.md)
+## [re_export_star_common_js_no_bundle](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle/bypass.md)
+## [re_export_star_entry_point_and_inner_file](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file/bypass.md)
+## [re_export_star_external_common_js](../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js/bypass.md)

@@ -9,8 +9,6 @@ snapshot_kind: text
 ```js
 "use strict";
 
-require("a");
-require("b");
 
 //#region inner.js
 var inner_exports = {};

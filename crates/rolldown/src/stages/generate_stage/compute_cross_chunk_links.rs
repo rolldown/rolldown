@@ -7,8 +7,8 @@ use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, Module, ModuleIdx,
-  NamedImport, OutputFormat, SymbolRef, WrapKind,
+  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, ImportRecordMeta, Module,
+  ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::IntoParallelIterator;
@@ -182,7 +182,10 @@ impl<'a> GenerateStage<'a> {
                 }
               }
             })
-            .filter(|rec| matches!(rec.kind, ImportKind::Import))
+            .filter(|rec| {
+              matches!(rec.kind, ImportKind::Import)
+                && !rec.meta.contains(ImportRecordMeta::IS_EXPORT_START)
+            })
             .filter_map(|rec| {
               self.link_output.module_table.modules[rec.resolved_module].as_external()
             })

@@ -8,7 +8,6 @@ snapshot_kind: text
 
 ```js
 "use strict";
-require("./external");
 
 //#region internal.js
 let foo = 123;

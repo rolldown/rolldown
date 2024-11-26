@@ -13,7 +13,7 @@ var mod = (() => {
 ```
 ### rolldown
 ```js
-(function(foo) {
+(function() {
 
 
 
@@ -25,7 +25,7 @@ Object.keys(foo).forEach(function (k) {
   });
 });
 
-})(foo);
+})();
 ```
 ### diff
 ```diff
@@ -37,8 +37,7 @@ Object.keys(foo).forEach(function (k) {
 -    var entry_exports = {};
 -    __reExport(entry_exports, __require("foo"));
 -    return __toCommonJS(entry_exports);
--})();
-+(function (foo) {
++(function () {
 +    var foo = require("foo");
 +    Object.keys(foo).forEach(function (k) {
 +        if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
@@ -48,6 +47,6 @@ Object.keys(foo).forEach(function (k) {
 +            }
 +        });
 +    });
-+})(foo);
+ })();
 
 ```

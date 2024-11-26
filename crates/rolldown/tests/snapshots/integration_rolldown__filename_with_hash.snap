@@ -4501,6 +4501,14 @@ snapshot_kind: text
 - main2-!~{001}~.js => main2-EKxH9I8y.js
 - chunk-!~{002}~.js => chunk-CrpGerW8.js
 
+# tests/rolldown/issues/2903_2
+
+- main-!~{000}~.js => main-BcrDU5fs.js
+
+# tests/rolldown/issues/2903_3
+
+- main-!~{000}~.js => main-BcrDU5fs.js
+
 # tests/rolldown/issues/376
 
 - main-!~{000}~.js => main-CfuHZZW7.js

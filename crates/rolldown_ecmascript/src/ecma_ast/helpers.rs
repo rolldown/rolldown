@@ -21,4 +21,14 @@ impl EcmaAst {
       semantic.into_symbol_table_and_scope_tree()
     })
   }
+
+  pub fn make_symbol_table_and_scope_tree_with_semantic_builder<'a>(
+    &'a self,
+    semantic_builder: SemanticBuilder<'a>,
+  ) -> (SymbolTable, ScopeTree) {
+    self.program.with_dependent::<'a, (SymbolTable, ScopeTree)>(|_owner, dep| {
+      let semantic = semantic_builder.build(&dep.program).semantic;
+      semantic.into_symbol_table_and_scope_tree()
+    })
+  }
 }

@@ -106,7 +106,6 @@ pub fn render_cjs<'code>(
           ctx.chunk_idx,
           &ctx.chunk.canonical_names,
         );
-        ctx.link_output.symbol_db.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
         source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
       }
       WrapKind::Cjs => {

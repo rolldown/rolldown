@@ -78,17 +78,19 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       match self.ctx.linking_info.wrap_kind {
         WrapKind::Cjs => {
           let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-          let commonjs_ref_name = if self.ctx.options.profiler_names {
-            self.canonical_name_for_runtime("__commonJS")
+          let commonjs_ref = if self.ctx.options.profiler_names {
+            self.canonical_ref_for_runtime("__commonJS")
           } else {
-            self.canonical_name_for_runtime("__commonJSMin")
+            self.canonical_ref_for_runtime("__commonJSMin")
           };
+
+          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false);
 
           let old_body = program.body.take_in(self.alloc);
 
           program.body.push(self.snippet.commonjs_wrapper_stmt(
             wrap_ref_name,
-            commonjs_ref_name,
+            commonjs_ref_expr,
             old_body,
             self.ctx.module.ast_usage,
             self.ctx.options.profiler_names,
@@ -98,11 +100,12 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         WrapKind::Esm => {
           use ast::Statement;
           let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-          let esm_ref_name = if self.ctx.options.profiler_names {
-            self.canonical_name_for_runtime("__esm")
+          let esm_ref = if self.ctx.options.profiler_names {
+            self.canonical_ref_for_runtime("__esm")
           } else {
-            self.canonical_name_for_runtime("__esmMin")
+            self.canonical_ref_for_runtime("__esmMin")
           };
+          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false);
           let old_body = program.body.take_in(self.alloc);
 
           let mut fn_stmts = allocator::Vec::new_in(self.alloc);
@@ -161,7 +164,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           }
           program.body.push(self.snippet.esm_wrapper_stmt(
             wrap_ref_name,
-            esm_ref_name,
+            esm_ref_expr,
             stmts_inside_closure,
             self.ctx.options.profiler_names,
             &self.ctx.module.stable_id,
@@ -441,10 +444,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // use `__require` instead of `require`
         if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
           *call_expr.callee.get_inner_expression_mut() =
-            self.snippet.builder.expression_identifier_reference(
-              SPAN,
-              self.canonical_name_for_runtime("__require").as_str(),
-            );
+            self.finalized_expr_for_symbol_ref(self.canonical_ref_for_runtime("__require"), false);
         }
         let rewrite_ast = match &self.ctx.modules[rec.resolved_module] {
           Module::Normal(importee) => {

@@ -72,7 +72,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
 
         // `__toESM`
-        let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+        let to_esm_fn_name =
+          self.finalized_expr_for_symbol_ref(self.canonical_ref_for_runtime("__toESM"), false);
 
         // `require_foo`
         let importee_wrapper_ref_name =

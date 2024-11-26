@@ -288,7 +288,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn commonjs_wrapper_stmt(
     &self,
     binding_name: PassedStr,
-    commonjs_name: PassedStr,
+    commonjs_expr: ast::Expression<'ast>,
     statements: allocator::Vec<'ast, Statement<'ast>>,
     ast_usage: EcmaModuleAstUsage,
     profiler_names: bool,
@@ -334,7 +334,8 @@ impl<'ast> AstSnippet<'ast> {
     }
 
     //  __commonJS(...)
-    let mut commonjs_call_expr = self.call_expr(commonjs_name);
+    let mut commonjs_call_expr =
+      self.builder.call_expression(SPAN, commonjs_expr, NONE, self.builder.vec(), false);
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
         SPAN,
@@ -383,7 +384,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn esm_wrapper_stmt(
     &self,
     binding_name: PassedStr,
-    esm_fn_name: PassedStr,
+    esm_fn_expr: ast::Expression<'ast>,
     statements: allocator::Vec<'ast, Statement<'ast>>,
     profiler_names: bool,
     stable_id: &str,
@@ -398,7 +399,8 @@ impl<'ast> AstSnippet<'ast> {
     let body = self.builder.function_body(SPAN, self.builder.vec(), statements);
 
     //  __esm(...)
-    let mut commonjs_call_expr = self.call_expr(esm_fn_name);
+    let mut esm_call_expr =
+      self.builder.call_expression(SPAN, esm_fn_expr, NONE, self.builder.vec(), false);
 
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
@@ -426,18 +428,18 @@ impl<'ast> AstSnippet<'ast> {
         )),
         None,
       );
-      commonjs_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
+      esm_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
       let arrow_expr =
         self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
-      commonjs_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
+      esm_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
     };
 
     // var init_foo = ...
 
     self.var_decl_stmt(
       binding_name,
-      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),
+      ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc())),
     )
   }
 
@@ -748,19 +750,30 @@ impl<'ast> AstSnippet<'ast> {
   // If `node_mode` is false, using `__toESM(expr)`
   pub fn wrap_with_to_esm(
     &self,
-    to_esm_fn_name: PassedStr,
+    to_esm_fn_expr: Expression<'ast>,
     expr: Expression<'ast>,
     node_mode: bool,
   ) -> Expression<'ast> {
-    if node_mode {
-      self.alloc_call_expr_with_2arg_expr_expr(
-        to_esm_fn_name,
-        expr,
-        self.builder.expression_numeric_literal(SPAN, 1.0, "1", NumberBase::Decimal),
-      )
+    let args = if node_mode {
+      self.builder.vec_from_iter([
+        Argument::from(expr),
+        Argument::from(self.builder.expression_numeric_literal(
+          SPAN,
+          1.0,
+          "1",
+          NumberBase::Decimal,
+        )),
+      ])
     } else {
-      self.call_expr_with_arg_expr_expr(to_esm_fn_name, expr)
-    }
+      self.builder.vec1(Argument::from(expr))
+    };
+    ast::Expression::CallExpression(self.builder.alloc_call_expression(
+      SPAN,
+      to_esm_fn_expr,
+      NONE,
+      args,
+      false,
+    ))
   }
 
   /// convert `Expression` to

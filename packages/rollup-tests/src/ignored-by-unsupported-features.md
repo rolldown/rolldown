@@ -483,7 +483,6 @@
  - rollup@function@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level
  - rollup@function@reassign-import-fails: disallows assignments to imported bindings
  - rollup@function@unused-import: warns on unused imports ([#595])
- - rollup@function@per-output-plugins-warn-hooks: warns when input hooks are used in output plugins
  - rollup@function@module-level-directive: module level directives should produce warnings    
  - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports
  - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports

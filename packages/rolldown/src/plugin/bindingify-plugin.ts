@@ -126,7 +126,7 @@ export function bindingifyPlugin(
     bindingifyCloseWatcher(args)
 
   const result: BindingPluginOptions = {
-    name: plugin.name ?? 'unknown',
+    name: plugin.name!,
     buildStart,
     buildStartMeta,
     resolveId,

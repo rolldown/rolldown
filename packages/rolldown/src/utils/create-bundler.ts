@@ -5,8 +5,11 @@ import { bindingifyInputOptions } from './bindingify-input-options'
 import { bindingifyOutputOptions } from './bindingify-output-options'
 import { composeJsPlugins } from './compose-js-plugins'
 import {
+  ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
+  ANONYMOUS_PLUGIN_PREFIX,
   checkOutputPluginOption,
   normalizePluginOption,
+  normalizePlugins,
 } from './normalize-plugin-option'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import type { InputOptions } from '../options/input-options'
@@ -44,9 +47,12 @@ export async function createBundler(
   ))
 
   let plugins = [
-    ...inputPlugins,
+    ...normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX),
     ...checkOutputPluginOption(
-      await normalizePluginOption(outputOptions.plugins),
+      normalizePlugins(
+        await normalizePluginOption(outputOptions.plugins),
+        ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
+      ),
       onLog,
     ),
   ]

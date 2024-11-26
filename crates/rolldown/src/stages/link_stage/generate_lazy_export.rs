@@ -5,7 +5,7 @@ use oxc::{
   span::{CompactStr, SPAN},
 };
 use rolldown_common::{
-  AstScopes, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
+  AstScopes, ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
   ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDbForModule,
 };
@@ -109,6 +109,7 @@ fn json_object_expr_to_esm(
   module_idx: ModuleIdx,
   ast_idx: EcmaAstIdx,
 ) -> bool {
+  let target = link_staged.options.target;
   let module = &mut link_staged.module_table.modules[module_idx];
   let Module::Normal(module) = module else {
     return false;
@@ -161,7 +162,9 @@ fn json_object_expr_to_esm(
             &mut property.value,
             snippet.builder.expression_identifier_reference(SPAN, legitimized_ident.as_str()),
           );
-          if is_legal_ident {
+          if key == "__proto__" && !matches!(target, ESTarget::Es5) {
+            property.computed = true;
+          } else if is_legal_ident {
             property.shorthand = is_legal_ident;
             property.key = ast::PropertyKey::StaticIdentifier(
               snippet.builder.alloc_identifier_name(SPAN, legitimized_ident.as_ref()),

@@ -1,19 +1,25 @@
 import { defineTest } from '@tests'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
+
+const onLogFn = vi.fn()
 
 export default defineTest({
   config: {
     plugins: [
       {
         name: 'test-plugin-context',
+        onLog: (level, log) => {
+          expect(level).toBe('warn')
+          expect(log.code).toBe('CYCLE_LOADING')
+          onLogFn()
+        },
         async load(id) {
-          try {
-            await this.load({ id })
-          } catch (e: any) {
-            expect(e.message).toContain('cycle loading')
-          }
+          this.load({ id })
         },
       },
     ],
+  },
+  afterTest: () => {
+    expect(onLogFn).toHaveBeenCalledTimes(1)
   },
 })

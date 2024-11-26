@@ -4,6 +4,11 @@
   "ignored": 35,
   "ignored(unsupported features)": 402,
   "ignored(treeshaking)": 285,
+<<<<<<< HEAD
   "ignored(behavior passed, snapshot different)": 113,
   "passed": 683
+=======
+  "ignored(behavior passed, snapshot different)": 114,
+  "passed": 681
+>>>>>>> 3cbe018d6 (chore: using warnings)
 }

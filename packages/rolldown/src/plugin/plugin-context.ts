@@ -14,6 +14,8 @@ import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-co
 import { PartialNull } from '../types/utils'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
 import type { LogHandler, LogLevelOption } from '../rollup'
+import { LOG_LEVEL_WARN } from '../log/logging'
+import { logCycleLoading } from '../log/logs'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -67,8 +69,9 @@ export class PluginContext extends MinimalPluginContext {
     super(onLog, logLevel, plugin)
     this.load = async ({ id, ...options }) => {
       if (id === currentLoadingModule) {
-        throw new Error(
-          `Found the module ${id} cycle loading at ${plugin.name} plugin, you can't load it if the current loading or transforming is self.`,
+        onLog(
+          LOG_LEVEL_WARN,
+          logCycleLoading(plugin.name!, currentLoadingModule),
         )
       }
       // resolveDependencies always true at rolldown

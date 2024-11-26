@@ -1,4 +1,4 @@
-import { RolldownPluginRec } from '../plugin'
+import { RolldownPluginOption } from '../plugin'
 import {
   LogLevel,
   LogLevelOption,
@@ -58,7 +58,7 @@ export interface WatchOptions {
 
 export interface InputOptions {
   input?: InputOption
-  plugins?: RolldownPluginRec[]
+  plugins?: RolldownPluginOption
   external?: ExternalOption
   resolve?: {
     alias?: Record<string, string>

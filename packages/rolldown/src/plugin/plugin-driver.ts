@@ -1,12 +1,13 @@
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { Plugin, RolldownPluginRec } from './'
+import { Plugin } from './'
 import { error, logPluginError } from '../log/logs'
 import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
 import { InputOptions, OutputOptions, RolldownPlugin, VERSION } from '..'
 import { getLogger, getOnLog } from '../log/logger'
 import { BuiltinPlugin } from '../builtin-plugin/constructors'
+import { normalizePluginOption } from '../utils/normalize-plugin-option'
 
 export class PluginDriver {
   public async callOptionsHook(
@@ -15,7 +16,7 @@ export class PluginDriver {
     const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
     const plugins = getSortedPlugins(
       'options',
-      getObjectPlugins(inputOptions.plugins ?? []),
+      getObjectPlugins(await normalizePluginOption(inputOptions.plugins)),
     )
     const logger = getLogger(
       plugins,
@@ -96,7 +97,7 @@ export class PluginDriver {
   }
 }
 
-export function getObjectPlugins(plugins: RolldownPluginRec[]): Plugin[] {
+export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
   return plugins.filter((plugin) => {
     if (!plugin) {
       return undefined

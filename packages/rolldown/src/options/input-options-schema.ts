@@ -9,7 +9,7 @@ import {
   RollupLogWithStringSchema,
 } from '../log/logging'
 import { TreeshakingOptionsSchema } from '../treeshake'
-import type { RolldownPluginRec } from '../plugin'
+import type { RolldownPluginOption } from '../plugin'
 import type { StringOrRegExp } from '../types/utils'
 import type {
   ExternalOption,
@@ -97,7 +97,7 @@ const watchOptionsSchema = z.strictObject({
 
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
-  plugins: zodExt.phantom<RolldownPluginRec>().array().optional(),
+  plugins: zodExt.phantom<RolldownPluginOption>().optional(),
   external: externalSchema.optional(),
   resolve: z
     .strictObject({

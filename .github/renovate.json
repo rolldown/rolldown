@@ -23,11 +23,6 @@
       "matchManagers": ["cargo"],
       "matchPackagePrefixes": ["oxc"],
       "enabled": false
-    },
-    {
-      "groupName": "npm-rolldown",
-      "matchManagers": ["npm"],
-      "enabled": false
     }
   ]
 }

@@ -7,10 +7,10 @@ use std::{
 
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
+use sugar_path::SugarPath;
 
 use crate::{
-  package_json_cache::PackageJsonCache,
-  package_json_peer::PackageJsonPeerDep,
+  package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
     can_externalize_file, clean_url, get_extension, get_npm_package_name, is_bare_import,
     is_builtin, is_deep_import, normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
@@ -213,7 +213,6 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
   package_json_cache: Arc<PackageJsonCache>,
-  package_json_peer_dep: PackageJsonPeerDep,
   runtime: String,
   root: String,
   try_prefix: Option<String>,
@@ -227,14 +226,7 @@ impl Resolver {
     root: String,
     try_prefix: Option<String>,
   ) -> Self {
-    Self {
-      inner,
-      package_json_cache,
-      package_json_peer_dep: PackageJsonPeerDep::default(),
-      runtime,
-      root,
-      try_prefix,
-    }
+    Self { inner, package_json_cache, runtime, root, try_prefix }
   }
 
   pub fn resolve_raw<P: AsRef<Path>>(
@@ -284,7 +276,10 @@ impl Resolver {
         let side_effects = result
           .package_json()
           .and_then(|pkg_json| {
-            self.package_json_cache.cached_package_json(pkg_json).check_side_effects_for(&raw_path)
+            self
+              .package_json_cache
+              .cached_package_json_side_effects(pkg_json)
+              .check_side_effects_for(&raw_path)
           })
           .map(
             |side_effects| {
@@ -307,7 +302,7 @@ impl Resolver {
             let base_dir = get_base_dir(importer).unwrap_or(&self.root);
             if base_dir != self.root {
               if let Some(package_json) =
-                self.package_json_peer_dep.get_nearest_package_json_optional_peer_deps(base_dir)
+                self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
               {
                 if package_json.optional_peer_dependencies.contains(pkg_name) {
                   return Ok(Some(HookResolveIdOutput {
@@ -326,6 +321,24 @@ impl Resolver {
       }
       Err(err) => Err(err.to_owned()),
     }
+  }
+
+  fn get_nearest_package_json_optional_peer_deps(
+    &self,
+    p: &str,
+  ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
+    let specifier = Path::new(p).absolutize();
+    let Ok(result) = self.inner.resolve(
+      /* actually this can be anything, as the specifier is absolute path */ &self.root,
+      specifier.to_str().unwrap_or(p),
+    ) else {
+      // Errors when p is a virtual module
+      return None;
+    };
+
+    result
+      .package_json()
+      .map(|pj| self.package_json_cache.cached_package_json_optional_peer_dep(pj))
   }
 
   pub fn resolve_bare_import(

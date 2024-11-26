@@ -1,6 +1,6 @@
 // @ts-check
 
-import { defineConfig, rolldown } from 'npm-rolldown'
+import { defineConfig, rolldown } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'

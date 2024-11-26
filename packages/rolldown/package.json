@@ -62,7 +62,7 @@
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
     "bak_build-node": "unbuild",
-    "build-node": "node ./build.mjs",
+    "build-node": "tsx ./build.mts",
     "build-types": "tsc -p ./tsconfig.dts.json",
     "build-types-check": "tsc -p ./tsconfig.check.json",
     "build-native:debug": "run-s build-binding build-types build-node build-types-check",

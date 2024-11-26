@@ -2506,7 +2506,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_prototype
 
-- entry-!~{000}~.js => entry-DcP-3Eea.js
+- entry-!~{000}~.js => entry-YRstirpx.js
 
 # tests/esbuild/loader/loader_json_prototype_es5
 

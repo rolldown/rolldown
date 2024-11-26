@@ -12,7 +12,7 @@ snapshot_kind: text
 var __proto__ = { "foo": "bar" };
 var data_default = {
 	"": "The property below should be converted to a computed property:",
-	__proto__: __proto__
+	["__proto__"]: __proto__
 };
 
 //#endregion

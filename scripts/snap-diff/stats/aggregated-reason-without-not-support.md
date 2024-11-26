@@ -199,8 +199,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
 ## should treated it as cjs module
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle
-## `__proto__` should use computed property
-- crates/rolldown/tests/esbuild/loader/loader_json_prototype
 ## should not transform `export * as ns from 'mod'` above es2019
 - crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision
 ## pure transformation is handled by `oxc-transform`

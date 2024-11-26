@@ -126,9 +126,9 @@ pub fn render_chunk_exports(
                   }
                   Some(OutputExports::Default) => {
                     if matches!(options.format, OutputFormat::Cjs) {
-                      concat_string!("module.exports = ", canonical_name.as_str(), ";")
+                      concat_string!("module.exports = ", exported_value.as_str(), ";")
                     } else {
-                      concat_string!("return ", canonical_name.as_str(), ";")
+                      concat_string!("return ", exported_value.as_str(), ";")
                     }
                   }
                   Some(OutputExports::None) => String::new(),

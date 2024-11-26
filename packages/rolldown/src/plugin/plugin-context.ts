@@ -62,9 +62,15 @@ export class PluginContext extends MinimalPluginContext {
     data: PluginContextData,
     onLog: LogHandler,
     logLevel: LogLevelOption,
+    currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin)
     this.load = async ({ id, ...options }) => {
+      if (id === currentLoadingModule) {
+        throw new Error(
+          `Found the module ${id} cycle loading at ${plugin.name} plugin, you can't load it if the current loading or transforming is self.`,
+        )
+      }
       // resolveDependencies always true at rolldown
       const moduleInfo = data.getModuleInfo(id, context)
       if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {

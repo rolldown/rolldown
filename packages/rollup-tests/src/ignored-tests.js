@@ -49,9 +49,6 @@ const ignoreTests = [
   "rollup@form@comment-before-import: preserves comments before imports@generates es",
   "rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es",
 
-  // Nested plugin is not supported
-  "rollup@function@nested-and-async-plugin: works when nested plugin",
-
   // The output code/sourcemap is not same as rollup,
   "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
   "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",

@@ -102,7 +102,7 @@ fn update_module_default_export_info(
 }
 
 #[allow(clippy::too_many_lines)]
-/// return if the json is a ObjectExpression
+/// return true if the json is a ObjectExpression
 fn json_object_expr_to_esm(
   link_staged: &mut LinkStage,
   module_idx: ModuleIdx,

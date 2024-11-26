@@ -4,10 +4,9 @@ use oxc_resolver::NODEJS_BUILTINS;
 const NODEJS_PREFIXED_BUILTINS: &[&str] = &[
   // https://nodejs.org/api/modules.html#built-in-modules-with-mandatory-node-prefix
   "node:sea",
+  "node:sqlite",
   "node:test",
   "node:test/reporters",
-  // https://nodejs.org/api/sqlite.html
-  "node:sqlite",
 ];
 
 /// Using `phf` should be faster, but it would increase the compile time, since this function is

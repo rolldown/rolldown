@@ -46,12 +46,18 @@ const configs = defineConfig([
       {
         name: 'shim',
         buildEnd() {
-          const binaryFiles = globSync(
-            ['./src/rolldown-binding.*.node', './src/rolldown-binding.*.wasm'],
-            {
-              absolute: true,
-            },
-          )
+          // wasm build rely on `.node` binaries. But we don't want to copy `.node` files
+          // to the dist folder, so we need to distinguish between `.wasm` and `.node` files.
+          const wasmFiles = globSync(['./src/rolldown-binding.*.wasm'], {
+            absolute: true,
+          })
+
+          const isWasmBuild = wasmFiles.length > 0
+
+          const nodeFiles = globSync(['./src/rolldown-binding.*.node'], {
+            absolute: true,
+          })
+
           const wasiShims = globSync(
             ['./src/*.wasi.js', './src/*.wasi.cjs', './src/*.mjs'],
             {
@@ -59,21 +65,37 @@ const configs = defineConfig([
             },
           )
           // Binary build is on the separate step on CI
-          if (!process.env.CI && binaryFiles.length === 0) {
+          if (
+            !process.env.CI &&
+            wasmFiles.length === 0 &&
+            nodeFiles.length === 0
+          ) {
             throw new Error('No binary files found')
           }
 
           const copyTo = nodePath.resolve(outputDir, 'shared')
           fsExtra.ensureDirSync(copyTo)
 
-          // Move the binary file to dist
-          binaryFiles.forEach((file) => {
-            const fileName = nodePath.basename(file)
-            console.log('[build:done] Copying', file, `to ${copyTo}`)
-            fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
-            console.log(`[build:done] Cleaning ${file}`)
-            fsExtra.rmSync(file)
-          })
+          if (isWasmBuild) {
+            // Move the binary file to dist
+            wasmFiles.forEach((file) => {
+              const fileName = nodePath.basename(file)
+              console.log('[build:done] Copying', file, `to ${copyTo}`)
+              fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+              console.log(`[build:done] Cleaning ${file}`)
+              fsExtra.rmSync(file)
+            })
+          } else {
+            // Move the binary file to dist
+            nodeFiles.forEach((file) => {
+              const fileName = nodePath.basename(file)
+              console.log('[build:done] Copying', file, `to ${copyTo}`)
+              fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+              console.log(`[build:done] Cleaning ${file}`)
+              fsExtra.rmSync(file)
+            })
+          }
+
           wasiShims.forEach((file) => {
             const fileName = nodePath.basename(file)
             console.log('[build:done] Copying', file, 'to ./dist/shared')

@@ -178,7 +178,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
-    self.handle_new_url_with_string_literal_and_import_meta_url(it);
+    if self.options.is_some_and(|opt| opt.experimental.is_resolve_new_url_to_asset_enabled()) {
+      self.handle_new_url_with_string_literal_and_import_meta_url(it);
+    }
     walk::walk_new_expression(self, it);
   }
 }

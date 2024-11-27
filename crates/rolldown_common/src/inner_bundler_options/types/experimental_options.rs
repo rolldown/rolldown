@@ -15,6 +15,7 @@ pub struct ExperimentalOptions {
   pub strict_execution_order: Option<bool>,
   pub disable_live_bindings: Option<bool>,
   pub vite_mode: Option<bool>,
+  pub resolve_new_url_to_asset: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -33,5 +34,9 @@ impl ExperimentalOptions {
     } else {
       ROLLDOWN_IGNORE
     }
+  }
+
+  pub fn is_resolve_new_url_to_asset_enabled(&self) -> bool {
+    self.resolve_new_url_to_asset.unwrap_or(false)
   }
 }

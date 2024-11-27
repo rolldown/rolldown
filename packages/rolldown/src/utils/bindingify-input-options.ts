@@ -66,6 +66,7 @@ export function bindingifyInputOptions(
       strictExecutionOrder: inputOptions.experimental?.strictExecutionOrder,
       disableLiveBindings: inputOptions.experimental?.disableLiveBindings,
       viteMode: inputOptions.experimental?.viteMode,
+      resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
     },
     profilerNames: inputOptions?.profilerNames,
     jsx: bindingifyJsx(inputOptions.jsx),

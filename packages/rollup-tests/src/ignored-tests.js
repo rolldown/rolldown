@@ -10,10 +10,6 @@ const ignoreTests = [
   'rollup@function@symlink: follows symlinks',
   "rollup@form@sourcemaps-inline: correct sourcemaps are written (inline)@generates es",
 
-  // Here has unexpected error `Error: nul byte found in provided data at position: 0` from rust due to #967.
-  // It crashed at call `banner` function at rust. 
-  "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
-
   // The `RenderChunk#modules` should ignores non-bundled modules
   "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
  
@@ -37,9 +33,6 @@ const ignoreTests = [
   // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@custom-module-options: supports adding custom options to modules",
-
-  // The sourcemap related
-  "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es", // the source filed has error 
 ]
 
 module.exports = {

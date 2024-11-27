@@ -44,7 +44,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.source,
         self.comments,
         // In `NormalModule` the options is always `Some`, for `RuntimeModule` always enable annotations
-        self.options.is_some_and(|opt| !opt.treeshake.annotations()),
+        !self.options.treeshake.annotations(),
       )
       .detect_side_effect_of_stmt(stmt);
 
@@ -74,34 +74,32 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
-    if it.r#await && self.is_top_level() {
-      if let Some(format) = self.options.as_ref().map(|option| &option.format) {
-        if !format.keep_esm_import_export_syntax() {
-          self.result.errors.push(BuildDiagnostic::unsupported_feature(
-            self.file_path.as_str().into(),
-            self.source.clone(),
-            it.span(),
-            format!(
-              "Top-level await is currently not supported with the '{format}' output format",
-            ),
-          ));
-        }
-      }
+    if it.r#await && self.is_top_level() && !self.options.format.keep_esm_import_export_syntax() {
+      self.result.errors.push(BuildDiagnostic::unsupported_feature(
+        self.file_path.as_str().into(),
+        self.source.clone(),
+        it.span(),
+        format!(
+          "Top-level await is currently not supported with the '{format}' output format",
+          format = self.options.format
+        ),
+      ));
     }
 
     walk::walk_for_of_statement(self, it);
   }
 
   fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
-    if let Some(format) = self.options.as_ref().map(|option| &option.format) {
-      if !format.keep_esm_import_export_syntax() && self.is_top_level() {
-        self.result.errors.push(BuildDiagnostic::unsupported_feature(
-          self.file_path.as_str().into(),
-          self.source.clone(),
-          it.span(),
-          format!("Top-level await is currently not supported with the '{format}' output format",),
-        ));
-      }
+    if !self.options.format.keep_esm_import_export_syntax() && self.is_top_level() {
+      self.result.errors.push(BuildDiagnostic::unsupported_feature(
+        self.file_path.as_str().into(),
+        self.source.clone(),
+        it.span(),
+        format!(
+          "Top-level await is currently not supported with the '{format}' output format",
+          format = self.options.format
+        ),
+      ));
     }
     walk::walk_await_expression(self, it);
   }
@@ -178,7 +176,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
-    if self.options.is_some_and(|opt| opt.experimental.is_resolve_new_url_to_asset_enabled()) {
+    if self.options.experimental.is_resolve_new_url_to_asset_enabled() {
       self.handle_new_url_with_string_literal_and_import_meta_url(it);
     }
     walk::walk_new_expression(self, it);

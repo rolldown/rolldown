@@ -2,6 +2,10 @@
 
 ## Plugin related
 
+### The `rollup.rollup` api is not compatible with rollup, the build is start at `bundle.generate` or `bundle.write`, so the input plugin hooks is not called
+ - rollup@hooks@supports buildStart and buildEnd hooks
+ - rollup@hooks@supports warnings in buildStart and buildEnd hooks
+
 ### The `NormalziedOptions` at hooks is not compatible with rollup
  - rollup@function@options-hook: allows to read and modify options in the options hook
  - rollup@function@output-options-hook: allows to read and modify options in the options hook
@@ -50,6 +54,8 @@
  - rollup@function@plugin-cache@anonymous-has: throws for anonymous plugins checking the cache
  - rollup@function@plugin-cache@anonymous-set: throws for anonymous plugins adding to the cache
  - rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache
+ - rollup@hooks@Disables the default transform cache when using cache in transform only
+ - rollup@hooks@opts-out transform hook cache for custom cache
 
 ### The `PluginContext.load` is not fully supported
  - rollup@form@supports-core-js: supports core-js (`@rollup/plugin-commonjs` is not supported)
@@ -84,7 +90,8 @@
  - rollup@function@emit-file@chunk-filename-not-available-buildEnd: Throws when accessing the filename before it has been generated in buildEnd
  - rollup@function@emit-file@chunk-filename-not-available-renderStart: Throws when accessing the filename before it has been generated in renderStart
  - rollup@function@emit-file@chunk-filename-not-available: Throws when accessing the filename before it has been generated
- - rollup@function@emit-file@file-references-in-bundle: lists referenced files in the bundle"
+ - rollup@function@emit-file@file-references-in-bundle: lists referenced files in the bundle
+ - rollup@hooks@caches chunk emission in transform hook
 
 ### The `PluginContext.emitFile` emit prebuilt chunk is not supported 
  - rollup@function@emit-file@prebuilt-chunk: get right prebuilt chunks
@@ -299,12 +306,14 @@
 
 ### The chunk information is not compatible with rollup
  - rollup@form@addon-functions: provides module information when adding addons@generates es
+ - rollup@hooks@supports generateBundle hook including reporting rendered exports and source length(`modules.dep.renderedExports/removedExports`)
 
 ## Features
 
 ### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
  - rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es
  - rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es
+ - rollup@hooks@caches asset emission in transform hook
 
 ### The rollup treat non-js-extensions module as js module, but the rolldown wiill guess the module type by externsion
  - rollup@function@non-js-extensions: non .js extensions are preserved

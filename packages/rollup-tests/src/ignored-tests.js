@@ -29,6 +29,18 @@ const ignoreTests = [
   "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
   "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
+
+  // watch mode api is not compitable with rollup, the `rollup.watch` is not a promise at rollup
+  "rollup@hooks@Throws when not specifying \"file\" or \"dir\"",
+  "rollup@hooks@Throws when using the \"file\"\" option for multiple chunks",
+  "rollup@hooks@Throws when using the \"sourcemapFile\" option for multiple chunks",
+  "rollup@hooks@allows to enforce plugin hook order in watch mode",
+  "rollup@hooks@allows to enforce sequential plugin hook order in watch mode",
+
+  "rollup@hooks@keeps emitted ids stable between runs",// emit empty asset
+  "rollup@hooks@passes errors to the buildEnd hook", // should call buildEnd hook if error
+  "rollup@hooks@supports renderError hook", // should call renderError hook if error
+  "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
 ]
 
 module.exports = {

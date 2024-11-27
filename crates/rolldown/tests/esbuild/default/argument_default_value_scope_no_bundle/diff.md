@@ -1,5 +1,5 @@
 # Reason
-1. class field lowering
+1. lowering class
 # Diff
 ## /out.js
 ### esbuild

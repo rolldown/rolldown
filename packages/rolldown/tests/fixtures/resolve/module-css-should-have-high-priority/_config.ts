@@ -8,7 +8,6 @@ export default defineTest({
     },
   },
   afterTest() {
-    // @ts-ignore
     import('./assert.mjs')
   },
 })

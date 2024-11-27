@@ -258,7 +258,6 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     // if (ignoredTestPattern.some((name) => testCaseName?.includes(name))) {
     //   isIgnored = true
     // }
-    // @ts-ignore
     // if (ignoreCases.includes(testCaseName)) {
     //   isIgnored = true
     // }

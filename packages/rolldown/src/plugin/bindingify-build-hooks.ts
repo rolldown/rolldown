@@ -142,22 +142,16 @@ export function bindingifyResolveId(
         }
       }
 
-      const result: BindingHookResolveIdOutput = {
-        id: ret.id,
-        external: ret.external,
-      }
-
-      if (ret.moduleSideEffects !== null) {
-        // @ts-ignore TODO The typing should import from binding
-        result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
-      }
-
       args.pluginContextData.updateModuleOption(ret.id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects || null,
       })
 
-      return result
+      return {
+        id: ret.id,
+        external: ret.external,
+        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
     // @ts-ignore
@@ -308,25 +302,19 @@ export function bindingifyLoad(
         return { code: ret }
       }
 
-      let map = preProcessSourceMap(ret, id)
-
-      const result = {
-        code: ret.code,
-        map: map !== undefined ? bindingifySourcemap(map) : undefined,
-        moduleType: ret.moduleType,
-      }
-
-      if (ret.moduleSideEffects !== null) {
-        // @ts-ignore TODO The typing should import from binding
-        result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
-      }
-
       args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects || null,
       })
 
-      return result
+      let map = preProcessSourceMap(ret, id)
+
+      return {
+        code: ret.code,
+        map: bindingifySourcemap(map),
+        moduleType: ret.moduleType,
+        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+      }
     },
     meta: bindingifyPluginHookMeta(meta),
     // @ts-ignore

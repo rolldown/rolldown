@@ -241,9 +241,6 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.2.3
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       emnapi:
         specifier: ^1.2.0
         version: 1.3.1(node-addon-api@8.2.1)
@@ -289,9 +286,6 @@ importers:
       vite:
         specifier: ^5.2.13
         version: 5.4.10(@types/node@22.8.7)(terser@5.36.0)
-      vitest:
-        specifier: ^2.0.0
-        version: 2.1.4(@types/node@22.8.7)(terser@5.36.0)
       why-is-node-running:
         specifier: ^3.0.0
         version: 3.2.1
@@ -326,6 +320,18 @@ importers:
   packages/rolldown/npm/win32-ia32-msvc: {}
 
   packages/rolldown/npm/win32-x64-msvc: {}
+
+  packages/rolldown/tests:
+    dependencies:
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
+      rolldown:
+        specifier: workspace:*
+        version: link:..
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.4(@types/node@22.8.7)(terser@5.36.0)
 
   packages/rollup-tests:
     dependencies:

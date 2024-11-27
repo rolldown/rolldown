@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - packages/rolldown/tests
   - packages/rolldown/npm/*
   - docs
   - examples/*

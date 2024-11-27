@@ -8,6 +8,8 @@ import { globSync } from 'glob'
 
 const outputDir = 'dist'
 
+const IS_RELEASING_CI = !!process.env.RELEASING
+
 const shared = defineConfig({
   input: {
     index: './src/index',
@@ -71,37 +73,42 @@ const configs = defineConfig([
           const copyTo = nodePath.resolve(outputDir, 'shared')
           fsExtra.ensureDirSync(copyTo)
 
-          if (isWasmBuild) {
-            // Move the binary file to dist
-            wasmFiles.forEach((file) => {
+          if (!IS_RELEASING_CI) {
+            // Released `rolldown` package import binary via `@rolldown/binding-<platform>` packages.
+            // There's no need to copy binary files to dist folder.
+
+            if (isWasmBuild) {
+              // Move the binary file to dist
+              wasmFiles.forEach((file) => {
+                const fileName = nodePath.basename(file)
+                console.log('[build:done] Copying', file, `to ${copyTo}`)
+                fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+                console.log(`[build:done] Cleaning ${file}`)
+                try {
+                  // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.
+                  // We could safely ignore the error.
+                  fsExtra.rmSync(file)
+                } catch {}
+              })
+            } else {
+              // Move the binary file to dist
+              nodeFiles.forEach((file) => {
+                const fileName = nodePath.basename(file)
+                console.log('[build:done] Copying', file, `to ${copyTo}`)
+                fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+                console.log(`[build:done] Cleaning ${file}`)
+                try {
+                  fsExtra.rmSync(file)
+                } catch {}
+              })
+            }
+
+            wasiShims.forEach((file) => {
               const fileName = nodePath.basename(file)
-              console.log('[build:done] Copying', file, `to ${copyTo}`)
+              console.log('[build:done] Copying', file, 'to ./dist/shared')
               fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
-              console.log(`[build:done] Cleaning ${file}`)
-              try {
-                // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.
-                // We could safely ignore the error.
-                fsExtra.rmSync(file)
-              } catch {}
-            })
-          } else {
-            // Move the binary file to dist
-            nodeFiles.forEach((file) => {
-              const fileName = nodePath.basename(file)
-              console.log('[build:done] Copying', file, `to ${copyTo}`)
-              fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
-              console.log(`[build:done] Cleaning ${file}`)
-              try {
-                fsExtra.rmSync(file)
-              } catch {}
             })
           }
-
-          wasiShims.forEach((file) => {
-            const fileName = nodePath.basename(file)
-            console.log('[build:done] Copying', file, 'to ./dist/shared')
-            fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
-          })
 
           // Copy binding types and rollup types to dist
           const distTypesDir = nodePath.resolve(outputDir, 'types')

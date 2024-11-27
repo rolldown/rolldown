@@ -197,7 +197,6 @@ try {
 ```
 ### rolldown
 ```js
-import "./foo";
 
 export * from "./foo"
 
@@ -212,7 +211,7 @@ using c = d;
 ===================================================================
 --- esbuild	/out/hoist-export-star.js
 +++ rolldown	hoist-export-star.js
-@@ -1,10 +1,9 @@
+@@ -1,10 +1,8 @@
 -export * from "./foo";
 -var _stack = [];
 -try {
@@ -223,7 +222,6 @@ using c = d;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
 -}
-+import "./foo";
 +
 +export * from "./foo"
 +

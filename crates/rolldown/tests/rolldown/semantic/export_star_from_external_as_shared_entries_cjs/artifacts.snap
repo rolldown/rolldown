@@ -37,6 +37,5 @@ Object.keys(node_fs).forEach(function (k) {
 ## main.js
 
 ```js
-require("node:fs");
 
 ```

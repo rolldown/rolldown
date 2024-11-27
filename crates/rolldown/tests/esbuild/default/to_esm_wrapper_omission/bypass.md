@@ -1,5 +1,5 @@
 # Reason
-1. redundant `require`
+1. codegen order
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -32,7 +32,6 @@ x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
 
 require("a_nowrap");
 const b_nowrap = __toESM(require("b_nowrap"));
-require("c_nowrap");
 const d_WRAP = __toESM(require("d_WRAP"));
 const e_WRAP = __toESM(require("e_WRAP"));
 const f_WRAP = __toESM(require("f_WRAP"));
@@ -68,7 +67,7 @@ Object.keys(c_nowrap).forEach(function (k) {
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,21 +1,28 @@
+@@ -1,21 +1,27 @@
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);
 -var import_a_nowrap = require("a_nowrap");
@@ -92,7 +91,6 @@ Object.keys(c_nowrap).forEach(function (k) {
 -x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
 +require("a_nowrap");
 +var b_nowrap = __toESM(require("b_nowrap"));
-+require("c_nowrap");
 +var d_WRAP = __toESM(require("d_WRAP"));
 +var e_WRAP = __toESM(require("e_WRAP"));
 +var f_WRAP = __toESM(require("f_WRAP"));

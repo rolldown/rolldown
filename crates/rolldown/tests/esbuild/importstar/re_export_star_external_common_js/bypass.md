@@ -1,5 +1,5 @@
 # Reason
-1. rolldown has redundant `require('external')`
+1. cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out.js
 ### esbuild
@@ -11,7 +11,6 @@ __reExport(entry_exports, require("foo"), module.exports);
 ```
 ### rolldown
 ```js
-require("foo");
 
 
 var foo = require("foo");
@@ -28,11 +27,10 @@ Object.keys(foo).forEach(function (k) {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,3 +1,10 @@
+@@ -1,3 +1,9 @@
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);
 -__reExport(entry_exports, require("foo"), module.exports);
-+require("foo");
 +var foo = require("foo");
 +Object.keys(foo).forEach(function (k) {
 +    if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {

@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use rolldown_common::{ExportsKind, Module, Specifier, WrapKind};
+use rolldown_common::{ExportsKind, Specifier, WrapKind};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
 
@@ -40,10 +40,7 @@ pub fn render_esm<'code>(
         .star_export_module_ids()
         .filter_map(|importee| {
           let importee = &ctx.link_output.module_table.modules[importee];
-          match importee {
-            Module::External(ext) => Some(&ext.name),
-            Module::Normal(_) => None,
-          }
+          importee.as_external().map(|m| &m.name)
         })
         .dedup()
         .for_each(|ext_name| {
@@ -143,13 +140,11 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       &ctx.chunk.import_path_for(importee_chunk).into(),
     ));
   });
-
   // render external imports
   ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table.modules[*importee_id]
       .as_external()
       .expect("Should be external module here");
-
     let mut has_importee_imported = false;
     let mut default_alias = vec![];
     let mut specifiers = named_imports

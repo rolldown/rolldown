@@ -1,5 +1,5 @@
 # Reason
-1. two `import` statement are redundant
+1. codegen position
 # Diff
 ## /out.js
 ### esbuild
@@ -18,7 +18,6 @@ export {
 ```
 ### rolldown
 ```js
-import "./external";
 
 export * from "fs"
 
@@ -35,8 +34,7 @@ export { foo };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,5 @@
-+import "./external";
+@@ -1,4 +1,4 @@
  export * from "fs";
 -var foo = 123;
  export * from "./external";

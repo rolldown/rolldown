@@ -9,7 +9,6 @@ snapshot_kind: text
 ```js
 "use strict";
 
-require("node:fs");
 
 //#region main.js
 var main_exports = {};

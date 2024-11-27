@@ -7,8 +7,6 @@ snapshot_kind: text
 ## main.js
 
 ```js
-require("node:fs");
-require("node:path");
 
 
 var node_fs = require("node:fs");

@@ -21,7 +21,6 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-require("foo");
 
 
 var foo = require("foo");

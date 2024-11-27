@@ -92,25 +92,15 @@
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call_inside_try
-## rolldown has redundant `require('external')`
-- crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle
-- crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file
-- crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js
 ## cross module constant folding
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
 - crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
-## cjs module lexer can't recognize esbuild interop pattern
-- crates/rolldown/tests/esbuild/default/export_forms_iife
-- crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
-## rolldown has redundant `import "external"`
-- crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle
-- crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6
 ## Wrong impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle
@@ -176,14 +166,12 @@
 - crates/rolldown/tests/esbuild/default/define_import_meta_es5
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
+## cjs module lexer can't recognize esbuild interop pattern
+- crates/rolldown/tests/esbuild/default/export_forms_iife
 ## Not sure if we needs to use `Object.define` pattern in iife
 - crates/rolldown/tests/esbuild/default/export_forms_iife
 ## should not generate duplicate export binding
 - crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
-## should not generate two redundant `require`
-- crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js
-## two `import` statement are redundant
-- crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6
 ## redundant `import` statements
 - crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js
 ## should not generate `__toCommonJS`
@@ -236,8 +224,6 @@
 - crates/rolldown/tests/esbuild/default/this_outside_function
 ## this undefined
 - crates/rolldown/tests/esbuild/default/this_undefined_warning_esm
-## redundant `require`
-- crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission
 ## there should not exist empty chunk
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## import('./entry.js') should be rewrite to `require_entry`

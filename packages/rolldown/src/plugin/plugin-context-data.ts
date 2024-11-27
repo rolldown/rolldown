@@ -11,7 +11,9 @@ export class PluginContextData {
   updateModuleOption(id: string, option: ModuleOptions) {
     const existing = this.moduleOptionMap.get(id)
     if (existing) {
-      Object.assign(existing, option)
+      if (option.moduleSideEffects != null) {
+        existing.moduleSideEffects = option.moduleSideEffects
+      }
       if (option.meta != null) {
         Object.assign(existing.meta, option.meta)
       }

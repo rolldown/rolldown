@@ -455,7 +455,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
     } else {
       // export * from '...'
-      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_START);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
       self.result.has_star_exports = true;
     }
     self.result.imports.insert(decl.span, id);

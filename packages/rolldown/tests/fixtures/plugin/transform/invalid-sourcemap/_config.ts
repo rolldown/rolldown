@@ -1,5 +1,5 @@
+import { expect } from 'vitest'
 import { defineTest } from '@tests'
-import { expect, vi } from 'vitest'
 import { encode } from '@jridgewell/sourcemap-codec'
 import { getLocation, getOutputAsset, getOutputChunk } from '@tests/utils'
 import { SourceMapConsumer } from 'source-map'

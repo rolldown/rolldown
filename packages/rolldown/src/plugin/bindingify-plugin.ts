@@ -145,7 +145,6 @@ export function bindingifyPlugin(
     moduleParsedMeta,
     load,
     loadMeta,
-    // @ts-ignore
     loadFilter,
     renderChunk,
     renderChunkMeta,

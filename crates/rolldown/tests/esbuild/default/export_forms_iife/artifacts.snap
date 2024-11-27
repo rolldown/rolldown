@@ -26,9 +26,9 @@ const abc = undefined;
 
 //#endregion
 //#region b.js
+const xyz = null;
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
-const xyz = null;
 
 //#endregion
 //#region entry.js

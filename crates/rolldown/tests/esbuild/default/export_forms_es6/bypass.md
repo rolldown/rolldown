@@ -44,9 +44,9 @@ const abc = undefined;
 
 //#endregion
 //#region b.js
+const xyz = null;
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
-const xyz = null;
 
 //#endregion
 //#region entry.js
@@ -65,12 +65,18 @@ export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,5 @@
+@@ -1,10 +1,10 @@
 -var abc = void 0;
 +var abc = undefined;
++var xyz = null;
  var b_exports = {};
  __export(b_exports, {
      xyz: () => xyz
  });
+-var xyz = null;
+ var entry_default = 123;
+ var v = 234;
+ var l = 234;
+ var c = 234;
 
 ```

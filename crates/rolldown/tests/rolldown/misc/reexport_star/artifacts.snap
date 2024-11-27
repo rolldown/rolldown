@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,9 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region a.js
+const abc = undefined;
 var a_exports = {};
 __export(a_exports, { abc: () => abc });
-const abc = undefined;
 
 //#endregion
 export { a_exports };

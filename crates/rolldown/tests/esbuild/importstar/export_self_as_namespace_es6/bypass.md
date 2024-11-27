@@ -1,5 +1,5 @@
 # Reason
-1. cjs module lexer can't recognize esbuild interop pattern
+1. rolldown generates module namespace object in the bottom if possible.
 # Diff
 ## /out.js
 ### esbuild
@@ -10,12 +10,14 @@ __export(entry_exports, {
   foo: () => foo,
   ns: () => entry_exports
 });
-module.exports = __toCommonJS(entry_exports);
 var foo = 123;
+export {
+  foo,
+  entry_exports as ns
+};
 ```
 ### rolldown
 ```js
-"use strict";
 
 
 //#region entry.js
@@ -27,34 +29,21 @@ __export(entry_exports, {
 });
 
 //#endregion
-exports.foo = foo
-Object.defineProperty(exports, 'ns', {
-  enumerable: true,
-  get: function () {
-    return entry_exports;
-  }
-});
+export { foo, entry_exports as ns };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,13 @@
+@@ -1,7 +1,7 @@
 +var foo = 123;
  var entry_exports = {};
  __export(entry_exports, {
      foo: () => foo,
      ns: () => entry_exports
  });
--module.exports = __toCommonJS(entry_exports);
 -var foo = 123;
-+exports.foo = foo;
-+Object.defineProperty(exports, 'ns', {
-+    enumerable: true,
-+    get: function () {
-+        return entry_exports;
-+    }
-+});
+ export {foo, entry_exports as ns};
 
 ```

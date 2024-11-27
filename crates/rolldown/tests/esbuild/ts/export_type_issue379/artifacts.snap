@@ -10,15 +10,15 @@ snapshot_kind: text
 
 
 //#region a.ts
+let foo$3 = 123;
 var a_exports = {};
 __export(a_exports, { foo: () => foo$3 });
-let foo$3 = 123;
 
 //#endregion
 //#region b.ts
+let foo$2 = 123;
 var b_exports = {};
 __export(b_exports, { foo: () => foo$2 });
-let foo$2 = 123;
 
 //#endregion
 //#region test.ts
@@ -26,21 +26,21 @@ var Test = void 0;
 
 //#endregion
 //#region c.ts
+let foo$1 = 123;
 var c_exports = {};
 __export(c_exports, {
 	Test: () => Test,
 	foo: () => foo$1
 });
-let foo$1 = 123;
 
 //#endregion
 //#region d.ts
+let foo = 123;
 var d_exports = {};
 __export(d_exports, {
 	Test: () => Test,
 	foo: () => foo
 });
-let foo = 123;
 
 //#endregion
 //#region entry.ts

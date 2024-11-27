@@ -18,9 +18,9 @@ console.log(foo);
 
 
 //#region import.ts
+let value = 123;
 var import_exports = {};
 __export(import_exports, { value: () => value });
-let value = 123;
 
 //#endregion
 //#region entry.ts
@@ -37,12 +37,12 @@ console.log(foo);
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,4 +1,9 @@
+ var value = 123;
+-var value_copy = value;
 +var import_exports = {};
 +__export(import_exports, {
 +    value: () => value
 +});
- var value = 123;
--var value_copy = value;
 +var value_copy = import_exports.value;
 +var Type_copy = import_exports.Type;
  var foo = value_copy;

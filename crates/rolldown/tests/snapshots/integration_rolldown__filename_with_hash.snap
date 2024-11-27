@@ -410,7 +410,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6
 
-- src_entry-!~{000}~.js => src_entry-BUnoAT0b.js
+- src_entry-!~{000}~.js => src_entry-ksy7oFWZ.js
 
 # tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999
 
@@ -794,20 +794,20 @@ snapshot_kind: text
 
 # tests/esbuild/default/export_forms_es6
 
-- entry-!~{000}~.js => entry-qwPbaHPl.js
+- entry-!~{000}~.js => entry-CHJB3A2J.js
 
 # tests/esbuild/default/export_forms_iife
 
-- entry-!~{000}~.js => entry-BA-K-SNR.js
+- entry-!~{000}~.js => entry-D1LVdCTI.js
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
-- a-!~{000}~.js => a-C93wlnPu.js
-- b-!~{001}~.js => b-Dcj670iG.js
+- a-!~{000}~.js => a-CrFEzohu.js
+- b-!~{001}~.js => b-zH6s6Nfx.js
 - c-!~{002}~.js => c-BJcfTzP6.js
 - d-!~{003}~.js => d-ad3ESJx-.js
 - e-!~{004}~.js => e-DOotNtCv.js
-- b-!~{005}~.js => b-4ScHOvJe.js
+- b-!~{005}~.js => b-BNi7R3Jn.js
 
 # tests/esbuild/default/export_fs_browser
 
@@ -839,7 +839,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
-- entry-!~{000}~.js => entry-B0-3jBbo.js
+- entry-!~{000}~.js => entry-Cndn-aAH.js
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
@@ -1385,7 +1385,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/minified_exports_and_module_format_common_js
 
-- entry-!~{000}~.js => entry-DtfKiS88.js
+- entry-!~{000}~.js => entry-Be_e1IyM.js
 
 # tests/esbuild/default/minified_jsx_preserve_with_object_spread
 
@@ -1874,11 +1874,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/export_self_as_namespace_common_js
 
-- entry-!~{000}~.js => entry-DeqVnP4o.js
+- entry-!~{000}~.js => entry-CelqmAIy.js
 
 # tests/esbuild/importstar/export_self_as_namespace_es6
 
-- entry-!~{000}~.js => entry-CaRffxae.js
+- entry-!~{000}~.js => entry-BbZF7Pkw.js
 
 # tests/esbuild/importstar/export_self_common_js
 
@@ -1912,13 +1912,13 @@ snapshot_kind: text
 - external-ns-!~{001}~.js => external-ns-all2LFha.js
 - external-ns-def-!~{003}~.js => external-ns-def-CPrnmGVn.js
 - external-ns-default-!~{002}~.js => external-ns-default-Cbqf8eIs.js
-- internal-def-!~{00b}~.js => internal-def-DfyIvJJl.js
-- internal-default-!~{00a}~.js => internal-default-DiS4WX0p.js
-- internal-default2-!~{006}~.js => internal-default2-CWBVGTD-.js
-- internal-ns-!~{007}~.js => internal-ns-7GgO4HmG.js
-- internal-ns-def-!~{009}~.js => internal-ns-def-piPU5sss.js
-- internal-ns-default-!~{008}~.js => internal-ns-default-JNy0Ko2y.js
-- internal-!~{00c}~.js => internal-DA-Z1nKh.js
+- internal-def-!~{00b}~.js => internal-def-DV-9IAGy.js
+- internal-default-!~{00a}~.js => internal-default-CfusN2Zs.js
+- internal-default2-!~{006}~.js => internal-default2-Fy5lk0cq.js
+- internal-ns-!~{007}~.js => internal-ns-Dx9dcEHi.js
+- internal-ns-def-!~{009}~.js => internal-ns-def--Dkg5SHS.js
+- internal-ns-default-!~{008}~.js => internal-ns-default-BFdLJBNH.js
+- internal-!~{00c}~.js => internal-Ca4oC2ka.js
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
@@ -1926,7 +1926,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_export_self_as_namespace_es6
 
-- entry-!~{000}~.js => entry-CaRffxae.js
+- entry-!~{000}~.js => entry-BbZF7Pkw.js
 
 # tests/esbuild/importstar/import_export_star_ambiguous_warning
 
@@ -1962,7 +1962,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_star_capture
 
-- entry-!~{000}~.js => entry-DRZgLsj7.js
+- entry-!~{000}~.js => entry-BCteFBwK.js
 
 # tests/esbuild/importstar/import_star_common_js_capture
 
@@ -1978,7 +1978,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_star_export_import_star_capture
 
-- entry-!~{000}~.js => entry-DRZgLsj7.js
+- entry-!~{000}~.js => entry-BCteFBwK.js
 
 # tests/esbuild/importstar/import_star_export_import_star_no_capture
 
@@ -1990,7 +1990,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_star_export_star_as_capture
 
-- entry-!~{000}~.js => entry-DRZgLsj7.js
+- entry-!~{000}~.js => entry-BCteFBwK.js
 
 # tests/esbuild/importstar/import_star_export_star_as_no_capture
 
@@ -2046,7 +2046,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_star_of_export_star_as
 
-- entry-!~{000}~.js => entry-BbcqPKpk.js
+- entry-!~{000}~.js => entry-BwVIDr2X.js
 
 # tests/esbuild/importstar/import_star_unused
 
@@ -2062,7 +2062,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/namespace_import_missing_es6
 
-- entry-!~{000}~.js => entry-DHRSEmgt.js
+- entry-!~{000}~.js => entry-CA5Ui1JQ.js
 
 # tests/esbuild/importstar/namespace_import_re_export_star_missing_es6
 
@@ -2090,7 +2090,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_namespace_import_missing_es6
 
-- entry-!~{000}~.js => entry-CrdjDlan.js
+- entry-!~{000}~.js => entry-C6A8LRmW.js
 
 # tests/esbuild/importstar/re_export_namespace_import_unused_missing_es6
 
@@ -2098,11 +2098,11 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/re_export_other_file_export_self_as_namespace_es6
 
-- entry-!~{000}~.js => entry-BaW0-g7W.js
+- entry-!~{000}~.js => entry-DqsirQpy.js
 
 # tests/esbuild/importstar/re_export_other_file_import_export_self_as_namespace_es6
 
-- entry-!~{000}~.js => entry-BaW0-g7W.js
+- entry-!~{000}~.js => entry-DqsirQpy.js
 
 # tests/esbuild/importstar/re_export_star_as_common_js_no_bundle
 
@@ -2178,7 +2178,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar_ts/ts_import_star_capture
 
-- entry-!~{000}~.js => entry-BJVqnJH2.js
+- entry-!~{000}~.js => entry-Cq6wxObG.js
 
 # tests/esbuild/importstar_ts/ts_import_star_common_js_capture
 
@@ -2194,7 +2194,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar_ts/ts_import_star_export_import_star_capture
 
-- entry-!~{000}~.js => entry-BJVqnJH2.js
+- entry-!~{000}~.js => entry-Cq6wxObG.js
 
 # tests/esbuild/importstar_ts/ts_import_star_export_import_star_no_capture
 
@@ -2206,7 +2206,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar_ts/ts_import_star_export_star_as_capture
 
-- entry-!~{000}~.js => entry-BJVqnJH2.js
+- entry-!~{000}~.js => entry-Cq6wxObG.js
 
 # tests/esbuild/importstar_ts/ts_import_star_export_star_as_no_capture
 
@@ -2484,7 +2484,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
-- entry-!~{000}~.js => entry-Di92Tbc8.js
+- entry-!~{000}~.js => entry-Z82MPaDZ.js
 
 # tests/esbuild/loader/loader_json_no_bundle
 
@@ -3346,7 +3346,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/export_type_issue379
 
-- entry-!~{000}~.js => entry-DnnYiJnK.js
+- entry-!~{000}~.js => entry-Ccxew7Uv.js
 
 # tests/esbuild/ts/this_inside_function_ts
 
@@ -3568,7 +3568,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_import_equals_undefined_import
 
-- entry-!~{000}~.js => entry-DTtRuQbn.js
+- entry-!~{000}~.js => entry-D0JxIWbT.js
 
 # tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 
@@ -3812,9 +3812,9 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{002}~.js => main-BsUbiWYI.js
-- foo-!~{000}~.js => foo-D0d6mltj.js
-- foo-!~{003}~.js => foo-DXxOOpWy.js
+- main-!~{002}~.js => main-BaSrNAgs.js
+- foo-!~{003}~.js => foo-4vkMJc3l.js
+- foo-!~{000}~.js => foo-Qos1T8vi.js
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
@@ -3993,7 +3993,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/export_mode/cjs/default
 
-- main-!~{000}~.js => main-D3aZvmrR.js
+- main-!~{000}~.js => main-DMnCajOv.js
 
 # tests/rolldown/function/export_mode/cjs/named
 
@@ -4005,11 +4005,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/export_mode/iife/default
 
-- main-!~{000}~.js => main-Bths0V1b.js
+- main-!~{000}~.js => main-CTrGAnM_.js
 
 # tests/rolldown/function/export_mode/iife/named
 
-- main-!~{000}~.js => main-BjBMIvpR.js
+- main-!~{000}~.js => main-CUNqqZ6y.js
 
 # tests/rolldown/function/export_mode/umd/auto/none
 
@@ -4585,7 +4585,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/invalid_ident_repr
 
-- main-!~{000}~.js => main-BlImAHc4.js
+- main-!~{000}~.js => main-6MikAUzX.js
 
 # tests/rolldown/misc/object_shorthand_property
 
@@ -4594,9 +4594,9 @@ snapshot_kind: text
 
 # tests/rolldown/misc/reexport_star
 
-- entry-!~{001}~.js => entry-D4C-xCYO.js
-- main-!~{000}~.js => main-CpKN3iJF.js
-- a-!~{002}~.js => a-BwezEc7i.js
+- entry-!~{001}~.js => entry-W8euwwoD.js
+- main-!~{000}~.js => main-RkBSLj7W.js
+- a-!~{002}~.js => a-DUjZTlqT.js
 
 # tests/rolldown/misc/reexport_star_from_local_named_export
 
@@ -4825,7 +4825,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/41
 
-- entry-!~{000}~.js => entry-R8ZcggYt.js
+- entry-!~{000}~.js => entry-DGxO1ckW.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/42
 
@@ -4833,7 +4833,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/43
 
-- entry-!~{000}~.js => entry-N7sqlT7J.js
+- entry-!~{000}~.js => entry--E2eL_Fq.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/44
 
@@ -4841,7 +4841,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/45
 
-- entry-!~{000}~.js => entry-Y_q56w8D.js
+- entry-!~{000}~.js => entry-DtJPXatq.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/46
 
@@ -4925,7 +4925,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/7
 
-- entry-!~{000}~.js => entry-B2XrAS5H.js
+- entry-!~{000}~.js => entry-0T7Frll2.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/8
 
@@ -4933,7 +4933,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/9
 
-- entry-!~{000}~.js => entry-qAWlTxKm.js
+- entry-!~{000}~.js => entry-D3OTRGw7.js
 
 # tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
 
@@ -5147,6 +5147,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BfW_etaZ.js
 
+# tests/rolldown/topics/shorten_module_namespace_object/implicit_self_reference
+
+- main-!~{000}~.js => main-BuWZ14zM.js
+
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.js => main-BdBlLzB5.js
@@ -5157,7 +5161,7 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/advanced_barrel_exports_bailout_dynamic_key
 
-- main-!~{000}~.js => main-CYJiKP4y.js
+- main-!~{000}~.js => main-BHIM-ojV.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

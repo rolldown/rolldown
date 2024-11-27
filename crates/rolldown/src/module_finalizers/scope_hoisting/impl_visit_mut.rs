@@ -46,13 +46,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // 3. hoisted_names
     // 4. wrapped module declaration
     let declaration_of_module_namespace_object = if is_namespace_referenced {
-      let stmts = self.generate_declaration_of_module_namespace_object();
-      if needs_wrapper {
-        stmts
-      } else {
-        program.body.splice(0..0, stmts);
-        vec![]
-      }
+      self.generate_declaration_of_module_namespace_object()
     } else {
       vec![]
     };
@@ -138,7 +132,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               stmts_inside_closure.push(stmt);
             }
           });
-          program.body.extend(declaration_of_module_namespace_object);
           program.body.extend(fn_stmts);
           if !hoisted_names.is_empty() {
             let mut declarators = allocator::Vec::new_in(self.alloc);
@@ -174,6 +167,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
         WrapKind::None => {}
       }
+    }
+
+    if self.contains_reference_to_namespace_ref_of_this_module || needs_wrapper {
+      program.body.splice(0..0, declaration_of_module_namespace_object);
     } else {
       program.body.extend(declaration_of_module_namespace_object);
     }
@@ -299,7 +296,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // Ensure `{ a }` would be rewritten to `{ a: a$1 }` instead of `{ a$1 }`
     match &mut prop.value {
       ast::Expression::Identifier(id_ref) if prop.shorthand => {
-        if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, false) {
+        if let Some(expr) = self.try_rewrite_identifier_reference_expr(id_ref, false) {
           prop.value = expr;
           prop.shorthand = false;
         } else {
@@ -676,6 +673,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             let rec = &self.ctx.module.import_records[rec_id];
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
+                self.contains_reference_to_namespace_ref_of_this_module = true;
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
                   let wrapper_ref_name =

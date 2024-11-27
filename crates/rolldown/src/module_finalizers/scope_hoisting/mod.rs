@@ -27,6 +27,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
   pub comments: oxc::allocator::Vec<'ast, Comment>,
+  pub contains_reference_to_namespace_ref_of_this_module: bool,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -241,7 +242,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
+  fn generate_declaration_of_module_namespace_object(&mut self) -> Vec<ast::Statement<'ast>> {
     let var_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
     // construct `var ns_name = {}`
     let decl_stmt = self
@@ -489,6 +490,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         {
           match object_ref {
             Some(object_ref) => {
+              self.check_if_ref_point_to_namespace_ref_of_this_module(*object_ref);
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
 
               let replaced_expr =
@@ -508,6 +510,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         {
           match object_ref {
             Some(object_ref) => {
+              self.check_if_ref_point_to_namespace_ref_of_this_module(*object_ref);
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
 
               let replaced_expr =
@@ -525,6 +528,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         None
       }
       MemberExpression::PrivateFieldExpression(_) => None,
+    }
+  }
+
+  pub fn check_if_ref_point_to_namespace_ref_of_this_module(&mut self, symbol_ref: SymbolRef) {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    if canonical_ref == self.ctx.module.namespace_object_ref {
+      self.contains_reference_to_namespace_ref_of_this_module = true;
     }
   }
 }

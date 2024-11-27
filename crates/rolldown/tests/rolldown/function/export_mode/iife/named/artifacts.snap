@@ -14,17 +14,17 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region mod.js
-var named_exports = {};
-__export(named_exports, {
-	add: () => add,
-	subtract: () => subtract
-});
 function add(a, b) {
 	return a + b;
 }
 function subtract(a, b) {
 	return a - b;
 }
+var named_exports = {};
+__export(named_exports, {
+	add: () => add,
+	subtract: () => subtract
+});
 
 //#endregion
 //#region main.js

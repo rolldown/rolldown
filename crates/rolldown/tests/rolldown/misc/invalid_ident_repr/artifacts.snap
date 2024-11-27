@@ -11,10 +11,10 @@ import assert from "node:assert";
 
 
 //#region 1aaa.js
-var _1aaa_exports = {};
-__export(_1aaa_exports, { default: () => _1aaa_default });
 const a$1 = "shared.js";
 var _1aaa_default = a$1;
+var _1aaa_exports = {};
+__export(_1aaa_exports, { default: () => _1aaa_default });
 
 //#endregion
 //#region main.js

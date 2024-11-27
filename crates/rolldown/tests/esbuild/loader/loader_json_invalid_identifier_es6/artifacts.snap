@@ -14,13 +14,13 @@ var invalid_identifier$1 = true;
 
 //#endregion
 //#region test2.json
+var invalid_identifier = true;
+var test2_default = { "invalid-identifier": invalid_identifier };
 var test2_exports = {};
 __export(test2_exports, {
 	default: () => test2_default,
 	"invalid-identifier": () => invalid_identifier
 });
-var invalid_identifier = true;
-var test2_default = { "invalid-identifier": invalid_identifier };
 
 //#endregion
 //#region entry.js

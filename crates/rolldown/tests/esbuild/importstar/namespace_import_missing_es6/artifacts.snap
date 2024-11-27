@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -24,9 +25,9 @@ import assert from "node:assert";
 
 
 //#region foo.js
+const x = 123;
 var foo_exports = {};
 __export(foo_exports, { x: () => x });
-const x = 123;
 
 //#endregion
 //#region entry.js

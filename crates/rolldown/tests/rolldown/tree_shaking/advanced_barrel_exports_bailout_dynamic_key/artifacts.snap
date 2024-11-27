@@ -11,15 +11,15 @@ import assert from "node:assert";
 
 
 //#region a.js
+const c = 1e3;
+const b = 500;
+const a = 100;
 var a_exports = {};
 __export(a_exports, {
 	a: () => a,
 	b: () => b,
 	c: () => c
 });
-const c = 1e3;
-const b = 500;
-const a = 100;
 
 //#endregion
 //#region main.js

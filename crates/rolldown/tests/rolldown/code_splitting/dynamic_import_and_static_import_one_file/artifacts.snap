@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -16,9 +17,9 @@ export { foo };
 
 
 //#region foo.js
+const foo = 1;
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo });
-const foo = 1;
 
 //#endregion
 export { foo, foo_exports };

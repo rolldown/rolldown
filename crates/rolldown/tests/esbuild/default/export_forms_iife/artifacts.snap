@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -50,12 +51,7 @@ Object.defineProperty(exports, 'b', {
   }
 });
 exports.c = c
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return entry_default;
-  }
-});
+exports.default = entry_default
 exports.l = l
 exports.v = v
 return exports;

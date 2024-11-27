@@ -9,12 +9,7 @@ snapshot_kind: text
 ```js
 const require_main = require('./main.js');
 
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return require_main.main_default;
-  }
-});
+exports.default = require_main.main_default
 exports.foo = require_main.foo
 ```
 ## entry2.js
@@ -22,12 +17,7 @@ exports.foo = require_main.foo
 ```js
 const require_main = require('./main.js');
 
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return require_main.main_default;
-  }
-});
+exports.default = require_main.main_default
 exports.foo = require_main.foo
 ```
 ## main.js

@@ -80,12 +80,7 @@ Object.defineProperty(exports, 'b', {
   }
 });
 exports.c = c
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return entry_default;
-  }
-});
+exports.default = entry_default
 exports.l = l
 exports.v = v
 return exports;
@@ -96,7 +91,7 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,27 +1,37 @@
+@@ -1,27 +1,32 @@
 -var globalName = (() => {
 -    var entry_exports = {};
 -    __export(entry_exports, {
@@ -142,12 +137,7 @@ return exports;
 +        }
 +    });
 +    exports.c = c;
-+    Object.defineProperty(exports, 'default', {
-+        enumerable: true,
-+        get: function () {
-+            return entry_default;
-+        }
-+    });
++    exports.default = entry_default;
 +    exports.l = l;
 +    exports.v = v;
 +    return exports;

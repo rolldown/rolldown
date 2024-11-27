@@ -798,7 +798,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/export_forms_iife
 
-- entry-!~{000}~.js => entry-B6vlME3I.js
+- entry-!~{000}~.js => entry-BA-K-SNR.js
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
@@ -3935,7 +3935,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_true
 
-- main-!~{000}~.js => main-CsgEFrlH.js
+- main-!~{000}~.js => main-cgJDF9TZ.js
 
 # tests/rolldown/function/es_module/if_default_prop_iife_false
 
@@ -3943,7 +3943,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/es_module/if_default_prop_iife_true
 
-- main-!~{000}~.js => main-IwFiE4Ff.js
+- main-!~{000}~.js => main-D9LdNfYj.js
 
 # tests/rolldown/function/es_module/never
 
@@ -3995,7 +3995,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/export_mode/cjs/named
 
-- main-!~{000}~.js => main-B0d7SG5w.js
+- main-!~{000}~.js => main-BwzQ9T-O.js
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
@@ -4939,7 +4939,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
-- main-!~{000}~.js => main-C_LhPujj.js
+- main-!~{000}~.js => main-ncpt5xmU.js
 
 # tests/rolldown/topics/css/align_vite
 
@@ -5043,7 +5043,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/live_bindings/default_export_expr_cjs
 
-- main-!~{000}~.js => main-DURgDUYH.js
+- main-!~{000}~.js => main-B_iLbtpg.js
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks
 
@@ -5117,7 +5117,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_cjs
 
-- main-!~{000}~.js => main-Cmb9Qu4e.js
+- main-!~{000}~.js => main-SgusirFn.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
 
@@ -5127,8 +5127,8 @@ snapshot_kind: text
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-D8lyh8F8.js
-- entry2-!~{001}~.js => entry2-CoQWESLQ.js
+- entry-!~{000}~.js => entry-DSxxgWLd.js
+- entry2-!~{001}~.js => entry2-CXxnJInr.js
 - main-!~{002}~.js => main-DallkI37.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
@@ -5143,7 +5143,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
-- main-!~{000}~.js => main-D4BrWgkl.js
+- main-!~{000}~.js => main-BfW_etaZ.js
 
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 
@@ -5268,7 +5268,7 @@ snapshot_kind: text
 
 # tests/rolldown/warnings/mixed_export
 
-- main-!~{000}~.js => main-BO4-4DlB.js
+- main-!~{000}~.js => main-BMoXN5sO.js
 
 # tests/rolldown/warnings/none-ascii-content
 

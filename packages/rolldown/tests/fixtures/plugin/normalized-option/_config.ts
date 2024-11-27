@@ -1,10 +1,7 @@
 import { expect } from 'vitest'
 import path from 'node:path'
 import { defineTest } from '@tests'
-import {
-  NormalizedInputOptions,
-  NormalizedOutputOptions,
-} from '../../../../src'
+import { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown'
 
 const entry = path.join(__dirname, './main.js')
 

@@ -1,5 +1,3 @@
-// @ts-check
-
 import { defineConfig, rolldown } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import nodePath from 'node:path'

@@ -2,7 +2,7 @@ import {
   RollupOutput,
   RolldownOutputChunk,
   RolldownOutputAsset,
-} from '../../src'
+} from 'rolldown'
 import nodePath from 'node:path'
 import assert from 'node:assert'
 import { workspaceRoot } from '@rolldown/testing'

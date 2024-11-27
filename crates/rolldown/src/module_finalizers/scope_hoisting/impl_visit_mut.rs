@@ -237,28 +237,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           *expr = new_expr;
         }
       }
-      // rewrite `foo_exports.bar` to `bar` directly
-      ast::Expression::StaticMemberExpression(inner_expr) => {
-        if let Some(resolved) =
-          self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
-        {
-          match resolved {
-            Some((object_ref, props)) => {
-              let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
-
-              let replaced_expr =
-                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
-              *expr = replaced_expr;
-            }
-            None => {
-              *expr = self.snippet.void_zero();
-            }
-          }
-          // these two branch are exclusive since `import.meta` is a global member_expr
-        } else if let Some(new_expr) = self.try_rewrite_import_meta_prop_expr(inner_expr) {
-          *expr = new_expr;
-        }
-      }
       // inline dynamic import
       ast::Expression::ImportExpression(import_expr) => {
         if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
@@ -273,7 +251,13 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           *expr = new_expr;
         }
       }
-      _ => {}
+      _ => {
+        if let Some(new_expr) =
+          expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))
+        {
+          *expr = new_expr;
+        }
+      }
     };
 
     walk_mut::walk_expression(self, expr);

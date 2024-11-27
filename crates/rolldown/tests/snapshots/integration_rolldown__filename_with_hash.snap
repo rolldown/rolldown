@@ -977,7 +977,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_re_export_es6_issue149
 
-- app-!~{000}~.js => app-Dxo2PfWo.js
+- app-!~{000}~.js => app-DaxVQXwp.js
 
 # tests/esbuild/default/import_relative_as_package
 
@@ -1066,8 +1066,8 @@ snapshot_kind: text
 
 # tests/esbuild/default/jsx_import_meta_value
 
-- factory-!~{000}~.js => factory-CItnMqcA.js
-- fragment-!~{001}~.js => fragment-C91b-ako.js
+- factory-!~{000}~.js => factory-BjTERCBI.js
+- fragment-!~{001}~.js => fragment-8HyPJWP9.js
 
 # tests/esbuild/default/jsx_imports_common_js
 

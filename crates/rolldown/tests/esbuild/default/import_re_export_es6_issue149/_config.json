@@ -5,7 +5,11 @@
         "name": "app",
         "import": "app.jsx"
       }
-    ]
+    ],
+    "jsx": {
+      "pragma": "h",
+      "runtime": "classic"
+    }
   },
   "expectExecuted": false
 }

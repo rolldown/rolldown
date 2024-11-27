@@ -8,14 +8,6 @@
 - crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 - crates/rolldown/tests/esbuild/ts/ts_declare_class_fields
 - crates/rolldown/tests/esbuild/ts/ts_minify_derived_class
-## `jsx.factory`
-- crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
-- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
-- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
-- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
-- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## lowering ts experimental decorator
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_keep_names
 - crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
@@ -36,6 +28,9 @@
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
+## `jsx.factory`
+- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
+- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
@@ -115,6 +110,14 @@
 - crates/rolldown/tests/esbuild/default/inject_import_meta
 ## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
 - crates/rolldown/tests/esbuild/default/inject_no_bundle
+## esbuild will auto polyfill `import.meta`
+- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
+## replace this with `void 0` in none function scope
+- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
+## should mark module as cjs if `this` in none function scope
+- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
+## should replace `this` with `void 0` when it's in none function scope
+- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## should read `tsconfig.json`
 - crates/rolldown/tests/esbuild/default/non_determinism_issue2537
 ## resolve alias

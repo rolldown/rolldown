@@ -43,8 +43,6 @@
   diff
 ## [import_namespace_this_value](../../../crates/rolldown/tests/esbuild/default/import_namespace_this_value/diff.md)
   diff
-## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149/diff.md)
-  diff
 ## import_with_hash_parameter
   missing
 ## import_with_query_parameter
@@ -189,6 +187,7 @@
 ## [import_meta_es6](../../../crates/rolldown/tests/esbuild/default/import_meta_es6)
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
+## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [inject_jsx_dot_names](../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names)

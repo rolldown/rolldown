@@ -1,5 +1,5 @@
 # Reason
-1. `jsx.factory`
+1. should mark module as cjs if `this` in none function scope
 # Diff
 ## /out/factory.js
 ### esbuild

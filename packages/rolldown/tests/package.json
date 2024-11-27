@@ -1,0 +1,12 @@
+{
+  "name": "rolldown-tests",
+  "private": true,
+  "scripts": {
+    "go": "cross-env RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --reporter verbose --hideSkippedTests"
+  },
+  "dependencies": {
+    "rolldown": "workspace:*",
+    "cross-env": "^7.0.3",
+    "vitest": "^2.0.0"
+  }
+}

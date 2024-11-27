@@ -36,11 +36,6 @@ const configs = defineConfig([
       format: 'esm',
       entryFileNames: 'esm/[name].mjs',
       chunkFileNames: 'shared/[name]-[hash].mjs',
-      // Cjs shims for esm format
-      banner: [
-        `import __node_module__ from 'node:module';`,
-        `const require = __node_module__.createRequire(import.meta.url)`,
-      ].join('\n'),
     },
     plugins: [
       {

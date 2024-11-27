@@ -25,7 +25,7 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, ROLLDOWN_IGNORE,
+  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -94,7 +94,7 @@ pub struct AstScanner<'me, 'ast> {
   cur_class_decl_and_symbol_referenced_ids: Option<(SymbolId, &'me Vec<ReferenceId>)>,
   visit_path: Vec<AstKind<'ast>>,
   scope_stack: Vec<Option<ScopeId>>,
-  options: Option<&'me SharedOptions>,
+  options: &'me SharedOptions,
   dynamic_import_usage_info: DynamicImportUsageInfo,
   ignore_comment: &'static str,
 }
@@ -110,7 +110,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     source: &'me ArcStr,
     file_path: &'me ModuleId,
     comments: &'me oxc::allocator::Vec<'me, Comment>,
-    options: Option<&'me SharedOptions>,
+    options: &'me SharedOptions,
   ) -> Self {
     let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, idx, scope.root_scope_id());
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
@@ -163,7 +163,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
       visit_path: vec![],
-      ignore_comment: options.map_or(ROLLDOWN_IGNORE, |opt| opt.experimental.get_ignore_comment()),
+      ignore_comment: options.experimental.get_ignore_comment(),
       options,
       scope_stack: vec![],
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),

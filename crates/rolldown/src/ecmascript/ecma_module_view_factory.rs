@@ -46,7 +46,7 @@ fn scan_ast(
     ast.source(),
     &module_id,
     ast.comments(),
-    Some(options),
+    options,
   );
   let namespace_object_ref = scanner.namespace_object_ref;
   let scan_result = scanner.scan(ast.program())?;

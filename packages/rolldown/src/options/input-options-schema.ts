@@ -160,6 +160,7 @@ export const inputOptionsSchema = z.strictObject({
       enableComposingJsPlugins: z.boolean().optional(),
       strictExecutionOrder: z.boolean().optional(),
       disableLiveBindings: z.boolean().optional(),
+      resolveNewUrlToAsset: z.boolean().optional(),
     })
     .optional(),
   define: z.record(z.string()).describe('Define global variables').optional(),

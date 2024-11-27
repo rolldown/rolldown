@@ -105,6 +105,7 @@ export interface InputOptions {
     strictExecutionOrder?: boolean
     disableLiveBindings?: boolean
     viteMode?: boolean
+    resolveNewUrlToAsset?: boolean
   }
   define?: Record<string, string>
   /**

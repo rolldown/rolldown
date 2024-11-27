@@ -546,6 +546,12 @@
             "null"
           ]
         },
+        "resolveNewUrlToAsset": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "strictExecutionOrder": {
           "type": [
             "boolean",

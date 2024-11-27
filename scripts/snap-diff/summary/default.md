@@ -1,8 +1,6 @@
 # Failed Cases
 ## [argument_default_value_scope_no_bundle](../../../crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle/diff.md)
   diff
-## [arguments_special_case_no_bundle](../../../crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle/diff.md)
-  diff
 ## call_import_namespace_warning
   missing
 ## [comment_preservation_import_assertions](../../../crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions/diff.md)
@@ -52,8 +50,6 @@
 ## import_with_query_parameter
   missing
 ## [indirect_require_message](../../../crates/rolldown/tests/esbuild/default/indirect_require_message/diff.md)
-  diff
-## [inject](../../../crates/rolldown/tests/esbuild/default/inject/diff.md)
   diff
 ## [inject_import_meta](../../../crates/rolldown/tests/esbuild/default/inject_import_meta/diff.md)
   diff
@@ -226,6 +222,7 @@
 ## [top_level_await_no_bundle_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle_esm_dead_branch)
 ## [use_strict_directive_bundle_esm_issue2264](../../../crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_esm_issue2264)
 # Bypassed Cases
+## [arguments_special_case_no_bundle](../../../crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle/bypass.md)
 ## [arrow_fn_scope](../../../crates/rolldown/tests/esbuild/default/arrow_fn_scope/bypass.md)
 ## [avoid_tdz](../../../crates/rolldown/tests/esbuild/default/avoid_tdz/bypass.md)
 ## [avoid_tdz_no_bundle](../../../crates/rolldown/tests/esbuild/default/avoid_tdz_no_bundle/bypass.md)
@@ -254,6 +251,7 @@
 ## [import_forms_with_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_forms_with_no_bundle/bypass.md)
 ## [import_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/import_fs_node_common_js/bypass.md)
 ## [import_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/import_fs_node_es6/bypass.md)
+## [inject](../../../crates/rolldown/tests/esbuild/default/inject/bypass.md)
 ## [inject_duplicate](../../../crates/rolldown/tests/esbuild/default/inject_duplicate/bypass.md)
 ## [inject_import_order](../../../crates/rolldown/tests/esbuild/default/inject_import_order/bypass.md)
 ## [inject_import_ts](../../../crates/rolldown/tests/esbuild/default/inject_import_ts/bypass.md)

@@ -257,7 +257,7 @@ impl<'a> LinkStage<'a> {
               // Make sure symbols from external modules are included and de_conflicted
               match rec.kind {
                 ImportKind::Import => {
-                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_START);
+                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR);
                   if is_reexport_all {
                     // export * from 'external' would be just removed. So it references nothing.
                     rec.namespace_ref.set_name(
@@ -285,7 +285,7 @@ impl<'a> LinkStage<'a> {
               let importee_linking_info = &self.metas[importee.idx];
               match rec.kind {
                 ImportKind::Import => {
-                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_START);
+                  let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR);
                   match importee_linking_info.wrap_kind {
                     WrapKind::None => {
                       // for case:

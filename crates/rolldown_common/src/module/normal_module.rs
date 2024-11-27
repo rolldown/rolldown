@@ -43,7 +43,7 @@ impl NormalModule {
           .ecma_view
           .import_records
           .iter()
-          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_START))
+          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
           .map(|rec| rec.resolved_module),
       )
     } else {
@@ -148,7 +148,7 @@ impl NormalModule {
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
     self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
-      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_START) {
+      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR) {
         return None;
       }
       match modules[rec.resolved_module] {

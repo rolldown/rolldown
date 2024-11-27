@@ -36,7 +36,7 @@ bitflags::bitflags! {
     /// the import is inserted during ast transformation, can't get source slice from the original source file
     const IS_UNSPANNED_IMPORT = 1 << 3;
     /// `export * from 'mod'` only
-    const IS_EXPORT_START = 1 << 4;
+    const IS_EXPORT_STAR = 1 << 4;
     ///  Tell the finalizer to use the runtime "__require()" instead of "require()"
     const CALL_RUNTIME_REQUIRE = 1 << 5;
     ///  `require('mod')` is used to load the module only

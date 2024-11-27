@@ -143,8 +143,6 @@
 - crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements
 ## unary operator side effects
 - crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators
-## related to minifier
-- crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
 ## not support `jsx.preserve`
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## esbuild will wrap `Promise.resolve().then() for original specifier`
@@ -183,8 +181,6 @@
 - crates/rolldown/tests/esbuild/default/import_namespace_this_value
 ## not align
 - crates/rolldown/tests/esbuild/default/indirect_require_message
-## generate wrong syntax when Exported is `StringLiteral`
-- crates/rolldown/tests/esbuild/default/inject
 ## different inject implementation
 - crates/rolldown/tests/esbuild/default/inject_import_meta
 ## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename

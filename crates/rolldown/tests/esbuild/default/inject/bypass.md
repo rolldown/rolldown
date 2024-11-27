@@ -1,5 +1,5 @@
 # Reason
-1. generate wrong syntax when Exported is `StringLiteral`
+1. the last line diff is because different inject implementation between `Oxc inject`(follows rollup inject) and `esbuild`
 # Diff
 ## /out.js
 ### esbuild

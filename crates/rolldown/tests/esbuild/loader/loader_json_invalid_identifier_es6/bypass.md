@@ -1,5 +1,5 @@
 # Reason
-1. json partial namespace memberExpr used tree shaking
+1. different codegen order
 # Diff
 ## /out.js
 ### esbuild
@@ -24,13 +24,7 @@ console.log(invalid_identifier, test2_exports);
 
 
 //#region test.json
-var test_exports = {};
-__export(test_exports, {
-	default: () => test_default,
-	"invalid-identifier": () => invalid_identifier$1
-});
 var invalid_identifier$1 = true;
-var test_default = { "invalid-identifier": invalid_identifier$1 };
 
 //#endregion
 //#region test2.json
@@ -44,7 +38,7 @@ var test2_default = { "invalid-identifier": invalid_identifier };
 
 //#endregion
 //#region entry.js
-console.log(test_exports["invalid-identifier"], test2_exports);
+console.log(invalid_identifier$1, test2_exports);
 
 //#endregion
 ```
@@ -53,17 +47,9 @@ console.log(test_exports["invalid-identifier"], test2_exports);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,19 @@
+@@ -1,11 +1,11 @@
 -var invalid_identifier = true;
-+var test_exports = {};
-+__export(test_exports, {
-+    default: () => test_default,
-+    "invalid-identifier": () => invalid_identifier$1
-+});
 +var invalid_identifier$1 = true;
-+var test_default = {
-+    "invalid-identifier": invalid_identifier$1
-+};
  var test2_exports = {};
  __export(test2_exports, {
      default: () => test2_default,
@@ -77,6 +63,6 @@ console.log(test_exports["invalid-identifier"], test2_exports);
 +    "invalid-identifier": invalid_identifier
  };
 -console.log(invalid_identifier, test2_exports);
-+console.log(test_exports["invalid-identifier"], test2_exports);
++console.log(invalid_identifier$1, test2_exports);
 
 ```

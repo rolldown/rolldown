@@ -677,6 +677,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
+  /// StaticMemberExpression or ComputeMemberExpression with static key
   pub fn try_extract_parent_static_member_expr_chain(
     &self,
     max_len: usize,
@@ -688,6 +689,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         AstKind::MemberExpression(MemberExpression::StaticMemberExpression(expr)) => {
           span = ancestor_ast.span();
           props.push(expr.property.name.as_str().into());
+        }
+        AstKind::MemberExpression(MemberExpression::ComputedMemberExpression(expr)) => {
+          if let Some(name) = expr.static_property_name() {
+            span = ancestor_ast.span();
+            props.push(name.into());
+          } else {
+            break;
+          }
         }
         _ => break,
       }

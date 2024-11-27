@@ -1,7 +1,7 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::{
-    ast::{self, Expression, IdentifierReference, Statement},
+    ast::{self, Expression, IdentifierReference, MemberExpression, Statement},
     Comment, NONE,
   },
   span::{Atom, GetSpan, SPAN},
@@ -474,5 +474,57 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     first_arg_string_literal.value = self.snippet.atom(&import_path);
     None
+  }
+
+  /// try rewrite `foo_exports.bar` or `foo_exports['bar']`  to `bar` directly
+  /// try rewrite `import.meta`
+  fn try_rewrite_member_expr(
+    &mut self,
+    member_expr: &ast::MemberExpression<'ast>,
+  ) -> Option<Expression<'ast>> {
+    match member_expr {
+      MemberExpression::ComputedMemberExpression(inner_expr) => {
+        if let Some(resolved) =
+          self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
+        {
+          match resolved {
+            Some((object_ref, props)) => {
+              let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
+
+              let replaced_expr =
+                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
+              return Some(replaced_expr);
+            }
+            None => {
+              return Some(self.snippet.void_zero());
+            }
+          }
+        }
+        None
+      }
+      MemberExpression::StaticMemberExpression(inner_expr) => {
+        if let Some(resolved) =
+          self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
+        {
+          match resolved {
+            Some((object_ref, props)) => {
+              let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
+
+              let replaced_expr =
+                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
+              return Some(replaced_expr);
+            }
+            None => {
+              return Some(self.snippet.void_zero());
+            }
+          }
+          // these two branch are exclusive since `import.meta` is a global member_expr
+        } else if let Some(new_expr) = self.try_rewrite_import_meta_prop_expr(inner_expr) {
+          return Some(new_expr);
+        }
+        None
+      }
+      MemberExpression::PrivateFieldExpression(_) => None,
+    }
   }
 }

@@ -37,9 +37,6 @@ const ignoreTests = [
   // Module meta related
   // Shouldn't modify meta objects passed in resolveId hook
   "rollup@function@custom-module-options: supports adding custom options to modules",
-
-  // The sourcemap related
-  "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es", // the source filed has error 
 ]
 
 module.exports = {

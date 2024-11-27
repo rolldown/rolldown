@@ -1,5 +1,5 @@
 # Reason
-1. import record with attributes
+1. not support import attributes
 # Diff
 ## /out.js
 ### esbuild

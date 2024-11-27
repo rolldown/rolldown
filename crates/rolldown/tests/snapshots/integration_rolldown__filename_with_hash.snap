@@ -2297,7 +2297,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 
-- entry-!~{000}~.js => entry-MjB6SOdQ.js
+- entry-!~{000}~.js => entry-CQbAI4ux.js
 
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 

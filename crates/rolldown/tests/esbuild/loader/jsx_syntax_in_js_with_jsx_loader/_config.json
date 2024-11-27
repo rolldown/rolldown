@@ -8,6 +8,9 @@
     ],
     "moduleTypes": {
       ".js": "jsx"
+    },
+    "jsx": {
+      "runtime": "classic"
     }
   },
   "expectExecuted": false

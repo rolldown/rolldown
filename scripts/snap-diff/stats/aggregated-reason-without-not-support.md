@@ -155,10 +155,6 @@
 - crates/rolldown/tests/esbuild/loader/jsx_automatic_no_name_collision
 ## rolldown don't have `jsx.Preserve` and `jsx.Parse` option
 - crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter
-## lowering jsx
-- crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
-## import record with attributes
-- crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes
 ## mime type should be `data:text/plain`
 - crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 ## Different hash asset name

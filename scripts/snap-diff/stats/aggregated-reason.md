@@ -29,6 +29,15 @@
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
 - crates/rolldown/tests/esbuild/ts/ts_minify_enum_property_names
 - crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with
+## lowering class
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
+- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
+- crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true
+- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
+- crates/rolldown/tests/esbuild/ts/ts_declare_class_fields
+- crates/rolldown/tests/esbuild/ts/ts_minify_derived_class
 ## not support copy loader
 - crates/rolldown/tests/esbuild/default/metafile_various_cases
 - crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths
@@ -38,14 +47,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_format
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_injected_file_bundle
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_transform
-## lowering class
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field
-- crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
-- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_false
-- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true
-- crates/rolldown/tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
-- crates/rolldown/tests/esbuild/ts/ts_declare_class_fields
-- crates/rolldown/tests/esbuild/ts/ts_minify_derived_class
 ## `jsx.factory`
 - crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
 - crates/rolldown/tests/esbuild/default/jsx_import_meta_property
@@ -92,9 +93,6 @@
 - crates/rolldown/tests/esbuild/default/nested_require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call
 - crates/rolldown/tests/esbuild/default/require_without_call_inside_try
-## cross module constant folding
-- crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number
-- crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
@@ -144,8 +142,6 @@
 - crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements
 ## unary operator side effects
 - crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators
-## class field lowering
-- crates/rolldown/tests/esbuild/default/argument_default_value_scope_no_bundle
 ## related to minifier
 - crates/rolldown/tests/esbuild/default/arguments_special_case_no_bundle
 ## not support `jsx.preserve`
@@ -166,10 +162,6 @@
 - crates/rolldown/tests/esbuild/default/define_import_meta_es5
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
-## cjs module lexer can't recognize esbuild interop pattern
-- crates/rolldown/tests/esbuild/default/export_forms_iife
-## Not sure if we needs to use `Object.define` pattern in iife
-- crates/rolldown/tests/esbuild/default/export_forms_iife
 ## should not generate duplicate export binding
 - crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 ## redundant `import` statements

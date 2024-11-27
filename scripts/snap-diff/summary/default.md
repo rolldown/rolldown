@@ -31,8 +31,6 @@
   missing
 ## [export_forms_common_js](../../../crates/rolldown/tests/esbuild/default/export_forms_common_js/diff.md)
   diff
-## [export_forms_iife](../../../crates/rolldown/tests/esbuild/default/export_forms_iife/diff.md)
-  diff
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
   diff
 ## [external_es6_converted_to_common_js](../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
@@ -244,6 +242,7 @@
 ## [dynamic_import_with_template_iife](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_template_iife/bypass.md)
 ## [entry_names_chunk_names_ext_placeholder](../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder/bypass.md)
 ## [export_forms_es6](../../../crates/rolldown/tests/esbuild/default/export_forms_es6/bypass.md)
+## [export_forms_iife](../../../crates/rolldown/tests/esbuild/default/export_forms_iife/bypass.md)
 ## [export_wildcard_fs_node_common_js](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js/bypass.md)
 ## [export_wildcard_fs_node_es6](../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6/bypass.md)
 ## [exports_and_module_format_common_js](../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js/bypass.md)

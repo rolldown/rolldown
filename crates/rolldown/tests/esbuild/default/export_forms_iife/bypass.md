@@ -1,6 +1,6 @@
 # Reason
 1. cjs module lexer can't recognize esbuild interop pattern
-2. Not sure if we needs to use `Object.define` pattern in iife
+2. different iife impl
 # Diff
 ## /out.js
 ### esbuild

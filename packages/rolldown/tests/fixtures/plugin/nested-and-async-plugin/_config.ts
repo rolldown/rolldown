@@ -1,4 +1,4 @@
-import { InputOptions } from '@src/index'
+import { InputOptions } from 'rolldown'
 import { defineTest } from '@tests'
 
 const pluginA = {

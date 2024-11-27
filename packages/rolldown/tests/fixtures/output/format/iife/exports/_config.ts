@@ -44,12 +44,7 @@ export default defineTest({
       var main_default = node_path.join;
 
       //#endregion
-      Object.defineProperty(exports, 'default', {
-        enumerable: true,
-        get: function () {
-          return main_default;
-        }
-      });
+      exports.default = main_default
       return exports;
       })({}, node_path);"
     `)

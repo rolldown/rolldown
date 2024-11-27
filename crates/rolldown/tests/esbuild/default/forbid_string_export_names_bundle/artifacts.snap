@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -19,8 +20,8 @@ let nested$1 = 2;
 //#region nested.js
 var nested_exports = {};
 __export(nested_exports, {
-	"nested name": () => nested,
-	"very nested name": () => nested$1
+	"nested name": nested,
+	"very nested name": nested$1
 });
 let nested = 1;
 

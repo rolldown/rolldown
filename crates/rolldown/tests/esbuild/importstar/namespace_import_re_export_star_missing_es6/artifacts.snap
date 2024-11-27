@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -29,7 +30,7 @@ const x = 123;
 //#endregion
 //#region foo.js
 var foo_exports = {};
-__export(foo_exports, { x: () => x });
+__export(foo_exports, { x });
 
 //#endregion
 //#region entry.js

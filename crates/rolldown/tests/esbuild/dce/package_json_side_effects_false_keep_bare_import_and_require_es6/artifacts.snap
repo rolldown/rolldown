@@ -11,7 +11,7 @@ snapshot_kind: text
 
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = {};
-__export(demo_pkg_exports, { foo: () => foo });
+__export(demo_pkg_exports, { foo });
 var foo;
 var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
 	foo = 123;

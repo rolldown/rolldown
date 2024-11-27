@@ -15,13 +15,13 @@ import { ns } from "x";
 
 //#region a.js
 var a_exports = {};
-__export(a_exports, { ns: () => ns$3 });
+__export(a_exports, { ns: ns$3 });
 var init_a = __esm({ "a.js"() {} });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-__export(b_exports, { ns: () => ns$2 });
+__export(b_exports, { ns: ns$2 });
 var init_b = __esm({ "b.js"() {} });
 
 //#endregion

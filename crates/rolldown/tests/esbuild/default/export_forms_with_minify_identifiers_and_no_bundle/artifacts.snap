@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -35,7 +36,7 @@ export { b_default as default };
 
 //#region b.js
 var b_exports = {};
-__export(b_exports, { default: () => b_default });
+__export(b_exports, { default: b_default });
 function b_default() {}
 
 //#endregion

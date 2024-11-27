@@ -89,3 +89,15 @@ impl SymbolRef {
     }
   }
 }
+
+// We only analyze the symbols we care about, so not all symbols's flags get tracked. That's why we add `assume` prefix to some methods.
+// The `assume` prefix` is intend to point out that if the method returns `true`, the assumption is absolutely correct.
+// If the method returns `false`, it doesn't mean the assumption is absolutely wrong. It means that we don't know the answer.
+impl SymbolRef {
+  /// If the symbol is declared by `const` or never get reassigned.
+  pub fn assume_unchangeable<T: GetLocalDb>(&self, db: &T) -> bool {
+    db.local_db(self.owner).flags.get(&self.symbol).map_or(false, |flags| {
+      flags.intersects(SymbolRefFlags::IS_CONST | SymbolRefFlags::IS_NOT_REASSIGNED)
+    })
+  }
+}

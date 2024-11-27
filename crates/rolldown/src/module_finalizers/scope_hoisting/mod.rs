@@ -320,9 +320,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     arg_obj_expr.properties.reserve_exact(exports_len);
 
     self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
-      // prop_name: () => returned
       let prop_name = export;
+
+      let canonical_ref = self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+
+      // `returned`
       let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false);
+
+      let is_safe_to_apply_pure_assignment =
+        self.ctx.symbol_db.get(canonical_ref).namespace_alias.is_none()
+          && canonical_ref.assume_unchangeable(self.ctx.symbol_db);
+
+      // `prop_name: () => returned` or `prop_name: returned`
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
           key: if is_validate_identifier_name(prop_name) {
@@ -332,7 +341,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
           },
-          value: self.snippet.only_return_arrow_expr(returned),
+          shorthand: is_safe_to_apply_pure_assignment
+            && returned.as_identifier().is_some_and(|id| id.name == prop_name),
+          value: if is_safe_to_apply_pure_assignment {
+            returned
+          } else {
+            self.snippet.only_return_arrow_expr(returned)
+          },
           ..TakeIn::dummy(self.alloc)
         }
         .into_in(self.alloc),

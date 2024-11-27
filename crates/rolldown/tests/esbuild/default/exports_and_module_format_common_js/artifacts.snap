@@ -12,13 +12,13 @@ const node_assert = __toESM(require("node:assert"));
 
 //#region foo/test.js
 var test_exports$1 = {};
-__export(test_exports$1, { foo: () => foo });
+__export(test_exports$1, { foo });
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
 var test_exports = {};
-__export(test_exports, { bar: () => bar });
+__export(test_exports, { bar });
 let bar = 123;
 
 //#endregion

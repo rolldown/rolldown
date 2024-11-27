@@ -15,7 +15,7 @@ const foo = () => "hi there";
 //#endregion
 //#region folders/index.js
 var folders_exports = {};
-__export(folders_exports, { foo: () => foo });
+__export(folders_exports, { foo });
 
 //#endregion
 //#region entry.js

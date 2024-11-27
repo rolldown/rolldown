@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.ts
 var foo_exports = {};
-__export(foo_exports, { foo: () => foo });
+__export(foo_exports, { foo });
 var foo;
 var init_foo = __esm({ "foo.ts"() {
 	foo = 123;

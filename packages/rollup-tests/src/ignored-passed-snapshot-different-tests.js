@@ -5,9 +5,6 @@ module.exports = [
     "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
     "rollup@form@import-specifier-deshadowing: deshadows aliased import bindings@generates es", // rollup not deconflict
     "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
-    "rollup@form@export-all-multiple: correctly handles multiple export * declarations (#1252)@generates es", // has extra import external
-    "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals", // has extra import external
-    "rollup@form@export-all-before-named: external `export *` must not interfere with internal exports@generates es",// has extra import external
     "rollup@form@dynamic-import-inlining: dynamic import inlining",
     "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
     "rollup@form@inline-with-reexport: handles inlining dynamic imports when the imported module contains reexports",

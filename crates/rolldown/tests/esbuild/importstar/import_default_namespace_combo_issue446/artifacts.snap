@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -233,7 +234,7 @@ console.log(internal_default, internal_exports);
 
 //#region internal.js
 var internal_exports = {};
-__export(internal_exports, { default: () => internal_default });
+__export(internal_exports, { default: internal_default });
 var internal_default = 123;
 
 //#endregion

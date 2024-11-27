@@ -13,9 +13,10 @@ var __commonJS = (cb, mod) => function () {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
 }
 var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports)
+// Used to implement ESM exports both for "require()" and "import * as"
 var __export = (target, all) => {
   for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true })
+    __defProp(target, name, typeof all[name] === 'function' ? { get: all[name], enumerable: true } : { value: all[name], enumerable: true })
 }
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === 'object' || typeof from === 'function')

@@ -7,9 +7,10 @@ export default defineTest({
       exports: 'named',
       name: 'module',
       format: 'umd',
+      entryFileNames: '[name].cjs',
     },
   },
   afterTest: async () => {
-    await import('./assert.js')
+    await import('./assert.cjs')
   },
 })

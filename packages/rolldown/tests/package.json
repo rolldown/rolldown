@@ -1,6 +1,7 @@
 {
   "name": "rolldown-tests",
   "private": true,
+  "type": "module",
   "scripts": {
     "go": "cross-env RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --reporter verbose --hideSkippedTests"
   },

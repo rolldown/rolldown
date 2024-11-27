@@ -200,9 +200,7 @@ impl PluginDriver {
         if let Some(mut map) = r.map {
           // If sourcemap  hasn't `sources`, using original id to fill it.
           let source = map.get_source(0);
-          if source.map_or(true, str::is_empty)
-            || source.map(|source| source != args.id).unwrap_or(true)
-          {
+          if source.map_or(true, str::is_empty) || source.map_or(true, |source| source != args.id) {
             map.set_sources(vec![args.id]);
           }
           // If sourcemap hasn't `sourcesContent`, using original code to fill it.

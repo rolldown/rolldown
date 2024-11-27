@@ -164,6 +164,8 @@ jobs:
       fail-fast: false
     name: Build Node Package
     runs-on: ubuntu-latest
+    env:
+      RELEASING: 'true'
     steps:
       - uses: actions/checkout@v4
 

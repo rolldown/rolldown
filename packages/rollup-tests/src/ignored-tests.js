@@ -29,10 +29,6 @@ const ignoreTests = [
   "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
   "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
-
-  // Module meta related
-  // Shouldn't modify meta objects passed in resolveId hook
-  "rollup@function@custom-module-options: supports adding custom options to modules",
 ]
 
 module.exports = {

@@ -51,7 +51,7 @@
  - rollup@function@plugin-cache@anonymous-set: throws for anonymous plugins adding to the cache
  - rollup@function@plugin-cache@duplicate-names: throws if two plugins with the same name and no cache key access the cache
 
-### `PluginContext.load` is not fully supported
+### The `PluginContext.load` is not fully supported
  - rollup@form@supports-core-js: supports core-js (`@rollup/plugin-commonjs` is not supported)
  - rollup@form@supports-es5-shim: supports es5-shim (`@rollup/plugin-commonjs` is not supported)
  - rollup@form@supports-es6-shim: supports es6-shim (`@rollup/plugin-commonjs` is not supported)
@@ -156,10 +156,6 @@
  - rollup@function@compact: compact output with compact: true
  - rollup@form@compact-multiple-imports: correctly handles empty external imports in compact mode@generates es
  - rollup@form@compact: supports compact output with compact: true@generates es
-
-### The `output.globals` function is not supported
- - rollup@form@globals-function: Externals aliases with deshadowing@generates es
- - rollup@form@external-imports-custom-names-function: allows globals to be specified as a function@generates es
 
 ### The `output.validate` is not supported
  - rollup@function@validate-output: handles validate failure

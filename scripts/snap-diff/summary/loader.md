@@ -7,8 +7,6 @@
   diff
 ## [jsx_preserve_capital_letter](../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter/diff.md)
   diff
-## [jsx_syntax_in_js_with_jsx_loader](../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader/diff.md)
-  diff
 ## [loader_bundle_with_import_attributes](../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes/diff.md)
   diff
 ## loader_bundle_with_unknown_import_attributes_and_copy_loader
@@ -82,6 +80,7 @@
 # Passed Cases
 ## [auto_detect_mime_type_from_extension](../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension)
 ## [extensionless_loader_js](../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_js)
+## [jsx_syntax_in_js_with_jsx_loader](../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader)
 ## [loader_data_url_base64_vs_percent_encoding](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding)
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)

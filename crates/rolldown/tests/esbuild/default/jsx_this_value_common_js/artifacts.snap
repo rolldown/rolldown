@@ -1,28 +1,46 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
-## factory.js
+## chunk.js
 
 ```js
 
+
+export { __commonJS };
+```
+## factory.js
+
+```js
+import { __commonJS } from "./chunk.js";
+
 //#region factory.jsx
-console.log([this("x", null), /* @__PURE__ */ this("x", null)]);
-f = function() {
-	console.log([this("y", null), /* @__PURE__ */ this("y", null)]);
-};
+var require_factory = __commonJS({ "factory.jsx"(exports) {
+	console.log([this("x", null), /* @__PURE__ */ exports("x", null)]);
+	f = function() {
+		console.log([this("y", null), /* @__PURE__ */ this("y", null)]);
+	};
+} });
 
 //#endregion
+export default require_factory();
+
 ```
 ## fragment.js
 
 ```js
+import { __commonJS } from "./chunk.js";
 
 //#region fragment.jsx
-console.log([this(this, null, "x"), /* @__PURE__ */ this(this, null, "x")]), f = function() {
-	console.log([this(this, null, "y"), /* @__PURE__ */ this(this, null, "y")]);
-};
+var require_fragment = __commonJS({ "fragment.jsx"(exports) {
+	console.log([this(this, null, "x"), /* @__PURE__ */ exports(exports, null, "x")]), f = function() {
+		console.log([this(this, null, "y"), /* @__PURE__ */ this(this, null, "y")]);
+	};
+} });
 
 //#endregion
+export default require_fragment();
+
 ```

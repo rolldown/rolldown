@@ -10,7 +10,8 @@ use oxc::{
   span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, WrapKind,
+  ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, ThisExprReplaceKind,
+  WrapKind,
 };
 use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
@@ -249,6 +250,18 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       ast::Expression::Identifier(ident_ref) => {
         if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, false) {
           *expr = new_expr;
+        }
+      }
+      ast::Expression::ThisExpression(this_expr) => {
+        if let Some(kind) = self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.span) {
+          match kind {
+            ThisExprReplaceKind::Exports => {
+              *expr = self.snippet.builder.expression_identifier_reference(SPAN, "exports");
+            }
+            ThisExprReplaceKind::Undefined => {
+              *expr = self.snippet.void_zero();
+            }
+          }
         }
       }
       _ => {

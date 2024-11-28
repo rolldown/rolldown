@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region factory.jsx
-console.log([this.factory("x", null), /* @__PURE__ */ this.factory("x", null)]);
+console.log([this.factory("x", null), /* @__PURE__ */ (void 0).factory("x", null)]);
 f = function() {
 	console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 };
@@ -20,7 +21,7 @@ f = function() {
 ```js
 
 //#region fragment.jsx
-console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ this.factory(this.fragment, null, "x")]), f = function() {
+console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x")]), f = function() {
 	console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 };
 

@@ -1,6 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use dashmap::DashMap;
+use rustc_hash::FxBuildHasher;
 
 use crate::{
   resolver::Resolver,
@@ -59,7 +60,7 @@ pub struct ExternalDecider {
   options: ExternalDeciderOptions,
   runtime: String,
   resolver: Arc<Resolver>,
-  processed_ids: DashMap<String, bool>,
+  processed_ids: DashMap<String, bool, FxBuildHasher>,
 }
 
 impl ExternalDecider {

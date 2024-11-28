@@ -2710,6 +2710,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
+ "rustc-hash",
  "sugar_path",
  "tokio",
  "tracing",
@@ -2880,6 +2881,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_fs",
+ "rustc-hash",
  "sugar_path",
 ]
 

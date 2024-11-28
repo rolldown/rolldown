@@ -4,6 +4,7 @@ use dashmap::{DashMap, DashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
 use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
+use rustc_hash::FxBuildHasher;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -19,13 +20,13 @@ pub struct EmittedAsset {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  source_hash_to_reference_id: DashMap<ArcStr, ArcStr>,
-  names: DashMap<ArcStr, u32>,
-  files: DashMap<ArcStr, EmittedAsset>,
+  source_hash_to_reference_id: DashMap<ArcStr, ArcStr, FxBuildHasher>,
+  names: DashMap<ArcStr, u32, FxBuildHasher>,
+  files: DashMap<ArcStr, EmittedAsset, FxBuildHasher>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
-  emitted_files: DashSet<ArcStr>,
+  emitted_files: DashSet<ArcStr, FxBuildHasher>,
 }
 
 impl FileEmitter {

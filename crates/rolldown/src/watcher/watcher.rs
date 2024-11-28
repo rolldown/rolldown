@@ -9,6 +9,7 @@ use rolldown_common::{
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::pattern_filter;
+use rustc_hash::FxBuildHasher;
 use std::{
   path::Path,
   sync::{
@@ -38,7 +39,7 @@ pub struct Watcher {
   inner: Arc<Mutex<RecommendedWatcher>>,
   running: AtomicBool,
   rerun: AtomicBool,
-  watch_files: DashSet<ArcStr>,
+  watch_files: DashSet<ArcStr, FxBuildHasher>,
   tx: Arc<Sender<WatcherChannelMsg>>,
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }

@@ -3,6 +3,7 @@ use dashmap::DashMap;
 use itertools::Itertools;
 use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions};
 use rolldown_fs::{FileSystem, OsFileSystem};
+use rustc_hash::FxBuildHasher;
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
@@ -27,7 +28,7 @@ pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   css_resolver: ResolverGeneric<T>,
   // Resolver for `new URL(..., import.meta.url)`
   new_url_resolver: ResolverGeneric<T>,
-  package_json_cache: DashMap<PathBuf, Arc<PackageJson>>,
+  package_json_cache: DashMap<PathBuf, Arc<PackageJson>, FxBuildHasher>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {

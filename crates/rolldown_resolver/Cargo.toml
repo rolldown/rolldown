@@ -23,4 +23,5 @@ itertools       = { workspace = true }
 oxc_resolver    = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_fs     = { workspace = true, features = ["os"] }
+rustc-hash      = { workspace = true }
 sugar_path      = { workspace = true }

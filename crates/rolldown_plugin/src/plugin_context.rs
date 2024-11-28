@@ -15,6 +15,7 @@ use rolldown_common::{
   SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::{ResolveError, Resolver};
+use rustc_hash::FxBuildHasher;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -87,9 +88,9 @@ pub struct PluginContextImpl {
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) options: SharedNormalizedBundlerOptions,
-  pub(crate) watch_files: Arc<DashSet<ArcStr>>,
-  pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>>>,
-  pub(crate) context_load_modules: Arc<DashMap<ArcStr, LoadCallback>>,
+  pub(crate) watch_files: Arc<DashSet<ArcStr, FxBuildHasher>>,
+  pub(crate) modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>, FxBuildHasher>>,
+  pub(crate) context_load_modules: Arc<DashMap<ArcStr, LoadCallback, FxBuildHasher>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 

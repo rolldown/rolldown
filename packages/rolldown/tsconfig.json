@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*", "build.mts"],
+  "include": ["src/**/*", "build.ts"],
   "exclude": ["src/*.js", "src/*.mjs", "src/*.cjs", "dist/**"],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */

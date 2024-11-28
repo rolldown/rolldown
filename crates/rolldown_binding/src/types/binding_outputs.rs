@@ -35,8 +35,12 @@ impl BindingOutputs {
         .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env))
 =======
         .into_iter()
+<<<<<<< HEAD
         .map(|diagnostic| to_js_diagnostic(&diagnostic, cwd.clone(), env))
 >>>>>>> 18ed45cbf (refactor: using reference at generate diagnostic)
+=======
+        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env))
+>>>>>>> 919159126 (refactor: fix lint)
         .collect();
     }
     Ok(vec![])

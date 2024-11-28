@@ -7,12 +7,14 @@ use std::{
 
 use dashmap::DashMap;
 use rolldown_common::PackageJson;
+use rustc_hash::FxBuildHasher;
 use serde::{de::IgnoredAny, Deserialize};
 
 #[derive(Debug, Default)]
 pub struct PackageJsonCache {
-  side_effects_cache: DashMap<PathBuf, Arc<PackageJson>>,
-  optional_peer_dep_cache: DashMap<PathBuf, Arc<PackageJsonWithOptionalPeerDependencies>>,
+  side_effects_cache: DashMap<PathBuf, Arc<PackageJson>, FxBuildHasher>,
+  optional_peer_dep_cache:
+    DashMap<PathBuf, Arc<PackageJsonWithOptionalPeerDependencies>, FxBuildHasher>,
 }
 
 impl PackageJsonCache {

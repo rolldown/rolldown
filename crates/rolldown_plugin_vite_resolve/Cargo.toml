@@ -16,6 +16,7 @@ derive_more     = { workspace = true }
 oxc_resolver    = { workspace = true, features = ["package_json_raw_json_api"] }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
+rustc-hash      = { workspace = true }
 serde           = { workspace = true }
 serde_json      = { workspace = true }
 sugar_path      = { workspace = true }

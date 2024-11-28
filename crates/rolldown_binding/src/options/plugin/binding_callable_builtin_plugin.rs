@@ -4,7 +4,7 @@ use napi::{bindgen_prelude::FromNapiValue, Either};
 use napi_derive::napi;
 use rolldown_common::{side_effects, WatcherChangeKind};
 use rolldown_plugin::{
-  typedmap::TypedDashMap, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
+  CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
 };
 use rolldown_plugin_vite_resolve::{
   CallablePluginAsyncTrait, ResolveIdOptionsScan, ViteResolvePlugin,
@@ -95,9 +95,9 @@ pub struct BindingHookJsResolveIdOptions {
   pub scan: Option<bool>,
 }
 
-impl From<BindingHookJsResolveIdOptions> for Arc<TypedDashMap> {
+impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   fn from(value: BindingHookJsResolveIdOptions) -> Self {
-    let map = TypedDashMap::default();
+    let map = CustomField::default();
     map.insert(ResolveIdOptionsScan {}, value.scan.unwrap_or(false));
     Arc::new(map)
   }

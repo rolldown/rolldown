@@ -36,6 +36,7 @@ import {
 } from './bindingify-hook-filter'
 import type { BindingifyPluginArgs } from './bindingify-plugin'
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
+import { normalizeErrors } from '../utils/error'
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
@@ -81,7 +82,7 @@ export function bindingifyBuildEnd(
           args.onLog,
           args.logLevel,
         ),
-        err ? new Error(err) : undefined,
+        err ? normalizeErrors(err.errors) : undefined,
       )
     },
     meta: bindingifyPluginHookMeta(meta),

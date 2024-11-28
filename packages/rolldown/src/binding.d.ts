@@ -15,6 +15,10 @@ export declare class BindingCallableBuiltinPlugin {
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
+export declare class BindingHookError {
+  get errors(): Array<unknown>
+}
+
 export declare class BindingLog {
   code: string
   message: string
@@ -439,7 +443,7 @@ export interface BindingPluginOptions {
   transformFilter?: BindingTransformHookFilter
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
-  buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
+  buildEnd?: (ctx: BindingPluginContext, error?: BindingHookError) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta

@@ -131,7 +131,7 @@ impl Plugin for ParallelJsPlugin {
   async fn build_end(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: Option<&rolldown_plugin::HookBuildEndArgs>,
+    args: Option<&rolldown_plugin::HookBuildEndArgs<'_>>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.first_plugin().build_end.is_some() {
       self.run_all(|plugin| plugin.call_build_end(ctx, args)).await?;

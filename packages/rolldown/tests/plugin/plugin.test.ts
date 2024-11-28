@@ -41,7 +41,7 @@ describe('Plugin buildEnd hook', async () => {
       },
       buildEnd: (error) => {
         buildEndFn()
-        expect(error).toBeInstanceOf(Error)
+        expect(error!.message).toContain('load error')
       },
     })
     expect(buildEndFn).toHaveBeenCalledTimes(1)

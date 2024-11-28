@@ -96,7 +96,7 @@ impl<'a> LinkStage<'a> {
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
-      errors: scan_stage_output.errors,
+      errors: vec![],
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,

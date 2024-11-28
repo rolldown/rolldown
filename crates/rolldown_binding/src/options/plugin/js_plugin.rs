@@ -11,6 +11,7 @@ use std::{borrow::Cow, ops::Deref, sync::Arc};
 use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_error::BindingHookError,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
@@ -193,10 +194,14 @@ impl Plugin for JsPlugin {
   async fn build_end(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: Option<&rolldown_plugin::HookBuildEndArgs>,
+    args: Option<&rolldown_plugin::HookBuildEndArgs<'_>>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_end {
-      cb.await_call((ctx.clone().into(), args.map(|a| a.error.to_string()))).await?;
+      cb.await_call((
+        ctx.clone().into(),
+        args.map(|args| BindingHookError::new(args.errors.clone(), args.cwd.clone())),
+      ))
+      .await?;
     }
     Ok(())
   }

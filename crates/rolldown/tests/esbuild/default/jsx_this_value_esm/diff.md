@@ -1,5 +1,5 @@
 # Reason
-1. `jsx.factory`
+1. should replace `this` with `void 0` when it's in none function scope
 # Diff
 ## /out/factory.js
 ### esbuild

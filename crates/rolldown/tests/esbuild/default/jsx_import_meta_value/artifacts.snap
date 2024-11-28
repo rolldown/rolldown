@@ -2,31 +2,16 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in factory.jsx
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in fragment.jsx
-
-```
 # Assets
 
 ## factory.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region factory.jsx
-console.log([_jsx("x", {}), /* @__PURE__ */ import.meta("x", null)]);
+console.log([import.meta("x", null), /* @__PURE__ */ import.meta("x", null)]);
 f = function() {
-	console.log([_jsx("y", {}), /* @__PURE__ */ import.meta("y", null)]);
+	console.log([import.meta("y", null), /* @__PURE__ */ import.meta("y", null)]);
 };
 
 //#endregion
@@ -34,11 +19,10 @@ f = function() {
 ## fragment.js
 
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 
 //#region fragment.jsx
-console.log([_jsx(_Fragment, { children: "x" }), /* @__PURE__ */ import.meta(import.meta, null, "x")]), f = function() {
-	console.log([_jsx(_Fragment, { children: "y" }), /* @__PURE__ */ import.meta(import.meta, null, "y")]);
+console.log([import.meta(import.meta, null, "x"), /* @__PURE__ */ import.meta(import.meta, null, "x")]), f = function() {
+	console.log([import.meta(import.meta, null, "y"), /* @__PURE__ */ import.meta(import.meta, null, "y")]);
 };
 
 //#endregion

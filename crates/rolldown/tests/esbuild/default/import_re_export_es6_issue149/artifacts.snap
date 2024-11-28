@@ -16,41 +16,24 @@ snapshot_kind: text
 ───╯
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in app.jsx
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in in2.jsx
-
-```
 # Assets
 
 ## app.js
 
 ```js
-import { render } from "preact";
-import { jsx as _jsx, jsx as _jsx$1, jsxs as _jsxs } from "react/jsx-runtime";
+import { h, render } from "preact";
 
 //#region import.js
 const p = "p";
 
 //#endregion
 //#region in2.jsx
-const Internal = () => _jsx$1(p, { children: " Test 2 " });
+const Internal = () => h(p, null, " Test 2 ");
 
 //#endregion
 //#region app.jsx
-const App = () => _jsxs(p, { children: [
-	" ",
-	_jsx(Internal, {}),
-	" T "
-] });
-render(_jsx(App, {}), document.getElementById("app"));
+const App = () => h(p, null, " ", h(Internal, null), " T ");
+render(h(App, null), document.getElementById("app"));
 
 //#endregion
 ```

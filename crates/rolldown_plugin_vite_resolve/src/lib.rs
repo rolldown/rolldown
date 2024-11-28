@@ -1,7 +1,6 @@
 mod callable_plugin;
 mod external;
 mod package_json_cache;
-mod package_json_peer;
 mod resolver;
 mod utils;
 mod vite_resolve_plugin;

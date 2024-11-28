@@ -30,7 +30,7 @@ impl BindingOutputs {
   pub fn errors(&mut self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
     if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = &self.error {
       return diagnostics
-        .into_iter()
+        .iter()
         .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env))
         .collect();
     }

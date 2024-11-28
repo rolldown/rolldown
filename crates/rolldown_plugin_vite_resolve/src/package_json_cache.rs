@@ -1,13 +1,8 @@
-use std::{
-  collections::{BTreeMap, BTreeSet},
-  fs,
-  path::PathBuf,
-  sync::Arc,
-};
+use std::{fs, path::PathBuf, sync::Arc};
 
 use dashmap::DashMap;
 use rolldown_common::PackageJson;
-use rustc_hash::FxBuildHasher;
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 use serde::{de::IgnoredAny, Deserialize};
 
 #[derive(Debug, Default)]
@@ -63,7 +58,7 @@ impl PackageJsonCache {
 #[derive(Debug, Default)]
 pub struct PackageJsonWithOptionalPeerDependencies {
   pub name: String,
-  pub optional_peer_dependencies: BTreeSet<String>,
+  pub optional_peer_dependencies: FxHashSet<String>,
 }
 
 impl TryFrom<PackageJsonWithPeerDependenciesRaw> for PackageJsonWithOptionalPeerDependencies {
@@ -73,7 +68,7 @@ impl TryFrom<PackageJsonWithPeerDependenciesRaw> for PackageJsonWithOptionalPeer
     let (Some(peer_dependencies), Some(peer_dependencies_meta)) =
       (value.peer_dependencies, value.peer_dependencies_meta)
     else {
-      return Ok(Self { name: value.name, optional_peer_dependencies: BTreeSet::default() });
+      return Ok(Self { name: value.name, optional_peer_dependencies: FxHashSet::default() });
     };
 
     Ok(Self {
@@ -90,9 +85,9 @@ impl TryFrom<PackageJsonWithPeerDependenciesRaw> for PackageJsonWithOptionalPeer
 struct PackageJsonWithPeerDependenciesRaw {
   pub name: String,
   #[serde(rename = "peerDependencies")]
-  pub peer_dependencies: Option<BTreeMap<String, IgnoredAny>>,
+  pub peer_dependencies: Option<FxHashMap<String, IgnoredAny>>,
   #[serde(rename = "peerDependenciesMeta")]
-  pub peer_dependencies_meta: Option<BTreeMap<String, PackageJsonPeerDependenciesMetaRaw>>,
+  pub peer_dependencies_meta: Option<FxHashMap<String, PackageJsonPeerDependenciesMetaRaw>>,
 }
 
 #[derive(Deserialize)]

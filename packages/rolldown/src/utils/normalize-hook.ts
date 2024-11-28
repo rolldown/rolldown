@@ -20,7 +20,9 @@ export function normalizeHook<Hook extends ObjectHook<AnyFn | string>>(
       options: {},
       meta: {},
     } as Return
-  } else if (typeof hook === 'object' && hook !== null) {
+  }
+
+  if (typeof hook === 'object' && hook !== null) {
     const { handler, order, ...options } = hook
     return {
       handler,

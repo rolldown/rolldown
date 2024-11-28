@@ -1,11 +1,12 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type {
+  BindingGeneralHookFilter,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
+  BindingTransformHookFilter,
 } from '../binding'
 
 import type {
-  hookFilterExtension,
   PluginHooks,
   PrivateResolveIdExtraOptions,
   SourceDescription,
@@ -91,7 +92,7 @@ export function bindingifyResolveId(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<
   BindingPluginOptions['resolveId'],
-  hookFilterExtension<'transform'>
+  BindingGeneralHookFilter | undefined
 > {
   const hook = args.plugin.resolveId as unknown as PluginHooks['resolveId']
   if (!hook) {
@@ -154,7 +155,6 @@ export function bindingifyResolveId(
       }
     },
     meta: bindingifyPluginHookMeta(meta),
-    // @ts-ignore
     filter: bindingifyResolveIdFilter(options.filter),
   }
 }
@@ -218,7 +218,10 @@ export function bindingifyResolveDynamicImport(
 
 export function bindingifyTransform(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['transform']> {
+): PluginHookWithBindingExt<
+  BindingPluginOptions['transform'],
+  BindingTransformHookFilter | undefined
+> {
   const hook = args.plugin.transform
   if (!hook) {
     return {}
@@ -266,14 +269,16 @@ export function bindingifyTransform(
       }
     },
     meta: bindingifyPluginHookMeta(meta),
-    // @ts-ignore
     filter: bindingifyTransformFilter(options.filter),
   }
 }
 
 export function bindingifyLoad(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['load']> {
+): PluginHookWithBindingExt<
+  BindingPluginOptions['load'],
+  BindingGeneralHookFilter | undefined
+> {
   const hook = args.plugin.load
   if (!hook) {
     return {}
@@ -317,7 +322,6 @@ export function bindingifyLoad(
       }
     },
     meta: bindingifyPluginHookMeta(meta),
-    // @ts-ignore
     filter: bindingifyLoadFilter(options.filter),
   }
 }

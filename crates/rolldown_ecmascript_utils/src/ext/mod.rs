@@ -192,7 +192,7 @@ pub trait StatementExt<'me, 'ast> {
   fn is_module_declaration_with_source(&self) -> bool;
 }
 
-impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
+impl<'ast> StatementExt<'_, 'ast> for ast::Statement<'ast> {
   fn is_import_declaration(&self) -> bool {
     matches!(self, ast::Statement::ImportDeclaration(_))
   }

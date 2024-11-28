@@ -80,7 +80,7 @@ pub struct GlobImportVisit<'ast, 'a> {
   id: &'a str,
 }
 
-impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
+impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::CallExpression(call_expr) = expr {
       match &call_expr.callee {
@@ -206,7 +206,7 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
   }
 }
 
-impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
+impl<'ast> GlobImportVisit<'ast, '_> {
   fn eval_glob_expr(&mut self, arg: &Argument, files: &mut std::vec::Vec<String>) {
     let mut glob_exprs = vec![];
     match arg {

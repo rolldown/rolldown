@@ -188,7 +188,7 @@ impl<'text> MagicString<'text> {
   }
 }
 
-impl<'text> std::fmt::Display for MagicString<'text> {
+impl std::fmt::Display for MagicString<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     let size_hint = self.len();
     let mut ret = String::with_capacity(size_hint);

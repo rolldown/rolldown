@@ -16,7 +16,6 @@ pub mod program_cell;
 pub use gen::ToSourceString;
 
 /// - To access `&mut ast::Program`, use `ast.program.with_mut(|fields| { fields.program; })`.
-
 pub struct EcmaAst {
   pub program: ProgramCell,
   pub source_type: SourceType,

@@ -47,14 +47,19 @@ impl ParallelJsPlugin {
   }
 
   #[cfg(not(target_family = "wasm"))]
-  async fn run_single<'a, R, F: FnOnce(&'a JsPlugin) -> BoxFuture<R>>(&'a self, f: F) -> R {
+  async fn run_single<'a, R, F: FnOnce(&'a JsPlugin) -> BoxFuture<'a, R>>(&'a self, f: F) -> R {
     let permit = self.worker_manager.acquire().await;
     let plugin = &self.plugins[permit.worker_index() as usize];
     f(plugin).await
   }
 
   #[cfg(not(target_family = "wasm"))]
-  async fn run_all<'a, R, E: std::fmt::Debug, F: FnMut(&'a JsPlugin) -> BoxFuture<Result<R, E>>>(
+  async fn run_all<
+    'a,
+    R,
+    E: std::fmt::Debug,
+    F: FnMut(&'a JsPlugin) -> BoxFuture<'a, Result<R, E>>,
+  >(
     &'a self,
     f: F,
   ) -> Result<Vec<R>, E> {

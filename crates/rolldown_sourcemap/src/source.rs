@@ -12,7 +12,7 @@ pub trait Source {
   }
 }
 
-impl<'a> Source for &'a str {
+impl Source for &str {
   fn sourcemap(&self) -> Option<&SourceMap> {
     None
   }
@@ -67,7 +67,7 @@ impl Source for SourceMapSource {
   }
 }
 
-impl<'a> Source for &'a Box<dyn Source + Send + Sync> {
+impl Source for &Box<dyn Source + Send + Sync> {
   fn sourcemap(&self) -> Option<&SourceMap> {
     self.as_ref().sourcemap()
   }

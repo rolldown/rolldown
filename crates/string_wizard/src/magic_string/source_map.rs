@@ -20,7 +20,7 @@ impl Default for SourceMapOptions {
   }
 }
 
-impl<'s> MagicString<'s> {
+impl MagicString<'_> {
   pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap {
     let mut source_builder = SourcemapBuilder::new(opts.hires);
 

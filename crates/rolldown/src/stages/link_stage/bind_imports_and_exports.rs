@@ -94,7 +94,7 @@ pub enum ImportStatus {
   External(SymbolRef),
 }
 
-impl<'link> LinkStage<'link> {
+impl LinkStage<'_> {
   /// Notices:
   /// - For external import like
   /// ```js
@@ -350,7 +350,7 @@ struct BindImportsAndExportsContext<'a> {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
-impl<'a> BindImportsAndExportsContext<'a> {
+impl BindImportsAndExportsContext<'_> {
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
     let Module::Normal(module) = &self.normal_modules[module_id] else {
       return;

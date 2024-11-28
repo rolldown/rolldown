@@ -59,7 +59,7 @@ pub struct IndentOptions<'a, 'b> {
   pub exclude: &'b [(usize, usize)],
 }
 
-impl<'text> MagicString<'text> {
+impl MagicString<'_> {
   fn guessed_indentor(&mut self) -> &str {
     let guessed_indentor = self
       .guessed_indentor

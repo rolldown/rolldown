@@ -12,7 +12,7 @@ use rolldown_ecmascript_utils::{ExpressionExt, SpanExt};
 
 use super::SideEffectDetector;
 
-impl<'a> SideEffectDetector<'a> {
+impl SideEffectDetector<'_> {
   /// Get the nearest comment before the `span`, return `None` if no leading comment is founded.
   ///
   ///  # Examples

@@ -14,7 +14,7 @@ pub struct PreProcessor<'a, 'ast> {
   need_push_ast: bool,
 }
 
-impl<'a, 'ast> PreProcessor<'a, 'ast> {
+impl<'a> PreProcessor<'a, '_> {
   pub fn new(alloc: &'a Allocator) -> Self {
     Self {
       snippet: AstSnippet::new(alloc),

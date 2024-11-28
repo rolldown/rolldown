@@ -4,7 +4,7 @@ use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
-impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
+impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// return `None` if
   /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
   /// - the reference doesn't have a `ReferenceId`

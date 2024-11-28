@@ -171,6 +171,8 @@ const configs = defineConfig([
   },
 ])
 
-for (const config of configs) {
-  await (await rolldown(config)).write(config.output)
-}
+;(async () => {
+  for (const config of configs) {
+    await (await rolldown(config)).write(config.output)
+  }
+})()

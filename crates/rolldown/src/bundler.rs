@@ -188,11 +188,11 @@ impl Bundler {
 
 fn _test_bundler() {
   #[allow(clippy::needless_pass_by_value)]
-  fn _assert_send(_foo: impl Send) {}
+  fn assert_send(_foo: impl Send) {}
   let mut bundler = Bundler::new(BundlerOptions::default());
   let write_fut = bundler.write();
-  _assert_send(write_fut);
+  assert_send(write_fut);
   let mut bundler = Bundler::new(BundlerOptions::default());
   let generate_fut = bundler.generate();
-  _assert_send(generate_fut);
+  assert_send(generate_fut);
 }

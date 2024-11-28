@@ -15,7 +15,7 @@ pub async fn load_source(
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
-  asserted_module_type: &Option<ModuleType>,
+  asserted_module_type: Option<&ModuleType>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?

@@ -2,7 +2,7 @@ use crate::MagicString;
 
 use super::update::UpdateOptions;
 
-impl<'text> MagicString<'text> {
+impl MagicString<'_> {
   pub fn remove(&mut self, start: usize, end: usize) -> &mut Self {
     self.inner_update_with(
       start,

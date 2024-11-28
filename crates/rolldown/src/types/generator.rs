@@ -21,7 +21,7 @@ pub struct GenerateContext<'a> {
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
 }
 
-impl<'a> GenerateContext<'a> {
+impl GenerateContext<'_> {
   /// A `SymbolRef` might be identifier or a property access. This function will return correct string pattern for the symbol.
   pub fn finalized_string_pattern_for_symbol_ref(
     &self,

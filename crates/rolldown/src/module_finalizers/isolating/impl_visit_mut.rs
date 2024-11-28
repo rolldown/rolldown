@@ -10,7 +10,7 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::IsolatingModuleFinalizer;
 
-impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
+impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
     // we don't want oxc to generate hashbang statement in module level since we already handle
@@ -114,7 +114,7 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   }
 }
 
-impl<'me, 'ast> IsolatingModuleFinalizer<'me, 'ast> {
+impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
   pub fn transform_import_declaration(&mut self, import_decl: &ast::ImportDeclaration<'ast>) {
     // The specifiers rewrite with reference the namespace object, see `IsolatingModuleFinalizer#visit_expression`
 

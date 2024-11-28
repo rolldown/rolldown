@@ -10,7 +10,7 @@ static PURE_COMMENTS: LazyLock<DoubleArrayAhoCorasick<usize>> = LazyLock::new(||
   DoubleArrayAhoCorasick::new(patterns).unwrap()
 });
 
-impl<'a> SideEffectDetector<'a> {
+impl SideEffectDetector<'_> {
   /// Comments containing @__PURE__ or #__PURE__ mark a specific function call
   /// or constructor invocation as side effect free.
   ///

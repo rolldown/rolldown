@@ -9,5 +9,5 @@ pub(crate) fn should_ignore(glob: &str) -> bool {
     return true;
   }
 
-  return IGNORED_PROTOCOLS.iter().any(|protocol| glob.starts_with(protocol));
+  IGNORED_PROTOCOLS.iter().any(|protocol| glob.starts_with(protocol))
 }

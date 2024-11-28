@@ -30,7 +30,7 @@ pub struct Chunk<'str> {
   pub keep_in_mappings: bool,
 }
 
-impl<'s> Chunk<'s> {
+impl Chunk<'_> {
   pub fn new(span: Span) -> Self {
     Self { span, ..Default::default() }
   }

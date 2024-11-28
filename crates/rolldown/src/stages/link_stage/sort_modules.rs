@@ -12,7 +12,7 @@ enum Status {
   WaitForExit(ModuleIdx),
 }
 
-impl<'a> LinkStage<'a> {
+impl LinkStage<'_> {
   /// Some notes about the module execution order:
   /// - We assume user-defined entries are always executed orderly.
   /// - Async entries is sorted by `Module#debug_id` of entry module to ensure deterministic output.

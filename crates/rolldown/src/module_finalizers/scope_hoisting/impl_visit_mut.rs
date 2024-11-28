@@ -19,7 +19,7 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
-impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
+impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
@@ -383,7 +383,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   }
 }
 
-impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
+impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
   fn get_transformed_class_decl(
     &mut self,

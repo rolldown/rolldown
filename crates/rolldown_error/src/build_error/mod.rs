@@ -21,8 +21,8 @@ pub struct BuildDiagnostic {
 }
 
 fn _assert_build_error_send_sync() {
-  fn _assert_send_sync<T: Send + Sync>() {}
-  _assert_send_sync::<BuildDiagnostic>();
+  fn assert_send_sync<T: Send + Sync>() {}
+  assert_send_sync::<BuildDiagnostic>();
 }
 
 impl Display for BuildDiagnostic {

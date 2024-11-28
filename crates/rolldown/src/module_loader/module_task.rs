@@ -126,7 +126,7 @@ impl ModuleTask {
       &mut sourcemap_chain,
       &mut hook_side_effects,
       &self.ctx.options,
-      &self.asserted_module_type,
+      self.asserted_module_type.as_ref(),
     )
     .await
     {

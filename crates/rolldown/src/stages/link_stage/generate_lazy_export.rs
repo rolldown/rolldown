@@ -20,7 +20,7 @@ use rolldown_utils::{
 
 use super::LinkStage;
 
-impl<'link> LinkStage<'link> {
+impl LinkStage<'_> {
   pub fn generate_lazy_export(&mut self) {
     let module_idx_to_exports_kind = append_only_vec::AppendOnlyVec::new();
     self.module_table.modules.par_iter_mut().for_each(|module| {

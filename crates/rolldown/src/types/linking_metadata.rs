@@ -77,7 +77,7 @@ impl LinkingMetadata {
     module_idx: ModuleIdx,
     entry_point_kind: EntryPointKind,
     dynamic_import_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  ) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> + '_ {
+  ) -> impl Iterator<Item = (&'b Rstr, &'b ResolvedExport)> + 'b {
     let partial_used_exports = match entry_point_kind {
       rolldown_common::EntryPointKind::UserDefined => None,
       rolldown_common::EntryPointKind::DynamicImport => {

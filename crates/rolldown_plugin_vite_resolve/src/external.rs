@@ -22,7 +22,7 @@ impl ResolveOptionsExternal {
       ResolveOptionsExternal::Vec(vec) => vec,
       _ => return false,
     };
-    return vec.iter().any(|v| v == id);
+    vec.iter().any(|v| v == id)
   }
 }
 

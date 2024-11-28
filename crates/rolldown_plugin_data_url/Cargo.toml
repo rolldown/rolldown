@@ -9,9 +9,8 @@ doctest = false
 
 [dependencies]
 base64-simd     = { workspace = true }
-dashmap         = { workspace = true }
 regex           = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rustc-hash      = { workspace = true }
+rolldown_utils  = { workspace = true }
 urlencoding     = { workspace = true }

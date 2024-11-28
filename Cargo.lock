@@ -2710,6 +2710,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
+ "rustc-hash",
  "sugar_path",
  "tokio",
  "tracing",
@@ -2739,11 +2740,10 @@ name = "rolldown_plugin_data_url"
 version = "0.1.0"
 dependencies = [
  "base64-simd 0.8.0",
- "dashmap 6.1.0",
  "regex",
  "rolldown_common",
  "rolldown_plugin",
- "rustc-hash",
+ "rolldown_utils",
  "urlencoding",
 ]
 
@@ -2848,6 +2848,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_utils",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -2881,6 +2882,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_fs",
+ "rolldown_utils",
  "sugar_path",
 ]
 
@@ -2959,6 +2961,7 @@ dependencies = [
  "base-encode",
  "base64-simd 0.8.0",
  "criterion2",
+ "dashmap 6.1.0",
  "futures",
  "glob-match",
  "indexmap",

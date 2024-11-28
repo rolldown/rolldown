@@ -1,5 +1,6 @@
 use crate::{
-  types::hook_resolve_id_skipped::HookResolveIdSkipped, HookResolveIdArgs, PluginDriver,
+  types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
+  HookResolveIdArgs, PluginDriver,
 };
 use rolldown_common::{
   is_existing_node_builtin_modules, ImportKind, ModuleDefFormat, ResolvedId,
@@ -7,7 +8,6 @@ use rolldown_common::{
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
-use typedmap::TypedDashMap;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -26,7 +26,7 @@ pub async fn resolve_id_check_external(
   is_entry: bool,
   import_kind: ImportKind,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
-  custom: Arc<TypedDashMap>,
+  custom: Arc<CustomField>,
   is_user_defined_entry: bool,
   bundle_options: &SharedNormalizedBundlerOptions,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
@@ -100,7 +100,7 @@ pub async fn resolve_id_with_plugins(
   is_entry: bool,
   import_kind: ImportKind,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
-  custom: Arc<TypedDashMap>,
+  custom: Arc<CustomField>,
   is_user_defined_entry: bool,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   if matches!(import_kind, ImportKind::DynamicImport) {

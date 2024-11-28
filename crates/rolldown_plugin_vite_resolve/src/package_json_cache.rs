@@ -1,15 +1,14 @@
 use std::{fs, path::PathBuf, sync::Arc};
 
-use dashmap::DashMap;
 use rolldown_common::PackageJson;
-use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+use rolldown_utils::dashmap::FxDashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{de::IgnoredAny, Deserialize};
 
 #[derive(Debug, Default)]
 pub struct PackageJsonCache {
-  side_effects_cache: DashMap<PathBuf, Arc<PackageJson>, FxBuildHasher>,
-  optional_peer_dep_cache:
-    DashMap<PathBuf, Arc<PackageJsonWithOptionalPeerDependencies>, FxBuildHasher>,
+  side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
+  optional_peer_dep_cache: FxDashMap<PathBuf, Arc<PackageJsonWithOptionalPeerDependencies>>,
 }
 
 impl PackageJsonCache {

@@ -1,6 +1,7 @@
 use crate::{FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes};
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
 use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
@@ -19,13 +20,13 @@ pub struct EmittedAsset {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  source_hash_to_reference_id: DashMap<ArcStr, ArcStr>,
-  names: DashMap<ArcStr, u32>,
-  files: DashMap<ArcStr, EmittedAsset>,
+  source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
+  names: FxDashMap<ArcStr, u32>,
+  files: FxDashMap<ArcStr, EmittedAsset>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
-  emitted_files: DashSet<ArcStr>,
+  emitted_files: FxDashSet<ArcStr>,
 }
 
 impl FileEmitter {

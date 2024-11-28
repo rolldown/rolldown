@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_plugin::{typedmap::TypedDashMap, PluginContextResolveOptions};
+use rolldown_plugin::{CustomField, PluginContextResolveOptions};
 use serde::Deserialize;
 
 use crate::options::plugin::JsPluginContextResolveCustomArgId;
@@ -19,7 +19,7 @@ impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions
   type Error = String;
 
   fn try_from(value: BindingPluginContextResolveOptions) -> Result<Self, Self::Error> {
-    let custom = TypedDashMap::new();
+    let custom = CustomField::new();
     if let Some(js_custom_id) = value.custom {
       custom.insert(JsPluginContextResolveCustomArgId, js_custom_id);
     }

@@ -8,7 +8,7 @@ use rolldown_common::{
   WatcherEvent,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
-use rolldown_utils::pattern_filter;
+use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::{
   path::Path,
   sync::{
@@ -38,7 +38,7 @@ pub struct Watcher {
   inner: Arc<Mutex<RecommendedWatcher>>,
   running: AtomicBool,
   rerun: AtomicBool,
-  watch_files: DashSet<ArcStr>,
+  watch_files: FxDashSet<ArcStr>,
   tx: Arc<Sender<WatcherChannelMsg>>,
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }

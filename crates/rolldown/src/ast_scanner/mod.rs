@@ -7,7 +7,7 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
-use oxc::semantic::{Reference, ReferenceId, ScopeId, SymbolTable};
+use oxc::semantic::{Reference, ReferenceId, ScopeFlags, ScopeId, SymbolTable};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -26,6 +26,7 @@ use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
   Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -67,6 +68,7 @@ pub struct ScanResult {
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
+  pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -97,6 +99,10 @@ pub struct AstScanner<'me, 'ast> {
   options: &'me SharedOptions,
   dynamic_import_usage_info: DynamicImportUsageInfo,
   ignore_comment: &'static str,
+  /// "top level" `this` AstNode range in source code
+  top_level_this_expr_set: FxHashSet<Span>,
+  /// A flag to resolve `this` appear with propertyKey in class
+  is_nested_this_inside_class: bool,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -147,6 +153,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       has_star_exports: false,
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
+      this_expr_replace_map: FxHashMap::default(),
     };
 
     Self {
@@ -170,6 +177,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       options,
       scope_stack: vec![],
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
+      top_level_this_expr_set: FxHashSet::default(),
+      is_nested_this_inside_class: false,
     }
   }
 
@@ -615,7 +624,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.scan_export_default_decl(decl);
         match &decl.declaration {
           ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-            self.scan_class_declaration(class);
+            self.visit_class(class);
             // walk::walk_declaration(self, &ast::Declaration::ClassDeclaration(func));
           }
           _ => {}
@@ -711,6 +720,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn is_global_identifier_reference(&self, ident: &IdentifierReference) -> bool {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     symbol_id.is_none()
+  }
+
+  /// If it is not a top level `this` reference visit position
+  pub fn is_this_nested(&self) -> bool {
+    self.is_nested_this_inside_class
+      || self.scope_stack.iter().any(|scope| {
+        scope.map_or(false, |scope| {
+          let flags = self.scopes.get_flags(scope);
+          flags.contains(ScopeFlags::Function) && !flags.contains(ScopeFlags::Arrow)
+        })
+      })
   }
 }
 

@@ -20,7 +20,7 @@ f = function() {
 ```js
 
 //#region factory.jsx
-console.log([this.factory("x", null), /* @__PURE__ */ this.factory("x", null)]);
+console.log([this.factory("x", null), /* @__PURE__ */ (void 0).factory("x", null)]);
 f = function() {
 	console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 };
@@ -34,7 +34,7 @@ f = function() {
 +++ rolldown	factory.js
 @@ -1,4 +1,4 @@
 -console.log([(void 0).factory("x", null), (void 0).factory("x", null)]);
-+console.log([this.factory("x", null), this.factory("x", null)]);
++console.log([this.factory("x", null), (void 0).factory("x", null)]);
  f = function () {
      console.log([this.factory("y", null), this.factory("y", null)]);
  };
@@ -58,7 +58,7 @@ console.log([
 ```js
 
 //#region fragment.jsx
-console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ this.factory(this.fragment, null, "x")]), f = function() {
+console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x")]), f = function() {
 	console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 };
 
@@ -71,7 +71,7 @@ console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ this.factor
 +++ rolldown	fragment.js
 @@ -1,3 +1,3 @@
 -(console.log([(void 0).factory((void 0).fragment, null, "x"), (void 0).factory((void 0).fragment, null, "x")]), f = function () {
-+(console.log([this.factory(this.fragment, null, "x"), this.factory(this.fragment, null, "x")]), f = function () {
++(console.log([this.factory(this.fragment, null, "x"), (void 0).factory((void 0).fragment, null, "x")]), f = function () {
      console.log([this.factory(this.fragment, null, "y"), this.factory(this.fragment, null, "y")]);
  });
 

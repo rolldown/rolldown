@@ -63,7 +63,10 @@ pub use crate::{
     comment_annotation::{get_leading_comment, ROLLDOWN_IGNORE},
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
-    ecma_view::{EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer},
+    ecma_view::{
+      generate_replace_this_expr_map, EcmaModuleAstUsage, EcmaView, EcmaViewMeta,
+      ImportMetaRolldownAssetReplacer, ThisExprReplaceKind,
+    },
     module_idx::ModuleIdx,
     node_builtin_modules::is_existing_node_builtin_modules,
   },

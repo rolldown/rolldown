@@ -23,7 +23,7 @@ let bar = async () => {};
 
 //#endregion
 //#region entry.js
-let foo = async () => this;
+let foo = async () => void 0;
 
 //#endregion
 export { bar, foo };
@@ -39,7 +39,7 @@ export { bar, foo };
 -    return void 0;
 -});
 +var bar = async () => {};
-+var foo = async () => this;
++var foo = async () => void 0;
  export {bar, foo};
 
 ```

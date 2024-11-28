@@ -4,10 +4,12 @@ use oxc::{
     visit::walk,
     AstKind, Visit,
   },
+  semantic::{ReferenceId, SymbolId},
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EcmaModuleAstUsage, ImportKind, ImportRecordMeta,
+  dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
+  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, ThisExprReplaceKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
@@ -62,6 +64,23 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       // if there exists `eval` in current module, assume all dynamic import are completely used;
       for usage in self.result.dynamic_import_rec_exports_usage.values_mut() {
         *usage = DynamicImportExportsUsage::Complete;
+      }
+    }
+
+    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser.go#L12551-L12604
+    // Since AstScan is immutable, we defer transformation in module finalizer
+    if !self.top_level_this_expr_set.is_empty() {
+      if self.esm_export_keyword.is_none() {
+        self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+        self.result.this_expr_replace_map = generate_replace_this_expr_map(
+          &self.top_level_this_expr_set,
+          ThisExprReplaceKind::Exports,
+        );
+      } else {
+        self.result.this_expr_replace_map = generate_replace_this_expr_map(
+          &self.top_level_this_expr_set,
+          ThisExprReplaceKind::Undefined,
+        );
       }
     }
   }
@@ -135,13 +154,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_import_expression(self, expr);
   }
 
-  fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
-    if let ast::Declaration::ClassDeclaration(class) = it {
-      self.scan_class_declaration(class);
-    }
-    walk::walk_declaration(self, it);
-  }
-
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
     match &node.left {
       // Detect `module.exports` and `exports.ANY`
@@ -181,20 +193,45 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
     walk::walk_new_expression(self, it);
   }
+
+  fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
+    if !self.is_this_nested() {
+      self.top_level_this_expr_set.insert(it.span);
+    }
+    walk::walk_this_expression(self, it);
+  }
+
+  fn visit_class(&mut self, it: &ast::Class<'ast>) {
+    let previous_reference_id = self.cur_class_decl_and_symbol_referenced_ids.take();
+    self.cur_class_decl_and_symbol_referenced_ids = self.get_class_id_and_references_id(it);
+    walk::walk_class(self, it);
+    self.cur_class_decl_and_symbol_referenced_ids = previous_reference_id;
+  }
+
+  fn visit_class_element(&mut self, it: &ast::ClassElement<'ast>) {
+    let pre_is_nested_this_inside_class = self.is_nested_this_inside_class;
+    self.is_nested_this_inside_class = true;
+    walk::walk_class_element(self, it);
+    self.is_nested_this_inside_class = pre_is_nested_this_inside_class;
+  }
+
+  fn visit_property_key(&mut self, it: &ast::PropertyKey<'ast>) {
+    let pre_is_nested_this_inside_class = self.is_nested_this_inside_class;
+    self.is_nested_this_inside_class = false;
+    walk::walk_property_key(self, it);
+    self.is_nested_this_inside_class = pre_is_nested_this_inside_class;
+  }
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// visit `Class` of declaration
-  pub fn scan_class_declaration(&mut self, class: &ast::Class<'ast>) {
-    let Some(id) = class.id.as_ref() else {
-      return;
-    };
+  pub fn get_class_id_and_references_id(
+    &mut self,
+    class: &ast::Class<'ast>,
+  ) -> Option<(SymbolId, &'me Vec<ReferenceId>)> {
+    let id = class.id.as_ref()?;
     let symbol_id = *id.symbol_id.get().unpack_ref();
-    let previous_reference_id = self.cur_class_decl_and_symbol_referenced_ids.take();
-    self.cur_class_decl_and_symbol_referenced_ids =
-      Some((symbol_id, &self.scopes.resolved_references[symbol_id]));
-    walk::walk_class(self, class);
-    self.cur_class_decl_and_symbol_referenced_ids = previous_reference_id;
+    Some((symbol_id, &self.scopes.resolved_references[symbol_id]))
   }
 
   fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {

@@ -1,28 +1,46 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
-## factory.js
+## chunk.js
 
 ```js
 
+
+export { __commonJS };
+```
+## factory.js
+
+```js
+import { __commonJS } from "./chunk.js";
+
 //#region factory.jsx
-console.log([this.factory("x", null), /* @__PURE__ */ this.factory("x", null)]);
-f = function() {
-	console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
-};
+var require_factory = __commonJS({ "factory.jsx"(exports) {
+	console.log([this.factory("x", null), /* @__PURE__ */ exports.factory("x", null)]);
+	f = function() {
+		console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
+	};
+} });
 
 //#endregion
+export default require_factory();
+
 ```
 ## fragment.js
 
 ```js
+import { __commonJS } from "./chunk.js";
 
 //#region fragment.jsx
-console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ this.factory(this.fragment, null, "x")]), f = function() {
-	console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
-};
+var require_fragment = __commonJS({ "fragment.jsx"(exports) {
+	console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ exports.factory(exports.fragment, null, "x")]), f = function() {
+		console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
+	};
+} });
 
 //#endregion
+export default require_fragment();
+
 ```

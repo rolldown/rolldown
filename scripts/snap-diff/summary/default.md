@@ -145,10 +145,6 @@
   diff
 ## [this_inside_function](../../../crates/rolldown/tests/esbuild/default/this_inside_function/diff.md)
   diff
-## [this_outside_function](../../../crates/rolldown/tests/esbuild/default/this_outside_function/diff.md)
-  diff
-## [this_undefined_warning_esm](../../../crates/rolldown/tests/esbuild/default/this_undefined_warning_esm/diff.md)
-  diff
 ## this_with_es6_syntax
   missing
 ## [top_level_await_allowed_import_with_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting/diff.md)
@@ -213,6 +209,8 @@
 ## [scoped_external_module_exclusion](../../../crates/rolldown/tests/esbuild/default/scoped_external_module_exclusion)
 ## [simple_common_js](../../../crates/rolldown/tests/esbuild/default/simple_common_js)
 ## [simple_es6](../../../crates/rolldown/tests/esbuild/default/simple_es6)
+## [this_outside_function](../../../crates/rolldown/tests/esbuild/default/this_outside_function)
+## [this_undefined_warning_esm](../../../crates/rolldown/tests/esbuild/default/this_undefined_warning_esm)
 ## [top_level_await_esm](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm)
 ## [top_level_await_esm_dead_branch](../../../crates/rolldown/tests/esbuild/default/top_level_await_esm_dead_branch)
 ## [top_level_await_no_bundle](../../../crates/rolldown/tests/esbuild/default/top_level_await_no_bundle)

@@ -21,6 +21,21 @@ bitflags! {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ThisExprReplaceKind {
+  Undefined,
+  Exports,
+}
+
+#[inline]
+#[allow(clippy::implicit_hasher)]
+pub fn generate_replace_this_expr_map(
+  set: &FxHashSet<Span>,
+  kind: ThisExprReplaceKind,
+) -> FxHashMap<Span, ThisExprReplaceKind> {
+  set.iter().map(|span| (*span, kind)).collect()
+}
+
 impl EcmaViewMeta {
   #[inline]
   pub fn has_eval(&self) -> bool {
@@ -109,6 +124,7 @@ pub struct EcmaView {
   pub mutations: Vec<BoxedSourceMutation>,
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
+  pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
 }
 
 bitflags! {

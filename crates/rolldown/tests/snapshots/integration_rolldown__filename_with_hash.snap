@@ -1083,23 +1083,25 @@ snapshot_kind: text
 
 # tests/esbuild/default/jsx_this_property_common_js
 
-- factory-!~{000}~.js => factory-BUCuvReF.js
-- fragment-!~{001}~.js => fragment-D4u4tkRV.js
+- factory-!~{000}~.js => factory-BPhz-cL8.js
+- fragment-!~{001}~.js => fragment-DD0ZIlgc.js
+- chunk-!~{002}~.js => chunk-0AZnlxyc.js
 
 # tests/esbuild/default/jsx_this_property_esm
 
-- factory-!~{000}~.js => factory-BUCuvReF.js
-- fragment-!~{001}~.js => fragment-D4u4tkRV.js
+- factory-!~{000}~.js => factory-CTa8D2qV.js
+- fragment-!~{001}~.js => fragment-ClNey37k.js
 
 # tests/esbuild/default/jsx_this_value_common_js
 
-- factory-!~{000}~.js => factory-BmRbhBN6.js
-- fragment-!~{001}~.js => fragment-7O2dciHs.js
+- factory-!~{000}~.js => factory-DQrSvLyh.js
+- fragment-!~{001}~.js => fragment-CrLGL54H.js
+- chunk-!~{002}~.js => chunk-0AZnlxyc.js
 
 # tests/esbuild/default/jsx_this_value_esm
 
-- factory-!~{000}~.js => factory-BmRbhBN6.js
-- fragment-!~{001}~.js => fragment-7O2dciHs.js
+- factory-!~{000}~.js => factory-zJ6m8AjK.js
+- fragment-!~{001}~.js => fragment-CYkdUgZX.js
 
 # tests/esbuild/default/keep_names_all_forms
 
@@ -1670,11 +1672,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/this_outside_function
 
-- entry-!~{000}~.js => entry-gh-ZrlyF.js
+- entry-!~{000}~.js => entry-CH8pJGJT.js
 
 # tests/esbuild/default/this_undefined_warning_esm
 
-- entry-!~{000}~.js => entry-CayMwpcZ.js
+- entry-!~{000}~.js => entry-ChdyVVXT.js
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
@@ -2617,11 +2619,11 @@ snapshot_kind: text
 
 # tests/esbuild/lower/lower_async_this2016_common_js
 
-- entry-!~{000}~.js => entry-OnxqRjTk.js
+- entry-!~{000}~.js => entry-Bs6QXSvE.js
 
 # tests/esbuild/lower/lower_async_this2016_es6
 
-- entry-!~{000}~.js => entry-LRyCr8Cg.js
+- entry-!~{000}~.js => entry-DqGqMvmj.js
 
 # tests/esbuild/lower/lower_class_field2020_no_bundle
 
@@ -2637,7 +2639,7 @@ snapshot_kind: text
 
 # tests/esbuild/lower/lower_exponentiation_operator_no_bundle
 
-- entry-!~{000}~.js => entry-UNDrCxfO.js
+- entry-!~{000}~.js => entry-BNgXhEed.js
 
 # tests/esbuild/lower/lower_export_star_as_name_collision
 
@@ -3691,11 +3693,11 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_this_is_undefined_warning
 
-- silent1-!~{003}~.js => silent1-xlNaR3Xw.js
-- silent2-!~{004}~.js => silent2-0A5OVVnh.js
-- warning1-!~{000}~.js => warning1-hsdj7pcF.js
-- warning2-!~{001}~.js => warning2-NlsF_kYu.js
-- warning3-!~{002}~.js => warning3-Dh7QomoU.js
+- silent1-!~{003}~.js => silent1-DONDxRyE.js
+- silent2-!~{004}~.js => silent2-CNZNW5A2.js
+- warning1-!~{000}~.js => warning1-D_a6naiQ.js
+- warning2-!~{001}~.js => warning2-CJD5w8oT.js
+- warning3-!~{002}~.js => warning3-DihfFxpP.js
 
 # tests/rolldown/cjs_compat/basic_commonjs
 

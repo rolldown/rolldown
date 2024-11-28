@@ -136,10 +136,6 @@
 - crates/rolldown/tests/esbuild/default/string_export_names_iife
 ## lowering not align
 - crates/rolldown/tests/esbuild/default/this_inside_function
-## this outside function behavior not align
-- crates/rolldown/tests/esbuild/default/this_outside_function
-## this undefined
-- crates/rolldown/tests/esbuild/default/this_undefined_warning_esm
 ## there should not exist empty chunk
 - crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting
 ## import('./entry.js') should be rewrite to `require_entry`

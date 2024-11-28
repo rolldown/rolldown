@@ -112,6 +112,7 @@ pub async fn create_ecma_view<'any>(
     has_star_exports,
     dynamic_import_rec_exports_usage: dynamic_import_exports_usage,
     new_url_references: new_url_imports,
+    this_expr_replace_map,
   } = scan_result;
   if !errors.is_empty() {
     return Err(errors.into());
@@ -200,6 +201,7 @@ pub async fn create_ecma_view<'any>(
     },
     mutations: vec![],
     new_url_references: new_url_imports,
+    this_expr_replace_map,
   };
 
   Ok(CreateEcmaViewReturn {

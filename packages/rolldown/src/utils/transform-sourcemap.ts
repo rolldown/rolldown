@@ -32,7 +32,7 @@ export function normalizeTransformHookSourcemap(
   }
   if (
     isEmptySourcemapFiled(map.sources) ||
-    (map.sources && map.sources[0] !== id)
+    (map.sources && map.sources.length === 1 && map.sources[0] !== id) // the transform sourcemaps maybe contain multiple sources
   ) {
     map.sources = [id]
   }

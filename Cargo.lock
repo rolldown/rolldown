@@ -2740,12 +2740,10 @@ name = "rolldown_plugin_data_url"
 version = "0.1.0"
 dependencies = [
  "base64-simd 0.8.0",
- "dashmap 6.1.0",
  "regex",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
- "rustc-hash",
  "urlencoding",
 ]
 

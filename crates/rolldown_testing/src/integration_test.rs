@@ -244,7 +244,7 @@ impl IntegrationTest {
       errors.sort_by_key(|e| e.kind().to_string());
       let diagnostics = errors
         .into_iter()
-        .map(|e| (e.kind(), e.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
 
       let mut rendered_diagnostics = diagnostics
         .map(|(code, diagnostic)| {
@@ -271,7 +271,7 @@ impl IntegrationTest {
       snapshot.push_str("# warnings\n\n");
       let diagnostics = warnings
         .into_iter()
-        .map(|e| (e.kind(), e.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
       let mut rendered_diagnostics = diagnostics
         .map(|(code, diagnostic)| {
           [

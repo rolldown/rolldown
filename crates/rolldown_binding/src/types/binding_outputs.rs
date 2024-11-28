@@ -31,7 +31,7 @@ impl BindingOutputs {
     if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = std::mem::take(&mut self.error) {
       return diagnostics
         .into_iter()
-        .map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
+        .map(|diagnostic| to_js_diagnostic(&diagnostic, cwd.clone(), env))
         .collect();
     }
     Ok(vec![])
@@ -94,8 +94,8 @@ pub struct BindingOutputsDiagnostics {
   cwd: std::path::PathBuf,
 }
 
-pub fn into_js_diagnostic(
-  diagnostic: BuildDiagnostic,
+pub fn to_js_diagnostic(
+  diagnostic: &BuildDiagnostic,
   cwd: std::path::PathBuf,
   env: Env,
 ) -> napi::Result<napi::JsUnknown> {
@@ -106,7 +106,7 @@ pub fn into_js_diagnostic(
       object.set("kind", error.kind().to_string())?;
       object.set(
         "message",
-        error.into_diagnostic_with(&DiagnosticOptions { cwd: cwd.clone() }).to_color_string(),
+        error.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.clone() }).to_color_string(),
       )?;
       Ok(object.into_unknown())
     }

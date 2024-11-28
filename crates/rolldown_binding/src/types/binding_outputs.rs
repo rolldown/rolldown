@@ -30,8 +30,13 @@ impl BindingOutputs {
   pub fn errors(&mut self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
     if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = &self.error {
       return diagnostics
+<<<<<<< HEAD
         .iter()
         .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env))
+=======
+        .into_iter()
+        .map(|diagnostic| to_js_diagnostic(&diagnostic, cwd.clone(), env))
+>>>>>>> 18ed45cbf (refactor: using reference at generate diagnostic)
         .collect();
     }
     Ok(vec![])

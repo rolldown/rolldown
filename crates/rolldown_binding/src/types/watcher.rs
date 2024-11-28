@@ -116,7 +116,14 @@ impl BindingWatcherEvent {
       rolldown_common::OutputsDiagnostics { diagnostics, cwd },
     )) = &mut self.inner
     {
+<<<<<<< HEAD
       diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env)).collect()
+=======
+      std::mem::take(diagnostics)
+        .into_iter()
+        .map(|diagnostic| to_js_diagnostic(&diagnostic, cwd.clone(), env))
+        .collect()
+>>>>>>> 18ed45cbf (refactor: using reference at generate diagnostic)
     } else {
       unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
     }

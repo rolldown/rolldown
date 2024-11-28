@@ -31,6 +31,9 @@ impl BindingOutputs {
     if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = &self.error {
       return diagnostics
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 571ba4963 (refactor: fix lint)
         .iter()
         .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env))
 =======

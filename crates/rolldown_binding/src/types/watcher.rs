@@ -117,6 +117,7 @@ impl BindingWatcherEvent {
     )) = &mut self.inner
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
       diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env)).collect()
 =======
       std::mem::take(diagnostics)
@@ -124,6 +125,9 @@ impl BindingWatcherEvent {
         .map(|diagnostic| to_js_diagnostic(&diagnostic, cwd.clone(), env))
         .collect()
 >>>>>>> 18ed45cbf (refactor: using reference at generate diagnostic)
+=======
+      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env)).collect()
+>>>>>>> 571ba4963 (refactor: fix lint)
     } else {
       unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
     }

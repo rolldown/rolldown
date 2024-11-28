@@ -47,14 +47,6 @@
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_format
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_injected_file_bundle
 - crates/rolldown/tests/esbuild/loader/loader_copy_with_transform
-## `jsx.factory`
-- crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
-- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
-- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
-- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
-- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## not support glob
 - crates/rolldown/tests/esbuild/glob/glob_basic_no_splitting
 - crates/rolldown/tests/esbuild/glob/glob_basic_splitting
@@ -97,6 +89,9 @@
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
+## `jsx.factory`
+- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
+- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
@@ -185,6 +180,14 @@
 - crates/rolldown/tests/esbuild/default/inject_import_meta
 ## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
 - crates/rolldown/tests/esbuild/default/inject_no_bundle
+## esbuild will auto polyfill `import.meta`
+- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
+## replace this with `void 0` in none function scope
+- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
+## should mark module as cjs if `this` in none function scope
+- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
+## should replace `this` with `void 0` when it's in none function scope
+- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## not support preserve `jsx`
 - crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread
 ## should read `tsconfig.json`

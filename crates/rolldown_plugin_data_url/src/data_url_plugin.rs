@@ -1,12 +1,11 @@
 use std::borrow::Cow;
 
-use dashmap::DashMap;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
 };
-use rustc_hash::FxBuildHasher;
+use rolldown_utils::dashmap::FxDashMap;
 
 use crate::utils::{is_data_url, parse_data_url};
 
@@ -18,7 +17,7 @@ pub struct ResolvedDataUrl {
 
 #[derive(Debug, Default)]
 pub struct DataUrlPlugin {
-  resolved_data_url: DashMap<String, ResolvedDataUrl, FxBuildHasher>,
+  resolved_data_url: FxDashMap<String, ResolvedDataUrl>,
 }
 
 impl Plugin for DataUrlPlugin {

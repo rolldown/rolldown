@@ -2744,6 +2744,7 @@ dependencies = [
  "regex",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_utils",
  "rustc-hash",
  "urlencoding",
 ]
@@ -2849,6 +2850,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_utils",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -2882,7 +2884,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_fs",
- "rustc-hash",
+ "rolldown_utils",
  "sugar_path",
 ]
 
@@ -2961,6 +2963,7 @@ dependencies = [
  "base-encode",
  "base64-simd 0.8.0",
  "criterion2",
+ "dashmap 6.1.0",
  "futures",
  "glob-match",
  "indexmap",

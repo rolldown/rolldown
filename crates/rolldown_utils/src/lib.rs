@@ -2,6 +2,7 @@
 
 pub mod base64;
 mod bitset;
+pub mod dashmap;
 pub mod dataurl;
 pub mod debug;
 pub mod ecmascript;

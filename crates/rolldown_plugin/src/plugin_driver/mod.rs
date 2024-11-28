@@ -10,7 +10,7 @@ use rolldown_common::{
   ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
-use rustc_hash::FxBuildHasher;
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -34,9 +34,9 @@ pub struct PluginDriver {
   order_indicates: HookOrderIndicates,
   index_plugin_filters: IndexPluginFilter,
   file_emitter: SharedFileEmitter,
-  pub watch_files: Arc<DashSet<ArcStr, FxBuildHasher>>,
-  pub modules: Arc<DashMap<ArcStr, Arc<ModuleInfo>, FxBuildHasher>>,
-  pub context_load_modules: Arc<DashMap<ArcStr, LoadCallback, FxBuildHasher>>,
+  pub watch_files: Arc<FxDashSet<ArcStr>>,
+  pub modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub context_load_modules: Arc<FxDashMap<ArcStr, LoadCallback>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 

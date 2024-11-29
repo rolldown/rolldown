@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -16,4 +18,14 @@ pub enum Comments {
   Preserve,
   /// Keep legal comments only
   PreserveLegal,
+}
+
+impl Display for Comments {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Comments::None => write!(f, "none"),
+      Comments::Preserve => write!(f, "preserve"),
+      Comments::PreserveLegal => write!(f, "preserve-legal"),
+    }
+  }
 }

@@ -58,6 +58,12 @@ export declare class BindingNormalizedOptions {
   get intro(): string | undefined | null | undefined
   get outro(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
+  get extend(): boolean
+  get globals(): Record<string, string> | undefined
+  get hashCharacters(): 'base64' | 'base36' | 'hex'
+  get sourcemapDebugIds(): boolean
+  get minify(): boolean
+  get comments(): 'none' | 'preserve-legal'
 }
 
 export declare class BindingOutputAsset {

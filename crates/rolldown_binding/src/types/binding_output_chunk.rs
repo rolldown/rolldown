@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
+use rustc_hash::FxHashMap;
 
 use super::{binding_rendered_module::BindingRenderedModule, binding_sourcemap::BindingSourcemap};
 
@@ -50,7 +49,7 @@ impl BindingOutputChunk {
   }
 
   #[napi(getter, ts_return_type = "Record<string, RenderedModule>")]
-  pub fn modules(&self) -> HashMap<String, BindingRenderedModule> {
+  pub fn modules(&self) -> FxHashMap<String, BindingRenderedModule> {
     self
       .inner
       .modules
@@ -109,7 +108,7 @@ pub struct JsOutputChunk {
   // RenderedChunk
   pub filename: String,
   #[napi(ts_type = "Record<string, RenderedModule>")]
-  pub modules: HashMap<String, BindingRenderedModule>,
+  pub modules: FxHashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
   // OutputChunk

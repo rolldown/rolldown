@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
 
 use super::binding_rendered_module::BindingRenderedModule;
@@ -19,7 +18,7 @@ pub struct RenderedChunk {
   pub file_name: String,
   #[serde(skip)]
   #[napi(ts_type = "Record<string, RenderedModule>")]
-  pub modules: HashMap<String, BindingRenderedModule>,
+  pub modules: FxHashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
 }

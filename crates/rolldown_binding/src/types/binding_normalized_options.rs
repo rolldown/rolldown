@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use napi::{bindgen_prelude::Undefined, Either};
 use napi_derive::napi;
 use rolldown::SharedNormalizedBundlerOptions;
+use rustc_hash::FxHashMap;
 
 #[napi]
 pub struct BindingNormalizedOptions {
@@ -17,7 +16,7 @@ impl BindingNormalizedOptions {
 
   // Notice: rust's HashMap doesn't guarantee the order of keys, so not sure if it's a good idea to expose it to JS directly.
   #[napi(getter)]
-  pub fn input(&self) -> Either<Vec<String>, HashMap<String, String>> {
+  pub fn input(&self) -> Either<Vec<String>, FxHashMap<String, String>> {
     let mut inputs_iter = self.inner.input.iter().peekable();
     let has_name = inputs_iter.peek().is_some_and(|input| input.name.is_some());
     if has_name {

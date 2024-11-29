@@ -1,7 +1,5 @@
 mod types;
 
-use std::collections::HashMap;
-
 use crate::types::js_callback::{JsCallback, MaybeAsyncJsCallback};
 
 use super::super::types::binding_rendered_chunk::RenderedChunk;
@@ -10,12 +8,13 @@ use crate::types::binding_pre_rendered_chunk::PreRenderedChunk;
 use derive_more::Debug;
 use napi::Either;
 use napi_derive::napi;
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use types::binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 
 pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 pub type ChunkFileNamesOutputOption = Either<String, JsCallback<PreRenderedChunk, String>>;
-pub type GlobalsOutputOption = Either<HashMap<String, String>, JsCallback<String, String>>;
+pub type GlobalsOutputOption = Either<FxHashMap<String, String>, JsCallback<String, String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Debug)]

@@ -1,7 +1,7 @@
 // cSpell:disable
 use binding_watch_option::BindingWatchOption;
 use oxc_transform_napi::transform::JsxOptions;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
@@ -76,7 +76,7 @@ pub struct BindingInputOptions {
   #[serde(skip_deserializing)]
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
-  pub module_types: Option<HashMap<String, String>>,
+  pub module_types: Option<FxHashMap<String, String>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,
   #[serde(skip_deserializing)]

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
 use rustc_hash::FxHashMap;
 
@@ -30,8 +30,8 @@ impl GlobalsOutputOption {
   }
 }
 
-impl From<HashMap<String, String>> for GlobalsOutputOption {
-  fn from(value: HashMap<String, String>) -> Self {
-    Self::FxHashMap(value.into_iter().collect())
+impl From<FxHashMap<String, String>> for GlobalsOutputOption {
+  fn from(value: FxHashMap<String, String>) -> Self {
+    Self::FxHashMap(value)
   }
 }

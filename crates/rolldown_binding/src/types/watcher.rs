@@ -5,7 +5,7 @@ use napi_derive::napi;
 
 use crate::utils::handle_result;
 
-use super::{binding_outputs::into_js_diagnostic, js_callback::MaybeAsyncJsCallback};
+use super::{binding_outputs::to_js_diagnostic, js_callback::MaybeAsyncJsCallback};
 use crate::types::js_callback::MaybeAsyncJsCallbackExt;
 
 #[napi]
@@ -116,10 +116,7 @@ impl BindingWatcherEvent {
       rolldown_common::OutputsDiagnostics { diagnostics, cwd },
     )) = &mut self.inner
     {
-      std::mem::take(diagnostics)
-        .into_iter()
-        .map(|diagnostic| into_js_diagnostic(diagnostic, cwd.clone(), env))
-        .collect()
+      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env)).collect()
     } else {
       unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
     }

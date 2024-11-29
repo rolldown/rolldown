@@ -202,7 +202,7 @@ impl Bundler {
             BindingLog {
               code: warning.kind().to_string(),
               message: warning
-                .into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
+                .to_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
                 .to_color_string(),
             },
           ))

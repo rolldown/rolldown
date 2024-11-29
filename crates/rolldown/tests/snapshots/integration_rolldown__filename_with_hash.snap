@@ -709,7 +709,7 @@ snapshot_kind: text
 # tests/esbuild/default/define_assign_warning
 
 - read-!~{000}~.js => read-Bc2LJUbQ.js
-- write-!~{001}~.js => write-B-BpzbIV.js
+- write-!~{001}~.js => write-Csg-7sbX.js
 
 # tests/esbuild/default/define_import_meta
 
@@ -1005,7 +1005,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_assign
 
-- entry-!~{000}~.js => entry-D2K82xY6.js
+- entry-!~{000}~.js => entry-D67QBE86.js
 
 # tests/esbuild/default/inject_duplicate
 
@@ -1061,8 +1061,8 @@ snapshot_kind: text
 
 # tests/esbuild/default/jsx_import_meta_property
 
-- factory-!~{000}~.js => factory-uhK8cSIW.js
-- fragment-!~{001}~.js => fragment-BE_JlgLN.js
+- factory-!~{000}~.js => factory-fCRkTTLO.js
+- fragment-!~{001}~.js => fragment-DtabIB1w.js
 
 # tests/esbuild/default/jsx_import_meta_value
 
@@ -1083,25 +1083,25 @@ snapshot_kind: text
 
 # tests/esbuild/default/jsx_this_property_common_js
 
-- factory-!~{000}~.js => factory-BPhz-cL8.js
-- fragment-!~{001}~.js => fragment-DD0ZIlgc.js
+- factory-!~{000}~.js => factory-D9NieI90.js
+- fragment-!~{001}~.js => fragment-DNDsP8h4.js
 - chunk-!~{002}~.js => chunk-0AZnlxyc.js
 
 # tests/esbuild/default/jsx_this_property_esm
 
-- factory-!~{000}~.js => factory-CTa8D2qV.js
-- fragment-!~{001}~.js => fragment-ClNey37k.js
+- factory-!~{000}~.js => factory-NbSZb1cX.js
+- fragment-!~{001}~.js => fragment-BiJhyFCr.js
 
 # tests/esbuild/default/jsx_this_value_common_js
 
-- factory-!~{000}~.js => factory-DQrSvLyh.js
-- fragment-!~{001}~.js => fragment-CrLGL54H.js
+- factory-!~{000}~.js => factory-DfKv17WI.js
+- fragment-!~{001}~.js => fragment-CXuTRVpf.js
 - chunk-!~{002}~.js => chunk-0AZnlxyc.js
 
 # tests/esbuild/default/jsx_this_value_esm
 
-- factory-!~{000}~.js => factory-zJ6m8AjK.js
-- fragment-!~{001}~.js => fragment-CYkdUgZX.js
+- factory-!~{000}~.js => factory-BvINHEzf.js
+- fragment-!~{001}~.js => fragment-9lrlT5nT.js
 
 # tests/esbuild/default/keep_names_all_forms
 

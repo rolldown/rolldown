@@ -379,7 +379,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 self.snippet.builder.expression_identifier_reference(SPAN, "require"),
                 oxc::ast::NONE,
                 self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                  self.snippet.builder.alloc_string_literal(SPAN, "url"),
+                  self.snippet.builder.alloc_string_literal(SPAN, "url", None),
                 )),
                 false,
               );

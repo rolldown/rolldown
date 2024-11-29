@@ -223,7 +223,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           self.builder.binding_identifier(SPAN, PRELOAD_METHOD),
           ImportOrExportKind::Value,
         ))),
-        self.builder.string_literal(SPAN, PRELOAD_HELPER_ID),
+        self.builder.string_literal(SPAN, PRELOAD_HELPER_ID, None),
         NONE,
         ImportOrExportKind::Value,
       ));

@@ -18,7 +18,7 @@ import { __commonJS } from "./chunk.js";
 
 //#region factory.jsx
 var require_factory = __commonJS({ "factory.jsx"(exports) {
-	console.log([this.factory("x", null), /* @__PURE__ */ exports.factory("x", null)]);
+	console.log([exports.factory("x", null), /* @__PURE__ */ exports.factory("x", null)]);
 	f = function() {
 		console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 	};
@@ -35,7 +35,7 @@ import { __commonJS } from "./chunk.js";
 
 //#region fragment.jsx
 var require_fragment = __commonJS({ "fragment.jsx"(exports) {
-	console.log([this.factory(this.fragment, null, "x"), /* @__PURE__ */ exports.factory(exports.fragment, null, "x")]), f = function() {
+	console.log([exports.factory(exports.fragment, null, "x"), /* @__PURE__ */ exports.factory(exports.fragment, null, "x")]), f = function() {
 		console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 	};
 } });

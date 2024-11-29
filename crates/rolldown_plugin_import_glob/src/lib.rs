@@ -298,7 +298,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
           self.ast_builder.module_declaration_import_declaration(
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
-            self.ast_builder.string_literal(Span::default(), formatted_file.as_str()),
+            self.ast_builder.string_literal(Span::default(), formatted_file.as_str(), None),
             NONE,
             ImportOrExportKind::Value,
           ),
@@ -309,7 +309,11 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         // import('./dir/bar.js')
         let mut import_expression = self.ast_builder.expression_import(
           SPAN,
-          self.ast_builder.expression_string_literal(Span::default(), formatted_file.as_str()),
+          self.ast_builder.expression_string_literal(
+            Span::default(),
+            formatted_file.as_str(),
+            None,
+          ),
           self.ast_builder.vec(),
         );
         // import('./dir/foo.js').then((m) => m.setup)
@@ -395,7 +399,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
       self.ast_builder.object_property_kind_object_property(
         SPAN,
         PropertyKind::Init,
-        PropertyKey::from(self.ast_builder.expression_string_literal(Span::default(), file)),
+        PropertyKey::from(self.ast_builder.expression_string_literal(Span::default(), file, None)),
         value,
         false,
         false,

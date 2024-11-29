@@ -146,10 +146,6 @@
 - crates/rolldown/tests/esbuild/default/conditional_require
 ## not support conditional `require.resolve`
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve
-## oxc define not support computed member expr
-- crates/rolldown/tests/esbuild/default/define_assign_warning
-## not support member expr with write
-- crates/rolldown/tests/esbuild/default/define_assign_warning
 ## oxc define
 - crates/rolldown/tests/esbuild/default/define_import_meta
 ## should warn when target do not support `imoprt.meta`
@@ -182,12 +178,8 @@
 - crates/rolldown/tests/esbuild/default/inject_no_bundle
 ## esbuild will auto polyfill `import.meta`
 - crates/rolldown/tests/esbuild/default/jsx_import_meta_value
-## replace this with `void 0` in none function scope
-- crates/rolldown/tests/esbuild/default/jsx_this_property_esm
 ## should mark module as cjs if `this` in none function scope
 - crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
-## should replace `this` with `void 0` when it's in none function scope
-- crates/rolldown/tests/esbuild/default/jsx_this_value_esm
 ## not support preserve `jsx`
 - crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread
 ## should read `tsconfig.json`

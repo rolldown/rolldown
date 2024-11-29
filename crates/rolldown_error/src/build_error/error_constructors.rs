@@ -96,7 +96,7 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
+  pub fn sourcemap_error(error: oxc_sourcemap::Error) -> Self {
     Self::new_inner(SourceMapError { error })
   }
 

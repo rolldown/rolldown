@@ -1,9 +1,7 @@
 use std::borrow::Cow;
-use std::hash::BuildHasherDefault;
 
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
-use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
@@ -11,18 +9,18 @@ use rolldown_common::{
   ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
-use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
-type IndexCrossChunkDynamicImports =
-  IndexVec<ChunkIdx, IndexSet<ChunkIdx, BuildHasherDefault<FxHasher>>>;
+type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
 
@@ -40,7 +38,7 @@ impl GenerateStage<'_> {
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
       index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
-      index_vec![IndexSet::default(); chunk_graph.chunk_table.len()];
+      index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
 
     self.collect_depended_symbols(
       chunk_graph,
@@ -278,7 +276,7 @@ impl GenerateStage<'_> {
           let symbol_data = symbols.get(declared);
           debug_assert!(
             symbol_data.chunk_id.unwrap_or(chunk_id) == chunk_id,
-            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}", 
+            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}",
             declared.name(symbols),
             declared,
             self.link_output.module_table.modules[declared.owner].id(),

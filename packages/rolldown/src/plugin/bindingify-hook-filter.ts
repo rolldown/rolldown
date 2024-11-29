@@ -1,10 +1,10 @@
-import {
+import { arraify } from '../utils/misc'
+import type { StringFilter } from './hook-filter'
+import type { HookFilterExtension, ModuleType } from '.'
+import type {
   BindingGeneralHookFilter,
   BindingTransformHookFilter,
 } from '../binding.d'
-import { hookFilterExtension, ModuleType } from '.'
-import type { StringFilter } from './hook-filter'
-import { arraify } from '../utils/misc'
 
 export function bindingifyStringFilter(
   matcher: StringFilter,
@@ -23,19 +23,19 @@ export function bindingifyStringFilter(
 }
 
 export function bindingifyResolveIdFilter(
-  filterOption?: hookFilterExtension<'resolveId'>['filter'],
+  filterOption?: HookFilterExtension<'resolveId'>['filter'],
 ): BindingGeneralHookFilter | undefined {
   return filterOption?.id ? bindingifyStringFilter(filterOption.id) : undefined
 }
 
 export function bindingifyLoadFilter(
-  filterOption?: hookFilterExtension<'load'>['filter'],
+  filterOption?: HookFilterExtension<'load'>['filter'],
 ): BindingGeneralHookFilter | undefined {
   return filterOption?.id ? bindingifyStringFilter(filterOption.id) : undefined
 }
 
 export function bindingifyTransformFilter(
-  filterOption?: hookFilterExtension<'transform'>['filter'],
+  filterOption?: HookFilterExtension<'transform'>['filter'],
 ): BindingTransformHookFilter | undefined {
   if (!filterOption) {
     return undefined

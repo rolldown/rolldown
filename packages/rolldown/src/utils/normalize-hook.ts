@@ -7,11 +7,13 @@ export function normalizeHook<Hook extends ObjectHook<AnyFn | string>>(
 ) {
   type Return =
     Hook extends ObjectHook<infer RawHook, infer CustomOptions>
-      ? {
-          handler: RawHook
-          options: CustomOptions
-          meta: ObjectHookMeta
-        }
+      ? Hook extends RawHook
+        ? never
+        : {
+            handler: RawHook
+            options: CustomOptions
+            meta: ObjectHookMeta
+          }
       : never
 
   if (typeof hook === 'function' || typeof hook === 'string') {

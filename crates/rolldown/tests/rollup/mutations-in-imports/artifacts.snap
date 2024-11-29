@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `value` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[main.js:4:1]
+   │
+ 4 │ foo.value.a = 1;
+   │ ─────┬─────  
+   │      ╰─────── 
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+
+//#region foo.js
+const foo = { a: 0 };
+
+//#endregion
+//#region main.js
+foo.a = 1;
+(void 0).a = 1;
+
+//#endregion
+```

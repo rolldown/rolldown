@@ -484,11 +484,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     match member_expr {
       MemberExpression::ComputedMemberExpression(inner_expr) => {
-        if let Some(resolved) =
+        if let Some((object_ref, props)) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
-          match resolved {
-            Some((object_ref, props)) => {
+          match object_ref {
+            Some(object_ref) => {
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
 
               let replaced_expr =
@@ -496,18 +496,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               return Some(replaced_expr);
             }
             None => {
-              return Some(self.snippet.void_zero());
+              return Some(self.snippet.member_expr_with_void_zero_object(props, inner_expr.span));
             }
           }
         }
         None
       }
       MemberExpression::StaticMemberExpression(inner_expr) => {
-        if let Some(resolved) =
+        if let Some((object_ref, props)) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
-          match resolved {
-            Some((object_ref, props)) => {
+          match object_ref {
+            Some(object_ref) => {
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
 
               let replaced_expr =
@@ -515,7 +515,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               return Some(replaced_expr);
             }
             None => {
-              return Some(self.snippet.void_zero());
+              return Some(self.snippet.member_expr_with_void_zero_object(props, inner_expr.span));
             }
           }
           // these two branch are exclusive since `import.meta` is a global member_expr

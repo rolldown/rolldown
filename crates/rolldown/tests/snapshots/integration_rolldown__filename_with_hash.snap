@@ -5292,6 +5292,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-DxFsUwA8.js
 
+# tests/rollup/mutations-in-imports
+
+- main-!~{000}~.js => main-BpHDMLpO.js
+
 # tests/rollup/object-spread-side-effect
 
 - main-!~{000}~.js => main-Btm3UsnH.js

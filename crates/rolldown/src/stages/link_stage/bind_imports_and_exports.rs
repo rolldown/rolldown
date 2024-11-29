@@ -282,7 +282,10 @@ impl LinkStage<'_> {
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
                     // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
-                      resolved.insert(member_expr_ref.span, None);
+                      resolved.insert(
+                        member_expr_ref.span,
+                        (None, member_expr_ref.props[cursor..].to_vec()),
+                      );
                       warnings.push(
                         BuildDiagnostic::import_is_undefined(
                           ArcStr::from(module.id.as_str()),
@@ -297,7 +300,10 @@ impl LinkStage<'_> {
                     break;
                   };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
-                    resolved.insert(member_expr_ref.span, None);
+                    resolved.insert(
+                      member_expr_ref.span,
+                      (None, member_expr_ref.props[cursor..].to_vec()),
+                    );
                     return;
                   };
 
@@ -320,7 +326,7 @@ impl LinkStage<'_> {
                 if cursor > 0 {
                   resolved.insert(
                     member_expr_ref.span,
-                    Some((canonical_ref, member_expr_ref.props[cursor..].to_vec())),
+                    (Some(canonical_ref), member_expr_ref.props[cursor..].to_vec()),
                   );
                 }
               }

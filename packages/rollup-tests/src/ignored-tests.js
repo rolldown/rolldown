@@ -16,7 +16,6 @@ const ignoreTests = [
   "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",// https://github.com/rolldown/rolldown/issues/2864
   "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
   "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",// https://github.com/oxc-project/oxc/issues/7209
-  "rollup@form@mutations-in-imports: track mutations of imports", // panic
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals", // need as esm if module is unknow-format and add `use strcit` to the output, https://github.com/rolldown/rolldown/issues/2394
 
   // /*@__PURE__*/ related

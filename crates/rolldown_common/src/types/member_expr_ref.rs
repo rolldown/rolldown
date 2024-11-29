@@ -25,11 +25,11 @@ impl MemberExprRef {
   #[allow(clippy::manual_map)]
   pub fn resolved_symbol_ref(
     &self,
-    resolved_map: &FxHashMap<Span, Option<(SymbolRef, Vec<CompactStr>)>>,
+    resolved_map: &FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
   ) -> Option<SymbolRef> {
-    if let Some(resolved) = resolved_map.get(&self.span) {
+    if let Some((resolved, _)) = resolved_map.get(&self.span) {
       match resolved {
-        Some((sym_ref, _)) => Some(*sym_ref),
+        Some(sym_ref) => Some(*sym_ref),
         None => {
           // This member expression resolve to a ambiguous export, which means it actually resolve to nothing.
           // It would be rewrite to `undefined` in the final code.

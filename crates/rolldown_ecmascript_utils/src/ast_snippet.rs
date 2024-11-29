@@ -75,6 +75,24 @@ impl<'ast> AstSnippet<'ast> {
     }
   }
 
+  /// The props of `foo_exports.value.a` is `["value", "a"]`, here convert it to `(void 0).a`
+  pub fn member_expr_with_void_zero_object(
+    &self,
+    names: &[CompactStr],
+    span: Span,
+  ) -> ast::Expression<'ast> {
+    if names.len() == 1 {
+      self.void_zero()
+    } else {
+      ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        span,
+        self.member_expr_with_void_zero_object(&names[0..names.len() - 1], span),
+        self.id_name(names[names.len() - 1].as_str(), span),
+        false,
+      ))
+    }
+  }
+
   /// `[object].[property]`
   pub fn literal_prop_access_member_expr(
     &self,

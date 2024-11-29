@@ -105,6 +105,7 @@ export declare class BindingRenderedModule {
 }
 
 export declare class BindingTransformPluginContext {
+  getCombinedSourcemap(): string
   inner(): BindingPluginContext
 }
 

@@ -37,10 +37,6 @@
 ### The `resolveFileUrl` hook not supported
  - rollup@form@configure-file-url: allows to configure file urls@generates es
 
-### The `PluginContext.getCombinedSourcemap` is not supported
- - rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es
- - rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es
-
 ### The `PluginContext.parse` is deprecated
  - rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method
  - rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options

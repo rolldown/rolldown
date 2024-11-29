@@ -13,13 +13,14 @@ import { PluginContext } from './plugin-context'
 import { augmentCodeLocation, error, logPluginError } from '../log/logs'
 import { PluginContextData } from './plugin-context-data'
 import type { Plugin } from './index'
+import { SourceMap } from '../types/rolldown-output'
 
 export class TransformPluginContext extends PluginContext {
   error: (
     error: RollupError | string,
     pos?: number | { column: number; line: number },
   ) => never
-  // getCombinedSourcemap: () => SourceMap
+  getCombinedSourcemap: () => SourceMap
 
   constructor(
     context: BindingPluginContext,
@@ -55,6 +56,6 @@ export class TransformPluginContext extends PluginContext {
       e.hook = 'transform'
       return error(logPluginError(normalizeLog(e), plugin.name || 'unknown'))
     }
-    // this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
+    this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
   }
 }

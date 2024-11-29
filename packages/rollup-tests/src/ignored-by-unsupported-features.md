@@ -10,9 +10,6 @@
  - rollup@function@options-hook: allows to read and modify options in the options hook
  - rollup@function@output-options-hook: allows to read and modify options in the options hook
 
-### The `transform` hook return `meta` is not supported
- - rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps
-
 ### The `load` hook return `ast` is not supported
  - rollup@function@uses-supplied-ast: uses supplied AST
 
@@ -36,10 +33,6 @@
 
 ### The `resolveFileUrl` hook not supported
  - rollup@form@configure-file-url: allows to configure file urls@generates es
-
-### The `PluginContext.getCombinedSourcemap` is not supported
- - rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es
- - rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es
 
 ### The `PluginContext.parse` is deprecated
  - rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method

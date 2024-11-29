@@ -307,7 +307,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
             for (const [handler, plugin] of batchedHandlers) {
               const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(
-                applyFixedPluginResolveFn(this, plugin),
+                {
+                  ...applyFixedPluginResolveFn(this, plugin),
+                  getCombinedSourcemap() {
+                    throw new Error(
+                      `The getCombinedSourcemap is not implement in transform hook at composedJsPlugins`,
+                    )
+                  },
+                },
                 code,
                 id,
                 moduleType,

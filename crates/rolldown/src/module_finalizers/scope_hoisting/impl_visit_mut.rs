@@ -4,6 +4,7 @@ use oxc::{
   allocator::{self, IntoIn},
   ast::{
     ast::{self, Expression, ImportExpression, SimpleAssignmentTarget, VariableDeclarationKind},
+    match_member_expression,
     visit::walk_mut,
     VisitMut, NONE,
   },
@@ -274,6 +275,24 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     };
 
     walk_mut::walk_expression(self, expr);
+  }
+
+  // foo.js `export const bar = { a: 0 }`
+  // main.js `import * as foo_exports from './foo.js';\n foo_exports.bar.a = 1;`
+  // The `foo_exports.bar.a` ast is `StaticMemberExpression(StaticMemberExpression)`, The outer StaticMemberExpression span is `foo_exports.bar.a`, the `visit_expression(Exprssion::MemberExpression)` is called with `foo_exports.bar`, the span is inner StaticMemberExpression.
+  fn visit_member_expression(&mut self, expr: &mut ast::MemberExpression<'ast>) {
+    if let Some(new_expr) = self.try_rewrite_member_expr(expr) {
+      match new_expr {
+        match_member_expression!(Expression) => {
+          *expr = new_expr.into_member_expression();
+        }
+        _ => {
+          unreachable!("Always rewrite to MemberExpression for nested MemberExpression")
+        }
+      }
+    } else {
+      walk_mut::walk_member_expression(self, expr);
+    }
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {

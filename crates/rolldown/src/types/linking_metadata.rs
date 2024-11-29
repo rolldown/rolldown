@@ -56,7 +56,7 @@ pub struct LinkingMetadata {
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
   pub dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
-  pub resolved_member_expr_refs: FxHashMap<Span, Option<(SymbolRef, Vec<CompactStr>)>>,
+  pub resolved_member_expr_refs: FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
 }
 

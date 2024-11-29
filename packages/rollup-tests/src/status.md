@@ -2,8 +2,16 @@
 |----| ---- |
 | failed | 0 |
 | skipFailed | 0 |
+<<<<<<< HEAD
 | ignored | 27 |
 | ignored(unsupported features) | 410 |
 | ignored(treeshaking) | 285 |
 | ignored(behavior passed, snapshot different) | 119 |
 | passed | 706 |
+=======
+| ignored | 26 |
+| ignored(unsupported features) | 413 |
+| ignored(treeshaking) | 286 |
+| ignored(behavior passed, snapshot different) | 118 |
+| passed | 704 |
+>>>>>>> 6298b4611 (fix: nested member expression mutation from imports)

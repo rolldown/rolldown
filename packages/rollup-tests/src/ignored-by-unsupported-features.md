@@ -10,9 +10,6 @@
  - rollup@function@options-hook: allows to read and modify options in the options hook
  - rollup@function@output-options-hook: allows to read and modify options in the options hook
 
-### The `transform` hook return `meta` is not supported
- - rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps
-
 ### The `load` hook return `ast` is not supported
  - rollup@function@uses-supplied-ast: uses supplied AST
 

@@ -1,6 +1,7 @@
 // cSpell:disable
 module.exports = [
     // Passed, but the output snapshot is same as rollup
+    "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
     "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",// rollup not deconflict
     "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
     "rollup@form@import-specifier-deshadowing: deshadows aliased import bindings@generates es", // rollup not deconflict

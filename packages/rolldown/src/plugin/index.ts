@@ -13,19 +13,19 @@ import type {
 import type { SourceMapInput } from '../types/sourcemap'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-import { PluginContext } from './plugin-context'
+import type { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transform-plugin-context'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
 import type { RollupLog } from '../rollup'
 import type { MinimalPluginContext } from './minimal-plugin-context'
-import { InputOptions, OutputOptions } from '..'
-import { BuiltinPlugin } from '../builtin-plugin/constructors'
-import { ParallelPlugin } from './parallel-plugin'
+import type { InputOptions, OutputOptions } from '..'
+import type { BuiltinPlugin } from '../builtin-plugin/constructors'
+import type { ParallelPlugin } from './parallel-plugin'
 import type { DefinedHookNames } from '../constants/plugin'
-import { DEFINED_HOOK_NAMES } from '../constants/plugin'
-import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
-import { HookFilter } from './hook-filter'
+import type { DEFINED_HOOK_NAMES } from '../constants/plugin'
+import type { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
+import type { HookFilter } from './hook-filter'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
@@ -204,9 +204,9 @@ export type ChangeEvent = 'create' | 'update' | 'delete'
 
 export type PluginOrder = 'pre' | 'post' | null
 
-export type ObjectHookMeta<O = {}> = { order?: PluginOrder } & O
+export type ObjectHookMeta = { order?: PluginOrder }
 
-export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta<O>)
+export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta & O)
 export type SyncPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'onLog'
@@ -260,7 +260,7 @@ export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks
 >
-export type hookFilterExtension<K extends keyof FunctionPluginHooks> =
+export type HookFilterExtension<K extends keyof FunctionPluginHooks> =
   K extends 'transform'
     ? { filter?: HookFilter }
     : K extends 'load' | 'resolveId'
@@ -272,7 +272,7 @@ export type PluginHooks = {
     K extends AsyncPluginHooks
       ? MakeAsync<FunctionPluginHooks[K]>
       : FunctionPluginHooks[K],
-    hookFilterExtension<K>
+    HookFilterExtension<K>
     // eslint-disable-next-line @typescript-eslint/ban-types
     // TODO
     // K extends ParallelPluginHooks ? { sequential?: boolean } : {}

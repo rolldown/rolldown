@@ -200,4 +200,39 @@ impl BindingNormalizedOptions {
   pub fn external_live_bindings(&self) -> bool {
     self.inner.external_live_bindings
   }
+
+  #[napi(getter)]
+  pub fn extend(&self) -> bool {
+    self.inner.extend
+  }
+
+  #[napi(getter)]
+  pub fn globals(&self) -> Either<HashMap<String, String>, Undefined> {
+    match &self.inner.globals {
+      rolldown::GlobalsOutputOption::FxHashMap(fx_hash_map) => {
+        Either::A(fx_hash_map.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+      }
+      rolldown::GlobalsOutputOption::Fn(_) => Either::B(()),
+    }
+  }
+
+  #[napi(getter, ts_return_type = "'base64' | 'base36' | 'hex'")]
+  pub fn hash_characters(&self) -> String {
+    self.inner.hash_characters.to_string()
+  }
+
+  #[napi(getter)]
+  pub fn sourcemap_debug_ids(&self) -> bool {
+    self.inner.sourcemap_debug_ids
+  }
+
+  #[napi(getter)]
+  pub fn minify(&self) -> bool {
+    self.inner.minify
+  }
+
+  #[napi(getter, ts_return_type = "'none' | 'preserve-legal'")]
+  pub fn comments(&self) -> String {
+    self.inner.comments.to_string()
+  }
 }

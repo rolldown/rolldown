@@ -21,10 +21,10 @@ impl BindingHookError {
 
   #[napi(getter)]
   pub fn errors(&self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
-    return self
+    self
       .errors
       .iter()
       .map(|diagnostic| to_js_diagnostic(diagnostic, self.cwd.clone(), env))
-      .collect();
+      .collect()
   }
 }

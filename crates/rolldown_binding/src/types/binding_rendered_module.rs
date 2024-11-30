@@ -29,12 +29,6 @@ impl From<rolldown_common::RenderedModule> for BindingRenderedModule {
   }
 }
 
-impl From<BindingRenderedModule> for rolldown_common::RenderedModule {
-  fn from(value: BindingRenderedModule) -> Self {
-    value.inner
-  }
-}
-
 impl FromNapiValue for BindingRenderedModule {
   unsafe fn from_napi_value(
     _env: napi::sys::napi_env,

@@ -92,7 +92,7 @@ function bindingifyFormat(
     case 'umd': {
       return 'umd'
     }
-    case 'app': {
+    case 'experimental-app': {
       return 'app'
     }
     default:

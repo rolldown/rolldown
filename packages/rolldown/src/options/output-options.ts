@@ -14,7 +14,7 @@ export type ModuleFormat =
   | 'commonjs'
   | 'iife'
   | 'umd'
-  | 'app'
+  | 'experimental-app'
 
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 

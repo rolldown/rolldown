@@ -62,5 +62,8 @@ export default defineTest({
     const chunks = getOutputChunk(output)
     expect(chunks.length).toBe(1)
     expect(chunks[0].code).toBe('console.error()')
+    expect(Object.values(chunks[0].modules)[0].code).toBe(
+      '//#region main.js\nconsole.log();\n\n//#endregion',
+    )
   },
 })

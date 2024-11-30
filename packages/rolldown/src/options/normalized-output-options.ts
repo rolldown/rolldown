@@ -38,7 +38,7 @@ export interface NormalizedOutputOptions {
   sourcemapIgnoreList: SourcemapIgnoreListOption | undefined
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
   minify: boolean
-  comments: 'none' | 'preserve-legal'
+  comments: 'none' | 'preserve' | 'preserve-legal'
 }
 
 function mapFunctionOption<T>(

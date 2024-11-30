@@ -1,6 +1,6 @@
-import { defineTest } from '@tests'
-import { expect } from 'vitest'
 import nodePath from 'node:path'
+import { expect } from 'vitest'
+import { defineTest } from '@tests'
 
 export default defineTest({
   config: {

@@ -145,21 +145,24 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__JsChangedOutputs_struct_143']?.()
   __napiInstance.exports['__napi_register__PreRenderedChunk_struct_144']?.()
   __napiInstance.exports['__napi_register__RenderedChunk_struct_145']?.()
-  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_146']?.()
-  __napiInstance.exports['__napi_register__BindingRenderedModule_impl_148']?.()
-  __napiInstance.exports['__napi_register__AliasItem_struct_149']?.()
-  __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_150']?.()
-  __napiInstance.exports['__napi_register__BindingSourcemap_struct_151']?.()
-  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_152']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_struct_153']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_156']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEvent_struct_157']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherEvent_impl_163']?.()
-  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_164']?.()
-  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_165']?.()
+  __napiInstance.exports['__napi_register__BindingChunkModules_struct_146']?.()
+  __napiInstance.exports['__napi_register__BindingChunkModules_impl_148']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_149']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_impl_151']?.()
+  __napiInstance.exports['__napi_register__AliasItem_struct_152']?.()
+  __napiInstance.exports['__napi_register__ExtensionAliasItem_struct_153']?.()
+  __napiInstance.exports['__napi_register__BindingSourcemap_struct_154']?.()
+  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_155']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_struct_156']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_159']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_struct_160']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherEvent_impl_166']?.()
+  __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_167']?.()
+  __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_168']?.()
 }
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
+export const BindingChunkModules = __napiModule.exports.BindingChunkModules
 export const BindingLog = __napiModule.exports.BindingLog
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 export const BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions

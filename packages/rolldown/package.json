@@ -97,7 +97,7 @@
         "fs": true
       }
     },
-    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\nexport interface RenderedModule {\n  readonly code: string | null\n  renderedLength: number\n}\n\n"
+    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
     "zod": "^3.23.8"

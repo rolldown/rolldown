@@ -1,14 +1,23 @@
-import { RenderedModule } from '../binding'
+import { BindingRenderedModule } from '../binding'
+import { RolldownRenderedModule } from '../types/rolldown-output'
 
 export function transformToRenderedModule(
-  bindingRenderedModule: RenderedModule,
-): RenderedModule {
+  mod: BindingRenderedModule,
+): RolldownRenderedModule {
+  // cache getter?
+  let code: string | null
   return {
     get code() {
-      return bindingRenderedModule.code
+      if (typeof code === 'undefined') {
+        code = mod.code
+      }
+      return code
     },
     get renderedLength() {
-      return bindingRenderedModule.code?.length || 0
+      if (typeof code === 'undefined') {
+        code = mod.code
+      }
+      return code?.length || 0
     },
   }
 }

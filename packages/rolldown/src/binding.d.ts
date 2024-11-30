@@ -3,11 +3,6 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 
-export interface RenderedModule {
-  readonly code: string | null
-  renderedLength: number
-}
-
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
@@ -18,6 +13,10 @@ export declare class BindingCallableBuiltinPlugin {
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
   load(id: string): Promise<BindingHookJsLoadOutput | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
+}
+
+export declare class BindingChunkModules {
+  toEntries(): [string, BindingRenderedModule][]
 }
 
 export declare class BindingLog {
@@ -759,7 +758,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: Record<string, RenderedModule>
+  modules: BindingChunkModules
   imports: Array<string>
   dynamicImports: Array<string>
 }

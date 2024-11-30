@@ -20,10 +20,9 @@ function normalizeEcmaTransformPluginConfig(
     return undefined
   }
   let normalizedConfig: BindingTransformPluginConfig = {
-    jsxInject: config?.jsxInject,
+    ...config,
     exclude: normalizedStringOrRegex(config.exclude),
     include: normalizedStringOrRegex(config.include),
-    targets: config.targets,
   }
 
   return normalizedConfig

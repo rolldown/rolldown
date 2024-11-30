@@ -524,6 +524,7 @@ export interface BindingTransformPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxInject?: string
+  reactRefresh?: boolean
   targets?: string
 }
 

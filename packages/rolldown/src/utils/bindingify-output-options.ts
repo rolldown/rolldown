@@ -92,6 +92,9 @@ function bindingifyFormat(
     case 'umd': {
       return 'umd'
     }
+    case 'app': {
+      return 'app'
+    }
     default:
       unimplemented(`output.format: ${format}`)
   }

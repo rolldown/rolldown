@@ -79,7 +79,7 @@ export declare class BindingOutputChunk {
   get moduleIds(): Array<string>
   get exports(): Array<string>
   get fileName(): string
-  get modules(): Record<string, RenderedModule>
+  get modules(): BindingChunkModules
   get imports(): Array<string>
   get dynamicImports(): Array<string>
   get code(): string
@@ -619,7 +619,7 @@ export interface JsOutputChunk {
   moduleIds: Array<string>
   exports: Array<string>
   filename: string
-  modules: Record<string, RenderedModule>
+  modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
   code: string

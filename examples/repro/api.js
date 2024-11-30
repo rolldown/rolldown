@@ -31,5 +31,4 @@ const build = await rolldown({
 })
 const output = await build.write()
 console.log(output.output[0].moduleIds)
-// TODO
-// console.log(output.output[0].modules)
+console.log(output.output[0].modules)

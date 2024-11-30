@@ -31,12 +31,17 @@ pub struct RenderedChunk {
   pub dynamic_imports: Vec<String>,
 }
 
-// TODO: also output chunk
 // workaround napi's map to_napi_value not handling "\0"
 // https://github.com/napi-rs/napi-rs/blob/f116eaf5e54090db4dca8a00ccdb684543a39e86/crates/napi/src/bindgen_runtime/js_values/map.rs#L26
 #[napi]
 #[derive(Default, Debug)]
 pub struct BindingChunkModules(FxHashMap<ModuleId, RenderedModule>);
+
+impl BindingChunkModules {
+  pub fn new(map: FxHashMap<ModuleId, RenderedModule>) -> Self {
+    Self(map)
+  }
+}
 
 #[napi]
 impl BindingChunkModules {
@@ -77,7 +82,7 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
       //   .into_iter()
       //   .map(|(key, value)| (key.to_string(), value.into()))
       //   .collect(),
-      modules: BindingChunkModules(value.modules),
+      modules: BindingChunkModules::new(value.modules),
       imports: value.imports.iter().map(|x| x.to_string()).collect(),
       dynamic_imports: value.dynamic_imports.iter().map(|x| x.to_string()).collect(),
     }

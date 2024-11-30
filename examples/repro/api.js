@@ -26,9 +26,13 @@ const build = await rolldown({
         console.log(chunk.moduleIds)
         console.log(chunk.modules)
       },
+      banner(chunk) {
+        console.log('[banner]')
+        console.log(chunk.modules)
+      },
     },
   ],
 })
 const output = await build.write()
 console.log(output.output[0].moduleIds)
-console.log(output.output[0].modules)
+console.log(output.output[0].modules['\x00virtual:test'].code)

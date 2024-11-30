@@ -39,12 +39,11 @@ export async function createBundler(
   )
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
-  // Force `inputOptions.onLog` to `logHandler` because some rollup plugin hook tests use `options.onLog`.
-  const onLog = (inputOptions.onLog = getLogger(
+  const onLog = getLogger(
     getObjectPlugins(inputPlugins),
     getOnLog(inputOptions, logLevel),
     logLevel,
-  ))
+  )
 
   let plugins = [
     ...normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX),
@@ -64,7 +63,7 @@ export async function createBundler(
   const parallelPluginInitResult = await initializeParallelPlugins(plugins)
 
   try {
-    // Convert `NormalizedInputOptions` to `BindingInputOptions`
+    // Convert `InputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
       plugins,
       inputOptions,
@@ -73,7 +72,7 @@ export async function createBundler(
       logLevel,
     )
 
-    // Convert `NormalizedOutputOptions` to `BindingInputOptions`
+    // Convert `OutputOptions` to `BindingInputOptions`
     const bindingOutputOptions = bindingifyOutputOptions(outputOptions)
 
     return {

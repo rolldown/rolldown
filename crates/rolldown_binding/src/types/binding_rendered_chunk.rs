@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use napi::{bindgen_prelude::ToNapiValue, Env};
+use napi::Env;
 use napi_derive::napi;
 use rolldown_common::{ModuleId, RenderedModule};
 use rustc_hash::FxHashMap;
@@ -22,13 +20,27 @@ pub struct RenderedChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub file_name: String,
-  // TODO: pass as Map or array then convert on js side?
   #[serde(skip)]
-  // #[napi(ts_type = "Record<string, RenderedModule>")]
-  // pub modules: HashMap<String, BindingRenderedModule>,
   pub modules: BindingChunkModules,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
+}
+
+impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
+  fn from(value: rolldown_common::RollupRenderedChunk) -> Self {
+    Self {
+      name: value.name.to_string(),
+      is_entry: value.is_entry,
+      is_dynamic_entry: value.is_dynamic_entry,
+      facade_module_id: value.facade_module_id.map(|x| x.to_string()),
+      module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
+      exports: value.exports,
+      file_name: value.filename.to_string(),
+      modules: BindingChunkModules::new(value.modules),
+      imports: value.imports.iter().map(|x| x.to_string()).collect(),
+      dynamic_imports: value.dynamic_imports.iter().map(|x| x.to_string()).collect(),
+    }
+  }
 }
 
 // workaround napi's map to_napi_value not handling "\0"
@@ -64,27 +76,5 @@ impl napi::bindgen_prelude::FromNapiValue for BindingChunkModules {
     _napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
     Ok(BindingChunkModules::default())
-  }
-}
-
-impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
-  fn from(value: rolldown_common::RollupRenderedChunk) -> Self {
-    Self {
-      name: value.name.to_string(),
-      is_entry: value.is_entry,
-      is_dynamic_entry: value.is_dynamic_entry,
-      facade_module_id: value.facade_module_id.map(|x| x.to_string()),
-      module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
-      exports: value.exports,
-      file_name: value.filename.to_string(),
-      // modules: value
-      //   .modules
-      //   .into_iter()
-      //   .map(|(key, value)| (key.to_string(), value.into()))
-      //   .collect(),
-      modules: BindingChunkModules::new(value.modules),
-      imports: value.imports.iter().map(|x| x.to_string()).collect(),
-      dynamic_imports: value.dynamic_imports.iter().map(|x| x.to_string()).collect(),
-    }
   }
 }

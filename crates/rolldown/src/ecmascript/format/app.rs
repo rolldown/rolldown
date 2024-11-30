@@ -1,10 +1,9 @@
-use rolldown_common::{ChunkKind, Module};
 use rolldown_sourcemap::SourceJoiner;
 
 use crate::{ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext};
 
 pub fn render_app<'code>(
-  ctx: &GenerateContext<'_>,
+  _ctx: &GenerateContext<'_>,
   hashbang: Option<&'code str>,
   banner: Option<&'code str>,
   intro: Option<&'code str>,
@@ -26,28 +25,13 @@ pub fn render_app<'code>(
   }
 
   // chunk content
-  module_sources.iter().for_each(|(module_idx, _, module_render_output)| {
+  module_sources.iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
-      source_joiner.append_source(format!(
-        "rolldown_runtime.define('{}',function(require, module, exports){{\n",
-        // Here need to care about virtual module `\0`, the oxc codegen will escape it, so here also escape it
-        ctx.link_output.module_table.modules[*module_idx].stable_id().escape_default()
-      ));
-      for source in emitted_sources.iter() {
+      for source in emitted_sources.as_ref() {
         source_joiner.append_source(source);
       }
-      source_joiner.append_source("});".to_string());
     }
   });
-
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
-    if let Module::Normal(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
-      source_joiner.append_source(format!(
-        "rolldown_runtime.require('{}');",
-        entry_module.stable_id.escape_default()
-      ));
-    }
-  }
 
   if let Some(outro) = outro {
     source_joiner.append_source(outro);

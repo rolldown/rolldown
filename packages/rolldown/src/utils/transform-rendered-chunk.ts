@@ -10,7 +10,6 @@ export function transformRenderedChunk(
 ): RolldownRenderedChunk {
   return {
     ...chunk,
-    // TODO: cache getter
     get modules() {
       return transformChunkModules(chunk.modules)
     },

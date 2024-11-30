@@ -1,6 +1,6 @@
 use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
-  binding_output_chunk::{BindingOutputChunk, JsOutputChunk},
+  binding_output_chunk::{update_output_chunk, BindingOutputChunk, JsOutputChunk},
 };
 use napi::Env;
 use napi_derive::napi;
@@ -73,7 +73,12 @@ pub fn update_outputs(
 ) -> anyhow::Result<()> {
   for chunk in changed.chunks {
     if let Some(index) = outputs.iter().position(|o| o.filename() == chunk.filename) {
-      outputs[index] = rolldown_common::Output::Chunk(Box::new(chunk.try_into()?));
+      match &mut outputs[index] {
+        rolldown_common::Output::Chunk(old_chunk) => {
+          update_output_chunk(old_chunk, chunk)?;
+        }
+        _ => {}
+      };
     }
   }
   for asset in changed.assets {

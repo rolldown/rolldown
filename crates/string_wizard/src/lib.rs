@@ -20,3 +20,5 @@ pub use crate::{
 
 #[cfg(feature = "sourcemap")]
 pub use crate::magic_string::source_map::SourceMapOptions;
+#[cfg(feature = "sourcemap")]
+pub use crate::source_map::sourcemap_builder::Hires;

@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use napi::{
   bindgen_prelude::ToNapiValue,
   sys::{napi_env, napi_value},
@@ -40,8 +41,8 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
       exports: value.exports,
       file_name: value.filename.to_string(),
       modules: BindingChunkModules::new(value.modules),
-      imports: value.imports.iter().map(|x| x.to_string()).collect(),
-      dynamic_imports: value.dynamic_imports.iter().map(|x| x.to_string()).collect(),
+      imports: value.imports.iter().map(ArcStr::to_string).collect(),
+      dynamic_imports: value.dynamic_imports.iter().map(ArcStr::to_string).collect(),
     }
   }
 }

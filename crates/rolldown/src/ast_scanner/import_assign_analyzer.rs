@@ -23,7 +23,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if is_namespace {
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
           self.result.errors.push(BuildDiagnostic::assign_to_import(
-            self.file_path.inner().clone(),
+            self.id.resource_id().clone(),
             self.source.clone(),
             span,
             name.into(),
@@ -34,7 +34,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       let reference_flag = self.scopes.references[ident.reference_id()].flags();
       if reference_flag.is_write() {
         self.result.errors.push(BuildDiagnostic::assign_to_import(
-          self.file_path.inner().clone(),
+          self.id.resource_id().clone(),
           self.source.clone(),
           ident.span,
           ident.name.as_str().into(),

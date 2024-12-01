@@ -69,10 +69,39 @@ impl SourcemapBuilder {
       let mut new_line = true;
       let mut char_in_hires_boundary = false;
       for char in chunk_content.chars() {
-        if new_line || !matches!(self.hires, Hires::False) {
-          if matches!(self.hires, Hires::Boundary) {
-            if char.is_alphanumeric() || char == '_' {
-              if !char_in_hires_boundary {
+        match char {
+          '\n' => {
+            loc.bump_line();
+            self.bump_line();
+            new_line = true;
+          }
+          _ => {
+            if new_line || !matches!(self.hires, Hires::False) {
+              if matches!(self.hires, Hires::Boundary) {
+                if char.is_alphanumeric() || char == '_' {
+                  if !char_in_hires_boundary {
+                    self.source_map_builder.add_token(
+                      self.generated_code_line as u32,
+                      self.generated_code_column as u32,
+                      loc.line as u32,
+                      loc.column as u32,
+                      Some(self.source_id),
+                      name_id,
+                    );
+                    char_in_hires_boundary = true;
+                  }
+                } else {
+                  self.source_map_builder.add_token(
+                    self.generated_code_line as u32,
+                    self.generated_code_column as u32,
+                    loc.line as u32,
+                    loc.column as u32,
+                    Some(self.source_id),
+                    name_id,
+                  );
+                  char_in_hires_boundary = false;
+                }
+              } else {
                 self.source_map_builder.add_token(
                   self.generated_code_line as u32,
                   self.generated_code_column as u32,
@@ -81,37 +110,8 @@ impl SourcemapBuilder {
                   Some(self.source_id),
                   name_id,
                 );
-                char_in_hires_boundary = true;
               }
-            } else {
-              self.source_map_builder.add_token(
-                self.generated_code_line as u32,
-                self.generated_code_column as u32,
-                loc.line as u32,
-                loc.column as u32,
-                Some(self.source_id),
-                name_id,
-              );
-              char_in_hires_boundary = false;
             }
-          } else {
-            self.source_map_builder.add_token(
-              self.generated_code_line as u32,
-              self.generated_code_column as u32,
-              loc.line as u32,
-              loc.column as u32,
-              Some(self.source_id),
-              name_id,
-            );
-          }
-        }
-        match char {
-          '\n' => {
-            loc.bump_line();
-            self.bump_line();
-            new_line = true;
-          }
-          _ => {
             let char_utf16_len = char.len_utf16();
             loc.column += char_utf16_len;
             self.generated_code_column += char_utf16_len;

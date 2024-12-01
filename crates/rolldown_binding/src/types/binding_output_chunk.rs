@@ -115,25 +115,11 @@ pub struct JsOutputChunk {
   pub preliminary_filename: String,
 }
 
-impl TryFrom<JsOutputChunk> for rolldown_common::OutputChunk {
-  type Error = anyhow::Error;
-
-  fn try_from(chunk: JsOutputChunk) -> Result<Self, Self::Error> {
-    Ok(Self {
-      name: chunk.name.into(),
-      is_entry: chunk.is_entry,
-      is_dynamic_entry: chunk.is_dynamic_entry,
-      facade_module_id: chunk.facade_module_id.map(Into::into),
-      module_ids: chunk.module_ids.into_iter().map(Into::into).collect(),
-      exports: chunk.exports,
-      filename: chunk.filename.into(),
-      modules: chunk.modules.into_iter().map(|(key, value)| (key.into(), value.into())).collect(),
-      imports: chunk.imports.into_iter().map(Into::into).collect(),
-      dynamic_imports: chunk.dynamic_imports.into_iter().map(Into::into).collect(),
-      code: chunk.code,
-      map: chunk.map.map(TryInto::try_into).transpose()?,
-      sourcemap_filename: chunk.sourcemap_filename,
-      preliminary_filename: chunk.preliminary_filename,
-    })
-  }
+pub fn update_output_chunk(
+  chunk: &mut rolldown_common::OutputChunk,
+  js_chunk: JsOutputChunk,
+) -> anyhow::Result<()> {
+  chunk.code = js_chunk.code;
+  chunk.map = js_chunk.map.map(TryInto::try_into).transpose()?;
+  Ok(())
 }

@@ -95,7 +95,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
     if it.r#await && self.is_top_level() && !self.options.format.keep_esm_import_export_syntax() {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.file_path.as_str().into(),
+        self.id.resource_id().clone(),
         self.source.clone(),
         it.span(),
         format!(
@@ -111,7 +111,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
     if !self.options.format.keep_esm_import_export_syntax() && self.is_top_level() {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.file_path.as_str().into(),
+        self.id.resource_id().clone(),
         self.source.clone(),
         it.span(),
         format!(
@@ -288,12 +288,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
             self.result.has_eval = true;
             self.result.warnings.push(
-              BuildDiagnostic::eval(
-                self.file_path.to_string(),
-                self.source.clone(),
-                ident_ref.span,
-              )
-              .with_severity_warning(),
+              BuildDiagnostic::eval(self.id.to_string(), self.source.clone(), ident_ref.span)
+                .with_severity_warning(),
             );
           }
           "require" => {

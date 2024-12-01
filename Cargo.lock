@@ -2568,6 +2568,7 @@ name = "rolldown_binding"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "async-channel",
  "dashmap 6.1.0",
  "derive_more",
@@ -2795,6 +2796,7 @@ dependencies = [
 name = "rolldown_plugin_manifest"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "rolldown_common",
  "rolldown_plugin",
  "rustc-hash",

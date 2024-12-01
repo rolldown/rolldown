@@ -12,6 +12,7 @@ version              = "0.1.0"
 workspace = true
 
 [dependencies]
+arcstr          = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rustc-hash      = { workspace = true }

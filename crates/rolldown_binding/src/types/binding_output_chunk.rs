@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use arcstr::ArcStr;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 
@@ -59,12 +60,12 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn imports(&self) -> Vec<String> {
-    self.inner.imports.iter().map(|x| x.to_string()).collect()
+    self.inner.imports.iter().map(ArcStr::to_string).collect()
   }
 
   #[napi(getter)]
   pub fn dynamic_imports(&self) -> Vec<String> {
-    self.inner.dynamic_imports.iter().map(|x| x.to_string()).collect()
+    self.inner.dynamic_imports.iter().map(ArcStr::to_string).collect()
   }
 
   // OutputChunk

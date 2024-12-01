@@ -103,7 +103,7 @@ impl PluginDriver {
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
-    self.modules.insert(module_id.as_str().into(), module_info);
+    self.modules.insert(module_id.resource_id().into(), module_info);
   }
 
   pub async fn set_context_load_modules_tx(
@@ -115,7 +115,7 @@ impl PluginDriver {
   }
 
   pub async fn mark_context_load_modules_loaded(&self, module_id: &ModuleId) -> anyhow::Result<()> {
-    if let Some((_, callback)) = self.context_load_modules.remove(module_id.as_str()) {
+    if let Some((_, callback)) = self.context_load_modules.remove(module_id.resource_id()) {
       callback().await?;
     }
     Ok(())

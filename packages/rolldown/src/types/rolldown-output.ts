@@ -1,7 +1,7 @@
 import { AssetSource } from '../utils/asset-source'
 import type { OutputAsset, OutputChunk } from '../rollup'
 import type { HasProperty, IsPropertiesEqual, TypeAssert } from './assert'
-import type { RenderedChunk as BindingRenderedChunk } from '../binding'
+import type { RenderedChunk } from '../binding'
 
 export interface RolldownOutputAsset {
   type: 'asset'
@@ -32,8 +32,7 @@ export interface RolldownRenderedModule {
   renderedLength: number
 }
 
-export interface RolldownRenderedChunk
-  extends Omit<BindingRenderedChunk, 'modules'> {
+export interface RolldownRenderedChunk extends Omit<RenderedChunk, 'modules'> {
   modules: {
     [id: string]: RolldownRenderedModule
   }

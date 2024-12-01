@@ -18,8 +18,6 @@ export default defineTest({
           }
         },
         renderChunk(_, chunk) {
-          // TODO: type
-          // @ts-ignore
           fn(chunk.modules['\0module'].code)
         },
       },

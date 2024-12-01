@@ -1,12 +1,9 @@
-import {
-  BindingChunkModules,
-  RenderedChunk as BindingRenderedChunk,
-} from '../binding'
+import { BindingChunkModules, RenderedChunk } from '../binding'
 import { RolldownRenderedChunk } from '../types/rolldown-output'
 import { transformToRenderedModule } from './transform-rendered-module'
 
 export function transformRenderedChunk(
-  chunk: BindingRenderedChunk,
+  chunk: RenderedChunk,
 ): RolldownRenderedChunk {
   return {
     ...chunk,

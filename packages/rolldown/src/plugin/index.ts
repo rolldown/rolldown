@@ -1,7 +1,6 @@
 import type {
   BindingHookResolveIdExtraArgs,
   BindingTransformHookExtraArgs,
-  RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type {
@@ -26,6 +25,7 @@ import type { DefinedHookNames } from '../constants/plugin'
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin'
 import type { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import type { HookFilter } from './hook-filter'
+import { RolldownRenderedChunk } from '../types/rolldown-output'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
@@ -158,7 +158,7 @@ export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.renderChunk]: (
     this: PluginContext,
     code: string,
-    chunk: RenderedChunk,
+    chunk: RolldownRenderedChunk,
     outputOptions: NormalizedOutputOptions,
   ) =>
     | NullValue
@@ -170,7 +170,7 @@ export interface FunctionPluginHooks {
 
   [DEFINED_HOOK_NAMES.augmentChunkHash]: (
     this: PluginContext,
-    chunk: RenderedChunk,
+    chunk: RolldownRenderedChunk,
   ) => string | void
 
   [DEFINED_HOOK_NAMES.renderError]: (this: PluginContext, error: Error) => void
@@ -281,7 +281,7 @@ export type PluginHooks = {
 
 export type AddonHookFunction = (
   this: PluginContext,
-  chunk: RenderedChunk,
+  chunk: RolldownRenderedChunk,
 ) => string | Promise<string>
 
 export type AddonHook = string | AddonHookFunction

@@ -62,8 +62,7 @@ export function bindingifyRenderChunk(
           args.logLevel,
         ),
         code,
-        // TODO: wrong type
-        transformRenderedChunk(chunk) as any,
+        transformRenderedChunk(chunk),
         new NormalizedOutputOptionsImpl(opts),
       )
 
@@ -107,8 +106,7 @@ export function bindingifyAugmentChunkHash(
           args.onLog,
           args.logLevel,
         ),
-        // TODO: wrong type
-        transformRenderedChunk(chunk) as any,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -256,7 +254,7 @@ export function bindingifyBanner(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -287,7 +285,7 @@ export function bindingifyFooter(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -318,7 +316,7 @@ export function bindingifyIntro(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -349,7 +347,7 @@ export function bindingifyOutro(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

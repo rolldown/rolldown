@@ -6,7 +6,6 @@ use serde::Deserialize;
 
 use super::binding_rendered_module::BindingRenderedModule;
 
-// TODO: should rename BindingRenderedChunk?
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]

@@ -1,6 +1,7 @@
 import { unimplemented } from './misc'
 import type { BindingOutputOptions } from '../binding'
 import type { OutputOptions } from '../options/output-options'
+import { transformRenderedChunk } from './transform-rendered-chunk'
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
@@ -66,7 +67,7 @@ function bindingifyAddon(
 ): BindingOutputOptions[AddonKeys] {
   return async (chunk) => {
     if (typeof configAddon === 'function') {
-      return configAddon(chunk)
+      return configAddon(transformRenderedChunk(chunk))
     }
     return configAddon || ''
   }

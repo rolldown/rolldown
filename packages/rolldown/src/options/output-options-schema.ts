@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import { bold, underline } from '../cli/colors'
-import type { RenderedChunk, PreRenderedChunk } from '../binding'
+import type { PreRenderedChunk } from '../binding'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
@@ -14,6 +14,7 @@ import type {
   OutputCliOptions,
   OutputOptions,
 } from '../options/output-options'
+import { RolldownRenderedChunk } from '../types/rolldown-output'
 
 const ModuleFormatSchema = z
   .literal('es')
@@ -29,7 +30,7 @@ const ModuleFormatSchema = z
 
 const addonFunctionSchema = z
   .function()
-  .args(zodExt.phantom<RenderedChunk>())
+  .args(zodExt.phantom<RolldownRenderedChunk>())
   .returns(
     z.string().or(z.promise(z.string())),
   ) satisfies z.ZodType<AddonFunction>

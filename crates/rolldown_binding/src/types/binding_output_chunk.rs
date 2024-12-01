@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 
-use super::{binding_rendered_module::BindingRenderedModule, binding_sourcemap::BindingSourcemap};
+use super::{
+  binding_rendered_chunk::BindingChunkModules, binding_rendered_module::BindingRenderedModule,
+  binding_sourcemap::BindingSourcemap,
+};
 
 // Here using `napi` `getter` fields to avoid the cost of serialize larger data to js side.
 
@@ -49,15 +52,9 @@ impl BindingOutputChunk {
     self.inner.filename.to_string()
   }
 
-  #[napi(getter, ts_return_type = "Record<string, RenderedModule>")]
-  pub fn modules(&self) -> HashMap<String, BindingRenderedModule> {
-    self
-      .inner
-      .modules
-      .clone()
-      .into_iter()
-      .map(|(key, value)| (key.to_string(), value.into()))
-      .collect()
+  #[napi(getter, ts_return_type = "Record<string, BindingRenderedModule>")]
+  pub fn modules(&self) -> BindingChunkModules {
+    BindingChunkModules::new(self.inner.modules.clone())
   }
 
   #[napi(getter)]
@@ -108,7 +105,6 @@ pub struct JsOutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub filename: String,
-  #[napi(ts_type = "Record<string, RenderedModule>")]
   pub modules: HashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,

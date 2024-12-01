@@ -1,4 +1,4 @@
-import { BindingStringOrRegex } from '../binding.d'
+import type { BindingStringOrRegex } from '../binding'
 
 /*
  * Normalize single or multiple string or regex patterns to an array of BindingStringOrRegex

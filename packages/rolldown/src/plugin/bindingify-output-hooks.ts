@@ -10,11 +10,11 @@ import {
   PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
 } from './bindingify-plugin-hook-meta'
-import { transformToRenderedModule } from '../utils/transform-rendered-module'
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options'
 import type { BindingifyPluginArgs } from './bindingify-plugin'
 import type { BindingPluginOptions } from '../binding'
+import { transformRenderedChunk } from '../utils/transform-rendered-chunk'
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -53,10 +53,6 @@ export function bindingifyRenderChunk(
 
   return {
     plugin: async (ctx, code, chunk, opts) => {
-      Object.entries(chunk.modules).forEach(([key, module]) => {
-        chunk.modules[key] = transformToRenderedModule(module)
-      })
-
       const ret = await handler.call(
         new PluginContext(
           ctx,
@@ -66,7 +62,7 @@ export function bindingifyRenderChunk(
           args.logLevel,
         ),
         code,
-        chunk,
+        transformRenderedChunk(chunk),
         new NormalizedOutputOptionsImpl(opts),
       )
 
@@ -102,10 +98,6 @@ export function bindingifyAugmentChunkHash(
 
   return {
     plugin: async (ctx, chunk) => {
-      Object.entries(chunk.modules).forEach(([key, module]) => {
-        chunk.modules[key] = transformToRenderedModule(module)
-      })
-
       return await handler.call(
         new PluginContext(
           ctx,
@@ -114,7 +106,7 @@ export function bindingifyAugmentChunkHash(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -262,7 +254,7 @@ export function bindingifyBanner(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -293,7 +285,7 @@ export function bindingifyFooter(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -324,7 +316,7 @@ export function bindingifyIntro(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -355,7 +347,7 @@ export function bindingifyOutro(
           args.onLog,
           args.logLevel,
         ),
-        chunk,
+        transformRenderedChunk(chunk),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

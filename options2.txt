@@ -1,0 +1,99 @@
+[crates/rolldown/src/utils/normalize_options.rs:173:3] &normalized = NormalizedBundlerOptions {
+    input: [
+        InputItem {
+            name: None,
+            import: "./index.js",
+        },
+    ],
+    cwd: "/home/xx/Documents/rolldown-rs/rolldown/examples/basic-vue",
+    external: None,
+    treeshake: Option(
+        InnerOptions {
+            module_side_effects: Boolean(
+                true,
+            ),
+            annotations: Some(
+                true,
+            ),
+        },
+    ),
+    platform: Browser,
+    shim_missing_exports: false,
+    module_types: {
+        "txt": Text,
+        "mjs": Js,
+        "json": Json,
+        "mts": Ts,
+        "css": Css,
+        "tsx": Tsx,
+        "js": Js,
+        "jsx": Jsx,
+        "cjs": Js,
+        "ts": Ts,
+        "cts": Ts,
+    },
+    name: None,
+    css_entry_filenames: ChunkFilenamesOutputOption::String("[name].css"),
+    css_chunk_filenames: ChunkFilenamesOutputOption::String("[name]-[hash].css"),
+    entry_filenames: ChunkFilenamesOutputOption::String("[name].js"),
+    chunk_filenames: ChunkFilenamesOutputOption::String("[name]-[hash].js"),
+    asset_filenames: FilenameTemplate {
+        template: "assets/[name]-[hash][extname]",
+    },
+    dir: "dist",
+    file: None,
+    format: Esm,
+    exports: Auto,
+    es_module: IfDefaultProp,
+    hash_characters: Base64,
+    globals: GlobalsOutputOption::FxHashMap({}),
+    sourcemap: None,
+    banner: Some(
+        AddonFunction::Fn(...),
+    ),
+    footer: Some(
+        AddonFunction::Fn(...),
+    ),
+    intro: Some(
+        AddonFunction::Fn(...),
+    ),
+    outro: Some(
+        AddonFunction::Fn(...),
+    ),
+    sourcemap_ignore_list: Some(
+        SourceMapIgnoreList::Fn(...),
+    ),
+    sourcemap_path_transform: None,
+    sourcemap_debug_ids: false,
+    experimental: ExperimentalOptions {
+        strict_execution_order: None,
+        disable_live_bindings: None,
+        vite_mode: None,
+        resolve_new_url_to_asset: None,
+    },
+    minify: false,
+    extend: false,
+    define: [],
+    inject: [],
+    oxc_inject_global_variables_config: InjectGlobalVariablesConfig {
+        injects: [],
+    },
+    external_live_bindings: true,
+    inline_dynamic_imports: false,
+    advanced_chunks: None,
+    checks: ChecksOptions {
+        circular_dependency: None,
+    },
+    profiler_names: true,
+    jsx: None,
+    watch: WatchOption {
+        skip_write: false,
+        notify: None,
+        include: None,
+        exclude: None,
+    },
+    comments: Preserve,
+    drop_labels: {},
+    target: EsNext,
+}
+

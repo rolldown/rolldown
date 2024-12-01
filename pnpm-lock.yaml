@@ -109,12 +109,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
-  examples/repro:
-    devDependencies:
-      rolldown:
-        specifier: workspace:*
-        version: link:../../packages/rolldown
-
   examples/rollup-plugin-esbuild:
     dependencies:
       rollup-plugin-esbuild:

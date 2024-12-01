@@ -1,4 +1,4 @@
 // MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
+const a = require('./test.json')
 
-console.log(hyperCube(5));
+console.log(`a: `, a)

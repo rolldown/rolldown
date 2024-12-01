@@ -170,6 +170,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     target: raw_options.target.unwrap_or_default(),
   };
-
+  dbg!(&normalized);
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }
 }

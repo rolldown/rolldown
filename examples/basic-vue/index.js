@@ -1,3 +1,2 @@
-import { createApp } from 'vue'
-
-export default createApp({})
+const a = require('./test.json')
+console.log(`a: `, a)

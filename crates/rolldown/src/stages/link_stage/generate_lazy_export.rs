@@ -32,6 +32,9 @@ impl LinkStage<'_> {
       }
       let default_symbol_ref = module.default_export_ref;
       let is_json = matches!(module.module_type, ModuleType::Json);
+      dbg!(&module.stable_id);
+      dbg!(&is_json);
+      dbg!(&module.exports_kind);
       if !is_json || module.exports_kind == ExportsKind::CommonJs {
         update_module_default_export_info(module, default_symbol_ref, 1.into());
       }

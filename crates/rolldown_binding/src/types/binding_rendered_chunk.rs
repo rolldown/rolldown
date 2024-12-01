@@ -70,7 +70,7 @@ impl ToNapiValue for BindingChunkModules {
   unsafe fn to_napi_value(raw_env: napi_env, val: Self) -> napi::Result<napi_value> {
     let env = Env::from(raw_env);
     let obj = ToNapiValue::to_napi_value(raw_env, env.create_object()?)?;
-    for (k, v) in val.0.into_iter() {
+    for (k, v) in val.0 {
       let status = napi::sys::napi_set_property(
         raw_env,
         obj,

@@ -34,7 +34,9 @@ Variant: (format: Cjs)
 ```js
 
 //#region entry.js
-input.works = import("./foo.js").then((foo) => foo.default === 123 && foo.__esModule === void 0);
+input.works = Promise.resolve().then(function() {
+	return require("./foo.js");
+}).then((foo) => foo.default === 123 && foo.__esModule === void 0);
 
 //#endregion
 ```
@@ -47,7 +49,7 @@ input.works = import("./foo.js").then((foo) => foo.default === 123 && foo.__esMo
 var foo_default = 123;
 
 //#endregion
-module.exports = foo_default;
+exports.default = foo_default
 ```
 ---
 

@@ -44,29 +44,30 @@ pub fn render_cjs<'code>(
   // Note that the determined `export_mode` should be used in `render_chunk_exports` to render exports.
   // We also need to get the export mode for rendering the namespace markers.
   // So we determine the export mode (from auto) here and use it in the following code.
-  let export_mode =
-    if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
-      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-        let export_items = get_export_items(ctx.chunk, ctx.link_output);
-        let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
-        let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
-        // Only `named` export can we render the namespace markers.
-        if matches!(&export_mode, OutputExports::Named) {
-          if let Some(marker) =
-            render_namespace_markers(ctx.options.es_module, has_default_export, false)
-          {
-            source_joiner.append_source(marker.to_string());
-          }
+  let export_mode = if let Some(entry_module) =
+    ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table)
+  {
+    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+      let export_items = get_export_items(ctx.chunk, ctx.link_output);
+      let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
+      let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
+      // Only `named` export can we render the namespace markers.
+      if matches!(&export_mode, OutputExports::Named) {
+        if let Some(marker) =
+          render_namespace_markers(ctx.options.es_module, has_default_export, false)
+        {
+          source_joiner.append_source(marker.to_string());
         }
-        Some(export_mode)
-      } else {
-        // There is no need for a non-ESM export kind for determining the export mode.
-        None
       }
+      Some(export_mode)
     } else {
-      // No need for common chunks to determine the export mode.
+      // There is no need for a non-ESM export kind for determining the export mode.
       None
-    };
+    }
+  } else {
+    // No need for common chunks to determine the export mode.
+    None
+  };
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.

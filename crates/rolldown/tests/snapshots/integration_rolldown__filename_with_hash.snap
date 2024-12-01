@@ -4497,6 +4497,15 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-Dr53fwGV.js
 
+# tests/rolldown/issues/2859/1
+
+- main-!~{000}~.js => main-CPwtM2LG.js
+- lib-!~{001}~.js => lib-vndzaBoN.js
+
+# tests/rolldown/issues/2859/2
+
+- main-!~{000}~.js => main-BsGtt3NE.js
+
 # tests/rolldown/issues/2903
 
 - main-!~{000}~.js => main-Be69oBDG.js
@@ -5036,7 +5045,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-DuqbfaZ3.js
+- main-!~{000}~.js => main-Bgp745YR.js
 - async-entry-!~{001}~.js => async-entry-C3udqLaX.js
 
 # tests/rolldown/topics/live_bindings/default_export_expr
@@ -5054,7 +5063,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-hAj-R5xW.js
+- main-!~{000}~.js => main-ykrUhC6W.js
 - async-entry-!~{001}~.js => async-entry-BSDgWi21.js
 
 # tests/rolldown/topics/live_bindings/named_exports
@@ -5073,7 +5082,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-BdWH4JBV.js
+- main-!~{000}~.js => main-BoT4utYZ.js
 - async-entry-!~{003}~.js => async-entry-B_S-BMIJ.js
 - shared-!~{001}~.js => shared-CmocJkWP.js
 

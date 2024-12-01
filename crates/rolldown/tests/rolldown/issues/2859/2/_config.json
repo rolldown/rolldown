@@ -1,0 +1,10 @@
+{
+  "config": {
+    "platform": "node"
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

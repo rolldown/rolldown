@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## lib.js
+
+```js
+
+//#region lib.js
+const foo = "foo";
+let bar = "";
+bar = "bar";
+var lib_default = "default";
+
+//#endregion
+export { bar, lib_default as default, foo };
+```
+## main.js
+
+```js
+import assert from "assert";
+
+//#region main.js
+import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
+	foo: "foo",
+	bar: "bar",
+	default: "default"
+}));
+
+//#endregion
+```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## lib.js
+
+```js
+"use strict";
+
+//#region lib.js
+const foo = "foo";
+let bar = "";
+bar = "bar";
+var lib_default = "default";
+
+//#endregion
+Object.defineProperty(exports, 'bar', {
+  enumerable: true,
+  get: function () {
+    return bar;
+  }
+});
+exports.default = lib_default
+exports.foo = foo
+```
+## main.js
+
+```js
+"use strict";
+
+const assert = __toESM(require("assert"));
+
+//#region main.js
+Promise.resolve().then(function() {
+	return require("./lib.js");
+}).then((exports$1) => assert.default.deepStrictEqual({ ...exports$1 }, {
+	foo: "foo",
+	bar: "bar",
+	default: "default"
+}));
+
+//#endregion
+```

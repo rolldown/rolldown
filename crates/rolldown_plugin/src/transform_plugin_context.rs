@@ -42,7 +42,7 @@ impl TransformPluginContext {
   fn create_sourcemap(&self) -> SourceMap {
     let magic_string = MagicString::new(self.original_code.as_str());
     magic_string.source_map(SourceMapOptions {
-      hires: true,
+      hires: string_wizard::Hires::True,
       include_content: true,
       source: self.id.as_str().into(),
     })

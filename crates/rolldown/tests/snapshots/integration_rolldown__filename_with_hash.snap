@@ -4239,7 +4239,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/inject
 
-- main-!~{000}~.js => main-D0GbBPjZ.js
+- main-!~{000}~.js => main-Bz6bTHfJ.js
 
 # tests/rolldown/function/inline_dynamic_imports/cjs
 

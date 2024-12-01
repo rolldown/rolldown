@@ -33,5 +33,5 @@ if ("object" !== "undefined" && "object" === "object" && "production" === "produ
 (1:10) "log(" --> (3:9) "log("
 (1:14) "'production')" --> (3:13) "\"production\")"
 (1:27) ";\n" --> (3:26) ";\n"
-(2:1) "\n" --> (4:0) "}\n"
+(2:0) "}\n" --> (4:0) "}\n"
 ```

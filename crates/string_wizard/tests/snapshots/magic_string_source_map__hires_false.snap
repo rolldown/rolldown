@@ -4,7 +4,6 @@ expression: "visualize(&s, Hires::False, &output)"
 snapshot_kind: text
 ---
 - 
-(0:0) "\n" --> (0:0) "\n"
 (1:0) "function test() {\n" --> (1:0) "function test() {\n"
 (2:0) "  console.log(\"" --> (2:0) "  console.log(\""
 (2:15) "foo" --> (2:15) "hello"

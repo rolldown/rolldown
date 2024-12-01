@@ -1,0 +1,6 @@
+---
+source: crates/string_wizard/tests/magic_string_source_map.rs
+expression: sm.to_json_string()
+snapshot_kind: text
+---
+{"version":3,"names":["d","v","div"],"sources":[""],"sourcesContent":["<div>\n  hello, world\n</div>"],"mappings":";AAAA,CAACA,CAAC,CAACC,CAAC;AACJ,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACb,CAAC,CAACC,EAAG"}

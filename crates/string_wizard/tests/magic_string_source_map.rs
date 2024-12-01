@@ -12,28 +12,18 @@ fn basic() {
     .update_with(input.len() - 4, input.len() - 1, "h1", update_options.clone());
 
   let sm = s.source_map(SourceMapOptions { include_content: true, ..Default::default() });
-
-  assert_eq!(
-        sm.to_json_string(),
-        "{\"version\":3,\"names\":[\"d\",\"v\",\"div\"],\"sources\":[\"\"],\"sourcesContent\":[\"<div>\\n  hello, world\\n</div>\"],\"mappings\":\"AAAA,CAACA,CAAC,CAACC,CAAC;AACJ;AACA,EAAEC,EAAG\"}"
-    );
+  insta::assert_snapshot!("basic1", sm.to_json_string());
 
   s.prepend("import React from 'react';\n");
   let sm = s.source_map(SourceMapOptions { include_content: true, ..Default::default() });
-  assert_eq!(
-        sm.to_json_string(),
-        "{\"version\":3,\"names\":[\"d\",\"v\",\"div\"],\"sources\":[\"\"],\"sourcesContent\":[\"<div>\\n  hello, world\\n</div>\"],\"mappings\":\";AAAA,CAACA,CAAC,CAACC,CAAC;AACJ;AACA,EAAEC,EAAG\"}"
-    );
+  insta::assert_snapshot!("basic2", sm.to_json_string());
 
   let sm = s.source_map(SourceMapOptions {
     include_content: true,
     hires: Hires::True,
     ..Default::default()
   });
-  assert_eq!(
-        sm.to_json_string(),
-        "{\"version\":3,\"names\":[\"d\",\"v\",\"div\"],\"sources\":[\"\"],\"sourcesContent\":[\"<div>\\n  hello, world\\n</div>\"],\"mappings\":\";AAAA,CAACA,CAAC,CAACC,CAAC,CAAC;AACL,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACd,CAAC,CAACC,EAAG\"}"
-    );
+  insta::assert_snapshot!("basic3", sm.to_json_string());
 }
 
 #[test]

@@ -5,6 +5,12 @@ const fn = vi.fn()
 
 export default defineTest({
   config: {
+    output: {
+      banner(chunk) {
+        fn('config.banner', chunk.modules['\0module'].code)
+        return ''
+      },
+    },
     plugins: [
       {
         resolveId(id) {
@@ -18,13 +24,23 @@ export default defineTest({
           }
         },
         renderChunk(_, chunk) {
-          fn(chunk.modules['\0module'].code)
+          fn('plugin.renderChunk', chunk.modules['\0module'].code)
+        },
+        banner(chunk) {
+          fn('plugin.banner', chunk.modules['\0module'].code)
+          return ''
         },
       },
     ],
   },
   afterTest(output) {
-    expect(fn.mock.calls[0][0]).toContain('[ok]')
+    expect(fn.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['config.banner', expect.stringContaining('[ok]')],
+        ['plugin.banner', expect.stringContaining('[ok]')],
+        ['plugin.renderChunk', expect.stringContaining('[ok]')],
+      ]),
+    )
     expect(output.output[0].modules['\0module'].code).toContain('[ok]')
   },
 })

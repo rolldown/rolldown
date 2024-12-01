@@ -366,7 +366,6 @@ if (!nativeBinding) {
 
 module.exports.BindingBundleEndEventData = nativeBinding.BindingBundleEndEventData
 module.exports.BindingCallableBuiltinPlugin = nativeBinding.BindingCallableBuiltinPlugin
-module.exports.BindingChunkModules = nativeBinding.BindingChunkModules
 module.exports.BindingLog = nativeBinding.BindingLog
 module.exports.BindingModuleInfo = nativeBinding.BindingModuleInfo
 module.exports.BindingNormalizedOptions = nativeBinding.BindingNormalizedOptions

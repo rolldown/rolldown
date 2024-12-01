@@ -15,10 +15,6 @@ export declare class BindingCallableBuiltinPlugin {
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
-export declare class BindingChunkModules {
-  toEntries(): [string, BindingRenderedModule][]
-}
-
 export declare class BindingLog {
   code: string
   message: string
@@ -79,7 +75,7 @@ export declare class BindingOutputChunk {
   get moduleIds(): Array<string>
   get exports(): Array<string>
   get fileName(): string
-  get modules(): BindingChunkModules
+  get modules(): Record<string, BindingRenderedModule>
   get imports(): Array<string>
   get dynamicImports(): Array<string>
   get code(): string
@@ -759,7 +755,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: BindingChunkModules
+  modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
 }

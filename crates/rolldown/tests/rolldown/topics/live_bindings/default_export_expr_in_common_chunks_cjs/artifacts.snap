@@ -37,7 +37,9 @@ node_assert.default.strictEqual(shared_default, shared_default);
 ```js
 
 //#region main.js
-import("./async-entry.js");
+Promise.resolve().then(function() {
+	return require("./async-entry.js");
+});
 
 //#endregion
 ```

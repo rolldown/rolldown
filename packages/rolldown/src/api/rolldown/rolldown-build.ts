@@ -1,10 +1,13 @@
-import { transformToRollupOutput } from './utils/transform-to-rollup-output'
-import { BundlerWithStopWorker, createBundler } from './utils/create-bundler'
+import { transformToRollupOutput } from '../../utils/transform-to-rollup-output'
+import {
+  BundlerWithStopWorker,
+  createBundler,
+} from '../../utils/create-bundler'
 
-import type { InputOptions } from './options/input-options'
-import type { OutputOptions } from './options/output-options'
-import type { RolldownOutput } from './types/rolldown-output'
-import type { HasProperty, TypeAssert } from './types/assert'
+import type { InputOptions } from '../../options/input-options'
+import type { OutputOptions } from '../../options/output-options'
+import type { RolldownOutput } from '../../types/rolldown-output'
+import type { HasProperty, TypeAssert } from '../../types/assert'
 
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose')

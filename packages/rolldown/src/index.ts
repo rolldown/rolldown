@@ -33,9 +33,10 @@ import type {
 } from './plugin'
 import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
-import { rolldown, watch } from './rolldown'
+import { rolldown } from './api/rolldown'
+import { watch } from './api/watch'
 import { ConfigExport } from './types/config-export'
-import { RolldownBuild } from './rolldown-build'
+import { RolldownBuild } from './api/rolldown/rolldown-build'
 import {
   EmittedAsset,
   EmittedFile,
@@ -55,7 +56,7 @@ import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
 import { WatchOptions } from './options/watch-options'
-import { Watcher } from './watcher'
+import { Watcher } from './api/watch/watcher'
 import { build } from './api/build'
 
 export { defineConfig, rolldown, watch, build }

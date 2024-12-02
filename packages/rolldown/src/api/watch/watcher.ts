@@ -1,6 +1,6 @@
-import { BindingWatcher } from './binding'
-import { MaybePromise } from './types/utils'
-import { normalizeErrors } from './utils/error'
+import { BindingWatcher } from '../../binding'
+import { MaybePromise } from '../../types/utils'
+import { normalizeErrors } from '../../utils/error'
 
 export class Watcher {
   closed: boolean

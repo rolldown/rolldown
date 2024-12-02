@@ -17,7 +17,7 @@ async fn replace_strings() {
         ..Default::default()
       },
       vec![Arc::new(ReplacePlugin::new(
-        [("typeof window".to_string(), "\"object\"".to_string())].into(),
+        [("typeof window".to_string(), "\"object\"".to_string())].into_iter().collect(),
       ))],
     )
     .await;

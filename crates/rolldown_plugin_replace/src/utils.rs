@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
 use regex::Regex;
+use rustc_hash::FxHashMap;
 
 static OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
   let pattern = r"^([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(\.([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*))+$";
@@ -8,7 +9,7 @@ static OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub(crate) fn expand_typeof_replacements(
-  values: &HashMap<String, String>,
+  values: &FxHashMap<String, String>,
 ) -> Vec<(String, String)> {
   let mut replacements: Vec<(String, String)> = Vec::new();
 
@@ -27,18 +28,18 @@ pub(crate) fn expand_typeof_replacements(
 
 #[cfg(test)]
 mod tests {
-  use std::collections::HashMap;
+  use rustc_hash::FxHashMap;
 
   use super::expand_typeof_replacements;
 
   fn run_test(keys: &[&str], expected: &[(&str, &str)]) {
     let map = keys.iter().copied().map(|key| (key.to_string(), "x".to_string())).collect();
-    let result = expand_typeof_replacements(&map).into_iter().collect::<HashMap<_, _>>();
+    let result = expand_typeof_replacements(&map).into_iter().collect::<FxHashMap<_, _>>();
     let expected = expected
       .iter()
       .copied()
       .map(|(key, replacement)| (key.to_string(), replacement.to_string()))
-      .collect::<HashMap<_, _>>();
+      .collect::<FxHashMap<_, _>>();
     assert_eq!(result, expected);
   }
 

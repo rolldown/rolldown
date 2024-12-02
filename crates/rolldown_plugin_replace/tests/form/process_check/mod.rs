@@ -23,7 +23,9 @@ async fn process_check() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [("process.env.NODE_ENV".to_string(), "\"production\"".to_string())].into(),
+      values: [("process.env.NODE_ENV".to_string(), "\"production\"".to_string())]
+        .into_iter()
+        .collect(),
       prevent_assignment: true,
       sourcemap: true,
       object_guards: true,

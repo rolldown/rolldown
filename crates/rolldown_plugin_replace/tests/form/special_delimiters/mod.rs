@@ -22,7 +22,7 @@ async fn special_delimiters() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [("special".to_string(), "replaced".to_string())].into(),
+      values: [("special".to_string(), "replaced".to_string())].into_iter().collect(),
       delimiters: Some(("\\b".to_string(), "\\b".to_string())),
       sourcemap: true,
       ..Default::default()

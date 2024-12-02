@@ -2929,6 +2929,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_sourcemap",
  "rolldown_testing_config",
+ "rustc-hash",
  "schemars",
  "serde_json",
  "sugar_path",

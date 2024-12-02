@@ -26,7 +26,8 @@ async fn match_variables() {
         ("BUILD".to_string(), "beta".to_string()),
         ("BUILD_VERSION".to_string(), "1.0.0".to_string()),
       ]
-      .into(),
+      .into_iter()
+      .collect(),
       sourcemap: true,
       ..Default::default()
     }))],

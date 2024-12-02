@@ -141,7 +141,30 @@ snapshot_kind: text
 ## entry.js
 
 ```js
+"use strict";
 
+require("a_nowrap");
+const b_nowrap = __toESM(require("b_nowrap"));
+const d_WRAP = __toESM(require("d_WRAP"));
+const e_WRAP = __toESM(require("e_WRAP"));
+const f_WRAP = __toESM(require("f_WRAP"));
+const g_WRAP = __toESM(require("g_WRAP"));
+const h_WRAP = __toESM(require("h_WRAP"));
+const i_WRAP = __toESM(require("i_WRAP"));
+const j_WRAP = __toESM(require("j_WRAP"));
+
+//#region entry.js
+(0, b_nowrap.b)();
+x = d_WRAP.x;
+(0, e_WRAP.default)();
+(0, f_WRAP.default)();
+(0, g_WRAP.__esModule)();
+x = h_WRAP;
+i_WRAP.x();
+j_WRAP.x``;
+x = import("k_WRAP");
+
+//#endregion
 
 var c_nowrap = require("c_nowrap");
 Object.keys(c_nowrap).forEach(function (k) {

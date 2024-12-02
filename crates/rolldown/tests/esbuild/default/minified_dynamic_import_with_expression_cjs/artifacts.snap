@@ -22,4 +22,9 @@ snapshot_kind: text
 
 ```js
 
+//#region a.js
+import("foo");
+import(foo());
+
+//#endregion
 ```

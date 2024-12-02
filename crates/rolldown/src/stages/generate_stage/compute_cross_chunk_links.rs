@@ -263,8 +263,7 @@ impl GenerateStage<'_> {
             depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
             depended_symbols.insert(entry.namespace_object_ref);
           }
-
-          depended_symbols.insert(self.link_output.runtime.resolve_symbol("__name"));
+          // depended_symbols.insert(self.link_output.runtime.resolve_symbol("__name"));
         }
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },

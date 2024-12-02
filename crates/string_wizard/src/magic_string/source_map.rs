@@ -3,7 +3,10 @@ use std::sync::Arc;
 use rustc_hash::FxHashMap;
 
 use crate::{
-  source_map::{locator::Locator, sourcemap_builder::SourcemapBuilder},
+  source_map::{
+    locator::Locator,
+    sourcemap_builder::{Hires, SourcemapBuilder},
+  },
   MagicString,
 };
 
@@ -11,12 +14,12 @@ use crate::{
 pub struct SourceMapOptions {
   pub include_content: bool,
   pub source: Arc<str>,
-  pub hires: bool,
+  pub hires: Hires,
 }
 
 impl Default for SourceMapOptions {
   fn default() -> Self {
-    Self { include_content: false, source: "".into(), hires: false }
+    Self { include_content: false, source: "".into(), hires: Hires::default() }
   }
 }
 

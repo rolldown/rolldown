@@ -1,6 +1,14 @@
 import { unsupported } from '../utils/misc'
 import type { BindingNormalizedOptions } from '../binding'
-import { ChunkFileNamesFunction, OutputOptions } from './output-options'
+import type {
+  SourcemapIgnoreListOption,
+  SourcemapPathTransformOption,
+} from '../rollup'
+import type {
+  ChunkFileNamesFunction,
+  GlobalsFunction,
+  OutputOptions,
+} from './output-options'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd' | 'app'
 
@@ -23,6 +31,14 @@ export interface NormalizedOutputOptions {
   intro: OutputOptions['intro']
   outro: OutputOptions['outro']
   esModule: boolean | 'if-default-prop'
+  extend: boolean
+  globals: Record<string, string> | GlobalsFunction
+  hashCharacters: 'base64' | 'base36' | 'hex'
+  sourcemapDebugIds: boolean
+  sourcemapIgnoreList: SourcemapIgnoreListOption | undefined
+  sourcemapPathTransform: SourcemapPathTransformOption | undefined
+  minify: boolean
+  comments: 'none' | 'preserve-legal'
 }
 
 function mapFunctionOption<T>(
@@ -118,5 +134,37 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get esModule() {
     return this.inner.esModule
+  }
+
+  get extend() {
+    return this.inner.extend
+  }
+
+  get globals() {
+    return mapFunctionOption(this.inner.globals, 'globals')
+  }
+
+  get hashCharacters() {
+    return this.inner.hashCharacters
+  }
+
+  get sourcemapDebugIds() {
+    return this.inner.sourcemapDebugIds
+  }
+
+  get sourcemapIgnoreList() {
+    return mapFunctionOption(void 0, 'sourcemapIgnoreList')
+  }
+
+  get sourcemapPathTransform() {
+    return mapFunctionOption(void 0, 'sourcemapPathTransform')
+  }
+
+  get minify() {
+    return this.inner.minify
+  }
+
+  get comments() {
+    return this.inner.comments
   }
 }

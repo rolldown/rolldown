@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "assert";
+
+//#region main.js
+const foo = "foo";
+let bar = "";
+bar = "bar";
+var main_default = "default";
+import("./main.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
+	foo: "foo",
+	bar: "bar",
+	default: "default"
+}));
+
+//#endregion
+export { bar, main_default as default, foo };
+```
+---
+
+Variant: (format: Cjs)
+
+# warnings
+
+## MIXED_EXPORT
+
+```text
+[MIXED_EXPORT] Warning: Entry module "main" is using named (including "bar", "default", "foo") and default exports together. Consumers of your bundle will have to use `main.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
+# Assets
+
+## main.js
+
+```js
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
+
+const assert = __toESM(require("assert"));
+
+//#region main.js
+const foo = "foo";
+let bar = "";
+bar = "bar";
+var main_default = "default";
+Promise.resolve().then(function() {
+	return require("./main.js");
+}).then((exports$1) => assert.default.deepStrictEqual({ ...exports$1 }, {
+	foo: "foo",
+	bar: "bar",
+	default: "default"
+}));
+
+//#endregion
+Object.defineProperty(exports, 'bar', {
+  enumerable: true,
+  get: function () {
+    return bar;
+  }
+});
+exports.default = main_default
+exports.foo = foo
+```

@@ -40,11 +40,13 @@ pub struct Renamer<'name> {
 impl<'name> Renamer<'name> {
   pub fn new(symbols: &'name SymbolRefDb, _modules_len: usize, format: OutputFormat) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
-    let manual_reserved = match format {
+    let mut manual_reserved = match format {
       OutputFormat::Esm | OutputFormat::App => vec![],
       OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
       OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for  AMD, but we don't support them yet.
     };
+    // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
+    manual_reserved.extend(["Object", "Promise"]);
     Self {
       canonical_names: FxHashMap::default(),
       canonical_token_to_name: FxHashMap::default(),

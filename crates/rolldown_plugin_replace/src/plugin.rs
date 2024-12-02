@@ -172,7 +172,7 @@ impl Plugin for ReplacePlugin {
         code: Some(magic_string.to_string()),
         map: if self.sourcemap {
           Some(magic_string.source_map(SourceMapOptions {
-            hires: true,
+            hires: string_wizard::Hires::True,
             include_content: false,
             source: Arc::from(args.id),
           }))
@@ -196,7 +196,7 @@ impl Plugin for ReplacePlugin {
         code: magic_string.to_string(),
         map: if self.sourcemap {
           Some(magic_string.source_map(SourceMapOptions {
-            hires: true,
+            hires: string_wizard::Hires::True,
             include_content: false,
             source: Arc::from(args.chunk.filename.as_str()),
           }))

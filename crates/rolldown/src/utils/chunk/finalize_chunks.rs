@@ -3,7 +3,7 @@ use std::{hash::Hash, mem};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{index_vec, IndexVec};
-use rolldown_common::{AssetIdx, HashCharacters, InstantiationKind, ModuleId, StrOrBytes};
+use rolldown_common::{AssetIdx, HashCharacters, InstantiationKind, StrOrBytes};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -106,7 +106,7 @@ pub fn finalize_assets(
     .map(|(asset_idx, mut asset)| {
       let asset_idx = AssetIdx::from(asset_idx);
 
-      let filename: ModuleId = replace_placeholder_with_hash(
+      let filename: ArcStr = replace_placeholder_with_hash(
         asset.preliminary_filename.as_str(),
         &final_hashes_by_placeholder,
       )

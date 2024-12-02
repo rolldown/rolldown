@@ -2,8 +2,16 @@ use crate::chunk::Chunk;
 
 use super::locator::Locator;
 
+#[derive(Debug, Default)]
+pub enum Hires {
+  #[default]
+  False,
+  True,
+  Boundary,
+}
+
 pub struct SourcemapBuilder {
-  hires: bool,
+  hires: Hires,
   generated_code_line: usize,
   /// `generated_code_column` is calculated based on utf-16.
   generated_code_column: usize,
@@ -12,7 +20,7 @@ pub struct SourcemapBuilder {
 }
 
 impl SourcemapBuilder {
-  pub fn new(hires: bool) -> Self {
+  pub fn new(hires: Hires) -> Self {
     Self {
       hires,
       generated_code_line: 0,
@@ -59,18 +67,8 @@ impl SourcemapBuilder {
     } else {
       let chunk_content = chunk.span.text(source);
       let mut new_line = true;
+      let mut char_in_hires_boundary = false;
       for char in chunk_content.chars() {
-        // TODO support hires boundary
-        if new_line || self.hires {
-          self.source_map_builder.add_token(
-            self.generated_code_line as u32,
-            self.generated_code_column as u32,
-            loc.line as u32,
-            loc.column as u32,
-            Some(self.source_id),
-            name_id,
-          );
-        }
         match char {
           '\n' => {
             loc.bump_line();
@@ -78,6 +76,42 @@ impl SourcemapBuilder {
             new_line = true;
           }
           _ => {
+            if new_line || !matches!(self.hires, Hires::False) {
+              if matches!(self.hires, Hires::Boundary) {
+                if char.is_alphanumeric() || char == '_' {
+                  if !char_in_hires_boundary {
+                    self.source_map_builder.add_token(
+                      self.generated_code_line as u32,
+                      self.generated_code_column as u32,
+                      loc.line as u32,
+                      loc.column as u32,
+                      Some(self.source_id),
+                      name_id,
+                    );
+                    char_in_hires_boundary = true;
+                  }
+                } else {
+                  self.source_map_builder.add_token(
+                    self.generated_code_line as u32,
+                    self.generated_code_column as u32,
+                    loc.line as u32,
+                    loc.column as u32,
+                    Some(self.source_id),
+                    name_id,
+                  );
+                  char_in_hires_boundary = false;
+                }
+              } else {
+                self.source_map_builder.add_token(
+                  self.generated_code_line as u32,
+                  self.generated_code_column as u32,
+                  loc.line as u32,
+                  loc.column as u32,
+                  Some(self.source_id),
+                  name_id,
+                );
+              }
+            }
             let char_utf16_len = char.len_utf16();
             loc.column += char_utf16_len;
             self.generated_code_column += char_utf16_len;

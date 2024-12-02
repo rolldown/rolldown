@@ -14,9 +14,9 @@ pub struct RollupRenderedChunk {
   pub module_ids: Vec<ModuleId>,
   pub exports: Vec<String>,
   // RenderedChunk
-  pub filename: ModuleId,
+  pub filename: ArcStr,
   pub modules: FxHashMap<ModuleId, RenderedModule>,
-  pub imports: Vec<ModuleId>,
-  pub dynamic_imports: Vec<ModuleId>,
+  pub imports: Vec<ArcStr>,
+  pub dynamic_imports: Vec<ArcStr>,
   pub debug_id: u128,
 }

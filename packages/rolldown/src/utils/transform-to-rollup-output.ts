@@ -18,8 +18,8 @@ import {
   transformAssetSource,
 } from './asset-source'
 import { bindingifySourcemap } from '../types/sourcemap'
-import { transformToRenderedModule } from './transform-rendered-module'
 import { normalizeErrors } from './error'
+import { transformChunkModules } from './transform-rendered-chunk'
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -33,12 +33,7 @@ function transformToRollupOutputChunk(
     fileName: bindingChunk.fileName,
     name: bindingChunk.name,
     get modules() {
-      return Object.fromEntries(
-        Object.entries(bindingChunk.modules).map(([key, value]) => [
-          key,
-          transformToRenderedModule(value),
-        ]),
-      )
+      return transformChunkModules(bindingChunk.modules)
     },
     get imports() {
       return bindingChunk.imports

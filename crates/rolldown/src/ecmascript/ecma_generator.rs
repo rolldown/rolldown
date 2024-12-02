@@ -52,10 +52,7 @@ impl Generator for EcmaGenerator {
       .collect::<Vec<_>>();
 
     rendered_module_sources.iter().for_each(|(_, module_id, sources)| {
-      // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
-      if !module_id.starts_with('\0') {
-        rendered_modules.insert(module_id.clone(), RenderedModule::new(sources.clone()));
-      }
+      rendered_modules.insert(module_id.clone(), RenderedModule::new(sources.clone()));
     });
 
     let rendered_chunk = generate_rendered_chunk(

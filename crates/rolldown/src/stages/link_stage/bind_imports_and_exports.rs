@@ -288,7 +288,7 @@ impl LinkStage<'_> {
                       );
                       warnings.push(
                         BuildDiagnostic::import_is_undefined(
-                          ArcStr::from(module.id.as_str()),
+                          module.id.resource_id().clone(),
                           module.source.clone(),
                           member_expr_ref.span,
                           ArcStr::from(name.as_str()),

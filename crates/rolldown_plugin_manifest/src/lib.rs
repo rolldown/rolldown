@@ -1,4 +1,5 @@
-use rolldown_common::{EmittedAsset, ModuleId, Output, OutputAsset, OutputChunk};
+use arcstr::ArcStr;
+use rolldown_common::{EmittedAsset, Output, OutputAsset, OutputChunk};
 use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
@@ -149,7 +150,7 @@ impl ManifestPlugin {
   fn get_chunk_name(&self, chunk: &OutputChunk) -> String {
     get_chunk_original_file_name(chunk, &self.config.root)
   }
-  fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ModuleId>) -> Vec<String> {
+  fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ArcStr>) -> Vec<String> {
     let mut filtered_imports = vec![];
     for file in imports {
       for chunk in bundle {

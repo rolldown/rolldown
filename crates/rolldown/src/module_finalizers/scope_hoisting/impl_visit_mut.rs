@@ -11,8 +11,8 @@ use oxc::{
   span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecordMeta, Module, ModuleType, StmtInfoIdx, SymbolRef, ThisExprReplaceKind,
-  WrapKind,
+  ExportsKind, ImportRecordMeta, Module, ModuleType, OutputFormat, StmtInfoIdx, SymbolRef,
+  ThisExprReplaceKind, WrapKind,
 };
 use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
@@ -640,6 +640,43 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         }
         Module::External(_) => {
           // iife format doesn't support external module
+        }
+      }
+    }
+    if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+      // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
+      let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
+      let rec = &self.ctx.module.import_records[*rec_id];
+      let importee_id = rec.resolved_module;
+      match &self.ctx.modules[importee_id] {
+        Module::Normal(_importee) => {
+          let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
+            .expect("Normal module should belong to a chunk");
+          let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];
+          let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
+          let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+          let import_path = importer_chunk.import_path_for(importee_chunk);
+          let new_expr = self.snippet.promise_resolve_then_call_expr(
+            import_expr.span,
+            self.snippet.builder.vec1(ast::Statement::ReturnStatement(
+              self.snippet.builder.alloc_return_statement(
+                SPAN,
+                Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                  SPAN,
+                  self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+                  NONE,
+                  self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                    self.snippet.alloc_string_literal(&import_path, import_expr.span),
+                  )),
+                  false,
+                ))),
+              ),
+            )),
+          );
+          return Some(new_expr);
+        }
+        Module::External(_) => {
+          // For `import('external')`, we just keep it as it is to preserve user's intention
         }
       }
     }

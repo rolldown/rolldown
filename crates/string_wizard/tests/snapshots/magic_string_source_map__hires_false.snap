@@ -1,0 +1,14 @@
+---
+source: crates/string_wizard/tests/magic_string_source_map.rs
+expression: "visualize(&s, Hires::False, &output)"
+snapshot_kind: text
+---
+- 
+(1:0) "function test() {\n" --> (1:0) "function test() {\n"
+(2:0) "  console.log(\"" --> (2:0) "  console.log(\""
+(2:15) "foo" --> (2:15) "hello"
+(2:18) "\")\n" --> (2:20) "\")\n"
+(3:0) "  console.error(\"" --> (3:0) "  console.error(\""
+(3:17) "bar" --> (3:17) "world"
+(3:20) "\")\n" --> (3:22) "\")\n"
+(4:0) "}\n" --> (4:0) "}\n"

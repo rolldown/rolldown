@@ -1,8 +1,12 @@
+use arcstr::ArcStr;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 
-use super::{binding_rendered_module::BindingRenderedModule, binding_sourcemap::BindingSourcemap};
+use super::{
+  binding_rendered_chunk::BindingChunkModules, binding_rendered_module::BindingRenderedModule,
+  binding_sourcemap::BindingSourcemap,
+};
 
 // Here using `napi` `getter` fields to avoid the cost of serialize larger data to js side.
 
@@ -48,25 +52,19 @@ impl BindingOutputChunk {
     self.inner.filename.to_string()
   }
 
-  #[napi(getter, ts_return_type = "Record<string, RenderedModule>")]
-  pub fn modules(&self) -> FxHashMap<String, BindingRenderedModule> {
-    self
-      .inner
-      .modules
-      .clone()
-      .into_iter()
-      .map(|(key, value)| (key.to_string(), value.into()))
-      .collect()
+  #[napi(getter, ts_return_type = "Record<string, BindingRenderedModule>")]
+  pub fn modules(&self) -> BindingChunkModules {
+    BindingChunkModules::new(self.inner.modules.clone())
   }
 
   #[napi(getter)]
   pub fn imports(&self) -> Vec<String> {
-    self.inner.imports.iter().map(|x| x.to_string()).collect()
+    self.inner.imports.iter().map(ArcStr::to_string).collect()
   }
 
   #[napi(getter)]
   pub fn dynamic_imports(&self) -> Vec<String> {
-    self.inner.dynamic_imports.iter().map(|x| x.to_string()).collect()
+    self.inner.dynamic_imports.iter().map(ArcStr::to_string).collect()
   }
 
   // OutputChunk
@@ -107,7 +105,6 @@ pub struct JsOutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub filename: String,
-  #[napi(ts_type = "Record<string, RenderedModule>")]
   pub modules: FxHashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
@@ -118,25 +115,11 @@ pub struct JsOutputChunk {
   pub preliminary_filename: String,
 }
 
-impl TryFrom<JsOutputChunk> for rolldown_common::OutputChunk {
-  type Error = anyhow::Error;
-
-  fn try_from(chunk: JsOutputChunk) -> Result<Self, Self::Error> {
-    Ok(Self {
-      name: chunk.name.into(),
-      is_entry: chunk.is_entry,
-      is_dynamic_entry: chunk.is_dynamic_entry,
-      facade_module_id: chunk.facade_module_id.map(Into::into),
-      module_ids: chunk.module_ids.into_iter().map(Into::into).collect(),
-      exports: chunk.exports,
-      filename: chunk.filename.into(),
-      modules: chunk.modules.into_iter().map(|(key, value)| (key.into(), value.into())).collect(),
-      imports: chunk.imports.into_iter().map(Into::into).collect(),
-      dynamic_imports: chunk.dynamic_imports.into_iter().map(Into::into).collect(),
-      code: chunk.code,
-      map: chunk.map.map(TryInto::try_into).transpose()?,
-      sourcemap_filename: chunk.sourcemap_filename,
-      preliminary_filename: chunk.preliminary_filename,
-    })
-  }
+pub fn update_output_chunk(
+  chunk: &mut rolldown_common::OutputChunk,
+  js_chunk: JsOutputChunk,
+) -> anyhow::Result<()> {
+  chunk.code = js_chunk.code;
+  chunk.map = js_chunk.map.map(TryInto::try_into).transpose()?;
+  Ok(())
 }

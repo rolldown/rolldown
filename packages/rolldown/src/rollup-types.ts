@@ -8,4 +8,5 @@ export type {
   OutputAsset,
   OutputBundle,
   SourceMapInput,
+  RenderedChunk,
 } from './rollup'

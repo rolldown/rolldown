@@ -75,7 +75,7 @@ pub struct AstScanner<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
   module_type: ModuleDefFormat,
-  file_path: &'me ModuleId,
+  id: &'me ModuleId,
   scopes: &'me AstScopes,
   comments: &'me oxc::allocator::Vec<'me, Comment>,
   current_stmt_info: StmtInfo,
@@ -168,7 +168,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       cjs_module_ident: None,
       cjs_exports_ident: None,
       source,
-      file_path,
+      id: file_path,
       comments,
       ast_usage: EcmaModuleAstUsage::empty(),
       cur_class_decl_and_symbol_referenced_ids: None,
@@ -201,7 +201,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if let Some(start) = self.cjs_module_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
-            self.file_path.to_string(),
+            self.id.to_string(),
             self.source.clone(),
             // SAFETY: we checked at the beginning
             self.esm_export_keyword.expect("should have start offset"),
@@ -213,7 +213,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if let Some(start) = self.cjs_exports_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
-            self.file_path.to_string(),
+            self.id.to_string(),
             self.source.clone(),
             // SAFETY: we checked at the beginning
             self.esm_export_keyword.expect("should have start offset"),
@@ -504,7 +504,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
         } else {
           self.result.errors.push(BuildDiagnostic::export_undefined_variable(
-            self.file_path.to_string(),
+            self.id.to_string(),
             self.source.clone(),
             spec.local.span(),
             ArcStr::from(spec.local.name().as_str()),
@@ -661,7 +661,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       let symbol_id = reference.symbol_id()?;
       if self.result.symbol_ref_db.get_flags(symbol_id).is_const_variable() {
         self.result.errors.push(BuildDiagnostic::forbid_const_assign(
-          self.file_path.to_string(),
+          self.id.to_string(),
           self.source.clone(),
           self.result.symbol_ref_db.get_name(symbol_id).into(),
           self.result.symbol_ref_db.get_span(symbol_id),

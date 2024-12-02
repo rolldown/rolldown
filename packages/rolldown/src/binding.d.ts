@@ -3,11 +3,6 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 
-export interface RenderedModule {
-  readonly code: string | null
-  renderedLength: number
-}
-
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
@@ -58,6 +53,12 @@ export declare class BindingNormalizedOptions {
   get intro(): string | undefined | null | undefined
   get outro(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
+  get extend(): boolean
+  get globals(): Record<string, string> | undefined
+  get hashCharacters(): 'base64' | 'base36' | 'hex'
+  get sourcemapDebugIds(): boolean
+  get minify(): boolean
+  get comments(): 'none' | 'preserve-legal'
 }
 
 export declare class BindingOutputAsset {
@@ -74,7 +75,7 @@ export declare class BindingOutputChunk {
   get moduleIds(): Array<string>
   get exports(): Array<string>
   get fileName(): string
-  get modules(): Record<string, RenderedModule>
+  get modules(): Record<string, BindingRenderedModule>
   get imports(): Array<string>
   get dynamicImports(): Array<string>
   get code(): string
@@ -390,7 +391,7 @@ export interface BindingOutputOptions {
   extend?: boolean
   externalLiveBindings?: boolean
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'es' | 'cjs' | 'iife' | 'umd'
+  format?: 'es' | 'cjs' | 'iife' | 'umd' | 'app'
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
@@ -518,6 +519,7 @@ export interface BindingTransformPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxInject?: string
+  reactRefresh?: boolean
   targets?: string
 }
 
@@ -614,7 +616,7 @@ export interface JsOutputChunk {
   moduleIds: Array<string>
   exports: Array<string>
   filename: string
-  modules: Record<string, RenderedModule>
+  modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
   code: string
@@ -753,7 +755,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: Record<string, RenderedModule>
+  modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
 }

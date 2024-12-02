@@ -166,7 +166,7 @@ export function collectChangedBundle(
         name: item.name,
       })
     } else {
-      // only `code` and `map` are allowed to be mutated on js
+      // not all properties modifications are reflected to rust side
       chunks.push({
         code: item.code,
         filename: item.fileName,

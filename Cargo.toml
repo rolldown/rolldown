@@ -140,9 +140,9 @@ lightningcss        = { version = "1.0.0-alpha.57" }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.16", features = ["async", "anyhow"] }
+napi                = { version = "3.0.0-alpha.21", features = ["async", "anyhow"] }
 napi-build          = { version = "2.1.3" }
-napi-derive         = { version = "3.0.0-alpha.15", default-features = false, features = ["type-def"] }
+napi-derive         = { version = "3.0.0-alpha.20", default-features = false, features = ["type-def"] }
 notify              = { version = "7.0.0" }
 oxc_index           = { version = "1.0.0", features = ["rayon"] }
 oxc_resolver        = { version = "2.1.1" }

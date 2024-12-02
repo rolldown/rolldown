@@ -65,3 +65,17 @@ jobs:
 
       - name: Build Examples For Node20
         run: pnpm --filter '@example/**' build
+
+      - name: Setup Node22 For Testing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Node Test For Node22
+        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+
+      - name: Rollup Test Node22
+        run: pnpm run --filter rollup-tests test
+
+      - name: Build Examples For Node22
+        run: pnpm --filter '@example/**' build

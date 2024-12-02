@@ -166,15 +166,14 @@ export function collectChangedBundle(
         name: item.name,
       })
     } else {
+      // only `code` and `map` are allowed to be mutated on js
       chunks.push({
         code: item.code,
         filename: item.fileName,
         name: item.name,
         isEntry: item.isEntry,
         exports: item.exports,
-        modules: Object.fromEntries(
-          Object.entries(item.modules).map(([key, _]) => [key, {} as any]),
-        ),
+        modules: {},
         imports: item.imports,
         dynamicImports: item.dynamicImports,
         facadeModuleId: item.facadeModuleId || undefined,

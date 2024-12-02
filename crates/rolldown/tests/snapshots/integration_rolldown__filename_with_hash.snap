@@ -5228,6 +5228,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-Dhs1OmSB.js
 
+# tests/rolldown/tree_shaking/json_module_def_format
+
+- main-!~{000}~.js => main-DmuJ66xe.js
+
 # tests/rolldown/tree_shaking/json_object
 
 - main-!~{000}~.js => main-DmP_iUaI.js

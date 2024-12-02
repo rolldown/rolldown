@@ -56,8 +56,9 @@ import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
 import { WatchOptions } from './options/watch-options'
 import { Watcher } from './watcher'
+import { build } from './api/build'
 
-export { defineConfig, rolldown, watch }
+export { defineConfig, rolldown, watch, build }
 export const VERSION: string = version
 
 export type {

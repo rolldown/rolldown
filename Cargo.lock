@@ -2707,6 +2707,7 @@ dependencies = [
  "oxc_index",
  "rolldown_common",
  "rolldown_ecmascript",
+ "rolldown_error",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",

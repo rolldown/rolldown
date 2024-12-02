@@ -16,6 +16,7 @@ use super::{
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_error::BindingHookError,
     binding_hook_filter::{BindingGeneralHookFilter, BindingTransformHookFilter},
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
@@ -100,9 +101,9 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>"
+    ts_type = "(ctx: BindingPluginContext, error?: BindingHookError) => MaybePromise<VoidNullable>"
   )]
-  pub build_end: Option<MaybeAsyncJsCallback<(BindingPluginContext, Option<String>), ()>>,
+  pub build_end: Option<MaybeAsyncJsCallback<(BindingPluginContext, Option<BindingHookError>), ()>>,
   pub build_end_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]

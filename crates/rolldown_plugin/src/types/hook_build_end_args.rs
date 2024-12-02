@@ -1,4 +1,9 @@
-#[derive(Debug, Default)]
-pub struct HookBuildEndArgs {
-  pub error: String,
+use std::sync::Arc;
+
+use rolldown_error::BuildDiagnostic;
+
+#[derive(Debug)]
+pub struct HookBuildEndArgs<'a> {
+  pub errors: Arc<Vec<BuildDiagnostic>>,
+  pub cwd: &'a std::path::PathBuf,
 }

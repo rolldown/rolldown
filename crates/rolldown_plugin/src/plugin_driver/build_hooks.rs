@@ -249,7 +249,7 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
+  pub async fn build_end(&self, args: Option<&HookBuildEndArgs<'_>>) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta) {
       plugin.call_build_end(ctx, args).await?;
     }

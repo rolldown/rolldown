@@ -35,7 +35,6 @@ pub struct ScanStageOutput {
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
-  pub errors: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
@@ -91,7 +90,6 @@ impl ScanStage {
       runtime,
       warnings,
       index_ecma_ast,
-      errors: vec![],
       dynamic_import_exports_usage_map,
     })
   }

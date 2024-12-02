@@ -301,6 +301,9 @@
  - rollup@form@addon-functions: provides module information when adding addons@generates es
  - rollup@hooks@supports generateBundle hook including reporting rendered exports and source length(`modules.dep.renderedExports/removedExports`)
 
+### The rolldown `output.dir` default to be `dist`, the rollup not specific `dir` or `file` by default
+ - rollup@hooks@Throws when not specifying "file" or "dir"
+
 ## Features
 
 ### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
@@ -431,8 +434,10 @@
  - rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules
  - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
  - rollup@function@logging@promote-log-to-error: allows turning logs into errors
+ - rollup@hooks@Throws when using the "file"" option for multiple chunks
 
 ### The error/warning not implement
+ - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks
  - rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming
  - rollup@function@non-function-hook-async: throws when providing a value for an async function hook
  - rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook

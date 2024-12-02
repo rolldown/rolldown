@@ -39,7 +39,9 @@ export class Watcher {
       clearInterval(timer)
     })
     // run first build after listener is attached
-    process.nextTick(() => this.inner.start(this.emitter.onEvent))
+    process.nextTick(() =>
+      this.inner.start(this.emitter.onEvent.bind(this.emitter)),
+    )
   }
 }
 

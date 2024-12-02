@@ -3,7 +3,9 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{
+  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
+};
 
 // Handles process type guards in replacements
 #[tokio::test(flavor = "multi_thread")]
@@ -18,7 +20,7 @@ async fn simple_object_guards() {
         ..Default::default()
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: [("foo".to_string(), "bar".to_string())].into(),
+        values: create_fx_hash_map([("foo".to_string(), "bar".to_string())]),
         object_guards: true,
         ..Default::default()
       }))],

@@ -206,7 +206,7 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn globals(&self) -> Either<HashMap<String, String>, Undefined> {
+  pub fn globals(&self) -> Either<FxHashMap<String, String>, Undefined> {
     match &self.inner.globals {
       rolldown::GlobalsOutputOption::FxHashMap(fx_hash_map) => {
         Either::A(fx_hash_map.iter().map(|(k, v)| (k.clone(), v.clone())).collect())

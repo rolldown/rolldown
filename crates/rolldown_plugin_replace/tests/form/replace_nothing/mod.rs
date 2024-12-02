@@ -3,7 +3,9 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin_replace::ReplacePlugin;
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{
+  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
+};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn replace_strings() {
@@ -16,9 +18,10 @@ async fn replace_strings() {
         cwd: Some(cwd),
         ..Default::default()
       },
-      vec![Arc::new(ReplacePlugin::new(
-        [("typeof window".to_string(), "\"object\"".to_string())].into(),
-      ))],
+      vec![Arc::new(ReplacePlugin::new(create_fx_hash_map([(
+        "typeof window".to_string(),
+        "\"object\"".to_string(),
+      )])))],
     )
     .await;
 }

@@ -3,7 +3,9 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{
+  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
+};
 
 // matches most specific variables
 #[tokio::test(flavor = "multi_thread")]
@@ -22,11 +24,10 @@ async fn match_variables() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [
+      values: create_fx_hash_map([
         ("BUILD".to_string(), "beta".to_string()),
         ("BUILD_VERSION".to_string(), "1.0.0".to_string()),
-      ]
-      .into(),
+      ]),
       sourcemap: true,
       ..Default::default()
     }))],

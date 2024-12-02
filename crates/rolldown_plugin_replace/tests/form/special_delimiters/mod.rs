@@ -3,7 +3,9 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{
+  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
+};
 
 // allows delimiters with special characters
 #[tokio::test(flavor = "multi_thread")]
@@ -22,7 +24,7 @@ async fn special_delimiters() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [("special".to_string(), "replaced".to_string())].into(),
+      values: create_fx_hash_map([("special".to_string(), "replaced".to_string())]),
       delimiters: Some(("\\b".to_string(), "\\b".to_string())),
       sourcemap: true,
       ..Default::default()

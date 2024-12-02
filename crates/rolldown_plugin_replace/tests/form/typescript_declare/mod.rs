@@ -6,7 +6,9 @@ use rolldown_plugin::{
   HookTransformArgs, HookTransformReturn, Plugin, SharedTransformPluginContext,
 };
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{
+  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
+};
 use std::sync::Mutex;
 
 #[derive(Debug)]
@@ -47,7 +49,7 @@ async fn typescript_declare() {
     },
     vec![
       Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: [("NAME".to_string(), "replaced".to_string())].into(),
+        values: create_fx_hash_map([("NAME".to_string(), "replaced".to_string())]),
         prevent_assignment: true,
         sourcemap: true,
         ..Default::default()

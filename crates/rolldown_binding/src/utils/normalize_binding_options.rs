@@ -17,6 +17,7 @@ use rolldown::{
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
+use rustc_hash::FxHashMap;
 use std::path::PathBuf;
 
 #[cfg(not(target_family = "wasm"))]
@@ -123,7 +124,7 @@ pub fn normalize_binding_options(
 
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
-    let mut tmp = FxHashMapExt::with_capacity(raw.len());
+    let mut tmp: FxHashMap<_, _> = FxHashMapExt::with_capacity(raw.len());
     for (k, v) in raw {
       tmp.insert(
         k,

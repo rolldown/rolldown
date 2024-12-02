@@ -3,7 +3,9 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{
+  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
+};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn replace_strings() {
@@ -21,7 +23,7 @@ async fn replace_strings() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [("original".to_string(), "replaced".to_string())].into(),
+      values: create_fx_hash_map([("original".to_string(), "replaced".to_string())]),
       delimiters: Some(("<%".to_string(), "%>".to_string())),
       sourcemap: true,
       ..Default::default()

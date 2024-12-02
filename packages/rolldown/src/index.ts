@@ -57,7 +57,7 @@ import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
 import { WatchOptions } from './options/watch-options'
 import { Watcher } from './api/watch/watcher'
-import { build } from './api/build'
+import { build, type BuildOptions } from './api/build'
 
 export { defineConfig, rolldown, watch, build }
 export const VERSION: string = version
@@ -109,6 +109,7 @@ export type {
   JsxOptions,
   WatchOptions,
   Watcher,
+  BuildOptions,
 }
 
 // Exports for compatibility

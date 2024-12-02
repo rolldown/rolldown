@@ -26,7 +26,8 @@ async fn assignment() {
         ("process.env.DEBUG".to_string(), "replaced".to_string()),
         ("hello".to_string(), "world".to_string()),
       ]
-      .into(),
+      .into_iter()
+      .collect(),
       prevent_assignment: true,
       sourcemap: true,
       ..Default::default()

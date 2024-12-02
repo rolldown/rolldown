@@ -21,7 +21,8 @@ async fn replace_strings() {
           ("ANSWER".to_string(), "42".to_string()),
           ("typeof window".to_string(), "\"object\"".to_string()),
         ]
-        .into(),
+        .into_iter()
+        .collect(),
       ))],
     )
     .await;

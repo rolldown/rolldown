@@ -1,6 +1,7 @@
 use oxc::transformer::JsxOptions;
 use rolldown_utils::indexmap::FxIndexMap;
-use std::{collections::HashMap, fmt::Debug, path::PathBuf};
+use rustc_hash::FxHashMap;
+use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::checks_options::ChecksOptions;
 use types::comments::Comments;
@@ -80,7 +81,7 @@ pub struct BundlerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_globals"),
-    schemars(with = "Option<HashMap<String, String>>")
+    schemars(with = "Option<FxHashMap<String, String>>")
   )]
   pub globals: Option<GlobalsOutputOption>,
   pub sourcemap: Option<SourceMapType>,
@@ -126,7 +127,7 @@ pub struct BundlerOptions {
   pub sourcemap_debug_ids: Option<bool>,
 
   /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
-  pub module_types: Option<HashMap<String, ModuleType>>,
+  pub module_types: Option<FxHashMap<String, ModuleType>>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
   #[cfg_attr(
@@ -138,7 +139,7 @@ pub struct BundlerOptions {
   pub minify: Option<bool>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
-    schemars(with = "Option<HashMap<String, String>>")
+    schemars(with = "Option<FxHashMap<String, String>>")
   )]
   pub define: Option<FxIndexMap<String, String>>,
   pub extend: Option<bool>,
@@ -151,7 +152,7 @@ pub struct BundlerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_jsx", default),
-    schemars(with = "Option<HashMap<String, String>>")
+    schemars(with = "Option<FxHashMap<String, String>>")
   )]
   pub jsx: Option<JsxOptions>,
   pub watch: Option<WatchOption>,
@@ -193,7 +194,7 @@ fn deserialize_globals<'de, D>(deserializer: D) -> Result<Option<GlobalsOutputOp
 where
   D: Deserializer<'de>,
 {
-  let deserialized = Option::<HashMap<String, String>>::deserialize(deserializer)?;
+  let deserialized = Option::<FxHashMap<String, String>>::deserialize(deserializer)?;
   Ok(deserialized.map(From::from))
 }
 

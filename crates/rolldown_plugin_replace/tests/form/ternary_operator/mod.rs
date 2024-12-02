@@ -27,7 +27,8 @@ async fn ternary_operator() {
         ("exprIfTrue".to_string(), "second".to_string()),
         ("exprIfFalse".to_string(), "third".to_string()),
       ]
-      .into(),
+      .into_iter()
+      .collect(),
       prevent_assignment: true,
       sourcemap: true,
       ..Default::default()

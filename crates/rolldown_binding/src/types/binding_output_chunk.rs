@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use arcstr::ArcStr;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
+use rustc_hash::FxHashMap;
 
 use super::{
   binding_rendered_chunk::BindingChunkModules, binding_rendered_module::BindingRenderedModule,
@@ -106,7 +105,9 @@ pub struct JsOutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub filename: String,
-  pub modules: HashMap<String, BindingRenderedModule>,
+  // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
+  #[napi(ts_type = "Record<string, BindingRenderedModule>")]
+  pub modules: FxHashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
   // OutputChunk

@@ -103,7 +103,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     parent: &ast::MemberExpression<'ast>,
     ancestor_len: usize,
     import_record_id: ImportRecordIdx,
-  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
+  ) -> Option<FxHashSet<CompactStr>> {
     let ast::MemberExpression::StaticMemberExpression(parent) = parent else {
       return None;
     };
@@ -136,7 +136,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     binding_pattern: &ast::BindingPattern<'_>,
     import_record_id: ImportRecordIdx,
-  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
+  ) -> Option<FxHashSet<CompactStr>> {
     let symbol_id = match &binding_pattern.kind {
       ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
       // only care about first level destructuring, if it is nested just assume it is used

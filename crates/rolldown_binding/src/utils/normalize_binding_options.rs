@@ -242,6 +242,8 @@ pub fn normalize_binding_options(
     drop_labels: input_options.drop_labels,
     // the target is not ready to expose yet
     target: None,
+    // TODO:
+    keep_names: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

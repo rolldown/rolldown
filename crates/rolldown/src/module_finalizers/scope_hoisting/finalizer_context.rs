@@ -1,3 +1,4 @@
+use oxc::semantic::SymbolId;
 use rolldown_common::{
   IndexModules, ModuleIdx, NormalModule, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
 };
@@ -19,7 +20,11 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbol_db: &'me SymbolRefDb,
   pub canonical_names: &'me FxHashMap<SymbolRef, Rstr>,
+  pub renamed_symbol_map: &'me FxHashMap<SymbolRef, Rstr>,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
+  pub cur_stmt_index: usize,
+  /// result
+  pub keep_name_statement_to_insert: Vec<(usize, SymbolId, Rstr, Rstr)>,
 }

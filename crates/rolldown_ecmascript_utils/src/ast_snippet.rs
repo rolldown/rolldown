@@ -864,4 +864,26 @@ impl<'ast> AstSnippet<'ast> {
       NONE,
     ))
   }
+
+  pub fn keep_name_call_expr_stmt(
+    &self,
+    original_name: PassedStr,
+    new_name: PassedStr,
+  ) -> Statement<'ast> {
+    self.builder.statement_expression(
+      SPAN,
+      self.builder.expression_call(
+        SPAN,
+        self.builder.expression_identifier_reference(SPAN, "__name"),
+        NONE,
+        {
+          let mut items = self.builder.vec_with_capacity(2);
+          items.push(self.builder.expression_identifier_reference(SPAN, new_name).into());
+          items.push(self.builder.expression_string_literal(SPAN, original_name).into());
+          items
+        },
+        false,
+      ),
+    )
+  }
 }

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, OutputFormat, SharedNormalizedBundlerOptions};
 use rolldown_rstr::ToRstr;
 use rustc_hash::FxHashMap;
 
@@ -10,13 +10,13 @@ use rustc_hash::FxHashMap;
 pub fn deconflict_chunk_symbols(
   chunk: &mut Chunk,
   link_output: &LinkStageOutput,
-  format: OutputFormat,
+  options: &SharedNormalizedBundlerOptions,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
   let mut renamer =
-    Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), format);
+    Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), options.clone());
 
-  if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
+  if matches!(options.format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
     // Also AMD, but we don't support them yet.
     chunk
@@ -104,5 +104,6 @@ pub fn deconflict_chunk_symbols(
   // rename non-top-level names
   renamer.rename_non_root_symbol(&chunk.modules, &link_output.module_table.modules);
 
-  (chunk.canonical_names, chunk.canonical_name_by_token) = renamer.into_canonical_names();
+  (chunk.canonical_names, chunk.canonical_name_by_token, chunk.renmaed_symbol_map) =
+    renamer.into_canonical_names();
 }

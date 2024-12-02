@@ -320,6 +320,12 @@
             "type": "string"
           }
         },
+        "keepNames": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "minify": {
           "type": [
             "boolean",

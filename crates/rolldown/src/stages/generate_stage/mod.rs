@@ -76,12 +76,7 @@ impl<'a> GenerateStage<'a> {
     self.patch_asset_modules(&chunk_graph);
 
     chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
-      deconflict_chunk_symbols(
-        chunk,
-        self.link_output,
-        self.options.format,
-        &index_chunk_id_to_name,
-      );
+      deconflict_chunk_symbols(chunk, self.link_output, &self.options, &index_chunk_id_to_name);
     });
 
     let ast_table_iter = self.link_output.ast_table.par_iter_mut();
@@ -112,6 +107,9 @@ impl<'a> GenerateStage<'a> {
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
               options: self.options,
+              renamed_symbol_map: &chunk.renmaed_symbol_map,
+              cur_stmt_index: 0,
+              keep_name_statement_to_insert: Vec::new(),
             },
             ast,
           );

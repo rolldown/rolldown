@@ -200,7 +200,6 @@ impl GenerateStage<'_> {
               imports_from_external_modules.entry(importee.idx).or_default().push(import.clone());
             }
           });
-
           module.stmt_infos.iter().for_each(|stmt_info| {
             if !stmt_info.is_included {
               return;
@@ -264,6 +263,8 @@ impl GenerateStage<'_> {
             depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
             depended_symbols.insert(entry.namespace_object_ref);
           }
+
+          depended_symbols.insert(self.link_output.runtime.resolve_symbol("__name"));
         }
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },

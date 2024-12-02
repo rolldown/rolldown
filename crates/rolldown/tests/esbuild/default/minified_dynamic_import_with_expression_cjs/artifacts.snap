@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -21,9 +22,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region a.js
-import("foo");
-import(foo());
-
-//#endregion
 ```

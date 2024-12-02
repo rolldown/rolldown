@@ -169,6 +169,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     comments: raw_options.comments.unwrap_or(Comments::Preserve),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     target: raw_options.target.unwrap_or_default(),
+    keep_names: raw_options.keep_names.unwrap_or_default(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

@@ -166,7 +166,7 @@ export function collectChangedBundle(
         name: item.name,
       })
     } else {
-      // not all properties are allowed to be mutated on js side
+      // not all properties modifications are reflected to rust side
       chunks.push({
         code: item.code,
         filename: item.fileName,

@@ -1,5 +1,5 @@
 import { defineTest } from '@tests'
-import { expect, vi } from 'vitest'
+import { expect, vi, assert } from 'vitest'
 
 const fn = vi.fn()
 
@@ -29,6 +29,11 @@ export default defineTest({
         banner(chunk) {
           fn('plugin.banner', chunk.modules['\0module'].code)
           return ''
+        },
+        generateBundle(_, bundle) {
+          const chunk = bundle['main.js']
+          assert(chunk.type === 'chunk')
+          chunk.code += '\n// edit!\n'
         },
       },
     ],

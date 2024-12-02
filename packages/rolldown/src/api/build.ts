@@ -2,8 +2,19 @@ import type { RolldownOptions } from '../types/rolldown-options'
 import type { RolldownOutput } from '../types/rolldown-output'
 import { rolldown } from './rolldown'
 
-export async function build(options: RolldownOptions): Promise<RolldownOutput> {
+export interface BuildOptions extends RolldownOptions {
+  /**
+   * Write the output to the file system
+   */
+  write?: boolean
+}
+
+export async function build(options: BuildOptions): Promise<RolldownOutput> {
   const { output, ...inputOptions } = options
   const build = await rolldown(inputOptions)
-  return build.generate(output)
+  if (options.write) {
+    return build.write(output)
+  } else {
+    return build.generate(output)
+  }
 }

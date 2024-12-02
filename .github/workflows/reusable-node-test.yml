@@ -23,7 +23,7 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
-      - name: Setup Node
+      - name: Setup Node For Development
         uses: ./.github/actions/setup-node
 
       - name: Setup Rust
@@ -38,11 +38,44 @@ jobs:
       - name: Type Check
         run: pnpm type-check
 
-      - name: Node Test
+      - name: Setup Node18 For Testing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Node Test For Node18
         run: pnpm run --recursive --parallel --filter=!rollup-tests test
 
-      - name: Rollup Test
+      - name: Rollup Test Node18
         run: pnpm run --filter rollup-tests test
 
-      - name: examples
+      - name: Build Examples For Node18
+        run: pnpm --filter '@example/**' build
+
+      - name: Setup Node20 For Testing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Node Test For Node20
+        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+
+      - name: Rollup Test Node20
+        run: pnpm run --filter rollup-tests test
+
+      - name: Build Examples For Node20
+        run: pnpm --filter '@example/**' build
+
+      - name: Setup Node22 For Testing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Node Test For Node22
+        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+
+      - name: Rollup Test Node22
+        run: pnpm run --filter rollup-tests test
+
+      - name: Build Examples For Node22
         run: pnpm --filter '@example/**' build

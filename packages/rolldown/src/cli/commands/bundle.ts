@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks'
-import { rolldown, watch as rolldownWatch } from '../../rolldown'
+import { watch as rolldownWatch } from '../../api/watch'
+import { rolldown } from '../../api/rolldown'
 import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
 import { arraify } from '../../utils/misc'
 import { ensureConfig, logger } from '../utils'

@@ -9,12 +9,25 @@ export interface BuildOptions extends RolldownOptions {
   write?: boolean
 }
 
-export async function build(options: BuildOptions): Promise<RolldownOutput> {
-  const { output, ...inputOptions } = options
-  const build = await rolldown(inputOptions)
-  if (options.write) {
-    return build.write(output)
+async function build(options: BuildOptions): Promise<RolldownOutput>
+/**
+ * Build multiple outputs __sequentially__.
+ */
+async function build(options: BuildOptions[]): Promise<RolldownOutput[]>
+async function build(
+  options: BuildOptions | BuildOptions[],
+): Promise<RolldownOutput | RolldownOutput[]> {
+  if (Array.isArray(options)) {
+    return Promise.all(options.map((opts) => build(opts)))
   } else {
-    return build.generate(output)
+    const { output, ...inputOptions } = options
+    const build = await rolldown(inputOptions)
+    if (options.write) {
+      return build.write(output)
+    } else {
+      return build.generate(output)
+    }
   }
 }
+
+export { build }

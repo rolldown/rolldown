@@ -413,6 +413,8 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
 #[serde(rename_all = "camelCase")]
 pub struct BindingReplacePluginConfig {
   // It's ok we use `HashMap` here, because we don't care about the order of the keys.
+  // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
+  #[napi(ts_type = "Record<string, string>")]
   pub values: FxHashMap<String, String>,
   #[napi(ts_type = "[string, string]")]
   pub delimiters: Option<Vec<String>>,

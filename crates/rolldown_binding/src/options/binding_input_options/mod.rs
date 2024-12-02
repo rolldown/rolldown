@@ -76,6 +76,8 @@ pub struct BindingInputOptions {
   #[serde(skip_deserializing)]
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
+  // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
+  #[napi(ts_type = "Record<string, string>")]
   pub module_types: Option<FxHashMap<String, String>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,

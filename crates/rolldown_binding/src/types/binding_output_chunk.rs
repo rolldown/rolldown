@@ -105,6 +105,8 @@ pub struct JsOutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub filename: String,
+  // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
+  #[napi(ts_type = "Record<string, BindingRenderedModule>")]
   pub modules: FxHashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,

@@ -9,6 +9,9 @@ on:
       changed:
         required: true
         type: boolean
+      node-version:
+        required: true
+        type: string
 
 jobs:
   run:
@@ -23,7 +26,7 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
-      - name: Setup Node
+      - name: Setup Node for Development
         uses: ./.github/actions/setup-node
 
       - name: Setup Rust
@@ -37,6 +40,11 @@ jobs:
 
       - name: Type Check
         run: pnpm type-check
+
+      - name: Setup Node for Testing
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ inputs.node-version }}
 
       - name: Node Test
         run: pnpm run --recursive --parallel --filter=!rollup-tests test

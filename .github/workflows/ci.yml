@@ -108,9 +108,11 @@ jobs:
     strategy:
       matrix:
         target: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [20]
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}
+      node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   wasi-test:

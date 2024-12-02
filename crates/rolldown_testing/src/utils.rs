@@ -1,10 +1,9 @@
-use std::{borrow::Cow, hash::Hash, path::Path, sync::LazyLock};
+use std::{borrow::Cow, path::Path, sync::LazyLock};
 
 use regex::Regex;
 use rolldown::BundleOutput;
 use rolldown_common::{BundlerOptions, Output};
 use rolldown_error::DiagnosticOptions;
-use rustc_hash::{FxBuildHasher, FxHashMap};
 
 pub fn assert_bundled(options: BundlerOptions) {
   let result = tokio::runtime::Builder::new_multi_thread()
@@ -103,16 +102,4 @@ macro_rules! abs_file_dir {
   () => {
     std::path::Path::new(env!("WORKSPACE_DIR")).join(file!()).parent().unwrap().to_path_buf()
   };
-}
-
-// note: `impl<K, V, S> From<[(K, V); N]> for HashMap<K, V, S>` is not implemented by std (see the comment in the source of std)
-pub fn create_fx_hash_map<K, V, const N: usize>(arr: [(K, V); N]) -> FxHashMap<K, V>
-where
-  K: Eq + Hash,
-{
-  let mut map = FxHashMap::with_capacity_and_hasher(N, FxBuildHasher);
-  for (k, v) in arr {
-    map.insert(k, v);
-  }
-  map
 }

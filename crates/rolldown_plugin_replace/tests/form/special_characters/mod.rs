@@ -3,9 +3,7 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{
-  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
-};
+use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 
 // supports special characters
 #[tokio::test(flavor = "multi_thread")]
@@ -24,7 +22,7 @@ async fn special_characters() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: create_fx_hash_map([("require('one')".to_string(), "1".to_string())]),
+      values: [("require('one')".to_string(), "1".to_string())].into_iter().collect(),
       delimiters: Some((String::new(), String::new())),
       sourcemap: true,
       ..Default::default()

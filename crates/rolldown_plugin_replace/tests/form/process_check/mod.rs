@@ -3,9 +3,7 @@ use std::sync::Arc;
 use rolldown::{BundlerOptions, TreeshakeOptions};
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_testing::{
-  abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta, utils::create_fx_hash_map,
-};
+use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 
 // Handles process type guards in replacements
 #[tokio::test(flavor = "multi_thread")]
@@ -25,10 +23,9 @@ async fn process_check() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: create_fx_hash_map([(
-        "process.env.NODE_ENV".to_string(),
-        "\"production\"".to_string(),
-      )]),
+      values: [("process.env.NODE_ENV".to_string(), "\"production\"".to_string())]
+        .into_iter()
+        .collect(),
       prevent_assignment: true,
       sourcemap: true,
       object_guards: true,

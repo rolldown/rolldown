@@ -6,9 +6,13 @@ import type { RenderedChunk } from '../binding'
 export interface RolldownOutputAsset {
   type: 'asset'
   fileName: string
+  /** @deprecated Use "originalFileNames" instead. */
   originalFileName: string | null
+  originalFileNames: string[]
   source: AssetSource
+  /** @deprecated Use "names" instead. */
   name: string | undefined
+  names: string[]
 }
 
 function _assertRolldownOutputAsset() {

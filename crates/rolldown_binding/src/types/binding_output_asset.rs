@@ -20,7 +20,12 @@ impl BindingOutputAsset {
 
   #[napi(getter)]
   pub fn original_file_name(&self) -> Option<String> {
-    self.inner.original_file_name.clone()
+    self.inner.original_file_names.first().cloned()
+  }
+
+  #[napi(getter)]
+  pub fn original_file_names(&self) -> Vec<String> {
+    self.inner.original_file_names.clone()
   }
 
   #[napi(getter)]
@@ -30,14 +35,19 @@ impl BindingOutputAsset {
 
   #[napi(getter)]
   pub fn name(&self) -> Option<String> {
-    self.inner.name.clone()
+    self.inner.names.first().cloned()
+  }
+
+  #[napi(getter)]
+  pub fn names(&self) -> Vec<String> {
+    self.inner.names.clone()
   }
 }
 
 #[napi(object)]
 pub struct JsOutputAsset {
-  pub name: Option<String>,
-  pub original_file_name: Option<String>,
+  pub names: Vec<String>,
+  pub original_file_names: Vec<String>,
   pub filename: String,
   pub source: BindingAssetSource,
 }
@@ -45,8 +55,8 @@ pub struct JsOutputAsset {
 impl From<JsOutputAsset> for rolldown_common::OutputAsset {
   fn from(asset: JsOutputAsset) -> Self {
     Self {
-      name: asset.name,
-      original_file_name: asset.original_file_name,
+      names: asset.names,
+      original_file_names: asset.original_file_names,
       filename: asset.filename.into(),
       source: asset.source.into(),
     }

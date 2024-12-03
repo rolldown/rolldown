@@ -52,6 +52,7 @@ export default defineTest({
     for (const asset of assets) {
       switch (asset.name) {
         case '+emitted.txt':
+          expect(asset.names).toStrictEqual(['+emitted.txt'])
           isComposingJs
             ? expect(asset.fileName).toMatchInlineSnapshot(
                 `"_emitted-umwR9Fta.txt"`,
@@ -60,6 +61,7 @@ export default defineTest({
                 `"_emitted-umwR9Fta.txt"`,
               )
           expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME)
+          expect(asset.originalFileNames).toStrictEqual([ORIGINAL_FILE_NAME])
           break
 
         case 'icon.png':

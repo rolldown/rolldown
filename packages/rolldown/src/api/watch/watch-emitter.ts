@@ -29,6 +29,15 @@ export class WatcherEmitter {
     WatcherEvent,
     Array<(...parameters: any[]) => MaybePromise<void>>
   > = new Map()
+
+  timer: any
+
+  constructor() {
+    // The rust side already create a thread for watcher, but it isn't at main thread.
+    // So here we need to avoid main process exit util the user call `watcher.close()`.
+    this.timer = setInterval(() => {}, 1e9 /* Low power usage */)
+  }
+
   on(
     event: 'change',
     listener: (
@@ -106,8 +115,9 @@ export class WatcherEmitter {
     }
   }
 
-  // Will be overwritten by Watcher
-  async close(): Promise<void> {}
+  async close(): Promise<void> {
+    clearInterval(this.timer)
+  }
 }
 
 export type RolldownWatcher = WatcherEmitter

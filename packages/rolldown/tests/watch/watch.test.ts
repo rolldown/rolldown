@@ -321,6 +321,15 @@ test.sequential('error handling + plugin error', async () => {
   await watcher.close()
 })
 
+test.sequential('watch close immediately', async () => {
+  const watcher = watch({
+    input,
+    cwd: import.meta.dirname,
+  })
+
+  await watcher.close()
+})
+
 async function waitUtil(expectFn: () => void) {
   for (let tries = 0; tries < 10; tries++) {
     try {

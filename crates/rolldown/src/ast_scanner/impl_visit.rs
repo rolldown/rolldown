@@ -9,7 +9,7 @@ use oxc::{
 };
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
-  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, ThisExprReplaceKind,
+  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
@@ -220,6 +220,19 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.is_nested_this_inside_class = false;
     walk::walk_property_key(self, it);
     self.is_nested_this_inside_class = pre_is_nested_this_inside_class;
+  }
+
+  fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
+    match it {
+      ast::Declaration::FunctionDeclaration(_) => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+      }
+      ast::Declaration::ClassDeclaration(_) => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
+      }
+      _ => {}
+    }
+    walk::walk_declaration(self, it);
   }
 }
 

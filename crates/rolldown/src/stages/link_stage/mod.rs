@@ -5,7 +5,8 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
   ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
-  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb, WrapKind,
+  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -226,6 +227,7 @@ impl<'a> LinkStage<'a> {
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
     let record_meta_update_pending_pairs_list = AppendOnlyVec::new();
+    let keep_names = self.options.keep_names;
     self.module_table.modules.par_iter().filter_map(Module::as_normal).for_each(|importer| {
       let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
       let importer_idx = importer.idx;
@@ -423,6 +425,9 @@ impl<'a> LinkStage<'a> {
             }
           }
         });
+        if keep_names && stmt_info.meta.intersects(StmtInfoMeta::FnDecl | StmtInfoMeta::ClassDecl) {
+          stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__name").into());
+        }
       });
       for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
         stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
@@ -462,6 +467,7 @@ impl<'a> LinkStage<'a> {
             is_included: false,
             import_records: Vec::new(),
             debug_label: None,
+            meta: Default::default(),
           };
           ecma_module.stmt_infos.add_stmt_info(stmt_info);
         });
@@ -504,6 +510,7 @@ impl<'a> LinkStage<'a> {
             is_included: false,
             import_records: Vec::new(),
             debug_label: None,
+            meta: Default::default(),
           };
           ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
         }

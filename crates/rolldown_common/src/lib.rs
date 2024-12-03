@@ -122,7 +122,7 @@ pub use crate::{
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,
   types::source_mutation::SourceMutation,
-  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
+  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},
   types::str_or_bytes::StrOrBytes,
   types::symbol_name_ref_token::SymbolNameRefToken,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,

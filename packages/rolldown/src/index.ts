@@ -56,7 +56,7 @@ import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
 import { WatchOptions } from './options/watch-options'
-import { RolldownWatcher } from './api/watch/watch/watch-emitter'
+import { RolldownWatcher } from './api/watch/watch-emitter'
 import { build, type BuildOptions } from './api/build'
 
 export { defineConfig, rolldown, watch, build }
@@ -108,7 +108,8 @@ export type {
   OutputBundle,
   JsxOptions,
   WatchOptions,
-  Watcher,
+  RolldownWatcher,
+  BuildOptions,
 }
 
 // Exports for compatibility

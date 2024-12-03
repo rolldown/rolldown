@@ -1,137 +1,59 @@
 import { BindingWatcher } from '../../binding'
-import { MaybePromise } from '../../types/utils'
-import { normalizeErrors } from '../../utils/error'
+import { WatchOptions } from '../../options/watch-options'
+import { createBundler } from '../../utils/create-bundler'
+import { WatcherEmitter } from './watch-emitter'
 
 export class Watcher {
   closed: boolean
   controller: AbortController
   inner: BindingWatcher
+  emitter: WatcherEmitter
   stopWorkers?: () => Promise<void>
-  listeners: Map<
-    WatcherEvent,
-    Array<(...parameters: any[]) => MaybePromise<void>>
-  > = new Map()
-  constructor(inner: BindingWatcher, stopWorkers?: () => Promise<void>) {
+
+  constructor(
+    emitter: WatcherEmitter,
+    inner: BindingWatcher,
+    stopWorkers?: () => Promise<void>,
+  ) {
     this.closed = false
     this.controller = new AbortController()
     this.inner = inner
+    this.emitter = emitter
+    emitter.close = this.close.bind(this)
     this.stopWorkers = stopWorkers
   }
 
   async close() {
+    if (this.closed) return
     this.closed = true
     await this.stopWorkers?.()
     await this.inner.close()
     this.controller.abort()
   }
 
-  on(
-    event: 'change',
-    listener: (
-      id: string,
-      change: { event: ChangeEvent },
-    ) => MaybePromise<void>,
-  ): this
-  on(
-    event: 'event',
-    listener: (data: RollupWatcherEvent) => MaybePromise<void>,
-  ): this
-  on(event: 'restart' | 'close', listener: () => MaybePromise<void>): this
-  on(
-    event: WatcherEvent,
-    listener: (...parameters: any[]) => MaybePromise<void>,
-  ): this {
-    const listeners = this.listeners.get(event)
-    if (listeners) {
-      listeners.push(listener)
-    } else {
-      this.listeners.set(event, [listener])
-    }
-    return this
-  }
-
   // The rust side already create a thread for watcher, but it isn't at main thread.
   // So here we need to avoid main process exit util the user call `watcher.close()`.
-  watch() {
+  start() {
     const timer = setInterval(() => {}, 1e9 /* Low power usage */)
     this.controller.signal.addEventListener('abort', () => {
       clearInterval(timer)
     })
     // run first build after listener is attached
     process.nextTick(() =>
-      this.inner.start(async (event) => {
-        const listeners = this.listeners.get(event.eventKind() as WatcherEvent)
-        if (listeners) {
-          switch (event.eventKind()) {
-            case 'close':
-            case 'restart':
-              for (const listener of listeners) {
-                await listener()
-              }
-              break
-
-            case 'event':
-              for (const listener of listeners) {
-                const code = event.bundleEventKind()
-                switch (code) {
-                  case 'BUNDLE_END':
-                    const { duration, output } = event.bundleEndData()
-                    await listener({
-                      code: 'BUNDLE_END',
-                      duration,
-                      output: [output], // rolldown doesn't support arraying configure output
-                    })
-                    break
-
-                  case 'ERROR':
-                    const errors = event.errors()
-                    await listener({
-                      code: 'ERROR',
-                      error: normalizeErrors(errors),
-                    })
-                    break
-
-                  default:
-                    await listener({ code })
-                    break
-                }
-              }
-              break
-
-            case 'change':
-              for (const listener of listeners) {
-                const { path, kind } = event.watchChangeData()
-                await listener(path, { event: kind as ChangeEvent })
-              }
-              break
-
-            default:
-              throw new Error(`Unknown event: ${event}`)
-          }
-        }
-      }),
+      this.inner.start(this.emitter.onEvent.bind(this.emitter)),
     )
   }
 }
 
-export type WatcherEvent = 'close' | 'event' | 'restart' | 'change'
-
-export type ChangeEvent = 'create' | 'update' | 'delete'
-
-export type RollupWatcherEvent =
-  | { code: 'START' }
-  | {
-      code: 'BUNDLE_START' /* input?: InputOption; output: readonly string[] */
-    }
-  | {
-      code: 'BUNDLE_END'
-      duration: number
-      // input?: InputOption
-      output: readonly string[]
-      // result: RollupBuild
-    }
-  | { code: 'END' }
-  | {
-      code: 'ERROR'
-      error: Error /* the error is not compilable with rollup * /  /**  result: RollupBuild | null **/
-    }
+export async function createWatcher(
+  emitter: WatcherEmitter,
+  input: WatchOptions,
+) {
+  const { bundler, stopWorkers } = await createBundler(
+    input,
+    input.output || {},
+  )
+  const bindingWatcher = await bundler.watch()
+  const watcher = new Watcher(emitter, bindingWatcher, stopWorkers)
+  watcher.start()
+}

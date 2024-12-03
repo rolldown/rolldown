@@ -1,15 +1,10 @@
 import type { WatchOptions } from '../../options/watch-options'
-import { createBundler } from '../../utils/create-bundler'
-import { Watcher } from './watcher'
+import { RolldownWatcher, WatcherEmitter } from './watch-emitter'
+import { createWatcher } from './watcher'
 
 // Compat to `rollup.watch`
-export const watch = async (input: WatchOptions): Promise<Watcher> => {
-  const { bundler, stopWorkers } = await createBundler(
-    input,
-    input.output || {},
-  )
-  const bindingWatcher = await bundler.watch()
-  const watcher = new Watcher(bindingWatcher, stopWorkers)
-  watcher.watch()
-  return watcher
+export const watch = (input: WatchOptions): RolldownWatcher => {
+  const emitter = new WatcherEmitter()
+  createWatcher(emitter, input)
+  return emitter
 }

@@ -16,7 +16,7 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingHookError {
-  get errors(): Array<unknown>
+  get errors(): Array<Error | object>
 }
 
 export declare class BindingLog {
@@ -92,7 +92,7 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  get errors(): Array<unknown>
+  get errors(): Array<Error | object>
 }
 
 export declare class BindingPluginContext {
@@ -129,7 +129,7 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
-  errors(): Array<unknown>
+  errors(): Array<Error | object>
 }
 
 export declare class Bundler {

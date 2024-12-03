@@ -1,5 +1,5 @@
 import { expect, test, vi, afterEach } from 'vitest'
-import { watch, Watcher } from 'rolldown'
+import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
 import { sleep } from '@tests/utils'
@@ -17,7 +17,7 @@ afterEach(async () => {
 test.sequential('watch', async () => {
   const watchChangeFn = vi.fn()
   const closeWatcherFn = vi.fn()
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
     plugins: [
@@ -56,7 +56,7 @@ test.sequential('watch', async () => {
 })
 
 test.sequential('watch close', async () => {
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
   })
@@ -74,7 +74,7 @@ test.sequential('watch close', async () => {
 })
 
 test.sequential('watch event', async () => {
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
   })
@@ -136,7 +136,7 @@ test.sequential('watch event', async () => {
 })
 
 test.sequential('watch event avoid deadlock #2806', async () => {
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
   })
@@ -167,7 +167,7 @@ test.sequential('watch event avoid deadlock #2806', async () => {
 
 test.sequential('watch skipWrite', async () => {
   const dir = path.join(import.meta.dirname, './skipWrite-dist/')
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
     output: {
@@ -177,15 +177,15 @@ test.sequential('watch skipWrite', async () => {
       skipWrite: true,
     },
   })
-  await waitUtil(() => {
-    expect(fs.existsSync(dir)).toBe(false)
-  })
+  await waitBuildFinished(watcher)
+
+  expect(fs.existsSync(dir)).toBe(false)
   await watcher.close()
 })
 
 test.sequential('PluginContext addWatchFile', async () => {
   const foo = path.join(import.meta.dirname, './foo.js')
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
     plugins: [
@@ -219,7 +219,7 @@ test.sequential('PluginContext addWatchFile', async () => {
 })
 
 test.sequential('watch include/exclude', async () => {
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
     watch: {
@@ -248,7 +248,7 @@ test.sequential('error handling', async () => {
   await new Promise((resolve) => {
     setTimeout(resolve, 60)
   })
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
   })
@@ -287,7 +287,7 @@ test.sequential('error handling', async () => {
 })
 
 test.sequential('error handling + plugin error', async () => {
-  const watcher = await watch({
+  const watcher = watch({
     input,
     cwd: import.meta.dirname,
     plugins: [
@@ -321,6 +321,15 @@ test.sequential('error handling + plugin error', async () => {
   await watcher.close()
 })
 
+test.sequential('watch close immediately', async () => {
+  const watcher = watch({
+    input,
+    cwd: import.meta.dirname,
+  })
+
+  await watcher.close()
+})
+
 async function waitUtil(expectFn: () => void) {
   for (let tries = 0; tries < 10; tries++) {
     try {
@@ -332,7 +341,10 @@ async function waitUtil(expectFn: () => void) {
   expectFn()
 }
 
-async function waitBuildFinished(watcher: Watcher, updateFn?: () => void) {
+async function waitBuildFinished(
+  watcher: RolldownWatcher,
+  updateFn?: () => void,
+) {
   return new Promise<void>((resolve) => {
     let listening = false
     watcher.on('event', (event) => {

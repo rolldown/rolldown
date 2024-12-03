@@ -30,9 +30,6 @@ const ignoreTests = [
   "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
 
   // watch mode api is not compitable with rollup, the `rollup.watch` is not a promise at rollup
-  "rollup@hooks@Throws when not specifying \"file\" or \"dir\"",
-  "rollup@hooks@Throws when using the \"file\"\" option for multiple chunks",
-  "rollup@hooks@Throws when using the \"sourcemapFile\" option for multiple chunks",
   "rollup@hooks@allows to enforce plugin hook order in watch mode",
   "rollup@hooks@allows to enforce sequential plugin hook order in watch mode",
 

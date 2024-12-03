@@ -5,7 +5,7 @@ import path from 'node:path'
 import { sleep } from '@tests/utils'
 
 const input = path.join(import.meta.dirname, './main.js')
-// const output = path.join(import.meta.dirname, './dist/main.js')
+const output = path.join(import.meta.dirname, './dist/main.js')
 
 afterEach(async () => {
   // revert change

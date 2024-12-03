@@ -5,3 +5,7 @@ export function a() {
 
 }
 
+export class Foo {
+
+}
+

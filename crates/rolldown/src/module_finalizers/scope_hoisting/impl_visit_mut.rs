@@ -15,6 +15,7 @@ use rolldown_common::{
   ThisExprReplaceKind, WrapKind,
 };
 use rolldown_ecmascript_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
+use rolldown_rstr::Rstr;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -419,6 +420,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.process_fn_decl(decl);
       }
       ast::Declaration::ClassDeclaration(decl) => {
+        // need to insert `keep_names` helper, because `get_transformed_class_decl`
+        // will remove id in `class.id`
+        self.insert_keep_name_helper_for_class_decl(decl);
         if let Some(decl) = self.get_transformed_class_decl(decl) {
           *it = decl;
         }
@@ -874,23 +878,36 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     );
   }
 
-  fn process_fn_decl(&mut self, decl: &mut allocator::Box<'_, ast::Function<'_>>) -> Option<()> {
+  fn process_fn_decl(
+    &mut self,
+    decl: &mut allocator::Box<'ast, ast::Function<'ast>>,
+  ) -> Option<()> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let id = decl.id.as_ref()?;
-    let symbol_id = id.symbol_id.get()?;
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let original_name = symbol_ref.name(self.ctx.symbol_db);
-    let canonical_name = self.canonical_name_for(symbol_ref);
-    if original_name != canonical_name.as_str() {
-      self.ctx.keep_name_statement_to_insert.push((
-        self.ctx.cur_stmt_index + 1,
-        id.symbol_id(),
-        original_name.into(),
-        canonical_name.clone(),
-      ));
+    let (symbol_id, original_name, canonical_name) = self.get_conflicted_info(decl.id.as_ref()?)?;
+    let original_name: Rstr = original_name.into();
+    let new_name = canonical_name.clone();
+    let insert_position = self.ctx.cur_stmt_index + 1;
+    self.ctx.keep_name_statement_to_insert.push((
+      insert_position,
+      symbol_id,
+      original_name,
+      new_name,
+    ));
+    None
+  }
+
+  fn insert_keep_name_helper_for_class_decl(
+    &mut self,
+    decl: &mut allocator::Box<'ast, ast::Class<'ast>>,
+  ) -> Option<()> {
+    if !self.ctx.options.keep_names {
+      return None;
     }
+    let (_, original_name, _) = self.get_conflicted_info(decl.id.as_ref()?)?;
+    let original_name: Rstr = original_name.into();
+    decl.body.body.insert(0, self.snippet.static_block_keep_name_helper(&original_name));
     None
   }
 }

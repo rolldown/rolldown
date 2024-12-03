@@ -1,9 +1,10 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::{
-    ast::{self, Expression, IdentifierReference, MemberExpression, Statement},
+    ast::{self, BindingIdentifier, Expression, IdentifierReference, MemberExpression, Statement},
     Comment, NONE,
   },
+  semantic::SymbolId,
   span::{Atom, GetSpan, SPAN},
 };
 use rolldown_common::{
@@ -526,5 +527,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       MemberExpression::PrivateFieldExpression(_) => None,
     }
+  }
+
+  fn get_conflicted_info(
+    &mut self,
+    id: &BindingIdentifier<'ast>,
+  ) -> Option<(SymbolId, &str, &rolldown_rstr::Rstr)> {
+    let symbol_id = id.symbol_id.get()?;
+    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let original_name = symbol_ref.name(self.ctx.symbol_db);
+    let canonical_name = self.canonical_name_for(symbol_ref);
+    (original_name != canonical_name.as_str()).then_some((symbol_id, original_name, canonical_name))
   }
 }

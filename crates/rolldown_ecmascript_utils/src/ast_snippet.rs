@@ -2,8 +2,9 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, Argument, BindingIdentifier, Declaration, Expression, FunctionType, ImportOrExportKind,
-      NumberBase, ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
+      self, Argument, BindingIdentifier, ClassElement, Declaration, Expression, FunctionType,
+      ImportOrExportKind, NumberBase, ObjectPropertyKind, PropertyKind, Statement,
+      VariableDeclarationKind,
     },
     AstBuilder, NONE,
   },
@@ -884,6 +885,27 @@ impl<'ast> AstSnippet<'ast> {
         },
         false,
       ),
+    )
+  }
+
+  pub fn static_block_keep_name_helper(&self, name: PassedStr) -> ClassElement<'ast> {
+    self.builder.class_element_static_block(
+      SPAN,
+      self.builder.vec1(self.builder.statement_expression(
+        SPAN,
+        self.builder.expression_call(
+          SPAN,
+          self.builder.expression_identifier_reference(SPAN, "__name"),
+          NONE,
+          {
+            let mut items = self.builder.vec_with_capacity(2);
+            items.push(self.builder.expression_this(SPAN).into());
+            items.push(self.builder.expression_string_literal(SPAN, name).into());
+            items
+          },
+          false,
+        ),
+      )),
     )
   }
 }

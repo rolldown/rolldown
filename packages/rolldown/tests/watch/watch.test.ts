@@ -165,6 +165,24 @@ test.sequential('watch event avoid deadlock #2806', async () => {
   await watcher.close()
 })
 
+test.sequential('watch skipWrite', async () => {
+  const dir = path.join(import.meta.dirname, './skipWrite-dist/')
+  const watcher = watch({
+    input,
+    cwd: import.meta.dirname,
+    output: {
+      dir,
+    },
+    watch: {
+      skipWrite: true,
+    },
+  })
+  await waitBuildFinished(watcher)
+
+  expect(fs.existsSync(dir)).toBe(false)
+  await watcher.close()
+})
+
 test.sequential('PluginContext addWatchFile', async () => {
   const foo = path.join(import.meta.dirname, './foo.js')
   const watcher = watch({
@@ -197,25 +215,6 @@ test.sequential('PluginContext addWatchFile', async () => {
     expect(changeFn).toBeCalled()
   })
 
-  await watcher.close()
-})
-
-// Not sure the case will cause the `PluginContext addWatchFile` timeout if it placed at the pervious of `PluginContext addWatchFile`
-test.sequential('watch skipWrite', async () => {
-  const dir = path.join(import.meta.dirname, './skipWrite-dist/')
-  const watcher = watch({
-    input,
-    cwd: import.meta.dirname,
-    output: {
-      dir,
-    },
-    watch: {
-      skipWrite: true,
-    },
-  })
-  await waitUtil(() => {
-    expect(fs.existsSync(dir)).toBe(false)
-  })
   await watcher.close()
 })
 

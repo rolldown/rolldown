@@ -174,7 +174,7 @@ impl LinkStage<'_> {
       }
     });
     if self.options.keep_names {
-      for id in entry_ids.iter() {
+      for id in &entry_ids {
         self.metas[*id]
           .referenced_symbols_by_entry_point_chunk
           .push(self.runtime.resolve_symbol("__name"));

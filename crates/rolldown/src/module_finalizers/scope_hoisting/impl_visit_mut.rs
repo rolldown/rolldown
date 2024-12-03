@@ -225,10 +225,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_statements(self, it);
 
     // TODO: perf it
-    for (stmt_index, symbol_id, original_name, new_name) in
+    for (stmt_index, _symbol_id, original_name, new_name) in
       self.ctx.keep_name_statement_to_insert.iter().rev()
     {
-      it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(&original_name, &new_name));
+      it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(original_name, new_name));
     }
     self.ctx.cur_stmt_index = previous_stmt_index;
     self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;
@@ -887,7 +887,6 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let id = decl.id.as_ref()?;
     let symbol_id = id.symbol_id.get()?;
     let symbol_ref = (self.ctx.id, symbol_id).into();
-    dbg!(&self.ctx.renamed_symbol_map);
     if let Some(original_name) = self.ctx.renamed_symbol_map.get(&symbol_ref) {
       let new_name = self.canonical_name_for(symbol_ref);
       self.ctx.keep_name_statement_to_insert.push((

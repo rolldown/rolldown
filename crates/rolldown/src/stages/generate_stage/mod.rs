@@ -76,7 +76,7 @@ impl<'a> GenerateStage<'a> {
     self.patch_asset_modules(&chunk_graph);
 
     chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
-      deconflict_chunk_symbols(chunk, self.link_output, &self.options, &index_chunk_id_to_name);
+      deconflict_chunk_symbols(chunk, self.link_output, self.options, &index_chunk_id_to_name);
     });
 
     let ast_table_iter = self.link_output.ast_table.par_iter_mut();

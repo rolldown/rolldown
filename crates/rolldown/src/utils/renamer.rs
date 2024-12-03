@@ -5,12 +5,11 @@ use rolldown_common::{
   SymbolNameRefToken, SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
-use rolldown_utils::rustc_hash::FxHashMapExt;
 use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 
@@ -76,9 +75,9 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
-  pub fn update_renamed_symbol_map(&mut self, symbol_ref: &SymbolRef, original_name: &Rstr) {
+  pub fn update_renamed_symbol_map(&mut self, symbol_ref: SymbolRef, original_name: &Rstr) {
     if self.options.keep_names {
-      self.renamed_symbol_map.insert(*symbol_ref, original_name.clone());
+      self.renamed_symbol_map.insert(symbol_ref, original_name.clone());
     }
   }
 
@@ -113,7 +112,7 @@ impl<'name> Renamer<'name> {
       }
     };
     if deconflicted {
-      self.update_renamed_symbol_map(&symbol_ref, &original_name);
+      self.update_renamed_symbol_map(symbol_ref, &original_name);
     }
   }
 

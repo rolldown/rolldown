@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::cmp::Reverse;
-use std::collections::BTreeSet;
 
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
@@ -56,14 +55,12 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
     );
-    dbg!(&index_imports_from_other_chunks);
 
     self.deconflict_exported_names(
       chunk_graph,
       &index_chunk_exported_symbols,
       &mut index_imports_from_other_chunks,
     );
-    dbg!(&index_imports_from_other_chunks);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .into_par_iter()

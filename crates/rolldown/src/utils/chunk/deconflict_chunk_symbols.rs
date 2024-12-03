@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
@@ -13,8 +13,11 @@ pub fn deconflict_chunk_symbols(
   options: &SharedNormalizedBundlerOptions,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
-  let mut renamer =
-    Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), options.clone());
+  let mut renamer = Renamer::new(
+    &link_output.symbol_db,
+    link_output.module_table.modules.len(),
+    Arc::<rolldown_common::NormalizedBundlerOptions>::clone(options),
+  );
 
   if matches!(options.format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external

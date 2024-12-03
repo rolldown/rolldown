@@ -4145,7 +4145,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-BQNBnSKG.js
+- main-!~{000}~.js => main-CtjRJ0Mq.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
@@ -4155,7 +4155,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.js => main-CBnqjF7B.js
+- main-!~{000}~.js => main-zshMOLla.js
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -5029,6 +5029,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-uZlLhrrK.js
 - main-uZlLhrrK.js.map
+
+# tests/rolldown/topics/keep_names/basic
+
+- main-!~{000}~.js => main-BGCT_L2h.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

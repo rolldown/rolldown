@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, SymbolRefDb, WrapKind,
+  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb, WrapKind,
 };
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -160,6 +160,7 @@ pub fn create_wrapper(
         is_included: false,
         import_records: Vec::new(),
         debug_label: None,
+        meta: StmtInfoMeta::default(),
       };
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));
@@ -189,6 +190,7 @@ pub fn create_wrapper(
         is_included: false,
         import_records: Vec::new(),
         debug_label: None,
+        meta: StmtInfoMeta::default(),
       };
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));

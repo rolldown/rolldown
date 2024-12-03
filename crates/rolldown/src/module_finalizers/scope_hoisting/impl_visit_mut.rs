@@ -210,6 +210,24 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_statement(self, it);
   }
 
+  fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
+    let previous_stmt_index = self.ctx.cur_stmt_index;
+    let previous_keep_name_statement = std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
+    for (i, stmt) in it.iter_mut().enumerate() {
+      self.ctx.cur_stmt_index = i;
+      self.visit_statement(stmt);
+    }
+
+    // TODO: perf it
+    for (stmt_index, _symbol_id, original_name, new_name) in
+      self.ctx.keep_name_statement_to_insert.iter().rev()
+    {
+      it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(original_name, new_name));
+    }
+    self.ctx.cur_stmt_index = previous_stmt_index;
+    self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;
+  }
+
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
     // This ensure all `IdentifierReference`s are processed
     debug_assert!(
@@ -393,11 +411,25 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     walk_mut::walk_simple_assignment_target(self, target);
   }
+
   fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
-    if let Some(decl) = self.get_transformed_class_decl(it) {
-      *it = decl;
+    match it {
+      ast::Declaration::VariableDeclaration(_) => {}
+      ast::Declaration::FunctionDeclaration(decl) => {
+        self.process_fn_decl(decl);
+      }
+      ast::Declaration::ClassDeclaration(decl) => {
+        if let Some(decl) = self.get_transformed_class_decl(decl) {
+          *it = decl;
+        }
+        // deconflict class name
+      }
+      ast::Declaration::TSTypeAliasDeclaration(_)
+      | ast::Declaration::TSInterfaceDeclaration(_)
+      | ast::Declaration::TSEnumDeclaration(_)
+      | ast::Declaration::TSModuleDeclaration(_)
+      | ast::Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
     }
-    // deconflict class name
     walk_mut::walk_declaration(self, it);
   }
 }
@@ -406,11 +438,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
   fn get_transformed_class_decl(
     &mut self,
-    it: &mut ast::Declaration<'ast>,
+    class: &mut allocator::Box<'ast, ast::Class<'ast>>,
   ) -> Option<ast::Declaration<'ast>> {
-    let ast::Declaration::ClassDeclaration(class) = it else {
-      return None;
-    };
     let scope_id = class.scope_id.get()?;
 
     if self.scope.get_parent_id(scope_id) != Some(self.scope.root_scope_id()) {
@@ -843,5 +872,25 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         program.body.push(top_stmt);
       },
     );
+  }
+
+  fn process_fn_decl(&mut self, decl: &mut allocator::Box<'_, ast::Function<'_>>) -> Option<()> {
+    if !self.ctx.options.keep_names {
+      return None;
+    }
+    let id = decl.id.as_ref()?;
+    let symbol_id = id.symbol_id.get()?;
+    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let original_name = symbol_ref.name(self.ctx.symbol_db);
+    let canonical_name = self.canonical_name_for(symbol_ref);
+    if original_name != canonical_name.as_str() {
+      self.ctx.keep_name_statement_to_insert.push((
+        self.ctx.cur_stmt_index + 1,
+        id.symbol_id(),
+        original_name.into(),
+        canonical_name.clone(),
+      ));
+    }
+    None
   }
 }

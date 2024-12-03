@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use oxc_index::IndexVec;
 use rustc_hash::FxHashMap;
 
@@ -66,6 +67,14 @@ oxc_index::define_index_type! {
   pub struct StmtInfoIdx = u32;
 }
 
+bitflags! {
+    #[derive(Debug, Default)]
+    pub struct StmtInfoMeta: u8 {
+        const FnDecl = 1;
+        const ClassDecl = 1 << 1;
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct StmtInfo {
   /// The index of this statement in the module body.
@@ -84,6 +93,7 @@ pub struct StmtInfo {
   pub is_included: bool,
   pub import_records: Vec<ImportRecordIdx>,
   pub debug_label: Option<String>,
+  pub meta: StmtInfoMeta,
 }
 
 impl StmtInfo {

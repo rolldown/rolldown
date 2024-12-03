@@ -1,6 +1,7 @@
 // Port from https://github.com/evanw/esbuild/blob/main/internal/runtime/runtime.go
 var __create = Object.create
 var __defProp = Object.defineProperty
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor // Note: can return "undefined" due to a Safari bug
 var __getOwnPropNames = Object.getOwnPropertyNames
 var __getProtoOf = Object.getPrototypeOf

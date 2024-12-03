@@ -64,6 +64,7 @@ pub struct NormalizedBundlerOptions {
   pub minify: bool,
   pub extend: bool,
   pub define: Vec<(/* Target to be replaced */ String, /* Replacement */ String)>,
+  pub keep_names: bool,
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
   pub external_live_bindings: bool,

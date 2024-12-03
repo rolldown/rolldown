@@ -199,7 +199,7 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.build_end {
       cb.await_call((
         ctx.clone().into(),
-        args.map(|args| BindingHookError::new(Arc::clone(&args.errors), args.cwd.clone())),
+        args.map(|args| BindingHookError::new(args.errors.clone(), args.cwd.clone())),
       ))
       .await?;
     }

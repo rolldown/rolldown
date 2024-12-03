@@ -9,9 +9,8 @@ async function buildWithPlugin(plugin: Plugin) {
       plugins: [plugin],
     })
     await build.write({})
-  } catch {
-    // Here `renderError` test will crash it, here avoid bubble it.
-    // console.log(error)
+  } catch (e) {
+    return e as Error
   }
 }
 
@@ -35,7 +34,7 @@ test('Plugin renderError hook', async () => {
 describe('Plugin buildEnd hook', async () => {
   test('call buildEnd hook with error', async () => {
     const buildEndFn = vi.fn()
-    await buildWithPlugin({
+    const error = await buildWithPlugin({
       load() {
         throw new Error('load error')
       },
@@ -44,17 +43,19 @@ describe('Plugin buildEnd hook', async () => {
         expect(error!.message).toContain('load error')
       },
     })
+    expect(error!.message).toContain('load error')
     expect(buildEndFn).toHaveBeenCalledTimes(1)
   })
 
   test('call buildEnd hook without error', async () => {
     const buildEndFn = vi.fn()
-    await buildWithPlugin({
+    const error = await buildWithPlugin({
       buildEnd: (error) => {
         buildEndFn()
-        expect(error).toBeNull()
+        expect(error).toBeUndefined()
       },
     })
+    expect(error).toBeUndefined()
     expect(buildEndFn).toHaveBeenCalledTimes(1)
   })
 })
@@ -62,7 +63,7 @@ describe('Plugin buildEnd hook', async () => {
 describe('Plugin closeBundle hook', async () => {
   test('call closeBundle hook if has error', async () => {
     const closeBundleFn = vi.fn()
-    await buildWithPlugin({
+    const error = await buildWithPlugin({
       load() {
         throw new Error('load error')
       },
@@ -70,6 +71,7 @@ describe('Plugin closeBundle hook', async () => {
         closeBundleFn()
       },
     })
+    expect(error!.message).toContain('load error')
     expect(closeBundleFn).toHaveBeenCalledTimes(1)
   })
 
@@ -107,20 +109,10 @@ describe('Plugin closeBundle hook', async () => {
 })
 
 test('call transformContext error', async () => {
-  try {
-    const build = await rolldown({
-      input: './main.js',
-      cwd: import.meta.dirname,
-      plugins: [
-        {
-          transform() {
-            this.error('transform hook error')
-          },
-        },
-      ],
-    })
-    await build.write({})
-  } catch (error: any) {
-    expect(error.message).toContain('transform hook error')
-  }
+  const error = await buildWithPlugin({
+    transform() {
+      this.error('transform hook error')
+    },
+  })
+  expect(error!.message).toContain('transform hook error')
 })

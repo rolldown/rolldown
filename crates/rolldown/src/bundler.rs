@@ -18,6 +18,7 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
 use rolldown_std_utils::OptionExt;
+use rolldown_utils::unique_arc::UniqueArc;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_chrome::FlushGuard;
@@ -108,20 +109,13 @@ impl Bundler {
     {
       Ok(v) => v,
       Err(errs) => {
-        let errors = Arc::new(errs.into_vec());
+        let errors = UniqueArc::new(errs.into_vec());
         self
           .plugin_driver
-          .build_end(Some(&HookBuildEndArgs {
-            errors: Arc::clone(&errors),
-            cwd: &self.options.cwd,
-          }))
+          .build_end(Some(&HookBuildEndArgs { errors: errors.weak_ref(), cwd: &self.options.cwd }))
           .await?;
         self.plugin_driver.close_bundle().await?;
-        return Err(
-          Arc::<std::vec::Vec<BuildDiagnostic>>::into_inner(errors)
-            .expect("Arc into_inner should success after call buildEnd hook")
-            .into(),
-        );
+        return Err(errors.into_inner().into());
       }
     };
 

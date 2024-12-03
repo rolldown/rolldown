@@ -5,6 +5,8 @@ import { rolldown } from './rolldown'
 export interface BuildOptions extends RolldownOptions {
   /**
    * Write the output to the file system
+   *
+   * @default true
    */
   write?: boolean
 }
@@ -20,9 +22,9 @@ async function build(
   if (Array.isArray(options)) {
     return Promise.all(options.map((opts) => build(opts)))
   } else {
-    const { output, ...inputOptions } = options
+    const { output, write = true, ...inputOptions } = options
     const build = await rolldown(inputOptions)
-    if (options.write) {
+    if (write) {
       return build.write(output)
     } else {
       return build.generate(output)

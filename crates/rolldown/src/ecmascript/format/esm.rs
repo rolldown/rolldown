@@ -110,6 +110,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let mut s = String::new();
 
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
+    // dbg!(&items);
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let mut default_alias = vec![];
     let mut specifiers = items
@@ -189,7 +190,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       s.push_str(&create_import_declaration(specifiers, &default_alias, &importee.name));
     }
   });
-
+  println!("{}", s);
   s
 }
 

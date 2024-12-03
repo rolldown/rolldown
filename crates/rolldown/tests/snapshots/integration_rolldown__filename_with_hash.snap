@@ -1934,15 +1934,15 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 
-- entry-default-!~{001}~.js => entry-default-C_JYqmZQ.js
-- entry-nope-!~{000}~.js => entry-nope-CYzTeMop.js
-- empty-!~{002}~.js => empty-Dy4eHWNn.js
+- entry-default-!~{001}~.js => entry-default-BxdMd5Fw.js
+- entry-nope-!~{000}~.js => entry-nope-Cl2aMGK5.js
+- empty-!~{002}~.js => empty-DVmVNhmZ.js
 
 # tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 
-- entry-default-!~{001}~.js => entry-default-WA7bVmRu.js
-- entry-nope-!~{000}~.js => entry-nope-w2dpweye.js
-- no-side-effects-!~{002}~.js => no-side-effects-DiWWhR1_.js
+- entry-default-!~{001}~.js => entry-default-BZA6Ekmm.js
+- entry-nope-!~{000}~.js => entry-nope-Su1_RKJq.js
+- no-side-effects-!~{002}~.js => no-side-effects-gbq-gMZ8.js
 
 # tests/esbuild/importstar/import_of_export_star
 

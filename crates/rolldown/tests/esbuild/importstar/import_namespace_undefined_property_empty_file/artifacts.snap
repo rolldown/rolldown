@@ -43,12 +43,12 @@ var require_empty$1 = __commonJS({ "empty.js"() {} });
 var require_empty = __commonJS({ "empty.cjs"() {} });
 
 //#endregion
-export { __toESM, require_empty$1 as require_empty, require_empty as require_empty$1 };
+export { __toESM, require_empty, require_empty$1 };
 ```
 ## entry-default.js
 
 ```js
-import { __toESM, require_empty as require_empty$1, require_empty$1 as require_empty } from "./empty.js";
+import { __toESM, require_empty, require_empty$1 } from "./empty.js";
 
 //#region entry-default.js
 var import_empty = __toESM(require_empty$1());
@@ -60,7 +60,7 @@ console.log(import_empty.default, void 0, import_empty$1.default);
 ## entry-nope.js
 
 ```js
-import { __toESM, require_empty as require_empty$1, require_empty$1 as require_empty } from "./empty.js";
+import { __toESM, require_empty, require_empty$1 } from "./empty.js";
 
 //#region entry-nope.js
 var import_empty = __toESM(require_empty$1());

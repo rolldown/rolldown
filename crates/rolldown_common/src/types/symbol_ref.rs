@@ -6,7 +6,7 @@ use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 use super::symbol_ref_db::{GetLocalDb, GetLocalDbMut};
 
 /// `SymbolRef` is used to represent a symbol in a module when there are multiple modules.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SymbolRef {
   pub owner: ModuleIdx,
   pub symbol: SymbolId,

@@ -215,7 +215,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     let previous_keep_name_statement = std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
     for (i, stmt) in it.iter_mut().enumerate() {
       self.ctx.cur_stmt_index = i;
-      walk_mut::walk_statement(self, stmt);
+      self.visit_statement(stmt);
     }
 
     // TODO: perf it

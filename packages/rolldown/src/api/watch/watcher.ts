@@ -17,7 +17,7 @@ export class Watcher {
     this.closed = false
     this.inner = inner
     this.emitter = emitter
-    const originClose = emitter.close
+    const originClose = emitter.close.bind(emitter)
     emitter.close = async () => {
       await this.close()
       originClose()

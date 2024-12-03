@@ -153,16 +153,16 @@ impl LinkStage<'_> {
       metas: &self.metas,
       used_symbol_refs: &mut self.used_symbol_refs,
     };
-
-    self.entries.iter().for_each(|entry| {
-      let module = match &self.module_table.modules[entry.id] {
+    let entry_ids = self.entries.iter().map(|entry| entry.id).collect::<Vec<_>>();
+    entry_ids.iter().for_each(|entry| {
+      let module = match &self.module_table.modules[*entry] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
           return;
         }
       };
-      let meta = &self.metas[entry.id];
+      let meta = &self.metas[*entry];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         include_symbol(context, *symbol_ref);
       });
@@ -173,13 +173,13 @@ impl LinkStage<'_> {
         include_symbol(context, keep_name_helper);
       }
     });
-    // if self.options.keep_names {
-    //   for id in entry_ids.iter() {
-    //     self.metas[*id]
-    //       .referenced_symbols_by_entry_point_chunk
-    //       .push(self.runtime.resolve_symbol("__name"));
-    //   }
-    // }
+    if self.options.keep_names {
+      for id in entry_ids.iter() {
+        self.metas[*id]
+          .referenced_symbols_by_entry_point_chunk
+          .push(self.runtime.resolve_symbol("__name"));
+      }
+    }
 
     self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
       let idx = module.idx;

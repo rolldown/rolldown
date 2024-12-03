@@ -5030,6 +5030,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-uZlLhrrK.js
 - main-uZlLhrrK.js.map
 
+# tests/rolldown/topics/keep_names/basic
+
+- main-!~{000}~.js => main-BGCT_L2h.js
+
 # tests/rolldown/topics/live_bindings/default_export_binding
 
 - main-!~{000}~.js => main-D8Iw7_K1.js

@@ -1,6 +1,7 @@
-export function test() {
+import cube from './cube.js';
 
-}
-export function a() {
-
+// This is only imported by one entry module and
+// shares a chunk with that module
+export default function hyperCube(x) {
+	return cube(x) * x;
 }

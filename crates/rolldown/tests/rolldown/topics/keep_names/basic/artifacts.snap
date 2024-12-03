@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "assert";
+
+
+//#region a.js
+function test$1() {}
+__name(test$1, "test");
+function a() {}
+
+//#endregion
+//#region main.js
+test$1();
+a();
+const test = 10;
+console.log(`test: `, test);
+assert.strictEqual(test$1.name, "test");
+
+//#endregion
+```

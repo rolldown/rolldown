@@ -36,7 +36,6 @@ pub struct Chunk {
   pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
   pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
-  pub renmaed_symbol_map: FxHashMap<SymbolRef, Rstr>,
   pub canonical_name_by_token: FxHashMap<SymbolNameRefToken, Rstr>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,

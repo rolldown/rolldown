@@ -1,8 +1,7 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  IndexModules, ModuleIdx, NormalModule, OutputFormat, SharedNormalizedBundlerOptions,
-  SymbolNameRefToken, SymbolRef, SymbolRefDb,
+  IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
@@ -36,20 +35,12 @@ pub struct Renamer<'name> {
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
-  /// Key is renamed symbol
-  /// Value is the original name of the symbol
-  renamed_symbol_map: FxHashMap<SymbolRef, Rstr>,
-  options: SharedNormalizedBundlerOptions,
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(
-    symbols: &'name SymbolRefDb,
-    _modules_len: usize,
-    options: SharedNormalizedBundlerOptions,
-  ) -> Self {
+  pub fn new(symbols: &'name SymbolRefDb, _modules_len: usize, format: OutputFormat) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
-    let mut manual_reserved = match options.format {
+    let mut manual_reserved = match format {
       OutputFormat::Esm | OutputFormat::App => vec![],
       OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
       OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for  AMD, but we don't support them yet.
@@ -66,8 +57,6 @@ impl<'name> Renamer<'name> {
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (Rstr::new(s), 0))
         .collect(),
-      renamed_symbol_map: FxHashMap::default(),
-      options,
     }
   }
 
@@ -75,16 +64,10 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
-  pub fn update_renamed_symbol_map(&mut self, symbol_ref: SymbolRef, original_name: &Rstr) {
-    if self.options.keep_names {
-      self.renamed_symbol_map.insert(symbol_ref, original_name.clone());
-    }
-  }
-
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let original_name = canonical_ref.name(self.symbol_db).to_rstr();
-    let deconflicted = match self.canonical_names.entry(canonical_ref) {
+    match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
         loop {
@@ -102,17 +85,11 @@ impl<'name> Renamer<'name> {
             }
           }
         }
-        let deconflicted = candidate_name != original_name;
         vacant.insert(candidate_name);
-        deconflicted
       }
       Entry::Occupied(_) => {
         // The symbol is already renamed
-        false
       }
-    };
-    if deconflicted {
-      self.update_renamed_symbol_map(symbol_ref, &original_name);
     }
   }
 
@@ -245,8 +222,7 @@ impl<'name> Renamer<'name> {
 
   pub fn into_canonical_names(
     self,
-  ) -> (FxHashMap<SymbolRef, Rstr>, FxHashMap<SymbolNameRefToken, Rstr>, FxHashMap<SymbolRef, Rstr>)
-  {
-    (self.canonical_names, self.canonical_token_to_name, self.renamed_symbol_map)
+  ) -> (FxHashMap<SymbolRef, Rstr>, FxHashMap<SymbolNameRefToken, Rstr>) {
+    (self.canonical_names, self.canonical_token_to_name)
   }
 }

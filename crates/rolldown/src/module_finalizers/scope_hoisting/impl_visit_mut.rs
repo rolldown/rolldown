@@ -886,14 +886,15 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
     let id = decl.id.as_ref()?;
     let symbol_id = id.symbol_id.get()?;
-    let symbol_ref = (self.ctx.id, symbol_id).into();
-    if let Some(original_name) = self.ctx.renamed_symbol_map.get(&symbol_ref) {
-      let new_name = self.canonical_name_for(symbol_ref);
+    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let original_name = symbol_ref.name(self.ctx.symbol_db);
+    let canonical_name = self.canonical_name_for(symbol_ref);
+    if original_name != canonical_name.as_str() {
       self.ctx.keep_name_statement_to_insert.push((
         self.ctx.cur_stmt_index + 1,
         id.symbol_id(),
-        original_name.clone(),
-        new_name.clone(),
+        original_name.into(),
+        canonical_name.clone(),
       ));
     }
     None

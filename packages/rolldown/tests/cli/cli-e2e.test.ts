@@ -25,7 +25,15 @@ describe('basic arguments', () => {
     const ret = await execa`rolldown`
 
     expect(ret.exitCode).toBe(0)
-    expect(cleanStdout(ret.stdout)).toMatchSnapshot()
+    expect(
+      cleanStdout(
+        // Prevent snapshot from breaking when version changes
+        ret.stdout.replace(
+          /* Match `rolldown v*)` */ /rolldown\sv.*\)/,
+          'rolldown VERSION)',
+        ),
+      ),
+    ).toMatchSnapshot()
   })
 })
 

@@ -13,17 +13,17 @@ var module = (function() {
 
 
 //#region mod.js
-var default_exports = {};
-__export(default_exports, {
-	add: () => add,
-	subtract: () => subtract
-});
 function add(a, b) {
 	return a + b;
 }
 function subtract(a, b) {
 	return a - b;
 }
+var default_exports = {};
+__export(default_exports, {
+	add: () => add,
+	subtract: () => subtract
+});
 
 //#endregion
 return default_exports;

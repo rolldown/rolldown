@@ -26,9 +26,9 @@ import assert from "node:assert";
 
 
 //#region bar.js
+const bar = 123;
 var bar_exports = {};
 __export(bar_exports, { bar: () => bar });
-const bar = 123;
 
 //#endregion
 //#region foo.js
@@ -52,11 +52,12 @@ assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
 -__export(foo_exports, {
 -    bar_ns: () => bar_exports
 -});
++var bar = 123;
  var bar_exports = {};
  __export(bar_exports, {
      bar: () => bar
  });
- var bar = 123;
+-var bar = 123;
 +var foo_exports = {};
 +__export(foo_exports, {
 +    bar_ns: () => bar_exports

@@ -39,6 +39,7 @@ pub fn finalize_normal_module(
       scope: &module.scope,
       snippet: AstSnippet::new(alloc),
       comments: oxc_program.comments.take_in(alloc),
+      contains_reference_to_namespace_ref_of_this_module: false,
     };
     finalizer.visit_program(oxc_program);
     oxc_program.comments = finalizer.comments.take_in(alloc);

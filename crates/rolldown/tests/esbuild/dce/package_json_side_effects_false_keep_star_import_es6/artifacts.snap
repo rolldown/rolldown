@@ -11,10 +11,10 @@ import assert from "node:assert";
 
 
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_exports = {};
-__export(demo_pkg_exports, { foo: () => foo });
 const foo = 123;
 console.log("hello");
+var demo_pkg_exports = {};
+__export(demo_pkg_exports, { foo: () => foo });
 
 //#endregion
 //#region src/entry.js

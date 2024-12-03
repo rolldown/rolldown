@@ -1,32 +1,32 @@
 # Reason
-1. rolldown implemented advanced barrel exports opt
+1. rolldown generates module namespace object in the bottom if possible.
 # Diff
 ## /out.js
 ### esbuild
 ```js
-// bar.js
-var bar_exports = {};
-__export(bar_exports, {
+// foo.js
+var foo_exports = {};
+__export(foo_exports, {
   x: () => x
 });
 var x = 123;
 
 // entry.js
-console.log(bar_exports, bar_exports.foo);
+console.log(foo_exports, void 0);
 ```
 ### rolldown
 ```js
 import assert from "node:assert";
 
 
-//#region bar.js
+//#region foo.js
 const x = 123;
-var bar_exports = {};
-__export(bar_exports, { x: () => x });
+var foo_exports = {};
+__export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js
-assert.deepEqual(bar_exports, { x: 123 });
+assert.deepEqual(foo_exports, { x: 123 });
 assert.equal(void 0, undefined);
 
 //#endregion
@@ -38,12 +38,11 @@ assert.equal(void 0, undefined);
 +++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 +var x = 123;
- var bar_exports = {};
- __export(bar_exports, {
+ var foo_exports = {};
+ __export(foo_exports, {
      x: () => x
  });
 -var x = 123;
--console.log(bar_exports, bar_exports.foo);
-+console.log(bar_exports, void 0);
+ console.log(foo_exports, void 0);
 
 ```

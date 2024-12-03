@@ -9,43 +9,6 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
   /// - the reference doesn't have a `ReferenceId`
   /// - the canonical name is the same as the original name
-  pub fn generate_finalized_expr_for_reference(
-    &self,
-    id_ref: &IdentifierReference<'ast>,
-    is_callee: bool,
-  ) -> Option<ast::Expression<'ast>> {
-    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-    let reference_id = id_ref.reference_id.get()?;
-
-    // we will hit this branch if the reference points to a global variable
-    let symbol_id = self.scope.symbol_id_for(reference_id)?;
-
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let mut expr = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee);
-
-    // See https://github.com/oxc-project/oxc/issues/4606
-
-    match &mut expr {
-      ast::Expression::Identifier(it) => {
-        it.span = id_ref.span;
-      }
-      ast::Expression::StaticMemberExpression(ref mut it) => {
-        it.span = id_ref.span;
-        it.property.span = id_ref.span;
-        if let Some(object) = it.object.as_identifier_mut() {
-          object.span = id_ref.span;
-        }
-      }
-      _ => {}
-    }
-
-    Some(expr)
-  }
-
-  /// return `None` if
-  /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
-  /// - the reference doesn't have a `ReferenceId`
-  /// - the canonical name is the same as the original name
   pub fn generate_finalized_simple_assignment_target_for_reference(
     &self,
     id_ref: &IdentifierReference,
@@ -83,13 +46,30 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ident_ref: &mut ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
-    if let Some(new_expr) = self.generate_finalized_expr_for_reference(ident_ref, is_callee) {
-      Some(new_expr)
-    } else {
-      // Nevertheless, this identifier is processed and don't need to be processed again.
-      ident_ref.reference_id.take();
-      None
+    // We used `take` to set the `ReferenceId` to `None` to indicate that this identifier reference has been processed.
+    let reference_id = ident_ref.reference_id.take()?;
+    // we will hit this branch if the reference points to a global variable
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    self.check_if_ref_point_to_namespace_ref_of_this_module(symbol_ref);
+    let mut expr = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee);
+    // See https://github.com/oxc-project/oxc/issues/4606
+
+    match &mut expr {
+      ast::Expression::Identifier(it) => {
+        it.span = ident_ref.span;
+      }
+      ast::Expression::StaticMemberExpression(ref mut it) => {
+        it.span = ident_ref.span;
+        it.property.span = ident_ref.span;
+        if let Some(object) = it.object.as_identifier_mut() {
+          object.span = ident_ref.span;
+        }
+      }
+      _ => {}
     }
+
+    Some(expr)
   }
 
   pub fn rewrite_simple_assignment_target(

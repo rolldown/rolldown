@@ -21,9 +21,9 @@ import assert from "node:assert";
 
 
 //#region foo.js
+const foo$1 = 123;
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });
-const foo$1 = 123;
 
 //#endregion
 //#region entry.js
@@ -40,6 +40,7 @@ assert.equal(foo, 234);
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,7 +1,7 @@
++var foo$1 = 123;
  var foo_exports = {};
  __export(foo_exports, {
 -    foo: () => foo
@@ -48,7 +49,6 @@ assert.equal(foo, 234);
 -var foo = 123;
 -var foo2 = 234;
 -console.log(foo_exports, foo, foo2);
-+var foo$1 = 123;
 +var foo = 234;
 +console.log(foo_exports, foo$1, foo);
 

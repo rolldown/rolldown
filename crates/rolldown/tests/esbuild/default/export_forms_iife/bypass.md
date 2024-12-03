@@ -55,9 +55,9 @@ const abc = undefined;
 
 //#endregion
 //#region b.js
+const xyz = null;
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
-const xyz = null;
 
 //#endregion
 //#region entry.js
@@ -110,12 +110,12 @@ return exports;
      });
 -    var abc = void 0;
 +    const abc = undefined;
++    const xyz = null;
      var b_exports = {};
      __export(b_exports, {
          xyz: () => xyz
      });
 -    var xyz = null;
-+    const xyz = null;
      var entry_default = 123;
      var v = 234;
 -    var l = 234;

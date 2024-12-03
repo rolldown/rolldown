@@ -23,6 +23,8 @@
   diff
 ## [package_json_side_effects_false_all_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_all_fork/diff.md)
   diff
+## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6/diff.md)
+  diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread/diff.md)
@@ -60,7 +62,6 @@
 ## [package_json_side_effects_false_cross_platform_slash](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash)
 ## [package_json_side_effects_false_intermediate_files_unused](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused)
 ## [package_json_side_effects_false_keep_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6)
-## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6)
 ## [package_json_side_effects_false_no_warning_in_node_modules_issue999](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999)
 ## [package_json_side_effects_false_remove_bare_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js)
 ## [package_json_side_effects_false_remove_bare_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6)

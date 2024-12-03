@@ -11,11 +11,11 @@ snapshot_kind: text
 
 
 //#region mod.js
-var default_exports = {};
-__export(default_exports, { default: () => example });
 function example() {
 	return "default";
 }
+var default_exports = {};
+__export(default_exports, { default: () => example });
 
 //#endregion
 module.exports = default_exports;

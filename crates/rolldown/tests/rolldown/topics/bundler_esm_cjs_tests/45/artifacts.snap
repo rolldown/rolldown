@@ -10,13 +10,13 @@ snapshot_kind: text
 
 
 //#region foo.js
+let __esModule = false;
+var foo_default = { bar: 123 };
 var foo_exports = {};
 __export(foo_exports, {
 	__esModule: () => __esModule,
 	default: () => foo_default
 });
-let __esModule = false;
-var foo_default = { bar: 123 };
 
 //#endregion
 //#region entry.js
@@ -37,13 +37,13 @@ Variant: (format: Cjs)
 
 
 //#region foo.js
+let __esModule = false;
+var foo_default = { bar: 123 };
 var foo_exports = {};
 __export(foo_exports, {
 	__esModule: () => __esModule,
 	default: () => foo_default
 });
-let __esModule = false;
-var foo_default = { bar: 123 };
 
 //#endregion
 //#region entry.js
@@ -66,13 +66,13 @@ Variant: (format: Iife)
 
 
 //#region foo.js
+let __esModule = false;
+var foo_default = { bar: 123 };
 var foo_exports = {};
 __export(foo_exports, {
 	__esModule: () => __esModule,
 	default: () => foo_default
 });
-let __esModule = false;
-var foo_default = { bar: 123 };
 
 //#endregion
 //#region entry.js
@@ -99,13 +99,13 @@ Variant: (format: Umd)
 
 
 //#region foo.js
+let __esModule = false;
+var foo_default = { bar: 123 };
 var foo_exports = {};
 __export(foo_exports, {
 	__esModule: () => __esModule,
 	default: () => foo_default
 });
-let __esModule = false;
-var foo_default = { bar: 123 };
 
 //#endregion
 //#region entry.js

@@ -111,7 +111,10 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn errors(&mut self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
+  pub fn errors(
+    &mut self,
+    env: Env,
+  ) -> napi::Result<Vec<napi::Either<napi::JsError, napi::JsObject>>> {
     if let rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::Error(
       rolldown_common::OutputsDiagnostics { diagnostics, cwd },
     )) = &mut self.inner

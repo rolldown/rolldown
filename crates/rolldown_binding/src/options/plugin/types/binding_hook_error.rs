@@ -20,7 +20,7 @@ impl BindingHookError {
   }
 
   #[napi(getter)]
-  pub fn errors(&self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
+  pub fn errors(&self, env: Env) -> napi::Result<Vec<napi::Either<napi::JsError, napi::JsObject>>> {
     self
       .errors
       .iter()

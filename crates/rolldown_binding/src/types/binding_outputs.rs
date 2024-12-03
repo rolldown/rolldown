@@ -27,7 +27,10 @@ impl BindingOutputs {
   }
 
   #[napi(getter)]
-  pub fn errors(&mut self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
+  pub fn errors(
+    &mut self,
+    env: Env,
+  ) -> napi::Result<Vec<napi::Either<napi::JsError, napi::JsObject>>> {
     if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = &self.error {
       return diagnostics
         .iter()
@@ -103,9 +106,9 @@ pub fn to_js_diagnostic(
   diagnostic: &BuildDiagnostic,
   cwd: std::path::PathBuf,
   env: Env,
-) -> napi::Result<napi::JsUnknown> {
+) -> napi::Result<napi::Either<napi::JsError, napi::JsObject>> {
   match diagnostic.downcast_napi_error() {
-    Ok(napi_error) => Ok(napi::JsError::from(napi_error.clone()).into_unknown(env)),
+    Ok(napi_error) => Ok(napi::Either::A(napi::JsError::from(napi_error.clone()))),
     Err(error) => {
       let mut object = env.create_object()?;
       object.set("kind", error.kind().to_string())?;
@@ -113,7 +116,7 @@ pub fn to_js_diagnostic(
         "message",
         error.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.clone() }).to_color_string(),
       )?;
-      Ok(object.into_unknown())
+      Ok(napi::Either::B(object))
     }
   }
 }

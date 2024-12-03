@@ -210,29 +210,29 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_statement(self, it);
   }
 
-  // fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
-  //   let previous_stmt_index = self.ctx.cur_stmt_index;
-  //   let previous_keep_name_statement = std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
-  //   for (i, stmt) in it.iter_mut().enumerate() {
-  //     self.ctx.cur_stmt_index = i;
-  //     walk_mut::walk_statement(self, stmt);
-  //   }
-  //
-  //   // FIXME: use index may not correct if other Visitor change the stmts,
-  //   // (it's fine for now because there is no other phase change it for now.)
-  //   // The best way to do this may store memory address instead,
-  //   // could be fixed after we migrate to Traverse trait
-  //   walk_mut::walk_statements(self, it);
-  //
-  //   // TODO: perf it
-  //   for (stmt_index, symbol_id, original_name, new_name) in
-  //     self.ctx.keep_name_statement_to_insert.iter().rev()
-  //   {
-  //     it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(&original_name, &new_name));
-  //   }
-  //   self.ctx.cur_stmt_index = previous_stmt_index;
-  //   self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;
-  // }
+  fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
+    let previous_stmt_index = self.ctx.cur_stmt_index;
+    let previous_keep_name_statement = std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
+    for (i, stmt) in it.iter_mut().enumerate() {
+      self.ctx.cur_stmt_index = i;
+      walk_mut::walk_statement(self, stmt);
+    }
+
+    // FIXME: use index may not correct if other Visitor change the stmts,
+    // (it's fine for now because there is no other phase change it for now.)
+    // The best way to do this may store memory address instead,
+    // could be fixed after we migrate to Traverse trait
+    walk_mut::walk_statements(self, it);
+
+    // TODO: perf it
+    for (stmt_index, symbol_id, original_name, new_name) in
+      self.ctx.keep_name_statement_to_insert.iter().rev()
+    {
+      it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(&original_name, &new_name));
+    }
+    self.ctx.cur_stmt_index = previous_stmt_index;
+    self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;
+  }
 
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
     // This ensure all `IdentifierReference`s are processed

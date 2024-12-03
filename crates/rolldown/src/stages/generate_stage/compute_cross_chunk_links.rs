@@ -20,7 +20,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
-type IndexChunkExportedSymbols = IndexVec<ChunkIdx, BTreeSet<SymbolRef>>;
+type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
@@ -33,7 +33,7 @@ impl GenerateStage<'_> {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
-      index_vec![BTreeSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
+      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
 
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
@@ -267,7 +267,7 @@ impl GenerateStage<'_> {
             depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
             depended_symbols.insert(entry.namespace_object_ref);
           }
-          // depended_symbols.insert(self.link_output.runtime.resolve_symbol("__name"));
+          depended_symbols.insert(self.link_output.runtime.resolve_symbol("__name"));
         }
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
@@ -361,7 +361,7 @@ impl GenerateStage<'_> {
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
     let mut name_count =
-      FxHashMap::with_capacity(index_chunk_exported_symbols.iter().map(BTreeSet::len).sum());
+      FxHashMap::with_capacity(index_chunk_exported_symbols.iter().map(FxHashSet::len).sum());
 
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
       for chunk_export in index_chunk_exported_symbols[chunk_id]

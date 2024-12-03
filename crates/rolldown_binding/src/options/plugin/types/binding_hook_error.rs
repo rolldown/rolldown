@@ -19,9 +19,18 @@ impl BindingHookError {
   }
 
   #[napi(getter)]
+<<<<<<< HEAD
   pub fn errors(&self, env: Env) -> napi::Result<Vec<napi::JsUnknown>> {
     self.errors.with_inner(|errors| {
       errors.iter().map(|diagnostic| to_js_diagnostic(diagnostic, self.cwd.clone(), env)).collect()
     })
+=======
+  pub fn errors(&self, env: Env) -> napi::Result<Vec<napi::Either<napi::JsError, napi::JsObject>>> {
+    self
+      .errors
+      .iter()
+      .map(|diagnostic| to_js_diagnostic(diagnostic, self.cwd.clone(), env))
+      .collect()
+>>>>>>> 504ea76c0 (fix: avoid one JsError into_unknown twice (#3020))
   }
 }

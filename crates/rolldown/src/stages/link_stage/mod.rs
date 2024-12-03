@@ -467,7 +467,7 @@ impl<'a> LinkStage<'a> {
             is_included: false,
             import_records: Vec::new(),
             debug_label: None,
-            meta: Default::default(),
+            meta: StmtInfoMeta::default(),
           };
           ecma_module.stmt_infos.add_stmt_info(stmt_info);
         });
@@ -510,7 +510,7 @@ impl<'a> LinkStage<'a> {
             is_included: false,
             import_records: Vec::new(),
             debug_label: None,
-            meta: Default::default(),
+            meta: StmtInfoMeta::default(),
           };
           ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
         }

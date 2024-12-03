@@ -135,53 +135,53 @@ afterEach(async () => {
 //   })
 // })
 
-// test.sequential('watch event avoid deadlock #2806', async () => {
-//   const watcher = watch({
-//     input,
-//     cwd: import.meta.dirname,
-//   })
-
-//   const testFn = vi.fn()
-//   let listening = false
-//   watcher.on('event', (event) => {
-//     if (event.code === 'BUNDLE_END' && !listening) {
-//       listening = true
-//       // shouldn't deadlock
-//       watcher.on('event', () => {
-//         if (event.code === 'BUNDLE_END') {
-//           testFn()
-//         }
-//       })
-//     }
-//   })
-
-//   await waitBuildFinished(watcher)
-
-//   fs.writeFileSync(input, 'console.log(2)')
-//   await waitUtil(() => {
-//     expect(testFn).toBeCalled()
-//   })
-
-//   await watcher.close()
-// })
-
-test.sequential('watch skipWrite', async () => {
-  const dir = path.join(import.meta.dirname, './skipWrite-dist/')
+test.sequential('watch event avoid deadlock #2806', async () => {
   const watcher = watch({
     input,
     cwd: import.meta.dirname,
-    output: {
-      dir,
-    },
-    watch: {
-      skipWrite: true,
-    },
   })
+
+  const testFn = vi.fn()
+  let listening = false
+  watcher.on('event', (event) => {
+    if (event.code === 'BUNDLE_END' && !listening) {
+      listening = true
+      // shouldn't deadlock
+      watcher.on('event', () => {
+        if (event.code === 'BUNDLE_END') {
+          testFn()
+        }
+      })
+    }
+  })
+
+  await waitBuildFinished(watcher)
+
+  fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {
-    expect(fs.existsSync(dir)).toBe(false)
+    expect(testFn).toBeCalled()
   })
+
   await watcher.close()
 })
+
+// test.sequential('watch skipWrite', async () => {
+//   const dir = path.join(import.meta.dirname, './skipWrite-dist/')
+//   const watcher = watch({
+//     input,
+//     cwd: import.meta.dirname,
+//     output: {
+//       dir,
+//     },
+//     watch: {
+//       skipWrite: true,
+//     },
+//   })
+//   await waitUtil(() => {
+//     expect(fs.existsSync(dir)).toBe(false)
+//   })
+//   await watcher.close()
+// })
 
 test.sequential('PluginContext addWatchFile', async () => {
   const foo = path.join(import.meta.dirname, './foo.js')

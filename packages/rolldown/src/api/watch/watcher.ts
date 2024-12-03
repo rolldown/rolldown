@@ -36,6 +36,8 @@ export class Watcher {
   start() {
     const timer = setInterval(() => {}, 1e9 /* Low power usage */)
     this.controller.signal.addEventListener('abort', () => {
+      // eslint-disable-next-line no-console
+      console.log('clearInterval')
       clearInterval(timer)
     })
     // run first build after listener is attached

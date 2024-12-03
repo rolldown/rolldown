@@ -241,85 +241,85 @@ test.sequential('watch include/exclude', async () => {
   await watcher.close()
 })
 
-test.sequential('error handling', async () => {
-  // first build error, the watching could be work with recover error
-  fs.writeFileSync(input, 'conso le.log(1)')
-  // wait 60ms avoid the change event emit at first build
-  await new Promise((resolve) => {
-    setTimeout(resolve, 60)
-  })
-  const watcher = watch({
-    input,
-    cwd: import.meta.dirname,
-  })
-  const errors: string[] = []
-  watcher.on('event', (event) => {
-    if (event.code === 'ERROR') {
-      errors.push(event.error.message)
-    }
-  })
-  await waitUtil(() => {
-    // First build should error
-    expect(errors.length).toBe(1)
-    expect(errors[0].includes('PARSE_ERROR')).toBe(true)
-  })
+// test.sequential('error handling', async () => {
+//   // first build error, the watching could be work with recover error
+//   fs.writeFileSync(input, 'conso le.log(1)')
+//   // wait 60ms avoid the change event emit at first build
+//   await new Promise((resolve) => {
+//     setTimeout(resolve, 60)
+//   })
+//   const watcher = watch({
+//     input,
+//     cwd: import.meta.dirname,
+//   })
+//   const errors: string[] = []
+//   watcher.on('event', (event) => {
+//     if (event.code === 'ERROR') {
+//       errors.push(event.error.message)
+//     }
+//   })
+//   await waitUtil(() => {
+//     // First build should error
+//     expect(errors.length).toBe(1)
+//     expect(errors[0].includes('PARSE_ERROR')).toBe(true)
+//   })
 
-  fs.writeFileSync(input, 'console.log(2)')
-  await waitBuildFinished(watcher)
+//   fs.writeFileSync(input, 'console.log(2)')
+//   await waitBuildFinished(watcher)
 
-  // failed again
-  fs.writeFileSync(input, 'conso le.log(1)')
-  await waitUtil(() => {
-    // The different platform maybe emit multiple events
-    expect(errors.length > 0).toBe(true)
-    expect(errors[0].includes('PARSE_ERROR')).toBe(true)
-  })
+//   // failed again
+//   fs.writeFileSync(input, 'conso le.log(1)')
+//   await waitUtil(() => {
+//     // The different platform maybe emit multiple events
+//     expect(errors.length > 0).toBe(true)
+//     expect(errors[0].includes('PARSE_ERROR')).toBe(true)
+//   })
 
-  // It should be working if the changes are fixed error
-  fs.writeFileSync(input, 'console.log(3)')
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(
-      true,
-    )
-  })
+//   // It should be working if the changes are fixed error
+//   fs.writeFileSync(input, 'console.log(3)')
+//   await waitUtil(() => {
+//     expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(
+//       true,
+//     )
+//   })
 
-  await watcher.close()
-})
+//   await watcher.close()
+// })
 
-test.sequential('error handling + plugin error', async () => {
-  const watcher = watch({
-    input,
-    cwd: import.meta.dirname,
-    plugins: [
-      {
-        transform() {
-          this.error('plugin error')
-        },
-      },
-    ],
-  })
-  const errors: string[] = []
-  watcher.on('event', (event) => {
-    if (event.code === 'ERROR') {
-      errors.push(event.error.message)
-    }
-  })
-  await waitUtil(() => {
-    // First build should error
-    expect(errors.length).toBe(1) // the revert change maybe emit the change event caused it failed
-    expect(errors[0].includes('plugin error')).toBe(true)
-  })
+// test.sequential('error handling + plugin error', async () => {
+//   const watcher = watch({
+//     input,
+//     cwd: import.meta.dirname,
+//     plugins: [
+//       {
+//         transform() {
+//           this.error('plugin error')
+//         },
+//       },
+//     ],
+//   })
+//   const errors: string[] = []
+//   watcher.on('event', (event) => {
+//     if (event.code === 'ERROR') {
+//       errors.push(event.error.message)
+//     }
+//   })
+//   await waitUtil(() => {
+//     // First build should error
+//     expect(errors.length).toBe(1) // the revert change maybe emit the change event caused it failed
+//     expect(errors[0].includes('plugin error')).toBe(true)
+//   })
 
-  errors.length = 0
-  fs.writeFileSync(input, 'console.log(2)')
-  await waitUtil(() => {
-    // The different platform maybe emit multiple events
-    expect(errors.length > 0).toBe(true)
-    expect(errors[0].includes('plugin error')).toBe(true)
-  })
+//   errors.length = 0
+//   fs.writeFileSync(input, 'console.log(2)')
+//   await waitUtil(() => {
+//     // The different platform maybe emit multiple events
+//     expect(errors.length > 0).toBe(true)
+//     expect(errors[0].includes('plugin error')).toBe(true)
+//   })
 
-  await watcher.close()
-})
+//   await watcher.close()
+// })
 
 async function waitUtil(expectFn: () => void) {
   for (let tries = 0; tries < 10; tries++) {

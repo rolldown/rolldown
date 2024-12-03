@@ -14,13 +14,21 @@ import assert from "assert";
 function test$1() {}
 __name(test$1, "test");
 function a() {}
+var Foo$1 = class {
+	static {
+		__name(this, "Foo");
+	}
+};
 
 //#endregion
 //#region main.js
 test$1();
 a();
 const test = 10;
+var Foo = class extends Foo$1 {};
 console.log(`test: `, test);
+assert.strictEqual(Foo.name, "Foo");
+assert.strictEqual(Foo$1.name, "Foo");
 assert.strictEqual(test$1.name, "test");
 
 //#endregion

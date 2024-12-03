@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::cmp::Reverse;
 
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
@@ -360,7 +361,15 @@ impl GenerateStage<'_> {
       FxHashMap::with_capacity(index_chunk_exported_symbols.iter().map(FxHashSet::len).sum());
 
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
-      for chunk_export in index_chunk_exported_symbols[chunk_id].iter().copied() {
+      for chunk_export in index_chunk_exported_symbols[chunk_id]
+        .iter()
+        .sorted_by_cached_key(|symbol_ref| {
+          // same deconflict order in deconflict_chunk_symbols.rs
+          // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
+          Reverse::<u32>(self.link_output.module_table.modules[symbol_ref.owner].exec_order())
+        })
+        .copied()
+      {
         let original_name: rolldown_rstr::Rstr =
           chunk_export.name(&self.link_output.symbol_db).to_rstr();
         let key: Cow<'_, Rstr> = Cow::Owned(original_name.clone());

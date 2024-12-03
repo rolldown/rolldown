@@ -218,12 +218,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       walk_mut::walk_statement(self, stmt);
     }
 
-    // FIXME: use index may not correct if other Visitor change the stmts,
-    // (it's fine for now because there is no other phase change it for now.)
-    // The best way to do this may store memory address instead,
-    // could be fixed after we migrate to Traverse trait
-    walk_mut::walk_statements(self, it);
-
     // TODO: perf it
     for (stmt_index, _symbol_id, original_name, new_name) in
       self.ctx.keep_name_statement_to_insert.iter().rev()

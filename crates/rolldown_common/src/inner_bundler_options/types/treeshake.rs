@@ -104,9 +104,9 @@ impl ModuleSideEffects {
   /// resolve the side effects from the ffi function
   /// # Panic
   /// Panics if the side effects are not defined as a function
-  pub async fn ffi_resolve(&self, path: &str, is_external: bool) -> anyhow::Result<bool> {
+  pub async fn ffi_resolve(&self, path: &str, is_external: bool) -> anyhow::Result<Option<bool>> {
     match self {
-      ModuleSideEffects::Function(f) => Ok(f(path, is_external).await?.unwrap_or_default()),
+      ModuleSideEffects::Function(f) => Ok(f(path, is_external).await?),
       _ => unreachable!(),
     }
   }

@@ -1,23 +1,39 @@
-use napi::Either;
+use std::{fmt::Debug, sync::Arc};
+
+use napi::bindgen_prelude::Either3;
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 use serde::Deserialize;
 
-use crate::options::plugin::types::binding_js_or_regex::JsRegExp;
+use crate::{
+  options::plugin::types::binding_js_or_regex::JsRegExp,
+  types::js_callback::{JsCallback, JsCallbackExt},
+};
 
-pub(crate) type BindingModuleSideEffects = Either<bool, Vec<BindingModuleSideEffectsRule>>;
+pub(crate) type BindingModuleSideEffects =
+  Either3<bool, Vec<BindingModuleSideEffectsRule>, JsCallback<(String, bool), Option<bool>>>;
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingTreeshake {
-  #[napi(ts_type = "boolean | BindingModuleSideEffectsRule[]")]
+  #[napi(
+    ts_type = "boolean | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)"
+  )]
   #[serde(skip_deserializing, default = "default_module_side_effects")]
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
 }
+impl Debug for BindingTreeshake {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BindingTreeshake")
+      .field("module_side_effects", &"ModuleSideEffects")
+      .field("annotations", &self.annotations)
+      .finish()
+  }
+}
 
 fn default_module_side_effects() -> BindingModuleSideEffects {
-  Either::A(true)
+  Either3::A(true)
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -34,8 +50,8 @@ pub struct BindingModuleSideEffectsRule {
 impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
   fn try_from(value: BindingTreeshake) -> anyhow::Result<Self> {
     let module_side_effects = match value.module_side_effects {
-      Either::A(value) => ModuleSideEffects::Boolean(value),
-      Either::B(rules) => {
+      Either3::A(value) => ModuleSideEffects::Boolean(value),
+      Either3::B(rules) => {
         let mut ret = Vec::with_capacity(rules.len());
         for rule in rules {
           let test = match rule.test {
@@ -49,6 +65,15 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
           });
         }
         ModuleSideEffects::ModuleSideEffectsRules(ret)
+      }
+      Either3::C(ts_fn) => {
+        ModuleSideEffects::Function(Arc::new(move |id: &str, is_external: bool| {
+          let id = id.to_string();
+          let ts_fn = Arc::clone(&ts_fn);
+          Box::pin(async move {
+            ts_fn.invoke_async((id.clone(), is_external)).await.map_err(anyhow::Error::from)
+          })
+        }))
       }
     };
 

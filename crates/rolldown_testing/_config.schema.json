@@ -552,12 +552,6 @@
             "null"
           ]
         },
-        "rebuild": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "resolveNewUrlToAsset": {
           "type": [
             "boolean",

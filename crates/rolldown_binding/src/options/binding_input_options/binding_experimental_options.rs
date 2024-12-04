@@ -8,5 +8,4 @@ pub struct BindingExperimentalOptions {
   pub disable_live_bindings: Option<bool>,
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
-  pub rebuild: Option<bool>,
 }

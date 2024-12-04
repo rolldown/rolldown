@@ -161,7 +161,6 @@ export const inputOptionsSchema = z.strictObject({
       strictExecutionOrder: z.boolean().optional(),
       disableLiveBindings: z.boolean().optional(),
       resolveNewUrlToAsset: z.boolean().optional(),
-      rebuild: z.boolean().optional(),
     })
     .optional(),
   define: z.record(z.string()).describe('Define global variables').optional(),

@@ -67,7 +67,6 @@ export function bindingifyInputOptions(
       disableLiveBindings: inputOptions.experimental?.disableLiveBindings,
       viteMode: inputOptions.experimental?.viteMode,
       resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
-      rebuild: inputOptions.experimental?.rebuild,
     },
     profilerNames: inputOptions?.profilerNames,
     jsx: bindingifyJsx(inputOptions.jsx),

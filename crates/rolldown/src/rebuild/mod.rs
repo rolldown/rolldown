@@ -59,6 +59,7 @@ impl RebuildManager {
     if !changed_modules.is_empty() {
       // create hmr chunk
       // TODO: should reuse EcmaGenerator::instantiate_chunk?
+      // TODO: sourcemap?
       let content =
         changed_modules.into_iter().filter_map(|(_, code)| code).collect::<Vec<_>>().join("\n");
       instantiated_chunks.push(InstantiatedChunk {

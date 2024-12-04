@@ -10,7 +10,14 @@ const config = defineConfig({
   output: {
     dir: './dist',
   },
-  plugins: [],
+  plugins: [
+    {
+      name: 'test',
+      renderChunk(code, chunk) {
+        console.log('[renderChunk]', chunk, { code })
+      },
+    },
+  ],
 })
 
 /**

@@ -24,10 +24,14 @@ async function build(
   } else {
     const { output, write = true, ...inputOptions } = options
     const build = await rolldown(inputOptions)
-    if (write) {
-      return build.write(output)
-    } else {
-      return build.generate(output)
+    try {
+      if (write) {
+        return await build.write(output)
+      } else {
+        return await build.generate(output)
+      }
+    } finally {
+      await build.close()
     }
   }
 }

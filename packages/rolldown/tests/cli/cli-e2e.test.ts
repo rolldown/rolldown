@@ -132,3 +132,10 @@ describe('config', () => {
     })
   })
 })
+
+it('call closeBundle', async () => {
+  const cwd = cliFixturesDir('close-bundle')
+  const status = await $({ cwd })`rolldown -c`
+  expect(status.stdout).toContain('[test:closeBundle]')
+  expect(status.exitCode).toBe(0)
+})

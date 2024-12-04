@@ -25,53 +25,66 @@ export function bindingifyInputOptions(
   logLevel: LogLevelOption,
 ): BindingInputOptions {
   const pluginContextData = new PluginContextData()
-
-  const plugins = rawPlugins.map((plugin) => {
-    if ('_parallel' in plugin) {
-      return undefined
-    }
-    if (plugin instanceof BuiltinPlugin) {
-      return bindingifyBuiltInPlugin(plugin)
-    }
-    return bindingifyPlugin(
-      plugin,
-      inputOptions,
-      outputOptions,
-      pluginContextData,
-      onLog,
-      logLevel,
-    )
-  })
+  const {
+    input,
+    resolve,
+    external,
+    platform,
+    shimMissingExports,
+    treeshake,
+    moduleTypes,
+    define = {},
+    inject,
+    experimental,
+    profilerNames,
+    jsx,
+    watch,
+    dropLabels,
+  } = inputOptions
+  const plugins = rawPlugins
+    .map((plugin) => {
+      if ('_parallel' in plugin) {
+        return undefined
+      }
+      if (plugin instanceof BuiltinPlugin) {
+        return bindingifyBuiltInPlugin(plugin)
+      }
+      return bindingifyPlugin(
+        plugin,
+        inputOptions,
+        outputOptions,
+        pluginContextData,
+        onLog,
+        logLevel,
+      )
+    })
+    .filter(Boolean)
 
   return {
-    input: bindingifyInput(inputOptions.input),
+    input: bindingifyInput(input),
     plugins,
     cwd: inputOptions.cwd ?? process.cwd(),
-    external: bindingifyExternal(inputOptions.external),
-    resolve: bindingifyResolve(inputOptions.resolve),
-    platform: inputOptions.platform,
-    shimMissingExports: inputOptions.shimMissingExports,
+    external: bindingifyExternal(external),
+    resolve: bindingifyResolve(resolve),
+    platform,
+    shimMissingExports,
     logLevel: bindingifyLogLevel(logLevel),
     onLog,
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
-    moduleTypes: inputOptions.moduleTypes,
-    define: inputOptions.define
-      ? Object.entries(inputOptions.define)
-      : undefined,
-    inject: bindingifyInject(inputOptions.inject),
+    treeshake: bindingifyTreeshakeOptions(treeshake),
+    moduleTypes,
+    define: Object.entries(define),
+    inject: bindingifyInject(inject),
     experimental: {
-      strictExecutionOrder: inputOptions.experimental?.strictExecutionOrder,
-      disableLiveBindings: inputOptions.experimental?.disableLiveBindings,
-      viteMode: inputOptions.experimental?.viteMode,
-      resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
+      strictExecutionOrder: experimental?.strictExecutionOrder,
+      disableLiveBindings: experimental?.disableLiveBindings,
     },
-    profilerNames: inputOptions?.profilerNames,
-    jsx: bindingifyJsx(inputOptions.jsx),
-    watch: bindingifyWatch(inputOptions.watch),
-    dropLabels: inputOptions.dropLabels,
+    profilerNames,
+    jsx: bindingifyJsx(jsx),
+    watch: bindingifyWatch(watch),
+    dropLabels,
   }
 }
 

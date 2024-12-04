@@ -527,7 +527,8 @@ export interface BindingTransformPluginConfig {
   exclude?: Array<BindingStringOrRegex>
   jsxInject?: string
   reactRefresh?: boolean
-  targets?: string
+  target?: string
+  browserslist?: string
 }
 
 export interface BindingTreeshake {

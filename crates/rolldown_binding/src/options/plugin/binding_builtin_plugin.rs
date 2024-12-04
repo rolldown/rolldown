@@ -103,7 +103,8 @@ pub struct BindingTransformPluginConfig {
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub jsx_inject: Option<String>,
   pub react_refresh: Option<bool>,
-  pub targets: Option<String>,
+  pub target: Option<String>,
+  pub browserslist: Option<String>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -308,7 +309,8 @@ impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
       exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
       jsx_inject: value.jsx_inject,
       react_refresh: value.react_refresh.unwrap_or_default(),
-      targets: value.targets,
+      target: value.target,
+      browserslist: value.browserslist,
     })
   }
 }

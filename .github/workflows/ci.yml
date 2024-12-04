@@ -67,10 +67,15 @@ jobs:
           filters: |
             src:
               - 'Cargo.lock'
+              - 'deny.toml'
+              - '.github/workflows/ci.yml'
 
       - name: Install cargo-deny
         if: steps.filter.outputs.src == 'true'
-        uses: taiki-e/install-action@cargo-deny
+        uses: ./.github/actions/setup-rust
+        with:
+          restore-cache: false
+          tools: cargo-deny
 
       - if: steps.filter.outputs.src == 'true'
         run: cargo deny check

@@ -3,6 +3,7 @@ mod external;
 mod package_json_cache;
 mod resolver;
 mod utils;
+mod utils_filter;
 mod vite_resolve_plugin;
 
 pub use callable_plugin::{CallablePlugin, CallablePluginAsyncTrait};

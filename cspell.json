@@ -140,6 +140,7 @@
     "oxlintignore",
     "peekable",
     "Pluginable",
+    "pluginutils",
     "pnpx",
     "proto",
     "quasis",

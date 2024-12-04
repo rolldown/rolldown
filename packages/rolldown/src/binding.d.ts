@@ -528,7 +528,8 @@ export interface BindingTransformPluginConfig {
   exclude?: Array<BindingStringOrRegex>
   jsxInject?: string
   reactRefresh?: boolean
-  targets?: string
+  target?: string
+  browserslist?: string
 }
 
 export interface BindingTreeshake {
@@ -541,7 +542,7 @@ export interface BindingViteResolvePluginConfig {
   environmentConsumer: string
   environmentName: string
   external: true | string[]
-  noExternal: true | string[]
+  noExternal: true | Array<string | RegExp>
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   runtime: string

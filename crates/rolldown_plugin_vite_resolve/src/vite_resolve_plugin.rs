@@ -9,6 +9,7 @@ use std::{
 
 use crate::{
   external::{self, ExternalDecider, ExternalDeciderOptions},
+  file_url::file_url_str_to_path,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
     clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
@@ -175,11 +176,8 @@ impl ViteResolvePlugin {
 
     // file url as path
     if args.specifier.starts_with("file://") {
-      // TODO(sapphi-red): implement fileURLToPath properly
-      let mut res = args.specifier.replace("file://", "");
-      if res.starts_with('/') && is_windows_drive_path(&res[1..]) {
-        res.remove(0);
-      }
+      let path = file_url_str_to_path(args.specifier)?;
+      let mut res = normalize_path(&path).into_owned();
       if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
         if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
           res = finalized;

@@ -21,8 +21,8 @@ pub struct TransformPlugin {
   pub jsx_inject: Option<String>,
   pub react_refresh: bool,
 
-  // TODO: support specific transform options. Firstly we can use `targets` but we'd better allowing user to pass more options.
-  pub targets: Option<String>,
+  pub target: Option<String>,
+  pub browserslist: Option<String>,
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
@@ -58,16 +58,21 @@ impl Plugin for TransformPlugin {
         return Err(anyhow::format_err!("Error occurred when parsing {}\n: {:?}", args.id, errs));
       }
     };
+
+    let env = if self.target.is_some() && self.browserslist.is_some() {
+      return Err(anyhow::anyhow!(
+        "Cannot specify both `target` and `browserslist` at the same time"
+      ));
+    } else if let Some(target) = &self.target {
+      EnvOptions::from_target(target).expect("Failed to create transform options")
+    } else if let Some(browserslist) = &self.browserslist {
+      EnvOptions::from_browserslist_query(browserslist).expect("Failed to create transform options")
+    } else {
+      EnvOptions::default()
+    };
+
     let ret = ast.program.with_mut(move |fields| {
-      let mut transformer_options = if let Some(targets) = &self.targets {
-        TransformOptions {
-          env: EnvOptions::from_browserslist_query(targets)
-            .expect("Failed to create transform options"),
-          ..TransformOptions::default()
-        }
-      } else {
-        TransformOptions::default()
-      };
+      let mut transformer_options = TransformOptions { env, ..TransformOptions::default() };
       match args.module_type {
         ModuleType::Jsx | ModuleType::Tsx => {
           transformer_options.jsx.jsx_plugin = true;
@@ -136,6 +141,6 @@ impl TransformPlugin {
   }
 
   pub fn from_targets(targets: Option<String>) -> Self {
-    Self { targets, ..Default::default() }
+    Self { target: targets, ..Default::default() }
   }
 }

@@ -1,5 +1,5 @@
-import { pathToFileURL } from 'node:url'
 import nodePath from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { createConsola } from 'consola'
 import type { ConfigExport } from '../types/config-export'
 

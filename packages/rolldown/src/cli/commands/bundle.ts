@@ -1,13 +1,13 @@
-import { performance } from 'node:perf_hooks'
-import { watch as rolldownWatch } from '../../api/watch'
-import { rolldown } from '../../api/rolldown'
-import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
-import { arraify } from '../../utils/misc'
-import { ensureConfig, logger } from '../utils'
-import * as colors from '../colors'
-import { NormalizedCliOptions } from '../arguments/normalize'
 import path from 'node:path'
+import { performance } from 'node:perf_hooks'
 import { onExit } from 'signal-exit'
+import * as colors from '../colors'
+import { ensureConfig, logger } from '../utils'
+import { NormalizedCliOptions } from '../arguments/normalize'
+import { arraify } from '../../utils/misc'
+import { rolldown } from '../../api/rolldown'
+import { watch as rolldownWatch } from '../../api/watch'
+import type { RolldownOptions, RolldownOutput, RollupOutput } from '../..'
 
 export async function bundleWithConfig(
   configPath: string,
@@ -21,39 +21,43 @@ export async function bundleWithConfig(
   }
 
   const configList = arraify(config)
-
+  const operation = cliOptions.watch ? watchInner : bundleInner
   for (const config of configList) {
-    cliOptions.watch
-      ? await watchInner(config, cliOptions)
-      : await bundleInner(config, cliOptions)
+    await operation(config, cliOptions)
   }
 }
 
 export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
-  // TODO when supports `output.file`, we should modify it here.
   if (cliOptions.output.dir) {
-    cliOptions.watch
-      ? await watchInner({}, cliOptions)
-      : await bundleInner({}, cliOptions)
-  } else if (!cliOptions.watch) {
-    const build = await rolldown(cliOptions.input)
-    try {
-      const { output } = await build.generate(cliOptions.output)
-      if (output.length > 1) {
-        logger.error('Multiple chunks are not supported to display in stdout')
-        process.exitCode = 1
-      } else if (output.length === 0) {
-        logger.error('No output generated')
-        process.exitCode = 1
-      } else {
-        logger.log(output[0].code)
-      }
-    } finally {
-      await build.close()
-    }
-  } else {
+    const operation = cliOptions.watch ? watchInner : bundleInner
+    await operation({}, cliOptions)
+    return
+  }
+
+  if (cliOptions.watch) {
     logger.error('You must specify `output.dir` to use watch mode')
     process.exit(1)
+  }
+
+  // Rolldown doesn't yet support the following syntax:
+  // await using build = await rolldown(cliOptions.input)
+  const build = await rolldown(cliOptions.input)
+  try {
+    const { output: outputs } = await build.generate(cliOptions.output)
+
+    if (outputs.length === 0) {
+      logger.error('No output generated')
+      process.exit(1)
+    }
+
+    for (const file of outputs) {
+      if (outputs.length > 1) {
+        logger.log(`\n${colors.cyan(colors.bold(`|→ ${file.fileName}:`))}\n`)
+      }
+      logger.log(file.type === 'asset' ? file.source : file.code)
+    }
+  } finally {
+    await build.close()
   }
 }
 

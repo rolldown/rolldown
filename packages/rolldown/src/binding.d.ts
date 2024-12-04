@@ -327,6 +327,7 @@ export interface BindingInputOptions {
   profilerNames?: boolean
   jsx?: JsxOptions
   watch?: BindingWatchOption
+  keepNames?: boolean
 }
 
 export interface BindingJsonPluginConfig {

@@ -21,6 +21,7 @@ pub struct TransformPlugin {
   pub jsx_inject: Option<String>,
   pub react_refresh: bool,
 
+  // TODO: support specific transform options. Firstly we can use `target` & `browserslist` but we'd better allowing user to pass more options.
   pub target: Option<String>,
   pub browserslist: Option<String>,
 }

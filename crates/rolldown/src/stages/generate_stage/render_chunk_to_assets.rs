@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use futures::future::try_join_all;
-use oxc::syntax::module_record;
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
   Asset, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleRenderArgs,
@@ -13,6 +12,7 @@ use rolldown_utils::{
   indexmap::FxIndexSet,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -68,22 +68,19 @@ impl<'a> GenerateStage<'a> {
                     }
                   }
                 }
-                _ => {}
+                InstantiationKind::None => {}
               }
             }
           }
-          _ => {}
+          rolldown_common::Output::Asset(_) => {}
         }
       }
 
       if !changed_modules.is_empty() {
         // create hmr chunk
         // TODO: should reuse EcmaGenerator::instantiate_chunk?
-        let content = changed_modules
-          .into_iter()
-          .map(|(_, code)| code.unwrap_or_else(|| "".to_string()))
-          .collect::<Vec<_>>()
-          .join("\n");
+        let content =
+          changed_modules.into_iter().filter_map(|(_, code)| code).collect::<Vec<_>>().join("\n");
         instantiated_chunks.push(InstantiatedChunk {
           origin_chunk: 0.into(),
           content: content.into(),
@@ -94,13 +91,13 @@ impl<'a> GenerateStage<'a> {
               is_entry: false,
               is_dynamic_entry: false,
               facade_module_id: None,
-              module_ids: Default::default(),
-              exports: Default::default(),
+              module_ids: vec![],
+              exports: vec![],
               filename: "hmr-update.js".into(),
-              modules: Default::default(),
-              imports: Default::default(),
-              dynamic_imports: Default::default(),
-              debug_id: Default::default(),
+              modules: FxHashMap::default(),
+              imports: vec![],
+              dynamic_imports: vec![],
+              debug_id: 0,
             },
           }),
           augment_chunk_hash: None,

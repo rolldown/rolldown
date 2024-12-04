@@ -6,6 +6,7 @@ use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
 
 use crate::{
+  rebuild::RebuildManager,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
     normalize_options::{normalize_options, NormalizeOptionsReturn},
@@ -44,7 +45,7 @@ impl BundlerBuilder {
       fs: OsFileSystem,
       warnings,
       _log_guard: maybe_guard,
-      rebuild_manager: Default::default(),
+      rebuild_manager: RebuildManager::default(),
     }
   }
 

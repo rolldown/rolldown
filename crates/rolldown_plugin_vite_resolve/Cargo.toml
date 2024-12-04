@@ -13,6 +13,7 @@ async-trait     = { workspace = true }
 cow-utils       = { workspace = true }
 dashmap         = { workspace = true }
 derive_more     = { workspace = true }
+glob-match      = { workspace = true }
 oxc_resolver    = { workspace = true, features = ["package_json_raw_json_api"] }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

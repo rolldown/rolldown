@@ -140,6 +140,7 @@ export declare class Bundler {
   close(): Promise<void>
   watch(): Promise<BindingWatcher>
   get closed(): boolean
+  setRebuildEnabled(enabled: boolean): Promise<void>
 }
 
 export declare class ParallelJsPluginRegistry {

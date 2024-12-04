@@ -177,7 +177,6 @@ impl Bundler {
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
-    self.rebuild_manager.enabled = true;
     if self.rebuild_manager.enabled {
       self.rebuild_manager.old_outputs.clone_from(&output.assets);
     }
@@ -195,6 +194,10 @@ impl Bundler {
     wait_for_change(Arc::clone(&watcher));
 
     Ok(watcher)
+  }
+
+  pub fn set_rebuild_enabled(&mut self, enabled: bool) {
+    self.rebuild_manager.enabled = enabled;
   }
 }
 

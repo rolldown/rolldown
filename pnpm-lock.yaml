@@ -69,6 +69,12 @@ importers:
         specifier: ^1.0.0
         version: 1.3.0
 
+  examples/basic-rebuild:
+    devDependencies:
+      rolldown:
+        specifier: workspace:*
+        version: link:../../packages/rolldown
+
   examples/basic-typescript:
     devDependencies:
       rolldown:

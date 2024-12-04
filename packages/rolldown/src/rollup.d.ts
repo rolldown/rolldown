@@ -906,8 +906,12 @@ export interface SerializedTimings {
 }
 
 export interface PreRenderedAsset {
+  /** @deprecated Use "names" instead. */
   name: string | undefined
+  names: string[]
+  /** @deprecated Use "originalFileNames" instead. */
   originalFileName: string | null
+  originalFileNames: string[]
   source: string | Uint8Array
   type: 'asset'
 }

@@ -121,8 +121,8 @@ impl<'a> GenerateStage<'a> {
                 output_assets.push(Output::Asset(Box::new(OutputAsset {
                   filename: map_filename.as_str().into(),
                   source: source.into(),
-                  original_file_name: None,
-                  name: None,
+                  original_file_names: vec![],
+                  names: vec![],
                 })));
                 if matches!(sourcemap, SourceMapType::File) {
                   code.push_str("\n//# sourceMappingURL=");
@@ -169,8 +169,8 @@ impl<'a> GenerateStage<'a> {
         output.push(Output::Asset(Box::new(OutputAsset {
           filename: filename.clone().into(),
           source: code,
-          original_file_name: None,
-          name: None,
+          original_file_names: vec![],
+          names: vec![],
         })));
       }
     }

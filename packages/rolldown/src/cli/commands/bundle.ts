@@ -25,7 +25,7 @@ export async function bundleWithConfig(
   for (const config of configList) {
     cliOptions.watch
       ? await watchInner(config, cliOptions)
-      : bundleInner(config, cliOptions)
+      : await bundleInner(config, cliOptions)
   }
 }
 
@@ -37,15 +37,19 @@ export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
       : await bundleInner({}, cliOptions)
   } else if (!cliOptions.watch) {
     const build = await rolldown(cliOptions.input)
-    const { output } = await build.generate(cliOptions.output)
-    if (output.length > 1) {
-      logger.error('Multiple chunks are not supported to display in stdout')
-      process.exit(1)
-    } else if (output.length === 0) {
-      logger.error('No output generated')
-      process.exit(1)
-    } else {
-      logger.log(output[0].code)
+    try {
+      const { output } = await build.generate(cliOptions.output)
+      if (output.length > 1) {
+        logger.error('Multiple chunks are not supported to display in stdout')
+        process.exitCode = 1
+      } else if (output.length === 0) {
+        logger.error('No output generated')
+        process.exitCode = 1
+      } else {
+        logger.log(output[0].code)
+      }
+    } finally {
+      await build.close()
     }
   } else {
     logger.error('You must specify `output.dir` to use watch mode')
@@ -113,19 +117,23 @@ async function bundleInner(
   const startTime = performance.now()
 
   const build = await rolldown({ ...options, ...cliOptions.input })
-  const bundleOutput = await build.write({
-    ...options?.output,
-    ...cliOptions.output,
-  })
+  try {
+    const bundleOutput = await build.write({
+      ...options?.output,
+      ...cliOptions.output,
+    })
 
-  const endTime = performance.now()
+    const endTime = performance.now()
 
-  printBundleOutputPretty(bundleOutput)
+    printBundleOutputPretty(bundleOutput)
 
-  logger.log(``)
-  const duration = endTime - startTime
-  // If the build time is more than 1s, we should display it in seconds.
-  logger.success(`Finished in ${colors.bold(ms(duration))}`)
+    logger.log(``)
+    const duration = endTime - startTime
+    // If the build time is more than 1s, we should display it in seconds.
+    logger.success(`Finished in ${colors.bold(ms(duration))}`)
+  } finally {
+    await build.close()
+  }
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

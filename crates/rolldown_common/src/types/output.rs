@@ -4,8 +4,8 @@ use crate::{OutputChunk, StrOrBytes};
 
 #[derive(Debug, Clone)]
 pub struct OutputAsset {
-  pub name: Option<String>,
-  pub original_file_name: Option<String>,
+  pub names: Vec<String>,
+  pub original_file_names: Vec<String>,
   pub filename: ArcStr,
   pub source: StrOrBytes,
 }

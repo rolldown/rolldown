@@ -78,10 +78,12 @@ function transformToRollupOutputAsset(
     type: 'asset',
     fileName: bindingAsset.fileName,
     originalFileName: bindingAsset.originalFileName || null,
+    originalFileNames: bindingAsset.originalFileNames,
     get source(): AssetSource {
       return transformAssetSource(bindingAsset.source)
     },
     name: bindingAsset.name ?? undefined,
+    names: bindingAsset.names,
   } as RolldownOutputAsset
   const cache: Record<string | symbol, any> = {}
   return new Proxy(asset, {
@@ -161,9 +163,9 @@ export function collectChangedBundle(
     if (item.type === 'asset') {
       assets.push({
         filename: item.fileName,
-        originalFileName: item.originalFileName || undefined,
+        originalFileNames: item.originalFileNames,
         source: bindingAssetSource(item.source),
-        name: item.name,
+        names: item.names,
       })
     } else {
       // not all properties modifications are reflected to rust side

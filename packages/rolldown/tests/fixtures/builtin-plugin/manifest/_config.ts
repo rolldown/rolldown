@@ -1,6 +1,6 @@
 import { manifestPlugin } from 'rolldown/experimental'
 import { defineTest } from '../../../src/index'
-import path from 'path'
+import path from 'node:path'
 
 export default defineTest({
   config: {
@@ -15,6 +15,7 @@ export default defineTest({
           this.emitFile({
             type: 'asset',
             name: 'asset.txt',
+            originalFileName: 'asset.txt',
             source: 'test',
           })
         },

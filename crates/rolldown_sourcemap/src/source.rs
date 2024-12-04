@@ -4,7 +4,6 @@ use oxc::sourcemap::SourceMap;
 
 use crate::lines_count;
 
-// TODO: hash? https://github.com/web-infra-dev/rspack-sources
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;
   fn content(&self) -> &str;

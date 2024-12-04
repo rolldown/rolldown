@@ -4,9 +4,11 @@ use rolldown_common::{
 };
 use rolldown_sourcemap::SourceJoiner;
 use rustc_hash::FxHashMap;
-use sugar_path::SugarPath;
 
-use crate::{type_alias::IndexInstantiatedChunks, BundleOutput, SharedOptions};
+use crate::{
+  ecmascript::ecma_generator::normalize_sourcemap_sources, type_alias::IndexInstantiatedChunks,
+  BundleOutput, SharedOptions,
+};
 
 #[derive(Debug, Default)]
 pub struct RebuildManager {
@@ -75,12 +77,8 @@ impl RebuildManager {
       }
       let (content, mut map) = source_joiner.join();
       let file_dir = options.cwd.as_path().join(&options.dir);
-      // normalize sources (same as EcmaGenerator.instantiate_chunk)
       if let Some(map) = map.as_mut() {
-        let paths =
-          map.get_sources().map(|source| source.as_path().relative(&file_dir)).collect::<Vec<_>>();
-        let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
-        map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+        normalize_sourcemap_sources(map, &file_dir);
       }
       instantiated_chunks.push(InstantiatedChunk {
         origin_chunk: 0.into(),

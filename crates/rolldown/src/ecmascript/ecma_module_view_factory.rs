@@ -160,9 +160,17 @@ pub async fn create_ecma_view<'any>(
       TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
       TreeshakeOptions::Boolean(true) => unreachable!(),
       TreeshakeOptions::Option(ref opt) => {
-        match opt.module_side_effects.resolve(&stable_id, ctx.resolved_id.is_external) {
-          Some(value) => DeterminedSideEffects::UserDefined(value),
-          None => lazy_check_side_effects(),
+        if opt.module_side_effects.is_fn() {
+          if opt.module_side_effects.ffi_resolve(&stable_id, ctx.resolved_id.is_external).await? {
+            lazy_check_side_effects()
+          } else {
+            DeterminedSideEffects::UserDefined(false)
+          }
+        } else {
+          match opt.module_side_effects.native_resolve(&stable_id, ctx.resolved_id.is_external) {
+            Some(value) => DeterminedSideEffects::UserDefined(value),
+            None => lazy_check_side_effects(),
+          }
         }
       }
     },

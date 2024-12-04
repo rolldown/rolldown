@@ -9,6 +9,7 @@ const config = defineConfig({
   },
   output: {
     dir: './dist',
+    sourcemap: 'inline',
   },
   plugins: [
     {

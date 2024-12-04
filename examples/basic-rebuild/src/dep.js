@@ -1,1 +1,1 @@
-export const dep = false
+export const dep = true

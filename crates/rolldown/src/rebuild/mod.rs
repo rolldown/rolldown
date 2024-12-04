@@ -1,7 +1,10 @@
 use rolldown_common::{
   EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, Output, PreliminaryFilename,
+  RenderedModule,
 };
+use rolldown_sourcemap::SourceJoiner;
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 use crate::{type_alias::IndexInstantiatedChunks, SharedOptions};
 
@@ -23,7 +26,7 @@ impl RebuildManager {
 
     // find changed modules
     // TODO: handle removed modules
-    let mut changed_modules: Vec<(ModuleId, Option<String>)> = vec![];
+    let mut changed_modules: Vec<(ModuleId, RenderedModule)> = vec![];
     for output in &self.old_outputs {
       match output {
         rolldown_common::Output::Chunk(old_chunk) => {
@@ -35,7 +38,7 @@ impl RebuildManager {
                   for (module_id, module) in &new_chunk.modules {
                     // NOTE: if plugin mutates code during renderChunk, such mutation cannot be
                     // detected. In this case, plugin should make sure the change to be reflected
-                    // on build hook stage (i.e. `transform/load`). For example,
+                    // on build hook stage (i.e. `transform/load`) for relevant modules. For example,
                     // `__VITE_ASSET_(referenceId)_` encodes asset content in `referenceId`, thus
                     // asset change is properly picked up for hmr.
                     // TODO: source comparison by hash
@@ -45,7 +48,7 @@ impl RebuildManager {
                       None => true,
                     };
                     if is_new {
-                      changed_modules.push((module_id.clone(), module_code));
+                      changed_modules.push((module_id.clone(), module.clone()));
                     }
                   }
                 }
@@ -60,14 +63,25 @@ impl RebuildManager {
 
     if !changed_modules.is_empty() {
       // create hmr chunk
-      // TODO: should reuse EcmaGenerator::instantiate_chunk?
-      // TODO: sourcemap?
-      let content =
-        changed_modules.into_iter().filter_map(|(_, code)| code).collect::<Vec<_>>().join("\n");
+      let mut source_joiner = SourceJoiner::default();
+      for (_, module) in &changed_modules {
+        for source in module.iter_source() {
+          source_joiner.append_source(source);
+        }
+      }
+      let (content, mut map) = source_joiner.join();
+      let file_dir = options.cwd.as_path().join(&options.dir);
+      // normalize sources (same as EcmaGenerator.instantiate_chunk)
+      if let Some(map) = map.as_mut() {
+        let paths =
+          map.get_sources().map(|source| source.as_path().relative(&file_dir)).collect::<Vec<_>>();
+        let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
+        map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+      }
       instantiated_chunks.push(InstantiatedChunk {
         origin_chunk: 0.into(),
         content: content.into(),
-        map: None,
+        map,
         kind: InstantiationKind::from(EcmaAssetMeta {
           rendered_chunk: rolldown_common::RollupRenderedChunk {
             name: "hmr-update".into(),
@@ -84,7 +98,7 @@ impl RebuildManager {
           },
         }),
         augment_chunk_hash: None,
-        file_dir: options.cwd.as_path().join(&options.dir),
+        file_dir,
         preliminary_filename: PreliminaryFilename::new("hmr-update.js".into(), None),
       });
     }

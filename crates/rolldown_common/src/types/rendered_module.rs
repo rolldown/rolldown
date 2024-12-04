@@ -4,7 +4,7 @@ use rolldown_sourcemap::{Source, SourceJoiner};
 
 #[derive(Clone, Default)]
 pub struct RenderedModule {
-  pub inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+  inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
 }
 
 impl Debug for RenderedModule {

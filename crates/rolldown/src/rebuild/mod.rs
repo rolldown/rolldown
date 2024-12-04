@@ -33,7 +33,12 @@ impl RebuildManager {
                 let new_chunk = &ecma.rendered_chunk;
                 if new_chunk.name == old_chunk.name {
                   for (module_id, module) in &new_chunk.modules {
-                    // TODO: compare by hash
+                    // NOTE: if plugin mutates code during renderChunk, such mutation cannot be
+                    // detected. In this case, plugin should make sure the change to be reflected
+                    // on build hook stage (i.e. `transform/load`). For example,
+                    // `__VITE_ASSET_(referenceId)_` encodes asset content in `referenceId`, thus
+                    // asset change is properly picked up for hmr.
+                    // TODO: source comparison by hash
                     let module_code = module.code();
                     let is_new = match old_chunk.modules.get(module_id) {
                       Some(old_module) => module_code != old_module.code(),

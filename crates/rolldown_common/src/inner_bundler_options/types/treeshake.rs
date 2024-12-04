@@ -1,3 +1,5 @@
+use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+
 use rolldown_utils::js_regex::HybridRegex;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -25,11 +27,32 @@ impl Default for TreeshakeOptions {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum ModuleSideEffects {
   ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
   Boolean(bool),
+  Function(Arc<ModuleSideEffectsFn>),
 }
+
+impl Debug for ModuleSideEffects {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      ModuleSideEffects::ModuleSideEffectsRules(rules) => {
+        f.debug_tuple("ModuleSideEffectsRules").field(rules).finish()
+      }
+      ModuleSideEffects::Boolean(v) => f.debug_tuple("Boolean").field(v).finish(),
+      ModuleSideEffects::Function(_) => f.write_str("Function"),
+    }
+  }
+}
+
+type ModuleSideEffectsFn = dyn Fn(
+    &str, // id
+    bool, // is_resolved
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static)>>
+  + Send
+  + Sync
+  + 'static;
 
 #[derive(Debug, Clone)]
 pub struct ModuleSideEffectsRule {
@@ -39,7 +62,13 @@ pub struct ModuleSideEffectsRule {
 }
 
 impl ModuleSideEffects {
-  pub fn resolve(&self, path: &str, is_external: bool) -> Option<bool> {
+  pub fn is_fn(&self) -> bool {
+    matches!(self, ModuleSideEffects::Function(_))
+  }
+
+  /// # Panic
+  /// Panics if the side effects are defined as a function
+  pub fn native_resolve(&self, path: &str, is_external: bool) -> Option<bool> {
     match self {
       ModuleSideEffects::ModuleSideEffectsRules(rules) => {
         for ModuleSideEffectsRule { test, external, side_effects } in rules {
@@ -68,6 +97,17 @@ impl ModuleSideEffects {
       }
       ModuleSideEffects::Boolean(false) => Some(false),
       ModuleSideEffects::Boolean(true) => None,
+      ModuleSideEffects::Function(_) => unreachable!(),
+    }
+  }
+
+  /// resolve the side effects from the ffi function
+  /// # Panic
+  /// Panics if the side effects are not defined as a function
+  pub async fn ffi_resolve(&self, path: &str, is_external: bool) -> anyhow::Result<Option<bool>> {
+    match self {
+      ModuleSideEffects::Function(f) => Ok(f(path, is_external).await?),
+      _ => unreachable!(),
     }
   }
 }

@@ -90,6 +90,7 @@ pub struct BindingInputOptions {
   #[debug(skip)]
   pub jsx: Option<JsxOptions>,
   pub watch: Option<BindingWatchOption>,
+  pub keep_names: Option<bool>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

@@ -328,6 +328,7 @@ export interface BindingInputOptions {
   profilerNames?: boolean
   jsx?: JsxOptions
   watch?: BindingWatchOption
+  keepNames?: boolean
 }
 
 export interface BindingJsonPluginConfig {
@@ -531,7 +532,7 @@ export interface BindingTransformPluginConfig {
 }
 
 export interface BindingTreeshake {
-  moduleSideEffects: boolean | BindingModuleSideEffectsRule[]
+  moduleSideEffects: boolean | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)
   annotations?: boolean
 }
 

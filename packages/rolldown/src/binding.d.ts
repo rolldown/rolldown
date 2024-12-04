@@ -68,8 +68,10 @@ export declare class BindingNormalizedOptions {
 export declare class BindingOutputAsset {
   get fileName(): string
   get originalFileName(): string | null
+  get originalFileNames(): Array<string>
   get source(): BindingAssetSource
   get name(): string | null
+  get names(): Array<string>
 }
 
 export declare class BindingOutputChunk {
@@ -606,8 +608,8 @@ export interface JsChangedOutputs {
 }
 
 export interface JsOutputAsset {
-  name?: string
-  originalFileName?: string
+  names: Array<string>
+  originalFileNames: Array<string>
   filename: string
   source: BindingAssetSource
 }

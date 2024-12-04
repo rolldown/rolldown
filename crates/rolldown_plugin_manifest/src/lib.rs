@@ -1,7 +1,8 @@
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output, OutputAsset, OutputChunk};
 use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rolldown_utils::rustc_hash::FxHashSetExt;
+use rustc_hash::FxHashSet;
 use serde::Serialize;
 use std::{borrow::Cow, collections::BTreeMap, path::Path, rc::Rc, sync::LazyLock};
 
@@ -10,15 +11,8 @@ pub struct ManifestPlugin {
   pub config: ManifestPluginConfig,
 }
 
-#[derive(Debug)]
-pub struct GeneratedAssetMeta {
-  pub original_name: String,
-  pub is_entry: bool,
-}
-
 // TODO: Link this with assets plugin
-static GENERATED_ASSETS: LazyLock<FxHashMap<String, GeneratedAssetMeta>> =
-  LazyLock::new(FxHashMap::default);
+static CSS_ENTRIES_MAP: LazyLock<FxHashSet<String>> = LazyLock::new(FxHashSet::default);
 
 #[derive(Debug, Default)]
 pub struct ManifestPluginConfig {
@@ -39,17 +33,15 @@ impl Plugin for ManifestPlugin {
   ) -> HookNoopReturn {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
-    let mut file_name_to_asset = FxHashMap::default();
-    let mut file_name_to_asset_meta = FxHashMap::default();
-    let assets: &FxHashMap<String, GeneratedAssetMeta> = &GENERATED_ASSETS;
-    let mut skip_assets = FxHashSet::default();
-    for (reference_id, asset) in assets {
+
+    let entry_css_reference_ids: &FxHashSet<String> = &CSS_ENTRIES_MAP;
+    let mut entry_css_asset_file_names = FxHashSet::with_capacity(entry_css_reference_ids.len());
+    for reference_id in entry_css_reference_ids {
       if let Ok(file_name) = ctx.try_get_file_name(reference_id.as_str()) {
-        file_name_to_asset_meta.insert(file_name, asset);
+        entry_css_asset_file_names.insert(file_name);
       } else {
         // The asset was generated as part of a different output option.
         // It was already handled during the previous run of this plugin.
-        skip_assets.insert(reference_id);
       }
     }
 
@@ -61,43 +53,39 @@ impl Plugin for ManifestPlugin {
           manifest.insert(name.clone(), chunk_manifest);
         }
         Output::Asset(asset) => {
-          if let Some(name) = &asset.name {
-            let asset_meta = file_name_to_asset_meta.remove(&asset.filename);
-            let src = asset_meta.map_or(name, |m| &m.original_name);
-            let asset_manifest = Rc::new(Self::create_asset(
-              asset,
-              src.clone(),
-              asset_meta.map_or(false, |m| m.is_entry),
-            ));
+          if !asset.names.is_empty() {
+            let src = asset.original_file_names.first().map_or_else(
+              || {
+                format!(
+                  "_{}",
+                  Path::new(asset.filename.as_str())
+                    .file_name()
+                    .map(|x| x.to_string_lossy())
+                    .unwrap()
+                )
+              },
+              ToOwned::to_owned,
+            );
+            let is_entry = entry_css_asset_file_names.contains(asset.filename.as_str());
+            let asset_manifest = Rc::new(Self::create_asset(asset, src.clone(), is_entry));
 
             // If JS chunk and asset chunk are both generated from the same source file,
             // prioritize JS chunk as it contains more information
-            if let Some(m) = manifest.get(src) {
-              let file = &m.file;
-
-              if file.ends_with(".js") || file.ends_with(".cjs") || file.ends_with(".mjs") {
-                continue;
-              }
+            if !manifest.get(&src).map_or(false, |m| {
+              m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
+            }) {
+              manifest.insert(src.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
             }
 
-            manifest.insert(src.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
-            file_name_to_asset.insert(asset.filename.clone(), asset_manifest);
+            for original_file_name in &asset.original_file_names {
+              if !manifest.get(original_file_name).map_or(false, |m| {
+                m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
+              }) {
+                manifest
+                  .insert(original_file_name.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
+              }
+            }
           }
-        }
-      }
-    }
-
-    // Add deduplicated assets to the manifest
-    for (reference_id, asset) in assets {
-      if skip_assets.contains(reference_id) {
-        continue;
-      }
-      let original_name = &asset.original_name;
-      if !manifest.contains_key(original_name) {
-        let filename = ctx.get_file_name(reference_id.as_str());
-        let asset = file_name_to_asset.remove(&filename);
-        if let Some(asset) = asset {
-          manifest.insert(original_name.clone(), asset);
         }
       }
     }

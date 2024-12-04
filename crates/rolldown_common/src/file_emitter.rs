@@ -22,7 +22,7 @@ pub struct EmittedAsset {
 pub struct FileEmitter {
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
-  files: FxDashMap<ArcStr, EmittedAsset>,
+  files: FxDashMap<ArcStr, OutputAsset>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
@@ -46,6 +46,14 @@ impl FileEmitter {
     // Deduplicate assets if an explicit fileName is not provided
     if file.file_name.is_none() {
       if let Some(reference_id) = self.source_hash_to_reference_id.get(&hash) {
+        self.files.entry(reference_id.clone()).and_modify(|entry| {
+          if let Some(name) = file.name {
+            entry.names.push(name);
+          }
+          if let Some(original_file_name) = file.original_file_name {
+            entry.original_file_names.push(original_file_name);
+          }
+        });
         return reference_id.value().clone();
       }
     }
@@ -56,7 +64,16 @@ impl FileEmitter {
     }
 
     self.generate_file_name(&mut file, &hash);
-    self.files.insert(reference_id.clone(), file);
+    self.files.insert(
+      reference_id.clone(),
+      OutputAsset {
+        filename: file.file_name.unwrap(),
+        source: std::mem::take(&mut file.source),
+        names: std::mem::take(&mut file.name).map_or(vec![], |name| vec![name]),
+        original_file_names: std::mem::take(&mut file.original_file_name)
+          .map_or(vec![], |original_file_name| vec![original_file_name]),
+      },
+    );
     reference_id
   }
 
@@ -65,7 +82,7 @@ impl FileEmitter {
       .files
       .get(reference_id)
       .ok_or(format!("Unable to get file name for unknown file: {reference_id}"))?;
-    file.file_name.clone().ok_or(format!("{reference_id} should have file name"))
+    Ok(file.filename.clone())
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> ArcStr {
@@ -129,11 +146,17 @@ impl FileEmitter {
         return;
       }
       self.emitted_files.insert(key.clone());
+
+      let mut names = std::mem::take(&mut value.names);
+      sort_names(&mut names);
+
+      let mut original_file_names = std::mem::take(&mut value.original_file_names);
+      original_file_names.sort_unstable();
       bundle.push(Output::Asset(Box::new(OutputAsset {
-        filename: value.file_name.clone().expect("should have file name"),
+        filename: value.filename.clone(),
+        names,
+        original_file_names,
         source: std::mem::take(&mut value.source),
-        name: std::mem::take(&mut value.name),
-        original_file_name: std::mem::take(&mut value.original_file_name),
       })));
     });
   }
@@ -145,6 +168,17 @@ impl FileEmitter {
     self.base_reference_id.store(0, Ordering::Relaxed);
     self.emitted_files.clear();
   }
+}
+
+fn sort_names(names: &mut [String]) {
+  names.sort_unstable_by(|a, b| {
+    let len_ord = a.len().cmp(&b.len());
+    if len_ord == std::cmp::Ordering::Equal {
+      a.cmp(b)
+    } else {
+      len_ord
+    }
+  });
 }
 
 pub type SharedFileEmitter = Arc<FileEmitter>;

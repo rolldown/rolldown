@@ -17,6 +17,9 @@ export const ModuleSideEffectsRuleSchema = z
 export const ModuleSideEffectsOptionSchema = z
   .boolean()
   .or(z.array(ModuleSideEffectsRuleSchema))
+  .or(
+    z.function().args(z.string(), z.boolean()).returns(z.boolean().optional()),
+  )
   .or(z.literal('no-external'))
 
 export const TreeshakingOptionsSchema = z

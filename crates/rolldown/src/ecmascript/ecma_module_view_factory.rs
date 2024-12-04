@@ -161,7 +161,12 @@ pub async fn create_ecma_view<'any>(
       TreeshakeOptions::Boolean(true) => unreachable!(),
       TreeshakeOptions::Option(ref opt) => {
         if opt.module_side_effects.is_fn() {
-          if opt.module_side_effects.ffi_resolve(&stable_id, ctx.resolved_id.is_external).await? {
+          if opt
+            .module_side_effects
+            .ffi_resolve(&stable_id, ctx.resolved_id.is_external)
+            .await?
+            .unwrap_or_default()
+          {
             lazy_check_side_effects()
           } else {
             DeterminedSideEffects::UserDefined(false)

@@ -28,6 +28,11 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
     walk_mut::walk_import_expression(self, it);
   }
 
+  fn visit_this_expression(&mut self, it: &mut oxc::ast::ast::ThisExpression) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_this_expression(self, it);
+  }
+
   fn visit_call_expression(&mut self, it: &mut oxc::ast::ast::CallExpression<'a>) {
     if it.callee.is_specific_id("require") && it.arguments.len() == 1 {
       self.ensure_uniqueness(it.span_mut());

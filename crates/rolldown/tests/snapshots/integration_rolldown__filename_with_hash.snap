@@ -5199,8 +5199,8 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/dynamic_import_then
 
-- main-!~{000}~.js => main-DPq_p8ej.js
-- lib-!~{001}~.js => lib-D53kxRc8.js
+- main-!~{000}~.js => main-Bo7rYtyU.js
+- lib-!~{001}~.js => lib-DstV67NW.js
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur
 

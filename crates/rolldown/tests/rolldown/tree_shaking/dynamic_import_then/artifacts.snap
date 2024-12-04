@@ -8,6 +8,10 @@ snapshot_kind: text
 
 ```js
 
+//#region a.js
+const other = "other";
+
+//#endregion
 //#region a2.js
 const thing = "thing";
 
@@ -16,14 +20,18 @@ const thing = "thing";
 var foo = "foo";
 
 //#endregion
-export { foo, thing };
+export { foo, other, thing };
 ```
 ## main.js
 
 ```js
 
 //#region main.js
-import("./lib.js").then((ns) => [ns.foo, ns.thing]);
+import("./lib.js").then(({ foo, thing,...reset }) => [
+	foo,
+	thing,
+	reset.other
+]);
 
 //#endregion
 ```

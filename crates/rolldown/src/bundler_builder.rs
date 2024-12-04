@@ -44,6 +44,7 @@ impl BundlerBuilder {
       fs: OsFileSystem,
       warnings,
       _log_guard: maybe_guard,
+      rebuild_manager: Default::default(),
     }
   }
 

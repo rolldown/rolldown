@@ -30,6 +30,7 @@ use crate::{
     isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
     scope_hoisting::ScopeHoistingFinalizerContext,
   },
+  rebuild::RebuildManager,
   stages::link_stage::LinkStageOutput,
   utils::{
     chunk::{
@@ -51,6 +52,7 @@ pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
+  rebuild_manager: &'a mut RebuildManager,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -58,8 +60,9 @@ impl<'a> GenerateStage<'a> {
     link_output: &'a mut LinkStageOutput,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
+    rebuild_manager: &'a mut RebuildManager,
   ) -> Self {
-    Self { link_output, options, plugin_driver }
+    Self { link_output, options, plugin_driver, rebuild_manager }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

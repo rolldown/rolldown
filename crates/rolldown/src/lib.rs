@@ -7,6 +7,7 @@ mod css;
 mod ecmascript;
 mod module_finalizers;
 mod module_loader;
+mod rebuild;
 mod stages;
 mod type_alias;
 mod types;

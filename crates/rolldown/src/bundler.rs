@@ -4,6 +4,7 @@ use super::stages::{
 };
 use crate::{
   bundler_builder::BundlerBuilder,
+  rebuild::RebuildManager,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
   watcher::watcher::{wait_for_change, Watcher},
@@ -31,6 +32,7 @@ pub struct Bundler {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
+  pub(crate) rebuild_manager: RebuildManager,
 }
 
 impl Bundler {
@@ -150,10 +152,14 @@ impl Bundler {
 
     self.plugin_driver.render_start(&self.options).await?;
 
-    let bundle_output =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
-        .generate()
-        .await; // Notice we don't use `?` to break the control flow here.
+    let bundle_output = GenerateStage::new(
+      &mut link_stage_output,
+      &self.options,
+      &self.plugin_driver,
+      &mut self.rebuild_manager,
+    )
+    .generate()
+    .await; // Notice we don't use `?` to break the control flow here.
 
     if let Err(errs) = &bundle_output {
       self
@@ -170,6 +176,12 @@ impl Bundler {
     self.plugin_driver.generate_bundle(&mut output.assets, is_write, &self.options).await?;
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
+
+    self.rebuild_manager.enabled = true;
+    if self.rebuild_manager.enabled {
+      self.rebuild_manager.old_link_stage_output = Some(link_stage_output);
+      self.rebuild_manager.old_assets = output.assets.clone();
+    }
 
     Ok(output)
   }

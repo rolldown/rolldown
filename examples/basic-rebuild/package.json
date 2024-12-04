@@ -1,0 +1,11 @@
+{
+  "name": "@example/basic-rebuld",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node serve.js"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  }
+}

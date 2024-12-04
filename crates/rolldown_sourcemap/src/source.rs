@@ -4,6 +4,7 @@ use oxc::sourcemap::SourceMap;
 
 use crate::lines_count;
 
+// TODO: hash?
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;
   fn content(&self) -> &str;

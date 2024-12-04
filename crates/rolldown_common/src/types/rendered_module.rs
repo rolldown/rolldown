@@ -1,4 +1,8 @@
-use std::{fmt::Debug, sync::Arc};
+use std::{
+  fmt::Debug,
+  hash::{DefaultHasher, Hash, Hasher},
+  sync::Arc,
+};
 
 use rolldown_sourcemap::{Source, SourceJoiner};
 
@@ -30,11 +34,19 @@ impl RenderedModule {
     })
   }
 
-  pub fn iter_source(&self) -> impl Iterator<Item = &Box<dyn Source + Send + Sync>> {
+  pub fn iter_sources(&self) -> impl Iterator<Item = &Box<dyn Source + Send + Sync>> {
     if let Some(code) = &self.inner_code {
       code.as_ref().iter()
     } else {
       [].iter()
     }
+  }
+
+  pub fn hash(&self) -> u64 {
+    let mut s = DefaultHasher::new();
+    for source in self.iter_sources() {
+      source.content().hash(&mut s);
+    }
+    s.finish()
   }
 }

@@ -47,10 +47,8 @@ impl RebuildManager {
                     // on build hook stage (i.e. `transform/load`) for relevant modules. For example,
                     // `__VITE_ASSET_(referenceId)_` encodes asset content in `referenceId`, thus
                     // asset change is properly picked up for hmr.
-                    // TODO: source comparison by hash
-                    let module_code = module.code();
                     let is_new = match old_chunk.modules.get(module_id) {
-                      Some(old_module) => module_code != old_module.code(),
+                      Some(old_module) => module.hash() != old_module.hash(),
                       None => true,
                     };
                     if is_new {
@@ -71,7 +69,7 @@ impl RebuildManager {
       // create hmr chunk
       let mut source_joiner = SourceJoiner::default();
       for (_, module) in &changed_modules {
-        for source in module.iter_source() {
+        for source in module.iter_sources() {
           source_joiner.append_source(source);
         }
       }

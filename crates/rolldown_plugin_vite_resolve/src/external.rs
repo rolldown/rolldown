@@ -1,13 +1,14 @@
 use std::{path::Path, sync::Arc};
 
 use dashmap::DashMap;
-use rolldown_utils::dashmap::FxDashMap;
+use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex};
 
 use crate::{
   resolver::Resolver,
   utils::{
     can_externalize_file, get_npm_package_name, is_bare_import, is_builtin, is_in_node_modules,
   },
+  utils_filter::UtilsFilter,
 };
 
 #[derive(Debug, Clone)]
@@ -26,33 +27,46 @@ impl ResolveOptionsExternal {
   }
 }
 
-#[derive(Debug, Clone)]
-pub enum ResolveOptionsNoExternal {
-  True,
-  // TODO(sapphi-red): support RegExp
-  Vec(Vec<String>),
-}
+#[derive(Debug)]
+pub struct ResolveOptionsNoExternal(ResolveOptionsNoExternalInner);
 
 impl ResolveOptionsNoExternal {
+  pub fn new_true() -> Self {
+    Self(ResolveOptionsNoExternalInner::True)
+  }
+
+  pub fn new_vec(value: Vec<StringOrRegex>) -> Self {
+    if value.is_empty() {
+      Self(ResolveOptionsNoExternalInner::Empty)
+    } else {
+      Self(ResolveOptionsNoExternalInner::Vec(UtilsFilter::new(vec![], value)))
+    }
+  }
+
+  pub fn is_true(&self) -> bool {
+    matches!(self.0, ResolveOptionsNoExternalInner::True)
+  }
+
   pub fn is_no_external(&self, id: &str) -> bool {
-    match self {
-      ResolveOptionsNoExternal::True => true,
-      ResolveOptionsNoExternal::Vec(vec) => {
-        if vec.is_empty() {
-          false
-        } else {
-          // TODO(sapphi-red): implement the same logic with createFilter
-          vec.iter().any(|v| v == id)
-        }
-      }
+    match &self.0 {
+      ResolveOptionsNoExternalInner::True => true,
+      ResolveOptionsNoExternalInner::Vec(filter) => !filter.is_match(id),
+      ResolveOptionsNoExternalInner::Empty => false,
     }
   }
 }
 
 #[derive(Debug)]
+enum ResolveOptionsNoExternalInner {
+  True,
+  Vec(UtilsFilter),
+  Empty,
+}
+
+#[derive(Debug)]
 pub struct ExternalDeciderOptions {
   pub external: ResolveOptionsExternal,
-  pub no_external: ResolveOptionsNoExternal,
+  pub no_external: Arc<ResolveOptionsNoExternal>,
 }
 
 #[derive(Debug)]

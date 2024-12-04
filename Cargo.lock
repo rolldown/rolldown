@@ -2849,6 +2849,7 @@ dependencies = [
  "cow-utils",
  "dashmap 6.1.0",
  "derive_more",
+ "glob-match",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",

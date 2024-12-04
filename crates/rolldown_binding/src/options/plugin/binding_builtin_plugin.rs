@@ -140,12 +140,12 @@ pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
   pub environment_consumer: String,
   pub environment_name: String,
-  #[serde(with = "EitherDeserializeEnabler")]
+  #[serde(with = "EitherTrueVecStringDeserializeEnabler")]
   #[napi(ts_type = "true | string[]")]
   pub external: napi::Either<BindingTrueValue, Vec<String>>,
-  #[serde(with = "EitherDeserializeEnabler")]
-  #[napi(ts_type = "true | string[]")]
-  pub no_external: napi::Either<BindingTrueValue, Vec<String>>,
+  #[serde(with = "EitherTrueVecStringRegexDeserializeEnabler")]
+  #[napi(ts_type = "true | Array<string | RegExp>")]
+  pub no_external: napi::Either<BindingTrueValue, Vec<BindingStringOrRegex>>,
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
   #[serde(skip_deserializing)]
   #[napi(
@@ -160,18 +160,22 @@ pub struct BindingViteResolvePluginConfig {
   pub runtime: String,
 }
 
-impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
-  fn from(value: BindingViteResolvePluginConfig) -> Self {
+impl TryFrom<BindingViteResolvePluginConfig> for ViteResolveOptions {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingViteResolvePluginConfig) -> Result<Self, Self::Error> {
     let external = match value.external {
       napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsExternal::True,
       napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsExternal::Vec(v),
     };
     let no_external = match value.no_external {
-      napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::True,
-      napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::Vec(v),
+      napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::new_true(),
+      napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::new_vec(
+        bindingify_string_or_regex_array(v)?,
+      ),
     };
 
-    Self {
+    Ok(Self {
       resolve_options: value.resolve_options.into(),
       environment_consumer: value.environment_consumer,
       environment_name: value.environment_name,
@@ -207,7 +211,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       ),
 
       runtime: value.runtime,
-    }
+    })
   }
 }
 
@@ -257,9 +261,16 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
 
 #[derive(Deserialize)]
 #[serde(remote = "napi::bindgen_prelude::Either<BindingTrueValue, Vec<String>>")]
-enum EitherDeserializeEnabler {
+enum EitherTrueVecStringDeserializeEnabler {
   A(BindingTrueValue),
   B(Vec<String>),
+}
+
+#[derive(Deserialize)]
+#[serde(remote = "napi::bindgen_prelude::Either<BindingTrueValue, Vec<BindingStringOrRegex>>")]
+enum EitherTrueVecStringRegexDeserializeEnabler {
+  A(BindingTrueValue),
+  B(Vec<BindingStringOrRegex>),
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
@@ -402,7 +413,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           ));
         };
 
-        Arc::new(ViteResolvePlugin::new(config.into()))
+        Arc::new(ViteResolvePlugin::new(config.try_into()?))
       }
     })
   }

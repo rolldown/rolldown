@@ -14,7 +14,7 @@ use crate::{
     clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
     normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
   },
-  CallablePlugin, ResolveOptionsExternal, ResolveOptionsNoExternal,
+  CallablePlugin, ResolveOptionsExternal,
 };
 use anyhow::anyhow;
 use derive_more::Debug;
@@ -84,7 +84,7 @@ impl TypedMapKey for ResolveIdOptionsScan {
 pub struct ViteResolvePlugin {
   resolve_options: ViteResolveResolveOptions,
   external: external::ResolveOptionsExternal,
-  no_external: external::ResolveOptionsNoExternal,
+  no_external: Arc<external::ResolveOptionsNoExternal>,
   environment_consumer: String,
   environment_name: String,
   #[debug(skip)]
@@ -116,17 +116,21 @@ impl ViteResolvePlugin {
       &options.resolve_options.external_conditions,
       options.runtime.clone(),
     );
+    let no_external = Arc::new(options.no_external);
 
     Self {
       external: options.external.clone(),
-      no_external: options.no_external.clone(),
+      no_external: Arc::clone(&no_external),
       environment_consumer: options.environment_consumer,
       environment_name: options.environment_name,
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
       runtime: options.runtime.clone(),
       external_decider: ExternalDecider::new(
-        ExternalDeciderOptions { external: options.external, no_external: options.no_external },
+        ExternalDeciderOptions {
+          external: options.external,
+          no_external: Arc::clone(&no_external),
+        },
         options.runtime,
         resolvers.get_for_external(),
       ),
@@ -228,7 +232,7 @@ impl ViteResolvePlugin {
 
       if is_builtin(args.specifier, &self.runtime) {
         if self.environment_consumer == "server" {
-          if matches!(self.no_external, ResolveOptionsNoExternal::True)
+          if self.no_external.is_true()
               // if both noExternal and external are true, noExternal will take the higher priority and bundle it.
               // only if the id is explicitly listed in external, we will externalize it and skip this error.
               &&(matches!(self.external, ResolveOptionsExternal::True)

@@ -30,6 +30,9 @@ export class RolldownBuild {
   async #getBundlerWithStopWorker(
     outputOptions: OutputOptions,
   ): Promise<BundlerWithStopWorker> {
+    if (this.#inputOptions.experimental?.rebuild && this.#bundler) {
+      return this.#bundler
+    }
     if (this.#bundler) {
       this.#bundler.stopWorkers?.()
     }
@@ -48,14 +51,6 @@ export class RolldownBuild {
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
     const output = await bundler.write()
-    return transformToRollupOutput(output)
-  }
-
-  async rebuild(): Promise<RolldownOutput> {
-    if (!this.#bundler) {
-      throw new Error('invalid rebuild')
-    }
-    const output = await this.#bundler.bundler.write()
     return transformToRollupOutput(output)
   }
 

@@ -36,6 +36,8 @@ impl BundlerBuilder {
 
     apply_inner_plugins(&mut self.plugins);
 
+    let rebuild_manager = RebuildManager::new(options.experimental.rebuild.unwrap_or(false));
+
     Bundler {
       closed: false,
       plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),
@@ -45,7 +47,7 @@ impl BundlerBuilder {
       fs: OsFileSystem,
       warnings,
       _log_guard: maybe_guard,
-      rebuild_manager: RebuildManager::default(),
+      rebuild_manager,
     }
   }
 

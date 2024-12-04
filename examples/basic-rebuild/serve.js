@@ -1,6 +1,5 @@
 // @ts-check
-import { defineConfig } from 'rolldown'
-import { rebuild } from 'rolldown/experimental'
+import { defineConfig, rolldown } from 'rolldown'
 import fs from 'node:fs'
 
 const config = defineConfig({
@@ -11,6 +10,9 @@ const config = defineConfig({
     dir: './dist',
   },
   plugins: [],
+  experimental: {
+    rebuild: true,
+  },
 })
 
 /**
@@ -22,13 +24,13 @@ function edit(filepath, editFn) {
 }
 
 async function main() {
-  const bundle = await rebuild(config)
-  const output1 = await bundle.build()
+  const bundle = await rolldown(config)
+  const output1 = await bundle.write(config.output)
   console.log(output1.output)
   edit('./src/dep.js', (s) =>
     s.replace(/true|false/, (m) => (m === 'true' ? 'false' : 'true')),
   )
-  const output2 = await bundle.build()
+  const output2 = await bundle.write(config.output)
   console.log(output2.output)
 }
 

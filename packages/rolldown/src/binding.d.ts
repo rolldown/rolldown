@@ -226,6 +226,7 @@ export interface BindingExperimentalOptions {
   disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
+  rebuild?: boolean
 }
 
 export interface BindingGeneralHookFilter {

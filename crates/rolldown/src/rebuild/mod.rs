@@ -12,6 +12,10 @@ pub struct RebuildManager {
 }
 
 impl RebuildManager {
+  pub fn new(enabled: bool) -> Self {
+    Self { enabled, old_outputs: vec![] }
+  }
+
   pub fn render_hmr_chunk(
     &self,
     instantiated_chunks: &mut IndexInstantiatedChunks,

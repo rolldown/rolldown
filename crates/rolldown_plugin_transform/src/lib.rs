@@ -61,16 +61,15 @@ impl Plugin for TransformPlugin {
     };
 
     let env = if self.target.is_some() && self.browserslist.is_some() {
-      return Err(anyhow::anyhow!(
-        "Cannot specify both `target` and `browserslist` at the same time"
-      ));
+      Err("Cannot specify both `target` and `browserslist` at the same time".to_string())
     } else if let Some(target) = &self.target {
-      EnvOptions::from_target(target).expect("Failed to create transform options")
+      EnvOptions::from_target(target)
     } else if let Some(browserslist) = &self.browserslist {
-      EnvOptions::from_browserslist_query(browserslist).expect("Failed to create transform options")
+      EnvOptions::from_browserslist_query(browserslist)
     } else {
-      EnvOptions::default()
-    };
+      Ok(EnvOptions::default())
+    }
+    .map_err(|e| anyhow::anyhow!(e))?;
 
     let ret = ast.program.with_mut(move |fields| {
       let mut transformer_options = TransformOptions { env, ..TransformOptions::default() };

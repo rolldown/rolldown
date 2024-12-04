@@ -136,6 +136,7 @@ export interface InputOptions {
   jsx?: JsxOptions
   watch?: WatchOptions | false
   dropLabels?: string[]
+  keepNames?: boolean
 }
 
 interface OverwriteInputOptionsForCli {

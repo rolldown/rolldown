@@ -34,6 +34,9 @@ impl RebuildManager {
                 if new_chunk.name == old_chunk.name {
                   for (module_id, module) in &new_chunk.modules {
                     // TODO: compare by hash
+                    // NOTE: we cannot detect change if renderChunk is expected to change the content,
+                    // e.g. Vite's __VITE_ASSET_xxx marker doesn't change if asset content changed.
+                    // but probably this should be handled by plugin side to make sure marker to change.
                     let module_code = module.code();
                     let is_new = match old_chunk.modules.get(module_id) {
                       Some(old_module) => module_code != old_module.code(),

@@ -3,8 +3,8 @@ use std::path::Path;
 use futures::future::try_join_all;
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
-  Asset, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleRenderArgs,
-  ModuleRenderOutput, Output, OutputAsset, OutputChunk, PreliminaryFilename, SourceMapType,
+  Asset, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk,
+  SourceMapType,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
@@ -12,7 +12,6 @@ use rolldown_utils::{
   indexmap::FxIndexSet,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -42,70 +41,7 @@ impl<'a> GenerateStage<'a> {
     let (mut instantiated_chunks, index_chunk_to_assets) =
       self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
 
-    // instantiate hmr chunk (TODO: move to RebuildManager)
-    if self.rebuild_manager.enabled {
-      // find changed modules
-      // TODO: handle removed modules
-      let mut changed_modules: Vec<(ModuleId, Option<String>)> = vec![];
-      for output in &self.rebuild_manager.old_assets {
-        match output {
-          rolldown_common::Output::Chunk(old_chunk) => {
-            for chunk in &instantiated_chunks {
-              match &chunk.kind {
-                InstantiationKind::Ecma(ecma) => {
-                  let new_chunk = &ecma.rendered_chunk;
-                  if new_chunk.name == old_chunk.name {
-                    for (module_id, module) in &new_chunk.modules {
-                      // TODO: compare by hash
-                      let module_code = module.code();
-                      let is_new = match old_chunk.modules.get(module_id) {
-                        Some(old_module) => module_code != old_module.code(),
-                        None => true,
-                      };
-                      if is_new {
-                        changed_modules.push((module_id.clone(), module_code));
-                      }
-                    }
-                  }
-                }
-                InstantiationKind::None => {}
-              }
-            }
-          }
-          rolldown_common::Output::Asset(_) => {}
-        }
-      }
-
-      if !changed_modules.is_empty() {
-        // create hmr chunk
-        // TODO: should reuse EcmaGenerator::instantiate_chunk?
-        let content =
-          changed_modules.into_iter().filter_map(|(_, code)| code).collect::<Vec<_>>().join("\n");
-        instantiated_chunks.push(InstantiatedChunk {
-          origin_chunk: 0.into(),
-          content: content.into(),
-          map: None,
-          kind: InstantiationKind::from(EcmaAssetMeta {
-            rendered_chunk: rolldown_common::RollupRenderedChunk {
-              name: "hmr-update".into(),
-              is_entry: false,
-              is_dynamic_entry: false,
-              facade_module_id: None,
-              module_ids: vec![],
-              exports: vec![],
-              filename: "hmr-update.js".into(),
-              modules: FxHashMap::default(),
-              imports: vec![],
-              dynamic_imports: vec![],
-              debug_id: 0,
-            },
-          }),
-          augment_chunk_hash: None,
-          file_dir: self.options.cwd.as_path().join(&self.options.dir),
-          preliminary_filename: PreliminaryFilename::new("hmr-update.js".into(), None),
-        });
-      }
-    }
+    self.rebuild_manager.render_hmr_chunk(&mut instantiated_chunks, self.options);
 
     render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
 

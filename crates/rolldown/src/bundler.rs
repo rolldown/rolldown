@@ -179,7 +179,7 @@ impl Bundler {
 
     self.rebuild_manager.enabled = true;
     if self.rebuild_manager.enabled {
-      self.rebuild_manager.old_assets.clone_from(&output.assets);
+      self.rebuild_manager.old_outputs.clone_from(&output.assets);
     }
 
     Ok(output)

@@ -177,9 +177,7 @@ impl Bundler {
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
-    if self.rebuild_manager.enabled {
-      self.rebuild_manager.old_outputs.clone_from(&output.assets);
-    }
+    self.rebuild_manager.save_output(&output);
 
     Ok(output)
   }

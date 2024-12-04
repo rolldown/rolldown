@@ -6,15 +6,21 @@ use rolldown_sourcemap::SourceJoiner;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-use crate::{type_alias::IndexInstantiatedChunks, SharedOptions};
+use crate::{type_alias::IndexInstantiatedChunks, BundleOutput, SharedOptions};
 
 #[derive(Debug, Default)]
 pub struct RebuildManager {
   pub enabled: bool,
-  pub old_outputs: Vec<Output>,
+  old_outputs: Vec<Output>,
 }
 
 impl RebuildManager {
+  pub fn save_output(&mut self, output: &BundleOutput) {
+    if self.enabled {
+      self.old_outputs.clone_from(&output.assets);
+    }
+  }
+
   pub fn render_hmr_chunk(
     &self,
     instantiated_chunks: &mut IndexInstantiatedChunks,

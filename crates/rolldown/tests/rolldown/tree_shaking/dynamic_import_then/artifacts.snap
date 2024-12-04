@@ -27,11 +27,8 @@ export { foo, other, thing };
 ```js
 
 //#region main.js
-import("./lib.js").then(({ foo, thing,...reset }) => [
-	foo,
-	thing,
-	reset.other
-]);
+import("./lib.js").then((ns) => [ns.foo, ns.thing]);
+import("./lib.js").then(({ ...rest }) => rest.other);
 
 //#endregion
 ```

@@ -13,7 +13,7 @@ use rolldown_utils::{
   },
   xxhash::{xxhash_base64_url, xxhash_with_base},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
@@ -52,6 +52,9 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
+  let index_asset_all_dependencies: IndexVec<AssetIdx, FxHashSet<AssetIdx>> =
+    collect_transitive_dependencies(&index_asset_dependencies);
+
   let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
     .par_iter()
@@ -59,7 +62,7 @@ pub fn finalize_assets(
       let mut hash = xxhash_base64_url(chunk.content.as_bytes());
       // Hash content that provided by users if it's exist
       if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
-        hash.push_str(&augment_chunk_hash);
+        hash.push_str(augment_chunk_hash);
         hash = xxhash_base64_url(hash.as_bytes());
       }
       hash
@@ -81,7 +84,7 @@ pub fn finalize_assets(
       // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
       preliminary_assets[asset_idx].preliminary_filename.hash(&mut hasher);
 
-      let dependencies = &index_asset_dependencies[asset_idx];
+      let dependencies = &index_asset_all_dependencies[asset_idx];
       dependencies.iter().copied().for_each(|dep_id| {
         index_standalone_content_hashes[dep_id].hash(&mut hasher);
       });
@@ -160,4 +163,30 @@ pub fn finalize_assets(
   });
 
   assets
+}
+
+fn collect_transitive_dependencies(
+  dep_map: &IndexVec<AssetIdx, Vec<AssetIdx>>,
+) -> IndexVec<AssetIdx, FxHashSet<AssetIdx>> {
+  fn traverse(
+    index: AssetIdx,
+    dep_map: &IndexVec<AssetIdx, Vec<AssetIdx>>,
+    visited: &mut FxHashSet<AssetIdx>,
+  ) {
+    for dep_index in &dep_map[index] {
+      if !visited.contains(dep_index) {
+        visited.insert(*dep_index);
+        traverse(*dep_index, dep_map, visited);
+      }
+    }
+  }
+
+  let mut all_dep_map: IndexVec<AssetIdx, FxHashSet<AssetIdx>> =
+    index_vec![FxHashSet::default(); dep_map.len()];
+
+  for index in dep_map.indices() {
+    traverse(index, dep_map, &mut all_dep_map[index]);
+  }
+
+  all_dep_map
 }

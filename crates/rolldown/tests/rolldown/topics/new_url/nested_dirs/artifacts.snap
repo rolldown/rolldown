@@ -6,7 +6,7 @@ snapshot_kind: text
 
 ## assets/foo-DX_UVeUe.txt
 
-## chunks/dep-BpZ-321W.js
+## chunks/dep-C4YmwnRJ.js
 
 ```js
 import "./foo-BKpPs9oN.js";
@@ -33,7 +33,7 @@ import "./chunks/foo-BKpPs9oN.js";
 
 //#region main.js
 const url = new URL("assets/foo-DX_UVeUe.txt", import.meta.url);
-const dep = import("./chunks/dep-BpZ-321W.js");
+const dep = import("./chunks/dep-C4YmwnRJ.js");
 
 //#endregion
 export { dep, url };

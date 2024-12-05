@@ -55,7 +55,15 @@ pub fn finalize_assets(
   let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
     .par_iter()
-    .map(|chunk| xxhash_base64_url(chunk.content.as_bytes()))
+    .map(|chunk| {
+      let mut hash = xxhash_base64_url(chunk.content.as_bytes());
+      // Hash content that provided by users if it's exist
+      if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
+        hash.push_str(&augment_chunk_hash);
+        hash = xxhash_base64_url(hash.as_bytes());
+      }
+      hash
+    })
     .collect::<Vec<_>>()
     .into();
 
@@ -77,11 +85,6 @@ pub fn finalize_assets(
       dependencies.iter().copied().for_each(|dep_id| {
         index_standalone_content_hashes[dep_id].hash(&mut hasher);
       });
-
-      // Hash content that provided by users if it's exist
-      if let Some(augment_chunk_hash) = &preliminary_assets[asset_idx].augment_chunk_hash {
-        augment_chunk_hash.as_bytes().hash(&mut hasher);
-      }
 
       let digested = hasher.digest128();
       (xxhash_with_base(&digested.to_le_bytes(), hash_base), digested)

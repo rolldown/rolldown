@@ -1,6 +1,6 @@
 // cSpell:disable
 use binding_watch_option::BindingWatchOption;
-use oxc_transform_napi::transform::JsxOptions;
+use oxc_transform_napi::JsxOptions;
 use rustc_hash::FxHashMap;
 
 use crate::types::{

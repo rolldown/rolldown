@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region factory.jsx
-console.log([React.createElement("x", null), /* @__PURE__ */ import.meta.factory("x", null)]);
+console.log([import.meta.factory("x", null), /* @__PURE__ */ import.meta.factory("x", null)]);
 f = function() {
-	console.log([React.createElement("y", null), /* @__PURE__ */ import.meta.factory("y", null)]);
+	console.log([import.meta.factory("y", null), /* @__PURE__ */ import.meta.factory("y", null)]);
 };
 
 //#endregion
@@ -20,8 +21,8 @@ f = function() {
 ```js
 
 //#region fragment.jsx
-console.log([React.createElement(React.Fragment, null, "x"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x")]), f = function() {
-	console.log([React.createElement(React.Fragment, null, "y"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y")]);
+console.log([import.meta.factory(import.meta.fragment, null, "x"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x")]), f = function() {
+	console.log([import.meta.factory(import.meta.fragment, null, "y"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y")]);
 };
 
 //#endregion

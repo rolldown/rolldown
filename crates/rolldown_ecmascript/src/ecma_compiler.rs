@@ -7,9 +7,9 @@ use oxc::{
   codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
   minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
-  sourcemap::SourceMap,
   span::SourceType,
 };
+use oxc_sourcemap::SourceMap;
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
 use crate::ecma_ast::{

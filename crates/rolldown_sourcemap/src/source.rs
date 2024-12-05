@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use oxc::sourcemap::SourceMap;
+use oxc_sourcemap::SourceMap;
 
 use crate::lines_count;
 

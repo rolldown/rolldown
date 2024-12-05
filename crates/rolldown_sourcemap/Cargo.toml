@@ -19,6 +19,7 @@ doctest = false
 [dependencies]
 memchr         = { workspace = true }
 oxc            = { workspace = true }
+oxc_sourcemap  = { workspace = true, features = ["rayon"] }
 rolldown_utils = { workspace = true }
 rustc-hash     = { workspace = true }
 

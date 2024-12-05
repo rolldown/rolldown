@@ -17,8 +17,6 @@
   missing
 ## decorator_printing_esm
   missing
-## [define_assign_warning](../../../crates/rolldown/tests/esbuild/default/define_assign_warning/diff.md)
-  diff
 ## [define_import_meta](../../../crates/rolldown/tests/esbuild/default/define_import_meta/diff.md)
   diff
 ## [define_import_meta_es5](../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5/diff.md)
@@ -63,11 +61,7 @@
   diff
 ## [jsx_this_property_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_common_js/diff.md)
   diff
-## [jsx_this_property_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_esm/diff.md)
-  diff
 ## [jsx_this_value_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_common_js/diff.md)
-  diff
-## [jsx_this_value_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_esm/diff.md)
   diff
 ## [legal_comments_avoid_slash_tag_end_of_file](../../../crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file/diff.md)
   diff
@@ -163,6 +157,7 @@
 ## [built_in_node_module_precedence](../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence)
 ## [bundling_files_outside_of_outbase](../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)
 ## [const_with_let_no_mangle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle)
+## [define_assign_warning](../../../crates/rolldown/tests/esbuild/default/define_assign_warning)
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
 ## [define_optional_chain](../../../crates/rolldown/tests/esbuild/default/define_optional_chain)
 ## [define_optional_chain_panic_issue3551](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_panic_issue3551)
@@ -190,6 +185,8 @@
 ## [inject_with_define](../../../crates/rolldown/tests/esbuild/default/inject_with_define)
 ## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
+## [jsx_this_property_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_esm)
+## [jsx_this_value_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_esm)
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [new_expression_common_js](../../../crates/rolldown/tests/esbuild/default/new_expression_common_js)
 ## [outbase](../../../crates/rolldown/tests/esbuild/default/outbase)

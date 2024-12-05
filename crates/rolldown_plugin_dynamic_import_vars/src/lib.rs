@@ -136,9 +136,9 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
             )),
             NONE,
             {
-              let mut arguments = self
-                .ast_builder
-                .vec1(Argument::from(self.ast_builder.expression_string_literal(SPAN, pattern)));
+              let mut arguments = self.ast_builder.vec1(Argument::from(
+                self.ast_builder.expression_string_literal(SPAN, pattern, None),
+              ));
               if let Some(params) = params {
                 arguments.push(Argument::from(self.ast_builder.expression_object(
                   SPAN,
@@ -148,7 +148,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                         SPAN,
                         PropertyKind::Init,
                         self.ast_builder.property_key_identifier_name(SPAN, "query"),
-                        self.ast_builder.expression_string_literal(SPAN, params.query),
+                        self.ast_builder.expression_string_literal(SPAN, params.query, None),
                         false,
                         false,
                         false,
@@ -158,7 +158,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                         SPAN,
                         PropertyKind::Init,
                         self.ast_builder.property_key_identifier_name(SPAN, "import"),
-                        self.ast_builder.expression_string_literal(SPAN, "*"),
+                        self.ast_builder.expression_string_literal(SPAN, "*", None),
                         false,
                         false,
                         false,
@@ -200,7 +200,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
           self.ast_builder.binding_identifier(SPAN, "__variableDynamicImportRuntimeHelper"),
         ),
       )),
-      self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER),
+      self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER, None),
       NONE,
       ImportOrExportKind::Value,
     ))

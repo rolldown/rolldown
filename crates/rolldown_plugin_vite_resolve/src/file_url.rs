@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use url::Url;
 
 /// The caller should check if the url has file scheme.
@@ -34,7 +35,6 @@ fn file_url_to_path(url: Url) -> anyhow::Result<String> {
 #[cfg(any(windows, target_family = "wasm"))]
 fn get_path_from_url_windows(url: Url) -> anyhow::Result<String> {
   use crate::utils::is_windows_drive_path;
-  use anyhow::anyhow;
   use cow_utils::CowUtils;
 
   let pathname = url.path();
@@ -74,5 +74,5 @@ fn get_path_from_url_posix(url: Url) -> anyhow::Result<String> {
   }
 
   let pathname = urlencoding::decode(&pathname)?;
-  Ok(pathname)
+  Ok(pathname.into_owned())
 }

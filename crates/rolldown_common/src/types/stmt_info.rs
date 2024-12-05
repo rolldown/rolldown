@@ -76,6 +76,7 @@ bitflags! {
         const FnExpr = 1 << 2;
         // Flag for `var foo = class {}`
         const ClassExpr = 1 << 3;
+        const KeepNamesType = StmtInfoMeta::FnDecl.bits() | StmtInfoMeta::ClassDecl.bits() | StmtInfoMeta::FnExpr.bits() | StmtInfoMeta::ClassExpr.bits();
     }
 }
 

@@ -56,6 +56,10 @@ export interface WatchOptions {
   chokidar?: any
 }
 
+export interface ChecksOptions {
+  circularDependency?: boolean
+}
+
 export interface InputOptions {
   input?: InputOption
   plugins?: RolldownPluginOption
@@ -137,6 +141,7 @@ export interface InputOptions {
   watch?: WatchOptions | false
   dropLabels?: string[]
   keepNames?: boolean
+  checks?: ChecksOptions
 }
 
 interface OverwriteInputOptionsForCli {

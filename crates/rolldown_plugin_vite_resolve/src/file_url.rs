@@ -13,6 +13,8 @@ pub fn file_url_str_to_path(url: &str) -> anyhow::Result<String> {
 fn file_url_to_path(url: Url) -> anyhow::Result<String> {
   #[cfg(target_family = "wasm")]
   {
+    use crate::utils::is_windows_drive_path;
+
     let pathname = url.path();
     // NOTE: should be decided if it's running on Windows or not
     //       for now, decide it if the path has a drive part

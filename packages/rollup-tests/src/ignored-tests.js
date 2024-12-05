@@ -22,13 +22,6 @@ const ignoreTests = [
   "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",// https://github.com/oxc-project/oxc/issues/7501 https://github.com/oxc-project/oxc/issues/7209#issuecomment-2503133537 The `assigned to unreferenced var will be dropped` is a minify featrue
   "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", // The Sequence expression/Binary expression/Calls with parentheses is not implement
 
-  // deconfilct
-  "rollup@function@class-name-conflict-2: does not shadow variables when preserving class names",
-  "rollup@function@class-name-conflict-3: does not shadow variables when preserving class names",
-  "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
-  "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
-  "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
-
   // watch mode api is not compitable with rollup, the `rollup.watch` is not a promise at rollup
   "rollup@hooks@allows to enforce plugin hook order in watch mode",
   "rollup@hooks@allows to enforce sequential plugin hook order in watch mode",

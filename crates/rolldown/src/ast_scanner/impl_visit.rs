@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    ast::{self, Expression, IdentifierReference},
+    ast::{self, BindingPatternKind, Expression, IdentifierReference},
     visit::walk,
     AstKind, Visit,
   },
@@ -224,6 +224,26 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
     match it {
+      ast::Declaration::VariableDeclaration(decl) => {
+        // only keep names for `var foo = class {}` or `var fn = function (){}`
+        if decl.declarations.len() == 1 {
+          if let Some(decl) = decl.declarations.first() {
+            if let (BindingPatternKind::BindingIdentifier(_), Some(init)) =
+              (&decl.id.kind, &decl.init)
+            {
+              match init {
+                ast::Expression::ClassExpression(_) => {
+                  self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+                }
+                ast::Expression::FunctionExpression(_) => {
+                  self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+                }
+                _ => {}
+              }
+            }
+          }
+        }
+      }
       ast::Declaration::FunctionDeclaration(_) => {
         self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
       }

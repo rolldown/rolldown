@@ -425,7 +425,14 @@ impl<'a> LinkStage<'a> {
             }
           }
         });
-        if keep_names && stmt_info.meta.intersects(StmtInfoMeta::FnDecl | StmtInfoMeta::ClassDecl) {
+        if keep_names
+          && stmt_info.meta.intersects(
+            StmtInfoMeta::FnDecl
+              | StmtInfoMeta::ClassDecl
+              | StmtInfoMeta::FnExpr
+              | StmtInfoMeta::ClassExpr,
+          )
+        {
           stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__name").into());
         }
       });

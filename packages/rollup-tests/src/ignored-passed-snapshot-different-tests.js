@@ -126,5 +126,7 @@ module.exports = [
     "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",// the inputs string `console.log( 'hello from main.js' )`, the rolldown output `console.log("hello from main.js")`, caused search original position failed
 
     // passed, the rolldown give a specific warning
-    "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading"
+    "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
+    // passed, the rolldown using `__name` to keep the original name
+    "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
 ]

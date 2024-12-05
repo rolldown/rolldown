@@ -1,7 +1,7 @@
 {
   "config": {
     "external": [
-      "assert"
+      "node:assert"
     ],
     "keepNames": true
   }

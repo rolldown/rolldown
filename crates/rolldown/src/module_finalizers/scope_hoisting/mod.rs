@@ -530,7 +530,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn get_conflicted_info(
-    &mut self,
+    &self,
     id: &BindingIdentifier<'ast>,
   ) -> Option<(SymbolId, &str, &rolldown_rstr::Rstr)> {
     let symbol_id = id.symbol_id.get()?;

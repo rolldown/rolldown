@@ -366,60 +366,68 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     if member_expr.object.is_import_meta() {
       let original_expr_span = member_expr.span;
-      match member_expr.property.name.as_str() {
+      let is_node_cjs = matches!(
+        (self.ctx.options.platform, &self.ctx.options.format),
+        (Platform::Node, OutputFormat::Cjs)
+      );
+
+      let property_name = member_expr.property.name.as_str();
+      match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {
-          let new_expr = match (self.ctx.options.platform, &self.ctx.options.format) {
-            (Platform::Node, OutputFormat::Cjs) => {
-              // Replace it with `require('url').pathToFileURL(__filename).href`
+          let new_expr = if is_node_cjs {
+            // Replace it with `require('url').pathToFileURL(__filename).href`
 
-              // require('url')
-              let require_call = self.snippet.builder.alloc_call_expression(
-                SPAN,
-                self.snippet.builder.expression_identifier_reference(SPAN, "require"),
-                oxc::ast::NONE,
-                self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                  self.snippet.builder.alloc_string_literal(SPAN, "url", None),
-                )),
+            // require('url')
+            let require_call = self.snippet.builder.alloc_call_expression(
+              SPAN,
+              self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+              oxc::ast::NONE,
+              self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                self.snippet.builder.alloc_string_literal(SPAN, "url", None),
+              )),
+              false,
+            );
+
+            // require('url').pathToFileURL
+            let require_path_to_file_url = self.snippet.builder.alloc_static_member_expression(
+              SPAN,
+              ast::Expression::CallExpression(require_call),
+              self.snippet.builder.identifier_name(SPAN, "pathToFileURL"),
+              false,
+            );
+
+            // require('url').pathToFileURL(__filename)
+            let require_path_to_file_url_call = self.snippet.builder.alloc_call_expression(
+              SPAN,
+              ast::Expression::StaticMemberExpression(require_path_to_file_url),
+              oxc::ast::NONE,
+              self.snippet.builder.vec1(ast::Argument::Identifier(
+                self.snippet.builder.alloc_identifier_reference(SPAN, "__filename"),
+              )),
+              false,
+            );
+
+            // require('url').pathToFileURL(__filename).href
+            let require_path_to_file_url_href =
+              self.snippet.builder.alloc_static_member_expression(
+                original_expr_span,
+                ast::Expression::CallExpression(require_path_to_file_url_call),
+                self.snippet.builder.identifier_name(SPAN, "href"),
                 false,
               );
-
-              // require('url').pathToFileURL
-              let require_path_to_file_url = self.snippet.builder.alloc_static_member_expression(
-                SPAN,
-                ast::Expression::CallExpression(require_call),
-                self.snippet.builder.identifier_name(SPAN, "pathToFileURL"),
-                false,
-              );
-
-              // require('url').pathToFileURL(__filename)
-              let require_path_to_file_url_call = self.snippet.builder.alloc_call_expression(
-                SPAN,
-                ast::Expression::StaticMemberExpression(require_path_to_file_url),
-                oxc::ast::NONE,
-                self.snippet.builder.vec1(ast::Argument::Identifier(
-                  self.snippet.builder.alloc_identifier_reference(SPAN, "__filename"),
-                )),
-                false,
-              );
-
-              // require('url').pathToFileURL(__filename).href
-              let require_path_to_file_url_href =
-                self.snippet.builder.alloc_static_member_expression(
-                  original_expr_span,
-                  ast::Expression::CallExpression(require_path_to_file_url_call),
-                  self.snippet.builder.identifier_name(SPAN, "href"),
-                  false,
-                );
-              Some(ast::Expression::StaticMemberExpression(require_path_to_file_url_href))
-            }
-            _ => {
-              // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
-              // so users may handle it in their own way.
-              None
-            }
+            Some(ast::Expression::StaticMemberExpression(require_path_to_file_url_href))
+          } else {
+            // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
+            // so users may handle it in their own way.
+            None
           };
           return new_expr;
+        }
+        "dirname" | "filename" => {
+          return is_node_cjs.then_some(ast::Expression::Identifier(
+            self.snippet.builder.alloc_identifier_reference(SPAN, format!("__{property_name}")),
+          ));
         }
         _ => {}
       }

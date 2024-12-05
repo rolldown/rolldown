@@ -1,5 +1,5 @@
 # Reason
-1. should warn when target do not support `imoprt.meta`
+1. don't see necessarity to auto polyfill `import.meta` since we already support `define`
 # Diff
 ## /out/kept.js
 ### esbuild

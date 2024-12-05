@@ -1,5 +1,5 @@
 # Reason
-1. esbuild will auto polyfill `import.meta`
+1. don't support `unsupportedFeature` https://github.com/evanw/esbuild/commit/71a2f8de5ad4e1882f35c449efa25761aa1241b5#diff-e20508c4ae566a2d8a60274ff05e408d81c9758a27d84318feecdfbf9e24af5eR11297-R11308
 # Diff
 ## /out/factory.js
 ### esbuild

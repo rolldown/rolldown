@@ -73,6 +73,6 @@ fn get_path_from_url_posix(url: Url) -> anyhow::Result<String> {
     ));
   }
 
-  let pathname = urlencoding::decode(&pathname)?;
+  let pathname = urlencoding::decode(pathname)?;
   Ok(pathname.into_owned())
 }

@@ -418,6 +418,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               );
             Some(ast::Expression::StaticMemberExpression(require_path_to_file_url_href))
           } else {
+            // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
+            // so users may handle it in their own way.
             None
           };
           return new_expr;

@@ -1,5 +1,5 @@
 # Reason
-1. should mark module as cjs if `this` in none function scope
+1. auto code splitting, only has extra line import `__commonJS` from common chunk
 # Diff
 ## /out/factory.js
 ### esbuild
@@ -8,13 +8,13 @@
 var require_factory = __commonJS({
   "factory.jsx"(exports) {
     console.log([
-      /* @__PURE__ */ exports("x", null),
-      /* @__PURE__ */ exports("x", null)
+      /* @__PURE__ */ exports.factory("x", null),
+      /* @__PURE__ */ exports.factory("x", null)
     ]);
     f = function() {
       console.log([
-        /* @__PURE__ */ this("y", null),
-        /* @__PURE__ */ this("y", null)
+        /* @__PURE__ */ this.factory("y", null),
+        /* @__PURE__ */ this.factory("y", null)
       ]);
     };
   }
@@ -27,9 +27,9 @@ import { __commonJS } from "./chunk.js";
 
 //#region factory.jsx
 var require_factory = __commonJS({ "factory.jsx"(exports) {
-	console.log([exports("x", null), /* @__PURE__ */ exports("x", null)]);
+	console.log([exports.factory("x", null), /* @__PURE__ */ exports.factory("x", null)]);
 	f = function() {
-		console.log([this("y", null), /* @__PURE__ */ this("y", null)]);
+		console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 	};
 } });
 
@@ -46,7 +46,7 @@ export default require_factory();
 +import {__commonJS} from "./chunk.js";
  var require_factory = __commonJS({
      "factory.jsx"(exports) {
-         console.log([exports("x", null), exports("x", null)]);
+         console.log([exports.factory("x", null), exports.factory("x", null)]);
          f = function () {
 
 ```
@@ -57,12 +57,12 @@ export default require_factory();
 var require_fragment = __commonJS({
   "fragment.jsx"(exports) {
     console.log([
-      /* @__PURE__ */ exports(exports, null, "x"),
-      /* @__PURE__ */ exports(exports, null, "x")
+      /* @__PURE__ */ exports.factory(exports.fragment, null, "x"),
+      /* @__PURE__ */ exports.factory(exports.fragment, null, "x")
     ]), f = function() {
       console.log([
-        /* @__PURE__ */ this(this, null, "y"),
-        /* @__PURE__ */ this(this, null, "y")
+        /* @__PURE__ */ this.factory(this.fragment, null, "y"),
+        /* @__PURE__ */ this.factory(this.fragment, null, "y")
       ]);
     };
   }
@@ -75,8 +75,8 @@ import { __commonJS } from "./chunk.js";
 
 //#region fragment.jsx
 var require_fragment = __commonJS({ "fragment.jsx"(exports) {
-	console.log([exports(exports, null, "x"), /* @__PURE__ */ exports(exports, null, "x")]), f = function() {
-		console.log([this(this, null, "y"), /* @__PURE__ */ this(this, null, "y")]);
+	console.log([exports.factory(exports.fragment, null, "x"), /* @__PURE__ */ exports.factory(exports.fragment, null, "x")]), f = function() {
+		console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 	};
 } });
 
@@ -93,7 +93,7 @@ export default require_fragment();
 +import {__commonJS} from "./chunk.js";
  var require_fragment = __commonJS({
      "fragment.jsx"(exports) {
-         (console.log([exports(exports, null, "x"), exports(exports, null, "x")]), f = function () {
-             console.log([this(this, null, "y"), this(this, null, "y")]);
+         (console.log([exports.factory(exports.fragment, null, "x"), exports.factory(exports.fragment, null, "x")]), f = function () {
+             console.log([this.factory(this.fragment, null, "y"), this.factory(this.fragment, null, "y")]);
 
 ```

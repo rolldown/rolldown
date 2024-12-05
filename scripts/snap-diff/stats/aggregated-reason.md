@@ -89,9 +89,6 @@
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
-## `jsx.factory`
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_property
-- crates/rolldown/tests/esbuild/default/jsx_this_property_common_js
 ## different iife impl
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife
 - crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle
@@ -148,8 +145,6 @@
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve
 ## oxc define
 - crates/rolldown/tests/esbuild/default/define_import_meta
-## should warn when target do not support `imoprt.meta`
-- crates/rolldown/tests/esbuild/default/define_import_meta_es5
 ## redundant `__toCommonJS`
 - crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## should not generate duplicate export binding
@@ -176,10 +171,6 @@
 - crates/rolldown/tests/esbuild/default/inject_import_meta
 ## generate wrong syntax when Exported is `StringLiteral`, and rest part of esbuild gen is weird since there is no need to rename
 - crates/rolldown/tests/esbuild/default/inject_no_bundle
-## esbuild will auto polyfill `import.meta`
-- crates/rolldown/tests/esbuild/default/jsx_import_meta_value
-## should mark module as cjs if `this` in none function scope
-- crates/rolldown/tests/esbuild/default/jsx_this_value_common_js
 ## not support preserve `jsx`
 - crates/rolldown/tests/esbuild/default/minified_jsx_preserve_with_object_spread
 ## should read `tsconfig.json`

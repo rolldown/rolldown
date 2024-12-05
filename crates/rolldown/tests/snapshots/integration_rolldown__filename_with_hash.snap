@@ -5025,10 +5025,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-BPZcaBgY.js
 - main-BPZcaBgY.js.map
 
-# tests/rolldown/topics/import_meta_url_polyfill/node_cjs
+# tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 
-- main-!~{000}~.js => main-uZlLhrrK.js
-- main-uZlLhrrK.js.map
+- main-!~{000}~.js => main-BsHwzpVr.js
+- main-BsHwzpVr.js.map
 
 # tests/rolldown/topics/keep_names/declaration
 

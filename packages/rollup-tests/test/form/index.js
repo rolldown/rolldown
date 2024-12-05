@@ -11,7 +11,6 @@ const {
 	compareLogs,
 	normaliseOutput: normalizeOutput,
 	runTestSuiteWithSamples,
-	verifyAstPlugin
 } = require('../utils.js');
 
 // const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
@@ -49,6 +48,7 @@ runTestSuiteWithSamples(
 										warnings.push(log);
 									}
 								},
+								keepNames: directory.includes('assignment-to-exports-class-declaration') ? true : false,
 								strictDeprecations: true,
 								...config.options,
 								plugins: config.options?.plugins
@@ -152,7 +152,7 @@ async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show
 }
 
 function formatter(input) {
-	const { code, declaration, errors } = oxc.transform(
+	const { code, errors } = oxc.transform(
 		'test.js',
 		input,
 		{}

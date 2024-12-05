@@ -419,9 +419,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
-        // only keep names for `var foo = class {}` or `var fn = function (){}`
-        if decl.declarations.len() == 1 {
-          if let Some(decl) = decl.declarations.get_mut(0) {
+        match decl.declarations.as_mut_slice() {
+          [decl] => {
             if let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
               (&decl.id.kind, decl.init.as_mut())
             {
@@ -441,6 +440,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               }
             }
           }
+          _ => {}
         }
       }
       ast::Declaration::FunctionDeclaration(decl) => {

@@ -5036,7 +5036,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/keep_names/expression
 
-- main-!~{000}~.js => main-DzZ-q1p_.js
+- main-!~{000}~.js => main-CJwQpcsI.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

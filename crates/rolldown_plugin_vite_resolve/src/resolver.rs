@@ -162,8 +162,6 @@ fn get_resolve_options(
       vec!["index".to_string()]
     },
     prefer_relative: additional_options.prefer_relative,
-    // TODO(sapphi-red): maybe oxc-resolver can do the rootInRoot optimization
-    // https://github.com/vitejs/vite/blob/a50ff6000bca46a6fe429f2c3a98c486ea5ebc8e/packages/vite/src/node/plugins/resolve.ts#L304
     roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
     ..Default::default()

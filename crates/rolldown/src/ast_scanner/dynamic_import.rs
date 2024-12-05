@@ -162,6 +162,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             set.insert(binding_name.into());
           }
         }
+
+        if let Some(rest) = &obj.rest {
+          match &rest.argument.kind {
+            ast::BindingPatternKind::BindingIdentifier(id) => {
+              let symbol_id = id.symbol_id();
+              self
+                .dynamic_import_usage_info
+                .dynamic_import_binding_to_import_record_id
+                .insert(symbol_id, import_record_id);
+              self
+                .dynamic_import_usage_info
+                .dynamic_import_binding_reference_id
+                .extend(self.scopes.resolved_references[symbol_id].iter());
+            }
+            // If the rest argument is not a BindingIdentifier, this is an unexpected case
+            // because '...' must be followed by an identifier in declaration contexts.
+            _ => unreachable!(),
+          }
+        }
+
         return Some(set);
       }
       ast::BindingPatternKind::ArrayPattern(_) | ast::BindingPatternKind::AssignmentPattern(_) => {

@@ -33,9 +33,9 @@ fn file_url_to_path(url: Url) -> anyhow::Result<String> {
 
 #[cfg(any(windows, target_family = "wasm"))]
 fn get_path_from_url_windows(url: Url) -> anyhow::Result<String> {
+  use crate::utils::is_windows_drive_path;
   use anyhow::anyhow;
   use cow_utils::CowUtils;
-  use crate::utils::is_windows_drive_path;
 
   let pathname = url.path();
   if pathname.contains("%2F") || pathname.contains("%5C") {

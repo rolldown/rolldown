@@ -47,10 +47,10 @@ export default defineTest({
         case path.join(__dirname, 'entry.js'):
           isComposingJs
             ? expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-tnETJw_E.js"`,
+                `"entry-DLGYbrYP.js"`,
               )
             : expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-tnETJw_E.js"`,
+                `"entry-DLGYbrYP.js"`,
               )
           break
 

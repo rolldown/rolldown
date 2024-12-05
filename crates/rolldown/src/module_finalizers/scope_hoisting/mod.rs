@@ -423,14 +423,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return new_expr;
         }
         "dirname" | "filename" => {
-          let new_expr = if is_node_cjs {
-            Some(ast::Expression::Identifier(
-              self.snippet.builder.alloc_identifier_reference(SPAN, format!("__{property_name}")),
-            ))
-          } else {
-            None
-          };
-          return new_expr;
+          return is_node_cjs.then_some(ast::Expression::Identifier(
+            self.snippet.builder.alloc_identifier_reference(SPAN, format!("__{property_name}")),
+          ));
         }
         _ => {}
       }

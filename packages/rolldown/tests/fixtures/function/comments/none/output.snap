@@ -3,7 +3,6 @@
 let x;
 console.log("in a");
 console.log("in b");
-console.log("in c");
 //! Legal comments1
 /*! Legal comments2 */
 foo;

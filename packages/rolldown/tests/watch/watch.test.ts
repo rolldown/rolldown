@@ -210,6 +210,8 @@ test.sequential('PluginContext addWatchFile', async () => {
   })
 
   // edit file
+  // TODO: not sure the update event is not triggered at windows, but add it success
+  console.log('writeFileSync', foo)
   fs.writeFileSync(foo, 'console.log(2)\n')
   await waitUtil(() => {
     expect(changeFn).toBeCalled()

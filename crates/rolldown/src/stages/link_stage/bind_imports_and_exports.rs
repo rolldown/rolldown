@@ -463,14 +463,12 @@ impl BindImportsAndExportsContext<'_> {
 
     // Is this an external file?
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
-    let importee_id = match &self.normal_modules[importee_id] {
-      Module::Normal(importee) => importee.idx,
+    let importee = match &self.normal_modules[importee_id] {
+      Module::Normal(importee) => importee.as_ref(),
       Module::External(external) => return ImportStatus::External(external.namespace_ref),
     };
 
     // Is this a named import of a file without any exports?
-    let importee =
-      &self.normal_modules[importee_id].as_normal().expect("external module is bailout above");
     debug_assert!(
       matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::CommonJs)
         || importee.meta.has_lazy_export()

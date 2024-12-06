@@ -57,6 +57,10 @@ export interface WatchOptions {
 }
 
 export interface ChecksOptions {
+  /**
+   * Wether to emit warnings when detecting circular dependencies.
+   * @default false
+   */
   circularDependency?: boolean
 }
 

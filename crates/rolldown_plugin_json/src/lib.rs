@@ -107,7 +107,7 @@ fn to_esm(data: &Value, named_exports: bool) -> String {
   let mut default_export_rows = vec![];
   let mut named_export_code = String::new();
   for (key, value) in data.as_object().unwrap() {
-    if rolldown_utils::ecma_script::is_validate_assignee_identifier_name(key) {
+    if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
       default_export_rows.push(Cow::Borrowed(key));
       named_export_code += &format!("export const {key} = {value};\n");
     } else {

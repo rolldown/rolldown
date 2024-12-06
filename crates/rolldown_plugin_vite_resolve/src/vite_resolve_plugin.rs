@@ -372,6 +372,7 @@ impl ViteResolvePlugin {
 
   fn watch_change_internal(&self, _path: &str, event: WatcherChangeKind) -> HookNoopReturn {
     // TODO(sapphi-red): we need to avoid using cache for files not watched by vite or rollup
+    // https://github.com/vitejs/vite/issues/17760
     match event {
       WatcherChangeKind::Create | WatcherChangeKind::Delete => {
         self.resolvers.clear_cache();

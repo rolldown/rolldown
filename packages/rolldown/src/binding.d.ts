@@ -554,6 +554,7 @@ export interface BindingViteResolvePluginConfig {
   environmentName: string
   external: true | string[]
   noExternal: true | Array<string | RegExp>
+  dedupe: Array<string>
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   runtime: string

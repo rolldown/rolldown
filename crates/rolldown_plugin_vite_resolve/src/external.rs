@@ -2,6 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use dashmap::DashMap;
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex};
+use rustc_hash::FxHashSet;
 
 use crate::{
   resolver::Resolver,
@@ -67,6 +68,7 @@ enum ResolveOptionsNoExternalInner {
 pub struct ExternalDeciderOptions {
   pub external: ResolveOptionsExternal,
   pub no_external: Arc<ResolveOptionsNoExternal>,
+  pub dedupe: Arc<FxHashSet<String>>,
 }
 
 #[derive(Debug)]
@@ -128,7 +130,7 @@ impl ExternalDecider {
       return false;
     }
 
-    let result = self.resolver.resolve_bare_import(id, importer, false);
+    let result = self.resolver.resolve_bare_import(id, importer, false, &self.options.dedupe);
     if let Ok(result) = result {
       let resolved = match result {
         Some(result) => result,

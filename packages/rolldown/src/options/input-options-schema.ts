@@ -19,6 +19,7 @@ import type {
   ModuleTypes,
   InputOptions,
   WatchOptions,
+  ChecksOptions,
 } from '../options/input-options'
 
 const inputOptionSchema = z
@@ -94,6 +95,13 @@ const watchOptionsSchema = z.strictObject({
   exclude: stringOrRegExpSchema.optional(),
   chokidar: z.any().optional(),
 }) satisfies z.ZodType<WatchOptions>
+
+const checksOptionsSchema = z.strictObject({
+  circularDependency: z
+    .boolean()
+    .describe('Wether to emit warnings when detecting circular dependencies')
+    .optional(),
+}) satisfies z.ZodType<ChecksOptions>
 
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
@@ -172,6 +180,7 @@ export const inputOptionsSchema = z.strictObject({
     .array(z.string())
     .describe('Remove labeled statements with these label names')
     .optional(),
+  checks: checksOptionsSchema.optional(),
 }) satisfies z.ZodType<InputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema

@@ -73,6 +73,7 @@ export function bindingifyInputOptions(
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: inputOptions.dropLabels,
     keepNames: inputOptions.keepNames,
+    checks: inputOptions.checks,
   }
 }
 

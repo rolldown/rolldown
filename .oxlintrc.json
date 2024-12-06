@@ -8,7 +8,7 @@
     ],
     "unicorn/prefer-node-protocol": "error",
     "import/namespace": [
-      "error",
+      "allow",
       {
         "allowComputed": true
       }

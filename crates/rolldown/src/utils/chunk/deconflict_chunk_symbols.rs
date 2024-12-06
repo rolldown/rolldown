@@ -4,7 +4,7 @@ use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, OutputFormat};
 use rolldown_rstr::ToRstr;
-use rolldown_utils::sanitize_identifier::sanitize_identifier;
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
 #[tracing::instrument(level = "trace", skip_all)]
@@ -72,10 +72,10 @@ pub fn deconflict_chunk_symbols(
     .map(|(id, _)| {
       (
         *id,
-        renamer.create_conflictless_name(&format!(
+        renamer.create_conflictless_name(&legitimize_identifier_name(&format!(
           "require_{}",
-          sanitize_identifier((&index_chunk_id_to_name[id]).into())
-        )),
+          index_chunk_id_to_name[id]
+        ))),
       )
     })
     .collect();

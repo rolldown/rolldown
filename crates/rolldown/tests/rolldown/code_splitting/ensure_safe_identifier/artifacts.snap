@@ -24,10 +24,10 @@ Object.defineProperty(exports, '_0shared_file__default', {
 
 ```js
 "use strict";
-const require__0shared_file_ = require('./0shared-file_.js');
+const require_0shared_file_ = require('./0shared-file_.js');
 
 //#region main1.js
-console.log(require__0shared_file_._0shared_file__default);
+console.log(require_0shared_file_._0shared_file__default);
 
 //#endregion
 ```
@@ -35,10 +35,10 @@ console.log(require__0shared_file_._0shared_file__default);
 
 ```js
 "use strict";
-const require__0shared_file_ = require('./0shared-file_.js');
+const require_0shared_file_ = require('./0shared-file_.js');
 
 //#region main2.js
-console.log(require__0shared_file_._0shared_file__default);
+console.log(require_0shared_file_._0shared_file__default);
 
 //#endregion
 ```

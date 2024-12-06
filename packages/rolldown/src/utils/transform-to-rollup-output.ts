@@ -1,4 +1,5 @@
 import type {
+  SourceMap,
   RolldownOutput,
   RolldownOutputAsset,
   RolldownOutputChunk,
@@ -20,6 +21,21 @@ import {
 import { bindingifySourcemap } from '../types/sourcemap'
 import { normalizeErrors } from './error'
 import { transformChunkModules } from './transform-rendered-chunk'
+import { Buffer } from 'node:buffer'
+
+function transformToRollupSourceMap(map: string): SourceMap {
+  const parsed: Omit<SourceMap, 'toString' | 'toUrl'> = JSON.parse(map)
+  const obj: SourceMap = {
+    ...parsed,
+    toString() {
+      return JSON.stringify(obj)
+    },
+    toUrl() {
+      return `data:application/json;charset=utf-8;base64,${Buffer.from(obj.toString(), 'utf-8').toString('base64')}`
+    },
+  }
+  return obj
+}
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -49,7 +65,9 @@ function transformToRollupOutputChunk(
       return bindingChunk.moduleIds
     },
     get map() {
-      return bindingChunk.map ? JSON.parse(bindingChunk.map) : null
+      return bindingChunk.map
+        ? transformToRollupSourceMap(bindingChunk.map)
+        : null
     },
     sourcemapFileName: bindingChunk.sourcemapFileName || null,
     preliminaryFileName: bindingChunk.preliminaryFileName,

@@ -14,7 +14,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        generateBundle: async (options, bundle, isWrite) => {
+        generateBundle: async (_options, bundle, isWrite) => {
           const chunk = bundle['main.js'] as RolldownOutputChunk
           expect(chunk.code.indexOf('console.log') > -1).toBe(true)
           expect(chunk.type).toBe('chunk')
@@ -30,6 +30,8 @@ export default defineTest({
             '//#region main.js\nconsole.log();\n\n//#endregion',
           )
           expect(Object.values(chunk.modules)[0].renderedLength).toBe(46)
+          expect(chunk.map).toBeDefined()
+          expect(chunk.map!.toString()).toContain('"version":')
           // called bundle.generate()
           expect(isWrite).toBe(true)
           // Mutate chunk
@@ -45,13 +47,14 @@ export default defineTest({
       },
       {
         name: 'test-plugin-2',
-        generateBundle: (options, bundle, isWrite) => {
+        generateBundle: (_options, _bundle, _isWrite) => {
           calls.push('test-plugin-2')
         },
       },
     ],
     output: {
       chunkFileNames: '[name].js',
+      sourcemap: true,
     },
   },
   beforeTest: () => {

@@ -61,7 +61,7 @@ export interface InputOptions {
   plugins?: RolldownPluginOption
   external?: ExternalOption
   resolve?: {
-    alias?: Record<string, string>
+    alias?: Record<string, string[] | string>
     aliasFields?: string[][]
     conditionNames?: string[]
     extensionAlias?: Record<string, string[]>

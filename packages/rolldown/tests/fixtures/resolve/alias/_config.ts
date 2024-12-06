@@ -4,7 +4,7 @@ export default defineTest({
   config: {
     resolve: {
       alias: {
-        '@': __dirname,
+        '@': ['./not-exists', __dirname],
       },
     },
   },

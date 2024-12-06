@@ -108,7 +108,7 @@ function bindingifyResolve(
       alias: alias
         ? Object.entries(alias).map(([name, replacement]) => ({
             find: name,
-            replacements: [replacement],
+            replacements: arraify(replacement),
           }))
         : undefined,
       extensionAlias: extensionAlias

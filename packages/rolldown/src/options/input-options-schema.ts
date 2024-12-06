@@ -101,7 +101,7 @@ export const inputOptionsSchema = z.strictObject({
   external: externalSchema.optional(),
   resolve: z
     .strictObject({
-      alias: z.record(z.string()).optional(),
+      alias: z.record(z.array(z.string()).or(z.string())).optional(),
       aliasFields: z.array(z.array(z.string())).optional(),
       conditionNames: zodExt.optionalStringArray(),
       extensionAlias: z.record(z.string(), z.array(z.string())).optional(),

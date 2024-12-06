@@ -8,12 +8,13 @@ use rolldown_common::{AssetIdx, HashCharacters, InstantiationKind, StrOrBytes};
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
+  indexmap::FxIndexSet,
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
   xxhash::{xxhash_base64_url, xxhash_with_base},
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
@@ -38,7 +39,7 @@ pub fn finalize_assets(
     })
     .collect::<FxHashMap<ArcStr, _>>();
 
-  let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
+  let index_direct_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
     .par_iter()
     .map(|asset| match &asset.content {
       StrOrBytes::Str(content) => extract_hash_placeholders(content)
@@ -52,8 +53,10 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let index_asset_all_dependencies: IndexVec<AssetIdx, FxHashSet<AssetIdx>> =
-    collect_transitive_dependencies(&index_asset_dependencies);
+  // Instead of using `index_direct_dependencies`, we are gonna use `index_transitive_dependencies` to calculate the hash.
+  // The reason is that we want to make sure, in `a -> b -> c`, if `c` is changed, not only the direct dependency `b` is changed, but also the indirect dependency `a` is changed.
+  let index_transitive_dependencies: IndexVec<AssetIdx, FxIndexSet<AssetIdx>> =
+    collect_transitive_dependencies(&index_direct_dependencies);
 
   let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
@@ -84,7 +87,7 @@ pub fn finalize_assets(
       // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
       preliminary_assets[asset_idx].preliminary_filename.hash(&mut hasher);
 
-      let dependencies = &index_asset_all_dependencies[asset_idx];
+      let dependencies = &index_transitive_dependencies[asset_idx];
       dependencies.iter().copied().for_each(|dep_id| {
         index_standalone_content_hashes[dep_id].hash(&mut hasher);
       });
@@ -166,12 +169,12 @@ pub fn finalize_assets(
 }
 
 fn collect_transitive_dependencies(
-  dep_map: &IndexVec<AssetIdx, Vec<AssetIdx>>,
-) -> IndexVec<AssetIdx, FxHashSet<AssetIdx>> {
+  index_direct_dependencies: &IndexVec<AssetIdx, Vec<AssetIdx>>,
+) -> IndexVec<AssetIdx, FxIndexSet<AssetIdx>> {
   fn traverse(
     index: AssetIdx,
     dep_map: &IndexVec<AssetIdx, Vec<AssetIdx>>,
-    visited: &mut FxHashSet<AssetIdx>,
+    visited: &mut FxIndexSet<AssetIdx>,
   ) {
     for dep_index in &dep_map[index] {
       if !visited.contains(dep_index) {
@@ -181,12 +184,18 @@ fn collect_transitive_dependencies(
     }
   }
 
-  let mut all_dep_map: IndexVec<AssetIdx, FxHashSet<AssetIdx>> =
-    index_vec![FxHashSet::default(); dep_map.len()];
+  let index_transitive_dependencies: IndexVec<AssetIdx, FxIndexSet<AssetIdx>> =
+    index_direct_dependencies
+      .par_iter()
+      .enumerate()
+      .map(|(idx, _deps)| {
+        let idx = AssetIdx::from(idx);
+        let mut visited_deps = FxIndexSet::default();
+        traverse(idx, index_direct_dependencies, &mut visited_deps);
+        visited_deps
+      })
+      .collect::<Vec<_>>()
+      .into();
 
-  for index in dep_map.indices() {
-    traverse(index, dep_map, &mut all_dep_map[index]);
-  }
-
-  all_dep_map
+  index_transitive_dependencies
 }

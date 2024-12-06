@@ -147,6 +147,7 @@ pub struct BindingViteResolvePluginConfig {
   #[serde(with = "EitherTrueVecStringRegexDeserializeEnabler")]
   #[napi(ts_type = "true | Array<string | RegExp>")]
   pub no_external: napi::Either<BindingTrueValue, Vec<BindingStringOrRegex>>,
+  pub dedupe: Vec<String>,
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
   #[serde(skip_deserializing)]
   #[napi(
@@ -182,6 +183,7 @@ impl TryFrom<BindingViteResolvePluginConfig> for ViteResolveOptions {
       environment_name: value.environment_name,
       external,
       no_external,
+      dedupe: value.dedupe,
       finalize_bare_specifier: value.finalize_bare_specifier.map(
         |finalizer_fn| -> Arc<FinalizeBareSpecifierCallback> {
           Arc::new(move |resolved_id: &str, raw_id: &str, importer: Option<&str>| {

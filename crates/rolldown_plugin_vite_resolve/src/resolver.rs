@@ -7,6 +7,7 @@ use std::{
 
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
+use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -265,6 +266,7 @@ impl Resolver {
   pub fn normalize_oxc_resolver_result(
     &self,
     importer: Option<&str>,
+    dedupe: &FxHashSet<String>,
     result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
   ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
     match result {
@@ -299,7 +301,7 @@ impl Resolver {
         // if so, we can resolve to a special id that errors only when imported.
         if is_bare_import(id) && !is_builtin(id, &self.runtime) && !id.contains('\0') {
           if let Some(pkg_name) = get_npm_package_name(id) {
-            let base_dir = get_base_dir(importer).unwrap_or(&self.root);
+            let base_dir = get_base_dir(id, importer, dedupe).unwrap_or(&self.root);
             if base_dir != self.root {
               if let Some(package_json) =
                 self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
@@ -346,12 +348,12 @@ impl Resolver {
     specifier: &str,
     importer: Option<&str>,
     external: bool,
+    dedupe: &FxHashSet<String>,
   ) -> HookResolveIdReturn {
-    // TODO(sapphi-red): support `dedupe`
-    let base_dir = get_base_dir(importer).unwrap_or(&self.root);
+    let base_dir = get_base_dir(specifier, importer, dedupe).unwrap_or(&self.root);
 
     let oxc_resolved_result = self.resolve_raw(base_dir, specifier);
-    let resolved = self.normalize_oxc_resolver_result(importer, &oxc_resolved_result)?;
+    let resolved = self.normalize_oxc_resolver_result(importer, dedupe, &oxc_resolved_result)?;
     if let Some(mut resolved) = resolved {
       if !external || !can_externalize_file(&resolved.id) {
         return Ok(Some(resolved));
@@ -384,7 +386,15 @@ impl Resolver {
   }
 }
 
-fn get_base_dir(importer: Option<&str>) -> Option<&str> {
+fn get_base_dir<'a>(
+  specifier: &'_ str,
+  importer: Option<&'a str>,
+  dedupe: &FxHashSet<String>,
+) -> Option<&'a str> {
+  if should_dedupe(specifier, dedupe) {
+    return None;
+  }
+
   if let Some(importer) = importer {
     let imp = Path::new(importer);
     if imp.is_absolute()
@@ -397,4 +407,13 @@ fn get_base_dir(importer: Option<&str>) -> Option<&str> {
     }
   }
   None
+}
+
+fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
+  if dedupe.is_empty() {
+    return false;
+  }
+
+  let pkg_id = get_npm_package_name(specifier).unwrap_or(clean_url(specifier));
+  dedupe.contains(pkg_id)
 }

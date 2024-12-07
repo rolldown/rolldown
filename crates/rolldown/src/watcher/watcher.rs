@@ -227,6 +227,7 @@ pub fn wait_for_change(watcher: Arc<Watcher>) {
         Ok(msg) => match msg {
           WatcherChannelMsg::NotifyEvent(event) => match event {
             Ok(event) => {
+              println!("notify event {:?}", event);
               for path in event.paths {
                 let id = path.to_string_lossy();
                 match event.kind {

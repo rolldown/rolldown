@@ -43,6 +43,8 @@ pub async fn load_source(
     }
   }
 
+  println!("load source maybe_source {:?} maybe_module_type {:?}", maybe_source, maybe_module_type);
+
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (source, None) => {
@@ -75,9 +77,14 @@ pub async fn load_source(
           | ModuleType::Empty
           | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str(
-              source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,
-            ),
+            StrOrBytes::Str(source.ok_or(()).or_else(|()| {
+              println!(
+                "read file: {:?} {:?}",
+                &resolved_id.id,
+                fs.read_to_string(resolved_id.id.as_path())?
+              );
+              fs.read_to_string(resolved_id.id.as_path())
+            })?),
             guessed,
           )),
         },

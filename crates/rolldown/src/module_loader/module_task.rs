@@ -97,6 +97,7 @@ impl ModuleTask {
 
   #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> BuildResult<()> {
+    println!("NormalModuleTask {:?}", &self.resolved_id.id);
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
@@ -148,7 +149,7 @@ impl ModuleTask {
     if let Some(asserted) = &self.asserted_module_type {
       module_type = asserted.clone();
     }
-
+    println!("source {:?}", source);
     let mut source = match source {
       StrOrBytes::Str(source) => {
         // Run plugin transform.

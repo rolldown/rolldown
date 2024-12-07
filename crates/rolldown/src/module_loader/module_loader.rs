@@ -142,6 +142,7 @@ impl ModuleLoader {
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
   ) -> ModuleIdx {
+    println!("spawn: {:?}", resolved_id);
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {

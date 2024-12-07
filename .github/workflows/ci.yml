@@ -112,7 +112,7 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target: [ubuntu-latest, macos-latest, windows-latest]
+        target: [windows-latest]
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}

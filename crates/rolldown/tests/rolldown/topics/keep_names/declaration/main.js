@@ -1,6 +1,6 @@
 // MULTIPLE ENTRY MODULES
 import { test as s, a as b, Foo as Bar } from './a.js';
-import assert from 'assert'
+import assert from 'node:assert'
 
 
 s();

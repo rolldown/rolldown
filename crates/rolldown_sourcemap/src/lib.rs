@@ -1,7 +1,7 @@
 // cSpell:disable
-pub use oxc::sourcemap::SourceMapBuilder;
-use oxc::sourcemap::Token;
-pub use oxc::sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
+pub use oxc_sourcemap::SourceMapBuilder;
+use oxc_sourcemap::Token;
+pub use oxc_sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
 pub use source_joiner::SourceJoiner;
 mod lines_count;
 pub use lines_count::lines_count;
@@ -81,9 +81,9 @@ fn test_collapse_sourcemaps() {
     allocator::Allocator,
     codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
     parser::Parser,
-    sourcemap::SourcemapVisualizer,
     span::SourceType,
   };
+  use oxc_sourcemap::SourcemapVisualizer;
 
   let allocator = Allocator::default();
 

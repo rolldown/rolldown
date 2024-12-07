@@ -72,6 +72,11 @@ bitflags! {
     pub struct StmtInfoMeta: u8 {
         const FnDecl = 1;
         const ClassDecl = 1 << 1;
+        // Flag for `var fn = function (){}`
+        const FnExpr = 1 << 2;
+        // Flag for `var foo = class {}`
+        const ClassExpr = 1 << 3;
+        const KeepNamesType = StmtInfoMeta::FnDecl.bits() | StmtInfoMeta::ClassDecl.bits() | StmtInfoMeta::FnExpr.bits() | StmtInfoMeta::ClassExpr.bits();
     }
 }
 

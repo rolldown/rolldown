@@ -211,7 +211,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
                     SPAN,
                     self.snippet.id_ref_expr(&namespace_object_ref, SPAN),
                     self.snippet.builder.expression_string_literal(
-                      SPAN, str.value.as_str()
+                      SPAN, str.value.as_str(), None
                     ),
                     false,
                   ),

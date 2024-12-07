@@ -73,6 +73,7 @@ export function bindingifyInputOptions(
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: inputOptions.dropLabels,
     keepNames: inputOptions.keepNames,
+    checks: inputOptions.checks,
   }
 }
 
@@ -108,7 +109,7 @@ function bindingifyResolve(
       alias: alias
         ? Object.entries(alias).map(([name, replacement]) => ({
             find: name,
-            replacements: [replacement],
+            replacements: arraify(replacement),
           }))
         : undefined,
       extensionAlias: extensionAlias

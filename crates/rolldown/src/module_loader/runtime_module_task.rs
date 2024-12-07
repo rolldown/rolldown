@@ -171,7 +171,7 @@ impl RuntimeModuleTask {
     let mut ast = EcmaCompiler::parse(filename, source, source_type)?;
 
     ast.program.with_mut(|fields| {
-      let mut pre_processor = PreProcessor::new(fields.allocator);
+      let mut pre_processor = PreProcessor::new(fields.allocator, false);
       pre_processor.visit_program(fields.program);
       ast.contains_use_strict = pre_processor.contains_use_strict;
     });

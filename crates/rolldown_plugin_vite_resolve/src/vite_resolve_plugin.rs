@@ -9,6 +9,7 @@ use std::{
 
 use crate::{
   external::{self, ExternalDecider, ExternalDeciderOptions},
+  file_url::file_url_str_to_path,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
     clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
@@ -23,6 +24,7 @@ use rolldown_plugin::{
   typedmap::TypedMapKey, HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn,
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
 };
+use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 const FS_PREFIX: &str = "/@fs/";
@@ -35,6 +37,7 @@ pub struct ViteResolveOptions {
   pub environment_name: String,
   pub external: external::ResolveOptionsExternal,
   pub no_external: external::ResolveOptionsNoExternal,
+  pub dedupe: Vec<String>,
   #[debug(skip)]
   pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
   #[debug(skip)]
@@ -85,6 +88,7 @@ pub struct ViteResolvePlugin {
   resolve_options: ViteResolveResolveOptions,
   external: external::ResolveOptionsExternal,
   no_external: Arc<external::ResolveOptionsNoExternal>,
+  dedupe: Arc<FxHashSet<String>>,
   environment_consumer: String,
   environment_name: String,
   #[debug(skip)]
@@ -117,10 +121,12 @@ impl ViteResolvePlugin {
       options.runtime.clone(),
     );
     let no_external = Arc::new(options.no_external);
+    let dedupe = Arc::new(options.dedupe.into_iter().collect());
 
     Self {
       external: options.external.clone(),
       no_external: Arc::clone(&no_external),
+      dedupe: Arc::clone(&dedupe),
       environment_consumer: options.environment_consumer,
       environment_name: options.environment_name,
       finalize_bare_specifier: options.finalize_bare_specifier,
@@ -130,6 +136,7 @@ impl ViteResolvePlugin {
         ExternalDeciderOptions {
           external: options.external,
           no_external: Arc::clone(&no_external),
+          dedupe,
         },
         options.runtime,
         resolvers.get_for_external(),
@@ -179,11 +186,8 @@ impl ViteResolvePlugin {
 
     // file url as path
     if args.specifier.starts_with("file://") {
-      // TODO(sapphi-red): implement fileURLToPath properly
-      let mut res = args.specifier.replace("file://", "");
-      if res.starts_with('/') && is_windows_drive_path(&res[1..]) {
-        res.remove(0);
-      }
+      let path = file_url_str_to_path(args.specifier)?;
+      let mut res = normalize_path(&path).into_owned();
       if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
         if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
           res = finalized;
@@ -216,7 +220,8 @@ impl ViteResolvePlugin {
       let external = self.resolve_options.is_build
         && self.environment_consumer == "server"
         && self.external_decider.is_external(args.specifier, args.importer);
-      let result = resolver.resolve_bare_import(args.specifier, args.importer, external)?;
+      let result =
+        resolver.resolve_bare_import(args.specifier, args.importer, external, &self.dedupe)?;
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
           if !scan && is_in_node_modules(&result.id) {
@@ -288,6 +293,7 @@ impl ViteResolvePlugin {
       .unwrap_or(&self.resolve_options.root);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
+      &self.dedupe,
       &resolver.resolve_raw(base_dir, args.specifier),
     )?;
     if let Some(mut resolved) = resolved {
@@ -366,6 +372,7 @@ impl ViteResolvePlugin {
 
   fn watch_change_internal(&self, _path: &str, event: WatcherChangeKind) -> HookNoopReturn {
     // TODO(sapphi-red): we need to avoid using cache for files not watched by vite or rollup
+    // https://github.com/vitejs/vite/issues/17760
     match event {
       WatcherChangeKind::Create | WatcherChangeKind::Delete => {
         self.resolvers.clear_cache();

@@ -3,7 +3,10 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{self, Expression, ImportExpression, SimpleAssignmentTarget, VariableDeclarationKind},
+    ast::{
+      self, BindingIdentifier, BindingPatternKind, ClassElement, Expression, ImportExpression,
+      SimpleAssignmentTarget, VariableDeclarationKind,
+    },
     match_member_expression,
     visit::walk_mut,
     VisitMut, NONE,
@@ -415,14 +418,40 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
     match it {
-      ast::Declaration::VariableDeclaration(_) => {}
+      ast::Declaration::VariableDeclaration(decl) => {
+        match decl.declarations.as_mut_slice() {
+          [decl] => {
+            if let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
+              (&decl.id.kind, decl.init.as_mut())
+            {
+              match init {
+                ast::Expression::ClassExpression(class_expression) => {
+                  if let Some(element) = self.keep_name_helper_for_class(Some(
+                    class_expression.id.as_ref().unwrap_or_else(|| id),
+                  )) {
+                    class_expression.body.body.insert(0, element);
+                  }
+                }
+                ast::Expression::FunctionExpression(fn_expression) => {
+                  // The `var fn = function foo() {}` shoulde be generate `__name(fn, 'foo')` to keep the name
+                  self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)));
+                }
+                _ => {}
+              }
+            }
+          }
+          _ => {}
+        }
+      }
       ast::Declaration::FunctionDeclaration(decl) => {
-        self.process_fn_decl(decl);
+        self.process_fn(decl.id.as_ref(), decl.id.as_ref());
       }
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`
         // will remove id in `class.id`
-        self.insert_keep_name_helper_for_class_decl(decl);
+        if let Some(element) = self.keep_name_helper_for_class(decl.id.as_ref()) {
+          decl.body.body.insert(0, element);
+        }
         if let Some(decl) = self.get_transformed_class_decl(decl) {
           *it = decl;
         }
@@ -878,14 +907,16 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     );
   }
 
-  fn process_fn_decl(
+  fn process_fn(
     &mut self,
-    decl: &mut allocator::Box<'ast, ast::Function<'ast>>,
+    symbol_binding_id: Option<&BindingIdentifier<'ast>>,
+    name_binding_id: Option<&BindingIdentifier<'ast>>,
   ) -> Option<()> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (symbol_id, original_name, canonical_name) = self.get_conflicted_info(decl.id.as_ref()?)?;
+    let (_, original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
+    let (symbol_id, _, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
     let new_name = canonical_name.clone();
     let insert_position = self.ctx.cur_stmt_index + 1;
@@ -898,16 +929,15 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     None
   }
 
-  fn insert_keep_name_helper_for_class_decl(
+  fn keep_name_helper_for_class(
     &mut self,
-    decl: &mut allocator::Box<'ast, ast::Class<'ast>>,
-  ) -> Option<()> {
+    id: Option<&BindingIdentifier<'ast>>,
+  ) -> Option<ClassElement<'ast>> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (_, original_name, _) = self.get_conflicted_info(decl.id.as_ref()?)?;
+    let (_, original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
-    decl.body.body.insert(0, self.snippet.static_block_keep_name_helper(&original_name));
-    None
+    Some(self.snippet.static_block_keep_name_helper(&original_name))
   }
 }

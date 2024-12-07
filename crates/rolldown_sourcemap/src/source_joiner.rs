@@ -1,4 +1,4 @@
-use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use oxc_sourcemap::{ConcatSourceMapBuilder, SourceMap};
 
 use crate::source::Source;
 
@@ -77,9 +77,9 @@ fn test_concat_sourcemaps() {
     allocator::Allocator,
     codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
     parser::Parser,
-    sourcemap::SourcemapVisualizer,
     span::SourceType,
   };
+  use oxc_sourcemap::SourcemapVisualizer;
 
   let mut source_joiner = SourceJoiner::default();
   source_joiner.append_source("\nconsole.log()".to_string());

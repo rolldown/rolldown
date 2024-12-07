@@ -4,7 +4,7 @@ use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct SourceMapError {
-  pub error: oxc::sourcemap::Error,
+  pub error: oxc_sourcemap::Error,
 }
 
 impl BuildEvent for SourceMapError {

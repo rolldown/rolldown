@@ -19,6 +19,7 @@ import type {
   ModuleTypes,
   InputOptions,
   WatchOptions,
+  ChecksOptions,
 } from '../options/input-options'
 
 const inputOptionSchema = z
@@ -95,13 +96,20 @@ const watchOptionsSchema = z.strictObject({
   chokidar: z.any().optional(),
 }) satisfies z.ZodType<WatchOptions>
 
+const checksOptionsSchema = z.strictObject({
+  circularDependency: z
+    .boolean()
+    .describe('Wether to emit warnings when detecting circular dependencies')
+    .optional(),
+}) satisfies z.ZodType<ChecksOptions>
+
 export const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
   plugins: zodExt.phantom<RolldownPluginOption>().optional(),
   external: externalSchema.optional(),
   resolve: z
     .strictObject({
-      alias: z.record(z.string()).optional(),
+      alias: z.record(z.array(z.string()).or(z.string())).optional(),
       aliasFields: z.array(z.array(z.string())).optional(),
       conditionNames: zodExt.optionalStringArray(),
       extensionAlias: z.record(z.string(), z.array(z.string())).optional(),
@@ -172,6 +180,7 @@ export const inputOptionsSchema = z.strictObject({
     .array(z.string())
     .describe('Remove labeled statements with these label names')
     .optional(),
+  checks: checksOptionsSchema.optional(),
 }) satisfies z.ZodType<InputOptions>
 
 export const inputCliOptionsSchema = inputOptionsSchema

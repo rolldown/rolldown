@@ -214,6 +214,10 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:replace'|
 'builtin:vite-resolve';
 
+export interface BindingChecksOptions {
+  circularDependency?: boolean
+}
+
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
@@ -329,6 +333,7 @@ export interface BindingInputOptions {
   jsx?: JsxOptions
   watch?: BindingWatchOption
   keepNames?: boolean
+  checks?: BindingChecksOptions
 }
 
 export interface BindingJsonPluginConfig {
@@ -543,6 +548,7 @@ export interface BindingViteResolvePluginConfig {
   environmentName: string
   external: true | string[]
   noExternal: true | Array<string | RegExp>
+  dedupe: Array<string>
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   runtime: string
@@ -570,6 +576,14 @@ export interface BindingWatchOption {
   notify?: BindingNotifyOption
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
+}
+
+export interface CompilerAssumptions {
+  ignoreFunctionLength?: boolean
+  noDocumentAll?: boolean
+  objectRestNoSymbols?: boolean
+  pureGetters?: boolean
+  setPublicClassFields?: boolean
 }
 
 export interface Es2015Options {
@@ -818,6 +832,8 @@ export interface TransformOptions {
    * @see {@link SourceMap}
    */
   sourcemap?: boolean
+  /** Set assumptions in order to produce smaller output. */
+  assumptions?: CompilerAssumptions
   /** Configure how TypeScript is transformed. */
   typescript?: TypeScriptOptions
   /** Configure how TSX and JSX are transformed. */

@@ -1,5 +1,6 @@
 mod callable_plugin;
 mod external;
+mod file_url;
 mod package_json_cache;
 mod resolver;
 mod utils;

@@ -224,7 +224,7 @@ pub fn normalize_binding_options(
           .collect::<Vec<_>>()
       }),
     }),
-    checks: None,
+    checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
     jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,

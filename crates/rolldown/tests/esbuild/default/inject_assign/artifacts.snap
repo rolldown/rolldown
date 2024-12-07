@@ -11,7 +11,7 @@ snapshot_kind: text
 //#region entry.js
 test = true;
 foo.bar = true;
-defined = true;
+some.define = true;
 
 //#endregion
 ```

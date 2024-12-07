@@ -361,7 +361,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.object_property_kind_object_property(
           SPAN,
           PropertyKind::Init,
-          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id)),
+          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id, None)),
           self.builder.expression_function(
             FunctionType::FunctionExpression,
             SPAN,
@@ -427,7 +427,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.object_property_kind_object_property(
           SPAN,
           PropertyKind::Init,
-          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id)),
+          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id, None)),
           self.builder.expression_function(
             FunctionType::FunctionExpression,
             SPAN,
@@ -536,7 +536,7 @@ impl<'ast> AstSnippet<'ast> {
     value: PassedStr,
     span: Span,
   ) -> Box<'ast, ast::StringLiteral<'ast>> {
-    self.builder.alloc_string_literal(span, value)
+    self.builder.alloc_string_literal(span, value, None)
   }
 
   pub fn string_literal_expr(&self, value: PassedStr, span: Span) -> ast::Expression<'ast> {
@@ -550,7 +550,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Statement::ImportDeclaration(self.builder.alloc_import_declaration(
       SPAN,
       Some(specifiers),
-      self.builder.string_literal(SPAN, source),
+      self.builder.string_literal(SPAN, source, None),
       NONE,
       ImportOrExportKind::Value,
     ))
@@ -636,7 +636,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       self.builder.expression_identifier_reference(SPAN, "require"),
       NONE,
-      self.builder.vec1(Argument::from(self.builder.expression_string_literal(SPAN, source))),
+      self.builder.vec1(Argument::from(self.builder.expression_string_literal(SPAN, source, None))),
       false,
     )
   }
@@ -733,7 +733,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       PropertyKind::Init,
       if computed {
-        ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, key))
+        ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, key, None))
       } else {
         self.builder.property_key_identifier_name(SPAN, key)
       },
@@ -853,7 +853,7 @@ impl<'ast> AstSnippet<'ast> {
             if *legal_ident {
               self.builder.module_export_name_identifier_name(SPAN, exported.as_ref())
             } else {
-              self.builder.module_export_name_string_literal(SPAN, exported.as_ref())
+              self.builder.module_export_name_string_literal(SPAN, exported.as_ref(), None)
             },
             ImportOrExportKind::Value,
           ));
@@ -880,7 +880,7 @@ impl<'ast> AstSnippet<'ast> {
         {
           let mut items = self.builder.vec_with_capacity(2);
           items.push(self.builder.expression_identifier_reference(SPAN, new_name).into());
-          items.push(self.builder.expression_string_literal(SPAN, original_name).into());
+          items.push(self.builder.expression_string_literal(SPAN, original_name, None).into());
           items
         },
         false,
@@ -900,7 +900,7 @@ impl<'ast> AstSnippet<'ast> {
           {
             let mut items = self.builder.vec_with_capacity(2);
             items.push(self.builder.expression_this(SPAN).into());
-            items.push(self.builder.expression_string_literal(SPAN, name).into());
+            items.push(self.builder.expression_string_literal(SPAN, name, None).into());
             items
           },
           false,

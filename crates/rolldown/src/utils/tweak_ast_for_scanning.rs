@@ -1,31 +1,70 @@
 use itertools::Itertools;
 use oxc::allocator::Allocator;
-use oxc::ast::ast::{self, BindingPatternKind, Declaration, Statement};
+use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::{VisitMut, NONE};
-use oxc::span::SPAN;
+use oxc::span::{Span, SPAN};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt, TakeIn};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
-pub struct PreProcessor<'a, 'ast> {
-  snippet: AstSnippet<'a>,
+pub struct PreProcessor<'ast> {
+  snippet: AstSnippet<'ast>,
   pub contains_use_strict: bool,
-  none_hosted_stmts: Vec<Statement<'ast>>,
+  /// For top level statements, this is used to store none_hoisted statements.
+  /// For none top level statements, this is used to store split `VarDeclaration`.
+  stmt_temp_storage: Vec<Statement<'ast>>,
   need_push_ast: bool,
+  keep_names: bool,
 }
 
-impl<'a> PreProcessor<'a, '_> {
-  pub fn new(alloc: &'a Allocator) -> Self {
+impl<'ast> PreProcessor<'ast> {
+  pub fn new(alloc: &'ast Allocator, keep_names: bool) -> Self {
     Self {
       snippet: AstSnippet::new(alloc),
       contains_use_strict: false,
-      none_hosted_stmts: vec![],
+      stmt_temp_storage: vec![],
       need_push_ast: false,
+      keep_names,
     }
+  }
+
+  /// split `var a = 1, b = 2;` into `var a = 1; var b = 2;`
+  fn split_var_declaration(
+    &self,
+    var_decl: &mut ast::VariableDeclaration<'ast>,
+    named_decl_span: Option<Span>,
+  ) -> Vec<Statement<'ast>> {
+    var_decl
+      .declarations
+      .take_in(self.snippet.alloc())
+      .into_iter()
+      .enumerate()
+      .map(|(i, declarator)| {
+        let new_decl = self.snippet.builder.alloc_variable_declaration(
+          SPAN,
+          var_decl.kind,
+          self.snippet.builder.vec_from_iter([declarator]),
+          var_decl.declare,
+        );
+        if let Some(named_decl_span) = named_decl_span {
+          Statement::ExportNamedDeclaration(self.snippet.builder.alloc_export_named_declaration(
+            if i == 0 { named_decl_span } else { SPAN },
+            Some(Declaration::VariableDeclaration(new_decl)),
+            self.snippet.builder.vec(),
+            // Since it is `export a = 1, b = 2;`, source should be `None`
+            None,
+            ImportOrExportKind::Value,
+            NONE,
+          ))
+        } else {
+          Statement::VariableDeclaration(new_decl)
+        }
+      })
+      .collect_vec()
   }
 }
 
-impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
+impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     program.directives.retain(|directive| {
       let is_use_strict = directive.is_use_strict();
@@ -38,7 +77,7 @@ impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
     });
     let original_body = program.body.take_in(self.snippet.alloc());
     program.body.reserve_exact(original_body.len());
-    self.none_hosted_stmts = Vec::with_capacity(
+    self.stmt_temp_storage = Vec::with_capacity(
       original_body.iter().filter(|stmt| !stmt.is_module_declaration_with_source()).count(),
     );
 
@@ -49,16 +88,49 @@ impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
         if stmt.is_module_declaration_with_source() {
           program.body.push(stmt);
         } else {
-          self.none_hosted_stmts.push(stmt);
+          self.stmt_temp_storage.push(stmt);
         }
       }
     }
-    program.body.extend(std::mem::take(&mut self.none_hosted_stmts));
+    program.body.extend(std::mem::take(&mut self.stmt_temp_storage));
+  }
+
+  fn visit_statements(&mut self, it: &mut oxc::allocator::Vec<'ast, Statement<'ast>>) {
+    if self.keep_names {
+      let stmts = it.take_in(self.snippet.alloc());
+      for mut stmt in stmts {
+        walk_mut::walk_statement(self, &mut stmt);
+        if self.stmt_temp_storage.is_empty() {
+          it.push(stmt);
+        } else {
+          it.extend(self.stmt_temp_storage.drain(..));
+        }
+      }
+    } else {
+      walk_mut::walk_statements(self, it);
+    }
+  }
+
+  fn visit_declaration(&mut self, it: &mut Declaration<'ast>) {
+    match it {
+      Declaration::VariableDeclaration(decl) => {
+        if decl.declarations.len() > 1 && self.keep_names {
+          self.stmt_temp_storage.extend(self.split_var_declaration(decl, None));
+          self.need_push_ast = false;
+        }
+      }
+      Declaration::FunctionDeclaration(_) | Declaration::ClassDeclaration(_) => {}
+      Declaration::TSTypeAliasDeclaration(_)
+      | Declaration::TSInterfaceDeclaration(_)
+      | Declaration::TSEnumDeclaration(_)
+      | Declaration::TSModuleDeclaration(_)
+      | Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
+    }
+    walk_mut::walk_declaration(self, it);
   }
 
   fn visit_export_named_declaration(&mut self, named_decl: &mut ast::ExportNamedDeclaration<'ast>) {
     walk_mut::walk_export_named_declaration(self, named_decl);
-    let named_decl_export_kind = named_decl.export_kind;
     let named_decl_span = named_decl.span;
 
     let Some(Declaration::VariableDeclaration(ref mut var_decl)) = named_decl.declaration else {
@@ -72,31 +144,8 @@ impl<'ast, 'a: 'ast> VisitMut<'ast> for PreProcessor<'a, 'ast> {
       // [a, b] = arr;`
       .any(|declarator| matches!(declarator.id.kind, BindingPatternKind::BindingIdentifier(_)))
     {
-      let rewritten = var_decl
-        .declarations
-        .take_in(self.snippet.alloc())
-        .into_iter()
-        .enumerate()
-        .map(|(i, declarator)| {
-          let is_first = i == 0;
-          let new_decl = self.snippet.builder.alloc_variable_declaration(
-            SPAN,
-            var_decl.kind,
-            self.snippet.builder.vec_from_iter([declarator]),
-            var_decl.declare,
-          );
-          Statement::ExportNamedDeclaration(self.snippet.builder.alloc_export_named_declaration(
-            if is_first { named_decl_span } else { SPAN },
-            Some(Declaration::VariableDeclaration(new_decl)),
-            self.snippet.builder.vec(),
-            // Since it is `export a = 1, b = 2;`, source should be `None`
-            None,
-            named_decl_export_kind,
-            NONE,
-          ))
-        })
-        .collect_vec();
-      self.none_hosted_stmts.extend(rewritten);
+      let rewritten = self.split_var_declaration(var_decl, Some(named_decl_span));
+      self.stmt_temp_storage.extend(rewritten);
       self.need_push_ast = false;
     }
   }

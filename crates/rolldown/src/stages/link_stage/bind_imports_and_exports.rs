@@ -9,8 +9,9 @@ use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{
-  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
+use rolldown_utils::{
+  index_vec_ext::IndexVecExt,
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
 use rustc_hash::FxHashMap;
@@ -109,7 +110,7 @@ impl LinkStage<'_> {
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
   pub fn bind_imports_and_exports(&mut self) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
-    self.metas.iter_mut_enumerated().par_bridge().for_each(|(module_id, meta)| {
+    self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
       let Module::Normal(module) = &self.module_table.modules[module_id] else {
         return;
       };

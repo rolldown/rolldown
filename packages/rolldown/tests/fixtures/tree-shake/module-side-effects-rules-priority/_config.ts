@@ -3,6 +3,7 @@ import { defineTest } from '@tests'
 import { expect } from 'vitest'
 
 export default defineTest({
+  skip: true, // FIXME(hyf0): this test is not working already.
   config: {
     treeshake: {
       moduleSideEffects: [

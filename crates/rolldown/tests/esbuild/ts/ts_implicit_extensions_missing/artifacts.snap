@@ -1,7 +1,8 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
+# Errors
 
 ## UNRESOLVED_IMPORT
 
@@ -11,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import './cjs.cjs'
    │        ─────┬─────  
-   │             ╰─────── Module not found, treating it as an external dependency
+   │             ╰─────── Module not found.
 ───╯
 
 ```
@@ -23,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import './js.js'
    │        ────┬────  
-   │            ╰────── Module not found, treating it as an external dependency
+   │            ╰────── Module not found.
 ───╯
 
 ```
@@ -35,7 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  4 │ import './jsx.jsx'
    │        ─────┬─────  
-   │             ╰─────── Module not found, treating it as an external dependency
+   │             ╰─────── Module not found.
 ───╯
 
 ```
@@ -47,18 +48,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import './mjs.mjs'
    │        ─────┬─────  
-   │             ╰─────── Module not found, treating it as an external dependency
+   │             ╰─────── Module not found.
 ───╯
-
-```
-# Assets
-
-## entry.js
-
-```js
-import "./mjs.mjs";
-import "./cjs.cjs";
-import "./js.js";
-import "./jsx.jsx";
 
 ```

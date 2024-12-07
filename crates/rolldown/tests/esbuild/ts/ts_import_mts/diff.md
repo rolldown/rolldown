@@ -9,16 +9,14 @@ console.log("works");
 ```
 ### rolldown
 ```js
-import "./imported.mjs";
 
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	entry.js
-@@ -1,1 +1,1 @@
++++ rolldown	
+@@ -1,1 +0,0 @@
 -console.log("works");
-+import "./imported.mjs";
 
 ```

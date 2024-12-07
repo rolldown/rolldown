@@ -1,7 +1,8 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
+# Errors
 
 ## UNRESOLVED_IMPORT
 
@@ -11,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  2 │ import out from '../../../out/in-out-dir.js'
    │                 ──────────────┬─────────────  
-   │                               ╰─────────────── Module not found, treating it as an external dependency
+   │                               ╰─────────────── Module not found.
 ───╯
 
 ```
@@ -23,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  3 │ import sha256 from '../../sha256.min.js'
    │                    ──────────┬──────────  
-   │                              ╰──────────── Module not found, treating it as an external dependency
+   │                              ╰──────────── Module not found.
 ───╯
 
 ```
@@ -35,34 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import foo from './foo.js'
    │                 ─────┬────  
-   │                      ╰────── Module not found, treating it as an external dependency
+   │                      ╰────── Module not found.
 ───╯
 
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve '/api/config?a=1&b=2' in nested/folder/test.js
-   ╭─[nested/folder/test.js:4:20]
-   │
- 4 │ import config from '/api/config?a=1&b=2'
-   │                    ──────────┬──────────  
-   │                              ╰──────────── Module not found, treating it as an external dependency
-───╯
-
-```
-# Assets
-
-## index.js
-
-```js
-import foo from "./foo.js";
-import out from "../../../out/in-out-dir.js";
-import sha256 from "../../sha256.min.js";
-import config from "/api/config?a=1&b=2";
-
-//#region nested/folder/test.js
-console.log(foo, out, sha256, config);
-
-//#endregion
 ```

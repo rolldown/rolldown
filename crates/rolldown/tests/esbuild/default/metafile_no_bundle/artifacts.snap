@@ -7,54 +7,6 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './dynamic' in entry.js
-   ╭─[entry.js:8:9]
-   │
- 8 │     import('./dynamic'),
-   │            ─────┬─────  
-   │                 ╰─────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './file' in entry.css
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './file' in entry.js
-   ╭─[entry.js:2:15]
-   │
- 2 │ import b from './file'
-   │               ────┬───  
-   │                   ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './file2' in entry.css
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './file2' in entry.js
-   ╭─[entry.js:7:10]
-   │
- 7 │     require('./file2'),
-   │             ────┬────  
-   │                 ╰────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg' in entry.css
 
 ```

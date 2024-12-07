@@ -1,7 +1,8 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
+# Errors
 
 ## UNRESOLVED_IMPORT
 
@@ -11,15 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ import './imported.mjs'
    │        ────────┬───────  
-   │                ╰───────── Module not found, treating it as an external dependency
+   │                ╰───────── Module not found.
 ───╯
-
-```
-# Assets
-
-## entry.js
-
-```js
-import "./imported.mjs";
 
 ```

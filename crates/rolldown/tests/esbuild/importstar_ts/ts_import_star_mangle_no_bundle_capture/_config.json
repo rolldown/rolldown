@@ -5,7 +5,8 @@
         "name": "entry",
         "import": "entry.ts"
       }
-    ]
+    ],
+    "external": ["./foo"]
   },
   "expectExecuted": false
 }

@@ -6,7 +6,8 @@
         "import": "entry.js"
       }
     ],
-    "platform": "node"
+    "platform": "node",
+    "external": ["./external"]
   },
   "expectExecuted": false
 }

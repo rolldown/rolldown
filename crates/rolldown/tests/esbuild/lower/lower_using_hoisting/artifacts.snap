@@ -2,44 +2,6 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "./foo" in hoist-import.js
-   ╭─[hoist-import.js:2:8]
-   │
- 2 │ import "./foo"
-   │        ───┬───  
-   │           ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './foo' in hoist-export-from.js
-   ╭─[hoist-export-from.js:2:20]
-   │
- 2 │ export {x, y} from './foo'
-   │                    ───┬───  
-   │                       ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './foo' in hoist-export-star.js
-   ╭─[hoist-export-star.js:2:15]
-   │
- 2 │ export * from './foo'
-   │               ───┬───  
-   │                  ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## hoist-directive.js

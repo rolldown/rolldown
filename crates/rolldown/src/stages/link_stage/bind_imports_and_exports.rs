@@ -399,25 +399,19 @@ impl BindImportsAndExportsContext<'_> {
             }
           }
 
-          exporter.extend(
-            potentially_ambiguous_symbol_refs
-              .iter()
-              .filter_map(|&symbol_ref| {
-                if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
-                  if let Specifier::Literal(name) = &named_import.imported {
-                    let named_export = &owner.named_exports[name];
-                    return Some(AmbiguousExternalNamespaceModule {
-                      source: owner.source.clone(),
-                      filename: owner.stable_id.to_string(),
-                      span_of_identifier: named_export.span,
-                    });
-                  }
-                }
+          exporter.extend(potentially_ambiguous_symbol_refs.iter().filter_map(|&symbol_ref| {
+            let normal_module = self.normal_modules[symbol_ref.owner].as_normal()?;
+            if let Specifier::Literal(name) = &named_import.imported {
+              let named_export = &normal_module.named_exports[name];
+              return Some(AmbiguousExternalNamespaceModule {
+                source: normal_module.source.clone(),
+                filename: normal_module.stable_id.to_string(),
+                span_of_identifier: named_export.span,
+              });
+            }
 
-                None
-              })
-              .collect::<Vec<_>>(),
-          );
+            None
+          }));
 
           self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
             named_import.imported.to_string(),

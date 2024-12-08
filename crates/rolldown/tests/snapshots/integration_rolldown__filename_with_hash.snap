@@ -849,6 +849,10 @@ snapshot_kind: text
 
 - index-!~{000}~.js => index-DOi3PDj0.js
 
+# tests/esbuild/default/external_module_exclusion_relative_path
+
+- index-!~{000}~.js => index-scdbiGyn.js
+
 # tests/esbuild/default/external_module_exclusion_scoped_package
 
 - index-!~{000}~.js => index-Bf26bgEl.js

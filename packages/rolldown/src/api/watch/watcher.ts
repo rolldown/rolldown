@@ -1,18 +1,18 @@
 import { BindingWatcher } from '../../binding'
 import { WatchOptions } from '../../options/watch-options'
-import { createBundler } from '../../utils/create-bundler'
+import { createBundlerOption } from '../../utils/create-bundler-option'
 import { WatcherEmitter } from './watch-emitter'
 
 export class Watcher {
   closed: boolean
   inner: BindingWatcher
   emitter: WatcherEmitter
-  stopWorkers?: () => Promise<void>
+  stopWorkers: ((() => Promise<void>) | undefined)[]
 
   constructor(
     emitter: WatcherEmitter,
     inner: BindingWatcher,
-    stopWorkers?: () => Promise<void>,
+    stopWorkers: ((() => Promise<void>) | undefined)[],
   ) {
     this.closed = false
     this.inner = inner
@@ -28,7 +28,9 @@ export class Watcher {
   async close() {
     if (this.closed) return
     this.closed = true
-    await this.stopWorkers?.()
+    for (const stop of this.stopWorkers) {
+      await stop?.()
+    }
     await this.inner.close()
   }
 
@@ -42,13 +44,19 @@ export class Watcher {
 
 export async function createWatcher(
   emitter: WatcherEmitter,
-  input: WatchOptions,
+  input: WatchOptions | WatchOptions[],
 ) {
-  const { bundler, stopWorkers } = await createBundler(
-    input,
-    input.output || {},
+  const options = Array.isArray(input) ? input : [input]
+  const bundlerOptions = await Promise.all(
+    options.map((option) => createBundlerOption(option, option.output || {})),
   )
-  const bindingWatcher = await bundler.watch()
-  const watcher = new Watcher(emitter, bindingWatcher, stopWorkers)
+  const bindingWatcher = new BindingWatcher(
+    bundlerOptions.map((option) => option.bundlerOption),
+  )
+  const watcher = new Watcher(
+    emitter,
+    bindingWatcher,
+    bundlerOptions.map((option) => option.stopWorkers),
+  )
   watcher.start()
 }

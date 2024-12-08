@@ -6,10 +6,13 @@ import { sleep } from '@tests/utils'
 
 const input = path.join(import.meta.dirname, './main.js')
 const output = path.join(import.meta.dirname, './dist/main.js')
+const outputDir = path.join(import.meta.dirname, './dist/')
+const foo = path.join(import.meta.dirname, './foo.js')
 
 afterEach(async () => {
   // revert change
   fs.writeFileSync(input, 'console.log(1)\n')
+  fs.writeFileSync(foo, 'console.log(1)\n')
   // TODO: find a way to avoid emit the change event at next test
   await sleep(60)
 })
@@ -319,6 +322,57 @@ test.sequential('error handling + plugin error', async () => {
     // The different platform maybe emit multiple events
     expect(errors.length > 0).toBe(true)
     expect(errors[0].includes('plugin error')).toBe(true)
+  })
+
+  await watcher.close()
+})
+
+test.sequential('watch multiply options', async () => {
+  const fooOutputDir = path.join(import.meta.dirname, './foo-dist/')
+  const fooOutput = path.join(import.meta.dirname, './foo-dist/foo.js')
+  const watcher = watch([
+    {
+      input,
+      cwd: import.meta.dirname,
+      output: {
+        dir: outputDir,
+      },
+    },
+    {
+      input: foo,
+      cwd: import.meta.dirname,
+      output: {
+        dir: fooOutputDir,
+      },
+    },
+  ])
+
+  const events: string[] = []
+  watcher.on('event', (event) => {
+    if (event.code === 'BUNDLE_END') {
+      events.push(event.output[0])
+    }
+  })
+
+  await waitBuildFinished(watcher)
+
+  fs.writeFileSync(input, 'console.log(2)')
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+    // Only the input corresponding bundler is rebuild
+    expect(events[0]).toEqual(outputDir)
+  })
+
+  events.length = 0
+  fs.writeFileSync(foo, 'console.log(2)')
+  await waitUtil(() => {
+    expect(fs.readFileSync(fooOutput, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+    // Only the foo corresponding bundler is rebuild
+    expect(events[0]).toEqual(fooOutputDir)
   })
 
   await watcher.close()

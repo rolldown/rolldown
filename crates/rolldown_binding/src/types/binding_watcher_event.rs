@@ -1,69 +1,7 @@
-use std::sync::Arc;
-
-use napi::{tokio, Env};
+use napi::Env;
 use napi_derive::napi;
 
-use crate::utils::handle_result;
-
-use super::{binding_outputs::to_js_diagnostic, js_callback::MaybeAsyncJsCallback};
-use crate::types::js_callback::MaybeAsyncJsCallbackExt;
-
-#[napi]
-pub struct BindingWatcher {
-  inner: Arc<rolldown::Watcher>,
-}
-
-#[napi]
-impl BindingWatcher {
-  pub fn new(inner: Arc<rolldown::Watcher>) -> Self {
-    Self { inner }
-  }
-
-  #[napi]
-  pub async fn close(&self) -> napi::Result<()> {
-    handle_result(self.inner.close().await)
-  }
-
-  #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
-  pub async fn start(
-    &self,
-    listener: MaybeAsyncJsCallback<BindingWatcherEvent, ()>,
-  ) -> napi::Result<()> {
-    let rx = Arc::clone(&self.inner.emitter.rx);
-    let future = async move {
-      let mut run = true;
-      let rx = rx.lock().await;
-      while run {
-        match rx.recv() {
-          Ok(event) => {
-            if let rolldown_common::WatcherEvent::Close = &event {
-              run = false;
-            }
-            if let Err(e) = listener.await_call(BindingWatcherEvent::new(event)).await {
-              eprintln!("watcher listener error: {e:?}");
-            }
-          }
-          Err(e) => {
-            eprintln!("watcher receiver error: {e:?}");
-          }
-        }
-      }
-    };
-    #[cfg(target_family = "wasm")]
-    {
-      let handle = tokio::runtime::Handle::current();
-      // could not block_on/spawn the main thread in WASI
-      std::thread::spawn(move || {
-        handle.spawn(future);
-      });
-    }
-    #[cfg(not(target_family = "wasm"))]
-    tokio::spawn(future);
-
-    self.inner.start().await;
-    Ok(())
-  }
-}
+use super::binding_outputs::to_js_diagnostic;
 
 #[napi]
 pub struct BindingWatcherEvent {

@@ -110,6 +110,12 @@ impl Bundler {
   pub fn get_closed(&self) -> napi::Result<bool> {
     napi::bindgen_prelude::block_on(async { self.get_closed_impl().await })
   }
+
+  #[napi]
+  pub async fn set_rebuild_enabled(&self, enabled: bool) {
+    let mut bundler_core = self.inner.lock().await;
+    bundler_core.set_rebuild_enabled(enabled);
+  }
 }
 
 impl Bundler {

@@ -204,11 +204,7 @@ impl Generator for EcmaGenerator {
     let file_dir = file_path.parent().expect("chunk file name should have a parent");
 
     if let Some(map) = map.as_mut() {
-      let paths =
-        map.get_sources().map(|source| source.as_path().relative(file_dir)).collect::<Vec<_>>();
-      // Here not normalize the windows path, the rollup `sourcemap_path_transform` ctx.options need to original path.
-      let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
-      map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+      normalize_sourcemap_sources(map, file_dir);
     }
 
     Ok(Ok(GenerateOutput {
@@ -228,4 +224,15 @@ impl Generator for EcmaGenerator {
       warnings: std::mem::take(&mut ctx.warnings),
     }))
   }
+}
+
+pub fn normalize_sourcemap_sources(
+  map: &mut rolldown_sourcemap::SourceMap,
+  file_dir: &std::path::Path,
+) {
+  let paths =
+    map.get_sources().map(|source| source.as_path().relative(file_dir)).collect::<Vec<_>>();
+  // Here not normalize the windows path, the rollup `sourcemap_path_transform` ctx.options need to original path.
+  let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
+  map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
 }

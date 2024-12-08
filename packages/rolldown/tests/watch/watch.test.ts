@@ -415,6 +415,7 @@ async function ensureWriteFileSync(filePath: string, content: string) {
   // TODO: not sure the update event is not triggered at windows, but add it success
   // ref https://github.com/rolldown/rolldown/actions/runs/12213020539/job/34072162527?pr=3032 windows node 18/20
   console.log(filePath, content)
+  fs.writeFileSync(filePath, content)
 
   // TODO:
   // The windows maybe cannot emit the change event, write the file twice to ensure the change event emit.

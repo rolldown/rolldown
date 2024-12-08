@@ -70,3 +70,7 @@ fn test_legitimize_identifier_name() {
   assert_eq!(legitimize_identifier_name("react-dom"), "react_dom");
   assert_eq!(legitimize_identifier_name("111a"), "_111a");
 }
+
+pub fn is_relative_specifier(specifier: &str) -> bool {
+  specifier.starts_with("./") || specifier.starts_with("../")
+}

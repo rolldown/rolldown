@@ -849,10 +849,6 @@ snapshot_kind: text
 
 - index-!~{000}~.js => index-DOi3PDj0.js
 
-# tests/esbuild/default/external_module_exclusion_relative_path
-
-- index-!~{000}~.js => index-scdbiGyn.js
-
 # tests/esbuild/default/external_module_exclusion_scoped_package
 
 - index-!~{000}~.js => index-Bf26bgEl.js
@@ -864,10 +860,6 @@ snapshot_kind: text
 # tests/esbuild/default/external_wildcard_does_not_match_entry_point
 
 - entry-!~{000}~.js => entry-BD1soJCO.js
-
-# tests/esbuild/default/external_with_wildcard
-
-- entry-!~{000}~.js => entry-CIoKzsVQ.js
 
 # tests/esbuild/default/false_require
 
@@ -3534,14 +3526,6 @@ snapshot_kind: text
 
 - a-!~{000}~.js => a-CEKlWI5j.js
 
-# tests/esbuild/ts/ts_implicit_extensions
-
-- entry-!~{000}~.js => entry-Begpf-2k.js
-
-# tests/esbuild/ts/ts_implicit_extensions_missing
-
-- entry-!~{000}~.js => entry-B36I9fxo.js
-
 # tests/esbuild/ts/ts_import_cts
 
 - entry-!~{000}~.js => entry--x_UhMj-.js
@@ -3575,17 +3559,9 @@ snapshot_kind: text
 - entry-!~{000}~.js => entry-Cl_h88w9.js
 - entry.css
 
-# tests/esbuild/ts/ts_import_missing_file
-
-- entry-!~{000}~.js => entry-BbVp7Q_1.js
-
 # tests/esbuild/ts/ts_import_missing_unused_es6
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
-
-# tests/esbuild/ts/ts_import_mts
-
-- entry-!~{000}~.js => entry-BfnBwdzA.js
 
 # tests/esbuild/ts/ts_import_type_only_file
 

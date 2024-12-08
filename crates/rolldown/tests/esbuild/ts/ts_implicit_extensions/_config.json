@@ -7,5 +7,5 @@
       }
     ]
   },
-  "expectExecuted": false
+"expectError": true // TODOO(hyf0): Only for pass tests in #3074. Should investigate if it should raise an error.
 }

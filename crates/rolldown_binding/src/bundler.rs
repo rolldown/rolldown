@@ -7,7 +7,6 @@ use crate::{
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::{
     binding_log::BindingLog, binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
-    watcher::BindingWatcher,
   },
   utils::{
     handle_result, normalize_binding_options::normalize_binding_options,
@@ -18,6 +17,13 @@ use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
+
+#[napi(object, object_to_js = false)]
+pub struct BindingBundlerOptions {
+  pub input_options: BindingInputOptions,
+  pub output_options: BindingOutputOptions,
+  pub parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
+}
 
 #[napi]
 pub struct Bundler {
@@ -31,13 +37,11 @@ pub struct Bundler {
 impl Bundler {
   #[napi(constructor)]
   #[cfg_attr(target_family = "wasm", allow(unused))]
-  pub fn new(
-    env: Env,
-    mut input_options: BindingInputOptions,
-    output_options: BindingOutputOptions,
-    parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
-  ) -> napi::Result<Self> {
+  pub fn new(env: Env, option: BindingBundlerOptions) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
+
+    let BindingBundlerOptions { mut input_options, output_options, parallel_plugins_registry } =
+      option;
 
     let log_level = input_options.log_level;
     let on_log = input_options.on_log.take();
@@ -96,13 +100,6 @@ impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> napi::Result<()> {
     self.close_impl().await
-  }
-
-  // The watch is sync, but the api is async to ensure tokio runtime is available
-  #[napi]
-  #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn watch(&self) -> napi::Result<BindingWatcher> {
-    self.watch_impl()
   }
 
   #[napi(getter)]
@@ -167,10 +164,8 @@ impl Bundler {
     Ok(())
   }
 
-  #[allow(clippy::significant_drop_tightening)]
-  pub fn watch_impl(&self) -> napi::Result<BindingWatcher> {
-    let watcher = handle_result(NativeBundler::watch(Arc::clone(&self.inner)))?;
-    Ok(BindingWatcher::new(watcher))
+  pub fn into_inner(self) -> Arc<Mutex<NativeBundler>> {
+    self.inner
   }
 
   #[allow(clippy::significant_drop_tightening)]

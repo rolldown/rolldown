@@ -30,7 +30,7 @@ enum WatcherChannelMsg {
   Close,
 }
 
-pub struct Watcher {
+pub struct WatcherImpl {
   pub emitter: SharedWatcherEmitter,
   tasks: Vec<WatcherTask>,
   inner: Arc<Mutex<RecommendedWatcher>>,
@@ -41,22 +41,23 @@ pub struct Watcher {
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }
 
-impl Watcher {
+impl WatcherImpl {
   #[allow(clippy::needless_pass_by_value)]
-  pub fn new(bundler: Arc<Mutex<Bundler>>) -> Result<Self> {
+  pub fn new(bundlers: Vec<Arc<Mutex<Bundler>>>) -> Result<Self> {
     let (tx, rx) = channel();
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
-      let config = Config::default();
-      let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
-      if let Some(notify) = &bundler_guard.options.watch.notify {
-        if let Some(poll_interval) = notify.poll_interval {
-          config.with_poll_interval(poll_interval);
-        }
-        config.with_compare_contents(notify.compare_contents);
-      }
-      config
+      // TODO using one notify configure for all bundlers
+      // let config = Config::default();
+      // let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
+      // if let Some(notify) = &bundler_guard.options.watch.notify {
+      //   if let Some(poll_interval) = notify.poll_interval {
+      //     config.with_poll_interval(poll_interval);
+      //   }
+      //   config.with_compare_contents(notify.compare_contents);
+      // }
+      Config::default()
     };
     let inner = RecommendedWatcher::new(
       move |res| {
@@ -69,8 +70,11 @@ impl Watcher {
 
     let emitter = Arc::new(WatcherEmitter::new());
 
+    let tasks =
+      bundlers.into_iter().map(|bundler| WatcherTask::new(bundler, Arc::clone(&emitter))).collect();
+
     Ok(Self {
-      tasks: vec![WatcherTask::new(Arc::clone(&bundler), Arc::clone(&emitter))],
+      tasks,
       emitter,
       inner: Arc::new(Mutex::new(inner)),
       running: AtomicBool::default(),
@@ -169,7 +173,7 @@ impl Watcher {
   }
 }
 
-pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {
+pub async fn on_change(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
     .emit(WatcherEvent::Change(WatcherChangeData { path: path.into(), kind }))
@@ -179,7 +183,7 @@ pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKi
   }
 }
 
-pub fn wait_for_change(watcher: Arc<Watcher>) {
+pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
   let future = async move {
     let mut run = true;
     while run {

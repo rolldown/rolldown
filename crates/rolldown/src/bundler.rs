@@ -6,7 +6,6 @@ use crate::{
   bundler_builder::BundlerBuilder,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
-  watcher::watcher::{wait_for_change, Watcher},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
@@ -19,7 +18,6 @@ use rolldown_plugin::{
 };
 use rolldown_std_utils::OptionExt;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -176,14 +174,6 @@ impl Bundler {
 
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
-  }
-
-  pub fn watch(bundler: Arc<Mutex<Bundler>>) -> Result<Arc<Watcher>> {
-    let watcher = Arc::new(Watcher::new(bundler)?);
-
-    wait_for_change(Arc::clone(&watcher));
-
-    Ok(watcher)
   }
 }
 

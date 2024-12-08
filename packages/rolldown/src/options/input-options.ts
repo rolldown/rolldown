@@ -72,6 +72,12 @@ export interface InputOptions {
     alias?: Record<string, string[] | string>
     aliasFields?: string[][]
     conditionNames?: string[]
+    /**
+     * Map of extensions to alternative extensions.
+     *
+     * With writing `import './foo.js'` in a file, you want to resolve it to `foo.ts` instead of `foo.js`.
+     * You can achieve this by setting: `extensionAlias: { '.js': ['.ts', '.js'] }`.
+     */
     extensionAlias?: Record<string, string[]>
     exportsFields?: string[][]
     extensions?: string[]

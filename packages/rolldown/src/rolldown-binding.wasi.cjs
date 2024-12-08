@@ -95,7 +95,7 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__ArrowFunctionsOptions_struct_9']?.()
   __napiInstance.exports['__napi_register__Es2015Options_struct_10']?.()
   __napiInstance.exports['__napi_register__transform_11']?.()
-  __napiInstance.exports['__napi_register__BindingBundlerOption_struct_0']?.()
+  __napiInstance.exports['__napi_register__BindingBundlerOptions_struct_0']?.()
   __napiInstance.exports['__napi_register__Bundler_struct_1']?.()
   __napiInstance.exports['__napi_register__Bundler_impl_8']?.()
   __napiInstance.exports['__napi_register__BindingChecksOptions_struct_9']?.()

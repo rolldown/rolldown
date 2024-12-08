@@ -117,7 +117,7 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: Array<BindingBundlerOption>)
+  constructor(options: Array<BindingBundlerOptions>)
   close(): Promise<void>
   start(listener: (data: BindingWatcherEvent) => void): Promise<void>
 }
@@ -136,7 +136,7 @@ export declare class BindingWatcherEvent {
 }
 
 export declare class Bundler {
-  constructor(option: BindingBundlerOption)
+  constructor(option: BindingBundlerOptions)
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<BindingOutputs>
@@ -213,7 +213,7 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:replace'|
 'builtin:vite-resolve';
 
-export interface BindingBundlerOption {
+export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
   parallelPluginsRegistry?: ParallelJsPluginRegistry

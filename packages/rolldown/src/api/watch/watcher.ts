@@ -1,6 +1,6 @@
 import { BindingWatcher } from '../../binding'
 import { WatchOptions } from '../../options/watch-options'
-import { createBundlerOption } from '../../utils/create-bundler-option'
+import { createBundlerOptions } from '../../utils/create-bundler-option'
 import { WatcherEmitter } from './watch-emitter'
 
 export class Watcher {
@@ -48,10 +48,10 @@ export async function createWatcher(
 ) {
   const options = Array.isArray(input) ? input : [input]
   const bundlerOptions = await Promise.all(
-    options.map((option) => createBundlerOption(option, option.output || {})),
+    options.map((option) => createBundlerOptions(option, option.output || {})),
   )
   const bindingWatcher = new BindingWatcher(
-    bundlerOptions.map((option) => option.bundlerOption),
+    bundlerOptions.map((option) => option.bundlerOptions),
   )
   const watcher = new Watcher(
     emitter,

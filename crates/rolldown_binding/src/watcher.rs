@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use napi_derive::napi;
 
-use crate::bundler::{BindingBundlerOption, Bundler};
+use crate::bundler::{BindingBundlerOptions, Bundler};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
 use napi::{tokio, Env};
@@ -19,7 +19,7 @@ pub struct BindingWatcher {
 #[napi]
 impl BindingWatcher {
   #[napi(constructor)]
-  pub fn new(env: Env, options: Vec<BindingBundlerOption>) -> napi::Result<Self> {
+  pub fn new(env: Env, options: Vec<BindingBundlerOptions>) -> napi::Result<Self> {
     let bundlers = options
       .into_iter()
       .map(|option| Bundler::new(env, option).map(Bundler::into_inner))

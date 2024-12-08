@@ -1,4 +1,4 @@
-import { BindingBundlerOption } from '../binding'
+import { BindingBundlerOptions } from '../binding'
 import { PluginDriver } from '../plugin/plugin-driver'
 import { TreeshakingOptionsSchema } from '../treeshake'
 import { bindingifyInputOptions } from './bindingify-input-options'
@@ -18,7 +18,7 @@ import { LOG_LEVEL_INFO } from '../log/logging'
 import { getLogger, getOnLog } from '../log/logger'
 import { getObjectPlugins } from '../plugin/plugin-driver'
 
-export async function createBundlerOption(
+export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
 ): Promise<BundlerOptionWithStopWorker> {
@@ -76,7 +76,7 @@ export async function createBundlerOption(
     const bindingOutputOptions = bindingifyOutputOptions(outputOptions)
 
     return {
-      bundlerOption: {
+      bundlerOptions: {
         inputOptions: bindingInputOptions,
         outputOptions: bindingOutputOptions,
         parallelPluginsRegistry: parallelPluginInitResult?.registry,
@@ -90,6 +90,6 @@ export async function createBundlerOption(
 }
 
 export interface BundlerOptionWithStopWorker {
-  bundlerOption: BindingBundlerOption
+  bundlerOptions: BindingBundlerOptions
   stopWorkers?: () => Promise<void>
 }

@@ -19,7 +19,7 @@ use rolldown::Bundler as NativeBundler;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 
 #[napi(object, object_to_js = false)]
-pub struct BindingBundlerOption {
+pub struct BindingBundlerOptions {
   pub input_options: BindingInputOptions,
   pub output_options: BindingOutputOptions,
   pub parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
@@ -37,10 +37,10 @@ pub struct Bundler {
 impl Bundler {
   #[napi(constructor)]
   #[cfg_attr(target_family = "wasm", allow(unused))]
-  pub fn new(env: Env, option: BindingBundlerOption) -> napi::Result<Self> {
+  pub fn new(env: Env, option: BindingBundlerOptions) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
-    let BindingBundlerOption { mut input_options, output_options, parallel_plugins_registry } =
+    let BindingBundlerOptions { mut input_options, output_options, parallel_plugins_registry } =
       option;
 
     let log_level = input_options.log_level;

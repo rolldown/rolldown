@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRefDb};
 use rolldown_rstr::ToRstr;
 use rustc_hash::FxHashMap;
 
@@ -83,22 +83,34 @@ pub fn deconflict_chunk_symbols(
     ChunkKind::Common => {}
   }
 
+  chunk.imports_from_external_modules.iter().for_each(|(module, import_record)| {
+    let db = link_output.symbol_db.local_db(*module);
+    db.classic_data.iter_enumerated().skip(1).for_each(|(symbol, _)| {
+      renamer.add_symbol_in_root_scope((*module, symbol).into());
+    });
+    dbg!(&db);
+  });
+
   chunk
     .modules
     .iter()
     .copied()
     // Starts with entry module
     .rev()
-    .filter_map(|id| link_output.module_table.modules[id].as_normal())
+    // .filter_map(|id| link_output.module_table.modules[id].as_normal())
     .for_each(|module| {
-      module
-        .stmt_infos
-        .iter()
-        .filter(|stmt_info| stmt_info.is_included)
-        .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
-        .for_each(|symbol_ref| {
-          renamer.add_symbol_in_root_scope(symbol_ref);
-        });
+      dbg!(&module);
+      if let Some(module) = link_output.module_table.modules[module].as_normal() {
+        module
+          .stmt_infos
+          .iter()
+          .filter(|stmt_info| stmt_info.is_included)
+          .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
+          .for_each(|symbol_ref| {
+            renamer.add_symbol_in_root_scope(symbol_ref);
+          });
+      } else {
+      }
     });
 
   // rename non-top-level names

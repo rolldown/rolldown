@@ -30,6 +30,10 @@ impl Rstr {
     Self(OxcStr::new(s))
   }
 
+  pub fn inner(&self) -> &OxcStr {
+    &self.0
+  }
+
   pub fn as_str(&self) -> &str {
     self.0.as_str()
   }

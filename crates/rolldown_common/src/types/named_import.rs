@@ -36,6 +36,11 @@ impl Specifier {
     matches!(self, Self::Star)
   }
 
+  #[inline]
+  pub fn is_literal(&self) -> bool {
+    matches!(self, Self::Literal(_))
+  }
+
   pub fn is_default(&self) -> bool {
     matches!(self, Self::Literal(atom) if atom.as_str() == "default")
   }

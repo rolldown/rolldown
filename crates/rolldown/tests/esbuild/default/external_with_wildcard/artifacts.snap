@@ -16,15 +16,3 @@ snapshot_kind: text
 ────╯
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "./file.png" in entry.js
-   ╭─[entry.js:5:8]
-   │
- 5 │ import "./file.png";
-   │        ──────┬─────  
-   │              ╰─────── Module not found.
-───╯
-
-```

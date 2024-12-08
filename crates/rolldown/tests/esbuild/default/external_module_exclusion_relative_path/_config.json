@@ -5,7 +5,13 @@
         "name": "index",
         "import": "index.js"
       }
+    ],
+    "external": [
+        "./foo.js",
+        "../../../out/in-out-dir.js",
+        "../../sha256.min.js",
+        "/api/config?a=1&b=2"
     ]
   },
-  "expectError": true // TODOO(hyf0): Only for pass tests in #3074. Should investigate if it should raise an error.
+  "expectExecuted": false
 }

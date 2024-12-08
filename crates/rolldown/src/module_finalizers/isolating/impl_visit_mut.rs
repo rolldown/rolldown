@@ -87,7 +87,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
           rolldown_common::Specifier::Star => {
             ident.name = self.snippet.atom(namespace_object_ref.as_str());
           }
-          rolldown_common::Specifier::Literal(imported) => {
+          rolldown_common::Specifier::Literal(imported, _) => {
             *expr = Expression::StaticMemberExpression(
               self.snippet.builder.alloc_static_member_expression(
                 ident.span,

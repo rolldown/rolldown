@@ -1,0 +1,7 @@
+{
+  "visualizeSourcemap": false,
+  "expectExecuted": false,
+  "config": {
+    "external": ["ext"]
+  }
+}

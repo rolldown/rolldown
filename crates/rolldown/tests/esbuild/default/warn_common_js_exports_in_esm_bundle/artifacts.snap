@@ -54,11 +54,11 @@ exports.foo = foo
 
 ```js
 
-const bar = __toESM(require("bar"));
+require("bar");
 
 //#region import-in-cjs.js
-exports.foo = bar.foo;
-module.exports = bar.foo;
+exports.foo = foo;
+module.exports = foo;
 
 //#endregion
 ```

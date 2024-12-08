@@ -9,15 +9,35 @@ snapshot_kind: text
 ```js
 "use strict";
 
-const node_fs = __toESM(require("node:fs"));
+require("node:fs");
 
 //#region main.js
 const nonExternal = "nonExternal";
 
 //#endregion
 exports.nonExternal = nonExternal
-exports.read = node_fs.read
-exports.readFile = node_fs.readFile
-exports.readFileSync = node_fs.readFileSync
-exports.readSync = node_fs.readSync
+Object.defineProperty(exports, 'read', {
+  enumerable: true,
+  get: function () {
+    return read;
+  }
+});
+Object.defineProperty(exports, 'readFile', {
+  enumerable: true,
+  get: function () {
+    return readFile;
+  }
+});
+Object.defineProperty(exports, 'readFileSync', {
+  enumerable: true,
+  get: function () {
+    return readFileSync;
+  }
+});
+Object.defineProperty(exports, 'readSync', {
+  enumerable: true,
+  get: function () {
+    return readSync;
+  }
+});
 ```

@@ -7,16 +7,14 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import * as ext$1 from "external";
-import * as ext from "external";
-import { a, b } from "external";
+import { parse } from "ext";
 
 //#region foo.js
-console.log(ext$1, a, b);
+console.log(parse);
 
 //#endregion
 //#region main.js
-console.log(ext, a, b);
+console.log(parse);
 
 //#endregion
 ```

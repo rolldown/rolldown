@@ -389,14 +389,16 @@ impl BindImportsAndExportsContext<'_> {
       let rec = &module.import_records[named_import.record_id];
       let is_external = matches!(self.normal_modules[rec.resolved_module], Module::External(_));
       if is_external {
-        if let Specifier::Literal(ref name) = named_import.imported {
-          self
-            .external_import_binding_merger
-            .entry(rec.resolved_module)
-            .or_insert_with(FxHashMap::default)
-            .entry(name.inner().clone())
-            .or_insert_with(IndexSet::default)
-            .insert(*imported_as_ref);
+        if let Specifier::Literal(ref name, is_alias) = named_import.imported {
+          if !is_alias {
+            self
+              .external_import_binding_merger
+              .entry(rec.resolved_module)
+              .or_insert_with(FxHashMap::default)
+              .entry(name.inner().clone())
+              .or_insert_with(IndexSet::default)
+              .insert(*imported_as_ref);
+          }
         }
       }
       let ret = self.match_import_with_export(
@@ -417,7 +419,7 @@ impl BindImportsAndExportsContext<'_> {
 
           let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
           if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
-            if let Specifier::Literal(name) = &named_import.imported {
+            if let Specifier::Literal(name, _) = &named_import.imported {
               let named_export = &owner.named_exports[name];
               exporter.push(AmbiguousExternalNamespaceModule {
                 source: owner.source.clone(),
@@ -432,7 +434,7 @@ impl BindImportsAndExportsContext<'_> {
               .iter()
               .filter_map(|&symbol_ref| {
                 if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
-                  if let Specifier::Literal(name) = &named_import.imported {
+                  if let Specifier::Literal(name, _) = &named_import.imported {
                     let named_export = &owner.named_exports[name];
                     return Some(AmbiguousExternalNamespaceModule {
                       source: owner.source.clone(),
@@ -516,7 +518,7 @@ impl BindImportsAndExportsContext<'_> {
         // owner: importee_id,
         potentially_ambiguous_export_star_refs: vec![],
       },
-      Specifier::Literal(literal_imported) => {
+      Specifier::Literal(literal_imported, _) => {
         if let Some(export) = self.metas[importee_id].resolved_exports.get(literal_imported) {
           ImportStatus::Found {
             // owner: importee_id,
@@ -572,14 +574,14 @@ impl BindImportsAndExportsContext<'_> {
           Specifier::Star => {
             MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
           }
-          Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
+          Specifier::Literal(alias, _) => MatchImportKind::NormalAndNamespace {
             namespace_ref: importer_record.namespace_ref,
             alias: alias.clone(),
           },
         },
         ImportStatus::DynamicFallback { namespace_ref } => match &tracker.imported {
           Specifier::Star => MatchImportKind::Namespace { namespace_ref },
-          Specifier::Literal(alias) => {
+          Specifier::Literal(alias, _) => {
             MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
           }
         },
@@ -643,7 +645,7 @@ impl BindImportsAndExportsContext<'_> {
 
           match &tracker.imported {
             Specifier::Star => MatchImportKind::Namespace { namespace_ref: symbol_ref },
-            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
+            Specifier::Literal(alias, _) => MatchImportKind::NormalAndNamespace {
               namespace_ref: symbol_ref,
               alias: alias.clone(),
             },
@@ -683,7 +685,7 @@ impl BindImportsAndExportsContext<'_> {
       {
         match &tracker.imported {
           Specifier::Star => unreachable!("star should always exist, no need to shim"),
-          Specifier::Literal(imported) => {
+          Specifier::Literal(imported, _) => {
             let shimmed_symbol_ref = self.metas[tracker.importee]
               .shimmed_missing_exports
               .entry(imported.clone())

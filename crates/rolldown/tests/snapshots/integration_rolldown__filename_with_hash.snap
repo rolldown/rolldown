@@ -931,7 +931,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry-!~{000}~.js => entry-CqpH3eko.js
+- entry-!~{000}~.js => entry-DlE9b11H.js
 
 # tests/esbuild/default/import_fs_node_es6
 
@@ -972,7 +972,7 @@ snapshot_kind: text
 
 - a-!~{000}~.js => a-Ccm5skrR.js
 - b-!~{001}~.js => b-DG7YT0yE.js
-- c-!~{002}~.js => c-DtjU8lpe.js
+- c-!~{002}~.js => c-1T-OvoZs.js
 - chunk-!~{003}~.js => chunk-D74pQ9g-.js
 
 # tests/esbuild/default/import_re_export_es6_issue149
@@ -1001,7 +1001,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject
 
-- entry-!~{000}~.js => entry-DMWP-_s9.js
+- entry-!~{000}~.js => entry-DlsH42c2.js
 
 # tests/esbuild/default/inject_assign
 
@@ -1680,7 +1680,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
-- entry-!~{000}~.js => entry-y0Br_NmR.js
+- entry-!~{000}~.js => entry-BNsemQv3.js
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
@@ -1802,14 +1802,14 @@ snapshot_kind: text
 # tests/esbuild/default/warn_common_js_exports_in_esm_bundle
 
 - cjs-in-esm-!~{000}~.js => cjs-in-esm-hf-W4_X-.js
-- import-in-cjs-!~{001}~.js => import-in-cjs-BSJuYoUc.js
+- import-in-cjs-!~{001}~.js => import-in-cjs-DnAdwDqA.js
 - no-warnings-here-!~{002}~.js => no-warnings-here-BnKOXmVw.js
 
 # tests/esbuild/default/warn_common_js_exports_in_esm_convert
 
 - cjs-in-esm-!~{000}~.js => cjs-in-esm-hf-W4_X-.js
 - cjs-in-esm2-!~{001}~.js => cjs-in-esm2-CSc2NrEd.js
-- import-in-cjs-!~{002}~.js => import-in-cjs-DGQPE4IN.js
+- import-in-cjs-!~{002}~.js => import-in-cjs-B0_otefv.js
 - no-warnings-here-!~{003}~.js => no-warnings-here-83rFFOtF.js
 
 # tests/esbuild/default/with_statement_tainting_no_bundle
@@ -2283,7 +2283,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/jsx_automatic_no_name_collision
 
-- entry-!~{000}~.js => entry-CoEzFoT6.js
+- entry-!~{000}~.js => entry-DK7BPvtc.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter
 
@@ -4081,7 +4081,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.js => main-bboG_iKl.js
+- main-!~{000}~.js => main-BNWWVkj7.js
 
 # tests/rolldown/function/external/implicit_import_external
 
@@ -4089,7 +4089,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/import_external
 
-- main-!~{000}~.js => main-IbSBXBfS.js
+- main-!~{000}~.js => main-B3SOe15B.js
 
 # tests/rolldown/function/external/keep_import_external_order
 
@@ -4103,7 +4103,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/external_live_bindings
 
-- main-!~{000}~.js => main-Dvh-f5Tk.js
+- main-!~{000}~.js => main-B-OXRDnf.js
 
 # tests/rolldown/function/file/css
 
@@ -5128,7 +5128,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 
-- main-!~{000}~.js => main-CGUvyXC5.js
+- main-!~{000}~.js => main-B5BWqX87.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 
@@ -5283,7 +5283,7 @@ snapshot_kind: text
 
 # tests/rolldown/warnings/missing_global_name
 
-- main-!~{000}~.js => main-DpALC9fS.js
+- main-!~{000}~.js => main-CDm-J9L8.js
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 

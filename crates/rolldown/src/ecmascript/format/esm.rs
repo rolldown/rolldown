@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use indexmap::IndexSet;
 use itertools::Itertools;
 use rolldown_common::{ExportsKind, Specifier, WrapKind};
 use rolldown_sourcemap::SourceJoiner;
@@ -117,7 +118,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       .filter_map(|item| {
         let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
         let imported = &ctx.chunk.canonical_names[&canonical_ref];
-        let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
+        let Specifier::Literal(alias, _) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
         };
         if alias == imported {
@@ -147,7 +148,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       .expect("Should be external module here");
     let mut has_importee_imported = false;
     let mut default_alias = vec![];
-    let mut specifiers = named_imports
+    let specifiers = named_imports
       .iter()
       .filter_map(|item| {
         let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(item.imported_as);
@@ -165,7 +166,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             s.push_str("\";\n");
             None
           }
-          Specifier::Literal(imported) => {
+          Specifier::Literal(imported, _) => {
             if alias == imported {
               Some(alias.as_str().into())
             } else {
@@ -178,9 +179,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           }
         }
       })
+      .sorted_unstable()
       .dedup()
       .collect::<Vec<_>>();
-    specifiers.sort_unstable();
     default_alias.sort_unstable();
 
     if !specifiers.is_empty()
@@ -190,7 +191,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       s.push_str(&create_import_declaration(specifiers, &default_alias, &importee.name));
     }
   });
-
   s
 }
 

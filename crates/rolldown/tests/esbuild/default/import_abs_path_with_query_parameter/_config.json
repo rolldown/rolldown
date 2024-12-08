@@ -5,7 +5,8 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "external": ["/Users/user/project/file.txt?foo", "/Users/user/project/file.txt#bar"]
   },
   "expectExecuted": false
 }

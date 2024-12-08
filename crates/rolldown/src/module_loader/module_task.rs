@@ -376,7 +376,8 @@ impl ModuleTask {
           match &e {
             ResolveError::NotFound(..) => {
               // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
-              if ecmascript::is_relative_specifier(&specifier) {
+              if ecmascript::is_path_like_specifier(&specifier) {
+                // Unlike rollup, we also emit errors for absolute path
                 build_errors.push(
                   BuildDiagnostic::resolve_error(
                     source.clone(),

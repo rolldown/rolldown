@@ -2,53 +2,74 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# Errors
+# Assets
 
-## UNRESOLVED_IMPORT
+## entry.js
 
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './order-js.js' in entry.ts
-   ╭─[entry.ts:5:8]
-   │
- 5 │ import './order-js.js'
-   │        ───────┬───────  
-   │               ╰───────── Module not found.
-───╯
+```js
 
-```
-## UNRESOLVED_IMPORT
+//#region pick-js.js
+console.log("correct");
 
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './order-jsx.jsx' in entry.ts
-   ╭─[entry.ts:6:8]
-   │
- 6 │ import './order-jsx.jsx'
-   │        ────────┬────────  
-   │                ╰────────── Module not found.
-───╯
+//#endregion
+//#region pick-ts.ts
+console.log("correct");
 
-```
-## UNRESOLVED_IMPORT
+//#endregion
+//#region pick-jsx.jsx
+console.log("correct");
 
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './pick-ts.js' in entry.ts
-   ╭─[entry.ts:2:8]
-   │
- 2 │ import './pick-ts.js'
-   │        ───────┬──────  
-   │               ╰──────── Module not found.
-───╯
+//#endregion
+//#region pick-tsx.tsx
+console.log("correct");
 
-```
-## UNRESOLVED_IMPORT
+//#endregion
+//#region order-js.ts
+console.log("correct");
 
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './pick-tsx.jsx' in entry.ts
-   ╭─[entry.ts:4:8]
-   │
- 4 │ import './pick-tsx.jsx'
-   │        ────────┬───────  
-   │                ╰───────── Module not found.
-───╯
+//#endregion
+//#region order-jsx.ts
+console.log("correct");
 
+//#endregion
+//#region node_modules/pkg/foo-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg/foo-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/abc-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/abc-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/lib/foo-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-exports/lib/foo-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/abc-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/abc-jsx.tsx
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/lib/foo-js.ts
+console.log("correct");
+
+//#endregion
+//#region node_modules/pkg-imports/lib/foo-jsx.tsx
+console.log("correct");
+
+//#endregion
 ```

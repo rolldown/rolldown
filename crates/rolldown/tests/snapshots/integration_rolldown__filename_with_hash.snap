@@ -3526,6 +3526,10 @@ snapshot_kind: text
 
 - a-!~{000}~.js => a-CEKlWI5j.js
 
+# tests/esbuild/ts/ts_implicit_extensions
+
+- entry-!~{000}~.js => entry-BKXWnRbp.js
+
 # tests/esbuild/ts/ts_import_cts
 
 - entry-!~{000}~.js => entry--x_UhMj-.js
@@ -3562,6 +3566,10 @@ snapshot_kind: text
 # tests/esbuild/ts/ts_import_missing_unused_es6
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
+
+# tests/esbuild/ts/ts_import_mts
+
+- entry-!~{000}~.js => entry-WijGgA1r.js
 
 # tests/esbuild/ts/ts_import_type_only_file
 

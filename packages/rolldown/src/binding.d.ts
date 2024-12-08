@@ -350,6 +350,7 @@ export interface BindingInputOptions {
 export interface BindingJsonPluginConfig {
   stringify?: boolean
   isBuild?: boolean
+  namedExports?: boolean
 }
 
 export interface BindingJsonSourcemap {

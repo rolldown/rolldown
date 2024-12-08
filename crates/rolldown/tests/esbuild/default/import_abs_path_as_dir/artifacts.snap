@@ -1,20 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve '/Users/user/project/node_modules/pkg/index' in entry.js
-   ╭─[entry.js:1:17]
-   │
- 1 │ import pkg from '/Users/user/project/node_modules/pkg/index'
-   │                 ──────────────────────┬─────────────────────  
-   │                                       ╰─────────────────────── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js

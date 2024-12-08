@@ -42,7 +42,7 @@ test.sequential('watch', async () => {
   await waitBuildFinished(watcher)
 
   // edit file
-  fs.writeFileSync(input, 'console.log(2)')
+  ensureWriteFileSync(input, 'console.log(2)')
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
       true,
@@ -210,7 +210,10 @@ test.sequential('PluginContext addWatchFile', async () => {
   })
 
   // edit file
-  fs.writeFileSync(foo, 'console.log(2)\n')
+  // TODO: not sure the update event is not triggered at windows, but add it success
+  // ref https://github.com/rolldown/rolldown/actions/runs/12213020539/job/34072162527?pr=3032 windows node 18/20
+  console.log(foo, 'console.log("update")\n')
+  fs.writeFileSync(foo, 'console.log("update")\n')
   await waitUtil(() => {
     expect(changeFn).toBeCalled()
   })
@@ -355,4 +358,12 @@ async function waitBuildFinished(
     })
     updateFn && updateFn()
   })
+}
+
+// TODO:
+// The windows maybe cannot emit the change event, write the file twice to ensure the change event emit.
+// ref https://github.com/rolldown/rolldown/actions/runs/12212639717/job/34071323644 windows node 22
+async function ensureWriteFileSync(filePath: string, content: string) {
+  fs.writeFileSync(filePath, '\n' + content + '\n')
+  fs.writeFileSync(filePath, content)
 }

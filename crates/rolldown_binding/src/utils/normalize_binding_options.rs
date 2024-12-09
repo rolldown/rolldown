@@ -243,6 +243,7 @@ pub fn normalize_binding_options(
     // the target is not ready to expose yet
     target: None,
     keep_names: input_options.keep_names,
+    polyfill_require: output_options.polyfill_require,
   };
 
   #[cfg(not(target_family = "wasm"))]

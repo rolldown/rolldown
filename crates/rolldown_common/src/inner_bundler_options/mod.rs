@@ -159,6 +159,7 @@ pub struct BundlerOptions {
   pub watch: Option<WatchOption>,
   pub comments: Option<Comments>,
   pub target: Option<ESTarget>,
+  pub polyfill_require: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

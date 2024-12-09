@@ -19,19 +19,19 @@ export class NormalizedInputOptionsImpl implements NormalizedInputOptions {
     this.inner = inner
   }
 
-  get shimMissingExports() {
+  get shimMissingExports(): boolean {
     return this.inner.shimMissingExports
   }
 
-  get input() {
+  get input(): string[] | Record<string, string> {
     return this.inner.input
   }
 
-  get cwd() {
+  get cwd(): string | undefined {
     return this.inner.cwd ?? undefined
   }
 
-  get platform() {
+  get platform(): 'browser' | 'node' | 'neutral' {
     return this.inner.platform
   }
 }

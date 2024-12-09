@@ -63,7 +63,7 @@ export class WatcherEmitter {
     return this
   }
 
-  async onEvent(event: BindingWatcherEvent) {
+  async onEvent(event: BindingWatcherEvent): Promise<void> {
     const listeners = this.listeners.get(event.eventKind() as WatcherEvent)
     if (listeners) {
       switch (event.eventKind()) {

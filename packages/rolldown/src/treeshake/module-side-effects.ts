@@ -28,7 +28,6 @@ export const TreeshakingOptionsSchema = z
     annotations: z.boolean().optional(),
   })
   .passthrough()
-
   .or(z.boolean())
 
 export type TreeshakingOptions = z.infer<typeof TreeshakingOptionsSchema>

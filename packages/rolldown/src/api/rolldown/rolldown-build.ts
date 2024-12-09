@@ -57,7 +57,7 @@ export class RolldownBuild {
     await bundler.close()
   }
 
-  async [Symbol.asyncDispose]() {
+  async [Symbol.asyncDispose](): Promise<void> {
     await this.close()
   }
 }

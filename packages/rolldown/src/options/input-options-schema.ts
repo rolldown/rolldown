@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
-import { underline, gray, yellow, dim } from '../cli/colors'
+import { colors } from '../cli/colors'
 import {
   LogLevelOptionSchema,
   LogLevelSchema,
@@ -128,7 +128,7 @@ export const inputOptionsSchema = z.strictObject({
     .or(z.literal('browser'))
     .or(z.literal('neutral'))
     .describe(
-      `Platform for which the code should be generated (node, ${underline('browser')}, neutral)`,
+      `Platform for which the code should be generated (node, ${colors.underline('browser')}, neutral)`,
     )
     .optional(),
   shimMissingExports: z
@@ -137,7 +137,7 @@ export const inputOptionsSchema = z.strictObject({
     .optional(),
   treeshake: TreeshakingOptionsSchema.optional(),
   logLevel: LogLevelOptionSchema.describe(
-    `Log level (${dim('silent')}, ${underline(gray('info'))}, debug, ${yellow('warn')})`,
+    `Log level (${colors.dim('silent')}, ${colors.underline(colors.gray('info'))}, debug, ${colors.yellow('warn')})`,
   ).optional(),
   onLog: z
     .function()

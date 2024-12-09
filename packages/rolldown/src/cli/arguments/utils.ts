@@ -44,7 +44,7 @@ export function setNestedProperty<T extends object, K>(
   obj: T,
   path: string,
   value: K,
-) {
+): void {
   const keys = path.split('.') as (keyof T)[]
   let current: any = obj
 

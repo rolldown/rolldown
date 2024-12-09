@@ -1,4 +1,4 @@
-import { ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap'
+import { type ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap'
 
 export function isEmptySourcemapFiled(
   array: undefined | (string | null)[],
@@ -16,7 +16,7 @@ export function normalizeTransformHookSourcemap(
   id: string,
   originalCode: string,
   rawMap?: SourceMapInput,
-) {
+): ExistingRawSourceMap | undefined {
   if (!rawMap) {
     return
   }

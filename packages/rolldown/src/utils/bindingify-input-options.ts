@@ -5,7 +5,7 @@ import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils'
 import { BuiltinPlugin } from '../builtin-plugin/constructors'
 import { arraify, unsupported } from './misc'
 import { normalizedStringOrRegex } from './normalize-string-or-regex'
-import type { RolldownPlugin } from 'rolldown'
+import type { RolldownPlugin } from '../plugin'
 import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
 import type {

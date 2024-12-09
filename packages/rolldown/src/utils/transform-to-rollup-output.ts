@@ -133,7 +133,7 @@ export function transformToRollupOutput(
   } as RolldownOutput
 }
 
-export function handleOutputErrors(output: BindingOutputs) {
+export function handleOutputErrors(output: BindingOutputs): void {
   const rawErrors = output.errors
   if (rawErrors.length > 0) {
     throw normalizeErrors(rawErrors)

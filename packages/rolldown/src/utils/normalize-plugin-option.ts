@@ -17,7 +17,7 @@ export const normalizePluginOption: {
 export function checkOutputPluginOption(
   plugins: RolldownOutputPlugin[],
   onLog: LogHandler,
-) {
+): RolldownOutputPlugin[] {
   for (const plugin of plugins) {
     for (const hook of ENUMERATED_INPUT_PLUGIN_HOOK_NAMES) {
       if (hook in plugin) {

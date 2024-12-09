@@ -15,6 +15,9 @@ export function defineParallelPluginImplementation<Options>(
     Options: Options,
     context: Context,
   ) => MaybePromise<ParallelPluginImplementation>,
-) {
+): (
+  Options: Options,
+  context: Context,
+) => MaybePromise<ParallelPluginImplementation> {
   return plugin
 }

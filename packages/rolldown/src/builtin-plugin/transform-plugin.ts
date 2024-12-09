@@ -28,7 +28,7 @@ function normalizeEcmaTransformPluginConfig(
   return normalizedConfig
 }
 
-export function transformPlugin(config?: TransformPluginConfig) {
+export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin(
     'builtin:transform',
     normalizeEcmaTransformPluginConfig(config),

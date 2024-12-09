@@ -3,13 +3,13 @@ import {
   version,
   description,
 } from '../../../package.json' assert { type: 'json' }
-import { bold, cyan, gray, underline } from '../colors'
+import { colors } from '../colors'
 import { options } from '../arguments'
 import { camelCaseToKebabCase } from '../arguments/utils'
 
-const introduction = `${gray(`${description} (rolldown v${version})`)}
+const introduction = `${colors.gray(`${description} (rolldown v${version})`)}
 
-${bold(underline('USAGE'))} ${cyan('rolldown -c <config>')} or ${cyan('rolldown <input> <options>')}`
+${colors.bold(colors.underline('USAGE'))} ${colors.cyan('rolldown -c <config>')} or ${colors.cyan('rolldown <input> <options>')}`
 
 const examples = [
   {
@@ -42,10 +42,10 @@ const notes = [
   'For more information, please visit https://rolldown.rs/.',
 ]
 
-export function showHelp() {
+export function showHelp(): void {
   logger.log(introduction)
   logger.log('')
-  logger.log(`${bold(underline('OPTIONS'))}`)
+  logger.log(`${colors.bold(colors.underline('OPTIONS'))}`)
   logger.log('')
   logger.log(
     Object.entries(options)
@@ -77,7 +77,7 @@ export function showHelp() {
           description = description[0].toUpperCase() + description.slice(1)
         }
         return (
-          cyan(optionStr.padEnd(30)) +
+          colors.cyan(optionStr.padEnd(30)) +
           description +
           (description && description?.endsWith('.') ? '' : '.')
         )
@@ -85,16 +85,16 @@ export function showHelp() {
       .join('\n'),
   )
   logger.log('')
-  logger.log(`${bold(underline('EXAMPLES'))}`)
+  logger.log(`${colors.bold(colors.underline('EXAMPLES'))}`)
   logger.log('')
   examples.forEach(({ title, command }, ord) => {
     logger.log(`  ${ord + 1}. ${title}:`)
-    logger.log(`    ${cyan(command)}`)
+    logger.log(`    ${colors.cyan(command)}`)
     logger.log('')
   })
-  logger.log(`${bold(underline('NOTES'))}`)
+  logger.log(`${colors.bold(colors.underline('NOTES'))}`)
   logger.log('')
   notes.forEach((note) => {
-    logger.log(`  * ${gray(note)}`)
+    logger.log(`  * ${colors.gray(note)}`)
   })
 }

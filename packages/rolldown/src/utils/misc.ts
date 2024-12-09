@@ -19,11 +19,11 @@ export function unreachable(info?: string): never {
   }
   throw new Error('unreachable')
 }
-
 export function unsupported(info: string): () => never {
   return () => {
     throw new Error(`UNSUPPORTED: ${info}`)
   }
 }
+export type UnsupportedFnRet = ReturnType<typeof unsupported>
 
-export function noop(..._args: any[]) {}
+export function noop(..._args: any[]): void {}

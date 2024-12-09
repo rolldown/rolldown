@@ -30,6 +30,6 @@ import { BuiltinPlugin } from './constructors'
 export function replacePlugin(
   values: BindingReplacePluginConfig['values'] = {},
   options: Omit<BindingReplacePluginConfig, 'values'> = {},
-) {
+): BuiltinPlugin {
   return new BuiltinPlugin('builtin:replace', { ...options, values })
 }

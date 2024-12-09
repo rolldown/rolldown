@@ -386,7 +386,7 @@ impl BindImportsAndExportsContext<'_> {
       let _enter = match_import_span.enter();
 
       let rec = &module.import_records[named_import.record_id];
-      let is_external = matches!(self.normal_modules[rec.resolved_module], Module::External(_));
+      let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
       if is_esm && is_external {
         if let Specifier::Literal(ref name) = named_import.imported {
           if name.as_str() != "default" {

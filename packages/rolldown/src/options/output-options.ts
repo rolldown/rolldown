@@ -25,6 +25,9 @@ export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
 
 export type GlobalsFunction = (name: string) => string
 
+/**
+ * @group ConfigOptions
+ */
 export interface OutputOptions {
   dir?: string
   file?: string

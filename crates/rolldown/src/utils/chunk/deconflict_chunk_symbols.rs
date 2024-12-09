@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRefDb};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat};
 use rolldown_rstr::ToRstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -90,12 +90,11 @@ pub fn deconflict_chunk_symbols(
     ChunkKind::Common => {}
   }
   if matches!(format, OutputFormat::Esm) {
-    chunk.imports_from_external_modules.iter().for_each(|(module, import_record)| {
+    chunk.imports_from_external_modules.iter().for_each(|(module, _)| {
       let db = link_output.symbol_db.local_db(*module);
       db.classic_data.iter_enumerated().skip(1).for_each(|(symbol, _)| {
         renamer.add_symbol_in_root_scope((*module, symbol).into());
       });
-      dbg!(&db);
     });
   }
 

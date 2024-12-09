@@ -1,7 +1,6 @@
 use arcstr::ArcStr;
 use indexmap::IndexSet;
-use oxc::{semantic::SymbolId, span::CompactStr};
-use oxc_index::Idx;
+use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
@@ -158,7 +157,7 @@ impl LinkStage<'_> {
     self.errors.extend(binding_ctx.errors);
     self.warnings.extend(binding_ctx.warnings);
 
-    for (module_idx, map) in binding_ctx.external_import_binding_merger.iter() {
+    for (module_idx, map) in &binding_ctx.external_import_binding_merger {
       for (key, value) in map {
         let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.clone());
         for symbol_ref in value {
@@ -372,6 +371,7 @@ struct BindImportsAndExportsContext<'a> {
 }
 
 impl BindImportsAndExportsContext<'_> {
+  #[allow(clippy::too_many_lines)]
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
     let Module::Normal(module) = &self.index_modules[module_id] else {
       return;
@@ -393,9 +393,9 @@ impl BindImportsAndExportsContext<'_> {
             self
               .external_import_binding_merger
               .entry(rec.resolved_module)
-              .or_insert_with(FxHashMap::default)
+              .or_default()
               .entry(name.inner().clone())
-              .or_insert_with(IndexSet::default)
+              .or_default()
               .insert(*imported_as_ref);
           }
         }

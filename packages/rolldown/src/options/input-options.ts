@@ -64,6 +64,9 @@ export interface ChecksOptions {
   circularDependency?: boolean
 }
 
+/**
+ * @group ConfigOptions
+ */
 export interface InputOptions {
   input?: InputOption
   plugins?: RolldownPluginOption

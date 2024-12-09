@@ -19,9 +19,10 @@ snapshot_kind: text
 
 "use strict";
 
+node_path = __toESM(node_path);
 
 //#region main.js
-console.log(join("a", "b"));
+console.log((0, node_path.join)("a", "b"));
 
 //#endregion
 })(node_path);

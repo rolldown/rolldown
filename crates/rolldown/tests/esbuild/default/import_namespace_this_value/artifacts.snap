@@ -74,8 +74,8 @@ const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 
 //#region c.js
-console.log((0, external.default)(), foo());
-console.log(new external.default(), new foo());
+console.log((0, external.default)(), (0, external.foo)());
+console.log(new external.default(), new external.foo());
 
 //#endregion
 ```

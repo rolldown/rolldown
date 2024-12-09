@@ -1,4 +1,4 @@
-use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
+use rolldown::{Bundler, BundlerOptions, InputItem, OutputFormat, SourceMapType};
 use rolldown_testing::workspace;
 use sugar_path::SugarPath;
 
@@ -13,6 +13,8 @@ async fn main() {
       // InputItem { name: Some("third-entry".to_string()), import: "./third-entry.js".to_string() },
     ]),
     cwd: Some(workspace::crate_dir("rolldown").join("./examples/basic").normalize()),
+    format: Some(OutputFormat::Cjs),
+
     sourcemap: Some(SourceMapType::File),
     ..Default::default()
   });

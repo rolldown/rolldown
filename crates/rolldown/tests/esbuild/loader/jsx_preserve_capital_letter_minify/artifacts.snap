@@ -15,14 +15,14 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region foo.js
 var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(_jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
+console.log(jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 
 //#endregion
 ```

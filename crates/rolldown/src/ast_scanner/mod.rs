@@ -315,12 +315,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     imported: &str,
     record_id: ImportRecordIdx,
     span_imported: Span,
-    is_alias: bool,
   ) {
     self.result.named_imports.insert(
       (self.idx, local).into(),
       NamedImport {
-        imported: (imported, is_alias).into(),
+        imported: Rstr::new(imported).into(),
         imported_as: (self.idx, local).into(),
         span_imported,
         record_id,
@@ -413,12 +412,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
-      imported: (imported, export_name != imported).into(),
+      imported: imported.into(),
       imported_as: generated_imported_as_ref,
       record_id,
       span_imported,
     };
-    dbg!(export_name, imported);
     if name_import.imported.is_default() {
       self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
     }
@@ -590,19 +588,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         let imported = spec.imported.name();
-        self.add_named_import(
-          sym,
-          imported.as_str(),
-          rec_id,
-          spec.imported.span(),
-          spec.local.name != imported,
-        );
+        self.add_named_import(sym, imported.as_str(), rec_id, spec.imported.span());
         if imported == "default" {
           self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
         }
       }
       ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id, spec.span, true);
+        self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id, spec.span);
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {

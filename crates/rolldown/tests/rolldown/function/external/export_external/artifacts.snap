@@ -9,15 +9,15 @@ snapshot_kind: text
 ```js
 import * as ext1 from "external";
 import * as ext from "external";
-import { a, a as a1, b, b as b1 } from "external";
+import { a, b } from "external";
 
 //#region foo.js
-const a1$1 = 1;
-console.log(a1$1);
+const a1 = 1;
+console.log(a1);
 
 //#endregion
 //#region main.js
-console.log(ext, a1, b1, ext1, a, b);
+console.log(ext, a, b, ext1, a, b);
 
 //#endregion
 export { a, b };

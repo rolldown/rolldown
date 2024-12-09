@@ -9,8 +9,8 @@ snapshot_kind: text
 ```js
 "use strict";
 
-require("external-pkg");
-require("external-pkg2");
+const external_pkg = __toESM(require("external-pkg"));
+const external_pkg2 = __toESM(require("external-pkg2"));
 
 //#region replacement.js
 let replace = { test() {} };
@@ -32,8 +32,8 @@ console.log("should be used");
 console.log(replace.test);
 console.log(replace2.test);
 console.log(collide);
-console.log(re_export);
-console.log(re.export);
+console.log(external_pkg.re_export);
+console.log(external_pkg2.re.export);
 
 //#endregion
 ```

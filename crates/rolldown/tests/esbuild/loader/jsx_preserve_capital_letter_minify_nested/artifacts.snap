@@ -15,12 +15,12 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 x = () => {
 	class XYYYYY {}
-	return _jsx(
+	return jsx(
 		XYYYYY,
 		// This should be named "Y" due to frequency analysis
 		{ "tag-must-start-with-capital-letter": true }

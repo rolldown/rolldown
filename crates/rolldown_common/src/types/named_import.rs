@@ -28,7 +28,7 @@ pub struct NamedImport {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Specifier {
   Star,
-  Literal(Rstr, bool),
+  Literal(Rstr),
 }
 
 impl Specifier {
@@ -36,13 +36,8 @@ impl Specifier {
     matches!(self, Self::Star)
   }
 
-  #[inline]
-  pub fn is_literal(&self) -> bool {
-    matches!(self, Self::Literal(_, _))
-  }
-
   pub fn is_default(&self) -> bool {
-    matches!(self, Self::Literal(atom, _) if atom.as_str() == "default")
+    matches!(self, Self::Literal(atom) if atom.as_str() == "default")
   }
 }
 
@@ -50,19 +45,19 @@ impl Display for Specifier {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::Star => "*".fmt(f),
-      Self::Literal(atom, _) => atom.as_str().fmt(f),
+      Self::Literal(atom) => atom.as_str().fmt(f),
     }
   }
 }
 
-impl From<(Rstr, bool)> for Specifier {
-  fn from((atom, is_alias): (Rstr, bool)) -> Self {
-    Self::Literal(atom, is_alias)
+impl From<Rstr> for Specifier {
+  fn from(atom: Rstr) -> Self {
+    Self::Literal(atom)
   }
 }
 
-impl From<(&str, bool)> for Specifier {
-  fn from((atom, is_alias): (&str, bool)) -> Self {
-    Self::Literal(atom.into(), is_alias)
+impl From<&str> for Specifier {
+  fn from(s: &str) -> Self {
+    Self::Literal(Rstr::from(s))
   }
 }

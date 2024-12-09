@@ -144,7 +144,7 @@ snapshot_kind: text
 "use strict";
 
 require("a_nowrap");
-require("b_nowrap");
+const b_nowrap = __toESM(require("b_nowrap"));
 const d_WRAP = __toESM(require("d_WRAP"));
 const e_WRAP = __toESM(require("e_WRAP"));
 const f_WRAP = __toESM(require("f_WRAP"));
@@ -154,7 +154,7 @@ const i_WRAP = __toESM(require("i_WRAP"));
 const j_WRAP = __toESM(require("j_WRAP"));
 
 //#region entry.js
-b();
+(0, b_nowrap.b)();
 x = d_WRAP.x;
 (0, e_WRAP.default)();
 (0, f_WRAP.default)();

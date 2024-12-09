@@ -62,6 +62,7 @@ export declare class BindingNormalizedOptions {
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
   get minify(): boolean
+  get polyfillRequire(): boolean
   get comments(): 'none' | 'preserve-legal'
 }
 
@@ -424,6 +425,7 @@ export interface BindingOutputOptions {
   minify?: boolean
   advancedChunks?: BindingAdvancedChunksOptions
   comments?: 'none' | 'preserve-legal'
+  polyfillRequire?: boolean
 }
 
 export interface BindingPluginContextResolvedId {

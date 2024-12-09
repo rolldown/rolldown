@@ -232,6 +232,11 @@ impl BindingNormalizedOptions {
     self.inner.minify
   }
 
+  #[napi(getter)]
+  pub fn polyfill_require(&self) -> bool {
+    self.inner.polyfill_require
+  }
+
   #[napi(getter, ts_return_type = "'none' | 'preserve-legal'")]
   pub fn comments(&self) -> String {
     self.inner.comments.to_string()

@@ -39,6 +39,7 @@ export interface NormalizedOutputOptions {
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
   minify: boolean
   comments: 'none' | 'preserve-legal'
+  polyfillRequire: boolean
 }
 
 function mapFunctionOption<T>(
@@ -166,5 +167,9 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get comments() {
     return this.inner.comments
+  }
+
+  get polyfillRequire() {
+    return this.inner.polyfillRequire
   }
 }

@@ -1,0 +1,8 @@
+{
+  "config": {
+    "polyfillRequire": false,
+    "format": "esm",
+    "platform": "node"
+  },
+  "expectExecuted": false
+}

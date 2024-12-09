@@ -364,6 +364,12 @@
             }
           ]
         },
+        "polyfillRequire": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "profilerNames": {
           "type": [
             "boolean",

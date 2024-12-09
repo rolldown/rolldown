@@ -4595,6 +4595,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-BhhiXn0Z.js
 - main-BhhiXn0Z.js.map
 
+# tests/rolldown/misc/polyfill-require-disabled
+
+- main-!~{000}~.js => main-YukbUm0A.js
+
 # tests/rolldown/misc/reexport_star
 
 - entry-!~{001}~.js => entry-D4C-xCYO.js

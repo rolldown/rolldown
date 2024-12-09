@@ -103,7 +103,7 @@ const checksOptionsSchema = z.strictObject({
     .optional(),
 }) satisfies z.ZodType<ChecksOptions>
 
-export const inputOptionsSchema = z.strictObject({
+export const inputOptionsSchema: z.ZodType<InputOptions> = z.strictObject({
   input: inputOptionSchema.optional(),
   plugins: zodExt.phantom<RolldownPluginOption>().optional(),
   external: externalSchema.optional(),
@@ -183,7 +183,9 @@ export const inputOptionsSchema = z.strictObject({
   checks: checksOptionsSchema.optional(),
 }) satisfies z.ZodType<InputOptions>
 
-export const inputCliOptionsSchema = inputOptionsSchema
+export const inputCliOptionsSchema: z.ZodType<InputCliOptions> = (
+  inputOptionsSchema as z.AnyZodObject
+)
   .extend({
     external: z
       .array(z.string())

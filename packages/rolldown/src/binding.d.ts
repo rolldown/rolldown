@@ -118,7 +118,7 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: Array<BindingBundlerOptions>)
+  constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
   close(): Promise<void>
   start(listener: (data: BindingWatcherEvent) => void): Promise<void>
 }
@@ -581,7 +581,6 @@ export interface BindingViteResolvePluginResolveOptions {
 
 export interface BindingWatchOption {
   skipWrite?: boolean
-  notify?: BindingNotifyOption
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
 }

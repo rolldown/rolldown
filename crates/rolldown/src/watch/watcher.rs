@@ -3,7 +3,9 @@ use dashmap::DashSet;
 use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
-use rolldown_common::{BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent};
+use rolldown_common::{
+  BundleEvent, NotifyOption, WatcherChangeData, WatcherChangeKind, WatcherEvent,
+};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
@@ -43,20 +45,21 @@ pub struct WatcherImpl {
 
 impl WatcherImpl {
   #[allow(clippy::needless_pass_by_value)]
-  pub fn new(bundlers: Vec<Arc<Mutex<Bundler>>>) -> Result<Self> {
+  pub fn new(
+    bundlers: Vec<Arc<Mutex<Bundler>>>,
+    notify_option: Option<NotifyOption>,
+  ) -> Result<Self> {
     let (tx, rx) = channel();
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
-      // TODO using one notify configure for all bundlers
-      // let config = Config::default();
-      // let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
-      // if let Some(notify) = &bundler_guard.options.watch.notify {
-      //   if let Some(poll_interval) = notify.poll_interval {
-      //     config.with_poll_interval(poll_interval);
-      //   }
-      //   config.with_compare_contents(notify.compare_contents);
-      // }
+      let config = Config::default();
+      if let Some(notify) = &notify_option {
+        if let Some(poll_interval) = notify.poll_interval {
+          config.with_poll_interval(poll_interval);
+        }
+        config.with_compare_contents(notify.compare_contents);
+      }
       Config::default()
     };
     let inner = RecommendedWatcher::new(

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use rolldown_common::NotifyOption;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -11,8 +12,11 @@ use crate::{
 pub struct Watcher(Arc<WatcherImpl>);
 
 impl Watcher {
-  pub fn new(bundlers: Vec<Arc<Mutex<Bundler>>>) -> Result<Self> {
-    let watcher = Arc::new(WatcherImpl::new(bundlers)?);
+  pub fn new(
+    bundlers: Vec<Arc<Mutex<Bundler>>>,
+    notify_option: Option<NotifyOption>,
+  ) -> Result<Self> {
+    let watcher = Arc::new(WatcherImpl::new(bundlers, notify_option)?);
 
     Ok(Self(watcher))
   }

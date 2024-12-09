@@ -5,7 +5,8 @@ import type { RollupLog } from '../rollup'
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
-  CYCLE_LOADING = 'CYCLE_LOADING'
+  CYCLE_LOADING = 'CYCLE_LOADING',
+  MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION'
 
 export function logInvalidLogPosition(pluginName: string): RollupLog {
   return {
@@ -31,6 +32,13 @@ export function logCycleLoading(
   return {
     code: CYCLE_LOADING,
     message: `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
+  }
+}
+
+export function logMultiplyNotifyOption(): RollupLog {
+  return {
+    code: MULTIPLY_NOTIFY_OPTION,
+    message: `Found multiply notify option at watch options, using first one to start notify watcher.`,
   }
 }
 

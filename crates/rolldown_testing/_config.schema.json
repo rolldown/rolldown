@@ -487,25 +487,6 @@
       },
       "additionalProperties": false
     },
-    "Duration": {
-      "type": "object",
-      "required": [
-        "nanos",
-        "secs"
-      ],
-      "properties": {
-        "nanos": {
-          "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
-        },
-        "secs": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0.0
-        }
-      }
-    },
     "ESTarget": {
       "type": "string",
       "enum": [
@@ -754,28 +735,6 @@
         }
       ]
     },
-    "NotifyOption": {
-      "type": "object",
-      "required": [
-        "compareContents"
-      ],
-      "properties": {
-        "compareContents": {
-          "type": "boolean"
-        },
-        "pollInterval": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Duration"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
     "OutputExports": {
       "type": "string",
       "enum": [
@@ -986,16 +945,6 @@
           "items": {
             "type": "string"
           }
-        },
-        "notify": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/NotifyOption"
-            },
-            {
-              "type": "null"
-            }
-          ]
         },
         "skipWrite": {
           "type": "boolean"

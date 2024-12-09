@@ -1,6 +1,8 @@
 use crate::types::{
-  binding_module_info::BindingModuleInfo, binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::update_outputs, js_callback::MaybeAsyncJsCallbackExt,
+  binding_module_info::BindingModuleInfo,
+  binding_normalized_options::BindingNormalizedOptions,
+  binding_outputs::{to_js_diagnostic, update_outputs},
+  js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{
   Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, ResolvedIdHookFilter,
@@ -11,7 +13,6 @@ use std::{borrow::Cow, ops::Deref, sync::Arc};
 use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::{
-    binding_hook_error::BindingHookError,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
@@ -199,7 +200,13 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.build_end {
       cb.await_call((
         ctx.clone().into(),
-        args.map(|args| BindingHookError::new(Arc::clone(&args.errors), args.cwd.clone())),
+        args.map(|args| {
+          args
+            .errors
+            .iter()
+            .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
+            .collect()
+        }),
       ))
       .await?;
     }

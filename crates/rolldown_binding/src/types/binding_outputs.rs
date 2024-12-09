@@ -2,7 +2,6 @@ use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
   binding_output_chunk::{update_output_chunk, BindingOutputChunk, JsOutputChunk},
 };
-use napi::Env;
 use napi_derive::napi;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 
@@ -11,7 +10,7 @@ use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 pub struct BindingOutputs {
   chunks: Vec<BindingOutputChunk>,
   assets: Vec<BindingOutputAsset>,
-  error: Option<BindingOutputsDiagnostics>,
+  error: Option<rolldown_common::OutputsDiagnostics>,
 }
 
 #[napi]
@@ -27,21 +26,18 @@ impl BindingOutputs {
   }
 
   #[napi(getter)]
-  pub fn errors(
-    &mut self,
-    env: Env,
-  ) -> napi::Result<Vec<napi::Either<napi::JsError, napi::JsObject>>> {
-    if let Some(BindingOutputsDiagnostics { diagnostics, cwd }) = &self.error {
+  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
+    if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.error.as_ref() {
       return diagnostics
         .iter()
-        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env))
+        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone()))
         .collect();
     }
-    Ok(vec![])
+    vec![]
   }
 
   pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
-    let error = BindingOutputsDiagnostics { diagnostics, cwd };
+    let error = rolldown_common::OutputsDiagnostics { diagnostics, cwd };
     Self { assets: vec![], chunks: vec![], error: Some(error) }
   }
 }
@@ -97,26 +93,24 @@ pub fn update_outputs(
   Ok(())
 }
 
-pub struct BindingOutputsDiagnostics {
-  diagnostics: Vec<BuildDiagnostic>,
-  cwd: std::path::PathBuf,
+#[napi]
+pub struct BindingError {
+  pub kind: String,
+  pub message: String,
 }
 
 pub fn to_js_diagnostic(
   diagnostic: &BuildDiagnostic,
   cwd: std::path::PathBuf,
-  env: Env,
-) -> napi::Result<napi::Either<napi::JsError, napi::JsObject>> {
+) -> napi::Either<napi::JsError, BindingError> {
   match diagnostic.downcast_napi_error() {
-    Ok(napi_error) => Ok(napi::Either::A(napi::JsError::from(napi_error.clone()))),
-    Err(error) => {
-      let mut object = env.create_object()?;
-      object.set("kind", error.kind().to_string())?;
-      object.set(
-        "message",
-        error.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.clone() }).to_color_string(),
-      )?;
-      Ok(napi::Either::B(object))
+    Ok(napi_error) => {
+      let e = napi::JsError::from(napi_error.clone());
+      napi::Either::A(e)
     }
+    Err(error) => napi::Either::B(BindingError {
+      kind: error.kind().to_string(),
+      message: error.to_diagnostic_with(&DiagnosticOptions { cwd }).to_color_string(),
+    }),
   }
 }

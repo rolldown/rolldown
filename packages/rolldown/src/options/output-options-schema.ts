@@ -164,46 +164,50 @@ const getAddonDescription = (
   return `Code to insert the ${colors.bold(placement)} of the bundled file (${colors.bold(wrapper)} the wrapper function)`
 }
 
-export const outputCliOptionsSchema = outputOptionsSchema
-  .extend({
-    // Reject all functions in CLI
-    banner: z
-      .string()
-      .describe(getAddonDescription('top', 'outside'))
-      .optional(),
-    footer: z
-      .string()
-      .describe(getAddonDescription('bottom', 'outside'))
-      .optional(),
-    intro: z.string().describe(getAddonDescription('top', 'inside')).optional(),
-    outro: z
-      .string()
-      .describe(getAddonDescription('bottom', 'inside'))
-      .optional(),
-    // It is hard to handle the union type in json schema, so use this first.
-    esModule: z
-      .boolean()
-      .describe(
-        'Always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable)',
-      )
-      .optional(),
-    globals: z
-      .record(z.string())
-      .describe(
-        'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
-      )
-      .optional(),
-    advancedChunks: z
-      .strictObject({
-        minSize: z.number().describe('Minimum size of the chunk').optional(),
-        minShareCount: z
-          .number()
-          .describe('Minimum share count of the chunk')
-          .optional(),
-      })
-      .optional(),
-  })
-  .omit({
-    sourcemapPathTransform: true,
-    sourcemapIgnoreList: true,
-  }) satisfies z.ZodType<OutputCliOptions>
+export const outputCliOptionsSchema: z.ZodType<OutputCliOptions> =
+  outputOptionsSchema
+    .extend({
+      // Reject all functions in CLI
+      banner: z
+        .string()
+        .describe(getAddonDescription('top', 'outside'))
+        .optional(),
+      footer: z
+        .string()
+        .describe(getAddonDescription('bottom', 'outside'))
+        .optional(),
+      intro: z
+        .string()
+        .describe(getAddonDescription('top', 'inside'))
+        .optional(),
+      outro: z
+        .string()
+        .describe(getAddonDescription('bottom', 'inside'))
+        .optional(),
+      // It is hard to handle the union type in json schema, so use this first.
+      esModule: z
+        .boolean()
+        .describe(
+          'Always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable)',
+        )
+        .optional(),
+      globals: z
+        .record(z.string())
+        .describe(
+          'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
+        )
+        .optional(),
+      advancedChunks: z
+        .strictObject({
+          minSize: z.number().describe('Minimum size of the chunk').optional(),
+          minShareCount: z
+            .number()
+            .describe('Minimum share count of the chunk')
+            .optional(),
+        })
+        .optional(),
+    })
+    .omit({
+      sourcemapPathTransform: true,
+      sourcemapIgnoreList: true,
+    }) satisfies z.ZodType<OutputCliOptions>

@@ -15,7 +15,7 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 const obj = {
@@ -24,13 +24,13 @@ const obj = {
 	...{ key: value },
 	after
 };
-_jsx(Foo, {
+jsx(Foo, {
 	before: true,
 	[key]: value,
 	key: value,
 	after: true
 });
-_jsx(Bar, {
+jsx(Bar, {
 	a,
 	[b]: c,
 	...d,

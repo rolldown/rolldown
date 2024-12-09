@@ -1,9 +1,11 @@
 use arcstr::ArcStr;
+use indexmap::IndexSet;
+use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -145,6 +147,7 @@ impl LinkStage<'_> {
       options: self.options,
       errors: Vec::default(),
       warnings: Vec::default(),
+      external_import_binding_merger: FxHashMap::default(),
     };
 
     self.module_table.modules.iter().for_each(|module| {
@@ -154,6 +157,14 @@ impl LinkStage<'_> {
     self.errors.extend(binding_ctx.errors);
     self.warnings.extend(binding_ctx.warnings);
 
+    for (module_idx, map) in &binding_ctx.external_import_binding_merger {
+      for (key, value) in map {
+        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.clone());
+        for symbol_ref in value {
+          self.symbols.link(*symbol_ref, target_symbol);
+        }
+      }
+    }
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
@@ -355,13 +366,17 @@ struct BindImportsAndExportsContext<'a> {
   pub options: &'a SharedOptions,
   pub errors: Vec<BuildDiagnostic>,
   pub warnings: Vec<BuildDiagnostic>,
+  pub external_import_binding_merger:
+    FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
 }
 
 impl BindImportsAndExportsContext<'_> {
+  #[allow(clippy::too_many_lines)]
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
     let Module::Normal(module) = &self.index_modules[module_id] else {
       return;
     };
+    let is_esm = matches!(self.options.format, OutputFormat::Esm);
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
@@ -371,7 +386,20 @@ impl BindImportsAndExportsContext<'_> {
       let _enter = match_import_span.enter();
 
       let rec = &module.import_records[named_import.record_id];
-
+      let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
+      if is_esm && is_external {
+        if let Specifier::Literal(ref name) = named_import.imported {
+          if name.as_str() != "default" {
+            self
+              .external_import_binding_merger
+              .entry(rec.resolved_module)
+              .or_default()
+              .entry(name.inner().clone())
+              .or_default()
+              .insert(*imported_as_ref);
+          }
+        }
+      }
       let ret = self.match_import_with_export(
         self.index_modules,
         &mut MatchingContext { tracker_stack: Vec::default() },

@@ -15,7 +15,7 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 let tests = [
@@ -51,27 +51,27 @@ let tests = [
 		j
 	}
 ];
-let jsx = [
-	_jsx("div", {
+let jsx$1 = [
+	jsx("div", {
 		...a,
 		...b
 	}),
-	_jsx("div", {
+	jsx("div", {
 		a: true,
 		b: true,
 		...c
 	}),
-	_jsx("div", {
+	jsx("div", {
 		...a,
 		b: true,
 		c: true
 	}),
-	_jsx("div", {
+	jsx("div", {
 		a: true,
 		...b,
 		c: true
 	}),
-	_jsx("div", {
+	jsx("div", {
 		a: true,
 		b: true,
 		...c,

@@ -147,7 +147,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       .expect("Should be external module here");
     let mut has_importee_imported = false;
     let mut default_alias = vec![];
-    let mut specifiers = named_imports
+    let specifiers = named_imports
       .iter()
       .filter_map(|item| {
         let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(item.imported_as);
@@ -178,8 +178,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           }
         }
       })
+      .sorted_unstable()
+      .dedup()
       .collect::<Vec<_>>();
-    specifiers.sort_unstable();
     default_alias.sort_unstable();
 
     if !specifiers.is_empty()

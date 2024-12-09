@@ -15,10 +15,10 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.js
-console.log(_jsx("div", {}));
+console.log(jsx("div", {}));
 
 //#endregion
 ```

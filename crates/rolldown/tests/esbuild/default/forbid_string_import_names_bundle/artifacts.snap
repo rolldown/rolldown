@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -20,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { some import as nested } from "external";
+import { some import } from "external";
 
-export { nested };
+export { some import as nested };
 ```

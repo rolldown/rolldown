@@ -1,17 +1,18 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## main_jsx.js
 
 ```js
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
 
 //#region main.jsx
-const Hello = () => _jsx("div", { children: "Hello" });
+const Hello = () => jsx("div", { children: "Hello" });
 function World() {
-	return _jsxs("div", { children: [_jsx(Hello, {}), "World"] });
+	return jsxs("div", { children: [jsx(Hello, {}), "World"] });
 }
 
 //#endregion

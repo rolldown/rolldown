@@ -26,7 +26,7 @@ var obj = {
 ```
 ### rolldown
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 const obj = {
@@ -35,13 +35,13 @@ const obj = {
 	...{ key: value },
 	after
 };
-_jsx(Foo, {
+jsx(Foo, {
 	before: true,
 	[key]: value,
 	key: value,
 	after: true
 });
-_jsx(Bar, {
+jsx(Bar, {
 	a,
 	[b]: c,
 	...d,
@@ -62,7 +62,7 @@ _jsx(Bar, {
 -  [key]: value,
 -  key: value,
 -  after
-+import { jsx as _jsx } from "react/jsx-runtime";
++import { jsx } from "react/jsx-runtime";
 +
 +//#region entry.jsx
 +const obj = {
@@ -84,13 +84,13 @@ _jsx(Bar, {
 -  e={e}
 -/>;
 \ No newline at end of file
-+_jsx(Foo, {
++jsx(Foo, {
 +	before: true,
 +	[key]: value,
 +	key: value,
 +	after: true
 +});
-+_jsx(Bar, {
++jsx(Bar, {
 +	a,
 +	[b]: c,
 +	...d,

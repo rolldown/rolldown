@@ -2,8 +2,9 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc_index::IndexVec;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
-  WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
+  ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat, RuntimeModuleBrief, StmtInfo,
+  StmtInfoMeta, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{

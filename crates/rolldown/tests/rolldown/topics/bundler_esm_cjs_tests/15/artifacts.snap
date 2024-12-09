@@ -91,7 +91,7 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 } });
 
 //#endregion
-require_entry();
+return require_entry();
 
 });
 ```

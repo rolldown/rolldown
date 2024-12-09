@@ -131,9 +131,8 @@ pub async fn render_umd<'code>(
           &ctx.chunk.canonical_names,
         );
 
-        // require_xxx();
-        // FIXME: should set the umd's exports with `require_xxx()`
-        source_joiner.append_source(concat_string!(wrapper_ref_name, "();\n"));
+        // return require_xxx();
+        source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
       }
       WrapKind::None => {}
     }

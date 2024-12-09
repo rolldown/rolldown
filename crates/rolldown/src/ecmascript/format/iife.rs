@@ -39,10 +39,13 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
-use super::utils::{render_chunk_external_imports, render_factory_parameters};
+use super::utils::{
+  render_chunk_external_imports, render_factory_parameters,
+  render_modules_with_peek_runtime_module_at_first,
+};
 
 /// The main function for rendering the IIFE format chunks.
-#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(clippy::too_many_arguments)]
 pub async fn render_iife<'code>(
   ctx: &GenerateContext<'_>,
   hashbang: Option<&'code str>,
@@ -136,31 +139,12 @@ pub async fn render_iife<'code>(
     }
   }
 
-  let mut module_sources_peekable = module_sources.iter().peekable();
-  match module_sources_peekable.peek() {
-    Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
-      if let (_, _module_id, Some(emitted_sources)) =
-        module_sources_peekable.next().expect("Must have module")
-      {
-        for source in emitted_sources.iter() {
-          source_joiner.append_source(source);
-        }
-      }
-    }
-    _ => {}
-  }
-
-  source_joiner.append_source(import_code);
-
-  // chunk content
-  // TODO indent chunk content for iife format
-  module_sources_peekable.for_each(|(_, _, module_render_output)| {
-    if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources.as_ref() {
-        source_joiner.append_source(source);
-      }
-    }
-  });
+  render_modules_with_peek_runtime_module_at_first(
+    ctx,
+    &mut source_joiner,
+    module_sources,
+    import_code,
+  );
 
   if let Some(entry_id) = ctx.chunk.entry_module_idx() {
     let entry_meta = &ctx.link_output.metas[entry_id];

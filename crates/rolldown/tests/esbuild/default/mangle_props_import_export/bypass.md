@@ -1,6 +1,6 @@
 # Reason
 1. could be done in minifier
-2. for `__require` diff, we don't have ModePassThrough
+2. will not rewrite `__require`
 # Diff
 ## /out/esm.js
 ### esbuild
@@ -44,7 +44,7 @@ let bar_ = require("xyz").b;
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;
-	let bar_ = __require("xyz").bar_;
+	let bar_ = require("xyz").bar_;
 } });
 
 //#endregion
@@ -62,7 +62,7 @@ export default require_cjs();
 +var require_cjs = __commonJS({
 +    "cjs.js"(exports) {
 +        exports.foo_ = 123;
-+        let bar_ = __require("xyz").bar_;
++        let bar_ = require("xyz").bar_;
 +    }
 +});
 +export default require_cjs();

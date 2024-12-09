@@ -8,9 +8,8 @@ snapshot_kind: text
 
 ```js
 
-
 //#region entry.js
-console.log(__require("hello, world"));
+console.log(require("hello, world"));
 
 //#endregion
 ```

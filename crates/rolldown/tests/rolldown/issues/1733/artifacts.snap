@@ -9,10 +9,9 @@ snapshot_kind: text
 ```js
 import "rewritten-./static.css";
 
-
 //#region entry.js
 import("rewritten-./dynamic.css");
-__require("rewritten-./some.css");
+require("rewritten-./some.css");
 
 //#endregion
 ```

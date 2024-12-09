@@ -1,11 +1,8 @@
 use std::{ptr::addr_of, sync::Mutex};
 
-use append_only_vec::AppendOnlyVec;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
-  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
   WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
@@ -226,11 +223,8 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    let record_meta_update_pending_pairs_list = AppendOnlyVec::new();
     let keep_names = self.options.keep_names;
     self.module_table.modules.par_iter().filter_map(Module::as_normal).for_each(|importer| {
-      let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
-      let importer_idx = importer.idx;
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
@@ -242,18 +236,6 @@ impl<'a> LinkStage<'a> {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
           let rec_resolved_module = &self.module_table.modules[rec.resolved_module];
-          if !rec_resolved_module.is_normal()
-            || is_external_dynamic_import(&self.module_table, rec, importer_idx)
-          {
-            if matches!(rec.kind, ImportKind::Require)
-              || !self.options.format.keep_esm_import_export_syntax()
-            {
-              if self.options.format.should_call_runtime_require() {
-                stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
-                record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
-              }
-            }
-          }
           match rec_resolved_module {
             Module::External(importee) => {
               // Make sure symbols from external modules are included and de_conflicted
@@ -432,18 +414,7 @@ impl<'a> LinkStage<'a> {
       for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
         stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
       }
-      record_meta_update_pending_pairs_list.push((importer_idx, record_meta_pairs));
     });
-
-    // merge import_record.meta
-    for (module_idx, record_meta_pairs) in record_meta_update_pending_pairs_list {
-      let Some(module) = self.module_table.modules[module_idx].as_normal_mut() else {
-        continue;
-      };
-      for (rec_id, meta) in record_meta_pairs {
-        module.import_records[rec_id].meta |= meta;
-      }
-    }
   }
 
   fn create_exports_for_ecma_modules(&mut self) {
@@ -555,16 +526,6 @@ impl<'a> LinkStage<'a> {
       });
     });
   }
-}
-
-fn is_external_dynamic_import(
-  table: &ModuleTable,
-  record: &ResolvedImportRecord,
-  module_idx: ModuleIdx,
-) -> bool {
-  record.kind == ImportKind::DynamicImport
-    && table.modules[module_idx].as_normal().is_some_and(|module| module.is_user_defined_entry)
-    && record.resolved_module != module_idx
 }
 
 pub fn init_entry_point_stmt_info(

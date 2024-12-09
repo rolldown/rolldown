@@ -50,10 +50,7 @@ impl RuntimeModuleTask {
         include_str!("../runtime/runtime-tail-node.js"),
       ))
     } else {
-      arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail.js"),
-      ))
+      arcstr::literal!(concat!(include_str!("../runtime/runtime-base.js"),))
     };
 
     let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);

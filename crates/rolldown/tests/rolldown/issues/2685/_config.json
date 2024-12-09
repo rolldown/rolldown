@@ -2,5 +2,6 @@
   "config": {
     "platform": "node"
   },
-  "hiddenRuntimeModule": false
+  "hiddenRuntimeModule": false,
+  "expectExecuted": false
 }

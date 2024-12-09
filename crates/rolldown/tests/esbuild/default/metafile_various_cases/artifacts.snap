@@ -59,7 +59,7 @@ var require_copy = __commonJS({ "copy.copy"() {
 } });
 
 //#endregion
-export { __commonJS, __require, __toESM, file_default, require_copy };
+export { __commonJS, __toESM, file_default, require_copy };
 ```
 ## dynamic.js
 
@@ -74,7 +74,7 @@ export { dynamic_default as default };
 ## entry.js
 
 ```js
-import { __commonJS, __require, __toESM, file_default, require_copy } from "./copy.js";
+import { __commonJS, __toESM, file_default, require_copy } from "./copy.js";
 import a from "extern-esm";
 
 //#region esm.js
@@ -93,7 +93,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_copy = __toESM(require_copy());
-console.log(a, esm_default, json_2_default, file_default, import_copy.default, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
+console.log(a, esm_default, json_2_default, file_default, import_copy.default, require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
 
 //#endregion

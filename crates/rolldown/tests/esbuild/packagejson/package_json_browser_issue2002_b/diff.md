@@ -27,7 +27,7 @@ require_foo();
 
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
-	__require("sub");
+	require("sub");
 } });
 
 //#endregion
@@ -51,7 +51,7 @@ require_foo();
 -    "Users/user/project/src/node_modules/pkg/sub/foo.js"() {
 -        require_bar();
 +    "src/node_modules/pkg/sub/foo.js"() {
-+        __require("sub");
++        require("sub");
      }
  });
  require_foo();

@@ -34,13 +34,12 @@ snapshot_kind: text
 
 ```js
 
-
 //#region entry.js
 require();
-__require("a", "b");
+require("a", "b");
 try {
 	require();
-	__require("a", "b");
+	require("a", "b");
 } catch {}
 
 //#endregion

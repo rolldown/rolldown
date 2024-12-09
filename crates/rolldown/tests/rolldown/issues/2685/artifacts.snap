@@ -7,14 +7,9 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import { createRequire } from "module";
 
-//#region rolldown:runtime
-var __require = /* @__PURE__ */ createRequire(import.meta.url);
-
-//#endregion
 //#region main.js
-var main_default = __require("path").join;
+var main_default = require("path").join;
 
 //#endregion
 export { main_default as default };

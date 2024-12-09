@@ -1,5 +1,5 @@
 # Reason
-1. `__require` rewrite
+1. will not rewrite `__require`
 # Diff
 ## /out.js
 ### esbuild
@@ -16,13 +16,12 @@ try {
 ### rolldown
 ```js
 
-
 //#region entry.js
 require();
-__require("a", "b");
+require("a", "b");
 try {
 	require();
-	__require("a", "b");
+	require("a", "b");
 } catch {}
 
 //#endregion
@@ -34,12 +33,14 @@ try {
 +++ rolldown	entry.js
 @@ -1,6 +1,6 @@
 -__require();
+-__require("a", "b");
 +require();
- __require("a", "b");
++require("a", "b");
  try {
 -    __require();
+-    __require("a", "b");
 +    require();
-     __require("a", "b");
++    require("a", "b");
  } catch {}
 
 ```

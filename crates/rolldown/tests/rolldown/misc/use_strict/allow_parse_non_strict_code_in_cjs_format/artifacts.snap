@@ -12,7 +12,7 @@ const node_assert = __toESM(require("node:assert"));
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
-	module.exports = function foo$1(arguments$1) {};
+	module.exports = function foo$1(arguments) {};
 } });
 
 //#endregion

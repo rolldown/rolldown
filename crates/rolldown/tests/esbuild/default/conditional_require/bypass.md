@@ -1,5 +1,5 @@
 # Reason
-1. We don't consider `require($expr)` as a import record
+1. will not rewrite `__require`
 # Diff
 ## /out.js
 ### esbuild
@@ -26,8 +26,8 @@ var require_b = __commonJS({ "b.js"(exports) {
 
 //#endregion
 //#region a.js
-x ? __require("a") : y ? require_b() : __require("c");
-x ? y ? __require("a") : require_b() : require(c);
+x ? require("a") : y ? require_b() : require("c");
+x ? y ? require("a") : require_b() : require(c);
 
 //#endregion
 ```
@@ -36,12 +36,14 @@ x ? y ? __require("a") : require_b() : require(c);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	a.js
-@@ -3,5 +3,5 @@
+@@ -2,6 +2,6 @@
+     "b.js"(exports) {
          exports.foo = 213;
      }
  });
- x ? __require("a") : y ? require_b() : __require("c");
+-x ? __require("a") : y ? require_b() : __require("c");
 -x ? y ? __require("a") : require_b() : __require(c);
-+x ? y ? __require("a") : require_b() : require(c);
++x ? require("a") : y ? require_b() : require("c");
++x ? y ? require("a") : require_b() : require(c);
 
 ```

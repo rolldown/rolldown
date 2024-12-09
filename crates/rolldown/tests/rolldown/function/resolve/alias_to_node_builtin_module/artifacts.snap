@@ -7,11 +7,9 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import { createRequire } from "module";
-
 
 //#region main.js
-__require("fs");
+require("fs");
 
 //#endregion
 ```

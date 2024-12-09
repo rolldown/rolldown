@@ -16,8 +16,8 @@ var require_b = __commonJS({ "b.js"(exports) {
 
 //#endregion
 //#region a.js
-x ? __require("a") : y ? require_b() : __require("c");
-x ? y ? __require("a") : require_b() : require(c);
+x ? require("a") : y ? require_b() : require("c");
+x ? y ? require("a") : require_b() : require(c);
 
 //#endregion
 ```

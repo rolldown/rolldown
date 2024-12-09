@@ -23,13 +23,13 @@ console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 ```js
 import * as ns2 from "foo";
 import * as ns from "foo";
-import def, { a, a2, b as c, b as c3, default as def2, default as def3 } from "foo";
+import def, { a, a2, b, default as def2, default as def3 } from "foo";
 
 //#region entry.js
 const imp = [import("foo"), function nested() {
 	return import("foo");
 }];
-console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
+console.log(ns, a, b, def, def2, ns2, def3, a2, b, imp);
 
 //#endregion
 ```
@@ -48,10 +48,11 @@ console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 -import def2, * as ns2 from "foo";
 -import def3, {a2, b as c3} from "foo";
 -const imp = [import("foo"), function nested() {
-+import def, {a, a2, b as c, b as c3, default as def2, default as def3} from "foo";
++import def, {a, a2, b, default as def2, default as def3} from "foo";
 +var imp = [import("foo"), function nested() {
      return import("foo");
  }];
- console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
+-console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
++console.log(ns, a, b, def, def2, ns2, def3, a2, b, imp);
 
 ```

@@ -53,23 +53,23 @@ console.log(
 ```
 ### rolldown
 ```js
-import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 
 //#region entry.jsx
 console.log(
-	_jsx("div", { x }),
-	_jsx("div", { x: "y" }),
-	_jsx("div", { x: true }),
-	_jsx("div", { ...x }),
-	_jsx("div", { children: x }),
-	_jsx(_Fragment, { children: x }),
+	jsx("div", { x }),
+	jsx("div", { x: "y" }),
+	jsx("div", { x: true }),
+	jsx("div", { ...x }),
+	jsx("div", { children: x }),
+	jsx(Fragment, { children: x }),
 	// Comments on absent AST nodes
-	_jsxs("div", { children: ["before", "after"] }),
-	_jsxs("div", { children: ["before", "after"] }),
-	_jsxs("div", { children: ["before", "after"] }),
-	_jsxs(_Fragment, { children: ["before", "after"] }),
-	_jsxs(_Fragment, { children: ["before", "after"] }),
-	_jsxs(_Fragment, { children: ["before", "after"] })
+	jsxs("div", { children: ["before", "after"] }),
+	jsxs("div", { children: ["before", "after"] }),
+	jsxs("div", { children: ["before", "after"] }),
+	jsxs(Fragment, { children: ["before", "after"] }),
+	jsxs(Fragment, { children: ["before", "after"] }),
+	jsxs(Fragment, { children: ["before", "after"] })
 );
 
 //#endregion
@@ -81,7 +81,7 @@ console.log(
 +++ rolldown	entry.js
 @@ -1,46 +1,20 @@
 -// entry.jsx
-+import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
++import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 +
 +//#region entry.jsx
  console.log(
@@ -130,19 +130,19 @@ console.log(
 -  }after</>
 -);
 \ No newline at end of file
-+	_jsx("div", { x }),
-+	_jsx("div", { x: "y" }),
-+	_jsx("div", { x: true }),
-+	_jsx("div", { ...x }),
-+	_jsx("div", { children: x }),
-+	_jsx(_Fragment, { children: x }),
++	jsx("div", { x }),
++	jsx("div", { x: "y" }),
++	jsx("div", { x: true }),
++	jsx("div", { ...x }),
++	jsx("div", { children: x }),
++	jsx(Fragment, { children: x }),
 +	// Comments on absent AST nodes
-+	_jsxs("div", { children: ["before", "after"] }),
-+	_jsxs("div", { children: ["before", "after"] }),
-+	_jsxs("div", { children: ["before", "after"] }),
-+	_jsxs(_Fragment, { children: ["before", "after"] }),
-+	_jsxs(_Fragment, { children: ["before", "after"] }),
-+	_jsxs(_Fragment, { children: ["before", "after"] })
++	jsxs("div", { children: ["before", "after"] }),
++	jsxs("div", { children: ["before", "after"] }),
++	jsxs("div", { children: ["before", "after"] }),
++	jsxs(Fragment, { children: ["before", "after"] }),
++	jsxs(Fragment, { children: ["before", "after"] }),
++	jsxs(Fragment, { children: ["before", "after"] })
 +);
 +
 +//#endregion

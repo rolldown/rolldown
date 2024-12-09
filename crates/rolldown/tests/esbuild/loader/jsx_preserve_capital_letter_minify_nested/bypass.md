@@ -13,12 +13,12 @@ x = () => {
 ```
 ### rolldown
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 x = () => {
 	class XYYYYY {}
-	return _jsx(
+	return jsx(
 		XYYYYY,
 		// This should be named "Y" due to frequency analysis
 		{ "tag-must-start-with-capital-letter": true }
@@ -34,7 +34,7 @@ x = () => {
 +++ rolldown	entry.js
 @@ -1,6 +1,13 @@
 -// entry.jsx
-+import { jsx as _jsx } from "react/jsx-runtime";
++import { jsx } from "react/jsx-runtime";
 +
 +//#region entry.jsx
  x = () => {
@@ -44,7 +44,7 @@ x = () => {
 -};
 \ No newline at end of file
 +	class XYYYYY {}
-+	return _jsx(
++	return jsx(
 +		XYYYYY,
 +		// This should be named "Y" due to frequency analysis
 +		{ "tag-must-start-with-capital-letter": true }

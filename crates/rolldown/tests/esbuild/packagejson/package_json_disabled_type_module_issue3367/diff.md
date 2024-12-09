@@ -17,14 +17,12 @@ var import_foo = __toESM(require_foo());
 ### rolldown
 ```js
 
-
 //#region (ignored) 
-var require_package_json_disabled_type_module_issue3367 = __commonJS({ ""() {} });
+var default$1 = void 0;
 
 //#endregion
 //#region entry.js
-var import_package_json_disabled_type_module_issue3367 = __toESM(require_package_json_disabled_type_module_issue3367());
-(0, import_package_json_disabled_type_module_issue3367.default)();
+default$1();
 
 //#endregion
 ```
@@ -33,15 +31,13 @@ var import_package_json_disabled_type_module_issue3367 = __toESM(require_package
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,5 @@
+@@ -1,5 +1,2 @@
 -var require_foo = __commonJS({
 -    "(disabled):node_modules/foo/index.js"() {}
-+var require_package_json_disabled_type_module_issue3367 = __commonJS({
-+    ""() {}
- });
+-});
 -var import_foo = __toESM(require_foo());
 -(0, import_foo.default)();
-+var import_package_json_disabled_type_module_issue3367 = __toESM(require_package_json_disabled_type_module_issue3367());
-+(0, import_package_json_disabled_type_module_issue3367.default)();
++var default$1 = void 0;
++default$1();
 
 ```

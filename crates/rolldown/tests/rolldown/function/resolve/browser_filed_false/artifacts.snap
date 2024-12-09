@@ -8,14 +8,12 @@ snapshot_kind: text
 
 ```js
 
-
 //#region (ignored) node_modules/package/util.js
-var require_util = __commonJS({ "node_modules/package/util.js"() {} });
+var default$1 = void 0;
 
 //#endregion
 //#region node_modules/package/index.js
-var import_util = __toESM(require_util(), 1);
-console.log(import_util.default);
+console.log(default$1);
 
 //#endregion
 ```

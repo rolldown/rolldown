@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,13 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-
 //#region b.empty
-var require_b = __commonJS({ "b.empty"() {} });
+var b_exports = {};
 
 //#endregion
 //#region c.empty
-var require_c = __commonJS({ "c.empty"() {} });
+var default$1 = void 0;
 
 //#endregion
 //#region d.empty
@@ -22,10 +22,8 @@ var named = void 0;
 
 //#endregion
 //#region entry.js
-var import_b = __toESM(require_b());
-var import_c = __toESM(require_c());
-assert.deepEqual(import_b, { default: {} });
-assert.deepEqual(import_c.default, {});
+assert.deepEqual(b_exports, {});
+assert.deepEqual(default$1, undefined);
 assert.equal(named, undefined);
 
 //#endregion

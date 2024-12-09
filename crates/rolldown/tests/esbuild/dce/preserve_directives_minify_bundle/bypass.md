@@ -31,6 +31,7 @@
 ```js
 (function() {
 
+"use strict";
 
 //#region nested.js
 "use A";

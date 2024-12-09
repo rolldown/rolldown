@@ -5,7 +5,8 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "external": ["/Users/user/project/node_modules/pkg/index"]
   },
   "expectExecuted": false
 }

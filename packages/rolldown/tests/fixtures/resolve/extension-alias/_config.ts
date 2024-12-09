@@ -6,7 +6,7 @@ export default defineTest({
   config: {
     input: entry,
     resolve: {
-      extensionAlias: { '.ts': ['.ts', '.js'] },
+      extensionAlias: { '.js': ['.ts', '.js'] },
     },
   },
 })

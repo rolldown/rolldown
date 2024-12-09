@@ -189,12 +189,8 @@
 - crates/rolldown/tests/esbuild/ts/ts_export_equals
 ## export missing es6
 - crates/rolldown/tests/esbuild/ts/ts_export_missing_es6
-## ts implicit extension
-- crates/rolldown/tests/esbuild/ts/ts_implicit_extensions
 ## rolldown don't insert debug comments in css
 - crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
-## resolve `mts` in ts
-- crates/rolldown/tests/esbuild/ts/ts_import_mts
 ## needs support target
 - crates/rolldown/tests/esbuild/ts/ts_namespace_keep_names_target_es2015
 ## controversial

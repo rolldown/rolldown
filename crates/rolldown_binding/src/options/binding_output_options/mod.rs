@@ -122,4 +122,5 @@ pub struct BindingOutputOptions {
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
   #[napi(ts_type = "'none' | 'preserve-legal'")]
   pub comments: Option<String>,
+  pub polyfill_require: Option<bool>,
 }

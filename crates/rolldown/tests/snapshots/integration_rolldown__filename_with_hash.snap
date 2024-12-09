@@ -865,10 +865,6 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-BD1soJCO.js
 
-# tests/esbuild/default/external_with_wildcard
-
-- entry-!~{000}~.js => entry-CIoKzsVQ.js
-
 # tests/esbuild/default/false_require
 
 - entry-!~{000}~.js => entry-8-6Piydq.js
@@ -3536,11 +3532,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_implicit_extensions
 
-- entry-!~{000}~.js => entry-Begpf-2k.js
-
-# tests/esbuild/ts/ts_implicit_extensions_missing
-
-- entry-!~{000}~.js => entry-B36I9fxo.js
+- entry-!~{000}~.js => entry-BKXWnRbp.js
 
 # tests/esbuild/ts/ts_import_cts
 
@@ -3575,17 +3567,13 @@ snapshot_kind: text
 - entry-!~{000}~.js => entry-Cl_h88w9.js
 - entry.css
 
-# tests/esbuild/ts/ts_import_missing_file
-
-- entry-!~{000}~.js => entry-BbVp7Q_1.js
-
 # tests/esbuild/ts/ts_import_missing_unused_es6
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 
 # tests/esbuild/ts/ts_import_mts
 
-- entry-!~{000}~.js => entry-BfnBwdzA.js
+- entry-!~{000}~.js => entry-WijGgA1r.js
 
 # tests/esbuild/ts/ts_import_type_only_file
 
@@ -3815,6 +3803,12 @@ snapshot_kind: text
 - main-!~{002}~.js => main-BsUbiWYI.js
 - foo-!~{000}~.js => foo-D0d6mltj.js
 - foo-!~{003}~.js => foo-DXxOOpWy.js
+
+# tests/rolldown/code_splitting/ensure_safe_identifier
+
+- main1-!~{000}~.js => main1-xM8JUegD.js
+- main2-!~{001}~.js => main2-DpJiuJHb.js
+- 0shared-file_-!~{002}~.js => 0shared-file_-CJwdPY_T.js
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
@@ -4604,6 +4598,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BhhiXn0Z.js
 - main-BhhiXn0Z.js.map
+
+# tests/rolldown/misc/polyfill-require-disabled
+
+- main-!~{000}~.js => main-YukbUm0A.js
 
 # tests/rolldown/misc/reexport_star
 

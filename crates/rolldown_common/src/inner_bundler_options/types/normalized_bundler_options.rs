@@ -77,6 +77,7 @@ pub struct NormalizedBundlerOptions {
   pub comments: Comments,
   pub drop_labels: FxHashSet<String>,
   pub target: ESTarget,
+  pub polyfill_require: bool,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;
@@ -88,5 +89,14 @@ impl NormalizedBundlerOptions {
 
   pub fn is_esm_format_with_node_platform(&self) -> bool {
     matches!(self.format, OutputFormat::Esm) && matches!(self.platform, Platform::Node)
+  }
+
+  /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform
+  #[inline]
+  pub fn polyfill_require_for_esm_format_with_node_platform(&self) -> bool {
+    if self.is_esm_format_with_node_platform() {
+      return self.polyfill_require;
+    }
+    true
   }
 }

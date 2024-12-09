@@ -13,6 +13,8 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
 
+use super::utils::render_modules_with_peek_runtime_module_at_first;
+
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn render_cjs<'code>(
   ctx: &GenerateContext<'_>,
@@ -71,30 +73,12 @@ pub fn render_cjs<'code>(
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
-  let mut module_sources_peekable = module_sources.iter().peekable();
-  match module_sources_peekable.peek() {
-    Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
-      if let (_, _module_id, Some(emitted_sources)) =
-        module_sources_peekable.next().expect("Must have module")
-      {
-        for source in emitted_sources.as_ref() {
-          source_joiner.append_source(source);
-        }
-      }
-    }
-    _ => {}
-  }
-
-  source_joiner.append_source(render_cjs_chunk_imports(ctx));
-
-  // chunk content
-  module_sources_peekable.for_each(|(_, _, module_render_output)| {
-    if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources.as_ref() {
-        source_joiner.append_source(source);
-      }
-    }
-  });
+  render_modules_with_peek_runtime_module_at_first(
+    ctx,
+    &mut source_joiner,
+    module_sources,
+    render_cjs_chunk_imports(ctx),
+  );
 
   if let Some(entry_id) = ctx.chunk.entry_module_idx() {
     let entry_meta = &ctx.link_output.metas[entry_id];

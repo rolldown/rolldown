@@ -6,7 +6,8 @@
         "import": "entry.js"
       }
     ],
-    "format": "iife"
+    "format": "iife",
+    "external": ["./foo"]
   },
   "expectExecuted": false
 }

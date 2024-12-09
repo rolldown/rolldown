@@ -248,7 +248,9 @@ impl<'a> LinkStage<'a> {
             if matches!(rec.kind, ImportKind::Require)
               || !self.options.format.keep_esm_import_export_syntax()
             {
-              if self.options.format.should_call_runtime_require() {
+              if self.options.format.should_call_runtime_require()
+                && self.options.polyfill_require_for_esm_format_with_node_platform()
+              {
                 stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
                 record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
               }

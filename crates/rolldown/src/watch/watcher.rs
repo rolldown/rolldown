@@ -3,12 +3,9 @@ use dashmap::DashSet;
 use notify::{
   event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
-use rolldown_common::{
-  BundleEndEventData, BundleEvent, OutputsDiagnostics, WatcherChangeData, WatcherChangeKind,
-  WatcherEvent,
-};
-use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
-use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
+use rolldown_common::{BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent};
+use rolldown_error::{BuildResult, ResultExt};
+use rolldown_utils::dashmap::FxDashSet;
 use std::{
   path::Path,
   sync::{
@@ -16,25 +13,26 @@ use std::{
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
-  time::Instant,
 };
-use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use crate::Bundler;
 
 use anyhow::Result;
 
-use super::emitter::{SharedWatcherEmitter, WatcherEmitter};
+use super::{
+  emitter::{SharedWatcherEmitter, WatcherEmitter},
+  watcher_task::WatcherTask,
+};
 
 enum WatcherChannelMsg {
   NotifyEvent(notify::Result<notify::Event>),
   Close,
 }
 
-pub struct Watcher {
+pub struct WatcherImpl {
   pub emitter: SharedWatcherEmitter,
-  bundler: Arc<Mutex<Bundler>>,
+  tasks: Vec<WatcherTask>,
   inner: Arc<Mutex<RecommendedWatcher>>,
   running: AtomicBool,
   rerun: AtomicBool,
@@ -43,21 +41,23 @@ pub struct Watcher {
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }
 
-impl Watcher {
-  pub fn new(bundler: Arc<Mutex<Bundler>>) -> Result<Self> {
+impl WatcherImpl {
+  #[allow(clippy::needless_pass_by_value)]
+  pub fn new(bundlers: Vec<Arc<Mutex<Bundler>>>) -> Result<Self> {
     let (tx, rx) = channel();
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
-      let config = Config::default();
-      let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
-      if let Some(notify) = &bundler_guard.options.watch.notify {
-        if let Some(poll_interval) = notify.poll_interval {
-          config.with_poll_interval(poll_interval);
-        }
-        config.with_compare_contents(notify.compare_contents);
-      }
-      config
+      // TODO using one notify configure for all bundlers
+      // let config = Config::default();
+      // let bundler_guard = bundler.try_lock().expect("Failed to lock the bundler. ");
+      // if let Some(notify) = &bundler_guard.options.watch.notify {
+      //   if let Some(poll_interval) = notify.poll_interval {
+      //     config.with_poll_interval(poll_interval);
+      //   }
+      //   config.with_compare_contents(notify.compare_contents);
+      // }
+      Config::default()
     };
     let inner = RecommendedWatcher::new(
       move |res| {
@@ -68,9 +68,14 @@ impl Watcher {
       watch_option,
     )?;
 
+    let emitter = Arc::new(WatcherEmitter::new());
+
+    let tasks =
+      bundlers.into_iter().map(|bundler| WatcherTask::new(bundler, Arc::clone(&emitter))).collect();
+
     Ok(Self {
-      emitter: Arc::new(WatcherEmitter::new()),
-      bundler,
+      tasks,
+      emitter,
       inner: Arc::new(Mutex::new(inner)),
       running: AtomicBool::default(),
       watch_files: DashSet::default(),
@@ -107,71 +112,34 @@ impl Watcher {
   }
 
   pub async fn run(&self) -> BuildResult<()> {
-    let start_time = Instant::now();
-    let mut bundler = self.bundler.lock().await;
     self.emitter.emit(WatcherEvent::ReStart)?;
 
     self.running.store(true, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::Start))?;
 
-    self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
-
-    bundler.plugin_driver.clear();
-
-    let output = {
-      if bundler.options.watch.skip_write {
-        // TODO Here should be call scan
-        bundler.generate().await
-      } else {
-        bundler.write().await
-      }
-    };
-
     let mut inner = self.inner.lock().await;
-    // FIXME(hyf0): probably should have a more official API/better way to get watch files
-    for file in bundler.plugin_driver.watch_files.iter() {
-      // we should skip the file that is already watched, here here some reasons:
-      // - The watching files has a ms level overhead.
-      // - Watching the same files multiple times will cost more overhead.
-      // TODO: tracking https://github.com/notify-rs/notify/issues/653
-      if self.watch_files.contains(file.as_str()) {
-        continue;
-      }
-      let path = Path::new(file.as_str());
-      if path.exists() {
-        let normalized_path = path.relative(&bundler.options.cwd);
-        let normalized_id = normalized_path.to_string_lossy();
-        if pattern_filter::filter(
-          bundler.options.watch.exclude.as_deref(),
-          bundler.options.watch.include.as_deref(),
-          file.as_str(),
-          &normalized_id,
-        )
-        .inner()
-        {
+
+    for task in &self.tasks {
+      task.run().await?;
+
+      for file in task.watch_files.iter() {
+        // we should skip the file that is already watched, here here some reasons:
+        // - The watching files has a ms level overhead.
+        // - Watching the same files multiple times will cost more overhead.
+        // TODO: tracking https://github.com/notify-rs/notify/issues/653
+        if self.watch_files.contains(file.as_str()) {
+          continue;
+        }
+        let path = Path::new(file.as_str());
+        if path.exists() {
           inner.watch(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
           self.watch_files.insert(file.clone());
         }
       }
     }
+
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
     std::mem::drop(inner);
-
-    match output {
-      Ok(_output) => {
-        self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleEnd(BundleEndEventData {
-          output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
-          #[allow(clippy::cast_possible_truncation)]
-          duration: start_time.elapsed().as_millis() as u32,
-        })))?;
-      }
-      Err(errs) => {
-        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {
-          diagnostics: errs.into_vec(),
-          cwd: bundler.options.cwd.clone(),
-        })))?;
-      }
-    }
 
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
@@ -193,8 +161,9 @@ impl Watcher {
     // emit close event
     self.emitter.emit(WatcherEvent::Close)?;
     // call close watcher hook
-    let bundler = self.bundler.lock().await;
-    bundler.plugin_driver.close_watcher().await?;
+    for task in &self.tasks {
+      task.close().await?;
+    }
 
     Ok(())
   }
@@ -204,21 +173,17 @@ impl Watcher {
   }
 }
 
-pub async fn on_change(watcher: &Arc<Watcher>, path: &str, kind: WatcherChangeKind) {
+pub async fn on_change(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
     .emit(WatcherEvent::Change(WatcherChangeData { path: path.into(), kind }))
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
-  let bundler = watcher.bundler.lock().await;
-  let _ = bundler.plugin_driver.watch_change(path, kind).await.map_err(|e| {
-    watcher.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {
-      diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
-      cwd: bundler.options.cwd.clone(),
-    })))
-  });
+  for task in &watcher.tasks {
+    task.on_change(path, kind).await;
+  }
 }
 
-pub fn wait_for_change(watcher: Arc<Watcher>) {
+pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
   let future = async move {
     let mut run = true;
     while run {

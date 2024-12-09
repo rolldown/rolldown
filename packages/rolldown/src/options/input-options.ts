@@ -56,6 +56,14 @@ export interface WatchOptions {
   chokidar?: any
 }
 
+export interface ChecksOptions {
+  /**
+   * Wether to emit warnings when detecting circular dependencies.
+   * @default false
+   */
+  circularDependency?: boolean
+}
+
 export interface InputOptions {
   input?: InputOption
   plugins?: RolldownPluginOption
@@ -64,6 +72,12 @@ export interface InputOptions {
     alias?: Record<string, string[] | string>
     aliasFields?: string[][]
     conditionNames?: string[]
+    /**
+     * Map of extensions to alternative extensions.
+     *
+     * With writing `import './foo.js'` in a file, you want to resolve it to `foo.ts` instead of `foo.js`.
+     * You can achieve this by setting: `extensionAlias: { '.js': ['.ts', '.js'] }`.
+     */
     extensionAlias?: Record<string, string[]>
     exportsFields?: string[][]
     extensions?: string[]
@@ -137,6 +151,7 @@ export interface InputOptions {
   watch?: WatchOptions | false
   dropLabels?: string[]
   keepNames?: boolean
+  checks?: ChecksOptions
 }
 
 interface OverwriteInputOptionsForCli {

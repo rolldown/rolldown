@@ -78,6 +78,7 @@ export interface OutputOptions {
    */
   comments?: 'none' | 'preserve-legal'
   plugins?: RolldownOutputPluginOption
+  polyfillRequire?: boolean
 }
 
 interface OverwriteOutputOptionsForCli {

@@ -12,7 +12,8 @@
     ],
     "moduleTypes": {
       ".css": "css"
-    }
+    },
+    "external": ["./dynamic", "./file", "./file2"]
   },
   "expectExecuted": false
 }

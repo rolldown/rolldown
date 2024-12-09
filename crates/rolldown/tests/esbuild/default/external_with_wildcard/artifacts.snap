@@ -1,7 +1,8 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
+# Errors
 
 ## UNRESOLVED_IMPORT
 
@@ -11,44 +12,8 @@ source: crates/rolldown_testing/src/integration_test.rs
     │
  10 │ import "./file.ping";
     │        ──────┬──────  
-    │              ╰──────── Module not found, treating it as an external dependency
+    │              ╰──────── Module not found.
 ────╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "./file.png" in entry.js
-   ╭─[entry.js:5:8]
-   │
- 5 │ import "./file.png";
-   │        ──────┬─────  
-   │              ╰─────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "/assets/images/test.jpg" in entry.js
-   ╭─[entry.js:2:8]
-   │
- 2 │ import "/assets/images/test.jpg";
-   │        ────────────┬────────────  
-   │                    ╰────────────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "/dir//file.gif" in entry.js
-   ╭─[entry.js:4:8]
-   │
- 4 │ import "/dir//file.gif";
-   │        ────────┬───────  
-   │                ╰───────── Module not found, treating it as an external dependency
-───╯
 
 ```
 ## UNRESOLVED_IMPORT
@@ -59,19 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  9 │ import "/dir/file.gif";
    │        ───────┬───────  
-   │               ╰───────── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "/dir/x/file.gif" in entry.js
-   ╭─[entry.js:3:8]
-   │
- 3 │ import "/dir/x/file.gif";
-   │        ────────┬────────  
-   │                ╰────────── Module not found, treating it as an external dependency
+   │               ╰───────── Module not found.
 ───╯
 
 ```
@@ -83,21 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  8 │ import "/sassets/images/test.jpg";
    │        ─────────────┬────────────  
-   │                     ╰────────────── Module not found, treating it as an external dependency
+   │                     ╰────────────── Module not found.
 ───╯
-
-```
-# Assets
-
-## entry.js
-
-```js
-import "/assets/images/test.jpg";
-import "/dir/x/file.gif";
-import "/dir//file.gif";
-import "./file.png";
-import "/sassets/images/test.jpg";
-import "/dir/file.gif";
-import "./file.ping";
 
 ```

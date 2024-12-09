@@ -14,6 +14,7 @@ use serde::Deserialize;
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+mod binding_checks_options;
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
@@ -91,6 +92,7 @@ pub struct BindingInputOptions {
   pub jsx: Option<JsxOptions>,
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
+  pub checks: Option<binding_checks_options::BindingChecksOptions>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

@@ -93,6 +93,7 @@ pub struct BindingModulePreloadPolyfillPluginConfig {
 pub struct BindingJsonPluginConfig {
   pub stringify: Option<bool>,
   pub is_build: Option<bool>,
+  pub named_exports: Option<bool>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -377,6 +378,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(JsonPlugin {
           stringify: config.stringify.unwrap_or_default(),
           is_build: config.is_build.unwrap_or_default(),
+          named_exports: config.named_exports.unwrap_or_default(),
         })
       }
       BindingBuiltinPluginName::BuildImportAnalysis => {

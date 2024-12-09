@@ -77,7 +77,8 @@
         "name": "hoist-export-default-expr",
         "import": "hoist-export-default-expr.js"
       }
-    ]
+    ],
+    "external": ["./foo"]
   },
   "expectExecuted": false
 }

@@ -1,25 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './imported.mjs' in entry.ts
-   ╭─[entry.ts:1:8]
-   │
- 1 │ import './imported.mjs'
-   │        ────────┬───────  
-   │                ╰───────── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-import "./imported.mjs";
 
+//#region imported.mts
+console.log("works");
+
+//#endregion
 ```

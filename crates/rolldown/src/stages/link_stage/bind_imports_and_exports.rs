@@ -12,8 +12,9 @@ use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{
-  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
+use rolldown_utils::{
+  index_vec_ext::IndexVecExt,
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
 use rustc_hash::FxHashMap;
@@ -112,7 +113,7 @@ impl LinkStage<'_> {
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
   pub fn bind_imports_and_exports(&mut self) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
-    self.metas.iter_mut_enumerated().par_bridge().for_each(|(module_id, meta)| {
+    self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
       let Module::Normal(module) = &self.module_table.modules[module_id] else {
         return;
       };
@@ -141,7 +142,7 @@ impl LinkStage<'_> {
     });
 
     let mut binding_ctx = BindImportsAndExportsContext {
-      normal_modules: &self.module_table.modules,
+      index_modules: &self.module_table.modules,
       metas: &mut self.metas,
       symbol_db: &mut self.symbols,
       options: self.options,
@@ -360,7 +361,7 @@ impl LinkStage<'_> {
 }
 
 struct BindImportsAndExportsContext<'a> {
-  pub normal_modules: &'a IndexModules,
+  pub index_modules: &'a IndexModules,
   pub metas: &'a mut LinkingMetadataVec,
   pub symbol_db: &'a mut SymbolRefDb,
   pub options: &'a SharedOptions,
@@ -372,7 +373,7 @@ struct BindImportsAndExportsContext<'a> {
 
 impl BindImportsAndExportsContext<'_> {
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
-    let Module::Normal(module) = &self.normal_modules[module_id] else {
+    let Module::Normal(module) = &self.index_modules[module_id] else {
       return;
     };
     let is_esm = matches!(self.options.format, OutputFormat::Esm);
@@ -400,7 +401,7 @@ impl BindImportsAndExportsContext<'_> {
         }
       }
       let ret = self.match_import_with_export(
-        self.normal_modules,
+        self.index_modules,
         &mut MatchingContext { tracker_stack: Vec::default() },
         ImportTracker {
           importer: module_id,
@@ -413,10 +414,10 @@ impl BindImportsAndExportsContext<'_> {
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
-          let importee = self.normal_modules[rec.resolved_module].stable_id().to_string();
+          let importee = self.index_modules[rec.resolved_module].stable_id().to_string();
 
           let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
-          if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
+          if let Some(owner) = self.index_modules[symbol_ref.owner].as_normal() {
             if let Specifier::Literal(name) = &named_import.imported {
               let named_export = &owner.named_exports[name];
               exporter.push(AmbiguousExternalNamespaceModule {
@@ -427,25 +428,19 @@ impl BindImportsAndExportsContext<'_> {
             }
           }
 
-          exporter.extend(
-            potentially_ambiguous_symbol_refs
-              .iter()
-              .filter_map(|&symbol_ref| {
-                if let Some(owner) = self.normal_modules[symbol_ref.owner].as_normal() {
-                  if let Specifier::Literal(name) = &named_import.imported {
-                    let named_export = &owner.named_exports[name];
-                    return Some(AmbiguousExternalNamespaceModule {
-                      source: owner.source.clone(),
-                      filename: owner.stable_id.to_string(),
-                      span_of_identifier: named_export.span,
-                    });
-                  }
-                }
+          exporter.extend(potentially_ambiguous_symbol_refs.iter().filter_map(|&symbol_ref| {
+            let normal_module = self.index_modules[symbol_ref.owner].as_normal()?;
+            if let Specifier::Literal(name) = &named_import.imported {
+              let named_export = &normal_module.named_exports[name];
+              return Some(AmbiguousExternalNamespaceModule {
+                source: normal_module.source.clone(),
+                filename: normal_module.stable_id.to_string(),
+                span_of_identifier: named_export.span,
+              });
+            }
 
-                None
-              })
-              .collect::<Vec<_>>(),
-          );
+            None
+          }));
 
           self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
             named_import.imported.to_string(),
@@ -469,7 +464,7 @@ impl BindImportsAndExportsContext<'_> {
             Some(NamespaceAlias { property_name: alias, namespace_ref });
         }
         MatchImportKind::NoMatch => {
-          let importee = &self.normal_modules[rec.resolved_module];
+          let importee = &self.index_modules[rec.resolved_module];
           self.errors.push(BuildDiagnostic::missing_export(
             module.stable_id.to_string(),
             importee.stable_id().to_string(),
@@ -484,21 +479,19 @@ impl BindImportsAndExportsContext<'_> {
 
   fn advance_import_tracker(&self, ctx: &mut MatchingContext) -> ImportStatus {
     let tracker = ctx.current_tracker();
-    let importer = &self.normal_modules[tracker.importer]
+    let importer = &self.index_modules[tracker.importer]
       .as_normal()
       .expect("only normal module can be importer");
     let named_import = &importer.named_imports[&tracker.imported_as];
 
     // Is this an external file?
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
-    let importee_id = match &self.normal_modules[importee_id] {
-      Module::Normal(importee) => importee.idx,
+    let importee = match &self.index_modules[importee_id] {
+      Module::Normal(importee) => importee.as_ref(),
       Module::External(external) => return ImportStatus::External(external.namespace_ref),
     };
 
     // Is this a named import of a file without any exports?
-    let importee =
-      &self.normal_modules[importee_id].as_normal().expect("external module is bailout above");
     debug_assert!(
       matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::CommonJs)
         || importee.meta.has_lazy_export()
@@ -538,14 +531,14 @@ impl BindImportsAndExportsContext<'_> {
   #[allow(clippy::too_many_lines)]
   fn match_import_with_export(
     &mut self,
-    normal_modules: &IndexModules,
+    index_modules: &IndexModules,
     ctx: &mut MatchingContext,
     mut tracker: ImportTracker,
   ) -> MatchImportKind {
     let tracking_span = tracing::trace_span!(
       "TRACKING_MATCH_IMPORT",
-      importer = normal_modules[tracker.importer].stable_id(),
-      importee = normal_modules[tracker.importee].stable_id(),
+      importer = index_modules[tracker.importer].stable_id(),
+      importee = index_modules[tracker.importee].stable_id(),
       imported_specifier = tracker.imported.to_string()
     );
     let _enter = tracking_span.enter();
@@ -563,7 +556,7 @@ impl BindImportsAndExportsContext<'_> {
       ctx.tracker_stack.push(tracker.clone());
       let import_status = self.advance_import_tracker(ctx);
       tracing::trace!("Got import_status {:?}", import_status);
-      let importer = &self.normal_modules[tracker.importer];
+      let importer = &self.index_modules[tracker.importer];
       let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
       let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_id];
 
@@ -588,14 +581,14 @@ impl BindImportsAndExportsContext<'_> {
         }
         ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs, .. } => {
           for ambiguous_ref in &potentially_ambiguous_export_star_refs {
-            let ambiguous_ref_owner = &normal_modules[ambiguous_ref.owner];
+            let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
             if let Some(another_named_import) =
               ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref)
             {
               let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
                 [another_named_import.record_id];
               let ambiguous_result = self.match_import_with_export(
-                normal_modules,
+                index_modules,
                 &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
                 ImportTracker {
                   importer: ambiguous_ref_owner.idx(),
@@ -612,11 +605,11 @@ impl BindImportsAndExportsContext<'_> {
 
           // If this is a re-export of another import, continue for another
           // iteration of the loop to resolve that import as well
-          let owner = &normal_modules[symbol.owner];
+          let owner = &index_modules[symbol.owner];
           if let Some(another_named_import) = owner.as_normal().unwrap().named_imports.get(&symbol)
           {
             let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_id];
-            match &self.normal_modules[rec.resolved_module] {
+            match &self.index_modules[rec.resolved_module] {
               Module::External(_) => {
                 break MatchImportKind::Normal { symbol: another_named_import.imported_as };
               }
@@ -677,7 +670,7 @@ impl BindImportsAndExportsContext<'_> {
       }
     }
 
-    if let Module::Normal(importee) = &self.normal_modules[tracker.importee] {
+    if let Module::Normal(importee) = &self.index_modules[tracker.importee] {
       if (self.options.shim_missing_exports || matches!(importee.module_type, ModuleType::Empty))
         && matches!(ret, MatchImportKind::NoMatch)
       {

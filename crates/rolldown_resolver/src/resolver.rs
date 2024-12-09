@@ -3,7 +3,7 @@ use dashmap::DashMap;
 use itertools::Itertools;
 use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_utils::dashmap::FxDashMap;
+use rolldown_utils::{dashmap::FxDashMap, indexmap::FxIndexMap};
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
@@ -72,6 +72,9 @@ impl<F: FileSystem + Default> Resolver<F> {
       Platform::Browser | Platform::Neutral => false,
     };
 
+    let mut extension_alias = raw_resolve.extension_alias.clone().unwrap_or_default();
+    impl_rewritten_file_extensions_via_extension_alias(&mut extension_alias);
+
     let resolve_options_with_default_conditions = OxcResolverOptions {
       tsconfig: raw_resolve.tsconfig_filename.map(|p| {
         let path = PathBuf::from(&p);
@@ -99,7 +102,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       exports_fields: raw_resolve
         .exports_fields
         .unwrap_or_else(|| vec![vec!["exports".to_string()]]),
-      extension_alias: raw_resolve.extension_alias.unwrap_or_default(),
+      extension_alias,
       extensions: raw_resolve.extensions.unwrap_or_else(|| {
         [".jsx", ".js", ".ts", ".tsx"].into_iter().map(str::to_string).collect()
       }),
@@ -273,4 +276,28 @@ fn build_resolve_ret(
   package_json: Option<Arc<PackageJson>>,
 ) -> ResolveReturn {
   ResolveReturn { path: path.into(), module_def_format: module_type, package_json }
+}
+
+// Support esbuild's `rewrittenFileExtensions` feature. https://github.com/evanw/esbuild/blob/a08f30db4a475472aa09cd89e2279a822266f6c7/internal/resolver/resolver.go#L1622-L1644
+// Some notices:
+// - We are using `extension_alias` feature to simulate the esbuild's `rewrittenFileExtensions` feature. But there are differences things, so we need to handle them carefully.
+// - `rewrittenFileExtensions` is not overridable by user config.
+// - `rewrittenFileExtensions` couldn't override user's config.
+fn impl_rewritten_file_extensions_via_extension_alias(
+  extension_alias: &mut Vec<(String, Vec<String>)>,
+) {
+  // The first alias is the original extension to make sure that `foo.js` will be resolved to `foo.js` if `foo.js` exists.
+  let mut rewritten_file_extensions = FxIndexMap::from_iter([
+    (".js".to_string(), vec![".js".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+    (".jsx".to_string(), vec![".jsx".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+    (".mjs".to_string(), vec![".mjs".to_string(), ".mts".to_string()]),
+    (".cjs".to_string(), vec![".cjs".to_string(), ".cts".to_string()]),
+  ]);
+  extension_alias.iter_mut().for_each(|(ext, aliases)| {
+    if let Some(rewrites) = rewritten_file_extensions.shift_remove(ext) {
+      aliases.extend(rewrites);
+    }
+  });
+
+  extension_alias.extend(rewritten_file_extensions);
 }

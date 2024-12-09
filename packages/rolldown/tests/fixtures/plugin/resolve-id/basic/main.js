@@ -2,4 +2,4 @@ import './foo'
 
 require('external')
 
-// import('dynamic')
+import('dynamic')

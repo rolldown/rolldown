@@ -6,6 +6,5 @@
         "import": "entry.ts"
       }
     ]
-  },
-  "expectExecuted": false
+  }
 }

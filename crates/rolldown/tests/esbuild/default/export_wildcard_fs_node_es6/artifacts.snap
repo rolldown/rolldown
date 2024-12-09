@@ -2,20 +2,6 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './external' in entry.js
-   ╭─[entry.js:3:15]
-   │
- 3 │ export * from './external'
-   │               ──────┬─────  
-   │                     ╰─────── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js

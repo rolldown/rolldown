@@ -162,8 +162,6 @@ fn get_resolve_options(
       vec!["index".to_string()]
     },
     prefer_relative: additional_options.prefer_relative,
-    // TODO(sapphi-red): maybe oxc-resolver can do the rootInRoot optimization
-    // https://github.com/vitejs/vite/blob/a50ff6000bca46a6fe429f2c3a98c486ea5ebc8e/packages/vite/src/node/plugins/resolve.ts#L304
     roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
     ..Default::default()
@@ -295,8 +293,6 @@ impl Resolver {
         Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
       }
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
-        // TODO(sapphi-red): maybe need to do the same thing for id mapped from browser field
-
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
         if is_bare_import(id) && !is_builtin(id, &self.runtime) && !id.contains('\0') {

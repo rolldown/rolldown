@@ -6,10 +6,13 @@ import { sleep } from '@tests/utils'
 
 const input = path.join(import.meta.dirname, './main.js')
 const output = path.join(import.meta.dirname, './dist/main.js')
+const outputDir = path.join(import.meta.dirname, './dist/')
+const foo = path.join(import.meta.dirname, './foo.js')
 
 afterEach(async () => {
   // revert change
   fs.writeFileSync(input, 'console.log(1)\n')
+  fs.writeFileSync(foo, 'console.log(1)\n')
   // TODO: find a way to avoid emit the change event at next test
   await sleep(60)
 })
@@ -42,7 +45,7 @@ test.sequential('watch', async () => {
   await waitBuildFinished(watcher)
 
   // edit file
-  fs.writeFileSync(input, 'console.log(2)')
+  ensureWriteFileSyncForWindowsNode22(input, 'console.log(2)')
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
       true,
@@ -210,7 +213,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   })
 
   // edit file
-  fs.writeFileSync(foo, 'console.log(2)\n')
+  ensureWriteFileSyncForWindowsNode18(foo, 'console.log(2)\n')
   await waitUtil(() => {
     expect(changeFn).toBeCalled()
   })
@@ -321,6 +324,57 @@ test.sequential('error handling + plugin error', async () => {
   await watcher.close()
 })
 
+test.sequential('watch multiply options', async () => {
+  const fooOutputDir = path.join(import.meta.dirname, './foo-dist/')
+  const fooOutput = path.join(import.meta.dirname, './foo-dist/foo.js')
+  const watcher = watch([
+    {
+      input,
+      cwd: import.meta.dirname,
+      output: {
+        dir: outputDir,
+      },
+    },
+    {
+      input: foo,
+      cwd: import.meta.dirname,
+      output: {
+        dir: fooOutputDir,
+      },
+    },
+  ])
+
+  const events: string[] = []
+  watcher.on('event', (event) => {
+    if (event.code === 'BUNDLE_END') {
+      events.push(event.output[0])
+    }
+  })
+
+  await waitBuildFinished(watcher)
+
+  ensureWriteFileSyncForWindowsNode18(input, 'console.log(2)')
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+    // Only the input corresponding bundler is rebuild
+    expect(events[0]).toEqual(outputDir)
+  })
+
+  events.length = 0
+  ensureWriteFileSyncForWindowsNode18(foo, 'console.log(2)')
+  await waitUtil(() => {
+    expect(fs.readFileSync(fooOutput, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+    // Only the foo corresponding bundler is rebuild
+    expect(events[0]).toEqual(fooOutputDir)
+  })
+
+  await watcher.close()
+})
+
 test.sequential('watch close immediately', async () => {
   const watcher = watch({
     input,
@@ -355,4 +409,25 @@ async function waitBuildFinished(
     })
     updateFn && updateFn()
   })
+}
+
+// TODO:
+// The windows maybe cannot emit the change event, write the file twice to ensure the change event emit.
+// ref https://github.com/rolldown/rolldown/actions/runs/12212639717/job/34071323644 windows node 22
+async function ensureWriteFileSyncForWindowsNode22(
+  filePath: string,
+  content: string,
+) {
+  fs.writeFileSync(filePath, '\n' + content + '\n')
+  fs.writeFileSync(filePath, content)
+}
+
+async function ensureWriteFileSyncForWindowsNode18(
+  filePath: string,
+  content: string,
+) {
+  // TODO: not sure the update event is not triggered at windows, but add it success
+  // ref https://github.com/rolldown/rolldown/actions/runs/12213020539/job/34072162527?pr=3032 windows node 18/20
+  console.log(filePath, content)
+  fs.writeFileSync(filePath, content)
 }

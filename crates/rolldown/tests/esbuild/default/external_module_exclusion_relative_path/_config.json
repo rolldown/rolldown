@@ -5,6 +5,12 @@
         "name": "index",
         "import": "index.js"
       }
+    ],
+    "external": [
+        "./foo.js",
+        "../../../out/in-out-dir.js",
+        "../../sha256.min.js",
+        "/api/config?a=1&b=2"
     ]
   },
   "expectExecuted": false

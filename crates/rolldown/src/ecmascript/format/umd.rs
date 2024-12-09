@@ -19,9 +19,9 @@ use crate::{
 
 use super::utils::{
   namespace::render_property_access, render_chunk_external_imports, render_factory_parameters,
+  render_modules_with_peek_runtime_module_at_first,
 };
 
-#[expect(clippy::too_many_lines)]
 pub async fn render_umd<'code>(
   ctx: &GenerateContext<'_>,
   banner: Option<&'code str>,
@@ -101,31 +101,12 @@ pub async fn render_umd<'code>(
     }
   }
 
-  let mut module_sources_peekable = module_sources.iter().peekable();
-  match module_sources_peekable.peek() {
-    Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
-      if let (_, _module_id, Some(emitted_sources)) =
-        module_sources_peekable.next().expect("Must have module")
-      {
-        for source in emitted_sources.iter() {
-          source_joiner.append_source(source);
-        }
-      }
-    }
-    _ => {}
-  }
-
-  source_joiner.append_source(import_code);
-
-  // chunk content
-  // TODO indent chunk content
-  module_sources_peekable.for_each(|(_, _, module_render_output)| {
-    if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources.as_ref() {
-        source_joiner.append_source(source);
-      }
-    }
-  });
+  render_modules_with_peek_runtime_module_at_first(
+    ctx,
+    &mut source_joiner,
+    module_sources,
+    import_code,
+  );
 
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
@@ -150,9 +131,8 @@ pub async fn render_umd<'code>(
           &ctx.chunk.canonical_names,
         );
 
-        // require_xxx();
-        // FIXME: should set the umd's exports with `require_xxx()`
-        source_joiner.append_source(concat_string!(wrapper_ref_name, "();\n"));
+        // return require_xxx();
+        source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
       }
       WrapKind::None => {}
     }

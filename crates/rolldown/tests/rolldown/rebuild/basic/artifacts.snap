@@ -1,0 +1,44 @@
+---
+source: crates/rolldown/tests/rolldown/rebuild/basic/mod.rs
+snapshot_kind: text
+---
+# build
+
+- entry
+
+```js
+
+//#region dep.js
+const dep = "[dep]";
+
+//#endregion
+//#region entry.js
+console.log(dep);
+
+//#endregion
+```
+
+# rebuild
+
+- entry
+
+```js
+
+//#region dep.js
+const dep = "[dep-edit]";
+
+//#endregion
+//#region entry.js
+console.log(dep);
+
+//#endregion
+```
+
+- hmr-update
+
+```js
+//#region dep.js
+const dep = "[dep-edit]";
+
+//#endregion
+```

@@ -51,6 +51,14 @@ export class RolldownBuild {
     return transformToRollupOutput(output)
   }
 
+  async rebuild(): Promise<RolldownOutput> {
+    if (!this.#bundler) {
+      throw new Error('invalid rebuild')
+    }
+    const output = await this.#bundler.bundler.write()
+    return transformToRollupOutput(output)
+  }
+
   async close(): Promise<void> {
     const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker({})
     await stopWorkers?.()

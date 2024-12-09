@@ -1,11 +1,16 @@
 {
+  // This config file is used to satisfy the TypeScript on traeating rolldown as a runnable project without building it.
+  // We will run rolldown directly from the source code using the `tsx`. It's mainly for building rolldown with itself.
+  // So you will see the though `build.ts` won't be published, it's still included in the `include` field.
+  // For generating dts, we use a separate `tsconfig.dts.json` file.
+
   "include": ["src/**/*", "build.ts"],
   "exclude": ["src/*.js", "src/*.mjs", "src/*.cjs", "dist/**"],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
 
     /* Projects */
-    // "incremental": true,                              /* Save .tsbuildinfo files to allow for incremental compilation of projects. */
+    "incremental": true /* Save .tsbuildinfo files to allow for incremental compilation of projects. */,
     // "composite": true,                                /* Enable constraints that allow a TypeScript project to be used with project references. */
     // "tsBuildInfoFile": "./.tsbuildinfo",              /* Specify the path to .tsbuildinfo incremental compilation file. */
     // "disableSourceOfProjectReferenceRedirect": true,  /* Disable preferring source files instead of declaration files when referencing composite projects. */

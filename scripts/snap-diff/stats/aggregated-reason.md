@@ -82,9 +82,9 @@
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
-## should rewrite `require`
-- crates/rolldown/tests/esbuild/default/nested_require_without_call
-- crates/rolldown/tests/esbuild/default/require_without_call
+## will not rewrite `__require`
+- crates/rolldown/tests/esbuild/default/metafile_various_cases
+- crates/rolldown/tests/esbuild/default/require_bad_argument_count
 - crates/rolldown/tests/esbuild/default/require_without_call_inside_try
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
@@ -139,8 +139,6 @@
 - crates/rolldown/tests/esbuild/default/comment_preservation_preserve_jsx
 ## esbuild will wrap `Promise.resolve().then() for original specifier`
 - crates/rolldown/tests/esbuild/default/conditional_import
-## We don't consider `require($expr)` as a import record
-- crates/rolldown/tests/esbuild/default/conditional_require
 ## not support conditional `require.resolve`
 - crates/rolldown/tests/esbuild/default/conditional_require_resolve
 ## oxc define
@@ -183,8 +181,6 @@
 - crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
 ## not support invalid template
 - crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template
-## `__require` rewrite
-- crates/rolldown/tests/esbuild/default/require_bad_argument_count
 ## not support require second argument
 - crates/rolldown/tests/esbuild/default/require_shim_substitution
 ## wrong `export default require_entry()`;

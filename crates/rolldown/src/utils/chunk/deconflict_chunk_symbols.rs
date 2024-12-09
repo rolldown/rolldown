@@ -82,14 +82,15 @@ pub fn deconflict_chunk_symbols(
     }
     ChunkKind::Common => {}
   }
-
-  chunk.imports_from_external_modules.iter().for_each(|(module, import_record)| {
-    let db = link_output.symbol_db.local_db(*module);
-    db.classic_data.iter_enumerated().skip(1).for_each(|(symbol, _)| {
-      renamer.add_symbol_in_root_scope((*module, symbol).into());
+  if !matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
+    chunk.imports_from_external_modules.iter().for_each(|(module, import_record)| {
+      let db = link_output.symbol_db.local_db(*module);
+      db.classic_data.iter_enumerated().skip(1).for_each(|(symbol, _)| {
+        renamer.add_symbol_in_root_scope((*module, symbol).into());
+      });
+      dbg!(&db);
     });
-    dbg!(&db);
-  });
+  }
 
   chunk
     .modules

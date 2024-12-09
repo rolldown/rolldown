@@ -4518,7 +4518,7 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2903_3
 
-- main-!~{000}~.js => main-BcrDU5fs.js
+- main-!~{000}~.js => main-BidPre_v.js
 
 # tests/rolldown/issues/2903_4
 
@@ -4595,6 +4595,10 @@ snapshot_kind: text
 # tests/rolldown/misc/invalid_ident_repr
 
 - main-!~{000}~.js => main-BlImAHc4.js
+
+# tests/rolldown/misc/merge_external_import
+
+- main-!~{000}~.js => main-BNMySP49.js
 
 # tests/rolldown/misc/object_shorthand_property
 

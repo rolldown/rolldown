@@ -159,9 +159,6 @@ impl LinkStage<'_> {
 
     for (module_idx, map) in binding_ctx.external_import_binding_merger.iter() {
       for (key, value) in map {
-        if key == "default" {
-          continue;
-        }
         let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.clone());
         for symbol_ref in value {
           self.symbols.link(*symbol_ref, target_symbol);

@@ -1,3 +1,4 @@
+import type Z from 'zod'
 import { z } from 'zod'
 
 export type LogLevel = 'info' | 'debug' | 'warn'
@@ -7,13 +8,15 @@ export type LogLevelWithError = LogLevel | 'error'
 export type RollupLog = any
 export type RollupLogWithString = RollupLog | string
 
-export const LogLevelSchema = z
+export const LogLevelSchema: Z.ZodType<LogLevel> = z
   .literal('info')
   .or(z.literal('debug'))
   .or(z.literal('warn')) satisfies z.ZodType<LogLevel>
 
-export const LogLevelOptionSchema = LogLevelSchema.or(z.literal('silent'))
-export const LogLevelWithErrorSchema = LogLevelSchema.or(z.literal('error'))
+export const LogLevelOptionSchema: Z.ZodType<LogLevelOption> =
+  LogLevelSchema.or(z.literal('silent'))
+export const LogLevelWithErrorSchema: Z.ZodType<LogLevelWithError> =
+  LogLevelSchema.or(z.literal('error'))
 
 export const LOG_LEVEL_SILENT: LogLevelOption = 'silent'
 export const LOG_LEVEL_ERROR = 'error'
@@ -29,7 +32,6 @@ export const logLevelPriority: Record<LogLevelOption, number> = {
 }
 
 // TODO RollupLog Fields
-export const RollupLogSchema = z.any() satisfies z.ZodType<RollupLog>
-export const RollupLogWithStringSchema = RollupLogSchema.or(
-  z.string(),
-) satisfies z.ZodType<RollupLogWithString>
+export const RollupLogSchema: Z.ZodAny = z.any() satisfies z.ZodType<RollupLog>
+export const RollupLogWithStringSchema: Z.ZodUnion<[Z.ZodAny, Z.ZodString]> =
+  RollupLogSchema.or(z.string()) satisfies z.ZodType<RollupLogWithString>

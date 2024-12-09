@@ -150,16 +150,11 @@ impl<'a> LinkStage<'a> {
             if matches!(importee.exports_kind, ExportsKind::None)
               && !importee.meta.has_lazy_export()
             {
-              // See https://github.com/evanw/esbuild/issues/447
-              if rec.meta.intersects(
-                ImportRecordMeta::CONTAINS_IMPORT_DEFAULT | ImportRecordMeta::CONTAINS_IMPORT_STAR,
-              ) {
-                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
-                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
-                }
+              // `import` a module that has `ExportsKind::None`, which will be turned into `ExportsKind::Esm`
+              // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+              unsafe {
+                let importee_mut = addr_of!(*importee).cast_mut();
+                (*importee_mut).exports_kind = ExportsKind::Esm;
               }
             }
           }

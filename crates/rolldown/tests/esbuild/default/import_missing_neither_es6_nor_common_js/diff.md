@@ -17,11 +17,11 @@ console.log((0, import_foo.default)(void 0, void 0));
 ```
 ### rolldown
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import default$1, { init_foo, x, y } from "./foo2.js";
 
 //#region named.js
-var import_foo = __toESM(require_foo());
-console.log((0, import_foo.default)(import_foo.x, import_foo.y));
+init_foo();
+console.log(default$1(x, y));
 
 //#endregion
 ```
@@ -36,10 +36,11 @@ console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 -        console.log("no exports here");
 -    }
 -});
-+import {__toESM, require_foo} from "./foo2.js";
- var import_foo = __toESM(require_foo());
+-var import_foo = __toESM(require_foo());
 -console.log((0, import_foo.default)(void 0, void 0));
-+console.log((0, import_foo.default)(import_foo.x, import_foo.y));
++import default$1, {init_foo, x, y} from "./foo2.js";
++init_foo();
++console.log(default$1(x, y));
 
 ```
 ## /out/star.js
@@ -58,11 +59,11 @@ console.log(ns.default(void 0, void 0));
 ```
 ### rolldown
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { init_foo } from "./foo2.js";
 
 //#region star.js
-var import_foo = __toESM(require_foo());
-console.log(import_foo.default(import_foo.x, import_foo.y));
+init_foo();
+console.log((void 0)(void 0, void 0));
 
 //#endregion
 ```
@@ -79,9 +80,9 @@ console.log(import_foo.default(import_foo.x, import_foo.y));
 -});
 -var ns = __toESM(require_foo());
 -console.log(ns.default(void 0, void 0));
-+import {__toESM, require_foo} from "./foo2.js";
-+var import_foo = __toESM(require_foo());
-+console.log(import_foo.default(import_foo.x, import_foo.y));
++import {init_foo} from "./foo2.js";
++init_foo();
++console.log((void 0)(void 0, void 0));
 
 ```
 ## /out/star-capture.js
@@ -100,11 +101,11 @@ console.log(ns);
 ```
 ### rolldown
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { foo_exports, init_foo } from "./foo2.js";
 
 //#region star-capture.js
-var import_foo = __toESM(require_foo());
-console.log(import_foo);
+init_foo();
+console.log(foo_exports);
 
 //#endregion
 ```
@@ -121,9 +122,9 @@ console.log(import_foo);
 -});
 -var ns = __toESM(require_foo());
 -console.log(ns);
-+import {__toESM, require_foo} from "./foo2.js";
-+var import_foo = __toESM(require_foo());
-+console.log(import_foo);
++import {foo_exports, init_foo} from "./foo2.js";
++init_foo();
++console.log(foo_exports);
 
 ```
 ## /out/bare.js
@@ -134,10 +135,10 @@ console.log("no exports here");
 ```
 ### rolldown
 ```js
-import { __toESM, require_foo } from "./foo2.js";
+import { init_foo } from "./foo2.js";
 
 //#region bare.js
-var import_foo = __toESM(require_foo());
+init_foo();
 
 //#endregion
 ```
@@ -148,8 +149,8 @@ var import_foo = __toESM(require_foo());
 +++ rolldown	bare.js
 @@ -1,1 +1,2 @@
 -console.log("no exports here");
-+import {__toESM, require_foo} from "./foo2.js";
-+var import_foo = __toESM(require_foo());
++import {init_foo} from "./foo2.js";
++init_foo();
 
 ```
 ## /out/require.js
@@ -167,10 +168,10 @@ console.log(require_foo());
 ```
 ### rolldown
 ```js
-import { require_foo } from "./foo2.js";
+import { __toCommonJS, foo_exports, init_foo } from "./foo2.js";
 
 //#region require.js
-console.log(require_foo());
+console.log((init_foo(), __toCommonJS(foo_exports)));
 
 //#endregion
 ```
@@ -185,8 +186,9 @@ console.log(require_foo());
 -        console.log("no exports here");
 -    }
 -});
-+import {require_foo} from "./foo2.js";
- console.log(require_foo());
+-console.log(require_foo());
++import {__toCommonJS, foo_exports, init_foo} from "./foo2.js";
++console.log((init_foo(), __toCommonJS(foo_exports)));
 
 ```
 ## /out/import.js

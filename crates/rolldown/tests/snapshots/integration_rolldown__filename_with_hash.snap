@@ -463,7 +463,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/preserve_directives_minify_bundle
 
-- entry-!~{000}~.js => entry-0i7_NCL_.js
+- entry-!~{000}~.js => entry-COf1Z-06.js
 
 # tests/esbuild/dce/preserve_directives_minify_iife
 
@@ -955,14 +955,14 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_missing_neither_es6_nor_common_js
 
-- bare-!~{005}~.js => bare-3FeQpbcR.js
-- import-!~{007}~.js => import-3XTcFbkN.js
-- named-!~{002}~.js => named-CfK85L09.js
-- require-!~{006}~.js => require-BoTqImFm.js
-- star-!~{003}~.js => star-CK0hnZmn.js
-- star-capture-!~{004}~.js => star-capture-Dq2IzTeh.js
-- foo-!~{000}~.js => foo-CFBE40Ue.js
-- foo-!~{008}~.js => foo-DgPUoGrl.js
+- bare-!~{005}~.js => bare-BIMgHBKr.js
+- import-!~{007}~.js => import-CAoYRAgF.js
+- named-!~{002}~.js => named-DAm_nyG6.js
+- require-!~{006}~.js => require-B62FyQyk.js
+- star-!~{003}~.js => star-BAz4dvdA.js
+- star-capture-!~{004}~.js => star-capture-B0k6v5Xr.js
+- foo-!~{000}~.js => foo-B-XkCArB.js
+- foo-!~{008}~.js => foo-BSS4Gc1I.js
 
 # tests/esbuild/default/import_namespace_this_value
 
@@ -1345,9 +1345,9 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{001}~.js => entry-BLL4Ia75.js
-- entry-!~{000}~.js => entry-Dfy32Vel.js
-- copy-!~{002}~.js => copy-CcFzMm3a.js
+- entry-!~{000}~.js => entry-BSgrZkE_.js
+- entry-!~{001}~.js => entry-DXek17jk.js
+- copy-!~{002}~.js => copy-BVWTGkKt.js
 - dynamic-!~{005}~.js => dynamic-CZVXMYjb.js
 - assets/file-C2vEMN7j.file
 - entry2.css
@@ -1355,7 +1355,7 @@ snapshot_kind: text
 # tests/esbuild/default/metafile_very_long_external_paths
 
 - bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-ZzcsnmC5.js
-- bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-CRP0fwCl.js
+- bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-Bi18rofi.js
 - bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-CZbPSatF.js
 - bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-TDxtK4FO.js
 - 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-BT4URTuB.js
@@ -1483,12 +1483,6 @@ snapshot_kind: text
 # tests/esbuild/default/output_extension_remapping_file
 
 - entry-!~{000}~.js => entry-MzAftW4Q.js
-
-# tests/esbuild/default/output_for_assert_type_json
-
-- js-entry-!~{000}~.js => js-entry-41Zb6Lz8.js
-- ts-entry-!~{001}~.js => ts-entry-CFvZ1qSC.js
-- foo-!~{002}~.js => foo-DZOcV_qA.js
 
 # tests/esbuild/default/preserve_key_comment
 
@@ -1930,15 +1924,15 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_namespace_undefined_property_empty_file
 
-- entry-default-!~{001}~.js => entry-default-BxdMd5Fw.js
-- entry-nope-!~{000}~.js => entry-nope-Cl2aMGK5.js
-- empty-!~{002}~.js => empty-DVmVNhmZ.js
+- entry-default-!~{001}~.js => entry-default-CQyj7JPY.js
+- entry-nope-!~{000}~.js => entry-nope-BEoiua5G.js
+- empty-!~{002}~.js => empty-BikMXlDl.js
 
 # tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 
-- entry-default-!~{001}~.js => entry-default-BZA6Ekmm.js
-- entry-nope-!~{000}~.js => entry-nope-Su1_RKJq.js
-- no-side-effects-!~{002}~.js => no-side-effects-gbq-gMZ8.js
+- entry-default-!~{001}~.js => entry-default-ClU9V9Z4.js
+- entry-nope-!~{000}~.js => entry-nope-CLLAfDyZ.js
+- no-side-effects-!~{002}~.js => no-side-effects-CUc65FVx.js
 
 # tests/esbuild/importstar/import_of_export_star
 
@@ -2270,8 +2264,8 @@ snapshot_kind: text
 
 # tests/esbuild/loader/empty_loader_js
 
-- entry-!~{000}~.js => entry-BovIuHJM.js
-- entry-BovIuHJM.js.map
+- entry-!~{000}~.js => entry-DOS_09LC.js
+- entry-DOS_09LC.js.map
 
 # tests/esbuild/loader/extensionless_loader_js
 
@@ -2309,23 +2303,11 @@ snapshot_kind: text
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 
-# tests/esbuild/loader/loader_copy_with_bundle_entry_point
-
-- assets_some-!~{002}~.js => assets_some-BbR_LKYD.js
-- src_entry-!~{000}~.js => src_entry-CKgMeF6u.js
-- src_entry-!~{001}~.js => src_entry-xedvR0Lf.js
-- some-!~{003}~.js => some-De9MyzBE.js
-- src_entry2.css
-
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
 - src_entry-!~{000}~.js => src_entry-D5N6Oy7t.js
 - assets/some-C_XH274v.file
 - src_entry.css
-
-# tests/esbuild/loader/loader_copy_with_bundle_from_js
-
-- src_entry-!~{000}~.js => src_entry-B7jvc6qO.js
 
 # tests/esbuild/loader/loader_copy_with_format
 
@@ -3002,7 +2984,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_disabled_type_module_issue3367
 
-- entry-!~{000}~.js => entry-Dh2YT855.js
+- entry-!~{000}~.js => entry-Bx_SMCQ3.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_browser
 
@@ -3296,9 +3278,9 @@ snapshot_kind: text
 
 # tests/esbuild/splitting/splitting_missing_lazy_export
 
-- a-!~{000}~.js => a-CS38wOI1.js
-- b-!~{001}~.js => b-D9ssaxLS.js
-- common-!~{002}~.js => common-DD0uT0qz.js
+- a-!~{000}~.js => a-DlABYEKD.js
+- b-!~{001}~.js => b-b-LmSczx.js
+- common-!~{002}~.js => common-BScgMHzN.js
 
 # tests/esbuild/splitting/splitting_nested_directories
 
@@ -3699,14 +3681,6 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BLRVE8qN.js
 - cjs-!~{001}~.js => cjs-CXfWVxx7.js
-
-# tests/rolldown/cjs_compat/empty_file_should_be_treated_as_cjs/import
-
-- main-!~{000}~.js => main-Dhw6dwmN.js
-
-# tests/rolldown/cjs_compat/empty_file_should_be_treated_as_cjs/re_export
-
-- main-!~{000}~.js => main-Dhw6dwmN.js
 
 # tests/rolldown/cjs_compat/esm_require_cjs
 
@@ -4384,7 +4358,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/resolve/browser_filed_false
 
-- package-!~{000}~.js => package-BXyAy_VX.js
+- package-!~{000}~.js => package-JvvE2Xed.js
 
 # tests/rolldown/function/resolve/extension_alias
 

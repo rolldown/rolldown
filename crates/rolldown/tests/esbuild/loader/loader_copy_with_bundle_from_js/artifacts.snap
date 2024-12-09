@@ -1,22 +1,18 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
-# Assets
+# Errors
 
-## src_entry.js
+## MISSING_EXPORT
 
-```js
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "assets/some.file".
+   ╭─[src/entry.js:1:8]
+   │
+ 1 │ import x from "../assets/some.file"
+   │        ┬  
+   │        ╰── Missing export
+───╯
 
-
-//#region assets/some.file
-var require_some = __commonJS({ "assets/some.file"() {
-	stuff;
-} });
-
-//#endregion
-//#region src/entry.js
-var import_some = __toESM(require_some());
-console.log(import_some.default);
-
-//#endregion
 ```

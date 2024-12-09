@@ -1,6 +1,33 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `missing` will always be undefined because there is no matching export in 'empty.js'
+   ╭─[common.js:2:37]
+   │
+ 2 │ export function foo() { return [ns, ns.missing] }
+   │                                     ─────┬────  
+   │                                          ╰────── 
+───╯
+
+```
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `missing` will always be undefined because there is no matching export in 'empty.js'
+   ╭─[common.js:3:33]
+   │
+ 3 │ export function bar() { return [ns.missing] }
+   │                                 ─────┬────  
+   │                                      ╰────── 
+───╯
+
+```
 # Assets
 
 ## a.js
@@ -27,18 +54,16 @@ console.log(bar());
 
 ```js
 
-
 //#region empty.js
-var require_empty = __commonJS({ "empty.js"() {} });
+var empty_exports = {};
 
 //#endregion
 //#region common.js
-var import_empty = __toESM(require_empty());
 function foo() {
-	return [import_empty, import_empty.missing];
+	return [empty_exports, void 0];
 }
 function bar() {
-	return [import_empty.missing];
+	return [void 0];
 }
 
 //#endregion

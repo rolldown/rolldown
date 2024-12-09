@@ -83,18 +83,16 @@ export {
 ### rolldown
 ```js
 
-
 //#region empty.js
-var require_empty = __commonJS({ "empty.js"() {} });
+var empty_exports = {};
 
 //#endregion
 //#region common.js
-var import_empty = __toESM(require_empty());
 function foo() {
-	return [import_empty, import_empty.missing];
+	return [empty_exports, void 0];
 }
 function bar() {
-	return [import_empty.missing];
+	return [void 0];
 }
 
 //#endregion
@@ -105,19 +103,10 @@ export { bar, foo };
 ===================================================================
 --- esbuild	/out/chunk-QVTGQSXT.js
 +++ rolldown	common.js
-@@ -1,8 +1,11 @@
--var empty_exports = {};
-+var require_empty = __commonJS({
-+    "empty.js"() {}
-+});
-+var import_empty = __toESM(require_empty());
- function foo() {
--    return [empty_exports, void 0];
-+    return [import_empty, import_empty.missing];
+@@ -4,5 +4,5 @@
  }
  function bar() {
--    return [void 0];
-+    return [import_empty.missing];
+     return [void 0];
  }
 -export {foo, bar};
 +export {bar, foo};

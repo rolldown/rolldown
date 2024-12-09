@@ -15,5 +15,5 @@
       }
     ]
   },
-  "expectExecuted": false
+  "expectError": true // TODO(hyf0): Remove this line after supporting copy loader/module type.
 }

@@ -5,8 +5,6 @@
 import { logger } from '../utils'
 import { setNestedProperty } from './utils'
 import { CliOptions, cliOptionsSchema } from './schema'
-import { inputCliOptionsSchema } from '../../options/input-options-schema'
-import { outputCliOptionsSchema } from '../../options/output-options-schema'
 import type { InputOptions } from '../../options/input-options'
 import type { OutputOptions } from '../../options/output-options'
 import type Z from 'zod'
@@ -19,6 +17,48 @@ export interface NormalizedCliOptions {
   version: boolean
   watch: boolean
 }
+
+const keysOfInput = [
+  'external',
+  'cwd',
+  'platform',
+  'shimMissingExports',
+  'treeshake',
+  'logLevel',
+  'moduleTypes',
+  'define',
+  'inject',
+  'jsx',
+  'dropLabels',
+  'checks',
+]
+
+const keysOfOutput = [
+  'dir',
+  'file',
+  'exports',
+  'hashCharacters',
+  'format',
+  'sourcemap',
+  'banner',
+  'footer',
+  'intro',
+  'outro',
+  'extend',
+  'esModule',
+  'assetFileNames',
+  'entryFileNames',
+  'chunkFileNames',
+  'cssEntryFileNames',
+  'cssChunkFileNames',
+  'minify',
+  'name',
+  'globals',
+  'externalLiveBindings',
+  'inlineDynamicImports',
+  'advancedChunks',
+  'comments',
+]
 
 export function normalizeCliOptions(
   cliOptions: CliOptions,

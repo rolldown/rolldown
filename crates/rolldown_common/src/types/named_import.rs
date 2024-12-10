@@ -57,15 +57,23 @@ impl Display for Specifier {
   }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum ImportOrExportName {
   Identifier(Rstr),
   String(Rstr),
 }
-
+/// the Custom impl `PartialOrd` is required, because we don't want to
+/// affect the original order by the enum `Tag`
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for ImportOrExportName {
   fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
     self.as_str().partial_cmp(other.as_str())
+  }
+}
+/// needs to impl `Ord` either, caused by https://rust-lang.github.io/rust-clippy/master/index.html#derive_ord_xor_partial_ord
+impl Ord for ImportOrExportName {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.partial_cmp(other).unwrap()
   }
 }
 

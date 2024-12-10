@@ -32,7 +32,7 @@ use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
 use rolldown_utils::concat_string;
-use rolldown_utils::ecmascript::{is_validate_identifier_name, legitimize_identifier_name};
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
@@ -609,11 +609,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         // the ast type to convert type correctly
         // let imported: ImportOrExportName = (&spec.imported).into();
         let name: Rstr = spec.imported.name().as_str().into();
-        let imported = if is_validate_identifier_name(&name) {
-          ImportOrExportName::Identifier(name)
-        } else {
-          ImportOrExportName::String(name)
-        };
+        let imported: ImportOrExportName = name.into();
         if imported.as_str() == "default" {
           self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
         }

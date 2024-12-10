@@ -4,14 +4,16 @@ use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ExportsKind, ImportOrExportName, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias,
+  NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
+  ecmascript::is_validate_identifier_name,
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -55,7 +57,7 @@ pub enum MatchImportKind {
   // Both "matchImportNormal" and "matchImportNamespace"
   NormalAndNamespace {
     namespace_ref: SymbolRef,
-    alias: Rstr,
+    alias: ImportOrExportName,
   },
   // The import could not be evaluated due to a cycle
   Cycle,
@@ -191,7 +193,7 @@ impl LinkStage<'_> {
 
   fn add_exports_for_export_star(
     normal_modules: &IndexModules,
-    resolve_exports: &mut FxHashMap<Rstr, ResolvedExport>,
+    resolve_exports: &mut FxHashMap<ImportOrExportName, ResolvedExport>,
     module_id: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
   ) {
@@ -288,7 +290,12 @@ impl LinkStage<'_> {
                 while cursor < member_expr_ref.props.len() && is_namespace_ref {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
-                  let export_symbol = meta.resolved_exports.get(&name.to_rstr());
+                  let export_name = if is_validate_identifier_name(name.as_str()) {
+                    ImportOrExportName::Identifier(name.to_rstr())
+                  } else {
+                    ImportOrExportName::String(name.to_rstr())
+                  };
+                  let export_symbol = meta.resolved_exports.get(&export_name);
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
@@ -311,7 +318,8 @@ impl LinkStage<'_> {
                     }
                     break;
                   };
-                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
+                  let export_name = (name.to_rstr(), is_validate_identifier_name(name)).into();
+                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&export_name) {
                     resolved.insert(
                       member_expr_ref.span,
                       (None, member_expr_ref.props[cursor..].to_vec()),
@@ -389,12 +397,12 @@ impl BindImportsAndExportsContext<'_> {
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
       if is_esm && is_external {
         if let Specifier::Literal(ref name) = named_import.imported {
-          if name.as_str() != "default" {
+          if name.as_str() != "default" && matches!(name, ImportOrExportName::Identifier(_)) {
             self
               .external_import_binding_merger
               .entry(rec.resolved_module)
               .or_default()
-              .entry(name.inner().clone())
+              .entry(name.as_str().into())
               .or_default()
               .insert(*imported_as_ref);
           }

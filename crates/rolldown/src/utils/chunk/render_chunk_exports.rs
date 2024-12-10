@@ -1,9 +1,9 @@
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
-use std::borrow::Cow;
+use std::{borrow::Cow, fs::canonicalize};
 
 use rolldown_common::{
-  Chunk, ChunkKind, EntryPointKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions,
-  OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, EntryPointKind, ExportsKind, ImportOrExportName, IndexModules, ModuleIdx,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::{
@@ -29,6 +29,7 @@ pub fn render_chunk_exports(
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
+          dbg!(&exported_name);
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
           let canonical_name = &chunk.canonical_names[&canonical_ref];
@@ -45,13 +46,10 @@ pub fn render_chunk_exports(
               ";\n"
             ));
           }
-
-          if canonical_name == &exported_name {
+          if exported_name.cmp_to_str(canonical_name) {
             Cow::Borrowed(canonical_name.as_str())
-          } else if is_validate_identifier_name(&exported_name) {
-            Cow::Owned(concat_string!(canonical_name, " as ", exported_name))
           } else {
-            Cow::Owned(concat_string!(canonical_name, " as '", exported_name, "'"))
+            Cow::Owned(concat_string!(canonical_name, " as ", exported_name.to_string()))
           }
         })
         .collect::<Vec<_>>();
@@ -78,7 +76,14 @@ pub fn render_chunk_exports(
                 let exported_value = if let Some(ns_alias) = &symbol.namespace_alias {
                   let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
                   let property_name = &ns_alias.property_name;
-                  Cow::Owned(property_access_str(canonical_ns_name, property_name).into())
+                  Cow::Owned(
+                    property_access_str(
+                      canonical_ns_name,
+                      property_name.as_str(),
+                      matches!(property_name, ImportOrExportName::Identifier(_)),
+                    )
+                    .into(),
+                  )
                 } else if link_output.module_table.modules[canonical_ref.owner].is_external() {
                   let namespace = &chunk.canonical_names[&canonical_ref];
                   Cow::Owned(namespace.as_str().into())
@@ -122,7 +127,11 @@ pub fn render_chunk_exports(
                       )
                     } else {
                       concat_string!(
-                        property_access_str("exports", exported_name.as_str()),
+                        property_access_str(
+                          "exports",
+                          exported_name.as_str(),
+                          matches!(exported_name, ImportOrExportName::Identifier(_))
+                        ),
                         " = ",
                         exported_value.as_str()
                       )
@@ -214,7 +223,10 @@ pub fn render_chunk_exports(
   }
 }
 
-pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
+pub fn get_export_items(
+  chunk: &Chunk,
+  graph: &LinkStageOutput,
+) -> Vec<(ImportOrExportName, SymbolRef)> {
   match chunk.kind {
     ChunkKind::EntryPoint { module, is_user_defined, .. } => {
       let meta = &graph.metas[module];
@@ -228,10 +240,10 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
         .collect::<Vec<_>>()
     }
     ChunkKind::Common => {
-      let mut tmp = chunk
+      let mut tmp: Vec<(ImportOrExportName, SymbolRef)> = chunk
         .exports_to_other_chunks
         .iter()
-        .map(|(export_ref, alias)| (alias.clone(), *export_ref))
+        .map(|(export_ref, alias)| (alias.clone().into(), *export_ref))
         .collect::<Vec<_>>();
 
       tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));

@@ -6,10 +6,11 @@ use crate::chunk_graph::ChunkGraph;
 use itertools::{multizip, Itertools};
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, ImportRecordMeta, Module,
-  ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
+  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, ImportOrExportName,
+  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
@@ -391,7 +392,7 @@ impl GenerateStage<'_> {
             .exports_to_other_chunks
             .get(&item.import_ref)
           {
-            item.export_alias = Some(alias.clone().into());
+            item.export_alias = Some(ImportOrExportName::from(alias.clone()).into());
           }
         }
       }

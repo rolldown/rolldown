@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
-use oxc::span::Span;
+use oxc::{ast::ast::ModuleExportName, span::Span};
 use rolldown_rstr::Rstr;
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 use crate::SymbolRef;
 
@@ -28,7 +29,13 @@ pub struct NamedImport {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Specifier {
   Star,
-  Literal(Rstr),
+  Literal(ImportOrExportName),
+}
+
+impl From<ImportOrExportName> for Specifier {
+  fn from(name: ImportOrExportName) -> Self {
+    Self::Literal(name)
+  }
 }
 
 impl Specifier {
@@ -50,14 +57,80 @@ impl Display for Specifier {
   }
 }
 
-impl From<Rstr> for Specifier {
-  fn from(atom: Rstr) -> Self {
-    Self::Literal(atom)
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ImportOrExportName {
+  Identifier(Rstr),
+  String(Rstr),
+}
+
+impl ImportOrExportName {
+  pub fn as_str(&self) -> &str {
+    match self {
+      Self::Identifier(rstr) => rstr.as_str(),
+      Self::String(rstr) => rstr.as_str(),
+    }
+  }
+
+  pub fn as_rstr(&self) -> &Rstr {
+    match self {
+      Self::Identifier(value) => value,
+      Self::String(value) => value,
+    }
+  }
+
+  pub fn cmp_to_str(&self, other: &str) -> bool {
+    match self {
+      Self::Identifier(str) if other.len() == str.len() => str.as_str() == other,
+      Self::String(rstr) if rstr.len() == other.len() + 2 => {
+        let str = rstr.as_str();
+        str.starts_with('"') && str.ends_with('"') && &str[1..str.len() - 1] == other
+      }
+      _ => false,
+    }
   }
 }
 
-impl From<&str> for Specifier {
-  fn from(s: &str) -> Self {
-    Self::Literal(Rstr::from(s))
+impl AsRef<str> for ImportOrExportName {
+  fn as_ref(&self) -> &str {
+    self.as_str()
+  }
+}
+
+impl From<(Rstr, bool)> for ImportOrExportName {
+  fn from((rstr, is_valid_ident): (Rstr, bool)) -> Self {
+    if is_valid_ident {
+      Self::Identifier(rstr)
+    } else {
+      Self::String(rstr)
+    }
+  }
+}
+
+impl From<Rstr> for ImportOrExportName {
+  fn from(rstr: Rstr) -> Self {
+    if is_validate_identifier_name(rstr.as_str()) {
+      Self::Identifier(rstr)
+    } else {
+      Self::String(rstr)
+    }
+  }
+}
+
+impl<'a, 'ast: 'a> From<&'a ModuleExportName<'ast>> for ImportOrExportName {
+  fn from(name: &'a ModuleExportName) -> Self {
+    match name {
+      ModuleExportName::IdentifierName(value) => Self::Identifier(value.name.as_str().into()),
+      ModuleExportName::StringLiteral(value) => Self::String(value.value.as_str().into()),
+      _ => unreachable!(),
+    }
+  }
+}
+
+impl Display for ImportOrExportName {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Identifier(rstr) => rstr.as_str().fmt(f),
+      Self::String(rstr) => format!("\"{}\"", rstr.as_str()).fmt(f),
+    }
   }
 }

@@ -189,7 +189,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         self.snippet.builder.alloc_static_member_expression(
           SPAN,
           expr,
-          self.snippet.id_name(&ns_alias.property_name, SPAN),
+          self.snippet.id_name(ns_alias.property_name.as_str(), SPAN),
           false,
         ),
       );
@@ -326,13 +326,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false);
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
-          key: if is_validate_identifier_name(prop_name) {
-            ast::PropertyKey::StaticIdentifier(
-              self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-            )
-          } else {
-            ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+          key: match prop_name {
+            rolldown_common::ImportOrExportName::Identifier(prop_name) => {
+              ast::PropertyKey::StaticIdentifier(
+                self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+              )
+            }
+            rolldown_common::ImportOrExportName::String(prop_name) => {
+              ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(&prop_name, SPAN))
+            }
           },
+          // key: if is_validate_identifier_name(prop_name) {
+          // } else {
+          // },
           value: self.snippet.only_return_arrow_expr(returned),
           ..TakeIn::dummy(self.alloc)
         }

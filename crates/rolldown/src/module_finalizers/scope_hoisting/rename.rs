@@ -63,7 +63,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
+      let access_expr =
+        self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name.as_str());
 
       return Some(ast::SimpleAssignmentTarget::from(access_expr));
     }
@@ -113,7 +114,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
+      let access_expr =
+        self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name.as_str());
       *simple_target = ast::SimpleAssignmentTarget::from(access_expr);
     } else {
       let canonical_name = self.canonical_name_for(canonical_ref);

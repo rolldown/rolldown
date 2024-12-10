@@ -6,6 +6,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::FxHashMap;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
@@ -65,7 +66,11 @@ impl GenerateContext<'_> {
 
           let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
             .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
-          rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
+          rolldown_utils::ecmascript::property_access_str(
+            require_binding,
+            exported_name,
+            is_validate_identifier_name(&exported_name),
+          )
         } else {
           symbol_db.canonical_name_for(canonical_ref, canonical_names).to_string()
         }

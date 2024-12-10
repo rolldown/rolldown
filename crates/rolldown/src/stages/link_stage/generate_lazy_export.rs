@@ -5,9 +5,9 @@ use oxc::{
   span::{CompactStr, SPAN},
 };
 use rolldown_common::{
-  AstScopes, ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
-  ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDbForModule,
+  AstScopes, ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, ImportOrExportName,
+  LocalExport, Module, ModuleIdx, ModuleType, NormalModule, StmtInfo, StmtInfoIdx,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDbForModule,
 };
 use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -95,9 +95,10 @@ fn update_module_default_export_info(
   default_symbol_ref: SymbolRef,
   idx: StmtInfoIdx,
 ) {
-  module
-    .named_exports
-    .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
+  module.named_exports.insert(
+    ImportOrExportName::Identifier("default".into()),
+    LocalExport { span: SPAN, referenced: default_symbol_ref },
+  );
   // needs to support `preferConst`, so default statement may not be the second stmt info
   module.stmt_infos.declare_symbol_for_stmt(idx, default_symbol_ref);
 }
@@ -246,10 +247,13 @@ fn json_object_expr_to_esm(
     let symbol_ref = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
     let stmt_info = StmtInfo::default().with_stmt_idx(i).with_declared_symbols(vec![symbol_ref]);
+    let named_export = if local == exported {
+      ImportOrExportName::Identifier(local.clone())
+    } else {
+      ImportOrExportName::String(exported.clone())
+    };
     module.stmt_infos.add_stmt_info(stmt_info);
-    module
-      .named_exports
-      .insert(exported.clone(), LocalExport { span: SPAN, referenced: symbol_ref });
+    module.named_exports.insert(named_export, LocalExport { span: SPAN, referenced: symbol_ref });
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
@@ -258,9 +262,10 @@ fn json_object_expr_to_esm(
     .with_referenced_symbols(all_declared_symbols.clone());
 
   module.stmt_infos.add_stmt_info(stmt_info);
-  module
-    .named_exports
-    .insert("default".into(), LocalExport { span: SPAN, referenced: default_export_ref });
+  module.named_exports.insert(
+    ImportOrExportName::Identifier("default".into()),
+    LocalExport { span: SPAN, referenced: default_export_ref },
+  );
 
   // declare namespace object statement
   module.exports_kind = ExportsKind::Esm;

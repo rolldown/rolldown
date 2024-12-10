@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use rolldown_common::{ExportsKind, Specifier, WrapKind};
+use rolldown_common::{ExportsKind, ImportOrExportName, Specifier, WrapKind};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::concat_string;
+use rolldown_utils::{concat_string, ecmascript::is_validate_identifier_name};
 
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
@@ -120,7 +120,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
         };
-        if alias == imported {
+        dbg!(&imported);
+        dbg!(&alias);
+        if alias.cmp_to_str(imported.as_str()) {
           Some(alias.as_str().into())
         } else {
           if alias.as_str() == "default" {
@@ -157,6 +159,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let alias = &ctx.chunk.canonical_names[canonical_ref];
         match &item.imported {
           Specifier::Star => {
+            dbg!(&alias);
             has_importee_imported = true;
             s.push_str("import * as ");
             s.push_str(alias);
@@ -166,14 +169,16 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             None
           }
           Specifier::Literal(imported) => {
-            if alias == imported {
+            if alias.as_str() == imported.as_str()
+              && matches!(imported, ImportOrExportName::Identifier(_))
+            {
               Some(alias.as_str().into())
             } else {
               if imported.as_str() == "default" {
                 default_alias.push(alias.as_str().into());
                 return None;
               }
-              Some(concat_string!(imported, " as ", alias))
+              Some(concat_string!(imported.to_string(), " as ", alias))
             }
           }
         }

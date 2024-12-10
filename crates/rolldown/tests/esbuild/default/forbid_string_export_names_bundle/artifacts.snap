@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -25,5 +26,5 @@ __export(nested_exports, {
 let nested = 1;
 
 //#endregion
-export { nested_exports as 'name space', nested as 'nested name', ok as 'not ok', ok, nested$1 as 'very nested name' };
+export { nested_exports as "name space", nested as "nested name", ok as "not ok", ok as "ok", nested$1 as "very nested name" };
 ```

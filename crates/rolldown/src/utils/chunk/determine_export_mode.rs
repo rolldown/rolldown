@@ -1,6 +1,6 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
-use rolldown_common::{NormalModule, OutputExports, SymbolRef};
+use rolldown_common::{ImportOrExportName, NormalModule, OutputExports, SymbolRef};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_rstr::Rstr;
 
@@ -9,7 +9,7 @@ pub fn determine_export_mode(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
   module: &NormalModule,
-  exports: &[(Rstr, SymbolRef)],
+  exports: &[(ImportOrExportName, SymbolRef)],
 ) -> BuildResult<OutputExports> {
   let export_mode = &ctx.options.exports;
   match export_mode {

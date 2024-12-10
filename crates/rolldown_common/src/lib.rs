@@ -110,7 +110,7 @@ pub use crate::{
   types::module_table::{IndexExternalModules, IndexModules, ModuleTable},
   types::module_view::ModuleView,
   types::named_export::LocalExport,
-  types::named_import::{NamedImport, Specifier},
+  types::named_import::{ImportOrExportName, NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,
   types::output::{Output, OutputAsset},
   types::output_chunk::OutputChunk,

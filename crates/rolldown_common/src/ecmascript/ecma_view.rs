@@ -7,8 +7,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopes,
-  EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
-  ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
+  EcmaAstIdx, ExportsKind, ImportOrExportName, ImportRecordIdx, LocalExport, ModuleDefFormat,
+  ModuleId, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
 };
 
 bitflags! {
@@ -96,7 +96,7 @@ pub struct EcmaView {
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
-  pub named_exports: FxHashMap<Rstr, LocalExport>,
+  pub named_exports: FxHashMap<ImportOrExportName, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,

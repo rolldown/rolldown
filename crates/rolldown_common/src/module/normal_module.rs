@@ -4,8 +4,9 @@ use std::sync::Arc;
 use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  AssetView, Comments, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, StmtInfo,
+  AssetView, Comments, DebugStmtInfoForTreeShaking, ExportsKind, ImportOrExportName,
+  ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
+  StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -99,7 +100,7 @@ impl NormalModule {
     export_star_set: &mut FxHashSet<ModuleIdx>,
     modules: &'modules IndexModules,
     include_default: bool,
-    ret: &mut FxHashSet<&'modules Rstr>,
+    ret: &mut FxHashSet<&'modules ImportOrExportName>,
   ) {
     if export_star_set.contains(&self.idx) {
       return;

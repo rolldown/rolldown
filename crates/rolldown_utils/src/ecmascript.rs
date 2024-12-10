@@ -1,8 +1,12 @@
-use oxc::syntax::{identifier, keyword};
+use oxc::{
+  ast::ast::ImportOrExportKind,
+  syntax::{identifier, keyword},
+};
 use std::{borrow::Cow, path::Path};
 
 use crate::concat_string;
 
+#[inline]
 pub fn is_validate_identifier_name(name: &str) -> bool {
   identifier::is_identifier_name(name)
 }
@@ -48,8 +52,8 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
   Cow::Owned(legitimized)
 }
 
-pub fn property_access_str(obj: &str, prop: &str) -> String {
-  if is_validate_identifier_name(prop) {
+pub fn property_access_str(obj: &str, prop: &str, is_valid_ident: bool) -> String {
+  if is_valid_ident {
     concat_string!(obj, ".", prop)
   } else {
     concat_string!(obj, "[", "\"", prop, "\"]")

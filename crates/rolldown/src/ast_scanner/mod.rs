@@ -399,7 +399,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     record_id: ImportRecordIdx,
     span_imported: Span,
   ) {
-    (&export_name, &imported);
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = self.result.symbol_ref_db.create_facade_root_symbol_ref(
       // TODO: eq to ident name
@@ -451,7 +450,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
     let named_export = Rstr::from(export_name).into();
-    &named_export;
     self.result.named_exports.insert(
       named_export,
       LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
@@ -633,7 +631,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         let symbol_id = spec.local.expect_symbol_id();
-        &spec.local;
         self.add_star_import(symbol_id, rec_id, spec.span);
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
       }

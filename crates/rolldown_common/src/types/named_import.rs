@@ -66,15 +66,13 @@ pub enum ImportOrExportName {
 impl ImportOrExportName {
   pub fn as_str(&self) -> &str {
     match self {
-      Self::Identifier(rstr) => rstr.as_str(),
-      Self::String(rstr) => rstr.as_str(),
+      Self::Identifier(rstr) | Self::String(rstr) => rstr.as_str(),
     }
   }
 
   pub fn as_rstr(&self) -> &Rstr {
     match self {
-      Self::Identifier(value) => value,
-      Self::String(value) => value,
+      Self::Identifier(value) | Self::String(value) => value,
     }
   }
 
@@ -121,7 +119,7 @@ impl<'a, 'ast: 'a> From<&'a ModuleExportName<'ast>> for ImportOrExportName {
     match name {
       ModuleExportName::IdentifierName(value) => Self::Identifier(value.name.as_str().into()),
       ModuleExportName::StringLiteral(value) => Self::String(value.value.as_str().into()),
-      _ => unreachable!(),
+      ModuleExportName::IdentifierReference(_) => unreachable!(),
     }
   }
 }

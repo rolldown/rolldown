@@ -6,11 +6,7 @@ use rolldown_common::{
   NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
-use rolldown_utils::{
-  concat_string,
-  ecmascript::property_access_str,
-  indexmap::FxIndexSet,
-};
+use rolldown_utils::{concat_string, ecmascript::property_access_str, indexmap::FxIndexSet};
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(

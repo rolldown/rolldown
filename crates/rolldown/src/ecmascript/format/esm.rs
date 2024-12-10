@@ -120,8 +120,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
         };
-        &imported;
-        &alias;
         if alias.cmp_to_str(imported.as_str()) {
           Some(alias.as_str().into())
         } else {

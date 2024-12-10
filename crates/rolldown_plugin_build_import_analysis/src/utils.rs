@@ -114,6 +114,7 @@ fn construct_vite_preload_call<'a>(
                   SPAN,
                   ast_builder.expression_string_literal(SPAN, source, None),
                   ast_builder.vec(),
+                  None,
                 ),
               )),
               false,

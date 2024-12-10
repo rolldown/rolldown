@@ -392,6 +392,7 @@ impl<'ast> TakeIn<'ast> for ast::ImportDeclaration<'ast> {
       source: TakeIn::dummy(alloc),
       with_clause: TakeIn::dummy(alloc),
       import_kind: TakeIn::dummy(alloc),
+      phase: TakeIn::dummy(alloc),
     }
   }
 }

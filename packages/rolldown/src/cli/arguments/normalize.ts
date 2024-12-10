@@ -4,7 +4,7 @@
  */
 import { logger } from '../utils'
 import { setNestedProperty } from './utils'
-import { CliOptions, cliOptionsSchema } from './schema'
+import type { CliOptions } from './schema'
 import type { InputOptions } from '../../options/input-options'
 import type { OutputOptions } from '../../options/output-options'
 import type Z from 'zod'
@@ -64,16 +64,18 @@ export function normalizeCliOptions(
   cliOptions: CliOptions,
   positionals: string[],
 ): NormalizedCliOptions {
-  const parsed = cliOptionsSchema.safeParse(cliOptions)
-  const options = parsed.data ?? {}
-  if (!parsed.success) {
-    parsed.error.errors.forEach((error) => {
-      logger.error(
-        `Invalid value for option ${error.path.join(', ')}. You can use \`rolldown -h\` to see the help.`,
-      )
-    })
-    process.exit(1)
-  }
+  // TODO: It will be resolved after migrating to `valibot`
+  // const parsed = cliOptionsSchema.safeParse(cliOptions)
+  // const options = parsed.data ?? {}
+  // if (!parsed.success) {
+  //   parsed.error.errors.forEach((error) => {
+  //     logger.error(
+  //       `Invalid value for option ${error.path.join(', ')}. You can use \`rolldown -h\` to see the help.`,
+  //     )
+  //   })
+  //   process.exit(1)
+  // }
+  const options = cliOptions
   const result = {
     input: {} as InputOptions,
     output: {} as OutputOptions,
@@ -85,11 +87,12 @@ export function normalizeCliOptions(
     result.config = options.config ? options.config : 'rolldown.config.js'
   }
   const reservedKeys = ['help', 'version', 'config', 'watch']
-  const keysOfInput = (inputCliOptionsSchema as Z.AnyZodObject).keyof()._def
-    .values as string[]
+  // TODO: It will be resolved after migrating to `valibot`
+  // const keysOfInput = (inputCliOptionsSchema as Z.AnyZodObject).keyof()._def
+  //   .values as string[]
   // Because input is the positional args, we shouldn't include it in the input schema.
-  const keysOfOutput = (outputCliOptionsSchema as Z.AnyZodObject).keyof()._def
-    .values as string[]
+  // const keysOfOutput = (outputCliOptionsSchema as Z.AnyZodObject).keyof()._def
+  //   .values as string[]
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.')
     const [primary] = keys

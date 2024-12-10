@@ -17,17 +17,17 @@ async function buildWithPlugin(plugin: Plugin) {
 test('Plugin renderError hook', async () => {
   const renderErrorFn = vi.fn()
   const renderChunkFn = vi.fn()
-  await buildWithPlugin({
+  const error = await buildWithPlugin({
     renderChunk() {
       renderChunkFn()
       throw new Error('renderChunk error')
     },
     renderError: (error) => {
       renderErrorFn()
-      expect(renderChunkFn).toHaveBeenCalledTimes(1)
-      expect(error).toBeInstanceOf(Error)
+      expect(error!.message).toContain('renderChunk error')
     },
   })
+  expect(error!.message).toContain('renderChunk error')
   expect(renderErrorFn).toHaveBeenCalledTimes(1)
 })
 

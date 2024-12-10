@@ -472,7 +472,7 @@ export interface BindingPluginOptions {
   augmentChunkHashMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
   renderStartMeta?: BindingPluginHookMeta
-  renderError?: (ctx: BindingPluginContext, error: string) => void
+  renderError?: (ctx: BindingPluginContext, error: (Error | BindingError)[]) => void
   renderErrorMeta?: BindingPluginHookMeta
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta

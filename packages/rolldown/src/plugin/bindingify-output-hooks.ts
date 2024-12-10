@@ -15,6 +15,7 @@ import { NormalizedOutputOptionsImpl } from '../options/normalized-output-option
 import type { BindingifyPluginArgs } from './bindingify-plugin'
 import type { BindingPluginOptions } from '../binding'
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk'
+import { normalizeErrors } from '../utils/error'
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -132,7 +133,7 @@ export function bindingifyRenderError(
           args.onLog,
           args.logLevel,
         ),
-        new Error(err),
+        normalizeErrors(err),
       )
     },
     meta: bindingifyPluginHookMeta(meta),

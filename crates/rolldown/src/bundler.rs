@@ -16,7 +16,6 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
-use rolldown_std_utils::OptionExt;
 use std::sync::Arc;
 use tracing_chrome::FlushGuard;
 
@@ -106,13 +105,12 @@ impl Bundler {
     {
       Ok(v) => v,
       Err(errs) => {
-        let errors = errs.into_vec();
         self
           .plugin_driver
-          .build_end(Some(&HookBuildEndArgs { errors: &errors, cwd: &self.options.cwd }))
+          .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
           .await?;
         self.plugin_driver.close_bundle().await?;
-        return Err(errors.into());
+        return Err(errs);
       }
     };
 
@@ -149,7 +147,7 @@ impl Bundler {
     if let Err(errs) = &bundle_output {
       self
         .plugin_driver
-        .render_error(&HookRenderErrorArgs { error: errs.first().unpack_ref().to_string() })
+        .render_error(&HookRenderErrorArgs { errors: errs, cwd: &self.options.cwd })
         .await?;
     }
 

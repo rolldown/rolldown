@@ -13,7 +13,7 @@ snapshot_kind: text
 ## MIXED_EXPORT
 
 ```text
-[MIXED_EXPORT] Warning: Entry module "test" is using named (including "default", "test", "invalid-identifier") and default exports together. Consumers of your bundle will have to use `test.json.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+[MIXED_EXPORT] Warning: Entry module "test" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `test.json.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
 # Assets
@@ -41,16 +41,16 @@ Object.defineProperty(exports, 'default', {
     return test_default;
   }
 });
-Object.defineProperty(exports, 'test', {
-  enumerable: true,
-  get: function () {
-    return test;
-  }
-});
 Object.defineProperty(exports, 'invalid-identifier', {
   enumerable: true,
   get: function () {
     return invalid_identifier;
+  }
+});
+Object.defineProperty(exports, 'test', {
+  enumerable: true,
+  get: function () {
+    return test;
   }
 });
 return exports;

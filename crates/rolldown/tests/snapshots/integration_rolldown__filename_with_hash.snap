@@ -2466,23 +2466,23 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_no_bundle
 
-- test-!~{000}~.js => test-CS1Jvt-P.js
+- test-!~{000}~.js => test-Bt4Vb5HE.js
 
 # tests/esbuild/loader/loader_json_no_bundle_common_js
 
-- test-!~{000}~.js => test-B2SnlG-o.js
+- test-!~{000}~.js => test-CiB_0WhV.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6
 
-- test-!~{000}~.js => test-CS1Jvt-P.js
+- test-!~{000}~.js => test-Bt4Vb5HE.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
 
-- test-!~{000}~.js => test-CS1Jvt-P.js
+- test-!~{000}~.js => test-Bt4Vb5HE.js
 
 # tests/esbuild/loader/loader_json_no_bundle_iife
 
-- test-!~{000}~.js => test-DVvzp0Ec.js
+- test-!~{000}~.js => test-Nn0-Ax_w.js
 
 # tests/esbuild/loader/loader_json_prototype
 

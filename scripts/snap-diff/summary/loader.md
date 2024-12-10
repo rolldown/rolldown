@@ -69,8 +69,6 @@
   diff
 ## [loader_json_no_bundle_common_js](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js/diff.md)
   diff
-## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names/diff.md)
-  diff
 ## [loader_json_no_bundle_iife](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife/diff.md)
   diff
 ## [with_type_json_override_loader](../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader/diff.md)
@@ -85,6 +83,7 @@
 ## [loader_data_url_escape_percents](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)
 ## [loader_data_url_text_java_script](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)
 ## [loader_data_url_unknown_mime](../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime)
+## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names)
 ## [require_custom_extension_base64](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64)
 ## [require_custom_extension_data_url](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url)
 ## [require_custom_extension_prefer_longest](../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest)

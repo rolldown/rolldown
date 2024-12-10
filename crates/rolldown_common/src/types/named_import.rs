@@ -57,10 +57,16 @@ impl Display for Specifier {
   }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Ord)]
 pub enum ImportOrExportName {
   Identifier(Rstr),
   String(Rstr),
+}
+
+impl PartialOrd for ImportOrExportName {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    self.as_str().partial_cmp(other.as_str())
+  }
 }
 
 impl ImportOrExportName {

@@ -12,7 +12,7 @@
   "dependencies": {
     "fixturify": "^3.0.0",
     "fs-extra": "^11.2.0",
-    "mocha": "^10.4.0",
+    "mocha": "^11.0.0",
     "rolldown": "workspace:*",
     "source-map-support": "^0.5.21",
     "oxc-transform": "0.35.0"

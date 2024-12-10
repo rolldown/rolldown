@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
 use rolldown_plugin::{CustomField, PluginContextResolveOptions};
-use serde::Deserialize;
 
 use crate::options::plugin::JsPluginContextResolveCustomArgId;
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingPluginContextResolveOptions {
   #[napi(ts_type = "'import' | 'dynamic-import' | 'require-call'")]
   pub import_kind: Option<String>,

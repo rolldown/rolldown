@@ -1,7 +1,6 @@
 use napi_derive::napi;
-use serde::Deserialize;
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 #[napi]
 pub enum BindingHookSideEffects {
   True,

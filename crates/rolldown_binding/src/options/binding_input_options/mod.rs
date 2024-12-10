@@ -9,7 +9,6 @@ use crate::types::{
 use binding_inject_import::BindingInjectImport;
 use derive_more::Debug;
 use napi_derive::napi;
-use serde::Deserialize;
 
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
 
@@ -24,8 +23,7 @@ mod binding_resolve_options;
 mod treeshake;
 
 #[napi(object, object_to_js = false)]
-#[derive(Deserialize, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug)]
 pub struct BindingInputOptions {
   // Not going to be supported
   // @deprecated Use the "inlineDynamicImports" output option instead.
@@ -37,7 +35,6 @@ pub struct BindingInputOptions {
   // context?: string;
   // experimentalCacheExpiry?: number;
   #[debug(skip)]
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
@@ -52,7 +49,6 @@ pub struct BindingInputOptions {
   // moduleContext?: ((id: string) => string | null | void) | { [id: string]: string };
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   pub resolve: Option<BindingResolveOptions>,
@@ -65,16 +61,13 @@ pub struct BindingInputOptions {
   // pub treeshake: Option<bool>,
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
-  #[serde(skip_deserializing)]
   pub log_level: BindingLogLevel,
   #[debug(skip)]
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]
   pub on_log: BindingOnLog,
   // extra
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
-  #[serde(skip_deserializing)]
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
   // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
@@ -82,12 +75,10 @@ pub struct BindingInputOptions {
   pub module_types: Option<FxHashMap<String, String>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
   pub inject: Option<Vec<BindingInjectImport>>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
-  #[serde(skip_deserializing)]
   #[debug(skip)]
   pub jsx: Option<JsxOptions>,
   pub watch: Option<BindingWatchOption>,

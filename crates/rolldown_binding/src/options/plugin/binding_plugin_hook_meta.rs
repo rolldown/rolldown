@@ -1,7 +1,6 @@
 use napi_derive::napi;
-use serde::Deserialize;
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[napi]
 pub enum BindingPluginOrder {
   Pre,
@@ -18,8 +17,7 @@ impl From<BindingPluginOrder> for rolldown_plugin::PluginOrder {
 }
 
 #[napi(object, object_to_js = false)]
-#[derive(Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub struct BindingPluginHookMeta {
   pub order: Option<BindingPluginOrder>,
 }

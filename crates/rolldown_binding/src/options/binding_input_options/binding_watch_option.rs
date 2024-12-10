@@ -1,12 +1,9 @@
-use serde::Deserialize;
-
 use crate::options::plugin::types::binding_js_or_regex::{
   bindingify_string_or_regex_array, BindingStringOrRegex,
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingWatchOption {
   pub skip_write: Option<bool>,
   pub include: Option<Vec<BindingStringOrRegex>>,

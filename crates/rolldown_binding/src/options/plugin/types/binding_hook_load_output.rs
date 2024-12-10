@@ -1,12 +1,10 @@
 use rolldown::ModuleType;
-use serde::Deserialize;
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
 use crate::types::binding_sourcemap::BindingSourcemap;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug)]
 pub struct BindingHookLoadOutput {
   pub code: String,
   pub side_effects: Option<BindingHookSideEffects>,

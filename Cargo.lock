@@ -2468,7 +2468,6 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
- "serde",
  "tracing",
 ]
 

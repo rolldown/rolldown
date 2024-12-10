@@ -1,15 +1,9 @@
 use napi::Either;
-use serde::Deserialize;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct BindingSourcemap {
-  #[serde(skip_deserializing, default = "default_sourcemap")]
   pub inner: Either<String, BindingJsonSourcemap>,
-}
-
-fn default_sourcemap() -> Either<String, BindingJsonSourcemap> {
-  Either::A(String::default())
 }
 
 impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
@@ -24,7 +18,7 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
   }
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Debug, Default)]
 #[napi_derive::napi(object)]
 pub struct BindingJsonSourcemap {
   pub file: Option<String>,

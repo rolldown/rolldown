@@ -4,12 +4,11 @@ use napi::{
   bindgen_prelude::{FromNapiValue, Function, TypeName, ValidateNapiValue},
   sys, Either, Env, Error, JsObject, JsUnknown, NapiValue, Status,
 };
-use serde::{Deserialize, Deserializer};
 
 use rolldown_utils::js_regex::HybridRegex;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
-#[derive(Debug, Deserialize, Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct JsRegExp {
   pub source: String,
   pub flags: String,
@@ -52,15 +51,6 @@ pub struct BindingStringOrRegex(pub Either<String, JsRegExp>);
 impl FromNapiValue for BindingStringOrRegex {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
     Ok(Self(Either::from_napi_value(env, napi_val)?))
-  }
-}
-
-impl<'de> Deserialize<'de> for BindingStringOrRegex {
-  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    Ok(Self(Either::A(String::deserialize(deserializer)?)))
   }
 }
 

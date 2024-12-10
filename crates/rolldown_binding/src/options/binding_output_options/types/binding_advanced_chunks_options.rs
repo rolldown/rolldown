@@ -1,10 +1,7 @@
-use serde::Deserialize;
-
 use crate::options::plugin::types::binding_js_or_regex::BindingStringOrRegex;
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct BindingAdvancedChunksOptions {
   pub min_size: Option<f64>,
   pub min_share_count: Option<u32>,
@@ -12,8 +9,7 @@ pub struct BindingAdvancedChunksOptions {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct BindingMatchGroup {
   pub name: String,
   pub test: Option<BindingStringOrRegex>,

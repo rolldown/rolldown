@@ -1,12 +1,9 @@
 use napi::bindgen_prelude::Buffer;
 use napi::Either;
-use serde::Deserialize;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize)]
 pub struct BindingAssetSource {
   #[napi(ts_type = "string | Uint8Array")]
-  #[serde(skip_deserializing, default = "default_source")]
   pub inner: Either<String, Buffer>,
 }
 

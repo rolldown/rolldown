@@ -3,7 +3,6 @@ use std::{fmt::Debug, sync::Arc};
 use napi::bindgen_prelude::Either3;
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
-use serde::Deserialize;
 
 use crate::{
   options::plugin::types::binding_js_or_regex::JsRegExp,
@@ -13,13 +12,10 @@ use crate::{
 pub(crate) type BindingModuleSideEffects =
   Either3<bool, Vec<BindingModuleSideEffectsRule>, JsCallback<(String, bool), Option<bool>>>;
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct BindingTreeshake {
   #[napi(
     ts_type = "boolean | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)"
   )]
-  #[serde(skip_deserializing, default = "default_module_side_effects")]
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
 }
@@ -32,13 +28,8 @@ impl Debug for BindingTreeshake {
   }
 }
 
-fn default_module_side_effects() -> BindingModuleSideEffects {
-  Either3::A(true)
-}
-
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingModuleSideEffectsRule {
   #[napi(ts_type = "RegExp | undefined")]
   pub test: Option<JsRegExp>,

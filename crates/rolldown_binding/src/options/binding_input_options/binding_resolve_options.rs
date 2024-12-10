@@ -1,10 +1,8 @@
 use crate::types::binding_resolve_alias_item::AliasItem;
 use crate::types::binding_resolve_extension_alias::ExtensionAliasItem;
-use serde::Deserialize;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingResolveOptions {
   // Option<Vec<(String, Vec<String>)>>> is better, maybe NAPI-RS should support tuples.
   pub alias: Option<Vec<AliasItem>>,

@@ -1,8 +1,5 @@
-use serde::Deserialize;
-
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug)]
 pub struct PreRenderedChunk {
   pub name: String,
   pub is_entry: bool,

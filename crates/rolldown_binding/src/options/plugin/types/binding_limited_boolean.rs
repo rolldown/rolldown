@@ -1,7 +1,6 @@
 use napi::bindgen_prelude::{FromNapiValue, ToNapiValue, TypeName, ValidateNapiValue};
-use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub struct LimitedBooleanValue<const VALUE: bool>();
 
 impl<const VALUE: bool> ValidateNapiValue for LimitedBooleanValue<VALUE> {}

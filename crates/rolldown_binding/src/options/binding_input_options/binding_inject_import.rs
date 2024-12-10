@@ -1,12 +1,10 @@
 use napi::Either;
 use rolldown::InjectImport;
-use serde::Deserialize;
 
 pub type BindingInjectImport = Either<BindingInjectImportNamed, BindingInjectImportNamespace>;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingInjectImportNamed {
   #[napi(ts_type = "true")]
   pub tag_named: bool,
@@ -16,8 +14,7 @@ pub struct BindingInjectImportNamed {
 }
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingInjectImportNamespace {
   #[napi(ts_type = "true")]
   pub tag_namespace: bool,

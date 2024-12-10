@@ -3,7 +3,9 @@ import {
   PluginHookNames,
 } from '../../constants/plugin'
 
-export const isPluginHookName = (function () {
+export const isPluginHookName: (
+  hookName: string,
+) => hookName is PluginHookNames = (function () {
   const PLUGIN_HOOK_NAMES_SET = new Set(
     ENUMERATED_PLUGIN_HOOK_NAMES as readonly string[],
   )

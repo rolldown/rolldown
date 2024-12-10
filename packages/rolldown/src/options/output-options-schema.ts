@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
-import { bold, underline } from '../cli/colors'
+import { colors } from '../cli/colors'
 import type { PreRenderedChunk } from '../binding'
 import type {
   SourcemapIgnoreListOption,
@@ -25,7 +25,7 @@ const ModuleFormatSchema = z
   .or(z.literal('iife'))
   .or(z.literal('umd'))
   .describe(
-    `Output format of the generated bundle (supports ${underline('esm')}, cjs, and iife)`,
+    `Output format of the generated bundle (supports ${colors.underline('esm')}, cjs, and iife)`,
   ) satisfies z.ZodType<ModuleFormat>
 
 const addonFunctionSchema = z
@@ -57,7 +57,7 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('default'))
     .or(z.literal('none'))
     .describe(
-      `Specify a export mode (${underline('auto')}, named, default, none)`,
+      `Specify a export mode (${colors.underline('auto')}, named, default, none)`,
     )
     .optional(),
   hashCharacters: z
@@ -72,7 +72,7 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('inline'))
     .or(z.literal('hidden'))
     .describe(
-      `Generate sourcemap (\`-s inline\` for inline, or ${bold('pass the `-s` on the last argument if you want to generate `.map` file')})`,
+      `Generate sourcemap (\`-s inline\` for inline, or ${colors.bold('pass the `-s` on the last argument if you want to generate `.map` file')})`,
     )
     .optional(),
   sourcemapIgnoreList: z
@@ -161,7 +161,7 @@ const getAddonDescription = (
   placement: 'bottom' | 'top',
   wrapper: 'inside' | 'outside',
 ) => {
-  return `Code to insert the ${bold(placement)} of the bundled file (${bold(wrapper)} the wrapper function)`
+  return `Code to insert the ${colors.bold(placement)} of the bundled file (${colors.bold(wrapper)} the wrapper function)`
 }
 
 export const outputCliOptionsSchema = outputOptionsSchema

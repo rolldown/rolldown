@@ -84,7 +84,7 @@ export function getLogger(
 export const getOnLog = (
   config: InputOptions,
   logLevel: LogLevelOption,
-  printLog = defaultPrintLog,
+  printLog: LogHandler = defaultPrintLog,
 ): LogHandler => {
   const { onwarn, onLog } = config
   const defaultOnLog = getDefaultOnLog(printLog, onwarn)

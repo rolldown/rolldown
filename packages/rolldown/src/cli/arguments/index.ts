@@ -7,12 +7,24 @@ import {
   kebabCaseToCamelCase,
 } from './utils'
 import { parseArgs } from 'node:util'
-import { normalizeCliOptions } from './normalize'
+import { normalizeCliOptions, type NormalizedCliOptions } from './normalize'
 import { logger } from '../utils'
+import type { Schema } from './types'
 
-export const flattenedSchema = flattenSchema(objectSchema.properties)
+export const flattenedSchema: Record<string, Schema> = flattenSchema(
+  objectSchema.properties,
+)
 
-export const options = Object.fromEntries(
+export const options: {
+  [k: string]: {
+    type: 'boolean' | 'string'
+    multiple: boolean
+    short?: string
+    default?: boolean | string | string[]
+    hint?: string
+    description: string
+  }
+} = Object.fromEntries(
   Object.entries(flattenedSchema).map(([key, schema]) => {
     const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
       | OptionConfig
@@ -52,7 +64,7 @@ export const options = Object.fromEntries(
 
 export type ParseArgsOptions = typeof options
 
-export function parseCliArguments() {
+export function parseCliArguments(): NormalizedCliOptions {
   const { values, tokens, positionals } = parseArgs({
     options,
     tokens: true,

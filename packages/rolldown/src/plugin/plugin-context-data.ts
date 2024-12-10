@@ -2,13 +2,14 @@ import { BindingPluginContext } from '../binding'
 import { ModuleOptions } from '..'
 import { transformModuleInfo } from '../utils/transform-module-info'
 import { PluginContextResolveOptions } from './plugin-context'
+import type { ModuleInfo } from '../types/module-info'
 
 export class PluginContextData {
-  moduleOptionMap = new Map<string, ModuleOptions>()
-  resolveOptionsMap = new Map<number, PluginContextResolveOptions>()
+  moduleOptionMap: Map<string, ModuleOptions> = new Map()
+  resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map()
   loadModulePromiseMap: Map<string, Promise<void>> = new Map()
 
-  updateModuleOption(id: string, option: ModuleOptions) {
+  updateModuleOption(id: string, option: ModuleOptions): void {
     const existing = this.moduleOptionMap.get(id)
     if (existing) {
       if (option.moduleSideEffects != null) {
@@ -22,7 +23,7 @@ export class PluginContextData {
     }
   }
 
-  getModuleOption(id: string) {
+  getModuleOption(id: string): ModuleOptions {
     const option = this.moduleOptionMap.get(id)
     if (!option) {
       const raw: ModuleOptions = {
@@ -35,7 +36,7 @@ export class PluginContextData {
     return option
   }
 
-  getModuleInfo(id: string, context: BindingPluginContext) {
+  getModuleInfo(id: string, context: BindingPluginContext): ModuleInfo | null {
     const bindingInfo = context.getModuleInfo(id)
     if (bindingInfo) {
       const info = transformModuleInfo(bindingInfo, this.getModuleOption(id))
@@ -44,7 +45,7 @@ export class PluginContextData {
     return null
   }
 
-  getModuleIds(context: BindingPluginContext) {
+  getModuleIds(context: BindingPluginContext): ArrayIterator<string> {
     const moduleIds = context.getModuleIds()
     return moduleIds.values()
   }
@@ -55,11 +56,13 @@ export class PluginContextData {
     return index
   }
 
-  getSavedResolveOptions(receipt: number) {
+  getSavedResolveOptions(
+    receipt: number,
+  ): PluginContextResolveOptions | undefined {
     return this.resolveOptionsMap.get(receipt)
   }
 
-  removeSavedResolveOptions(receipt: number) {
+  removeSavedResolveOptions(receipt: number): void {
     this.resolveOptionsMap.delete(receipt)
   }
 }

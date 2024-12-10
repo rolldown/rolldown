@@ -1,12 +1,13 @@
 import nodePath from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { createConsola } from 'consola'
+import { type ConsolaInstance, createConsola } from 'consola'
 import type { ConfigExport } from '../types/config-export'
 
 /**
  * Console logger
  */
-export const logger = process.env.ROLLDOWN_TEST
+export const logger: Record<string, any> | ConsolaInstance = process.env
+  .ROLLDOWN_TEST
   ? createTestingLogger()
   : createConsola({
       formatOptions: {

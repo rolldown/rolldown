@@ -25,7 +25,7 @@ export class Watcher {
     this.stopWorkers = stopWorkers
   }
 
-  async close() {
+  async close(): Promise<void> {
     if (this.closed) return
     this.closed = true
     for (const stop of this.stopWorkers) {
@@ -34,7 +34,7 @@ export class Watcher {
     await this.inner.close()
   }
 
-  start() {
+  start(): void {
     // run first build after listener is attached
     process.nextTick(() =>
       this.inner.start(this.emitter.onEvent.bind(this.emitter)),
@@ -45,7 +45,7 @@ export class Watcher {
 export async function createWatcher(
   emitter: WatcherEmitter,
   input: WatchOptions | WatchOptions[],
-) {
+): Promise<void> {
   const options = Array.isArray(input) ? input : [input]
   const bundlerOptions = await Promise.all(
     options.map((option) => createBundlerOptions(option, option.output || {})),

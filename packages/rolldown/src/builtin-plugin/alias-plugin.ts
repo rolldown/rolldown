@@ -10,6 +10,6 @@ type AliasPluginConfig = {
   entries: AliasPluginAlias[]
 }
 
-export function aliasPlugin(config: AliasPluginConfig) {
+export function aliasPlugin(config: AliasPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:alias', config)
 }

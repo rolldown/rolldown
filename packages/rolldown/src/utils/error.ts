@@ -1,6 +1,6 @@
 import { RollupError } from '../rollup'
 
-export function normalizeErrors(rawErrors: (object | Error)[]) {
+export function normalizeErrors(rawErrors: (object | Error)[]): Error {
   const errors = rawErrors.map((e) =>
     e instanceof Error
       ? e

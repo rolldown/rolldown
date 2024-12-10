@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { onExit } from 'signal-exit'
-import * as colors from '../colors'
+import { colors } from '../colors'
 import { ensureConfig, logger } from '../utils'
 import { NormalizedCliOptions } from '../arguments/normalize'
 import { arraify } from '../../utils/misc'
@@ -12,7 +12,7 @@ import type { RolldownOptions, RolldownOutput, RollupOutput } from '../..'
 export async function bundleWithConfig(
   configPath: string,
   cliOptions: NormalizedCliOptions,
-) {
+): Promise<void> {
   const config = await ensureConfig(configPath)
 
   if (!config) {
@@ -27,7 +27,9 @@ export async function bundleWithConfig(
   }
 }
 
-export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions) {
+export async function bundleWithCliOptions(
+  cliOptions: NormalizedCliOptions,
+): Promise<void> {
   if (cliOptions.output.dir) {
     const operation = cliOptions.watch ? watchInner : bundleInner
     await operation({}, cliOptions)

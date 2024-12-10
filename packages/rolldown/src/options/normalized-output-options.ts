@@ -1,4 +1,4 @@
-import { unsupported } from '../utils/misc'
+import { unsupported, type UnsupportedFnRet } from '../utils/misc'
 import type { BindingNormalizedOptions } from '../binding'
 import type {
   SourcemapIgnoreListOption,
@@ -61,115 +61,115 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     this.inner = inner
   }
 
-  get dir() {
+  get dir(): string | undefined {
     return this.inner.dir ?? undefined
   }
 
-  get entryFileNames() {
+  get entryFileNames(): string | UnsupportedFnRet {
     return mapFunctionOption(this.inner.entryFilenames, 'entryFileNames')
   }
 
-  get chunkFileNames() {
+  get chunkFileNames(): string | UnsupportedFnRet {
     return mapFunctionOption(this.inner.chunkFilenames, 'chunkFileNames')
   }
 
-  get assetFileNames() {
+  get assetFileNames(): string {
     return this.inner.assetFilenames
   }
 
-  get format() {
+  get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd' {
     return this.inner.format
   }
 
-  get exports() {
+  get exports(): 'default' | 'named' | 'none' | 'auto' {
     return this.inner.exports
   }
 
-  get sourcemap() {
+  get sourcemap(): boolean | 'inline' | 'hidden' {
     return this.inner.sourcemap
   }
 
-  get cssEntryFileNames() {
+  get cssEntryFileNames(): string | UnsupportedFnRet {
     return mapFunctionOption(this.inner.cssEntryFilenames, 'cssEntryFileNames')
   }
 
-  get cssChunkFileNames() {
+  get cssChunkFileNames(): string | UnsupportedFnRet {
     return mapFunctionOption(this.inner.cssChunkFilenames, 'cssChunkFileNames')
   }
 
-  get shimMissingExports() {
+  get shimMissingExports(): boolean {
     return this.inner.shimMissingExports
   }
 
-  get name() {
+  get name(): string | undefined {
     return this.inner.name ?? undefined
   }
 
-  get file() {
+  get file(): string | undefined {
     return this.inner.file ?? undefined
   }
 
-  get inlineDynamicImports() {
+  get inlineDynamicImports(): boolean {
     return this.inner.inlineDynamicImports
   }
 
-  get externalLiveBindings() {
+  get externalLiveBindings(): boolean {
     return this.inner.externalLiveBindings
   }
 
-  get banner() {
+  get banner(): string | UnsupportedFnRet | undefined {
     return mapFunctionOption(this.inner.banner, 'banner') ?? undefined
   }
 
-  get footer() {
+  get footer(): string | UnsupportedFnRet | undefined {
     return mapFunctionOption(this.inner.footer, 'footer') ?? undefined
   }
 
-  get intro() {
+  get intro(): string | UnsupportedFnRet | undefined {
     return mapFunctionOption(this.inner.intro, 'intro') ?? undefined
   }
 
-  get outro() {
+  get outro(): string | UnsupportedFnRet | undefined {
     return mapFunctionOption(this.inner.outro, 'outro') ?? undefined
   }
 
-  get esModule() {
+  get esModule(): boolean | 'if-default-prop' {
     return this.inner.esModule
   }
 
-  get extend() {
+  get extend(): boolean {
     return this.inner.extend
   }
 
-  get globals() {
+  get globals(): Record<string, string> | UnsupportedFnRet {
     return mapFunctionOption(this.inner.globals, 'globals')
   }
 
-  get hashCharacters() {
+  get hashCharacters(): 'base64' | 'base36' | 'hex' {
     return this.inner.hashCharacters
   }
 
-  get sourcemapDebugIds() {
+  get sourcemapDebugIds(): boolean {
     return this.inner.sourcemapDebugIds
   }
 
-  get sourcemapIgnoreList() {
+  get sourcemapIgnoreList(): UnsupportedFnRet | undefined {
     return mapFunctionOption(void 0, 'sourcemapIgnoreList')
   }
 
-  get sourcemapPathTransform() {
+  get sourcemapPathTransform(): UnsupportedFnRet | undefined {
     return mapFunctionOption(void 0, 'sourcemapPathTransform')
   }
 
-  get minify() {
+  get minify(): boolean {
     return this.inner.minify
   }
 
-  get comments() {
+  get comments(): 'none' | 'preserve-legal' {
     return this.inner.comments
   }
 
-  get polyfillRequire() {
+  get polyfillRequire(): boolean {
     return this.inner.polyfillRequire
   }
 }

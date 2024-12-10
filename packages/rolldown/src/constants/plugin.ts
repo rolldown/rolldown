@@ -25,7 +25,14 @@ export const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
   'generateBundle',
 ] as const
 
-export const ENUMERATED_PLUGIN_HOOK_NAMES = [
+export const ENUMERATED_PLUGIN_HOOK_NAMES: [
+  ...typeof ENUMERATED_INPUT_PLUGIN_HOOK_NAMES,
+  ...typeof ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES,
+  'footer',
+  'banner',
+  'intro',
+  'outro',
+] = [
   // build hooks
   ...ENUMERATED_INPUT_PLUGIN_HOOK_NAMES,
   // generate hooks

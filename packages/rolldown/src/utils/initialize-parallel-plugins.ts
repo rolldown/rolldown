@@ -15,7 +15,15 @@ type ParallelPluginInfo = {
   options: unknown
 }
 
-export async function initializeParallelPlugins(plugins: RolldownPlugin[]) {
+export async function initializeParallelPlugins(
+  plugins: RolldownPlugin[],
+): Promise<
+  | {
+      registry: ParallelJsPluginRegistry
+      stopWorkers: () => Promise<void>
+    }
+  | undefined
+> {
   const pluginInfos: ParallelPluginInfo[] = []
   for (const [index, plugin] of plugins.entries()) {
     if ('_parallel' in plugin) {
@@ -43,7 +51,7 @@ export function initializeWorkers(
   registryId: number,
   count: number,
   pluginInfos: ParallelPluginInfo[],
-) {
+): Promise<Worker[]> {
   return Promise.all(
     Array.from({ length: count }, (_, i) =>
       initializeWorker(registryId, pluginInfos, i),

@@ -15,8 +15,9 @@ export declare class BindingCallableBuiltinPlugin {
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
-export declare class BindingHookError {
-  get errors(): Array<Error | object>
+export declare class BindingError {
+  kind: string
+  message: string
 }
 
 export declare class BindingLog {
@@ -95,7 +96,7 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  get errors(): Array<Error | object>
+  get errors(): Array<Error | BindingError>
 }
 
 export declare class BindingPluginContext {
@@ -133,7 +134,7 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
-  errors(): Array<Error | object>
+  errors(): Array<Error | BindingError>
 }
 
 export declare class Bundler {
@@ -463,7 +464,7 @@ export interface BindingPluginOptions {
   transformFilter?: BindingTransformHookFilter
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
-  buildEnd?: (ctx: BindingPluginContext, error?: BindingHookError) => MaybePromise<VoidNullable>
+  buildEnd?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta

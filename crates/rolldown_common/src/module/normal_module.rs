@@ -14,7 +14,6 @@ use std::ops::{Deref, DerefMut};
 use either::Either;
 use oxc::codegen::LegalComment;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_rstr::Rstr;
 use rolldown_sourcemap::collapse_sourcemaps;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;

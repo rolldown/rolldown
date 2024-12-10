@@ -5,7 +5,7 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use oxc::ast::ast::{IdentifierName, MemberExpression};
+use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
 use oxc::semantic::{Reference, ReferenceId, ScopeFlags, ScopeId, SymbolTable};
 use oxc::span::SPAN;
@@ -32,7 +32,7 @@ use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
 use rolldown_utils::concat_string;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::ecmascript::{is_validate_identifier_name, legitimize_identifier_name};
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
@@ -399,7 +399,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     record_id: ImportRecordIdx,
     span_imported: Span,
   ) {
-    dbg!(&export_name, &imported);
+    (&export_name, &imported);
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = self.result.symbol_ref_db.create_facade_root_symbol_ref(
       // TODO: eq to ident name
@@ -410,7 +410,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         concat_string!(importee_repr, "_default").into()
       } else {
         // the export_name could be a string literal
-        legitimize_identifier_name(&export_name.as_str()).into()
+        legitimize_identifier_name(export_name.as_str()).into()
       },
     );
 
@@ -425,7 +425,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
     }
     self.result.named_exports.insert(
-      export_name.into(),
+      export_name,
       LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
@@ -451,7 +451,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
     let named_export = Rstr::from(export_name).into();
-    dbg!(&named_export);
+    &named_export;
     self.result.named_exports.insert(
       named_export,
       LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
@@ -607,7 +607,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     specifiers.iter().for_each(|spec| match spec {
       ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
-        let imported: ImportOrExportName = (&spec.imported).into();
+        // TODO: recover when https://github.com/oxc-project/oxc/pull/7768 is merged
+        // this is due to oxc inject plugin generate wrong ast, we rely on
+        // the ast type to convert type correctly
+        // let imported: ImportOrExportName = (&spec.imported).into();
+        let name: Rstr = spec.imported.name().as_str().into();
+        let imported = if is_validate_identifier_name(&name) {
+          ImportOrExportName::Identifier(name)
+        } else {
+          ImportOrExportName::String(name)
+        };
         if imported.as_str() == "default" {
           self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
         }
@@ -624,7 +633,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         let symbol_id = spec.local.expect_symbol_id();
-        dbg!(&spec.local);
+        &spec.local;
         self.add_star_import(symbol_id, rec_id, spec.span);
         self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
       }

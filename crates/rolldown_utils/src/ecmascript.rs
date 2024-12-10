@@ -1,7 +1,4 @@
-use oxc::{
-  ast::ast::ImportOrExportKind,
-  syntax::{identifier, keyword},
-};
+use oxc::syntax::{identifier, keyword};
 use std::{borrow::Cow, path::Path};
 
 use crate::concat_string;

@@ -69,7 +69,7 @@ impl GenerateContext<'_> {
           rolldown_utils::ecmascript::property_access_str(
             require_binding,
             exported_name,
-            is_validate_identifier_name(&exported_name),
+            is_validate_identifier_name(exported_name),
           )
         } else {
           symbol_db.canonical_name_for(canonical_ref, canonical_names).to_string()

@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{ExportsKind, ImportOrExportName, Specifier, WrapKind};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::{concat_string, ecmascript::is_validate_identifier_name};
+use rolldown_utils::concat_string;
 
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
@@ -120,8 +120,8 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
         };
-        dbg!(&imported);
-        dbg!(&alias);
+        &imported;
+        &alias;
         if alias.cmp_to_str(imported.as_str()) {
           Some(alias.as_str().into())
         } else {
@@ -159,7 +159,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let alias = &ctx.chunk.canonical_names[canonical_ref];
         match &item.imported {
           Specifier::Star => {
-            dbg!(&alias);
             has_importee_imported = true;
             s.push_str("import * as ");
             s.push_str(alias);

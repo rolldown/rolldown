@@ -1,4 +1,3 @@
-use rolldown_rstr::Rstr;
 
 use crate::{ImportOrExportName, SymbolRef};
 

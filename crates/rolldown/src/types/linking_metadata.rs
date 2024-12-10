@@ -4,7 +4,6 @@ use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPointKind, ImportOrExportName,
   ImportRecordIdx, ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
 };
-use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
 

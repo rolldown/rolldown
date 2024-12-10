@@ -1,5 +1,5 @@
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
-use std::{borrow::Cow, fs::canonicalize};
+use std::borrow::Cow;
 
 use rolldown_common::{
   Chunk, ChunkKind, EntryPointKind, ExportsKind, ImportOrExportName, IndexModules, ModuleIdx,
@@ -8,7 +8,7 @@ use rolldown_common::{
 use rolldown_rstr::Rstr;
 use rolldown_utils::{
   concat_string,
-  ecmascript::{is_validate_identifier_name, property_access_str},
+  ecmascript::property_access_str,
   indexmap::FxIndexSet,
 };
 
@@ -29,7 +29,6 @@ pub fn render_chunk_exports(
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
-          dbg!(&exported_name);
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
           let canonical_name = &chunk.canonical_names[&canonical_ref];

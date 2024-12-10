@@ -1,14 +1,13 @@
-# Reason
-1. sub optimal
-2. should inline literal in json
 # Diff
 ## /out.js
 ### esbuild
 ```js
 var test = 123;
-var test_default = { test, "invalid-identifier": true };
+var invalid_identifier = true;
+var test_default = { test, "invalid-identifier": invalid_identifier };
 export {
   test_default as default,
+  invalid_identifier as "invalid-identifier",
   test
 };
 ```
@@ -31,15 +30,12 @@ export { test_default as default, test, invalid_identifier as "invalid-identifie
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	test.js
-@@ -1,6 +1,7 @@
- var test = 123;
-+var invalid_identifier = true;
+@@ -3,5 +3,5 @@
  var test_default = {
      test,
--    "invalid-identifier": true
-+    "invalid-identifier": invalid_identifier
+     "invalid-identifier": invalid_identifier
  };
--export {test_default as default, test};
+-export {test_default as default, invalid_identifier as undefined, test};
 +export {test_default as default, test, invalid_identifier as undefined};
 
 ```

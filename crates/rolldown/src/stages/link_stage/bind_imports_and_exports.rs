@@ -9,7 +9,7 @@ use rolldown_common::{
   SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
-use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_rstr::ToRstr;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{

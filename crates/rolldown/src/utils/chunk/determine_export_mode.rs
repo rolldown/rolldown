@@ -2,7 +2,6 @@ use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
 use rolldown_common::{ImportOrExportName, NormalModule, OutputExports, SymbolRef};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_rstr::Rstr;
 
 // Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
 pub fn determine_export_mode(

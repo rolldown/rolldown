@@ -1,7 +1,6 @@
 use napi_derive::napi;
-use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[napi(string_enum)]
 pub enum BindingBuiltinPluginName {
   #[napi(value = "builtin:wasm-helper")]

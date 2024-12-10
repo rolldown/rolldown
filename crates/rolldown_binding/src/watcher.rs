@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use napi_derive::napi;
-use serde::Deserialize;
 
 use crate::bundler::{BindingBundlerOptions, Bundler};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
@@ -14,8 +13,7 @@ use crate::utils::handle_result;
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingNotifyOption {
   pub poll_interval: Option<u32>,
   pub compare_contents: Option<bool>,

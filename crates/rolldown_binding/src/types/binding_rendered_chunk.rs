@@ -1,12 +1,10 @@
 use arcstr::ArcStr;
 use rustc_hash::FxHashMap;
-use serde::Deserialize;
 
 use super::binding_rendered_module::BindingRenderedModule;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug)]
 pub struct RenderedChunk {
   // PreRenderedChunk
   pub name: String,
@@ -17,7 +15,6 @@ pub struct RenderedChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub file_name: String,
-  #[serde(skip)]
   #[napi(ts_type = "Record<string, BindingRenderedModule>")]
   pub modules: BindingChunkModules,
   pub imports: Vec<String>,

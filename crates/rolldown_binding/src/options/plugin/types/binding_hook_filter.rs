@@ -1,12 +1,10 @@
 use rolldown::ModuleType;
 use rolldown_plugin::{GeneralHookFilter, ResolvedIdHookFilter, TransformHookFilter};
-use serde::Deserialize;
 
 use super::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct BindingGeneralHookFilter {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
@@ -35,8 +33,7 @@ impl TryFrom<BindingGeneralHookFilter> for ResolvedIdHookFilter {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Clone)]
 pub struct BindingTransformHookFilter {
   pub code: Option<BindingGeneralHookFilter>,
   pub module_type: Option<Vec<String>>,

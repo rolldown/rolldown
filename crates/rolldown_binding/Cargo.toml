@@ -45,7 +45,6 @@ rolldown_sourcemap                      = { workspace = true }
 rolldown_tracing                        = { workspace = true }
 rolldown_utils                          = { workspace = true }
 rustc-hash                              = { workspace = true }
-serde                                   = { workspace = true }
 tracing                                 = { workspace = true }
 
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]

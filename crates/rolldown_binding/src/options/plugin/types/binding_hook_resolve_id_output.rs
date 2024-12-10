@@ -1,10 +1,7 @@
-use serde::Deserialize;
-
 use super::binding_hook_side_effects::BindingHookSideEffects;
 
 #[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug)]
 pub struct BindingHookResolveIdOutput {
   pub id: String,
   pub external: Option<bool>,

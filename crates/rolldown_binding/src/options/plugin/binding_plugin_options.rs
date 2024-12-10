@@ -1,5 +1,4 @@
 use napi::bindgen_prelude::Either;
-use serde::Deserialize;
 use std::fmt::Debug;
 
 use crate::types::{
@@ -31,12 +30,10 @@ pub type BindingPluginOrParallelJsPluginPlaceholder =
   Option<Either<BindingPluginOptions, BindingBuiltinPlugin>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub struct BindingPluginOptions {
   pub name: String,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>"
   )]
@@ -44,7 +41,6 @@ pub struct BindingPluginOptions {
     Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
   pub build_start_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
   )]
@@ -57,7 +53,6 @@ pub struct BindingPluginOptions {
   pub resolve_id_meta: Option<BindingPluginHookMeta>,
   pub resolve_id_filter: Option<BindingGeneralHookFilter>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
   )]
@@ -69,7 +64,6 @@ pub struct BindingPluginOptions {
   >,
   pub resolve_dynamic_import_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
@@ -78,7 +72,6 @@ pub struct BindingPluginOptions {
   pub load_meta: Option<BindingPluginHookMeta>,
   pub load_filter: Option<BindingGeneralHookFilter>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
   )]
@@ -91,14 +84,12 @@ pub struct BindingPluginOptions {
   pub transform_meta: Option<BindingPluginHookMeta>,
   pub transform_filter: Option<BindingTransformHookFilter>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"
   )]
   pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), ()>>,
   pub module_parsed_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>"
   )]
@@ -110,7 +101,6 @@ pub struct BindingPluginOptions {
   >,
   pub build_end_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
   )]
@@ -122,7 +112,6 @@ pub struct BindingPluginOptions {
   >,
   pub render_chunk_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>"
   )]
@@ -130,18 +119,15 @@ pub struct BindingPluginOptions {
     Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
   pub augment_chunk_hash_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void")]
   pub render_start:
     Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
   pub render_start_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, error: string) => void")]
   pub render_error: Option<MaybeAsyncJsCallback<(BindingPluginContext, String), ()>>,
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
@@ -153,7 +139,6 @@ pub struct BindingPluginOptions {
   >,
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
@@ -165,39 +150,32 @@ pub struct BindingPluginOptions {
   >,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
   pub close_bundle: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
   pub close_bundle_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>"
   )]
   pub watch_change: Option<MaybeAsyncJsCallback<(BindingPluginContext, String, String), ()>>,
   pub watch_change_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
   pub close_watcher: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
   pub close_watcher_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub banner: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
   pub banner_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub footer: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
   pub footer_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub intro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
   pub intro_meta: Option<BindingPluginHookMeta>,
 
-  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub outro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
   pub outro_meta: Option<BindingPluginHookMeta>,
@@ -210,8 +188,7 @@ impl Debug for BindingPluginOptions {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingPluginWithIndex {
   pub index: u32,
   pub plugin: BindingPluginOptions,

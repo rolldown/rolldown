@@ -42,13 +42,13 @@ export const ModuleSideEffectsOptionSchema: v.UnionSchema<
         v.ArgsAction<
           (...args: unknown[]) => unknown,
           v.TupleSchema<
-            [
-              v.SchemaWithPipe<
-                [v.StringSchema<undefined>, v.DecimalAction<string, undefined>]
-              >,
-            ],
+            [v.StringSchema<undefined>, v.BooleanSchema<undefined>],
             undefined
           >
+        >,
+        v.ReturnsAction<
+          (args_0: string, args_1: boolean) => unknown,
+          v.OptionalSchema<v.BooleanSchema<undefined>, undefined>
         >,
       ]
     >,
@@ -58,7 +58,11 @@ export const ModuleSideEffectsOptionSchema: v.UnionSchema<
   v.boolean(),
   v.literal('no-external'),
   v.array(ModuleSideEffectsRuleSchema),
-  v.pipe(v.function(), v.args(v.tuple([v.pipe(v.string(), v.decimal())]))),
+  v.pipe(
+    v.function(),
+    v.args(v.tuple([v.string(), v.boolean()])),
+    v.returns(v.optional(v.boolean())),
+  ),
 ])
 
 export type TreeshakingOptions =

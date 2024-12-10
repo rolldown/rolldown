@@ -1,5 +1,5 @@
-import type Z from 'zod'
 import { z } from 'zod'
+import type Z from 'zod'
 
 export const stringOrRegExp = (): Z.ZodUnion<
   [Z.ZodString, Z.ZodType<RegExp, Z.ZodTypeDef, RegExp>]

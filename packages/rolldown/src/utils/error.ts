@@ -1,7 +1,7 @@
 import { BindingError } from '../binding'
 import { RollupError } from '../rollup'
 
-export function normalizeErrors(rawErrors: (BindingError | Error)[]) {
+export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
   const errors = rawErrors.map((e) =>
     e instanceof Error
       ? e
@@ -40,7 +40,7 @@ export function normalizeErrors(rawErrors: (BindingError | Error)[]) {
   return wrapper
 }
 
-function getErrorMessage(e: RollupError) {
+function getErrorMessage(e: RollupError): string {
   let s = ''
   if (e.plugin) {
     s += `[plugin ${e.plugin}]`

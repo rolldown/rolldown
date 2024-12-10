@@ -6,11 +6,11 @@ export function normalizeErrors(rawErrors: (BindingError | Error)[]) {
     e instanceof Error
       ? e
       : // strip stacktrace of errors from native diagnostics
-        Object.assign(
-          new Error(),
-          { kind: e.kind, message: e.message },
-          { stack: undefined },
-        ),
+        Object.assign(new Error(), {
+          kind: e.kind,
+          message: e.message,
+          stack: undefined,
+        }),
   )
   // based on https://github.com/evanw/esbuild/blob/9eca46464ed5615cb36a3beb3f7a7b9a8ffbe7cf/lib/shared/common.ts#L1673
   // combine error messages as a top level error

@@ -82,7 +82,7 @@ export function bindingifyBuildEnd(
           args.onLog,
           args.logLevel,
         ),
-        err ? normalizeErrors(err.errors) : undefined,
+        err ? normalizeErrors(err) : undefined,
       )
     },
     meta: bindingifyPluginHookMeta(meta),

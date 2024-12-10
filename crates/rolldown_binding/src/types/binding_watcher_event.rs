@@ -1,7 +1,6 @@
-use napi::Env;
 use napi_derive::napi;
 
-use super::binding_outputs::to_js_diagnostic;
+use super::binding_outputs::{to_js_diagnostic, BindingError};
 
 #[napi]
 pub struct BindingWatcherEvent {
@@ -49,15 +48,12 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn errors(
-    &mut self,
-    env: Env,
-  ) -> napi::Result<Vec<napi::Either<napi::JsError, napi::JsObject>>> {
+  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
     if let rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::Error(
       rolldown_common::OutputsDiagnostics { diagnostics, cwd },
     )) = &mut self.inner
     {
-      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone(), env)).collect()
+      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone())).collect()
     } else {
       unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
     }

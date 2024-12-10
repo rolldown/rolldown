@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::{BindingOutputs, JsChangedOutputs},
+  binding_outputs::{BindingError, BindingOutputs, JsChangedOutputs},
   binding_rendered_chunk::RenderedChunk,
   js_callback::MaybeAsyncJsCallback,
 };
@@ -16,7 +16,6 @@ use super::{
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
   types::{
-    binding_hook_error::BindingHookError,
     binding_hook_filter::{BindingGeneralHookFilter, BindingTransformHookFilter},
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
@@ -101,9 +100,14 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, error?: BindingHookError) => MaybePromise<VoidNullable>"
+    ts_type = "(ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>"
   )]
-  pub build_end: Option<MaybeAsyncJsCallback<(BindingPluginContext, Option<BindingHookError>), ()>>,
+  pub build_end: Option<
+    MaybeAsyncJsCallback<
+      (BindingPluginContext, Option<Vec<napi::Either<napi::JsError, BindingError>>>),
+      (),
+    >,
+  >,
   pub build_end_meta: Option<BindingPluginHookMeta>,
 
   #[serde(skip_deserializing)]

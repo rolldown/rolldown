@@ -1,7 +1,6 @@
 pub mod binding_asset_source;
 pub mod binding_builtin_plugin_name;
 pub mod binding_emitted_asset;
-pub mod binding_hook_error;
 pub mod binding_hook_filter;
 pub mod binding_hook_load_output;
 pub mod binding_hook_render_chunk_output;

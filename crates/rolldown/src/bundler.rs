@@ -106,20 +106,13 @@ impl Bundler {
     {
       Ok(v) => v,
       Err(errs) => {
-        let errors = Arc::new(errs.into_vec());
+        let errors = errs.into_vec();
         self
           .plugin_driver
-          .build_end(Some(&HookBuildEndArgs {
-            errors: Arc::clone(&errors),
-            cwd: &self.options.cwd,
-          }))
+          .build_end(Some(&HookBuildEndArgs { errors: &errors, cwd: &self.options.cwd }))
           .await?;
         self.plugin_driver.close_bundle().await?;
-        return Err(
-          Arc::<std::vec::Vec<BuildDiagnostic>>::into_inner(errors)
-            .expect("Arc into_inner should success after call buildEnd hook")
-            .into(),
-        );
+        return Err(errors.into());
       }
     };
 

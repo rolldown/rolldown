@@ -179,6 +179,9 @@ importers:
       '@babel/runtime':
         specifier: '>=7'
         version: 7.26.0
+      '@valibot/to-json-schema':
+        specifier: ^0.2.1
+        version: 0.2.1(valibot@0.42.1(typescript@5.6.3))
       valibot:
         specifier: ^0.42.1
         version: 0.42.1(typescript@5.6.3)
@@ -2163,7 +2166,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 
@@ -3270,6 +3272,11 @@ packages:
 
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
+
+  '@valibot/to-json-schema@0.2.1':
+    resolution: {integrity: sha512-Cyb/2vz56CvRp5VzO4a0lWxCwMG3BxWZrZRd/EyDMkx1yhfeSP2r8b7SEH+s+f16vdiMEjtRws/4EiOXLZlbMQ==}
+    peerDependencies:
+      valibot: '>=0.31.0 <1'
 
   '@vitejs/plugin-vue@5.1.4':
     resolution: {integrity: sha512-N2XSI2n3sQqp5w7Y/AN/L2XDjBIRGqXko+eDp42sydYSBeJuSm5a1sLf8zakmo8u7tA8NmBgoDLA1HeOESjp9A==}
@@ -9127,6 +9134,10 @@ snapshots:
   '@types/web-bluetooth@0.0.20': {}
 
   '@ungap/structured-clone@1.2.0': {}
+
+  '@valibot/to-json-schema@0.2.1(valibot@0.42.1(typescript@5.6.3))':
+    dependencies:
+      valibot: 0.42.1(typescript@5.6.3)
 
   '@vitejs/plugin-vue@5.1.4(vite@5.4.10(@types/node@22.8.7)(terser@5.36.0))(vue@3.5.12(typescript@5.6.3))':
     dependencies:

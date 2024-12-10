@@ -344,10 +344,13 @@ export interface BindingInputOptions {
 }
 
 export interface BindingJsonPluginConfig {
-  stringify?: boolean
+  stringify?: BindingJsonPluginStringify
   isBuild?: boolean
   namedExports?: boolean
 }
+
+export type BindingJsonPluginStringify =
+  boolean | string
 
 export interface BindingJsonSourcemap {
   file?: string

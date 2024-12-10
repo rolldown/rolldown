@@ -124,8 +124,13 @@ pub struct BindingPluginOptions {
     Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
   pub render_start_meta: Option<BindingPluginHookMeta>,
 
-  #[napi(ts_type = "(ctx: BindingPluginContext, error: string) => void")]
-  pub render_error: Option<MaybeAsyncJsCallback<(BindingPluginContext, String), ()>>,
+  #[napi(ts_type = "(ctx: BindingPluginContext, error: (Error | BindingError)[]) => void")]
+  pub render_error: Option<
+    MaybeAsyncJsCallback<
+      (BindingPluginContext, Vec<napi::Either<napi::JsError, BindingError>>),
+      (),
+    >,
+  >,
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
   #[napi(

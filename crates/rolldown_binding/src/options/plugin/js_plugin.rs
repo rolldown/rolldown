@@ -364,10 +364,18 @@ impl Plugin for JsPlugin {
   async fn render_error(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookRenderErrorArgs,
+    args: &rolldown_plugin::HookRenderErrorArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.render_error {
-      cb.await_call((ctx.clone().into(), args.error.to_string())).await?;
+      cb.await_call((
+        ctx.clone().into(),
+        args
+          .errors
+          .iter()
+          .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
+          .collect(),
+      ))
+      .await?;
     }
     Ok(())
   }

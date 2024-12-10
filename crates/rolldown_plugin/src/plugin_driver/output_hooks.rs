@@ -106,7 +106,7 @@ impl PluginDriver {
     Ok(hash)
   }
 
-  pub async fn render_error(&self, args: &HookRenderErrorArgs) -> HookNoopReturn {
+  pub async fn render_error(&self, args: &HookRenderErrorArgs<'_>) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
     {
       plugin.call_render_error(ctx, args).await?;

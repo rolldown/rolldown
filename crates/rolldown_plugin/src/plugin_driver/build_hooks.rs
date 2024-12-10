@@ -15,6 +15,7 @@ use rolldown_common::{
 };
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
+use string_wizard::{MagicString, SourceMapOptions};
 
 use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
 
@@ -197,22 +198,13 @@ impl PluginDriver {
         )
         .await?
       {
-        if let Some(mut map) = r.map {
-          // If sourcemap  hasn't `sources`, using original id to fill it.
-          let source = map.get_source(0);
-          if source.map_or(true, str::is_empty)
-            || (map.get_sources().count() == 1 && source.map_or(true, |source| source != args.id))
-          {
-            map.set_sources(vec![args.id]);
-          }
-          // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-          if map.get_source_content(0).map_or(true, str::is_empty) {
-            map.set_source_contents(vec![&code]);
-          }
-          original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
-          original_sourcemap_chain.push(map);
-          plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
-        }
+        original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
+        original_sourcemap_chain.push(Self::normalize_transform_sourcemap(
+          r.map,
+          args.id,
+          original_code,
+        ));
+        plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
         }
@@ -226,6 +218,38 @@ impl PluginDriver {
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)
+  }
+
+  #[inline]
+  fn normalize_transform_sourcemap(
+    map: Option<SourceMap>,
+    id: &str,
+    original_code: &str,
+  ) -> SourceMap {
+    if let Some(mut map) = map {
+      // If sourcemap  hasn't `sources`, using original id to fill it.
+      let source = map.get_source(0);
+      if source.map_or(true, str::is_empty)
+        || (map.get_sources().count() == 1 && source.map_or(true, |source| source != id))
+      {
+        map.set_sources(vec![id]);
+      }
+      // If sourcemap hasn't `sourcesContent`, using original code to fill it.
+      if map.get_source_content(0).map_or(true, str::is_empty) {
+        map.set_source_contents(vec![original_code]);
+      }
+      map
+    } else {
+      // If sourcemap is empty, need to create one remapping original code.
+      // Here using `hires: true` to get more accurate column information, but it has more overhead.
+      // TODO: maybe it should be add a option to control hires.
+      let magic_string = MagicString::new(original_code);
+      magic_string.source_map(SourceMapOptions {
+        hires: string_wizard::Hires::True,
+        include_content: true,
+        source: id.into(),
+      })
+    }
   }
 
   pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {

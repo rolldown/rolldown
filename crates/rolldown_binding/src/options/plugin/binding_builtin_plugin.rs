@@ -7,7 +7,7 @@ use rolldown_plugin_alias::{Alias, AliasPlugin};
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
-use rolldown_plugin_json::JsonPlugin;
+use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
@@ -88,12 +88,33 @@ pub struct BindingModulePreloadPolyfillPluginConfig {
 }
 
 #[napi_derive::napi(object)]
-#[derive(Debug, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default)]
 pub struct BindingJsonPluginConfig {
-  pub stringify: Option<bool>,
+  pub stringify: Option<BindingJsonPluginStringify>,
   pub is_build: Option<bool>,
   pub named_exports: Option<bool>,
+}
+
+#[derive(Debug)]
+#[napi(transparent)]
+pub struct BindingJsonPluginStringify(napi::Either<bool, String>);
+
+impl TryFrom<BindingJsonPluginStringify> for JsonPluginStringify {
+  type Error = napi::Error;
+
+  fn try_from(value: BindingJsonPluginStringify) -> Result<Self, Self::Error> {
+    Ok(match value {
+      BindingJsonPluginStringify(napi::Either::A(true)) => JsonPluginStringify::True,
+      BindingJsonPluginStringify(napi::Either::A(false)) => JsonPluginStringify::False,
+      BindingJsonPluginStringify(napi::Either::B(s)) if s == "auto" => JsonPluginStringify::Auto,
+      BindingJsonPluginStringify(napi::Either::B(s)) => {
+        return Err(napi::Error::new(
+          napi::Status::InvalidArg,
+          format!("Invalid stringify option: {s}"),
+        ))
+      }
+    })
+  }
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -376,7 +397,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           BindingJsonPluginConfig::default()
         };
         Arc::new(JsonPlugin {
-          stringify: config.stringify.unwrap_or_default(),
+          stringify: config.stringify.map(TryInto::try_into).transpose()?.unwrap_or_default(),
           is_build: config.is_build.unwrap_or_default(),
           named_exports: config.named_exports.unwrap_or_default(),
         })

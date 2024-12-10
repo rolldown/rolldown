@@ -1,13 +1,22 @@
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookTransformOutput, Plugin};
+use rolldown_sourcemap::SourceMap;
 use serde_json::Value;
 use std::borrow::Cow;
 
 #[derive(Debug, Default)]
 pub struct JsonPlugin {
-  pub stringify: bool,
+  pub stringify: JsonPluginStringify,
   pub is_build: bool,
   pub named_exports: bool,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum JsonPluginStringify {
+  False,
+  True,
+  #[default]
+  Auto,
 }
 
 impl Plugin for JsonPlugin {
@@ -25,27 +34,62 @@ impl Plugin for JsonPlugin {
       return Ok(None);
     }
     let code = strip_bom(args.code);
-    let value = serde_json::from_str::<Value>(code)?;
-    if self.stringify {
-      let normalized_code = if self.is_build {
-        let str = serde_json::to_string(&value)?;
-        // TODO: perf: find better way than https://github.com/rolldown/vite/blob/3bf86e3f715c952a032b476b60c8c869e9c50f3f/packages/vite/src/node/plugins/json.ts#L55-L57
-        let str = serde_json::to_string(&str)?;
-        format!("export default /*#__PURE__*/ JSON.parse({str})")
-      } else {
-        format!("export default /*#__PURE__*/ JSON.parse({})", serde_json::to_string(code)?)
-      };
-      return Ok(Some(HookTransformOutput {
-        code: Some(normalized_code),
-        module_type: Some(ModuleType::Js),
-        ..Default::default()
-      }));
+
+    if self.stringify != JsonPluginStringify::False {
+      if self.named_exports && code.trim_start().starts_with('{') {
+        let parsed = serde_json::from_str::<Value>(code)?;
+        let parsed =
+          parsed.as_object().expect("should be object because the value starts with `{`");
+
+        let mut code = String::new();
+        let mut default_object_code = "{\n".to_owned();
+        for (key, value) in parsed {
+          if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
+            code += &format!("export const {key} = {};\n", &serialize_value(value)?);
+            default_object_code += &format!("  {key},\n");
+          } else {
+            // TODO: escape key
+            default_object_code += &format!("  \"{key}\": {},\n", &serialize_value(value)?);
+          }
+        }
+        default_object_code += "}";
+
+        code += &format!("export default {default_object_code};\n");
+        return Ok(Some(HookTransformOutput {
+          code: Some(code),
+          map: Some(SourceMap::default()),
+          module_type: Some(ModuleType::Js),
+          ..Default::default()
+        }));
+      }
+
+      if self.stringify == JsonPluginStringify::True ||
+      // use 10kB as a threshold for 'auto'
+      // https://v8.dev/blog/cost-of-javascript-2019#:~:text=A%20good%20rule%20of%20thumb%20is%20to%20apply%20this%20technique%20for%20objects%20of%2010%20kB%20or%20larger
+      code.len() > 10 * 1000
+      {
+        let normalized_code = if self.is_build {
+          // TODO: perf: find better way than https://github.com/rolldown/vite/blob/3bf86e3f715c952a032b476b60c8c869e9c50f3f/packages/vite/src/node/plugins/json.ts#L55-L57
+          let value = serde_json::from_str::<Value>(code)?;
+          Cow::Owned(serde_json::to_string(&value)?)
+        } else {
+          Cow::Borrowed(code)
+        };
+        let normalized_code_string = serde_json::to_string(&normalized_code)?;
+        return Ok(Some(HookTransformOutput {
+          code: Some(format!("export default /*#__PURE__*/ JSON.parse({normalized_code_string})")),
+          map: Some(SourceMap::default()),
+          module_type: Some(ModuleType::Js),
+          ..Default::default()
+        }));
+      }
     }
 
+    let value = serde_json::from_str::<Value>(code)?;
     let output = to_esm(&value, self.named_exports);
-
     Ok(Some(HookTransformOutput {
       code: Some(output),
+      map: Some(SourceMap::default()),
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
@@ -99,6 +143,15 @@ fn is_special_query(ext: &str) -> bool {
   false
 }
 
+fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
+  let value_as_string = serde_json::to_string(value)?;
+  if value.is_object() && !value.is_null() && value_as_string.len() > 10 * 1000 {
+    Ok(format!("JSON.parse({})", serde_json::to_string(&value_as_string)?))
+  } else {
+    Ok(value_as_string)
+  }
+}
+
 fn to_esm(data: &Value, named_exports: bool) -> String {
   if !named_exports || !data.is_object() {
     return format!("export default {data};\n");
@@ -111,6 +164,7 @@ fn to_esm(data: &Value, named_exports: bool) -> String {
       default_export_rows.push(Cow::Borrowed(key));
       named_export_code += &format!("export const {key} = {value};\n");
     } else {
+      // TODO: escape key
       default_export_rows.push(Cow::Owned(format!("\"{key}\": {value}",)));
     }
   }

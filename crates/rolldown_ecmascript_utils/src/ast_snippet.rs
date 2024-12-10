@@ -485,7 +485,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Expression::NumericLiteral(self.builder.alloc_numeric_literal(
       SPAN,
       value,
-      raw,
+      Some(Atom::from(raw)),
       oxc::syntax::number::NumberBase::Decimal,
     ))
   }
@@ -551,6 +551,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       Some(specifiers),
       self.builder.string_literal(SPAN, source, None),
+      None,
       NONE,
       ImportOrExportKind::Value,
     ))
@@ -760,7 +761,7 @@ impl<'ast> AstSnippet<'ast> {
       Some(Interop::Node) => self.alloc_call_expr_with_2arg_expr_expr(
         to_esm_fn_name,
         call_expr,
-        self.builder.expression_numeric_literal(SPAN, 1.0, "1", NumberBase::Decimal),
+        self.builder.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal),
       ),
     }
   }
@@ -779,7 +780,7 @@ impl<'ast> AstSnippet<'ast> {
         Argument::from(self.builder.expression_numeric_literal(
           SPAN,
           1.0,
-          "1",
+          None,
           NumberBase::Decimal,
         )),
       ])

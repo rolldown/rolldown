@@ -200,8 +200,18 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
             let new_cond_expr = self.snippet.builder.expression_conditional(
               SPAN,
               test,
-              self.snippet.builder.expression_import(SPAN, consequent, self.snippet.builder.vec()),
-              self.snippet.builder.expression_import(SPAN, alternative, self.snippet.builder.vec()),
+              self.snippet.builder.expression_import(
+                SPAN,
+                consequent,
+                self.snippet.builder.vec(),
+                None,
+              ),
+              self.snippet.builder.expression_import(
+                SPAN,
+                alternative,
+                self.snippet.builder.vec(),
+                None,
+              ),
             );
 
             Some(new_cond_expr)

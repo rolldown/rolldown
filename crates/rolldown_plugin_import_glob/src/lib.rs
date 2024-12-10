@@ -299,6 +299,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
             self.ast_builder.string_literal(Span::default(), formatted_file.as_str(), None),
+            None,
             NONE,
             ImportOrExportKind::Value,
           ),
@@ -315,6 +316,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
             None,
           ),
           self.ast_builder.vec(),
+          None,
         );
         // import('./dir/foo.js').then((m) => m.setup)
         if let Some(import) = &opts.import {

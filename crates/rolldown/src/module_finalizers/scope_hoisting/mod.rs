@@ -336,9 +336,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
             }
           },
-          // key: if is_validate_identifier_name(prop_name) {
-          // } else {
-          // },
           value: self.snippet.only_return_arrow_expr(returned),
           ..TakeIn::dummy(self.alloc)
         }

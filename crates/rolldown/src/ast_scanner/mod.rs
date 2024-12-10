@@ -401,7 +401,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = self.result.symbol_ref_db.create_facade_root_symbol_ref(
-      // TODO: eq to ident name
       if export_name.cmp_to_str("default") {
         let importee_repr =
           self.result.import_records[record_id].module_request.as_path().representative_file_name();

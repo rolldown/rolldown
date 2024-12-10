@@ -9,7 +9,7 @@ use rolldown_common::{
   SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
-use rolldown_rstr::ToRstr;
+use rolldown_rstr::{Rstr, ToRstr};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -290,11 +290,7 @@ impl LinkStage<'_> {
                 while cursor < member_expr_ref.props.len() && is_namespace_ref {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
-                  let export_name = if is_validate_identifier_name(name.as_str()) {
-                    ImportOrExportName::Identifier(name.to_rstr())
-                  } else {
-                    ImportOrExportName::String(name.to_rstr())
-                  };
+                  let export_name = Rstr::from(name.as_str()).into();
                   let export_symbol = meta.resolved_exports.get(&export_name);
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module

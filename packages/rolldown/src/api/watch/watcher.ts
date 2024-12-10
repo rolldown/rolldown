@@ -1,6 +1,11 @@
 import { BindingWatcher } from '../../binding'
+import { LOG_LEVEL_WARN } from '../../log/logging'
+import { logMultiplyNotifyOption } from '../../log/logs'
 import { WatchOptions } from '../../options/watch-options'
-import { createBundlerOptions } from '../../utils/create-bundler-option'
+import {
+  BundlerOptionWithStopWorker,
+  createBundlerOptions,
+} from '../../utils/create-bundler-option'
 import { WatcherEmitter } from './watch-emitter'
 
 export class Watcher {
@@ -50,8 +55,10 @@ export async function createWatcher(
   const bundlerOptions = await Promise.all(
     options.map((option) => createBundlerOptions(option, option.output || {})),
   )
+  const notifyOptions = getValidNotifyOption(bundlerOptions)
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
+    notifyOptions,
   )
   const watcher = new Watcher(
     emitter,
@@ -59,4 +66,21 @@ export async function createWatcher(
     bundlerOptions.map((option) => option.stopWorkers),
   )
   watcher.start()
+}
+
+function getValidNotifyOption(bundlerOptions: BundlerOptionWithStopWorker[]) {
+  let result
+  for (const option of bundlerOptions) {
+    if (option.inputOptions.watch) {
+      const notifyOption = option.inputOptions.watch.notify
+      if (notifyOption) {
+        if (result) {
+          option.onLog(LOG_LEVEL_WARN, logMultiplyNotifyOption())
+          return result
+        } else {
+          result = notifyOption
+        }
+      }
+    }
+  }
 }

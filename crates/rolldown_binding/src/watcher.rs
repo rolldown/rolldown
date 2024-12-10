@@ -1,6 +1,8 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use napi_derive::napi;
+use serde::Deserialize;
 
 use crate::bundler::{BindingBundlerOptions, Bundler};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
@@ -11,6 +13,24 @@ use crate::utils::handle_result;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
 
+#[napi_derive::napi(object)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingNotifyOption {
+  pub poll_interval: Option<u32>,
+  pub compare_contents: Option<bool>,
+}
+
+impl From<BindingNotifyOption> for rolldown_common::NotifyOption {
+  #[allow(clippy::cast_lossless)]
+  fn from(value: BindingNotifyOption) -> Self {
+    Self {
+      poll_interval: value.poll_interval.map(|m| Duration::from_millis(m as u64)),
+      compare_contents: value.compare_contents.unwrap_or_default(),
+    }
+  }
+}
+
 #[napi]
 pub struct BindingWatcher {
   inner: rolldown::Watcher,
@@ -19,13 +39,17 @@ pub struct BindingWatcher {
 #[napi]
 impl BindingWatcher {
   #[napi(constructor)]
-  pub fn new(env: Env, options: Vec<BindingBundlerOptions>) -> napi::Result<Self> {
+  pub fn new(
+    env: Env,
+    options: Vec<BindingBundlerOptions>,
+    notify_option: Option<BindingNotifyOption>,
+  ) -> napi::Result<Self> {
     let bundlers = options
       .into_iter()
       .map(|option| Bundler::new(env, option).map(Bundler::into_inner))
       .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(Self { inner: rolldown::Watcher::new(bundlers)? })
+    Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })
   }
 
   #[napi]

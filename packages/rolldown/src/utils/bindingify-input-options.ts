@@ -235,12 +235,6 @@ function bindingifyWatch(
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
     } as BindingWatchOption
-    if (watch.notify) {
-      value.notify = {
-        pollInterval: watch.notify.pollInterval,
-        compareContents: watch.notify.compareContents,
-      }
-    }
     if (watch.chokidar) {
       unsupported(
         'The watch chokidar option is deprecated, please use notify options instead of it.',

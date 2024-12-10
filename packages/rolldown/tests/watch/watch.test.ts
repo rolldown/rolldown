@@ -375,6 +375,45 @@ test.sequential('watch multiply options', async () => {
   await watcher.close()
 })
 
+test.sequential('warning for multiply notify options', async () => {
+  const onLogFn = vi.fn()
+  const watcher = watch([
+    {
+      input,
+      cwd: import.meta.dirname,
+      watch: {
+        notify: {
+          compareContents: false,
+        },
+      },
+    },
+    {
+      input: foo,
+      cwd: import.meta.dirname,
+      watch: {
+        notify: {
+          compareContents: true,
+        },
+      },
+      plugins: [
+        {
+          onLog: (level, log) => {
+            onLogFn()
+            expect(level).toBe('warn')
+            expect(log.code).toBe('MULTIPLY_NOTIFY_OPTION')
+          },
+        },
+      ],
+    },
+  ])
+
+  await waitUtil(() => {
+    expect(onLogFn).toBeCalled()
+  })
+
+  await watcher.close()
+})
+
 test.sequential('watch close immediately', async () => {
   const watcher = watch({
     input,

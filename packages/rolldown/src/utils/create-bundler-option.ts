@@ -17,6 +17,7 @@ import type { OutputOptions } from '../options/output-options'
 import { LOG_LEVEL_INFO } from '../log/logging'
 import { getLogger, getOnLog } from '../log/logger'
 import { getObjectPlugins } from '../plugin/plugin-driver'
+import { LogHandler } from '../rollup'
 
 export async function createBundlerOptions(
   inputOptions: InputOptions,
@@ -81,6 +82,8 @@ export async function createBundlerOptions(
         outputOptions: bindingOutputOptions,
         parallelPluginsRegistry: parallelPluginInitResult?.registry,
       },
+      inputOptions,
+      onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
     }
   } catch (e) {
@@ -91,5 +94,7 @@ export async function createBundlerOptions(
 
 export interface BundlerOptionWithStopWorker {
   bundlerOptions: BindingBundlerOptions
+  inputOptions: InputOptions
+  onLog: LogHandler
   stopWorkers?: () => Promise<void>
 }

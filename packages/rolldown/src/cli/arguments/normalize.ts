@@ -7,7 +7,6 @@ import { setNestedProperty } from './utils'
 import type { CliOptions } from './schema'
 import type { InputOptions } from '../../options/input-options'
 import type { OutputOptions } from '../../options/output-options'
-import type Z from 'zod'
 
 export interface NormalizedCliOptions {
   input: InputOptions

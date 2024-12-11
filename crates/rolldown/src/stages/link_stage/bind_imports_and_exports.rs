@@ -12,6 +12,7 @@ use rolldown_rstr::{Rstr, ToRstr};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
+  ecmascript::is_validate_identifier_name,
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -389,7 +390,7 @@ impl BindImportsAndExportsContext<'_> {
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
       if is_esm && is_external {
         if let Specifier::Literal(ref name) = named_import.imported {
-          if name.as_str() != "default" {
+          if name.as_str() != "default" && is_validate_identifier_name(name) {
             self
               .external_import_binding_merger
               .entry(rec.resolved_module)

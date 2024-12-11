@@ -407,7 +407,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let importee_repr = legitimize_identifier_name(&importee_repr);
         concat_string!(importee_repr, "_default").into()
       } else {
-        export_name.into()
+        // the export_name could be a string literal
+        legitimize_identifier_name(export_name).into()
       });
 
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
@@ -433,8 +434,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     record_id: ImportRecordIdx,
     span_for_export_name: Span,
   ) {
-    let generated_imported_as_ref =
-      self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name.into());
+    let generated_imported_as_ref = self
+      .result
+      .symbol_ref_db
+      .create_facade_root_symbol_ref(legitimize_identifier_name(export_name).into());
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
       imported: Specifier::Star,

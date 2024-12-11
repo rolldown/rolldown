@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fs, path::Path};
 
-use rolldown_common::{EmittedAsset, StrOrBytes};
+use rolldown_common::{EmittedAsset, ModuleType, StrOrBytes};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
@@ -23,6 +23,8 @@ impl Plugin for WasmHelperPlugin {
   ) -> HookResolveIdReturn {
     if args.specifier == WASM_HELPER_ID {
       Ok(Some(HookResolveIdOutput { id: WASM_HELPER_ID.to_string(), ..Default::default() }))
+    } else if args.specifier.ends_with(".wasm?init") {
+      Ok(Some(HookResolveIdOutput { id: args.specifier.to_string(), ..Default::default() }))
     } else {
       Ok(None)
     }
@@ -51,6 +53,7 @@ impl Plugin for WasmHelperPlugin {
           r#"import initWasm from "{WASM_HELPER_ID}"; 
           export default opts => initWasm(opts, "{url}")"#
         ),
+        module_type: Some(ModuleType::Js),
         ..Default::default()
       }));
     }

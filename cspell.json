@@ -29,7 +29,9 @@
     "/pnpm-lock.yaml",
     "*.wasm",
     "*.text",
-    "*.go"
+    "*.go",
+    // TODO: It will be removed after migrating to `valibot`
+    "/packages/rolldown/src/cli/arguments/**"
   ],
   "languageSettings": [
     {

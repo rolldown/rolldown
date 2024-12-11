@@ -5,6 +5,7 @@ import semver from 'semver'
 import path from 'node:path'
 import { findWorkspacePackagesNoCheck } from '@pnpm/find-workspace-packages'
 import { REPO_ROOT } from '../meta/constants.js'
+import fsExtra from 'fs-extra'
 
 /**
  * @typedef {'major' | 'minor' | 'patch'  | 'commit'} PresetVersion
@@ -43,7 +44,7 @@ async function genVersionByPreset(preset) {
     }
     case 'commit':
       const commitId = await getCommitId()
-      return `${currentVersion}+commit.${commitId}` // Example: 0.15.1+commit.1234567
+      return `${currentVersion}-commit.${commitId}` // Example: 0.15.1-commit.1234567
   }
 }
 
@@ -88,13 +89,24 @@ if (!inputVersion) {
   throw new Error('You must pass a version to bump')
 }
 
-if (isPresetArg(inputVersion)) {
-  await bumpVersion(await genVersionByPreset(inputVersion))
-} else {
-  if (!semver.valid(inputVersion)) {
-    throw new Error(
-      `You must pass a valid semver version instead of '${inputVersion}'`,
-    )
+const newVersion = await (async function () {
+  if (isPresetArg(inputVersion)) {
+    return await genVersionByPreset(inputVersion)
+  } else {
+    if (!semver.valid(inputVersion)) {
+      throw new Error(
+        `You must pass a valid semver version instead of '${inputVersion}'`,
+      )
+    }
+    return inputVersion
   }
-  await bumpVersion(inputVersion)
+})()
+
+await bumpVersion(newVersion)
+if (process.env.CI) {
+  // Write the version to a file for later we can use it in the release process.
+  fsExtra.writeFileSync(
+    path.resolve(REPO_ROOT, 'rolldown-version.txt'),
+    newVersion,
+  )
 }

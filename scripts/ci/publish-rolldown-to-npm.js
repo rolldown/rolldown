@@ -1,14 +1,18 @@
-import { $, ProcessOutput } from 'zx'
+import 'zx/globals'
 import { assertRunningScriptFromRepoRoot } from '../meta/utils.js'
 import * as actionsCore from '@actions/core'
 import { REPO_ROOT } from '../meta/constants.js'
+import nodePath from 'node:path'
 
 /**
  *
  * @returns {Promise<string>}
  */
 async function getCurrentVersion() {
-  const pkgPath = path.resolve(REPO_ROOT, './packages/rolldown/package.json')
+  const pkgPath = nodePath.resolve(
+    REPO_ROOT,
+    './packages/rolldown/package.json',
+  )
   const result = await import(pkgPath, {
     assert: {
       type: 'json',
@@ -23,15 +27,11 @@ async function getCurrentVersion() {
  */
 async function isVersionExists(version) {
   try {
-    const result = await $({ quiet: true })`npm show rolldown@${version}`
-    return result.exitCode === 0
+    const resp = await (
+      await fetch(`http://registry.npmjs.org/rolldown`)
+    ).json()
+    return version in resp.time
   } catch (cause) {
-    if (
-      cause instanceof ProcessOutput &&
-      cause.stderr.includes('No match found for version')
-    ) {
-      return false
-    }
     throw new Error(
       `Unexpected error happened when checking if rolldown@${version} exist.`,
       { cause },
@@ -45,8 +45,11 @@ async function isVersionExists(version) {
  * @param {string} tag
  */
 async function publish(version, tag) {
+  actionsCore.info(
+    `Prepare to publish rolldown@${version} to npm with tag ${tag}`,
+  )
   if (await isVersionExists(version)) {
-    await $`pnpm dist-tag add rolldown@${version} ${tag}`
+    await $`pnpm dist-tag add 'rolldown@${version}' ${tag}`
     actionsCore.info(`Version ${version} exists, just add dist-tag ${tag}`)
     return
   }
@@ -58,6 +61,9 @@ async function publish(version, tag) {
 // --- main
 
 assertRunningScriptFromRepoRoot()
+// // cspell:ignore nothrow
+$.nothrow = true
+$.verbose = true
 
 const tag = process.argv[2]?.trim()
 

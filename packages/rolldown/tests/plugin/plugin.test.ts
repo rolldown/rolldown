@@ -35,15 +35,15 @@ describe('Plugin buildEnd hook', async () => {
   test('call buildEnd hook with error', async () => {
     const buildEndFn = vi.fn()
     const error = await buildWithPlugin({
-      load() {
-        throw new Error('load error')
+      buildStart() {
+        throw new Error('buildStart error')
       },
       buildEnd: (error) => {
         buildEndFn()
-        expect(error!.message).toContain('load error')
+        expect(error!.message).toContain('buildStart error')
       },
     })
-    expect(error!.message).toContain('load error')
+    expect(error!.message).toContain('buildStart error')
     expect(buildEndFn).toHaveBeenCalledTimes(1)
   })
 

@@ -54,6 +54,8 @@ impl ScanStage {
       return Err(anyhow::format_err!("You must supply options.input to rolldown").into());
     }
 
+    self.plugin_driver.build_start(&self.options).await?;
+
     let module_loader = ModuleLoader::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),

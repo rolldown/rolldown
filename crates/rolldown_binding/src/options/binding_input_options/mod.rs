@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 // cSpell:disable
 use binding_watch_option::BindingWatchOption;
 use oxc_transform_napi::JsxOptions;
-use rustc_hash::FxHashMap;
+use rustc_hash::FxBuildHasher;
 
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
@@ -70,9 +72,7 @@ pub struct BindingInputOptions {
   // pub builtins: BuiltinsOptions,
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
-  // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
-  #[napi(ts_type = "Record<string, string>")]
-  pub module_types: Option<FxHashMap<String, String>>,
+  pub module_types: Option<HashMap<String, String, FxBuildHasher>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,
   #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]

@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use napi::{bindgen_prelude::Undefined, Either};
 use napi_derive::napi;
 use rolldown::SharedNormalizedBundlerOptions;
-use rustc_hash::FxHashMap;
+use rustc_hash::FxBuildHasher;
 
 #[napi]
 pub struct BindingNormalizedOptions {
@@ -15,9 +17,8 @@ impl BindingNormalizedOptions {
   }
 
   // Notice: rust's HashMap doesn't guarantee the order of keys, so not sure if it's a good idea to expose it to JS directly.
-  // TODO(sapphi-red): remove `ts_return_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
-  #[napi(getter, ts_return_type = "Array<string> | Record<string, string>")]
-  pub fn input(&self) -> Either<Vec<String>, FxHashMap<String, String>> {
+  #[napi(getter)]
+  pub fn input(&self) -> Either<Vec<String>, HashMap<String, String, FxBuildHasher>> {
     let mut inputs_iter = self.inner.input.iter().peekable();
     let has_name = inputs_iter.peek().is_some_and(|input| input.name.is_some());
     if has_name {
@@ -206,9 +207,8 @@ impl BindingNormalizedOptions {
     self.inner.extend
   }
 
-  // TODO(sapphi-red): remove `ts_return_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
-  #[napi(getter, ts_return_type = "Record<string, string> | undefined")]
-  pub fn globals(&self) -> Either<FxHashMap<String, String>, Undefined> {
+  #[napi(getter)]
+  pub fn globals(&self) -> Either<HashMap<String, String, FxBuildHasher>, Undefined> {
     match &self.inner.globals {
       rolldown::GlobalsOutputOption::FxHashMap(fx_hash_map) => {
         Either::A(fx_hash_map.iter().map(|(k, v)| (k.clone(), v.clone())).collect())

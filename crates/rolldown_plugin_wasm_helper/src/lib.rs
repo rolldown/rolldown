@@ -5,6 +5,7 @@ use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
 };
+use rolldown_utils::concat_string;
 
 const WASM_HELPER_ID: &str = "\0vite/wasm-helper.js";
 
@@ -18,13 +19,18 @@ impl Plugin for WasmHelperPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == WASM_HELPER_ID {
       Ok(Some(HookResolveIdOutput { id: WASM_HELPER_ID.to_string(), ..Default::default() }))
     } else if args.specifier.ends_with(".wasm?init") {
-      Ok(Some(HookResolveIdOutput { id: args.specifier.to_string(), ..Default::default() }))
+      let id = args.specifier.replace("?init", "");
+      let resolved_id = ctx.resolve(&id, args.importer, None).await??;
+      Ok(Some(HookResolveIdOutput {
+        id: concat_string!(resolved_id.id, "?init"),
+        ..Default::default()
+      }))
     } else {
       Ok(None)
     }

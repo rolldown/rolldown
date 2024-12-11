@@ -40,6 +40,7 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
   }
 }
 
+#[allow(clippy::implicit_hasher)]
 pub fn into_binding_chunk_modules(
   modules: FxHashMap<ModuleId, RenderedModule>,
 ) -> HashMap<String, BindingRenderedModule, FxBuildHasher> {

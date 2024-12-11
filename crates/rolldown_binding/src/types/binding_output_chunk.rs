@@ -54,9 +54,9 @@ impl BindingOutputChunk {
     self.inner.filename.to_string()
   }
 
-  #[napi(getter, ts_return_type = "Record<string, BindingRenderedModule>")]
+  #[napi(getter)]
   pub fn modules(&self) -> BindingChunkModules {
-    self.inner.modules.iter().map(|(key, value)| (key.to_string(), value.clone().into())).collect()
+    self.inner.modules.clone().into()
   }
 
   #[napi(getter)]

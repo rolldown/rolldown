@@ -64,7 +64,7 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    self.plugin_driver.render_start(&self.options).await?;
+    self.plugin_driver.render_start(self.options).await?;
 
     let mut chunk_graph = self.generate_chunks().await?;
     if chunk_graph.chunk_table.len() > 1 {

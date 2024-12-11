@@ -5,6 +5,7 @@ use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
+use rolldown_plugin_deno_loader::DenoLoaderPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
@@ -126,6 +127,12 @@ pub struct BindingTransformPluginConfig {
 #[derive(Debug, Default)]
 pub struct BindingAliasPluginConfig {
   pub entries: Vec<BindingAliasPluginAlias>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingDenoLoaderPluginConfig {
+  pub import_map_string: String,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -294,6 +301,14 @@ impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
   }
 }
 
+impl TryFrom<BindingDenoLoaderPluginConfig> for DenoLoaderPlugin {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingDenoLoaderPluginConfig) -> Result<Self, Self::Error> {
+    Ok(DenoLoaderPlugin::new(value.import_map_string))
+  }
+}
+
 impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
   type Error = anyhow::Error;
 
@@ -356,6 +371,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           BindingAliasPluginConfig::from_unknown(options)?.try_into()?
         } else {
           AliasPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::DenoLoader => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingDenoLoaderPluginConfig::from_unknown(options)?.try_into()?
+        } else {
+          DenoLoaderPlugin::default()
         };
         Arc::new(plugin)
       }

@@ -15,43 +15,44 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow                    = { workspace = true }
-append-only-vec           = { workspace = true }
-arcstr                    = { workspace = true }
-css-module-lexer          = { workspace = true }
-daachorse                 = { workspace = true }
-dashmap                   = { workspace = true }
-dunce                     = { workspace = true }
-futures                   = { workspace = true }
-indexmap                  = { workspace = true }
-itertools                 = { workspace = true }
-itoa                      = { workspace = true }
-memchr                    = { workspace = true }
-notify                    = { workspace = true }
-oxc                       = { workspace = true }
-oxc_index                 = { workspace = true }
-rolldown_common           = { workspace = true }
-rolldown_ecmascript       = { workspace = true }
-rolldown_ecmascript_utils = { workspace = true }
-rolldown_error            = { workspace = true }
-rolldown_fs               = { workspace = true, features = ["os"] }
-rolldown_loader_utils     = { workspace = true }
-rolldown_plugin           = { workspace = true, features = ["inner"] }
-rolldown_plugin_data_url  = { workspace = true }
-rolldown_resolver         = { workspace = true }
-rolldown_rstr             = { workspace = true }
-rolldown_sourcemap        = { workspace = true }
-rolldown_std_utils        = { workspace = true }
-rolldown_tracing          = { workspace = true }
-rolldown_utils            = { workspace = true }
-rustc-hash                = { workspace = true }
-sanitize-filename         = { workspace = true }
-string_wizard             = { workspace = true }
-sugar_path                = { workspace = true }
-tokio                     = { workspace = true, features = ["rt", "macros", "sync"] }
-tracing                   = { workspace = true }
-tracing-chrome            = { workspace = true }
-xxhash-rust               = { workspace = true, features = ["xxh3"] }
+anyhow                      = { workspace = true }
+append-only-vec             = { workspace = true }
+arcstr                      = { workspace = true }
+css-module-lexer            = { workspace = true }
+daachorse                   = { workspace = true }
+dashmap                     = { workspace = true }
+dunce                       = { workspace = true }
+futures                     = { workspace = true }
+indexmap                    = { workspace = true }
+itertools                   = { workspace = true }
+itoa                        = { workspace = true }
+memchr                      = { workspace = true }
+notify                      = { workspace = true }
+oxc                         = { workspace = true }
+oxc_index                   = { workspace = true }
+rolldown_common             = { workspace = true }
+rolldown_ecmascript         = { workspace = true }
+rolldown_ecmascript_utils   = { workspace = true }
+rolldown_error              = { workspace = true }
+rolldown_fs                 = { workspace = true, features = ["os"] }
+rolldown_loader_utils       = { workspace = true }
+rolldown_plugin             = { workspace = true, features = ["inner"] }
+rolldown_plugin_data_url    = { workspace = true }
+rolldown_plugin_deno_loader = { workspace = true }
+rolldown_resolver           = { workspace = true }
+rolldown_rstr               = { workspace = true }
+rolldown_sourcemap          = { workspace = true }
+rolldown_std_utils          = { workspace = true }
+rolldown_tracing            = { workspace = true }
+rolldown_utils              = { workspace = true }
+rustc-hash                  = { workspace = true }
+sanitize-filename           = { workspace = true }
+string_wizard               = { workspace = true }
+sugar_path                  = { workspace = true }
+tokio                       = { workspace = true, features = ["rt", "macros", "sync"] }
+tracing                     = { workspace = true }
+tracing-chrome              = { workspace = true }
+xxhash-rust                 = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
 glob             = { workspace = true }

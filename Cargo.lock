@@ -1016,6 +1016,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfdf4f5d937a025381f5ab13624b1c5f51414bfe5c9885663226eae8d6d39560"
 
 [[package]]
+name = "import_map"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "351a787decc56f38d65d16d32687265045d6d6a4531b4a0e1b649def3590354e"
+dependencies = [
+ "indexmap",
+ "log",
+ "percent-encoding",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1172,7 +1187,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e310b3a6b5907f99202fcdb4960ff45b93735d7c7d96b760fcff8db2dc0e103d"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.5",
 ]
 
 [[package]]
@@ -2414,6 +2429,7 @@ dependencies = [
  "rolldown_loader_utils",
  "rolldown_plugin",
  "rolldown_plugin_data_url",
+ "rolldown_plugin_deno_loader",
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2453,6 +2469,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_alias",
  "rolldown_plugin_build_import_analysis",
+ "rolldown_plugin_deno_loader",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_import_glob",
  "rolldown_plugin_json",
@@ -2617,6 +2634,23 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
+ "urlencoding",
+]
+
+[[package]]
+name = "rolldown_plugin_deno_loader"
+version = "0.1.0"
+dependencies = [
+ "base64-simd 0.8.0",
+ "import_map",
+ "regex",
+ "rolldown_common",
+ "rolldown_fs",
+ "rolldown_plugin",
+ "rolldown_utils",
+ "serde",
+ "serde_json",
+ "url",
  "urlencoding",
 ]
 
@@ -3441,6 +3475,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]

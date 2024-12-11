@@ -11,7 +11,7 @@ use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_loader_utils::{binary_to_esm, text_to_string_literal};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
-use rolldown_utils::{concat_string, mime::guess_mime};
+use rolldown_utils::mime::guess_mime;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
@@ -60,7 +60,13 @@ pub fn parse_to_ecma_ast(
   };
 
   let source = ArcStr::from(source);
-  let mut ecma_ast = EcmaCompiler::parse(stable_id, &source, oxc_source_type)?;
+
+  let mut ecma_ast = match module_type {
+    ModuleType::Json | ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
+      EcmaCompiler::parse_expr_as_program(stable_id, &source, oxc_source_type)?
+    }
+    _ => EcmaCompiler::parse(stable_id, &source, oxc_source_type)?,
+  };
 
   ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
     cwd: &options.cwd,
@@ -102,7 +108,6 @@ fn pre_process_source(
     ModuleType::Json => {
       has_lazy_export = true;
       let content = source.try_into_string()?;
-      let content = concat_string!("(", content, ")");
       (content, OxcParseType::Js)
     }
     ModuleType::Text => {

@@ -4,10 +4,11 @@ use arcstr::ArcStr;
 use either::Either;
 use oxc::{
   allocator::Allocator,
+  ast::AstBuilder,
   codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
   minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
-  span::SourceType,
+  span::{SourceType, SPAN},
 };
 use oxc_sourcemap::SourceMap;
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -38,6 +39,42 @@ impl EcmaCompiler {
           ))
         } else {
           Ok(ProgramCellDependent { program: ret.program })
+        }
+      })?;
+    Ok(EcmaAst { program: inner, source_type: ty, contains_use_strict: false })
+  }
+
+  pub fn parse_expr_as_program(
+    filename: &str,
+    source: impl Into<ArcStr>,
+    ty: SourceType,
+  ) -> BuildResult<EcmaAst> {
+    let source: ArcStr = source.into();
+    let allocator = oxc::allocator::Allocator::default();
+    let inner =
+      ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
+        let builder = AstBuilder::new(&owner.allocator);
+        let parser = Parser::new(&owner.allocator, &owner.source, ty);
+        let ret = parser.parse_expression();
+        match ret {
+          Ok(expr) => {
+            let program = builder.program(
+              SPAN,
+              SourceType::default().with_module(true),
+              owner.source.as_str(),
+              builder.vec(),
+              None,
+              builder.vec(),
+              builder.vec1(builder.statement_expression(SPAN, expr)),
+            );
+            Ok(ProgramCellDependent { program })
+          }
+          Err(errors) => Err(BuildDiagnostic::from_oxc_diagnostics(
+            errors,
+            &source.clone(),
+            filename,
+            &Severity::Error,
+          )),
         }
       })?;
     Ok(EcmaAst { program: inner, source_type: ty, contains_use_strict: false })

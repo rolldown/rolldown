@@ -18,7 +18,7 @@ pub struct RenderedChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub file_name: String,
-  pub modules: BindingChunkModules,
+  pub modules: HashMap<String, BindingRenderedModule, FxBuildHasher>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
 }
@@ -33,19 +33,15 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
       module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
       exports: value.exports,
       file_name: value.filename.to_string(),
-      modules: value.modules.into(),
+      modules: into_binding_chunk_modules(value.modules),
       imports: value.imports.iter().map(ArcStr::to_string).collect(),
       dynamic_imports: value.dynamic_imports.iter().map(ArcStr::to_string).collect(),
     }
   }
 }
 
-#[napi_derive::napi(transparent)]
-#[derive(Default, Debug)]
-pub struct BindingChunkModules(HashMap<String, BindingRenderedModule, FxBuildHasher>);
-
-impl From<FxHashMap<ModuleId, RenderedModule>> for BindingChunkModules {
-  fn from(value: FxHashMap<ModuleId, RenderedModule>) -> Self {
-    Self(value.into_iter().map(|(key, value)| (key.to_string(), value.into())).collect())
-  }
+pub fn into_binding_chunk_modules(
+  modules: FxHashMap<ModuleId, RenderedModule>,
+) -> HashMap<String, BindingRenderedModule, FxBuildHasher> {
+  modules.into_iter().map(|(key, value)| (key.to_string(), value.into())).collect()
 }

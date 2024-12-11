@@ -83,7 +83,7 @@ export declare class BindingOutputChunk {
   get moduleIds(): Array<string>
   get exports(): Array<string>
   get fileName(): string
-  get modules(): BindingChunkModules
+  get modules(): Record<string, BindingRenderedModule>
   get imports(): Array<string>
   get dynamicImports(): Array<string>
   get code(): string
@@ -224,9 +224,6 @@ export interface BindingBundlerOptions {
 export interface BindingChecksOptions {
   circularDependency?: boolean
 }
-
-export type BindingChunkModules =
-  Record<string, BindingRenderedModule>
 
 export interface BindingEmittedAsset {
   name?: string
@@ -831,7 +828,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: BindingChunkModules
+  modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
 }

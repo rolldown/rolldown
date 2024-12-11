@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```js
 import { re_export } from "external-pkg";
-import { reexpo.rt } from "external-pkg2";
+import { 'reexpo.rt' as reexpo_rt } from "external-pkg2";
 
 //#region replacement.js
 let replace = { test() {} };
@@ -31,7 +31,7 @@ console.log(replace.test);
 console.log(replaceDot.test);
 console.log(collide);
 console.log(re_export);
-console.log(reexpo.rt);
+console.log(reexpo_rt);
 
 //#endregion
 ```

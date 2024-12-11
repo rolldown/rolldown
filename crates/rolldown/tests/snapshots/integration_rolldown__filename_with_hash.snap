@@ -875,15 +875,15 @@ snapshot_kind: text
 
 # tests/esbuild/default/forbid_string_export_names_no_bundle
 
-- entry-!~{000}~.js => entry-DPEKvaEX.js
+- entry-!~{000}~.js => entry-tCArwM3B.js
 
 # tests/esbuild/default/forbid_string_import_names_bundle
 
-- entry-!~{000}~.js => entry-jctnBfVO.js
+- entry-!~{000}~.js => entry-D-RVKiCJ.js
 
 # tests/esbuild/default/forbid_string_import_names_no_bundle
 
-- entry-!~{000}~.js => entry-FmeENkiX.js
+- entry-!~{000}~.js => entry-BZG3a0tS.js
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
@@ -1033,7 +1033,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_no_bundle
 
-- entry-!~{000}~.js => entry-CNE62KHW.js
+- entry-!~{000}~.js => entry-BN8j3IUf.js
 
 # tests/esbuild/default/inject_with_define
 

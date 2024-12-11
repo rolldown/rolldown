@@ -7,12 +7,12 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import * as name space from "./foo";
-import { name 1, same name } from "./foo";
+import * as name_space from "./foo";
+import { 'name 1' as name_2, 'same name' as same_name } from "./foo";
 
 //#region entry.js
 let ok = true;
 
 //#endregion
-export { name 1 as 'name 2', name space, ok as 'not ok', ok, same name };
+export { name_2 as 'name 2', name_space as 'name space', ok as 'not ok', ok, same_name as 'same name' };
 ```

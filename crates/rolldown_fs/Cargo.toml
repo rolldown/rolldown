@@ -19,7 +19,5 @@ memory = []
 os     = []
 
 [dependencies]
-dunce        = { workspace = true }
 oxc_resolver = { workspace = true }
-simdutf8     = { workspace = true }
 vfs          = { workspace = true }

@@ -1833,9 +1833,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "2.1.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da33ec82d0f4770f4b5c120d6a1d8e45de2d99ae2672a7ee6bd29092ada945f2"
+checksum = "f4e556f56c129d2aa2499804d9f3f3e45612ea9846188e81d2702e80eaf9862e"
 dependencies = [
  "cfg-if",
  "dashmap 6.1.0",
@@ -2562,9 +2562,7 @@ dependencies = [
 name = "rolldown_fs"
 version = "0.1.0"
 dependencies = [
- "dunce",
  "oxc_resolver",
- "simdutf8",
  "vfs",
 ]
 

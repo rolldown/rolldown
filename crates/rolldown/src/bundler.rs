@@ -135,8 +135,6 @@ impl Bundler {
 
     let mut link_stage_output = self.try_build().await?;
 
-    self.plugin_driver.render_start(&self.options).await?;
-
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
         .generate()

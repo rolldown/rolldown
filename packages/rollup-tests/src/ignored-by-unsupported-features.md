@@ -436,6 +436,7 @@
  - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
  - rollup@function@logging@promote-log-to-error: allows turning logs into errors
  - rollup@hooks@Throws when using the "file"" option for multiple chunks
+ - rollup@hooks@supports renderError hook
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks

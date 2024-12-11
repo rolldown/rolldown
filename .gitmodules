@@ -1,6 +1,3 @@
 [submodule "rollup"]
 	path = rollup
 	url = https://github.com/rollup/rollup.git
-[submodule "crates/rolldown_plugin_deno_loader"]
-	path = crates/rolldown_plugin_deno_loader
-	url = https://github.com/nestarz/rolldown_plugin_deno_loader.git

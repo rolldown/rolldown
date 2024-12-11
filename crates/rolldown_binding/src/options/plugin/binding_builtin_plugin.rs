@@ -132,7 +132,8 @@ pub struct BindingAliasPluginConfig {
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingDenoLoaderPluginConfig {
-  pub import_map_string: String,
+  pub import_map: String,
+  pub import_map_base_url: String,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -305,7 +306,7 @@ impl TryFrom<BindingDenoLoaderPluginConfig> for DenoLoaderPlugin {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingDenoLoaderPluginConfig) -> Result<Self, Self::Error> {
-    Ok(DenoLoaderPlugin::new(value.import_map_string))
+    Ok(DenoLoaderPlugin::new(value.import_map, value.import_map_base_url))
   }
 }
 

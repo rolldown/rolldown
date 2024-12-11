@@ -7,6 +7,10 @@
     "@std/assert": "jsr:@std/assert@1",
     "zod": "npm:zod@^3.24.0",
     "module": "node:module",
-    "react": "npm:react"
+    "react": "npm:react@19",
+    "@/": "./",
+    "@/basic/dep1": "./tests/basic/dep1.ts",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber?external=react",
+    "zustand": "https://cdn.jsdelivr.net/npm/zustand/+esm"
   }
 }

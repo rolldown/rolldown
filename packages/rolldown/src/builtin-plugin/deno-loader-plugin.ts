@@ -1,7 +1,8 @@
 import { BuiltinPlugin } from './constructors'
 
 type DenoLoaderPluginConfig = {
-  import_map_string: string
+  importMap: string
+  importMapBaseUrl: string
 }
 
 export function denoLoaderPlugin(

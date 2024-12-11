@@ -1,4 +1,5 @@
 use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_utils::path_ext::PathExt;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -11,7 +12,7 @@ use rolldown_plugin::{
   HookResolveIdReturn, Plugin, PluginContext, PluginContextResolveOptions,
 };
 
-use import_map::parse_from_json;
+use import_map::{parse_from_json_with_options, ImportMapOptions};
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "kind")]
@@ -29,6 +30,12 @@ enum ModuleInfo {
     #[serde(rename = "npmPackage")]
     npm_package: String,
   },
+  #[serde(rename = "node")]
+  Node {
+    specifier: String,
+    #[serde(rename = "moduleName")]
+    module_name: String,
+  },
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -41,29 +48,13 @@ enum DenoMediaType {
   Json,
   Dmts,
   Mjs,
+  Dts,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct DenoInfoJsonV1 {
   redirects: HashMap<String, String>,
   modules: Vec<ModuleInfo>,
-}
-
-fn follow_redirects(
-  initial: &str,
-  redirects: &HashMap<String, String>,
-) -> Result<String, &'static str> {
-  let mut current = initial.to_string();
-  let mut seen = std::collections::HashSet::new();
-
-  while let Some(next) = redirects.get(&current) {
-    if !seen.insert(current.clone()) {
-      return Err("Circular redirect detected");
-    }
-    current = next.clone();
-  }
-
-  Ok(current)
 }
 
 fn get_deno_info(specifier: &str) -> Result<DenoInfoJsonV1, &'static str> {
@@ -81,7 +72,7 @@ fn get_deno_info(specifier: &str) -> Result<DenoInfoJsonV1, &'static str> {
 
 #[derive(Debug, Clone)]
 struct DenoResolveResult {
-  info: DenoInfoJsonV1,
+  npm_package: Option<String>,
   local_path: Option<String>,
   redirected: String,
 }
@@ -89,35 +80,60 @@ struct DenoResolveResult {
 #[derive(Debug)]
 pub struct DenoLoaderPlugin {
   resolve_cache: Mutex<HashMap<String, DenoResolveResult>>,
-  pub import_map_string: String,
+  pub import_map: String,
+  pub import_map_base_url: String,
 }
 
 impl Default for DenoLoaderPlugin {
   fn default() -> Self {
-    Self::new(r#"{}"#.to_string())
+    Self::new(r#"{}"#.to_string(), "file://".to_string())
   }
 }
 
 impl DenoLoaderPlugin {
-  pub fn new(import_map_string: String) -> Self {
-    Self { resolve_cache: Mutex::new(HashMap::new()), import_map_string }
+  pub fn new(import_map: String, import_map_base_url: String) -> Self {
+    Self { resolve_cache: Mutex::new(HashMap::new()), import_map, import_map_base_url }
   }
 
   fn get_cached_info(&self, specifier: &str) -> Result<DenoResolveResult, &'static str> {
-    if let Some(cached) = self.resolve_cache.lock().unwrap().get(specifier).cloned() {
+    let mut cache = self.resolve_cache.lock().unwrap();
+    if let Some(cached) = cache.get(specifier).cloned() {
       return Ok(cached);
     }
+    let info: DenoInfoJsonV1 = get_deno_info(specifier)?;
+    for module in &info.modules {
+      match module {
+        ModuleInfo::Node { specifier: s, .. } => {}
+        ModuleInfo::Esm { specifier: s, local, .. } => {
+          let result = DenoResolveResult {
+            local_path: Some(local.clone()),
+            redirected: s.clone(),
+            npm_package: None,
+          };
+          cache.insert(s.clone(), result.clone());
+          for (key, value) in &info.redirects {
+            if value == s {
+              cache.insert(key.clone(), result.clone());
+            }
+          }
+        }
+        ModuleInfo::Npm { specifier: s, npm_package, .. } => {
+          let result = DenoResolveResult {
+            local_path: None,
+            redirected: s.clone(),
+            npm_package: Some(npm_package.clone()),
+          };
+          cache.insert(s.clone(), result.clone());
+          for (key, value) in &info.redirects {
+            if value == s {
+              cache.insert(key.clone(), result.clone());
+            }
+          }
+        }
+      }
+    }
 
-    let info = get_deno_info(specifier)?;
-    let redirected = follow_redirects(specifier, &info.redirects)?;
-    let local_path = info.modules.iter().find_map(|m| match m {
-      ModuleInfo::Esm { specifier: s, local, .. } if s == &redirected => Some(local.clone()),
-      _ => None,
-    });
-
-    let result = DenoResolveResult { info, local_path, redirected };
-    self.resolve_cache.lock().unwrap().insert(specifier.to_string(), result.clone());
-    Ok(result)
+    cache.get(specifier).cloned().ok_or("Specifier not found in cache after processing")
   }
 }
 
@@ -132,39 +148,57 @@ impl Plugin for DenoLoaderPlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> impl std::future::Future<Output = HookResolveIdReturn> {
     async {
-      let id = if args.specifier.starts_with('.') {
+      let id = if args.specifier.starts_with(".") || args.specifier.starts_with("/") {
         args
           .importer
           .and_then(|importer| url::Url::parse(importer).ok())
           .and_then(|base_url| base_url.join(&args.specifier).ok())
-          .map(|joined_url| {
-            if joined_url.scheme() == "file" {
-              joined_url.path().to_string()
-            } else {
-              joined_url.to_string()
-            }
-          })
+          .map(|url| if url.scheme() == "file" { url.path().to_string() } else { url.to_string() })
           .unwrap_or_else(|| args.specifier.to_string())
       } else {
         args.specifier.to_string()
       };
 
-      let base_url = ctx
-        .cwd()
-        .to_str()
-        .and_then(|s| url::Url::from_file_path(s).ok())
-        .unwrap_or_else(|| url::Url::parse("file:///").unwrap());
+      let maybe_resolved = if id.starts_with(".") || id.starts_with("/") {
+        id.to_string()
+      } else {
+        let import_map_base_url =
+          url::Url::parse(&self.import_map_base_url).expect("is not an url");
+        let import_map = parse_from_json_with_options(
+          import_map_base_url.clone(),
+          &self.import_map,
+          ImportMapOptions { expand_imports: true, ..Default::default() },
+        )
+        .unwrap()
+        .import_map;
 
-      let import_map =
-        parse_from_json(base_url.clone(), &self.import_map_string).unwrap().import_map;
+        import_map
+          .resolve(&id, &import_map_base_url)
+          .ok()
+          .map(|url| url.to_string())
+          .unwrap_or_else(|| id.to_string())
+      };
 
-      let maybe_resolved = import_map
-        .resolve(&id, &base_url)
-        .ok()
-        .map(|url| url.to_string())
-        .unwrap_or_else(|| id.to_string());
+      if maybe_resolved.starts_with("node:") {
+        return Ok(Some(HookResolveIdOutput {
+          id: maybe_resolved,
+          external: Some(true),
+          ..Default::default()
+        }));
+      } else if maybe_resolved.starts_with("file:") {
+        let final_id = url::Url::parse(&maybe_resolved)
+          .map(|url| url.to_file_path().expect("error"))
+          .expect("error")
+          .as_path()
+          .expect_to_str()
+          .to_string();
 
-      if maybe_resolved.starts_with("jsr:") {
+        return Ok(Some(HookResolveIdOutput {
+          id: final_id,
+          external: Some(false),
+          ..Default::default()
+        }));
+      } else if maybe_resolved.starts_with("jsr:") {
         let cached: DenoResolveResult = self.get_cached_info(&maybe_resolved).expect("info failed");
 
         return Ok(Some(HookResolveIdOutput {
@@ -175,15 +209,13 @@ impl Plugin for DenoLoaderPlugin {
       } else if maybe_resolved.starts_with("npm:") {
         let cached: DenoResolveResult = self.get_cached_info(&maybe_resolved).expect("info failed");
 
-        if let Some(ModuleInfo::Npm { npm_package, .. }) = cached.info.modules.into_iter().find(
-          |m| matches!(m, ModuleInfo::Npm { specifier, .. } if specifier == &cached.redirected),
-        ) {
+        if let Some(npm_package) = cached.npm_package {
           let package_name = npm_package.split('@').next().unwrap_or(&npm_package).to_string();
           return Ok(
             ctx
               .resolve(
                 &package_name,
-                args.importer,
+                None,
                 Some(PluginContextResolveOptions {
                   import_kind: args.kind,
                   skip_self: true,

@@ -14,7 +14,8 @@ const configs = [
     resolve: { conditionNames: ["import"] },
     plugins: [
       denoLoaderPlugin({
-        importMapString: await fetch(import.meta.resolve("./deno.json"))
+        importMapBaseUrl: import.meta.resolve("./"),
+        importMap: await fetch(import.meta.resolve("./deno.json"))
           .then(
             (r) => r.text(),
           ),
@@ -24,5 +25,7 @@ const configs = [
 ];
 
 for (const config of configs) {
+  console.time("rolldown+deno_loader_plugin");
   await (await rolldown(config)).write(config.output);
+  console.timeEnd("rolldown+deno_loader_plugin");
 }

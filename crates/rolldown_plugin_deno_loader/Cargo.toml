@@ -9,7 +9,7 @@ doctest = false
 
 [dependencies]
 base64-simd     = { workspace = true }
-import_map      = { version = "*" }
+import_map      = { version = "*", features = ["ext"] }
 regex           = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_fs     = { workspace = true, features = ["os"] }

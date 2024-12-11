@@ -1,4 +1,4 @@
-name: A - Release Canary/Nightly
+name: A - Publish Nightly/Canary
 
 on:
   # Manually released. This will publish under the canary npm tag.
@@ -74,19 +74,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
       - name: Canary/Nightly Versioning
-        run: node ./scripts/misc/bump-version.js snapshot
-
-      - name: Publish(Dry Run)
-        run: |
-          pnpm publish -r --tag ${{ needs.plan.outputs.npm-tag }} --dry-run --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/misc/bump-version.js commit
 
       - name: Publish
-        run: |
-          pnpm publish -r --tag ${{ needs.plan.outputs.npm-tag }} --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+        run: node ./scripts/ci/publish-rolldown-to-npm.js ${{ needs.plan.outputs.npm-tag }}

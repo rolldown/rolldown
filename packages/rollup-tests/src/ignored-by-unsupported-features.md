@@ -5,6 +5,7 @@
 ### The `rollup.rollup` api is not compatible with rollup, the build is start at `bundle.generate` or `bundle.write`, so the input plugin hooks is not called
  - rollup@hooks@supports buildStart and buildEnd hooks
  - rollup@hooks@supports warnings in buildStart and buildEnd hooks
+ - rollup@hooks@passes errors to the buildEnd hook
 
 ### The `NormalziedOptions` at hooks is not compatible with rollup
  - rollup@function@options-hook: allows to read and modify options in the options hook

@@ -27,7 +27,6 @@ const ignoreTests = [
   "rollup@hooks@allows to enforce sequential plugin hook order in watch mode",
 
   "rollup@hooks@keeps emitted ids stable between runs",// emit empty asset
-  "rollup@hooks@passes errors to the buildEnd hook", // should call buildEnd hook if error
   "rollup@hooks@supports renderError hook", // should call renderError hook if error
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
 ]

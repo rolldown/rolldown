@@ -92,8 +92,6 @@ impl Bundler {
   }
 
   pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
-    self.plugin_driver.build_start(&self.options).await?;
-
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),

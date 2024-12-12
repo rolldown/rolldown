@@ -144,18 +144,12 @@ describe('watch cli', () => {
   })
 
   it('should handle output options', async () => {
-    const controller = new AbortController()
     const cwd = cliFixturesDir('watch-cli-option')
-    setTimeout(() => controller.abort(), 100)
-
-    /* ignore abort error */
-    try {
-      await $({
-        cwd,
-        cancelSignal: controller.signal,
-      })`rolldown index.ts -d dist -w -s`
-    } catch (e) {} // eslint-disable-line no-unused-vars
-    expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
-    expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
+    const subprocess = execa({ cwd })`rolldown index.ts -d dist -w -s`
+    setTimeout(() => {
+      subprocess.kill('SIGINT')
+      expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
+      expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
+    }, 100)
   })
 })

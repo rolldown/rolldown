@@ -1731,6 +1731,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5eca5d9726cd0a6e433debe003b7bc88b2ecad0bb6109f0cef7c55e692139a34"
 dependencies = [
  "rayon",
+ "serde",
 ]
 
 [[package]]
@@ -3157,6 +3158,7 @@ dependencies = [
  "oxc_index",
  "oxc_sourcemap",
  "rustc-hash",
+ "serde",
 ]
 
 [[package]]

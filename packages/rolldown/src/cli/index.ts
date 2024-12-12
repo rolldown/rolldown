@@ -1,6 +1,6 @@
 import process from 'node:process'
 import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle'
-import { logger } from './utils'
+import { logger } from './logger'
 import { parseCliArguments } from './arguments'
 import { showHelp } from './commands/help'
 import { version } from '../../package.json'

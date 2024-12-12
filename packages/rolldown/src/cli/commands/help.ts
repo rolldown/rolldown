@@ -1,4 +1,4 @@
-import { logger } from '../utils'
+import { logger } from '../logger'
 import {
   version,
   description,

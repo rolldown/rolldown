@@ -112,14 +112,29 @@ describe('config', () => {
         expect(err).not.toBeUndefined()
       }
     })
-    it('should throw friendly error message for ts', async () => {
+    it('should allow loading ts config', async () => {
       const cwd = cliFixturesDir('ext-ts')
-      try {
-        const _ = await $({ cwd })`rolldown -c rolldown.config.ts`
-      } catch (err) {
-        expect(err).toBeInstanceOf(Error)
-        expect((err as Error).message).toContain('Unsupported config format.')
-      }
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+    it('should allow loading cts config', async () => {
+      const cwd = cliFixturesDir('ext-cts')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.cts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+    it('should allow loading mts config', async () => {
+      const cwd = cliFixturesDir('ext-mts')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.mts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
     it('should allow loading ts config with tsx', async () => {
       const cwd = cliFixturesDir('ext-ts')

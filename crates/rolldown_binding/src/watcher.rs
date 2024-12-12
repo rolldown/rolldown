@@ -50,11 +50,13 @@ impl BindingWatcher {
     Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   #[napi]
   pub async fn close(&self) -> napi::Result<()> {
     handle_result(self.inner.close().await)
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
   pub async fn start(
     &self,
@@ -70,6 +72,7 @@ impl BindingWatcher {
             if let rolldown_common::WatcherEvent::Close = &event {
               run = false;
             }
+            tracing::debug!(name= "send event to js side", event = ?event);
             if let Err(e) = listener.await_call(BindingWatcherEvent::new(event)).await {
               eprintln!("watcher listener error: {e:?}");
             }

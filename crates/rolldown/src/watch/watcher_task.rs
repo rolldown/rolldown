@@ -31,6 +31,7 @@ impl WatcherTask {
     Self { emitter, bundler, invalidate: AtomicBool::new(true), watch_files: FxDashSet::default() }
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn run(&self) -> BuildResult<()> {
     if !self.invalidate.load(Ordering::Relaxed) {
       return Ok(());
@@ -95,12 +96,14 @@ impl WatcherTask {
     Ok(())
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> anyhow::Result<()> {
     let bundler = self.bundler.lock().await;
     bundler.plugin_driver.close_watcher().await?;
     Ok(())
   }
 
+  #[tracing::instrument(level = "debug", skip(self))]
   pub async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
     // invalidate the watcher task if the changed file is in the watch list
     if self.watch_files.contains(path) {

@@ -4,6 +4,7 @@ use arcstr::ArcStr;
 
 use crate::OutputsDiagnostics;
 
+#[derive(Debug)]
 pub enum WatcherEvent {
   Close,
   Event(BundleEvent),
@@ -22,11 +23,13 @@ impl Display for WatcherEvent {
   }
 }
 
+#[derive(Debug)]
 pub struct WatcherChangeData {
   pub path: ArcStr,
   pub kind: WatcherChangeKind,
 }
 
+#[derive(Debug)]
 pub enum BundleEvent {
   Start,
   BundleStart,
@@ -47,12 +50,13 @@ impl Display for BundleEvent {
   }
 }
 
+#[derive(Debug)]
 pub struct BundleEndEventData {
   pub output: String,
   pub duration: u32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum WatcherChangeKind {
   Create,
   Update,

@@ -22,28 +22,33 @@ use super::LinkStage;
 
 impl LinkStage<'_> {
   pub fn generate_lazy_export(&mut self) {
-    let module_idx_to_exports_kind = append_only_vec::AppendOnlyVec::new();
-    self.module_table.modules.par_iter_mut().for_each(|module| {
-      let Module::Normal(module) = module else {
-        return;
-      };
-      if !module.meta.has_lazy_export() {
-        return;
-      }
-      let default_symbol_ref = module.default_export_ref;
-      let is_json = matches!(module.module_type, ModuleType::Json);
-      if !is_json || module.exports_kind == ExportsKind::CommonJs {
-        update_module_default_export_info(module, default_symbol_ref, 1.into());
-      }
-      module_idx_to_exports_kind.push((module.ecma_ast_idx(), module.exports_kind, is_json));
+    let module_idx_to_exports_kind = self
+      .module_table
+      .modules
+      .par_iter_mut()
+      .filter_map(|module| {
+        let Module::Normal(module) = module else {
+          return None;
+        };
+        if !module.meta.has_lazy_export() {
+          return None;
+        }
+        let default_symbol_ref = module.default_export_ref;
+        let is_json = matches!(module.module_type, ModuleType::Json);
+        if !is_json || module.exports_kind == ExportsKind::CommonJs {
+          update_module_default_export_info(module, default_symbol_ref, 1.into());
+        }
 
-      // generate `module.exports = expr`
-      if module.exports_kind == ExportsKind::CommonJs {
-        // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
-        module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true;
-        module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
-      }
-    });
+        // generate `module.exports = expr`
+        if module.exports_kind == ExportsKind::CommonJs {
+          // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
+          module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true;
+          module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+        }
+
+        Some((module.ecma_ast_idx(), module.exports_kind, is_json))
+      })
+      .collect::<Vec<_>>();
 
     for (ast_idx, exports_kind, is_json_module) in module_idx_to_exports_kind {
       let Some((ecma_ast, module_idx)) = self.ast_table.get_mut(ast_idx) else { unreachable!() };

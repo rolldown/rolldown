@@ -21,8 +21,8 @@ enum ModuleInfo {
   Esm {
     local: String,
     specifier: String,
-    #[serde(rename = "mediaType")]
-    media_type: DenoMediaType,
+    // #[serde(rename = "mediaType")]
+    // media_type: DenoMediaType,
   },
   #[serde(rename = "npm")]
   Npm {
@@ -33,22 +33,30 @@ enum ModuleInfo {
   #[serde(rename = "node")]
   Node {
     specifier: String,
-    #[serde(rename = "moduleName")]
-    module_name: String,
+    // #[serde(rename = "moduleName")]
+    // module_name: String,
   },
 }
 
 #[derive(Deserialize, Debug, Clone)]
-// cspell:ignore Dmts
+// cspell:ignore Dmts, Dcts
 enum DenoMediaType {
-  TypeScript,
-  Tsx,
   JavaScript,
-  Jsx,
-  Json,
-  Dmts,
   Mjs,
+  Cjs,
+  JSX,
+  TypeScript,
+  Mts,
+  Cts,
   Dts,
+  Dmts,
+  Dcts,
+  TSX,
+  Json,
+  Wasm,
+  TsBuildInfo,
+  SourceMap,
+  Unknown,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -103,7 +111,7 @@ impl DenoLoaderPlugin {
     let info: DenoInfoJsonV1 = get_deno_info(specifier)?;
     for module in &info.modules {
       match module {
-        ModuleInfo::Node { specifier: s, .. } => {}
+        ModuleInfo::Node { specifier: _s, .. } => {}
         ModuleInfo::Esm { specifier: s, local, .. } => {
           let result = DenoResolveResult {
             local_path: Some(local.clone()),

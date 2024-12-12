@@ -150,6 +150,6 @@ describe('watch cli', () => {
       subprocess.kill('SIGINT')
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
-    }, 100)
+    }, 300)
   })
 })

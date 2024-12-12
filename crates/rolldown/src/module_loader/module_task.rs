@@ -5,10 +5,10 @@ use oxc_index::IndexVec;
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
+use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   concat_string,
   ecmascript::{self, legitimize_identifier_name},
-  path_ext::PathExt,
 };
 use std::sync::Arc;
 use sugar_path::SugarPath;

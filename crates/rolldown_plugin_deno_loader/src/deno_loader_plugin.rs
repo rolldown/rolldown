@@ -17,12 +17,19 @@ use import_map::{parse_from_json_with_options, ImportMapOptions};
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "kind")]
 enum ModuleInfo {
+  #[serde(rename = "asserted")]
+  Asserted {
+    specifier: String,
+    local: String,
+    #[serde(rename = "mediaType")]
+    media_type: DenoMediaType,
+  },
   #[serde(rename = "esm")]
   Esm {
     local: String,
     specifier: String,
-    // #[serde(rename = "mediaType")]
-    // media_type: DenoMediaType,
+    #[serde(rename = "mediaType")]
+    media_type: DenoMediaType,
   },
   #[serde(rename = "npm")]
   Npm {
@@ -36,13 +43,14 @@ enum ModuleInfo {
     // #[serde(rename = "moduleName")]
     // module_name: String,
   },
-  #[serde(rename = "asserted")]
-  Asserted {
-    specifier: String,
-    local: String,
-    // #[serde(rename = "moduleName")]
-    // module_name: String,
-  },
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct NpmPackageInfo {
+  name: String,
+  version: String,
+  #[serde(rename = "registryUrl")]
+  registry_url: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -66,10 +74,32 @@ enum DenoMediaType {
   Unknown,
 }
 
+impl From<&DenoMediaType> for ModuleType {
+  fn from(media_type: &DenoMediaType) -> Self {
+    match media_type {
+      DenoMediaType::JavaScript | DenoMediaType::Mjs | DenoMediaType::Cjs => ModuleType::Js,
+      DenoMediaType::JSX => ModuleType::Jsx,
+      DenoMediaType::TypeScript
+      | DenoMediaType::Mts
+      | DenoMediaType::Cts
+      | DenoMediaType::Dts
+      | DenoMediaType::Dmts
+      | DenoMediaType::Dcts => ModuleType::Ts,
+      DenoMediaType::TSX => ModuleType::Tsx,
+      DenoMediaType::Json => ModuleType::Json,
+      DenoMediaType::Wasm => ModuleType::Binary,
+      DenoMediaType::TsBuildInfo | DenoMediaType::SourceMap => ModuleType::Text,
+      DenoMediaType::Unknown => ModuleType::Empty,
+    }
+  }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 struct DenoInfoJsonV1 {
   redirects: HashMap<String, String>,
   modules: Vec<ModuleInfo>,
+  #[serde(rename = "npmPackages")]
+  npm_packages: HashMap<String, NpmPackageInfo>,
 }
 
 fn get_deno_info(specifier: &str) -> Result<DenoInfoJsonV1, &'static str> {
@@ -90,6 +120,7 @@ struct DenoResolveResult {
   npm_package: Option<String>,
   local_path: Option<String>,
   redirected: String,
+  module_type: Option<ModuleType>,
 }
 
 #[derive(Debug)]
@@ -119,12 +150,13 @@ impl DenoLoaderPlugin {
     for module in &info.modules {
       match module {
         ModuleInfo::Node { specifier: _s, .. } => {}
-        ModuleInfo::Asserted { specifier: s, local, .. }
-        | ModuleInfo::Esm { specifier: s, local, .. } => {
+        ModuleInfo::Asserted { media_type, specifier: s, local, .. }
+        | ModuleInfo::Esm { media_type, specifier: s, local, .. } => {
           let result = DenoResolveResult {
             local_path: Some(local.clone()),
             redirected: s.clone(),
             npm_package: None,
+            module_type: Some(media_type.into()),
           };
           cache.insert(s.clone(), result.clone());
           for (key, value) in &info.redirects {
@@ -137,7 +169,8 @@ impl DenoLoaderPlugin {
           let result = DenoResolveResult {
             local_path: None,
             redirected: s.clone(),
-            npm_package: Some(npm_package.clone()),
+            npm_package: info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone()),
+            module_type: None,
           };
           cache.insert(s.clone(), result.clone());
           for (key, value) in &info.redirects {
@@ -226,11 +259,10 @@ impl Plugin for DenoLoaderPlugin {
         let cached: DenoResolveResult = self.get_cached_info(&maybe_resolved).expect("info failed");
 
         if let Some(npm_package) = cached.npm_package {
-          let package_name = npm_package.split('@').next().unwrap_or(&npm_package).to_string();
           return Ok(
             ctx
               .resolve(
-                &package_name,
+                &npm_package,
                 None,
                 Some(PluginContextResolveOptions {
                   import_kind: args.kind,
@@ -268,17 +300,17 @@ impl Plugin for DenoLoaderPlugin {
       {
         let cached = self.get_cached_info(args.id).expect("info failed");
         let local_path = cached.local_path.expect("local path not found");
-        // Return the specifier as the id to tell rolldown that this data url is handled by the plugin. Don't fallback to
-        // the default resolve behavior and mark it as external.
-        Ok(Some(HookLoadOutput {
-          code: String::from_utf8_lossy(
-            &OsFileSystem::read(&OsFileSystem, Path::new(&local_path))
-              .expect("cant read local path"),
-          )
-          .into_owned(),
-          module_type: Some(ModuleType::Tsx),
-          ..Default::default()
-        }))
+        let content = String::from_utf8_lossy(
+          &OsFileSystem::read(&OsFileSystem, Path::new(&local_path)).expect("cant read local path"),
+        )
+        .into_owned();
+        let (code, module_type) = if cached.module_type.as_ref() == Some(&ModuleType::Json) {
+          (format!("export default {}", content), Some(ModuleType::Js))
+        } else {
+          (content, cached.module_type)
+        };
+
+        Ok(Some(HookLoadOutput { code, module_type, ..Default::default() }))
       } else {
         Ok(None)
       }

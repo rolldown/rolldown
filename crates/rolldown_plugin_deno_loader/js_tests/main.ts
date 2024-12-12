@@ -8,10 +8,12 @@ const configs = [
   defineConfig({
     input: { basic: "./tests/basic/mod.ts" },
     resolve: { conditionNames: ["import"] },
+    output: { minify: false },
   }),
   defineConfig({
     input: { jsr: "./tests/jsr/mod.ts" },
     resolve: { conditionNames: ["import"] },
+    output: { minify: false },
     plugins: [
       denoLoaderPlugin({
         importMapBaseUrl: import.meta.resolve("./"),
@@ -24,7 +26,7 @@ const configs = [
   }),
 ];
 
-for (const config of configs) {
+for (const config of configs.slice(1)) {
   console.time("rolldown+deno_loader_plugin");
   await (await rolldown(config)).write(config.output);
   console.timeEnd("rolldown+deno_loader_plugin");

@@ -74,6 +74,10 @@ async function watchInner(
   const watcher = await rolldownWatch({
     ...options,
     ...cliOptions.input,
+    output: {
+      ...options?.output,
+      ...cliOptions.output,
+    },
   })
 
   onExit((code: number | null | undefined) => {

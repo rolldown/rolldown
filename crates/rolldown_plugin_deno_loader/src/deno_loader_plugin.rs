@@ -36,6 +36,13 @@ enum ModuleInfo {
     // #[serde(rename = "moduleName")]
     // module_name: String,
   },
+  #[serde(rename = "asserted")]
+  Asserted {
+    specifier: String,
+    local: String,
+    // #[serde(rename = "moduleName")]
+    // module_name: String,
+  },
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -112,7 +119,8 @@ impl DenoLoaderPlugin {
     for module in &info.modules {
       match module {
         ModuleInfo::Node { specifier: _s, .. } => {}
-        ModuleInfo::Esm { specifier: s, local, .. } => {
+        ModuleInfo::Asserted { specifier: s, local, .. }
+        | ModuleInfo::Esm { specifier: s, local, .. } => {
           let result = DenoResolveResult {
             local_path: Some(local.clone()),
             redirected: s.clone(),

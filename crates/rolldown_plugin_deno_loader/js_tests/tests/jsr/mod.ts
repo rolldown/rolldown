@@ -1,3 +1,6 @@
+import { imports } from "../../deno.json" with {type: "json"};
+console.log(imports);
+
 import { fromFileUrl } from "jsr:@std/path@1.0.8/from-file-url";
 const d = await import("jsr:@std/crypto");
 const assert = await import("@std/assert");

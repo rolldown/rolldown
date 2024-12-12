@@ -177,7 +177,7 @@ oxc_transform_napi = { version = "0.40.1" }
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 oxc_index     = { version = "2", features = ["rayon"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver  = { version = "2.1.1" }                   # https://github.com/oxc-project/oxc-resolver
+oxc_resolver  = { version = "3" }                       # https://github.com/oxc-project/oxc-resolver
 oxc_sourcemap = { version = "1" }                       # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]

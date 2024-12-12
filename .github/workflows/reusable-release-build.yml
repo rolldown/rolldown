@@ -2,6 +2,10 @@ name: Release Build
 
 on:
   workflow_call:
+    inputs:
+      version: # Should be valid semver or 'patch', 'minor', 'major', 'commit'. See scripts/misc/bump-version.js for details.
+        type: string
+        default: 'noop'
 
 jobs:
   build-binding:
@@ -176,6 +180,10 @@ jobs:
         # This binary is only used to build the node package itself. It's won't be published.
         run: pnpm --filter rolldown build-binding
 
+      - name: Determine Version
+        if: ${{ inputs.version != 'noop' }}
+        run: node ./scripts/misc/bump-version.js ${{ inputs.version }}
+
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: pnpm --filter rolldown build-node
@@ -188,4 +196,13 @@ jobs:
         with:
           if-no-files-found: error
           name: node-artifact
-          path: packages/rolldown/dist/**
+          path: |
+            packages/rolldown/dist/**
+
+      - name: Upload `rolldown-version.txt`
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: warn
+          name: rolldown-version
+          path: |
+            rolldown-version.txt

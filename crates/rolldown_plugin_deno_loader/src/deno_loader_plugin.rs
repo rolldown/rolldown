@@ -15,8 +15,21 @@ use rolldown_plugin::{
 use import_map::{parse_from_json_with_options, ImportMapOptions};
 
 #[derive(Deserialize, Debug, Clone)]
-#[serde(tag = "kind")]
+#[serde(untagged)]
 enum ModuleInfo {
+  Typed {
+    #[serde(flatten)]
+    details: TypedModuleDetails,
+  },
+  Error {
+    specifier: String,
+    error: String,
+  },
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(tag = "kind")]
+enum TypedModuleDetails {
   #[serde(rename = "asserted")]
   Asserted {
     specifier: String,
@@ -38,11 +51,7 @@ enum ModuleInfo {
     npm_package: String,
   },
   #[serde(rename = "node")]
-  Node {
-    specifier: String,
-    // #[serde(rename = "moduleName")]
-    // module_name: String,
-  },
+  Node { specifier: String },
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -149,35 +158,42 @@ impl DenoLoaderPlugin {
     let info: DenoInfoJsonV1 = get_deno_info(specifier)?;
     for module in &info.modules {
       match module {
-        ModuleInfo::Node { specifier: _s, .. } => {}
-        ModuleInfo::Asserted { media_type, specifier: s, local, .. }
-        | ModuleInfo::Esm { media_type, specifier: s, local, .. } => {
-          let result = DenoResolveResult {
-            local_path: Some(local.clone()),
-            redirected: s.clone(),
-            npm_package: None,
-            module_type: Some(media_type.into()),
-          };
-          cache.insert(s.clone(), result.clone());
-          for (key, value) in &info.redirects {
-            if value == s {
-              cache.insert(key.clone(), result.clone());
+        ModuleInfo::Typed { details, .. } => match details {
+          TypedModuleDetails::Node { specifier: _s } => {}
+          TypedModuleDetails::Asserted { media_type, specifier: s, local }
+          | TypedModuleDetails::Esm { media_type, specifier: s, local } => {
+            let result = DenoResolveResult {
+              local_path: Some(local.clone()),
+              redirected: s.clone(),
+              npm_package: None,
+              module_type: Some(media_type.into()),
+            };
+            cache.insert(s.clone(), result.clone());
+            for (key, value) in &info.redirects {
+              if value == s {
+                cache.insert(key.clone(), result.clone());
+              }
             }
           }
-        }
-        ModuleInfo::Npm { specifier: s, npm_package, .. } => {
-          let result = DenoResolveResult {
-            local_path: None,
-            redirected: s.clone(),
-            npm_package: info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone()),
-            module_type: None,
-          };
-          cache.insert(s.clone(), result.clone());
-          for (key, value) in &info.redirects {
-            if value == s {
-              cache.insert(key.clone(), result.clone());
+          TypedModuleDetails::Npm { specifier: s, npm_package } => {
+            let result = DenoResolveResult {
+              local_path: None,
+              redirected: s.clone(),
+              npm_package: info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone()),
+              module_type: None,
+            };
+            cache.insert(s.clone(), result.clone());
+            for (key, value) in &info.redirects {
+              if value == s {
+                cache.insert(key.clone(), result.clone());
+              }
             }
           }
+        },
+        ModuleInfo::Error { specifier: s, error } => {
+          eprintln!("Error for specifier {}: {}", s, error);
+          // Optionally, you could return an error here instead of continuing
+          // return Err("Error in module resolution");
         }
       }
     }

@@ -16,7 +16,8 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
-use rolldown_utils::{ecmascript::is_validate_identifier_name, path_ext::PathExt};
+use rolldown_std_utils::PathExt;
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 use sugar_path::SugarPath;
 
 mod rename;

@@ -1,6 +1,6 @@
 use regex::Regex;
 use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, PluginContext};
-use rolldown_utils::path_ext::clean_url;
+use rolldown_utils::clean_url::clean_url;
 use std::{borrow::Cow, sync::LazyLock};
 
 static DATA_URL_RE: LazyLock<Regex> = LazyLock::new(|| {

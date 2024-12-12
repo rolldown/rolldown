@@ -9,7 +9,8 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, path_ext::PathExt};
+use rolldown_std_utils::PathExt;
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 

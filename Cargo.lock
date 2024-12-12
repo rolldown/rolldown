@@ -2870,7 +2870,6 @@ dependencies = [
  "rolldown_std_utils",
  "rustc-hash",
  "simdutf8",
- "sugar_path",
  "xxhash-rust",
 ]
 

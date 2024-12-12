@@ -11,9 +11,10 @@ pub mod types;
 
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
+use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   extract_hash_pattern::extract_hash_pattern, hash_placeholder::HashPlaceholderGenerator,
-  indexmap::FxIndexMap, path_ext::PathExt, BitSet,
+  indexmap::FxIndexMap, BitSet,
 };
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;

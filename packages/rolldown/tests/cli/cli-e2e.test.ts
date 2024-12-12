@@ -2,6 +2,8 @@ import { describe, test, it, expect } from 'vitest'
 import { $, execa } from 'execa'
 import { stripAnsi } from 'consola/utils'
 import { testsDir } from '@tests/utils'
+import path from 'node:path'
+import fs from 'node:fs'
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined)
@@ -133,9 +135,27 @@ describe('config', () => {
   })
 })
 
-it('call closeBundle', async () => {
-  const cwd = cliFixturesDir('close-bundle')
-  const status = await $({ cwd })`rolldown -c`
-  expect(status.stdout).toContain('[test:closeBundle]')
-  expect(status.exitCode).toBe(0)
+describe('watch cli', () => {
+  it('call closeBundle', async () => {
+    const cwd = cliFixturesDir('close-bundle')
+    const status = await $({ cwd })`rolldown -c`
+    expect(status.stdout).toContain('[test:closeBundle]')
+    expect(status.exitCode).toBe(0)
+  })
+
+  it('should handle output options', async () => {
+    const controller = new AbortController()
+    const cwd = cliFixturesDir('watch-cli-option')
+    setTimeout(() => controller.abort(), 100)
+
+    /* ignore abort error */
+    try {
+      await $({
+        cwd,
+        cancelSignal: controller.signal,
+      })`rolldown index.ts -d dist -w -s`
+    } catch (e) {} // eslint-disable-line no-unused-vars
+    expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
+    expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
+  })
 })

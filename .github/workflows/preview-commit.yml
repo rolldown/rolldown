@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build bindings and node packages
     uses: ./.github/workflows/reusable-release-build.yml
+    with:
+      version: 'commit'
 
   publish:
     if: github.repository == 'rolldown/rolldown'
@@ -42,6 +44,20 @@ jobs:
         with:
           path: packages/rolldown/dist
           name: node-artifact
+
+      - name: Download `rolldown-version.txt`
+        uses: actions/download-artifact@v4
+        with:
+          name: rolldown-version
+
+      - name: Read `rolldown-version.txt`
+        id: rolldown-version
+        uses: igorskyflyer/action-readfile@v1.0.0
+        with:
+          path: rolldown-version.txt
+
+      - name: Canary/Nightly Versioning
+        run: node ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
 
       - name: Copy Licenses
         run: |

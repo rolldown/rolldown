@@ -1,3 +1,4 @@
+use regex::Regex;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::path_ext::PathExt;
 use serde::Deserialize;
@@ -57,9 +58,9 @@ enum TypedModuleDetails {
 #[derive(Deserialize, Debug, Clone)]
 struct NpmPackageInfo {
   name: String,
-  version: String,
-  #[serde(rename = "registryUrl")]
-  registry_url: String,
+  // version: String,
+  // #[serde(rename = "registryUrl")]
+  // registry_url: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -145,6 +146,11 @@ impl Default for DenoLoaderPlugin {
   }
 }
 
+fn extract_path_from_specifier(specifier: &str) -> Option<String> {
+  let re: Regex = Regex::new(r"(?:[^:]+:/?)?(?:@[^/]+/)?[^/@]+(?:@[^/]*)?(?:/(.+))?").unwrap();
+  re.captures(specifier).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+}
+
 impl DenoLoaderPlugin {
   pub fn new(import_map: String, import_map_base_url: String) -> Self {
     Self { resolve_cache: Mutex::new(HashMap::new()), import_map, import_map_base_url }
@@ -176,10 +182,17 @@ impl DenoLoaderPlugin {
             }
           }
           TypedModuleDetails::Npm { specifier: s, npm_package } => {
+            let npm_package_base = info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone());
+            let npm_package_path = extract_path_from_specifier(specifier);
+            let npm_package = match (npm_package_base, npm_package_path) {
+              (Some(base), Some(path)) => format!("{}/{}", base, path),
+              (Some(base), None) => base,
+              _ => npm_package.to_string(),
+            };
             let result = DenoResolveResult {
               local_path: None,
               redirected: s.clone(),
-              npm_package: info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone()),
+              npm_package: Some(npm_package),
               module_type: None,
             };
             cache.insert(s.clone(), result.clone());

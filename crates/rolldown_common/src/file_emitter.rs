@@ -3,6 +3,7 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
+use rolldown_utils::itoa;
 use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
 use std::ffi::OsStr;
@@ -127,8 +128,9 @@ impl FileEmitter {
         *count += 1;
         let extension = extension.map(|e| format!(".{e}")).unwrap_or_default();
         file_name = format!(
-          "{}{count}{extension}",
+          "{}{}{extension}",
           &file_name.to_string()[..file_name.len() - extension.len()],
+          itoa!(*count)
         )
         .into();
       } else {

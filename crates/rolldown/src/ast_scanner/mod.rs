@@ -32,8 +32,8 @@ use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
-use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::{concat_string, itoa};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
@@ -296,7 +296,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let namespace_ref: SymbolRef = self.result.symbol_ref_db.create_facade_root_symbol_ref(
       concat_string!(
         "#LOCAL_NAMESPACE_IN_",
-        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default()),
+        itoa!(self.current_stmt_info.stmt_idx.unwrap_or_default()),
         "#"
       )
       .into(),

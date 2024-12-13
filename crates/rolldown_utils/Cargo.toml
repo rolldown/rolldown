@@ -30,6 +30,7 @@ futures            = { workspace = true }
 glob-match         = { workspace = true }
 indexmap           = { workspace = true, features = ["serde"] }
 infer              = { workspace = true }
+itoa               = { workspace = true }
 memchr             = { workspace = true }
 mime               = { workspace = true }
 oxc                = { workspace = true }

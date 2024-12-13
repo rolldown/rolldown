@@ -1,4 +1,4 @@
-use rolldown_utils::ecmascript::is_validate_assignee_identifier_name;
+use rolldown_utils::{ecmascript::is_validate_assignee_identifier_name, itoa};
 use serde_json::Value;
 // TODO: handling https://github.com/tc39/proposal-json-superset
 
@@ -16,7 +16,7 @@ pub fn json_to_esm(json: &str) -> serde_json::Result<String> {
             .push_str(&format!("export const {key} = {};\n", serde_json::to_string_pretty(value)?));
           exported_items_for_default_export.push(key.to_string());
         } else {
-          let valid_id = format!("key_{}", itoa::Buffer::new().format(idx));
+          let valid_id = format!("key_{}", itoa!(idx));
           source.push_str(&format!(
             "const {} = {};\n",
             valid_id,

@@ -12,6 +12,7 @@ use oxc::{
   span::{Span, SPAN},
 };
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext};
+use rolldown_utils::itoa;
 use rustc_hash::FxHashMap;
 use std::{
   borrow::Cow,
@@ -267,11 +268,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         // const modules = {
         //   './dir/foo.js': __glob__0,
         // }
-        let name = format!(
-          "__glob__{}_{}_",
-          itoa::Buffer::new().format(self.current),
-          itoa::Buffer::new().format(index)
-        );
+        let name = format!("__glob__{}_{}_", itoa!(self.current), itoa!(index));
 
         let module_specifier = match opts.import.as_deref() {
           Some("default") => {

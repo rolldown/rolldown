@@ -18,6 +18,7 @@ use rolldown_utils::{
   concat_string,
   extract_hash_pattern::extract_hash_pattern,
   hash_placeholder::HashPlaceholderGenerator,
+  itoa,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
   sanitize_file_name::sanitize_file_name,
 };
@@ -201,8 +202,7 @@ impl<'a> GenerateStage<'a> {
               // This name is already used
               let next_count = *occ.get();
               occ.insert(next_count + 1);
-              candidate =
-                ArcStr::from(concat_string!(name, itoa::Buffer::new().format(next_count)).as_str());
+              candidate = ArcStr::from(concat_string!(name, itoa!(next_count)).as_str());
             }
             Entry::Vacant(vac) => {
               // This is the first time we see this name

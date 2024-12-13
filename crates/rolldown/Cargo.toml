@@ -25,7 +25,6 @@ dunce                     = { workspace = true }
 futures                   = { workspace = true }
 indexmap                  = { workspace = true }
 itertools                 = { workspace = true }
-itoa                      = { workspace = true }
 memchr                    = { workspace = true }
 notify                    = { workspace = true }
 oxc                       = { workspace = true }

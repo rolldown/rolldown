@@ -11,6 +11,7 @@ use rolldown_common::{
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::itoa;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -377,7 +378,7 @@ impl GenerateStage<'_> {
         let alias = if *count == 0 {
           original_name.clone()
         } else {
-          format!("{original_name}${}", itoa::Buffer::new().format(*count)).into()
+          format!("{original_name}${}", itoa!(*count)).into()
         };
         chunk.exports_to_other_chunks.insert(chunk_export, alias.clone());
         *count += 1;

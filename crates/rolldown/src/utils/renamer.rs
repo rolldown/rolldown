@@ -4,6 +4,7 @@ use rolldown_common::{
   IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::itoa;
 use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
@@ -76,8 +77,7 @@ impl<'name> Renamer<'name> {
               let next_conflict_index = *occ.get() + 1;
               *occ.get_mut() = next_conflict_index;
               candidate_name =
-                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
-                  .into();
+                concat_string!(original_name, "$", itoa!(next_conflict_index)).into();
             }
             Entry::Vacant(vac) => {
               vac.insert(0);
@@ -101,8 +101,7 @@ impl<'name> Renamer<'name> {
         Entry::Occupied(mut occ) => {
           let next_conflict_index = *occ.get() + 1;
           *occ.get_mut() = next_conflict_index;
-          conflictless_name =
-            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
+          conflictless_name = concat_string!(hint, "$", itoa!(next_conflict_index)).into();
         }
         Entry::Vacant(vac) => {
           vac.insert(0);
@@ -122,8 +121,7 @@ impl<'name> Renamer<'name> {
         Entry::Occupied(mut occ) => {
           let next_conflict_index = *occ.get() + 1;
           *occ.get_mut() = next_conflict_index;
-          conflictless_name =
-            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
+          conflictless_name = concat_string!(hint, "$", itoa!(next_conflict_index)).into();
         }
         Entry::Vacant(vac) => {
           vac.insert(0);
@@ -160,8 +158,7 @@ impl<'name> Renamer<'name> {
               || used_canonical_names_for_this_scope.contains_key(&candidate_name);
 
             if is_shadowed {
-              candidate_name =
-                concat_string!(binding_name, "$", itoa::Buffer::new().format(count)).into();
+              candidate_name = concat_string!(binding_name, "$", itoa!(count)).into();
               count += 1;
             } else {
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);

@@ -22,6 +22,7 @@ pub mod concat_string;
 pub mod extract_hash_pattern;
 pub mod hash_placeholder;
 pub mod index_vec_ext;
+pub mod itoa;
 pub mod js_regex;
 pub mod pattern_filter;
 pub mod unique_arc;

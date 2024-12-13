@@ -181,7 +181,7 @@ impl DenoLoaderPlugin {
               }
             }
           }
-          TypedModuleDetails::Npm { specifier: s, npm_package } => {
+          TypedModuleDetails::Npm { specifier, npm_package } => {
             let npm_package_base = info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone());
             let npm_package_path = extract_path_from_specifier(specifier);
             let npm_package = match (npm_package_base, npm_package_path) {
@@ -191,13 +191,13 @@ impl DenoLoaderPlugin {
             };
             let result = DenoResolveResult {
               local_path: None,
-              redirected: s.clone(),
+              redirected: specifier.clone(),
               npm_package: Some(npm_package),
               module_type: None,
             };
-            cache.insert(s.clone(), result.clone());
+            cache.insert(specifier.clone(), result.clone());
             for (key, value) in &info.redirects {
-              if value == s {
+              if value == specifier {
                 cache.insert(key.clone(), result.clone());
               }
             }

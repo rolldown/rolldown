@@ -363,8 +363,8 @@ impl<'ast> AstSnippet<'ast> {
           PropertyKind::Init,
           ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id, None)),
           self.builder.expression_function(
-            FunctionType::FunctionExpression,
             SPAN,
+            FunctionType::FunctionExpression,
             None,
             false,
             false,
@@ -429,8 +429,8 @@ impl<'ast> AstSnippet<'ast> {
           PropertyKind::Init,
           ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id, None)),
           self.builder.expression_function(
-            FunctionType::FunctionExpression,
             SPAN,
+            FunctionType::FunctionExpression,
             None,
             false,
             false,
@@ -674,8 +674,8 @@ impl<'ast> AstSnippet<'ast> {
     statements: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Expression<'ast> {
     let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
-      ast::FunctionType::FunctionExpression,
       SPAN,
+      ast::FunctionType::FunctionExpression,
       None::<BindingIdentifier>,
       false,
       false,

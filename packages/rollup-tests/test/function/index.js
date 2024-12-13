@@ -118,7 +118,7 @@ runTestSuiteWithSamples(
 						let result;
 
 						return bundle
-							.write({
+							.generate({
 								exports: 'auto',
 								format: 'cjs',
 								...(config.options || {}).output

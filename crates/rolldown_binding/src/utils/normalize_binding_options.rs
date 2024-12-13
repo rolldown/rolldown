@@ -83,7 +83,6 @@ pub fn normalize_binding_options(
   >,
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
-  debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
 
   let external = input_options.external.map(|ts_fn| {

@@ -2,15 +2,10 @@
 const ignoreTests = [
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
 
-  // The test case import test.js from rollup package, it's dependencies can't be resolved.
-  "rollup@function@relative-outside-external: correctly resolves relative external imports from outside directories",
   // Ignore skipIfWindows test avoid test status error
   'rollup@function@preserve-symlink: follows symlinks',
   'rollup@function@symlink: follows symlinks',
   "rollup@form@sourcemaps-inline: correct sourcemaps are written (inline)@generates es",
-
-  // The `RenderChunk#modules` should ignores non-bundled modules
-  "rollup@function@inline-dynamic-imports-bundle: ignores non-bundled modules when inlining dynamic imports",
  
   // The result is not working as expected
   "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",// https://github.com/rolldown/rolldown/issues/2864
@@ -22,11 +17,6 @@ const ignoreTests = [
   "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",// https://github.com/oxc-project/oxc/issues/7501 https://github.com/oxc-project/oxc/issues/7209#issuecomment-2503133537 The `assigned to unreferenced var will be dropped` is a minify featrue
   "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", // The Sequence expression/Binary expression/Calls with parentheses is not implement
 
-  // watch mode api is not compitable with rollup, the `rollup.watch` is not a promise at rollup
-  "rollup@hooks@allows to enforce plugin hook order in watch mode",
-  "rollup@hooks@allows to enforce sequential plugin hook order in watch mode",
-
-  "rollup@hooks@keeps emitted ids stable between runs",// emit empty asset
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
 ]
 

@@ -21,6 +21,12 @@ export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
 
+export interface MinifyOptions {
+  mangle: boolean
+  compress: boolean
+  removeWhitespace: boolean
+}
+
 export type GlobalsFunction = (name: string) => string
 
 export interface OutputOptions {
@@ -52,7 +58,7 @@ export interface OutputOptions {
   chunkFileNames?: string | ChunkFileNamesFunction
   cssEntryFileNames?: string | ChunkFileNamesFunction
   cssChunkFileNames?: string | ChunkFileNamesFunction
-  minify?: boolean
+  minify?: boolean | 'dead-code-elimination-only' | MinifyOptions
   name?: string
   globals?: Record<string, string> | GlobalsFunction
   externalLiveBindings?: boolean

@@ -327,9 +327,13 @@
           ]
         },
         "minify": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawMinifyOptions"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "moduleTypes": {
@@ -702,6 +706,26 @@
       },
       "additionalProperties": false
     },
+    "MinifyOptionsObject": {
+      "type": "object",
+      "required": [
+        "compress",
+        "mangle",
+        "removeWhitespace"
+      ],
+      "properties": {
+        "compress": {
+          "type": "boolean"
+        },
+        "mangle": {
+          "type": "boolean"
+        },
+        "removeWhitespace": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
     "ModuleType": {
       "oneOf": [
         {
@@ -769,6 +793,19 @@
           "enum": [
             "node"
           ]
+        }
+      ]
+    },
+    "RawMinifyOptions": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/definitions/MinifyOptionsObject"
         }
       ]
     },

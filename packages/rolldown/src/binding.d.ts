@@ -63,7 +63,7 @@ export declare class BindingNormalizedOptions {
   get globals(): Record<string, string> | undefined
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
-  get minify(): boolean
+  get minify(): false | BindingMinifyOptions
   get polyfillRequire(): boolean
   get comments(): 'none' | 'preserve-legal'
 }
@@ -391,6 +391,12 @@ export interface BindingMatchGroup {
   minShareCount?: number
 }
 
+export interface BindingMinifyOptions {
+  mangle: boolean
+  compress: boolean
+  removeWhitespace: boolean
+}
+
 export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
@@ -432,7 +438,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
-  minify?: boolean
+  minify?: boolean | 'dead-code-elimination-only' | BindingMinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions
   comments?: 'none' | 'preserve-legal'
   polyfillRequire?: boolean

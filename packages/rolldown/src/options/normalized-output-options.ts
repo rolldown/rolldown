@@ -1,5 +1,5 @@
 import { unsupported } from '../utils/misc'
-import type { BindingNormalizedOptions } from '../binding'
+import type { BindingMinifyOptions, BindingNormalizedOptions } from '../binding'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
@@ -7,6 +7,7 @@ import type {
 import type {
   ChunkFileNamesFunction,
   GlobalsFunction,
+  MinifyOptions,
   OutputOptions,
 } from './output-options'
 
@@ -37,7 +38,7 @@ export interface NormalizedOutputOptions {
   sourcemapDebugIds: boolean
   sourcemapIgnoreList: SourcemapIgnoreListOption | undefined
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
-  minify: boolean
+  minify: false | MinifyOptions
   comments: 'none' | 'preserve-legal'
   polyfillRequire: boolean
 }
@@ -165,7 +166,7 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return mapFunctionOption(void 0, 'sourcemapPathTransform')
   }
 
-  get minify(): boolean {
+  get minify(): false | BindingMinifyOptions {
     return this.inner.minify
   }
 

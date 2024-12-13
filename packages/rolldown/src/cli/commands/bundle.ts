@@ -58,7 +58,9 @@ export async function bundleWithCliOptions(
       if (outputs.length > 1) {
         logger.log(`\n${colors.cyan(colors.bold(`|→ ${file.fileName}:`))}\n`)
       }
-      logger.log(file.type === 'asset' ? file.source : file.code)
+      // avoid consola since it doesn't print it as raw string
+      // eslint-disable-next-line no-console
+      console.log(file.type === 'asset' ? file.source : file.code)
     }
   } finally {
     await build.close()

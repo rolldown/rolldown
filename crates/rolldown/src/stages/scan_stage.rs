@@ -51,24 +51,19 @@ impl ScanStage {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::format_err!("You must supply options.input to rolldown").into());
+      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
     self.plugin_driver.build_start(&self.options).await?;
 
     let module_loader = ModuleLoader::new(
-      Arc::clone(&self.options),
-      Arc::clone(&self.plugin_driver),
       self.fs,
+      Arc::clone(&self.options),
       Arc::clone(&self.resolver),
+      Arc::clone(&self.plugin_driver),
     )?;
 
-    let user_entries = match self.resolve_user_defined_entries().await? {
-      Ok(entries) => entries,
-      Err(errors) => {
-        return Err(errors);
-      }
-    };
+    let user_entries = self.resolve_user_defined_entries().await??;
 
     let ModuleLoaderOutput {
       module_table,
@@ -78,12 +73,7 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       dynamic_import_exports_usage_map,
-    } = match module_loader.fetch_all_modules(user_entries).await? {
-      Ok(output) => output,
-      Err(errors) => {
-        return Err(errors);
-      }
-    };
+    } = module_loader.fetch_all_modules(user_entries).await?;
 
     Ok(ScanStageOutput {
       module_table,
@@ -97,7 +87,6 @@ impl ScanStage {
   }
 
   /// Resolve `InputOptions.input`
-
   #[tracing::instrument(level = "debug", skip_all)]
   #[allow(clippy::type_complexity)]
   async fn resolve_user_defined_entries(
@@ -145,7 +134,7 @@ impl ScanStage {
           ret.push(item);
         }
         Err(e) => match e {
-          ResolveError::NotFound(..) => {
+          ResolveError::NotFound(_) => {
             errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
           }
           ResolveError::PackagePathNotExported(..) => {

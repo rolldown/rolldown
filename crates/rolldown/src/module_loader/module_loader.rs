@@ -73,10 +73,10 @@ pub struct ModuleLoaderOutput {
 
 impl ModuleLoader {
   pub fn new(
-    options: SharedOptions,
-    plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
+    options: SharedOptions,
     resolver: SharedResolver,
+    plugin_driver: SharedPluginDriver,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -240,9 +240,9 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-  ) -> anyhow::Result<BuildResult<ModuleLoaderOutput>> {
+  ) -> BuildResult<ModuleLoaderOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
+      return Err(anyhow::anyhow!("You must supply options.input to rolldown").into());
     }
 
     self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;
@@ -385,7 +385,7 @@ impl ModuleLoader {
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors.into()));
+      return Err(errors.into());
     }
 
     let dynamic_import_exports_usage_map = dynamic_import_exports_usage_pairs.into_iter().fold(
@@ -446,7 +446,7 @@ impl ModuleLoader {
       }));
     }
 
-    Ok(Ok(ModuleLoaderOutput {
+    Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
@@ -454,6 +454,6 @@ impl ModuleLoader {
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
-    }))
+    })
   }
 }

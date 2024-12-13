@@ -242,7 +242,7 @@ impl ModuleLoader {
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
   ) -> BuildResult<ModuleLoaderOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::anyhow!("You must supply options.input to rolldown").into());
+      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
     self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;

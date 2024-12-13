@@ -51,7 +51,7 @@ impl ScanStage {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::anyhow!("You must supply options.input to rolldown").into());
+      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
     self.plugin_driver.build_start(&self.options).await?;

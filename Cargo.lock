@@ -3152,7 +3152,7 @@ checksum = "e9557cb6521e8d009c51a8666f09356f4b817ba9ba0981a305bd86aee47bd35c"
 
 [[package]]
 name = "string_wizard"
-version = "0.0.24"
+version = "0.0.25"
 dependencies = [
  "insta",
  "oxc_index",

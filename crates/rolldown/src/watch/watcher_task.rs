@@ -7,7 +7,7 @@ use std::{
   time::Instant,
 };
 
-use crate::Bundler;
+use crate::{Bundler, SharedOptions};
 
 use super::emitter::SharedWatcherEmitter;
 use arcstr::ArcStr;
@@ -44,39 +44,31 @@ impl WatcherTask {
 
     bundler.plugin_driver.clear();
 
-    let output = {
-      if bundler.options.watch.skip_write {
-        // TODO Here should be call scan
-        bundler.generate().await
-      } else {
-        bundler.write().await
+    let result = {
+      let result = bundler.scan().await;
+      // FIXME(hyf0): probably should have a more official API/better way to get watch files
+      self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options);
+      match result {
+        Ok(scan_stage_output) => {
+          if bundler.options.watch.skip_write {
+            Ok(())
+          } else {
+            // avoid watching scan stage files twice
+            bundler.plugin_driver.watch_files.clear();
+            let output = bundler.bundle_write(scan_stage_output).await;
+            self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options);
+            match output {
+              Ok(_) => Ok(()),
+              Err(errs) => Err(errs),
+            }
+          }
+        }
+        Err(errs) => Err(errs),
       }
     };
 
-    // FIXME(hyf0): probably should have a more official API/better way to get watch files
-    for file in bundler.plugin_driver.watch_files.iter() {
-      if self.watch_files.contains(file.as_str()) {
-        continue;
-      }
-      let path = Path::new(file.as_str());
-      if path.exists() {
-        let normalized_path = path.relative(&bundler.options.cwd);
-        let normalized_id = normalized_path.to_string_lossy();
-        if pattern_filter::filter(
-          bundler.options.watch.exclude.as_deref(),
-          bundler.options.watch.include.as_deref(),
-          file.as_str(),
-          &normalized_id,
-        )
-        .inner()
-        {
-          self.watch_files.insert(file.clone());
-        }
-      }
-    }
-
-    match output {
-      Ok(_output) => {
+    match result {
+      Ok(()) => {
         self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleEnd(BundleEndEventData {
           output: bundler.options.cwd.join(&bundler.options.dir).to_string_lossy().to_string(),
           #[allow(clippy::cast_possible_truncation)]
@@ -94,6 +86,29 @@ impl WatcherTask {
     self.invalidate.store(false, Ordering::Relaxed);
 
     Ok(())
+  }
+
+  fn watch_files(&self, files: &Arc<FxDashSet<ArcStr>>, options: &SharedOptions) {
+    for file in files.iter() {
+      if self.watch_files.contains(file.as_str()) {
+        continue;
+      }
+      let path = Path::new(file.as_str());
+      if path.exists() {
+        let normalized_path = path.relative(&options.cwd);
+        let normalized_id = normalized_path.to_string_lossy();
+        if pattern_filter::filter(
+          options.watch.exclude.as_deref(),
+          options.watch.include.as_deref(),
+          file.as_str(),
+          &normalized_id,
+        )
+        .inner()
+        {
+          self.watch_files.insert(file.clone());
+        }
+      }
+    }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

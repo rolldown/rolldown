@@ -58,6 +58,30 @@ test.sequential('watch', async () => {
   expect(closeWatcherFn).toBeCalledTimes(1)
 })
 
+test.sequential('watch files after scan stage', async () => {
+  const watcher = watch({
+    input,
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        renderStart() {
+          fs.writeFileSync(input, 'console.log(2)')
+        },
+      },
+    ],
+  })
+  // should run build once
+  await waitBuildFinished(watcher)
+
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+  })
+
+  await watcher.close()
+})
+
 test.sequential('watch close', async () => {
   const watcher = watch({
     input,

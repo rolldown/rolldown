@@ -25,6 +25,7 @@
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
+ - rollup@hooks@allows to enforce sequential plugin hook order in watch mode
 
 ### The `renderDynamicImport/resolveFileUrl/resolveImportMeta/shouldTransformCachedModule` hooks not supported
  - rollup@function@enforce-plugin-order: allows to enforce plugin hook order
@@ -101,6 +102,7 @@
  - rollup@function@emit-file@set-asset-source-twice2: throws when setting the asset source twice
  - rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice
  - rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids
+ - rollup@hooks@keeps emitted ids stable between runs
 
 ### The `PluginContext.error` accpet more arguments at `transform` hooks 
  - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
@@ -365,6 +367,9 @@
  - rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId
  - rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports
  - rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input
+
+### The watch `BUNDLE_END` event `result` is not supported
+ - rollup@hooks@allows to enforce plugin hook order in watch mode
 
 ### escaping external id is not supported
  - rollup@form@quote-id: handles escaping for external ids@generates es

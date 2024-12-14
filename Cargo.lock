@@ -1172,7 +1172,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e310b3a6b5907f99202fcdb4960ff45b93735d7c7d96b760fcff8db2dc0e103d"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.5",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -1834,9 +1834,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "3.0.0"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4e556f56c129d2aa2499804d9f3f3e45612ea9846188e81d2702e80eaf9862e"
+checksum = "bed381b6ab4bbfebfc7a011ad43b110ace8d201d02a39c0e09855f16b8f3f741"
 dependencies = [
  "cfg-if",
  "dashmap 6.1.0",
@@ -1874,9 +1874,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_sourcemap"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51f7c51c48ad723ccd069a37b16f4bcd4f75b32d5c74b06c2110335beb504a9a"
+checksum = "c9d811a7c2879984b0fbb70ddbf0818f80247dccfcb5014be997019683aa5dfc"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",

@@ -16,7 +16,7 @@ impl EnsureSpanUniqueness {
   }
 }
 
-impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
+impl VisitMut<'_> for EnsureSpanUniqueness {
   #[inline]
   fn visit_span(&mut self, it: &mut Span) {
     if it.start == it.end {

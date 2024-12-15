@@ -69,7 +69,11 @@ console.log(
 	jsxs("div", { children: ["before", "after"] }),
 	jsxs(Fragment, { children: ["before", "after"] }),
 	jsxs(Fragment, { children: ["before", "after"] }),
-	jsxs(Fragment, { children: ["before", "after"] })
+	jsxs(
+		Fragment,
+		/*before*/
+		{ children: ["before", "after"] }
+)
 );
 
 //#endregion
@@ -79,7 +83,7 @@ console.log(
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,46 +1,20 @@
+@@ -1,46 +1,24 @@
 -// entry.jsx
 +import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 +
@@ -142,7 +146,11 @@ console.log(
 +	jsxs("div", { children: ["before", "after"] }),
 +	jsxs(Fragment, { children: ["before", "after"] }),
 +	jsxs(Fragment, { children: ["before", "after"] }),
-+	jsxs(Fragment, { children: ["before", "after"] })
++	jsxs(
++		Fragment,
++		/*before*/
++		{ children: ["before", "after"] }
++)
 +);
 +
 +//#endregion

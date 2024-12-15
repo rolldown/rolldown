@@ -31,7 +31,11 @@ console.log(
 	jsxs("div", { children: ["before", "after"] }),
 	jsxs(Fragment, { children: ["before", "after"] }),
 	jsxs(Fragment, { children: ["before", "after"] }),
-	jsxs(Fragment, { children: ["before", "after"] })
+	jsxs(
+		Fragment,
+		/*before*/
+		{ children: ["before", "after"] }
+)
 );
 
 //#endregion

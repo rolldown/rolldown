@@ -670,7 +670,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation_preserve_jsx
 
-- entry-!~{000}~.js => entry-Bi06zCVv.js
+- entry-!~{000}~.js => entry-DUZ9vOYX.js
 
 # tests/esbuild/default/comment_preservation_transform_jsx
 
@@ -2285,7 +2285,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested
 
-- entry-!~{000}~.js => entry-CVhaGTu-.js
+- entry-!~{000}~.js => entry-BN4cPWga.js
 
 # tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 
@@ -3542,7 +3542,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_import_equals_undefined_import
 
-- entry-!~{000}~.js => entry-DTtRuQbn.js
+- entry-!~{000}~.js => entry-CH9LcHNX.js
 
 # tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 

@@ -16,16 +16,13 @@ console.log(foo);
 ### rolldown
 ```js
 
-
 //#region import.ts
-var import_exports = {};
-__export(import_exports, { value: () => value });
 let value = 123;
 
 //#endregion
 //#region entry.ts
-var value_copy = import_exports.value;
-var Type_copy = import_exports.Type;
+var value_copy = value;
+var Type_copy = void 0;
 let foo = value_copy;
 console.log(foo);
 
@@ -36,15 +33,10 @@ console.log(foo);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,9 @@
-+var import_exports = {};
-+__export(import_exports, {
-+    value: () => value
-+});
+@@ -1,4 +1,5 @@
  var value = 123;
--var value_copy = value;
-+var value_copy = import_exports.value;
-+var Type_copy = import_exports.Type;
+ var value_copy = value;
++var Type_copy = void 0;
  var foo = value_copy;
  console.log(foo);
 

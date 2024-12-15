@@ -402,35 +402,37 @@ impl ModuleLoader {
         acc
       },
     );
+
     self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
 
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
-      .flatten()
       .enumerate()
-      .map(|(id, mut module)| {
-        let id = ModuleIdx::from(id);
-        if let Some(module) = module.as_normal_mut() {
-          // Note: (Compat to rollup)
-          // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
-          for importer in &importers {
-            if importer.kind.is_static() {
-              module.importers.push(importer.importer_path.clone());
-            } else {
-              module.dynamic_importers.push(importer.importer_path.clone());
+      .filter_map(|(id, module)| {
+        module.map(|mut module| {
+          if let Some(module) = module.as_normal_mut() {
+            let id = ModuleIdx::from(id);
+            // Note: (Compat to rollup)
+            // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+            let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
+            for importer in &importers {
+              if importer.kind.is_static() {
+                module.importers.push(importer.importer_path.clone());
+              } else {
+                module.dynamic_importers.push(importer.importer_path.clone());
+              }
+            }
+            if !importers.is_empty() {
+              self
+                .shared_context
+                .plugin_driver
+                .set_module_info(&module.id, Arc::new(module.to_module_info()));
             }
           }
-          if !importers.is_empty() {
-            self
-              .shared_context
-              .plugin_driver
-              .set_module_info(&module.id, Arc::new(module.to_module_info()));
-          }
-        }
-        module
+          module
+        })
       })
       .collect();
 

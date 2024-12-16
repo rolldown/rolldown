@@ -1,11 +1,11 @@
-import { expect, test, vi, afterEach } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
 import { sleep } from '@tests/utils'
 
 test.sequential('watch', async () => {
-  const { input, output } = await await createTestInputAndOutput('watch')
+  const { input, output } = await createTestInputAndOutput('watch')
   const watchChangeFn = vi.fn()
   const closeWatcherFn = vi.fn()
   const watcher = watch({
@@ -204,7 +204,7 @@ test.sequential('watch skipWrite', async () => {
 })
 
 test.sequential('PluginContext addWatchFile', async () => {
-  const { input, output, dir } = await createTestInputAndOutput('addWatchFile')
+  const { input, output } = await createTestInputAndOutput('addWatchFile')
   const { input: foo } = await createTestInputAndOutput('addWatchFile-foo')
   const watcher = watch({
     input,

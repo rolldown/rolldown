@@ -3,7 +3,6 @@ import nodePath from 'node:path'
 
 export default defineConfig({
   test: {
-    include: ['**/watch.test.ts'],
     testTimeout: 20000,
     // Disabled, Because the error printed by rust cannot be seen
     disableConsoleIntercept: true,

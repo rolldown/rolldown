@@ -197,7 +197,7 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
                   notify::EventKind::Modify(
                     ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
                   ) => {
-                    tracing::debug!(name= "updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
+                    tracing::debug!(name= "notify updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
                     on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
                     watcher.invalidate();
                   }

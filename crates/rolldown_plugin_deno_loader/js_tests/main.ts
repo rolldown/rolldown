@@ -16,6 +16,7 @@ const configs = [
     output: { minify: false },
     plugins: [
       denoLoaderPlugin({
+        entryPoints: ["./tests/jsr/mod.ts"],
         importMapBaseUrl: import.meta.resolve("./"),
         importMap: await fetch(import.meta.resolve("./deno.json"))
           .then(

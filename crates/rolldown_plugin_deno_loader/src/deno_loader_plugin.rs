@@ -6,11 +6,13 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, PluginContext, PluginContextResolveOptions,
+  HookBuildStartArgs, HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn,
+  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
+  PluginContextResolveOptions,
 };
 
 use import_map::{parse_from_json_with_options, ImportMapOptions};
@@ -34,14 +36,14 @@ enum TypedModuleDetails {
   #[serde(rename = "asserted")]
   Asserted {
     specifier: String,
-    local: String,
+    local: Option<String>,
     #[serde(rename = "mediaType")]
     media_type: DenoMediaType,
   },
   #[serde(rename = "esm")]
   Esm {
-    local: String,
     specifier: String,
+    local: Option<String>,
     #[serde(rename = "mediaType")]
     media_type: DenoMediaType,
   },
@@ -53,14 +55,6 @@ enum TypedModuleDetails {
   },
   #[serde(rename = "node")]
   Node { specifier: String },
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct NpmPackageInfo {
-  name: String,
-  // version: String,
-  // #[serde(rename = "registryUrl")]
-  // registry_url: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -108,26 +102,25 @@ impl From<&DenoMediaType> for ModuleType {
 struct DenoInfoJsonV1 {
   redirects: HashMap<String, String>,
   modules: Vec<ModuleInfo>,
-  #[serde(rename = "npmPackages")]
-  npm_packages: HashMap<String, NpmPackageInfo>,
 }
 
 fn get_deno_info(specifier: &str) -> Result<DenoInfoJsonV1, &'static str> {
-  let output = std::process::Command::new("deno")
-    .args(["info", "--json", specifier])
-    .output()
-    .expect("Failed to execute deno info command");
-
+  let start = Instant::now();
+  let output = match std::process::Command::new("deno").args(["info", "--json", specifier]).output()
+  {
+    Ok(output) => output,
+    Err(_) => return Err("Failed to execute deno info command"),
+  };
   if !output.status.success() {
     return Err("deno info command failed");
   }
-
+  let duration = start.elapsed();
+  println!("Deno info retrieved in {:?} for {}", duration, specifier);
   Ok(serde_json::from_slice(&output.stdout).expect("Failed to parse JSON output"))
 }
 
 #[derive(Debug, Clone)]
 struct DenoResolveResult {
-  npm_package: Option<String>,
   local_path: Option<String>,
   redirected: String,
   module_type: Option<ModuleType>,
@@ -138,22 +131,35 @@ pub struct DenoLoaderPlugin {
   resolve_cache: Mutex<HashMap<String, DenoResolveResult>>,
   pub import_map: String,
   pub import_map_base_url: String,
+  pub entry_points: Vec<String>,
 }
 
 impl Default for DenoLoaderPlugin {
   fn default() -> Self {
-    Self::new(r#"{}"#.to_string(), "file://".to_string())
+    Self::new(r#"{}"#.to_string(), "file://".to_string(), [].to_vec())
   }
 }
 
-fn extract_path_from_specifier(specifier: &str) -> Option<String> {
-  let re: Regex = Regex::new(r"(?:[^:]+:/?)?(?:@[^/]+/)?[^/@]+(?:@[^/]*)?(?:/(.+))?").unwrap();
-  re.captures(specifier).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+fn extract_package_and_path(specifier: &str) -> (Option<String>, Option<String>) {
+  let re = Regex::new(r"(?:[^:]+:/?)?(@?[^/@]+/[^/@]+|[^/@]+)(?:@[^/]*)?(?:/(.+))?").unwrap();
+
+  if let Some(caps) = re.captures(specifier) {
+    let package = caps.get(1).map(|m| m.as_str().to_string());
+    let path = caps.get(2).map(|m| m.as_str().to_string());
+    (package, path)
+  } else {
+    (None, None)
+  }
 }
 
 impl DenoLoaderPlugin {
-  pub fn new(import_map: String, import_map_base_url: String) -> Self {
-    Self { resolve_cache: Mutex::new(HashMap::new()), import_map, import_map_base_url }
+  pub fn new(import_map: String, import_map_base_url: String, entry_points: Vec<String>) -> Self {
+    Self {
+      resolve_cache: Mutex::new(HashMap::new()),
+      import_map,
+      import_map_base_url,
+      entry_points,
+    }
   }
 
   fn get_cached_info(&self, specifier: &str) -> Result<DenoResolveResult, &'static str> {
@@ -169,9 +175,8 @@ impl DenoLoaderPlugin {
           TypedModuleDetails::Asserted { media_type, specifier: s, local }
           | TypedModuleDetails::Esm { media_type, specifier: s, local } => {
             let result = DenoResolveResult {
-              local_path: Some(local.clone()),
+              local_path: local.as_ref().map(|l| l.to_owned()),
               redirected: s.clone(),
-              npm_package: None,
               module_type: Some(media_type.into()),
             };
             cache.insert(s.clone(), result.clone());
@@ -181,33 +186,9 @@ impl DenoLoaderPlugin {
               }
             }
           }
-          TypedModuleDetails::Npm { specifier, npm_package } => {
-            let npm_package_base = info.npm_packages.get(npm_package).map(|pkg| pkg.name.clone());
-            let npm_package_path = extract_path_from_specifier(specifier);
-            let npm_package = match (npm_package_base, npm_package_path) {
-              (Some(base), Some(path)) => format!("{}/{}", base, path),
-              (Some(base), None) => base,
-              _ => npm_package.to_string(),
-            };
-            let result = DenoResolveResult {
-              local_path: None,
-              redirected: specifier.clone(),
-              npm_package: Some(npm_package),
-              module_type: None,
-            };
-            cache.insert(specifier.clone(), result.clone());
-            for (key, value) in &info.redirects {
-              if value == specifier {
-                cache.insert(key.clone(), result.clone());
-              }
-            }
-          }
+          TypedModuleDetails::Npm { specifier: _s, npm_package: _n } => {}
         },
-        ModuleInfo::Error { specifier: s, error } => {
-          eprintln!("Error for specifier {}: {}", s, error);
-          // Optionally, you could return an error here instead of continuing
-          // return Err("Error in module resolution");
-        }
+        ModuleInfo::Error { specifier: _s, error: _e } => {}
       }
     }
 
@@ -218,6 +199,19 @@ impl DenoLoaderPlugin {
 impl Plugin for DenoLoaderPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:deno-loader")
+  }
+
+  fn build_start(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookBuildStartArgs<'_>,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async {
+      for ele in &self.entry_points {
+        let _ = self.get_cached_info(ele);
+      }
+      Ok(())
+    }
   }
 
   fn resolve_id(
@@ -251,7 +245,14 @@ impl Plugin for DenoLoaderPlugin {
         .import_map;
 
         import_map
-          .resolve(&id, &import_map_base_url)
+          .resolve(
+            &id,
+            &args
+              .importer
+              .as_ref()
+              .and_then(|s| url::Url::parse(s).ok())
+              .unwrap_or_else(|| import_map_base_url.clone()),
+          )
           .ok()
           .map(|url| url.to_string())
           .unwrap_or_else(|| id.to_string())
@@ -285,26 +286,28 @@ impl Plugin for DenoLoaderPlugin {
           ..Default::default()
         }));
       } else if maybe_resolved.starts_with("npm:") {
-        let cached: DenoResolveResult = self.get_cached_info(&maybe_resolved).expect("info failed");
-
-        if let Some(npm_package) = cached.npm_package {
-          return Ok(
-            ctx
-              .resolve(
-                &npm_package,
-                None,
-                Some(PluginContextResolveOptions {
-                  import_kind: args.kind,
-                  skip_self: true,
-                  custom: Arc::clone(&args.custom),
-                }),
-              )
-              .await?
-              .map(|resolved_id| {
-                Some(HookResolveIdOutput { id: resolved_id.id.to_string(), ..Default::default() })
-              })?,
-          );
-        }
+        let (package, path) = extract_package_and_path(&maybe_resolved);
+        let npm_package = match (package, path) {
+          (Some(base), Some(path)) => format!("{}/{}", base, path),
+          (Some(base), None) => base,
+          _ => maybe_resolved.to_string(),
+        };
+        return Ok(
+          ctx
+            .resolve(
+              &npm_package,
+              None,
+              Some(PluginContextResolveOptions {
+                import_kind: args.kind,
+                skip_self: true,
+                custom: Arc::clone(&args.custom),
+              }),
+            )
+            .await?
+            .map(|resolved_id| {
+              Some(HookResolveIdOutput { id: resolved_id.id.to_string(), ..Default::default() })
+            })?,
+        );
       } else if maybe_resolved.starts_with("http:") || maybe_resolved.starts_with("https:") {
         return Ok(Some(HookResolveIdOutput {
           id: maybe_resolved.to_string(),

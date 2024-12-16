@@ -229,6 +229,7 @@ export interface BindingChecksOptions {
 export interface BindingDenoLoaderPluginConfig {
   importMap: string
   importMapBaseUrl: string
+  entryPoints: Array<string>
 }
 
 export interface BindingEmittedAsset {

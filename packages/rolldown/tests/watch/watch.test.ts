@@ -47,7 +47,9 @@ test.sequential('watch', async () => {
 })
 
 test.sequential('watch files after scan stage', async () => {
-  const { input, output } = await createTestInputAndOutput('watch-files-after-scan')
+  const { input, output } = await createTestInputAndOutput(
+    'watch-files-after-scan',
+  )
   const watcher = watch({
     input,
     output: { file: output },
@@ -154,7 +156,9 @@ test.sequential('watch event', async () => {
 })
 
 test.sequential('watch event avoid deadlock #2806', async () => {
-  const { input, output } = await createTestInputAndOutput('watch-event-avoid-dead-lock')
+  const { input, output } = await createTestInputAndOutput(
+    'watch-event-avoid-dead-lock',
+  )
   const watcher = watch({
     input,
     output: { file: output },
@@ -261,7 +265,10 @@ test.sequential('watch include/exclude', async () => {
 
 test.sequential('error handling', async () => {
   // first build error, the watching could be work with recover error
-  const { input, output } = await createTestInputAndOutput('error-handling', 'conso le.log(1)')
+  const { input, output } = await createTestInputAndOutput(
+    'error-handling',
+    'conso le.log(1)',
+  )
 
   const watcher = watch({
     input,
@@ -274,7 +281,6 @@ test.sequential('error handling', async () => {
     }
   })
   await waitUtil(() => {
-    console.log(errors)
     // First build should error
     expect(errors.length).toBe(1)
     expect(errors[0].includes('PARSE_ERROR')).toBe(true)
@@ -303,7 +309,9 @@ test.sequential('error handling', async () => {
 })
 
 test.sequential('error handling + plugin error', async () => {
-  const { input, output } = await createTestInputAndOutput('error-handling-plugin-error')
+  const { input, output } = await createTestInputAndOutput(
+    'error-handling-plugin-error',
+  )
   const watcher = watch({
     input,
     output: { file: output },
@@ -339,8 +347,14 @@ test.sequential('error handling + plugin error', async () => {
 })
 
 test.sequential('watch multiply options', async () => {
-  const { input, output, outputDir } = await createTestInputAndOutput('watch-multiply-options')
-  const { input: foo, output: fooOutput, outputDir: fooOutputDir } = await createTestInputAndOutput('watch-multiply-options-foo')
+  const { input, output, outputDir } = await createTestInputAndOutput(
+    'watch-multiply-options',
+  )
+  const {
+    input: foo,
+    output: fooOutput,
+    outputDir: fooOutputDir,
+  } = await createTestInputAndOutput('watch-multiply-options-foo')
   const watcher = watch([
     {
       input,
@@ -384,8 +398,12 @@ test.sequential('watch multiply options', async () => {
 })
 
 test.sequential('warning for multiply notify options', async () => {
-  const { input, output, } = await createTestInputAndOutput('watch-multiply-options-warning')
-  const { input: foo } = await createTestInputAndOutput('watch-multiply-options-warning-foo')
+  const { input, output } = await createTestInputAndOutput(
+    'watch-multiply-options-warning',
+  )
+  const { input: foo } = await createTestInputAndOutput(
+    'watch-multiply-options-warning-foo',
+  )
   const onLogFn = vi.fn()
   const watcher = watch([
     {
@@ -425,7 +443,9 @@ test.sequential('warning for multiply notify options', async () => {
 })
 
 test.sequential('watch close immediately', async () => {
-  const { input, output, } = await createTestInputAndOutput('watch-close-immediately')
+  const { input, output } = await createTestInputAndOutput(
+    'watch-close-immediately',
+  )
   const watcher = watch({
     input,
     output: { file: output },

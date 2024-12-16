@@ -146,6 +146,7 @@ impl WatcherImpl {
     // TODO the notify watcher should be dropped, because the stop method is private
     let mut inner = self.notify_watcher.lock().await;
     for path in self.notify_watch_files.iter() {
+      tracing::debug!(name= "notify close ", path = ?path.as_str());
       inner.unwatch(Path::new(path.as_str()))?;
     }
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::run`

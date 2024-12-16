@@ -14,7 +14,7 @@ afterEach(async () => {
   fs.writeFileSync(input, 'console.log(1)\n')
   fs.writeFileSync(foo, 'console.log(1)\n')
   // TODO: find a way to avoid emit the change event at next test
-  await sleep(60)
+  await sleep(100)
 })
 
 test.sequential('watch', async () => {

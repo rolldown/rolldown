@@ -439,7 +439,7 @@ async function createTestInputAndOutput(dirname: string, content?: string) {
   fs.mkdirSync(dir, { recursive: true })
   const input = path.join(dir, './main.js')
   fs.writeFileSync(input, content || 'console.log(1)')
-  sleep(60) // TODO: find a way to avoid emit the change event at next test
+  await sleep(60) // TODO: find a way to avoid emit the change event at next test
   const outputDir = path.join(dir, './dist')
   const output = path.join(outputDir, 'main.js')
   return { input, output, dir, outputDir }

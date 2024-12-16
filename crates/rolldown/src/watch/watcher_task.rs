@@ -11,10 +11,11 @@ use crate::{Bundler, SharedOptions};
 
 use super::emitter::SharedWatcherEmitter;
 use arcstr::ArcStr;
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rolldown_common::{
   BundleEndEventData, BundleEvent, OutputsDiagnostics, WatcherChangeKind, WatcherEvent,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -23,12 +24,26 @@ pub struct WatcherTask {
   pub emitter: SharedWatcherEmitter,
   bundler: Arc<Mutex<Bundler>>,
   invalidate: AtomicBool,
+  notify_watcher: Arc<Mutex<RecommendedWatcher>>,
+  notify_watch_files: Arc<FxDashSet<ArcStr>>,
   pub watch_files: FxDashSet<ArcStr>,
 }
 
 impl WatcherTask {
-  pub fn new(bundler: Arc<Mutex<Bundler>>, emitter: SharedWatcherEmitter) -> Self {
-    Self { emitter, bundler, invalidate: AtomicBool::new(true), watch_files: FxDashSet::default() }
+  pub fn new(
+    bundler: Arc<Mutex<Bundler>>,
+    emitter: SharedWatcherEmitter,
+    notify_watcher: Arc<Mutex<RecommendedWatcher>>,
+    notify_watched_files: Arc<FxDashSet<ArcStr>>,
+  ) -> Self {
+    Self {
+      emitter,
+      bundler,
+      invalidate: AtomicBool::new(true),
+      watch_files: FxDashSet::default(),
+      notify_watcher,
+      notify_watch_files: notify_watched_files,
+    }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -47,7 +62,7 @@ impl WatcherTask {
     let result = {
       let result = bundler.scan().await;
       // FIXME(hyf0): probably should have a more official API/better way to get watch files
-      self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options);
+      self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
       match result {
         Ok(scan_stage_output) => {
           if bundler.options.watch.skip_write {
@@ -56,7 +71,7 @@ impl WatcherTask {
             // avoid watching scan stage files twice
             bundler.plugin_driver.watch_files.clear();
             let output = bundler.bundle_write(scan_stage_output).await;
-            self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options);
+            self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
             match output {
               Ok(_) => Ok(()),
               Err(errs) => Err(errs),
@@ -88,7 +103,13 @@ impl WatcherTask {
     Ok(())
   }
 
-  fn watch_files(&self, files: &Arc<FxDashSet<ArcStr>>, options: &SharedOptions) {
+  async fn watch_files(
+    &self,
+    files: &Arc<FxDashSet<ArcStr>>,
+    options: &SharedOptions,
+  ) -> BuildResult<()> {
+    let mut notify_watcher = self.notify_watcher.lock().await;
+
     for file in files.iter() {
       if self.watch_files.contains(file.as_str()) {
         continue;
@@ -106,9 +127,27 @@ impl WatcherTask {
         .inner()
         {
           self.watch_files.insert(file.clone());
+          // we should skip the file that is already watched, here here some reasons:
+          // - The watching files has a ms level overhead.
+          // - Watching the same files multiple times will cost more overhead.
+          // TODO: tracking https://github.com/notify-rs/notify/issues/653
+          if self.notify_watch_files.contains(file.as_str()) {
+            continue;
+          }
+          let path = Path::new(file.as_str());
+          if path.exists() {
+            tracing::debug!(name= "notify watch ", path = ?path);
+            notify_watcher.watch(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
+            self.notify_watch_files.insert(file.clone());
+          }
         }
       }
     }
+
+    // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
+    std::mem::drop(notify_watcher);
+
+    Ok(())
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

@@ -2407,7 +2407,6 @@ dependencies = [
  "arcstr",
  "css-module-lexer",
  "daachorse",
- "dashmap 6.1.0",
  "dunce",
  "futures",
  "glob",

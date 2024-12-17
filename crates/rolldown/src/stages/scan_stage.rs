@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ImportKind, ModuleIdx, ModuleTable,
   ResolvedId, RuntimeModuleBrief, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
@@ -63,7 +62,7 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
     )?;
 
-    let user_entries = self.resolve_user_defined_entries().await??;
+    let user_entries = self.resolve_user_defined_entries().await?;
 
     let ModuleLoaderOutput {
       module_table,
@@ -88,10 +87,9 @@ impl ScanStage {
 
   /// Resolve `InputOptions.input`
   #[tracing::instrument(level = "debug", skip_all)]
-  #[allow(clippy::type_complexity)]
   async fn resolve_user_defined_entries(
     &mut self,
-  ) -> Result<BuildResult<Vec<(Option<ArcStr>, ResolvedId)>>> {
+  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
@@ -99,6 +97,7 @@ impl ScanStage {
       struct Args<'a> {
         specifier: &'a str,
       }
+
       let args = Args { specifier: &input_item.import };
       let resolved = resolve_id(
         resolver,
@@ -140,17 +139,15 @@ impl ScanStage {
           ResolveError::PackagePathNotExported(..) => {
             errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
-          _ => {
-            return Err(e.into());
-          }
+          _ => return Err(e).map_err_to_unhandleable()?,
         },
       }
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors.into()));
+      Err(errors)?;
     }
 
-    Ok(Ok(ret))
+    Ok(ret)
   }
 }

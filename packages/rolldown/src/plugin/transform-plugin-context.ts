@@ -16,19 +16,13 @@ import type { Plugin } from './index'
 import { SourceMap } from '../types/rolldown-output'
 
 export class TransformPluginContext extends PluginContext {
-  error: (
-    error: RollupError | string,
-    pos?: number | { column: number; line: number },
-  ) => never
-  getCombinedSourcemap: () => SourceMap
-
   constructor(
     context: BindingPluginContext,
     plugin: Plugin,
     data: PluginContextData,
-    inner: BindingTransformPluginContext,
-    moduleId: string,
-    moduleSource: string,
+    private inner: BindingTransformPluginContext,
+    private moduleId: string,
+    private moduleSource: string,
     onLog: LogHandler,
     LogLevelOption: LogLevelOption,
   ) {
@@ -46,16 +40,20 @@ export class TransformPluginContext extends PluginContext {
     this.debug = getLogHandler(this.debug)
     this.warn = getLogHandler(this.warn)
     this.info = getLogHandler(this.info)
-    this.error = (
-      e: RollupError | string,
-      pos?: number | { column: number; line: number },
-    ): never => {
-      if (typeof e === 'string') e = { message: e }
-      if (pos) augmentCodeLocation(e, pos, moduleSource, moduleId)
-      e.id = moduleId
-      e.hook = 'transform'
-      return error(logPluginError(normalizeLog(e), plugin.name || 'unknown'))
-    }
-    this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
+  }
+
+  error(
+    e: RollupError | string,
+    pos?: number | { column: number; line: number },
+  ): never {
+    if (typeof e === 'string') e = { message: e }
+    if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId)
+    e.id = this.moduleId
+    e.hook = 'transform'
+    return error(logPluginError(normalizeLog(e), super.pluginName))
+  }
+
+  public getCombinedSourcemap(): SourceMap {
+    return JSON.parse(this.inner.getCombinedSourcemap())
   }
 }

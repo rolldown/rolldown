@@ -59,6 +59,7 @@ export class PluginDriver {
               name,
               logLevel,
             ),
+            pluginName: name,
           },
           inputOptions,
         )

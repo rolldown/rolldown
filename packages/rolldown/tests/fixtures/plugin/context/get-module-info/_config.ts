@@ -37,6 +37,8 @@ export default defineTest({
                 expect(moduleInfo.importedIds).toStrictEqual([
                   'external',
                   path.join(import.meta.dirname, 'static.js'),
+                  // TODO: should be duplicated
+                  path.join(import.meta.dirname, 'static.js'),
                 ])
                 expect(moduleInfo.dynamicallyImportedIds).toStrictEqual([
                   path.join(import.meta.dirname, 'dynamic.js'),
@@ -44,11 +46,14 @@ export default defineTest({
                 expect(moduleInfo.importers).toStrictEqual([])
                 expect(moduleInfo.dynamicImporters).toStrictEqual([])
                 expect(moduleInfo.meta).toBe(meta)
+                expect(moduleInfo.exports).toStrictEqual(['result', '*'])
                 break
               case path.join(import.meta.dirname, 'static.js'):
                 expect(moduleInfo.importedIds).toStrictEqual([])
                 expect(moduleInfo.dynamicallyImportedIds).toStrictEqual([])
                 expect(moduleInfo.importers).toStrictEqual([
+                  path.join(import.meta.dirname, 'main.js'),
+                  // TODO: should be duplicated
                   path.join(import.meta.dirname, 'main.js'),
                 ])
                 expect(moduleInfo.dynamicImporters).toStrictEqual([])

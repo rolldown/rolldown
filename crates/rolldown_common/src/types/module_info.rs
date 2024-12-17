@@ -11,4 +11,5 @@ pub struct ModuleInfo {
   pub dynamic_importers: Vec<ModuleId>,
   pub imported_ids: Vec<ModuleId>,
   pub dynamically_imported_ids: Vec<ModuleId>,
+  pub exports: Vec<ArcStr>,
 }

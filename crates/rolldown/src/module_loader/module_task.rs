@@ -102,6 +102,7 @@ impl ModuleTask {
         dynamic_importers: vec![],
         imported_ids: vec![],
         dynamically_imported_ids: vec![],
+        exports: vec![],
       }),
     );
 
@@ -256,7 +257,7 @@ impl ModuleTask {
       asset_view,
     };
 
-    let module_info = Arc::new(module.to_module_info());
+    let module_info = Arc::new(module.to_module_info(Some(&raw_import_records)));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info)).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(&module.id).await?;

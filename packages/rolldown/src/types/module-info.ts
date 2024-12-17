@@ -11,5 +11,6 @@ export interface ModuleInfo extends ModuleOptions {
   dynamicImporters: string[]
   importedIds: string[]
   dynamicallyImportedIds: string[]
+  exports: string[]
   isEntry: boolean
 }

@@ -188,6 +188,7 @@ impl ModuleLoader {
               dynamic_importers: vec![],
               imported_ids: vec![],
               dynamically_imported_ids: vec![],
+              exports: vec![],
             }),
           );
 
@@ -429,7 +430,7 @@ impl ModuleLoader {
             self
               .shared_context
               .plugin_driver
-              .set_module_info(&module.id, Arc::new(module.to_module_info()));
+              .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
           }
         }
 

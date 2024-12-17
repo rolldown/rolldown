@@ -31,6 +31,7 @@ export declare class BindingModuleInfo {
   dynamicImporters: Array<string>
   importedIds: Array<string>
   dynamicallyImportedIds: Array<string>
+  exports: Array<string>
   isEntry: boolean
   get code(): string | null
 }

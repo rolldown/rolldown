@@ -5,13 +5,14 @@ use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, Comments, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, StmtInfo,
+  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use either::Either;
 use oxc::codegen::LegalComment;
+use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_rstr::Rstr;
 use rolldown_sourcemap::collapse_sourcemaps;
@@ -68,7 +69,10 @@ impl NormalModule {
     }
   }
 
-  pub fn to_module_info(&self) -> ModuleInfo {
+  pub fn to_module_info(
+    &self,
+    raw_import_records: Option<&IndexVec<ImportRecordIdx, RawImportRecord>>,
+  ) -> ModuleInfo {
     ModuleInfo {
       code: Some(self.ecma_view.source.clone()),
       id: self.id.clone(),
@@ -85,6 +89,28 @@ impl NormalModule {
       },
       imported_ids: self.ecma_view.imported_ids.clone(),
       dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
+      // https://github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/Module.ts#L331
+      exports: {
+        let mut exports =
+          self.ecma_view.named_exports.keys().map(|e| e.as_str().into()).collect::<Vec<_>>();
+        if let Some(e) = raw_import_records {
+          exports.extend(
+            e.iter()
+              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+              .map(|_| "*".into()),
+          );
+        } else {
+          exports.extend(
+            self
+              .ecma_view
+              .import_records
+              .iter()
+              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+              .map(|_| "*".into()),
+          );
+        }
+        exports
+      },
     }
   }
 

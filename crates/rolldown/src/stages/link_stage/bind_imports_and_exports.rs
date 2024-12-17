@@ -48,6 +48,7 @@ pub enum MatchImportKind {
   // "sourceIndex" and "ref" are in use
   Normal {
     symbol: SymbolRef,
+    reexports: Vec<SymbolRef>,
   },
   // "namespaceRef" and "alias" are in use
   Namespace {
@@ -454,7 +455,9 @@ impl BindImportsAndExportsContext<'_> {
             exporter,
           ));
         }
-        MatchImportKind::Normal { symbol } => {
+        MatchImportKind::Normal { symbol, .. } => {
+          // let meta = &mut self.metas[module_id];
+
           self.symbol_db.link(*imported_as_ref, symbol);
         }
         MatchImportKind::Namespace { namespace_ref } => {
@@ -545,6 +548,7 @@ impl BindImportsAndExportsContext<'_> {
     let _enter = tracking_span.enter();
 
     let mut ambiguous_results = vec![];
+    let mut reexports = vec![];
     let ret = loop {
       for prev_tracker in ctx.tracker_stack.iter().rev() {
         if prev_tracker.importer == tracker.importer
@@ -600,7 +604,8 @@ impl BindImportsAndExportsContext<'_> {
               );
               ambiguous_results.push(ambiguous_result);
             } else {
-              ambiguous_results.push(MatchImportKind::Normal { symbol: *ambiguous_ref });
+              ambiguous_results
+                .push(MatchImportKind::Normal { symbol: *ambiguous_ref, reexports: vec![] });
             }
           }
 
@@ -612,19 +617,23 @@ impl BindImportsAndExportsContext<'_> {
             let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_id];
             match &self.index_modules[rec.resolved_module] {
               Module::External(_) => {
-                break MatchImportKind::Normal { symbol: another_named_import.imported_as };
+                break MatchImportKind::Normal {
+                  symbol: another_named_import.imported_as,
+                  reexports: vec![],
+                };
               }
               Module::Normal(importee) => {
                 tracker.importee = importee.idx;
                 tracker.importer = owner.idx();
                 tracker.imported = another_named_import.imported.clone();
                 tracker.imported_as = another_named_import.imported_as;
+                reexports.push(another_named_import.imported_as);
                 continue;
               }
             }
           }
 
-          break MatchImportKind::Normal { symbol };
+          break MatchImportKind::Normal { symbol, reexports };
         }
         ImportStatus::_CommonJSWithoutExports => todo!(),
         ImportStatus::_Disabled => todo!(),
@@ -632,7 +641,7 @@ impl BindImportsAndExportsContext<'_> {
           if self.options.format.keep_esm_import_export_syntax() {
             // Imports from external modules should not be converted to CommonJS
             // if the output format preserves the original ES6 import statements
-            break MatchImportKind::Normal { symbol: tracker.imported_as };
+            break MatchImportKind::Normal { symbol: tracker.imported_as, reexports: vec![] };
           }
 
           match &tracker.imported {
@@ -652,13 +661,13 @@ impl BindImportsAndExportsContext<'_> {
 
     for ambiguous_result in &ambiguous_results {
       if *ambiguous_result != ret {
-        if let MatchImportKind::Normal { symbol } = ret {
+        if let MatchImportKind::Normal { symbol, .. } = ret {
           return MatchImportKind::Ambiguous {
             symbol_ref: symbol,
             potentially_ambiguous_symbol_refs: ambiguous_results
               .iter()
               .filter_map(|kind| match *kind {
-                MatchImportKind::Normal { symbol } => Some(symbol),
+                MatchImportKind::Normal { symbol, .. } => Some(symbol),
                 MatchImportKind::Namespace { namespace_ref }
                 | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
                 _ => None,
@@ -687,7 +696,7 @@ impl BindImportsAndExportsContext<'_> {
                   imported.clone().to_string().into(),
                 )
               });
-            return MatchImportKind::Normal { symbol: *shimmed_symbol_ref };
+            return MatchImportKind::Normal { symbol: *shimmed_symbol_ref, reexports: vec![] };
           }
         }
       }

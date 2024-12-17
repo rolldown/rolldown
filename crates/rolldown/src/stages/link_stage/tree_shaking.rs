@@ -189,7 +189,7 @@ impl LinkStage<'_> {
     );
   }
 
-  fn determine_side_effects(&mut self) {
+  pub fn determine_side_effects(&mut self) {
     #[derive(Debug, Clone, Copy)]
     enum SideEffectCache {
       None,

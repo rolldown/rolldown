@@ -105,7 +105,6 @@ impl WatcherImpl {
     }
 
     let future = async move {
-      self.rerun.store(false, Ordering::Relaxed);
       let _ = self.run().await;
     };
 
@@ -134,6 +133,11 @@ impl WatcherImpl {
 
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
+
+    if self.rerun.load(Ordering::Relaxed) {
+      self.rerun.store(false, Ordering::Relaxed);
+      self.invalidate();
+    }
 
     Ok(())
   }

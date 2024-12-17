@@ -19,6 +19,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
@@ -184,10 +185,10 @@ impl ModuleLoader {
               code: None,
               id,
               is_entry: false,
-              importers: vec![],
-              dynamic_importers: vec![],
-              imported_ids: vec![],
-              dynamically_imported_ids: vec![],
+              importers: FxIndexSet::default(),
+              dynamic_importers: FxIndexSet::default(),
+              imported_ids: FxIndexSet::default(),
+              dynamically_imported_ids: FxIndexSet::default(),
               exports: vec![],
             }),
           );
@@ -421,9 +422,9 @@ impl ModuleLoader {
           let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
           for importer in &importers {
             if importer.kind.is_static() {
-              module.importers.push(importer.importer_path.clone());
+              module.importers.insert(importer.importer_path.clone());
             } else {
-              module.dynamic_importers.push(importer.importer_path.clone());
+              module.dynamic_importers.insert(importer.importer_path.clone());
             }
           }
           if !importers.is_empty() {

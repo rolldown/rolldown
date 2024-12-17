@@ -402,17 +402,19 @@ impl ModuleLoader {
         acc
       },
     );
+
     self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
 
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
-      .flatten()
       .enumerate()
-      .map(|(id, mut module)| {
-        let id = ModuleIdx::from(id);
+      .map(|(id, module)| {
+        let mut module = module.expect("Module tasks did't complete as expected");
+
         if let Some(module) = module.as_normal_mut() {
+          let id = ModuleIdx::from(id);
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
           let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
@@ -430,6 +432,7 @@ impl ModuleLoader {
               .set_module_info(&module.id, Arc::new(module.to_module_info()));
           }
         }
+
         module
       })
       .collect();

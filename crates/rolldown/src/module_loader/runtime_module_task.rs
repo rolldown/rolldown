@@ -12,6 +12,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -110,10 +111,10 @@ impl RuntimeModuleTask {
         import_records: IndexVec::default(),
         sourcemap_chain: vec![],
         // The internal runtime module `importers/imported` should be skip.
-        importers: vec![],
-        dynamic_importers: vec![],
-        imported_ids: vec![],
-        dynamically_imported_ids: vec![],
+        importers: FxIndexSet::default(),
+        dynamic_importers: FxIndexSet::default(),
+        imported_ids: FxIndexSet::default(),
+        dynamically_imported_ids: FxIndexSet::default(),
         side_effects: DeterminedSideEffects::Analyzed(false),
         named_imports,
         named_exports,

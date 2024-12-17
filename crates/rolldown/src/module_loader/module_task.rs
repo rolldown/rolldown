@@ -9,6 +9,7 @@ use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   concat_string,
   ecmascript::{self, legitimize_identifier_name},
+  indexmap::FxIndexSet,
 };
 use std::sync::Arc;
 use sugar_path::SugarPath;
@@ -98,10 +99,10 @@ impl ModuleTask {
         code: None,
         id: id.clone(),
         is_entry: self.is_user_defined_entry,
-        importers: vec![],
-        dynamic_importers: vec![],
-        imported_ids: vec![],
-        dynamically_imported_ids: vec![],
+        importers: FxIndexSet::default(),
+        dynamic_importers: FxIndexSet::default(),
+        imported_ids: FxIndexSet::default(),
+        dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
       }),
     );
@@ -229,10 +230,10 @@ impl ModuleTask {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-            ecma_view.imported_ids.push(ArcStr::clone(&info.id).into());
+            ecma_view.imported_ids.insert(ArcStr::clone(&info.id).into());
           }
           ImportKind::DynamicImport => {
-            ecma_view.dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
+            ecma_view.dynamically_imported_ids.insert(ArcStr::clone(&info.id).into());
           }
           // for a none css module, we should not have `at-import` or `url-import`
           ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),

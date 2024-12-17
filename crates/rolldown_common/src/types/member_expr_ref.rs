@@ -28,14 +28,9 @@ impl MemberExprRef {
     resolved_map: &FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
   ) -> Option<SymbolRef> {
     if let Some((resolved, _)) = resolved_map.get(&self.span) {
-      match resolved {
-        Some(sym_ref) => Some(*sym_ref),
-        None => {
-          // This member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-          // It would be rewrite to `undefined` in the final code.
-          None
-        }
-      }
+      // This member expression resolve to a ambiguous export if `resolved` equals to `None`, which means it actually resolve to nothing.
+      // It would be rewrite to `undefined` in the final code.
+      resolved.map(|sym_ref| sym_ref)
     } else {
       Some(self.object_ref)
     }

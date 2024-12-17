@@ -1,7 +1,4 @@
-use memchr::memchr2;
 use std::{borrow::Cow, ffi::OsStr, path::Path};
-
-use sugar_path::SugarPath;
 
 pub trait PathExt {
   fn expect_to_str(&self) -> &str;
@@ -19,8 +16,13 @@ impl PathExt for std::path::Path {
   }
 
   fn expect_to_slash(&self) -> String {
-    self
-      .to_slash()
+    let path = if std::path::MAIN_SEPARATOR == '/' {
+      self.to_str().map(Cow::Borrowed)
+    } else {
+      self.to_str().map(|s| Cow::Owned(s.replace(std::path::MAIN_SEPARATOR, "/")))
+    };
+
+    path
       .unwrap_or_else(|| panic!("Failed to convert {:?} to slash str", self.display()))
       .into_owned()
   }
@@ -60,15 +62,4 @@ fn test_representative_file_name() {
 
   let path = cwd.join("vue").join("mod.ts");
   assert_eq!(path.representative_file_name(), "vue");
-}
-
-#[inline]
-/// ref https://github.com/rolldown/vite/blob/454c8fff9f7115ed29281c2d927366280508a0ab/packages/vite/src/shared/utils.ts#L31-L34
-/// https://regex101.com/delete/E5Xk8cGCIde8tiY8I4TOe9eWqgTxyQj006TK
-pub fn clean_url(v: &str) -> &str {
-  if let Some(index) = memchr2(b'?', b'#', v.as_bytes()) {
-    &v[0..index]
-  } else {
-    v
-  }
 }

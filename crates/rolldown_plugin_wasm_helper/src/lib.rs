@@ -1,10 +1,11 @@
 use std::{borrow::Cow, fs, path::Path};
 
-use rolldown_common::{EmittedAsset, StrOrBytes};
+use rolldown_common::{EmittedAsset, ModuleType, StrOrBytes};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
 };
+use rolldown_utils::concat_string;
 
 const WASM_HELPER_ID: &str = "\0vite/wasm-helper.js";
 
@@ -18,11 +19,18 @@ impl Plugin for WasmHelperPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == WASM_HELPER_ID {
       Ok(Some(HookResolveIdOutput { id: WASM_HELPER_ID.to_string(), ..Default::default() }))
+    } else if args.specifier.ends_with(".wasm?init") {
+      let id = args.specifier.replace("?init", "");
+      let resolved_id = ctx.resolve(&id, args.importer, None).await??;
+      Ok(Some(HookResolveIdOutput {
+        id: concat_string!(resolved_id.id, "?init"),
+        ..Default::default()
+      }))
     } else {
       Ok(None)
     }
@@ -51,6 +59,7 @@ impl Plugin for WasmHelperPlugin {
           r#"import initWasm from "{WASM_HELPER_ID}"; 
           export default opts => initWasm(opts, "{url}")"#
         ),
+        module_type: Some(ModuleType::Js),
         ..Default::default()
       }));
     }

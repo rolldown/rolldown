@@ -44,6 +44,7 @@ export default defineTest({
                 expect(moduleInfo.importers).toStrictEqual([])
                 expect(moduleInfo.dynamicImporters).toStrictEqual([])
                 expect(moduleInfo.meta).toBe(meta)
+                expect(moduleInfo.exports).toStrictEqual(['result', '*'])
                 break
               case path.join(import.meta.dirname, 'static.js'):
                 expect(moduleInfo.importedIds).toStrictEqual([])

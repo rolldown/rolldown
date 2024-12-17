@@ -7,7 +7,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "./file.ping" in entry.js
+[UNRESOLVED_IMPORT] Error: Could not resolve "./file.ping" in entry.js
     ╭─[entry.js:10:8]
     │
  10 │ import "./file.ping";
@@ -19,7 +19,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "/dir/file.gif" in entry.js
+[UNRESOLVED_IMPORT] Error: Could not resolve "/dir/file.gif" in entry.js
    ╭─[entry.js:9:8]
    │
  9 │ import "/dir/file.gif";
@@ -31,7 +31,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "/sassets/images/test.jpg" in entry.js
+[UNRESOLVED_IMPORT] Error: Could not resolve "/sassets/images/test.jpg" in entry.js
    ╭─[entry.js:8:8]
    │
  8 │ import "/sassets/images/test.jpg";

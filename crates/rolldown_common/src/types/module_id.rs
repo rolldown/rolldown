@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use arcstr::ArcStr;
-use rolldown_utils::path_ext::PathExt;
+use rolldown_std_utils::PathExt;
 use sugar_path::SugarPath;
 
 /// `ModuleId` is the unique string identifier for each module.

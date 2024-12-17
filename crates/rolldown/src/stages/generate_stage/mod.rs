@@ -13,12 +13,11 @@ use rolldown_common::{
   ImportMetaRolldownAssetReplacer, Module, PreliminaryFilename,
 };
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_std_utils::{PathBufExt, PathExt};
 use rolldown_utils::{
   concat_string,
   extract_hash_pattern::extract_hash_pattern,
   hash_placeholder::HashPlaceholderGenerator,
-  path_buf_ext::PathBufExt,
-  path_ext::PathExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
   sanitize_file_name::sanitize_file_name,
 };
@@ -64,6 +63,8 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    self.plugin_driver.render_start(self.options).await?;
+
     let mut chunk_graph = self.generate_chunks().await?;
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;

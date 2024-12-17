@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ImportKind, ModuleIdx, ModuleTable,
   ResolvedId, RuntimeModuleBrief, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
@@ -51,22 +50,19 @@ impl ScanStage {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::format_err!("You must supply options.input to rolldown").into());
+      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
+    self.plugin_driver.build_start(&self.options).await?;
+
     let module_loader = ModuleLoader::new(
-      Arc::clone(&self.options),
-      Arc::clone(&self.plugin_driver),
       self.fs,
+      Arc::clone(&self.options),
       Arc::clone(&self.resolver),
+      Arc::clone(&self.plugin_driver),
     )?;
 
-    let user_entries = match self.resolve_user_defined_entries().await? {
-      Ok(entries) => entries,
-      Err(errors) => {
-        return Err(errors);
-      }
-    };
+    let user_entries = self.resolve_user_defined_entries().await?;
 
     let ModuleLoaderOutput {
       module_table,
@@ -76,12 +72,7 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       dynamic_import_exports_usage_map,
-    } = match module_loader.fetch_all_modules(user_entries).await? {
-      Ok(output) => output,
-      Err(errors) => {
-        return Err(errors);
-      }
-    };
+    } = module_loader.fetch_all_modules(user_entries).await?;
 
     Ok(ScanStageOutput {
       module_table,
@@ -95,12 +86,10 @@ impl ScanStage {
   }
 
   /// Resolve `InputOptions.input`
-
   #[tracing::instrument(level = "debug", skip_all)]
-  #[allow(clippy::type_complexity)]
   async fn resolve_user_defined_entries(
     &mut self,
-  ) -> Result<BuildResult<Vec<(Option<ArcStr>, ResolvedId)>>> {
+  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
@@ -108,6 +97,7 @@ impl ScanStage {
       struct Args<'a> {
         specifier: &'a str,
       }
+
       let args = Args { specifier: &input_item.import };
       let resolved = resolve_id(
         resolver,
@@ -143,23 +133,21 @@ impl ScanStage {
           ret.push(item);
         }
         Err(e) => match e {
-          ResolveError::NotFound(..) => {
+          ResolveError::NotFound(_) => {
             errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
           }
           ResolveError::PackagePathNotExported(..) => {
             errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
-          _ => {
-            return Err(e.into());
-          }
+          _ => return Err(e).map_err_to_unhandleable()?,
         },
       }
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors.into()));
+      Err(errors)?;
     }
 
-    Ok(Ok(ret))
+    Ok(ret)
   }
 }

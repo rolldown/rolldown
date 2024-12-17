@@ -1,11 +1,13 @@
+use std::collections::HashMap;
+
 use arcstr::ArcStr;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
-use rustc_hash::FxHashMap;
+use rustc_hash::FxBuildHasher;
 
 use super::{
-  binding_rendered_chunk::BindingChunkModules, binding_rendered_module::BindingRenderedModule,
-  binding_sourcemap::BindingSourcemap,
+  binding_rendered_chunk::into_binding_chunk_modules,
+  binding_rendered_module::BindingRenderedModule, binding_sourcemap::BindingSourcemap,
 };
 
 // Here using `napi` `getter` fields to avoid the cost of serialize larger data to js side.
@@ -52,9 +54,9 @@ impl BindingOutputChunk {
     self.inner.filename.to_string()
   }
 
-  #[napi(getter, ts_return_type = "Record<string, BindingRenderedModule>")]
-  pub fn modules(&self) -> BindingChunkModules {
-    self.inner.modules.iter().map(|(key, value)| (key.to_string(), value.clone().into())).collect()
+  #[napi(getter)]
+  pub fn modules(&self) -> HashMap<String, BindingRenderedModule, FxBuildHasher> {
+    into_binding_chunk_modules(self.inner.modules.clone())
   }
 
   #[napi(getter)]
@@ -105,9 +107,7 @@ pub struct JsOutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub filename: String,
-  // TODO(sapphi-red): remove `ts_type` and use HashMap<K, V, S> instead once https://github.com/napi-rs/napi-rs/pull/2384 is released
-  #[napi(ts_type = "Record<string, BindingRenderedModule>")]
-  pub modules: FxHashMap<String, BindingRenderedModule>,
+  pub modules: HashMap<String, BindingRenderedModule, FxBuildHasher>,
   pub imports: Vec<String>,
   pub dynamic_imports: Vec<String>,
   // OutputChunk

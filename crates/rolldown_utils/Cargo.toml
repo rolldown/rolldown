@@ -40,7 +40,6 @@ regress            = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rustc-hash         = { workspace = true }
 simdutf8           = { workspace = true }
-sugar_path         = { workspace = true }
 xxhash-rust        = { workspace = true, features = ["xxh3"] }
 
 

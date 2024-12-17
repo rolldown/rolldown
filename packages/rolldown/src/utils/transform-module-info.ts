@@ -19,6 +19,7 @@ export function transformModuleInfo(
     dynamicImporters: info.dynamicImporters,
     importedIds: info.importedIds,
     dynamicallyImportedIds: info.dynamicallyImportedIds,
+    exports: info.exports,
     isEntry: info.isEntry,
     ...option,
   }

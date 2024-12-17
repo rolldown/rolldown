@@ -66,6 +66,7 @@ export function getLogger(
                 watchMode: false,
               },
               warn: getLogHandler(LOG_LEVEL_WARN),
+              pluginName: plugin.name || 'unknown',
             },
             level,
             log,

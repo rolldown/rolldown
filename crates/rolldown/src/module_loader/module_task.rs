@@ -5,10 +5,11 @@ use oxc_index::IndexVec;
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
+use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   concat_string,
   ecmascript::{self, legitimize_identifier_name},
-  path_ext::PathExt,
+  indexmap::FxIndexSet,
 };
 use std::sync::Arc;
 use sugar_path::SugarPath;
@@ -49,7 +50,6 @@ pub struct ModuleTask {
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
   owner: Option<ModuleTaskOwner>,
-  errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
@@ -69,7 +69,6 @@ impl ModuleTask {
       module_idx: idx,
       resolved_id,
       owner,
-      errors: vec![],
       is_user_defined_entry,
       asserted_module_type: assert_module_type,
     }
@@ -77,33 +76,18 @@ impl ModuleTask {
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
-    match self.run_inner().await {
-      Ok(()) => {
-        if !self.errors.is_empty() {
-          self
-            .ctx
-            .tx
-            .send(ModuleLoaderMsg::BuildErrors(self.errors))
-            .await
-            .expect("Send should not fail");
-        }
-      }
-      Err(errs) => {
-        self
-          .ctx
-          .tx
-          .send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
-          .await
-          .expect("Send should not fail");
-      }
+    if let Err(errs) = self.run_inner().await {
+      self
+        .ctx
+        .tx
+        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
+        .await
+        .expect("Send should not fail");
     }
   }
 
   #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> BuildResult<()> {
-    let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let mut sourcemap_chain = vec![];
-    let mut warnings = vec![];
     let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
 
     // Add watch files for watcher recover if build errors occurred.
@@ -115,15 +99,19 @@ impl ModuleTask {
         code: None,
         id: id.clone(),
         is_entry: self.is_user_defined_entry,
-        importers: vec![],
-        dynamic_importers: vec![],
-        imported_ids: vec![],
-        dynamically_imported_ids: vec![],
+        importers: FxIndexSet::default(),
+        dynamic_importers: FxIndexSet::default(),
+        imported_ids: FxIndexSet::default(),
+        dynamically_imported_ids: FxIndexSet::default(),
+        exports: vec![],
       }),
     );
 
+    let mut sourcemap_chain = vec![];
+    let mut hook_side_effects = self.resolved_id.side_effects.take();
+
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let (source, mut module_type) = match load_source(
+    let result = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
       &self.ctx.fs,
@@ -132,22 +120,19 @@ impl ModuleTask {
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
     )
-    .await
-    {
-      Ok(ret) => ret,
-      Err(err) => {
-        self.errors.push(BuildDiagnostic::unloadable_dependency(
-          self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
-          self.owner.as_ref().map(|owner| UnloadableDependencyContext {
-            importer_id: owner.importer_id.as_str().into(),
-            importee_span: owner.importee_span,
-            source: owner.source.clone(),
-          }),
-          err,
-        ));
-        return Ok(());
-      }
-    };
+    .await;
+
+    let (source, mut module_type) = result.map_err(|err| {
+      BuildDiagnostic::unloadable_dependency(
+        self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
+        self.owner.as_ref().map(|owner| UnloadableDependencyContext {
+          importer_id: owner.importer_id.as_str().into(),
+          importee_span: owner.importee_span,
+          source: owner.source.clone(),
+        }),
+        err,
+      )
+    })?;
 
     if let Some(asserted) = &self.asserted_module_type {
       module_type = asserted.clone();
@@ -175,18 +160,11 @@ impl ModuleTask {
       // TODO: should provide some diagnostics for user how they should handle the module type.
       // e.g.
       // sass -> recommended npm install `sass` etc
-      return Err(anyhow::format_err!(
+      Err(anyhow::anyhow!(
         "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
       ))?;
     };
-
-    let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
-    let repr_name = legitimize_identifier_name(&repr_name);
-
-    let stable_id = id.stabilize(&self.ctx.options.cwd);
-
-    let mut raw_import_records = IndexVec::default();
 
     let asset_view = if matches!(module_type, ModuleType::Asset) {
       let asset_source = source.into_bytes();
@@ -195,6 +173,9 @@ impl ModuleTask {
     } else {
       None
     };
+
+    let stable_id = id.stabilize(&self.ctx.options.cwd);
+    let mut raw_import_records = IndexVec::default();
 
     let css_view = if matches!(module_type, ModuleType::Css) {
       let css_source: ArcStr = source.try_into_string()?.into();
@@ -206,6 +187,8 @@ impl ModuleTask {
     } else {
       None
     };
+
+    let mut warnings = vec![];
 
     let ret = create_ecma_view(
       &mut CreateModuleContext {
@@ -233,35 +216,34 @@ impl ModuleTask {
     if !matches!(module_type, ModuleType::Css) {
       raw_import_records = ecma_raw_import_records;
     }
-    let resolved_deps = match self
+
+    let resolved_deps = self
       .resolve_dependencies(
         &raw_import_records,
         ecma_view.source.clone(),
         &mut warnings,
         &module_type,
       )
-      .await?
-    {
-      Ok(deps) => deps,
-      Err(errs) => {
-        self.errors.extend(errs.into_vec());
-        return Ok(());
-      }
-    };
+      .await?;
+
     if !matches!(module_type, ModuleType::Css) {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-            ecma_view.imported_ids.push(ArcStr::clone(&info.id).into());
+            ecma_view.imported_ids.insert(ArcStr::clone(&info.id).into());
           }
           ImportKind::DynamicImport => {
-            ecma_view.dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
+            ecma_view.dynamically_imported_ids.insert(ArcStr::clone(&info.id).into());
           }
           // for a none css module, we should not have `at-import` or `url-import`
           ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
         }
       }
     }
+
+    let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
+    let repr_name = legitimize_identifier_name(&repr_name);
+
     let module = NormalModule {
       repr_name: repr_name.into_owned(),
       stable_id,
@@ -276,12 +258,12 @@ impl ModuleTask {
       asset_view,
     };
 
-    let module_info = Arc::new(module.to_module_info());
+    let module_info = Arc::new(module.to_module_info(Some(&raw_import_records)));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info)).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(&module.id).await?;
 
-    if let Err(_err) = self
+    if self
       .ctx
       .tx
       .send(ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
@@ -293,6 +275,7 @@ impl ModuleTask {
         raw_import_records,
       }))
       .await
+      .is_err()
     {
       // The main thread is dead, nothing we can do to handle these send failures.
     }
@@ -342,7 +325,7 @@ impl ModuleTask {
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
     module_type: &ModuleType,
-  ) -> anyhow::Result<BuildResult<IndexVec<ImportRecordIdx, ResolvedId>>> {
+  ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let bundle_options = Arc::clone(&self.ctx.options);
@@ -378,20 +361,17 @@ impl ModuleTask {
               // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
               if ecmascript::is_path_like_specifier(&specifier) {
                 // Unlike rollup, we also emit errors for absolute path
-                build_errors.push(
-                  BuildDiagnostic::resolve_error(
-                    source.clone(),
-                    self.resolved_id.id.clone(),
-                    if dep.is_unspanned() || is_css_module {
-                      DiagnosableArcstr::String(concat_string!("'", specifier.as_str(), "'").into())
-                    } else {
-                      DiagnosableArcstr::Span(dep.state.span)
-                    },
-                    "Module not found.".into(),
-                    Some("UNRESOLVED_IMPORT"),
-                  )
-                  .with_severity_warning(),
-                );
+                build_errors.push(BuildDiagnostic::resolve_error(
+                  source.clone(),
+                  self.resolved_id.id.clone(),
+                  if dep.is_unspanned() || is_css_module {
+                    DiagnosableArcstr::String(concat_string!("'", specifier.as_str(), "'").into())
+                  } else {
+                    DiagnosableArcstr::Span(dep.state.span)
+                  },
+                  "Module not found.".into(),
+                  Some("UNRESOLVED_IMPORT"),
+                ));
               } else {
                 warnings.push(
                   BuildDiagnostic::resolve_error(
@@ -438,9 +418,9 @@ impl ModuleTask {
     }
 
     if build_errors.is_empty() {
-      Ok(Ok(ret))
+      Ok(ret)
     } else {
-      Ok(Err(build_errors.into()))
+      Err(build_errors.into())
     }
   }
 }

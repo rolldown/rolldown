@@ -2,24 +2,26 @@ import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { onExit } from 'signal-exit'
 import { colors } from '../colors'
-import { ensureConfig, logger } from '../utils'
+import { logger } from '../logger'
 import { NormalizedCliOptions } from '../arguments/normalize'
 import { arraify } from '../../utils/misc'
 import { rolldown } from '../../api/rolldown'
 import { watch as rolldownWatch } from '../../api/watch'
 import type { RolldownOptions, RolldownOutput, RollupOutput } from '../..'
+import { loadConfig } from '../load-config'
 
 export async function bundleWithConfig(
   configPath: string,
   cliOptions: NormalizedCliOptions,
 ): Promise<void> {
-  const config = await ensureConfig(configPath)
+  const config = await loadConfig(configPath)
 
   if (!config) {
     logger.error(`No configuration found at ${config}`)
     process.exit(1)
   }
 
+  // TODO: Could add more validation/diagnostics here to emit a nice error message
   const configList = arraify(config)
   const operation = cliOptions.watch ? watchInner : bundleInner
   for (const config of configList) {
@@ -56,7 +58,9 @@ export async function bundleWithCliOptions(
       if (outputs.length > 1) {
         logger.log(`\n${colors.cyan(colors.bold(`|→ ${file.fileName}:`))}\n`)
       }
-      logger.log(file.type === 'asset' ? file.source : file.code)
+      // avoid consola since it doesn't print it as raw string
+      // eslint-disable-next-line no-console
+      console.log(file.type === 'asset' ? file.source : file.code)
     }
   } finally {
     await build.close()
@@ -72,6 +76,10 @@ async function watchInner(
   const watcher = await rolldownWatch({
     ...options,
     ...cliOptions.input,
+    output: {
+      ...options?.output,
+      ...cliOptions.output,
+    },
   })
 
   onExit((code: number | null | undefined) => {

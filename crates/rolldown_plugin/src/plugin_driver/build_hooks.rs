@@ -170,20 +170,20 @@ impl PluginDriver {
 
   pub async fn transform(
     &self,
-    args: &HookTransformArgs<'_>,
+    id: &str,
+    original_code: String,
     sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
-    original_code: &str,
     module_type: &mut ModuleType,
   ) -> Result<String> {
-    let mut code = args.code.to_string();
+    let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
       let filter_option = &self.index_plugin_filters[plugin_idx];
-      if !filter_transform(filter_option, args.id, ctx.cwd(), module_type, &code) {
+      if !filter_transform(filter_option, id, ctx.cwd(), module_type, &code) {
         continue;
       }
       if let Some(r) = plugin
@@ -191,19 +191,17 @@ impl PluginDriver {
           Arc::new(TransformPluginContext::new(
             ctx.clone(),
             plugin_sourcemap_chain.weak_ref(),
-            original_code.into(),
-            args.id.into(),
+            code.as_str().into(),
+            id.into(),
           )),
-          &HookTransformArgs { id: args.id, code: &code, module_type: &*module_type },
+          &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
         .await?
       {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
-        original_sourcemap_chain.push(Self::normalize_transform_sourcemap(
-          r.map,
-          args.id,
-          original_code,
-        ));
+        if let Some(map) = Self::normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
+          original_sourcemap_chain.push(map);
+        }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
@@ -225,7 +223,8 @@ impl PluginDriver {
     map: Option<SourceMap>,
     id: &str,
     original_code: &str,
-  ) -> SourceMap {
+    code: Option<&String>,
+  ) -> Option<SourceMap> {
     if let Some(mut map) = map {
       // If sourcemap  hasn't `sources`, using original id to fill it.
       let source = map.get_source(0);
@@ -238,17 +237,23 @@ impl PluginDriver {
       if map.get_source_content(0).map_or(true, str::is_empty) {
         map.set_source_contents(vec![original_code]);
       }
-      map
+      Some(map)
+    } else if let Some(code) = code {
+      if original_code == code {
+        None
+      } else {
+        // If sourcemap is empty and code has changed, need to create one remapping original code.
+        // Here using `hires: true` to get more accurate column information, but it has more overhead.
+        // TODO: maybe it should be add a option to control hires.
+        let magic_string = MagicString::new(original_code);
+        Some(magic_string.source_map(SourceMapOptions {
+          hires: string_wizard::Hires::True,
+          include_content: true,
+          source: id.into(),
+        }))
+      }
     } else {
-      // If sourcemap is empty, need to create one remapping original code.
-      // Here using `hires: true` to get more accurate column information, but it has more overhead.
-      // TODO: maybe it should be add a option to control hires.
-      let magic_string = MagicString::new(original_code);
-      magic_string.source_map(SourceMapOptions {
-        hires: string_wizard::Hires::True,
-        include_content: true,
-        source: id.into(),
-      })
+      None
     }
   }
 

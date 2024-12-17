@@ -5,6 +5,7 @@
 ### The `rollup.rollup` api is not compatible with rollup, the build is start at `bundle.generate` or `bundle.write`, so the input plugin hooks is not called
  - rollup@hooks@supports buildStart and buildEnd hooks
  - rollup@hooks@supports warnings in buildStart and buildEnd hooks
+ - rollup@hooks@passes errors to the buildEnd hook
 
 ### The `NormalziedOptions` at hooks is not compatible with rollup
  - rollup@function@options-hook: allows to read and modify options in the options hook
@@ -24,6 +25,7 @@
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
+ - rollup@hooks@allows to enforce sequential plugin hook order in watch mode
 
 ### The `renderDynamicImport/resolveFileUrl/resolveImportMeta/shouldTransformCachedModule` hooks not supported
  - rollup@function@enforce-plugin-order: allows to enforce plugin hook order
@@ -100,6 +102,7 @@
  - rollup@function@emit-file@set-asset-source-twice2: throws when setting the asset source twice
  - rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice
  - rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids
+ - rollup@hooks@keeps emitted ids stable between runs
 
 ### The `PluginContext.error` accpet more arguments at `transform` hooks 
  - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
@@ -365,6 +368,9 @@
  - rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports
  - rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input
 
+### The watch `BUNDLE_END` event `result` is not supported
+ - rollup@hooks@allows to enforce plugin hook order in watch mode
+
 ### escaping external id is not supported
  - rollup@form@quote-id: handles escaping for external ids@generates es
 
@@ -435,6 +441,7 @@
  - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
  - rollup@function@logging@promote-log-to-error: allows turning logs into errors
  - rollup@hooks@Throws when using the "file"" option for multiple chunks
+ - rollup@hooks@supports renderError hook
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks

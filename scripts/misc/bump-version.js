@@ -5,13 +5,18 @@ import semver from 'semver'
 import path from 'node:path'
 import { findWorkspacePackagesNoCheck } from '@pnpm/find-workspace-packages'
 import { REPO_ROOT } from '../meta/constants.js'
+import fsExtra from 'fs-extra'
+
+/**
+ * @typedef {'major' | 'minor' | 'patch'  | 'commit'} PresetVersion
+ */
 
 async function getCommitId() {
   const result = await $`git rev-parse --short HEAD`
   return result.stdout.replace('\n', '')
 }
 
-async function getLastVersion() {
+async function getCurrentVersion() {
   const pkgPath = path.resolve(REPO_ROOT, './packages/rolldown/package.json')
   const result = await import(pkgPath, {
     assert: {
@@ -23,38 +28,32 @@ async function getLastVersion() {
 
 /**
  *
- * @param {string} lastVersion
+ * @param {PresetVersion} preset
  */
-async function getSnapshotVersion(lastVersion) {
-  const commitId = await getCommitId()
-  const dateTime = new Date()
-    .toISOString()
-    .replace(/\.\d{3}Z$/, '')
-    .replace(/[^\d]/g, '')
-  return `${lastVersion}-snapshot-${commitId}-${dateTime}`
+async function genVersionByPreset(preset) {
+  const currentVersion = await getCurrentVersion()
+  switch (preset) {
+    case 'major':
+    case 'minor':
+    case 'patch': {
+      const v = semver.inc(currentVersion, preset)
+      if (!v) {
+        throw new Error(`Failed to bump version with preset ${preset}`)
+      }
+      return v
+    }
+    case 'commit':
+      const commitId = await getCommitId()
+      return `${currentVersion}-commit.${commitId}` // Example: 0.15.1-commit.1234567
+  }
 }
 
 /**
  *
- * @param {'major' | 'minor' | 'patch' | 'snapshot'} version
+ * @param {string} nextVersion
  */
-async function bumpVersion(version) {
-  const allowedVersion = ['major', 'minor', 'patch', 'snapshot']
-  if (!allowedVersion.includes(version)) {
-    throw new Error(
-      `version must be one of ${allowedVersion}, but you passed ${version}`,
-    )
-  }
+async function bumpVersion(nextVersion) {
   const root = process.cwd()
-
-  const lastVersion = await getLastVersion()
-  const nextVersion = await (() => {
-    if (version === 'snapshot') {
-      return getSnapshotVersion(lastVersion)
-    } else {
-      return semver.inc(lastVersion, version)
-    }
-  })()
 
   const workspaces = await findWorkspacePackagesNoCheck(root)
   for (const workspace of workspaces) {
@@ -73,14 +72,41 @@ async function bumpVersion(version) {
   }
 }
 
-const version = process.argv[2]
-
-if (!version) {
-  console.error(
-    "You must pass a version to bump. e.g. 'major', 'minor', 'patch', 'canary'",
-  )
-  process.exit(1)
+/**
+ *
+ * @param {string} arg
+ * @returns {arg is PresetVersion}
+ */
+function isPresetArg(arg) {
+  return ['major', 'minor', 'patch', 'commit'].includes(arg)
 }
 
-// @ts-expect-error
-await bumpVersion(version)
+// --- main
+
+const inputVersion = process.argv[2]?.trim()
+
+if (!inputVersion) {
+  throw new Error('You must pass a version to bump')
+}
+
+const newVersion = await (async function () {
+  if (isPresetArg(inputVersion)) {
+    return await genVersionByPreset(inputVersion)
+  } else {
+    if (!semver.valid(inputVersion)) {
+      throw new Error(
+        `You must pass a valid semver version instead of '${inputVersion}'`,
+      )
+    }
+    return inputVersion
+  }
+})()
+
+await bumpVersion(newVersion)
+if (process.env.CI) {
+  // Write the version to a file for later we can use it in the release process.
+  fsExtra.writeFileSync(
+    path.resolve(REPO_ROOT, 'rolldown-version.txt'),
+    newVersion,
+  )
+}

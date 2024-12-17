@@ -92,8 +92,6 @@ impl Bundler {
   }
 
   pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
-    self.plugin_driver.build_start(&self.options).await?;
-
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
@@ -136,8 +134,6 @@ impl Bundler {
     }
 
     let mut link_stage_output = self.try_build().await?;
-
-    self.plugin_driver.render_start(&self.options).await?;
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)

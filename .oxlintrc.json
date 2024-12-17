@@ -8,11 +8,12 @@
     ],
     "unicorn/prefer-node-protocol": "error",
     "import/namespace": [
-      "allow",
+      "error",
       {
         "allowComputed": true
       }
-    ]
+    ],
+    "import/named": "allow"
   },
   "overrides": [
     {

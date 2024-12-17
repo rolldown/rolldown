@@ -8,7 +8,7 @@ import {
 } from './utils'
 import { parseArgs } from 'node:util'
 import { normalizeCliOptions, type NormalizedCliOptions } from './normalize'
-import { logger } from '../utils'
+import { logger } from '../logger'
 import type { Schema } from './types'
 
 export const flattenedSchema: Record<string, Schema> = flattenSchema(

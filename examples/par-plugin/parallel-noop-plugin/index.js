@@ -1,4 +1,4 @@
-import { defineParallelPlugin } from 'rolldown'
+import { defineParallelPlugin } from 'rolldown/experimental'
 import path from 'node:path'
 
 /** @type {import('rolldown').DefineParallelPluginResult<void>} */

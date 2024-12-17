@@ -31,6 +31,7 @@ export declare class BindingModuleInfo {
   dynamicImporters: Array<string>
   importedIds: Array<string>
   dynamicallyImportedIds: Array<string>
+  exports: Array<string>
   isEntry: boolean
   get code(): string | null
 }
@@ -604,6 +605,12 @@ export interface CompilerAssumptions {
   setPublicClassFields?: boolean
 }
 
+export interface ErrorLabel {
+  message?: string
+  start: number
+  end: number
+}
+
 export interface Es2015Options {
   /** Transform arrow functions into function expressions. */
   arrowFunction?: ArrowFunctionsOptions
@@ -612,6 +619,32 @@ export interface Es2015Options {
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
+}
+
+export type HelperMode = /**
+ * Runtime mode (default): Helper functions are imported from a runtime package.
+ *
+ * Example:
+ *
+ * ```js
+ * import helperName from "@babel/runtime/helpers/helperName";
+ * helperName(...arguments);
+ * ```
+ */
+'Runtime'|
+/**
+ * External mode: Helper functions are accessed from a global `babelHelpers` object.
+ *
+ * Example:
+ *
+ * ```js
+ * babelHelpers.helperName(...arguments);
+ * ```
+ */
+'External';
+
+export interface Helpers {
+  mode?: HelperMode
 }
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
@@ -633,7 +666,7 @@ export interface IsolatedDeclarationsOptions {
 export interface IsolatedDeclarationsResult {
   code: string
   map?: SourceMap
-  errors: Array<string>
+  errors: Array<OxcError>
 }
 
 export interface JsChangedOutputs {
@@ -761,6 +794,13 @@ export interface JsxOptions {
   refresh?: boolean | ReactRefreshOptions
 }
 
+export interface OxcError {
+  severity: Severity
+  message: string
+  labels: Array<ErrorLabel>
+  helpMessage?: string
+}
+
 export interface PreRenderedChunk {
   name: string
   isEntry: boolean
@@ -800,6 +840,10 @@ export interface RenderedChunk {
   imports: Array<string>
   dynamicImports: Array<string>
 }
+
+export type Severity =  'Error'|
+'Warning'|
+'Advice';
 
 export interface SourceMap {
   file?: string
@@ -871,6 +915,8 @@ export interface TransformOptions {
    * @see [esbuild#target](https://esbuild.github.io/api/#target)
    */
   target?: string | Array<string>
+  /** Behaviour for runtime helpers. */
+  helpers?: Helpers
   /** Define Plugin */
   define?: Record<string, string>
   /** Inject Plugin */
@@ -908,13 +954,25 @@ export interface TransformResult {
    */
   declarationMap?: SourceMap
   /**
+   * Helpers used.
+   *
+   * @internal
+   *
+   * Example:
+   *
+   * ```text
+   * { "_objectSpread": "@babel/runtime/helpers/objectSpread2" }
+   * ```
+   */
+  helpersUsed: Record<string, string>
+  /**
    * Parse and transformation errors.
    *
    * Oxc's parser recovers from common syntax errors, meaning that
    * transformed code may still be available even if there are errors in this
    * list.
    */
-  errors: Array<string>
+  errors: Array<OxcError>
 }
 
 export interface TypeScriptOptions {

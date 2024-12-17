@@ -34,11 +34,10 @@ export default defineTest({
       "console.log('main')",
     )
 
-    // TODO: fix oxc source map lookup_source_view_token
-    // const generatedLoc2 = getLocation(code, code.indexOf(`"added"`))
-    // const originalLoc2 = smc.originalPositionFor(generatedLoc2)
-    // expect(originalLoc2.line).toBe(null)
-    // expect(originalLoc2.column).toBe(null)
-    // expect(originalLoc2.source).toBe(null)
+    const generatedLoc2 = getLocation(code, code.indexOf(`"added"`))
+    const originalLoc2 = smc.originalPositionFor(generatedLoc2)
+    expect(originalLoc2.line).toBe(null)
+    expect(originalLoc2.column).toBe(null)
+    expect(originalLoc2.source).toBe(null)
   },
 })

@@ -9,6 +9,7 @@ use rolldown_ecmascript::EcmaCompiler;
 
 use oxc::transformer::EnvOptions;
 use rolldown_plugin::Plugin;
+use rolldown_utils::clean_url::clean_url;
 use rolldown_utils::pattern_filter::{self, StringOrRegex};
 use std::borrow::Cow;
 use std::path::Path;
@@ -131,7 +132,7 @@ impl TransformPlugin {
     }
     let normalized_path = Path::new(id).relative(ctx.inner.cwd());
     let normalized_id = normalized_path.to_string_lossy();
-    let cleaned_id = rolldown_utils::path_ext::clean_url(&normalized_id);
+    let cleaned_id = clean_url(&normalized_id);
     if cleaned_id == normalized_id {
       pattern_filter::filter(Some(&self.exclude), Some(&self.include), id, &normalized_id).inner()
     } else {

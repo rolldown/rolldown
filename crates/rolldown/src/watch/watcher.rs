@@ -88,6 +88,7 @@ impl WatcherImpl {
     })
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn invalidate(&self) {
     if self.running.load(Ordering::Relaxed) {
       self.rerun.store(true, Ordering::Relaxed);
@@ -114,6 +115,7 @@ impl WatcherImpl {
     }
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn run(&self) -> BuildResult<()> {
     self.emitter.emit(WatcherEvent::ReStart)?;
 
@@ -135,6 +137,7 @@ impl WatcherImpl {
         }
         let path = Path::new(file.as_str());
         if path.exists() {
+          tracing::debug!(name= "notify watch ", path = ?path);
           inner.watch(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
           self.watch_files.insert(file.clone());
         }
@@ -150,6 +153,7 @@ impl WatcherImpl {
     Ok(())
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
     self.tx.send(WatcherChannelMsg::Close)?;
@@ -176,6 +180,7 @@ impl WatcherImpl {
   }
 }
 
+#[tracing::instrument(level = "debug", skip(watcher))]
 pub async fn on_change(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
@@ -186,6 +191,7 @@ pub async fn on_change(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChan
   }
 }
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
   let future = async move {
     let mut run = true;
@@ -195,6 +201,7 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
         Ok(msg) => match msg {
           WatcherChannelMsg::NotifyEvent(event) => match event {
             Ok(event) => {
+              tracing::debug!(name= "notify event ", event = ?event);
               for path in event.paths {
                 let id = path.to_string_lossy();
                 match event.kind {

@@ -2,7 +2,7 @@
  * @description This file is used for normalize the options.
  * In CLI, the input options and output options are mixed together. We need to tell them apart.
  */
-import { logger } from '../utils'
+import { logger } from '../logger'
 import { setNestedProperty } from './utils'
 import { CliOptions, cliOptionsSchema } from './schema'
 import { inputCliOptionsSchema } from '../../options/input-options-schema'

@@ -7,7 +7,7 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import assert from "node:assert";const a$1="shared.js",a="index.js";assert.equal(a,"index.js");assert.equal(a$1,"shared.js");
+import assert from"node:assert";const a$1="shared.js",a="index.js";assert.equal(a,"index.js");assert.equal(a$1,"shared.js");
 //# sourceMappingURL=main.js.map
 ```
 
@@ -15,20 +15,20 @@ import assert from "node:assert";const a$1="shared.js",a="index.js";assert.equal
 
 ```
 - ../shared.js
-(0:0) "const " --> (0:33) "const "
-(0:6) "a = " --> (0:39) "a$1="
-(0:10) "'shared.js'\n" --> (0:43) "\"shared.js\","
+(0:0) "const " --> (0:32) "const "
+(0:6) "a = " --> (0:38) "a$1="
+(0:10) "'shared.js'\n" --> (0:42) "\"shared.js\","
 - ../main.js
-(2:6) "a = " --> (0:55) "a="
-(2:10) "'index.js'\n" --> (0:57) "\"index.js\";"
-(3:0) "assert." --> (0:68) "assert."
-(3:7) "equal(" --> (0:75) "equal("
-(3:13) "a, " --> (0:81) "a,"
-(3:16) "'index.js')" --> (0:83) "\"index.js\")"
-(3:27) "\n" --> (0:94) ";"
-(4:0) "assert." --> (0:95) "assert."
-(4:7) "equal(" --> (0:102) "equal("
-(4:13) "a2, " --> (0:108) "a$1,"
-(4:17) "'shared.js')" --> (0:112) "\"shared.js\")"
-(4:29) "\n" --> (0:124) ";\n"
+(2:6) "a = " --> (0:54) "a="
+(2:10) "'index.js'\n" --> (0:56) "\"index.js\";"
+(3:0) "assert." --> (0:67) "assert."
+(3:7) "equal(" --> (0:74) "equal("
+(3:13) "a, " --> (0:80) "a,"
+(3:16) "'index.js')" --> (0:82) "\"index.js\")"
+(3:27) "\n" --> (0:93) ";"
+(4:0) "assert." --> (0:94) "assert."
+(4:7) "equal(" --> (0:101) "equal("
+(4:13) "a2, " --> (0:107) "a$1,"
+(4:17) "'shared.js')" --> (0:111) "\"shared.js\")"
+(4:29) "\n" --> (0:123) ";\n"
 ```

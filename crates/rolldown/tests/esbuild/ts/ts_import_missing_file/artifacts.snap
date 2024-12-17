@@ -7,7 +7,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve './doesNotExist.ts' in entry.ts
+[UNRESOLVED_IMPORT] Error: Could not resolve './doesNotExist.ts' in entry.ts
    ╭─[entry.ts:1:25]
    │
  1 │ import {Something} from './doesNotExist.ts'

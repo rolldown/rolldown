@@ -1,4 +1,4 @@
-name: A - Release Canary/Nightly
+name: A - Publish Nightly/Canary
 
 on:
   # Manually released. This will publish under the canary npm tag.
@@ -25,6 +25,8 @@ jobs:
     name: Build bindings and node packages
     if: github.repository == 'rolldown/rolldown'
     uses: ./.github/workflows/reusable-release-build.yml
+    with:
+      version: 'commit'
 
   publish:
     name: Publish npm Packages
@@ -63,6 +65,20 @@ jobs:
           path: packages/rolldown/dist
           name: node-artifact
 
+      - name: Download `rolldown-version.txt`
+        uses: actions/download-artifact@v4
+        with:
+          name: rolldown-version
+
+      - name: Read `rolldown-version.txt`
+        id: rolldown-version
+        uses: igorskyflyer/action-readfile@v1.0.0
+        with:
+          path: rolldown-version.txt
+
+      - name: Canary/Nightly Versioning
+        run: node ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
+
       - name: Copy Licenses
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
@@ -73,20 +89,5 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
-      - name: Canary/Nightly Versioning
-        run: node ./scripts/misc/bump-version.js snapshot
-
-      - name: Publish(Dry Run)
-        run: |
-          pnpm publish -r --tag ${{ needs.plan.outputs.npm-tag }} --dry-run --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish
-        run: |
-          pnpm publish -r --tag ${{ needs.plan.outputs.npm-tag }} --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+        run: node ./scripts/ci/publish-rolldown-to-npm.js ${{ needs.plan.outputs.npm-tag }}

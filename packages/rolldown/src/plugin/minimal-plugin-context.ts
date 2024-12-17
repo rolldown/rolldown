@@ -4,7 +4,6 @@ import type {
   LogLevelOption,
   RollupError,
 } from '../rollup'
-import type { Plugin } from '../plugin'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { getLogHandler, normalizeLog } from '../log/logHandler'
@@ -21,10 +20,12 @@ export class MinimalPluginContext {
   warn: LoggingFunction
   debug: LoggingFunction
   meta: PluginContextMeta
-  readonly error: (error: RollupError | string) => never
 
-  constructor(onLog: LogHandler, logLevel: LogLevelOption, plugin: Plugin) {
-    const pluginName = plugin.name || 'unknown'
+  constructor(
+    onLog: LogHandler,
+    logLevel: LogLevelOption,
+    readonly pluginName: string,
+  ) {
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
       'PLUGIN_LOG',
@@ -46,13 +47,15 @@ export class MinimalPluginContext {
       pluginName,
       logLevel,
     )
-    this.error = (e): never => {
-      return error(logPluginError(normalizeLog(e), pluginName))
-    }
+
     this.meta = {
       rollupVersion: '4.23.0',
       rolldownVersion: VERSION,
       watchMode: false,
     }
+  }
+
+  public error(e: RollupError | string): never {
+    return error(logPluginError(normalizeLog(e), this.pluginName))
   }
 }

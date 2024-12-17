@@ -19,6 +19,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
@@ -73,10 +74,10 @@ pub struct ModuleLoaderOutput {
 
 impl ModuleLoader {
   pub fn new(
-    options: SharedOptions,
-    plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
+    options: SharedOptions,
     resolver: SharedResolver,
+    plugin_driver: SharedPluginDriver,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -94,7 +95,8 @@ impl ModuleLoader {
         })?
       },
     };
-    let common_data = Arc::new(TaskContext {
+
+    let shared_context = Arc::new(TaskContext {
       options: Arc::clone(&options),
       tx: tx.clone(),
       resolver,
@@ -104,14 +106,13 @@ impl ModuleLoader {
     });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
-    let symbols = SymbolRefDb::default();
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
     let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
     #[cfg(target_family = "wasm")]
     {
-      task.run().unwrap();
+      task.run();
     }
     // task is sync, but execution time is too short at the moment
     // so we are using spawn instead of spawn_blocking here to avoid an additional blocking thread creation within tokio
@@ -122,16 +123,16 @@ impl ModuleLoader {
     }
 
     Ok(Self {
-      shared_context: common_data,
       tx,
       rx,
       options,
-      visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
       runtime_id,
       // runtime module is always there
       remaining: 1,
+      shared_context,
       intermediate_normal_modules,
-      symbol_ref_db: symbols,
+      symbol_ref_db: SymbolRefDb::default(),
+      visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
     })
   }
 
@@ -184,10 +185,11 @@ impl ModuleLoader {
               code: None,
               id,
               is_entry: false,
-              importers: vec![],
-              dynamic_importers: vec![],
-              imported_ids: vec![],
-              dynamically_imported_ids: vec![],
+              importers: FxIndexSet::default(),
+              dynamic_importers: FxIndexSet::default(),
+              imported_ids: FxIndexSet::default(),
+              dynamically_imported_ids: FxIndexSet::default(),
+              exports: vec![],
             }),
           );
 
@@ -240,9 +242,9 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-  ) -> anyhow::Result<BuildResult<ModuleLoaderOutput>> {
+  ) -> BuildResult<ModuleLoaderOutput> {
     if self.options.input.is_empty() {
-      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
+      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
     self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;
@@ -385,7 +387,7 @@ impl ModuleLoader {
     }
 
     if !errors.is_empty() {
-      return Ok(Err(errors.into()));
+      return Err(errors.into());
     }
 
     let dynamic_import_exports_usage_map = dynamic_import_exports_usage_pairs.into_iter().fold(
@@ -402,34 +404,37 @@ impl ModuleLoader {
         acc
       },
     );
+
     self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
 
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
-      .flatten()
       .enumerate()
-      .map(|(id, mut module)| {
-        let id = ModuleIdx::from(id);
+      .map(|(id, module)| {
+        let mut module = module.expect("Module tasks did't complete as expected");
+
         if let Some(module) = module.as_normal_mut() {
+          let id = ModuleIdx::from(id);
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
           let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
           for importer in &importers {
             if importer.kind.is_static() {
-              module.importers.push(importer.importer_path.clone());
+              module.importers.insert(importer.importer_path.clone());
             } else {
-              module.dynamic_importers.push(importer.importer_path.clone());
+              module.dynamic_importers.insert(importer.importer_path.clone());
             }
           }
           if !importers.is_empty() {
             self
               .shared_context
               .plugin_driver
-              .set_module_info(&module.id, Arc::new(module.to_module_info()));
+              .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
           }
         }
+
         module
       })
       .collect();
@@ -446,7 +451,7 @@ impl ModuleLoader {
       }));
     }
 
-    Ok(Ok(ModuleLoaderOutput {
+    Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
@@ -454,6 +459,6 @@ impl ModuleLoader {
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
-    }))
+    })
   }
 }

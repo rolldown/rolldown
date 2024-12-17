@@ -18,16 +18,16 @@ test('Plugin renderError hook', async () => {
   const renderErrorFn = vi.fn()
   const renderChunkFn = vi.fn()
   const error = await buildWithPlugin({
-    renderChunk() {
+    renderStart() {
       renderChunkFn()
-      throw new Error('renderChunk error')
+      throw new Error('renderStart error')
     },
     renderError: (error) => {
       renderErrorFn()
-      expect(error!.message).toContain('renderChunk error')
+      expect(error!.message).toContain('renderStart error')
     },
   })
-  expect(error!.message).toContain('renderChunk error')
+  expect(error!.message).toContain('renderStart error')
   expect(renderErrorFn).toHaveBeenCalledTimes(1)
 })
 
@@ -35,15 +35,15 @@ describe('Plugin buildEnd hook', async () => {
   test('call buildEnd hook with error', async () => {
     const buildEndFn = vi.fn()
     const error = await buildWithPlugin({
-      load() {
-        throw new Error('load error')
+      buildStart() {
+        throw new Error('buildStart error')
       },
       buildEnd: (error) => {
         buildEndFn()
-        expect(error!.message).toContain('load error')
+        expect(error!.message).toContain('buildStart error')
       },
     })
-    expect(error!.message).toContain('load error')
+    expect(error!.message).toContain('buildStart error')
     expect(buildEndFn).toHaveBeenCalledTimes(1)
   })
 

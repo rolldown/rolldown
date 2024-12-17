@@ -142,7 +142,7 @@ exports[`cli options for bundling > should handle single boolean option 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.10 kB
 
 "
 `;
@@ -155,6 +155,24 @@ exports[`cli options for bundling > should handle single object options 1`] = `
 
 exports[`cli options for bundling > should handle single string options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
+
+"
+`;
+
+exports[`config > no package.json > should allow loading cts config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
+exports[`config > no package.json > should allow loading mts config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
+exports[`config > no package.json > should allow loading ts config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;

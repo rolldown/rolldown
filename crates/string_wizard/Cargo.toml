@@ -3,7 +3,7 @@ description = "manipulate string like a wizard"
 edition     = "2021"
 license     = "MIT"
 name        = "string_wizard"
-version     = "0.0.23"
+version     = "0.0.25"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -11,10 +11,15 @@ version     = "0.0.23"
 oxc_index     = { workspace = true }
 oxc_sourcemap = { workspace = true, optional = true }
 rustc-hash    = { workspace = true }
+serde         = { workspace = true, optional = true }
 
 [dev-dependencies]
 insta = { workspace = true }
 
 [features]
 default   = ["sourcemap"]
+serde     = ["dep:serde", "oxc_index/serde"]
 sourcemap = ["dep:oxc_sourcemap"]
+
+[package.metadata.cargo-shear]
+ignored = ["serde"]

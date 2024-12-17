@@ -2,6 +2,8 @@ import { describe, test, it, expect } from 'vitest'
 import { $, execa } from 'execa'
 import { stripAnsi } from 'consola/utils'
 import { testsDir } from '@tests/utils'
+import path from 'node:path'
+import fs from 'node:fs'
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined)
@@ -112,14 +114,29 @@ describe('config', () => {
         expect(err).not.toBeUndefined()
       }
     })
-    it('should throw friendly error message for ts', async () => {
+    it('should allow loading ts config', async () => {
       const cwd = cliFixturesDir('ext-ts')
-      try {
-        const _ = await $({ cwd })`rolldown -c rolldown.config.ts`
-      } catch (err) {
-        expect(err).toBeInstanceOf(Error)
-        expect((err as Error).message).toContain('Unsupported config format.')
-      }
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+    it('should allow loading cts config', async () => {
+      const cwd = cliFixturesDir('ext-cts')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.cts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+    it('should allow loading mts config', async () => {
+      const cwd = cliFixturesDir('ext-mts')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.mts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
     it('should allow loading ts config with tsx', async () => {
       const cwd = cliFixturesDir('ext-ts')
@@ -133,9 +150,21 @@ describe('config', () => {
   })
 })
 
-it('call closeBundle', async () => {
-  const cwd = cliFixturesDir('close-bundle')
-  const status = await $({ cwd })`rolldown -c`
-  expect(status.stdout).toContain('[test:closeBundle]')
-  expect(status.exitCode).toBe(0)
+describe('watch cli', () => {
+  it('call closeBundle', async () => {
+    const cwd = cliFixturesDir('close-bundle')
+    const status = await $({ cwd })`rolldown -c`
+    expect(status.stdout).toContain('[test:closeBundle]')
+    expect(status.exitCode).toBe(0)
+  })
+
+  it('should handle output options', async () => {
+    const cwd = cliFixturesDir('watch-cli-option')
+    const subprocess = execa({ cwd })`rolldown index.ts -d dist -w -s`
+    setTimeout(() => {
+      subprocess.kill('SIGINT')
+      expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
+      expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
+    }, 300)
+  })
 })

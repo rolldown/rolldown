@@ -9,7 +9,8 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, path_ext::PathExt};
+use rolldown_std_utils::PathExt;
+use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -119,9 +120,6 @@ pub async fn create_ecma_view<'any>(
   }
   ctx.warnings.extend(scan_warnings);
 
-  let imported_ids = vec![];
-  let dynamically_imported_ids = vec![];
-
   // The side effects priority is:
   // 1. Hook side effects
   // 2. Package.json side effects
@@ -196,10 +194,10 @@ pub async fn create_ecma_view<'any>(
     def_format: ctx.resolved_id.module_def_format,
     sourcemap_chain: args.sourcemap_chain,
     import_records: IndexVec::default(),
-    importers: vec![],
-    dynamic_importers: vec![],
-    imported_ids,
-    dynamically_imported_ids,
+    importers: FxIndexSet::default(),
+    dynamic_importers: FxIndexSet::default(),
+    imported_ids: FxIndexSet::default(),
+    dynamically_imported_ids: FxIndexSet::default(),
     side_effects,
     ast_usage,
     self_referenced_class_decl_symbol_ids,

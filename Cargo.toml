@@ -172,13 +172,15 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates with the same version
-oxc                = { version = "0.39.0", features = ["transformer", "minifier", "semantic", "codegen"] }
-oxc_transform_napi = { version = "0.39.0" }
+oxc                = { version = "0.41.0", features = ["transformer", "minifier", "semantic", "codegen"] }
+oxc_transform_napi = { version = "0.41.0" }
 
 # oxc crates in their own repos
-oxc_index     = { version = "1.0.0", features = ["rayon"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver  = { version = "2.1.1" }                       # https://github.com/oxc-project/oxc-resolver
-oxc_sourcemap = { version = "1.0.3" }                       # https://github.com/oxc-project/oxc-sourcemap
+# Versions must be relaxed for usage in oxc.
+# Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
+oxc_index     = { version = "2", features = ["rayon"] } # https://github.com/oxc-project/oxc-index-vec
+oxc_resolver  = { version = "3" }                       # https://github.com/oxc-project/oxc-resolver
+oxc_sourcemap = { version = "1" }                       # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]
 codegen-units = 1

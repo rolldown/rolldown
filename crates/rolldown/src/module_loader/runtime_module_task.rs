@@ -11,17 +11,18 @@ use rolldown_common::{
   SharedNormalizedBundlerOptions, RUNTIME_MODULE_ID,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::BuildResult;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   utils::tweak_ast_for_scanning::PreProcessor,
 };
+
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
-  module_id: ModuleIdx,
-  errors: Vec<BuildDiagnostic>,
+  module_idx: ModuleIdx,
   options: SharedNormalizedBundlerOptions,
 }
 
@@ -34,15 +35,24 @@ pub struct MakeEcmaAstResult {
 
 impl RuntimeModuleTask {
   pub fn new(
-    id: ModuleIdx,
+    module_idx: ModuleIdx,
     tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
     options: SharedNormalizedBundlerOptions,
   ) -> Self {
-    Self { module_id: id, tx, errors: Vec::new(), options }
+    Self { module_idx, tx, options }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
-  pub fn run(mut self) -> anyhow::Result<()> {
+  pub fn run(mut self) {
+    if let Err(errs) = self.run_inner() {
+      self
+        .tx
+        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
+        .expect("Send should not fail");
+    }
+  }
+
+  fn run_inner(&mut self) -> BuildResult<()> {
     let source = if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-head-node.js"),
@@ -56,19 +66,11 @@ impl RuntimeModuleTask {
       ))
     };
 
-    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
-
-    let ecma_ast_result = match ecma_ast_result {
-      Ok(ecma_ast_result) => ecma_ast_result,
-      Err(errs) => {
-        self.errors.extend(errs.into_vec());
-        return Ok(());
-      }
-    };
+    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
 
     let MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref } = ecma_ast_result;
 
-    let runtime = RuntimeModuleBrief::new(self.module_id, &ast_scope);
+    let runtime = RuntimeModuleBrief::new(self.module_idx, &ast_scope);
 
     let ScanResult {
       named_imports,
@@ -92,7 +94,7 @@ impl RuntimeModuleTask {
     } = scan_result;
 
     let module = NormalModule {
-      idx: self.module_id,
+      idx: self.module_idx,
       repr_name: "rolldown_runtime".to_string(),
       stable_id: RUNTIME_MODULE_ID.to_string(),
       id: ModuleId::new(RUNTIME_MODULE_ID),
@@ -109,10 +111,10 @@ impl RuntimeModuleTask {
         import_records: IndexVec::default(),
         sourcemap_chain: vec![],
         // The internal runtime module `importers/imported` should be skip.
-        importers: vec![],
-        dynamic_importers: vec![],
-        imported_ids: vec![],
-        dynamically_imported_ids: vec![],
+        importers: FxIndexSet::default(),
+        dynamic_importers: FxIndexSet::default(),
+        imported_ids: FxIndexSet::default(),
+        dynamically_imported_ids: FxIndexSet::default(),
         side_effects: DeterminedSideEffects::Analyzed(false),
         named_imports,
         named_exports,
@@ -142,21 +144,22 @@ impl RuntimeModuleTask {
       asset_view: None,
     };
 
+    let resolved_deps = raw_import_records
+      .iter()
+      .map(|rec| {
+        // We assume the runtime module only has external dependencies.
+        ResolvedId::new_external_without_side_effects(rec.module_request.to_string().into())
+      })
+      .collect();
+
     if let Err(_err) =
       self.tx.try_send(ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
-        // warnings: self.warnings,
-        local_symbol_ref_db: symbol_ref_db,
+        ast,
         module,
         runtime,
-        ast,
-        resolved_deps: raw_import_records
-          .iter()
-          .map(|rec| {
-            // We assume the runtime module only has external dependencies.
-            ResolvedId::new_external_without_side_effects(rec.module_request.to_string().into())
-          })
-          .collect(),
+        resolved_deps,
         raw_import_records,
+        local_symbol_ref_db: symbol_ref_db,
       }))
     {
       // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
@@ -184,7 +187,7 @@ impl RuntimeModuleTask {
     );
     let facade_path = ModuleId::new("runtime");
     let scanner = AstScanner::new(
-      self.module_id,
+      self.module_idx,
       &ast_scope,
       symbol_table,
       "rolldown_runtime",

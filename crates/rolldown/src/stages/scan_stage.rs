@@ -6,7 +6,7 @@ use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ImportKind, ModuleIdx, ModuleTable,
   ResolvedId, RuntimeModuleBrief, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
@@ -139,7 +139,7 @@ impl ScanStage {
           ResolveError::PackagePathNotExported(..) => {
             errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
-          _ => return Err(e)?,
+          _ => return Err(e).map_err_to_unhandleable()?,
         },
       }
     }

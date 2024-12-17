@@ -89,7 +89,7 @@ impl NormalModule {
       },
       imported_ids: self.ecma_view.imported_ids.clone(),
       dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
-      // https://github.com/rollup/rollup/blob/master/src/Module.ts#L331
+      // https://github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/Module.ts#L331
       exports: {
         let mut exports =
           self.ecma_view.named_exports.keys().map(|e| e.as_str().into()).collect::<Vec<_>>();

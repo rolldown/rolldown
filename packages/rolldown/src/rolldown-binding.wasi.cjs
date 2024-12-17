@@ -56,11 +56,11 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
       return 4
     }
   })(),
+  reuseWorker: true,
   wasi: __wasi,
   onCreateWorker() {
     const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
       env: process.env,
-      execArgv: ['--experimental-wasi-unstable-preview1'],
     })
     worker.onmessage = ({ data }) => {
       __wasmCreateOnMessageForFsProxy(__nodeFs)(data)
@@ -83,6 +83,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
 
 function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__OxcError_struct_0']?.()
+  __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()
   __napiInstance.exports['__napi_register__ErrorLabel_struct_1']?.()
   __napiInstance.exports['__napi_register__Severity_2']?.()
   __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()

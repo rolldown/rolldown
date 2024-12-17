@@ -1,6 +1,7 @@
 use regex::Regex;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::path_ext::PathExt;
+use rolldown_utils::percent_encoding;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -104,9 +105,18 @@ struct DenoInfoJsonV1 {
   modules: Vec<ModuleInfo>,
 }
 
-fn get_deno_info(specifier: &str) -> Result<DenoInfoJsonV1, &'static str> {
+fn to_json_data_uri(json_string: &str) -> String {
+  let encoded = percent_encoding::encode_as_percent_escaped(json_string.as_bytes())
+    .unwrap_or_else(|| json_string.to_string());
+  format!("data:application/json,{}", encoded)
+}
+
+fn get_deno_info(specifier: &str, import_map: &str) -> Result<DenoInfoJsonV1, &'static str> {
   let start = Instant::now();
-  let output = match std::process::Command::new("deno").args(["info", "--json", specifier]).output()
+  let import_map_data_uri = to_json_data_uri(import_map);
+  let output = match std::process::Command::new("deno")
+    .args(["info", "--no-config", "--import-map", &import_map_data_uri, "--json", specifier])
+    .output()
   {
     Ok(output) => output,
     Err(_) => return Err("Failed to execute deno info command"),
@@ -167,7 +177,7 @@ impl DenoLoaderPlugin {
     if let Some(cached) = cache.get(specifier).cloned() {
       return Ok(cached);
     }
-    let info: DenoInfoJsonV1 = get_deno_info(specifier)?;
+    let info: DenoInfoJsonV1 = get_deno_info(specifier, &self.import_map)?;
     for module in &info.modules {
       match module {
         ModuleInfo::Typed { details, .. } => match details {

@@ -466,7 +466,7 @@ async function createTestInputAndOutput(dirname: string, content?: string) {
 }
 
 async function waitUtil(expectFn: () => void) {
-  for (let tries = 0; tries < 20; tries++) {
+  for (let tries = 0; tries < 10; tries++) {
     try {
       await expectFn()
       return

@@ -17,6 +17,7 @@ import {
 } from '../plugin/plugin-context'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import { isPluginHookName } from './plugin'
+import { TransformPluginContext } from '../plugin/transform-plugin-context'
 
 const unsupportedHookName = [
   'augmentChunkHash',
@@ -165,17 +166,17 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
 
   const createFixedPluginResolveFnMap = new Map<
     Plugin,
-    (ctx: PluginContext) => PluginContext['resolve']
+    (
+      ctx: PluginContext,
+      resolve: PluginContext['resolve'],
+    ) => PluginContext['resolve']
   >()
 
   function applyFixedPluginResolveFn(ctx: PluginContext, plugin: Plugin) {
     const createFixedPluginResolveFn = createFixedPluginResolveFnMap.get(plugin)
 
     if (createFixedPluginResolveFn) {
-      return {
-        ...ctx,
-        resolve: createFixedPluginResolveFn(ctx),
-      }
+      ctx.resolve = createFixedPluginResolveFn(ctx, ctx.resolve.bind(ctx))
     }
 
     return ctx
@@ -195,6 +196,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
       const handlerSymbol = handlerSymbols[handlerIdx]
       const createFixedPluginResolveFn = (
         ctx: PluginContext,
+        resolve: PluginContext['resolve'],
       ): PluginContext['resolve'] => {
         return (source, importer, rawContextResolveOptions) => {
           const contextResolveOptions: PrivatePluginContextResolveOptions =
@@ -205,8 +207,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               handlerSymbol
             contextResolveOptions.skipSelf = false
           }
-
-          return ctx.resolve(source, importer, contextResolveOptions)
+          return resolve(source, importer, contextResolveOptions)
         }
       }
       createFixedPluginResolveFnMap.set(plugin, createFixedPluginResolveFn)
@@ -306,15 +307,16 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
             }
             for (const [handler, plugin] of batchedHandlers) {
               const { handler: handlerFn } = normalizeHook(handler)
+              this.getCombinedSourcemap = () => {
+                throw new Error(
+                  `The getCombinedSourcemap is not implement in transform hook at composedJsPlugins`,
+                )
+              }
               const result = await handlerFn.call(
-                {
-                  ...applyFixedPluginResolveFn(this, plugin),
-                  getCombinedSourcemap() {
-                    throw new Error(
-                      `The getCombinedSourcemap is not implement in transform hook at composedJsPlugins`,
-                    )
-                  },
-                },
+                applyFixedPluginResolveFn(
+                  this,
+                  plugin,
+                ) as TransformPluginContext,
                 code,
                 id,
                 moduleType,

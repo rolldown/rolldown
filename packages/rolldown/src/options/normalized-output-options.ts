@@ -1,4 +1,4 @@
-import { unsupported, type UnsupportedFnRet } from '../utils/misc'
+import { unsupported } from '../utils/misc'
 import type { BindingNormalizedOptions } from '../binding'
 import type {
   SourcemapIgnoreListOption,
@@ -45,13 +45,17 @@ export interface NormalizedOutputOptions {
 function mapFunctionOption<T>(
   option: T | undefined,
   name: string,
-): T | ReturnType<typeof unsupported> {
+): T | (() => never) {
   return typeof option === 'undefined'
-    ? unsupported(
-        `You should not take \`NormalizedOutputOptions#${name}\` and call it directly`,
-      )
+    ? () => {
+        unsupported(
+          `You should not take \`NormalizedOutputOptions#${name}\` and call it directly`,
+        )
+      }
     : option
 }
+
+type UnsupportedFnRet = () => never
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
 export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {

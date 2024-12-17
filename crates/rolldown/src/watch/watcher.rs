@@ -35,7 +35,7 @@ pub struct WatcherImpl {
   notify_watcher: Arc<Mutex<RecommendedWatcher>>,
   notify_watch_files: Arc<FxDashSet<ArcStr>>,
   running: AtomicBool,
-  rerun: AtomicBool,
+  watch_changes: FxDashSet<WatcherChangeData>,
   tx: Arc<Sender<WatcherChannelMsg>>,
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }
@@ -88,24 +88,32 @@ impl WatcherImpl {
       notify_watcher,
       notify_watch_files,
       running: AtomicBool::default(),
-      rerun: AtomicBool::default(),
+      watch_changes: FxDashSet::default(),
       rx: Arc::new(Mutex::new(rx)),
       tx: cloned_tx,
     })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn invalidate(&self) {
-    tracing::debug!(name= "watch invalidate ", running = ?self.running.load(Ordering::Relaxed), rerun= ?self.rerun.load(Ordering::Relaxed));
-    if self.running.load(Ordering::Relaxed) {
-      self.rerun.store(true, Ordering::Relaxed);
-      return;
+  pub fn invalidate(&self, data: Option<WatcherChangeData>) {
+    tracing::debug!(name= "watch invalidate", running = ?self.running.load(Ordering::Relaxed));
+
+    if let Some(data) = data {
+      self.watch_changes.insert(data);
     }
-    if self.rerun.load(Ordering::Relaxed) {
+
+    if self.running.load(Ordering::Relaxed) {
       return;
     }
 
     let future = async move {
+      for change in self.watch_changes.iter() {
+        for task in &self.tasks {
+          task.on_change(change.path.as_str(), change.kind).await;
+          task.invalidate(change.path.as_str());
+        }
+      }
+      self.watch_changes.clear();
       let _ = self.run().await;
     };
 
@@ -135,9 +143,8 @@ impl WatcherImpl {
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
 
-    if self.rerun.load(Ordering::Relaxed) {
-      self.rerun.store(false, Ordering::Relaxed);
-      self.invalidate();
+    if !self.watch_changes.is_empty() {
+      self.invalidate(None);
     }
 
     Ok(())
@@ -172,14 +179,11 @@ impl WatcherImpl {
 }
 
 #[tracing::instrument(level = "debug", skip(watcher))]
-pub async fn on_change(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
+pub fn emit_change_event(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
     .emit(WatcherEvent::Change(WatcherChangeData { path: path.into(), kind }))
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
-  for task in &watcher.tasks {
-    task.on_change(path, kind).await;
-  }
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -195,21 +199,19 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
               tracing::debug!(name= "notify event ", event = ?event);
               for path in event.paths {
                 let id = path.to_string_lossy();
-                match event.kind {
-                  notify::EventKind::Create(_) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
-                  }
+                if let Some(kind) = match event.kind {
+                  notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
                   notify::EventKind::Modify(
                     ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
                   ) => {
                     tracing::debug!(name= "notify updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
-                    watcher.invalidate();
+                    Some(WatcherChangeKind::Update)
                   }
-                  notify::EventKind::Remove(_) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
-                  }
-                  _ => {}
+                  notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),
+                  _ => None,
+                } {
+                  emit_change_event(&watcher, id.as_ref(), kind);
+                  watcher.invalidate(Some(WatcherChangeData { path: id.into(), kind }));
                 }
               }
             }

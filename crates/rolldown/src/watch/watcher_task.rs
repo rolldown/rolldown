@@ -157,13 +157,15 @@ impl WatcherTask {
     Ok(())
   }
 
-  #[tracing::instrument(level = "debug", skip(self))]
-  pub async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
+  pub fn invalidate(&self, path: &str) {
     // invalidate the watcher task if the changed file is in the watch list
     if self.watch_files.contains(path) {
       self.invalidate.store(true, Ordering::Relaxed);
     }
+  }
 
+  #[tracing::instrument(level = "debug", skip(self))]
+  pub async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
     let bundler = self.bundler.lock().await;
     let _ = bundler.plugin_driver.watch_change(path, kind).await.map_err(|e| {
       self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {

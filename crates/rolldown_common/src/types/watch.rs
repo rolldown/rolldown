@@ -23,7 +23,7 @@ impl Display for WatcherEvent {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct WatcherChangeData {
   pub path: ArcStr,
   pub kind: WatcherChangeKind,
@@ -56,7 +56,7 @@ pub struct BundleEndEventData {
   pub duration: u32,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum WatcherChangeKind {
   Create,
   Update,

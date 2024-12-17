@@ -96,6 +96,7 @@ impl WatcherImpl {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn invalidate(&self) {
+    tracing::debug!(name= "watch invalidate ", running = ?self.running.load(Ordering::Relaxed), rerun= ?self.rerun.load(Ordering::Relaxed));
     if self.running.load(Ordering::Relaxed) {
       self.rerun.store(true, Ordering::Relaxed);
       return;

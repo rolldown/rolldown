@@ -8,14 +8,15 @@ version = "0.1.0"
 doctest = false
 
 [dependencies]
-base64-simd     = { workspace = true }
-import_map      = { version = "*", features = ["ext"] }
-regex           = { workspace = true }
-rolldown_common = { workspace = true }
-rolldown_fs     = { workspace = true, features = ["os"] }
-rolldown_plugin = { workspace = true }
-rolldown_utils  = { workspace = true }
-serde           = { workspace = true }
-serde_json      = { workspace = true }
-url             = { workspace = true }
-urlencoding     = { workspace = true }
+base64-simd        = { workspace = true }
+import_map         = { version = "*", features = ["ext"] }
+regex              = { workspace = true }
+rolldown_common    = { workspace = true }
+rolldown_fs        = { workspace = true, features = ["os"] }
+rolldown_plugin    = { workspace = true }
+rolldown_std_utils = { workspace = true }
+rolldown_utils     = { workspace = true }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+url                = { workspace = true }
+urlencoding        = { workspace = true }

@@ -1,6 +1,6 @@
 use regex::Regex;
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_utils::path_ext::PathExt;
+use rolldown_std_utils::PathExt;
 use rolldown_utils::percent_encoding;
 use serde::Deserialize;
 use std::borrow::Cow;

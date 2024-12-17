@@ -27,9 +27,10 @@ impl MemberExprRef {
     &self,
     resolved_map: &FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
   ) -> Option<SymbolRef> {
-    resolved_map
-      .get(&self.span)
-      .and_then(|(resolved, _)| resolved.map(|sym_ref| sym_ref))
-      .or(Some(self.object_ref))
+    if let Some((resolved, _)) = resolved_map.get(&self.span) {
+      resolved.map(|sym_ref| sym_ref)
+    } else {
+      Some(self.object_ref)
+    }
   }
 }

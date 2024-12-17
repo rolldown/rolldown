@@ -120,6 +120,12 @@ impl From<anyhow::Error> for BuildDiagnostic {
   }
 }
 
+impl From<oxc_resolver::ResolveError> for BatchedBuildDiagnostic {
+  fn from(err: oxc_resolver::ResolveError) -> Self {
+    Self::new(vec![BuildDiagnostic::unhandleable_error(err.into())])
+  }
+}
+
 #[derive(Debug, Default)]
 pub struct BatchedBuildDiagnostic(Vec<BuildDiagnostic>);
 

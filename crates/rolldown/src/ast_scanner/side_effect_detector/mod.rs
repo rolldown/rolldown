@@ -28,6 +28,7 @@ pub struct SideEffectDetector<'a> {
   pub source: &'a str,
   pub comments: &'a oxc::allocator::Vec<'a, Comment>,
   pub ignore_annotations: bool,
+  pub jsx_preserve: bool,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -36,8 +37,9 @@ impl<'a> SideEffectDetector<'a> {
     source: &'a str,
     comments: &'a oxc::allocator::Vec<'a, Comment>,
     ignore_annotations: bool,
+    jsx_preserve: bool,
   ) -> Self {
-    Self { scope, source, comments, ignore_annotations }
+    Self { scope, source, comments, ignore_annotations, jsx_preserve }
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
@@ -325,6 +327,9 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::YieldExpression(_) => true,
 
       Expression::JSXElement(_) | Expression::JSXFragment(_) => {
+        if self.jsx_preserve {
+          return true;
+        }
         unreachable!("jsx should be transpiled")
       }
 
@@ -565,7 +570,7 @@ mod test {
     };
 
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments(), false)
+      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments(), false, false)
         .detect_side_effect_of_stmt(stmt)
     });
 

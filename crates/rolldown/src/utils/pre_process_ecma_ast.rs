@@ -10,7 +10,7 @@ use oxc::transformer::{
   TransformOptions, Transformer,
 };
 
-use rolldown_common::{ESTarget, NormalizedBundlerOptions};
+use rolldown_common::{ESTarget, Jsx, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
@@ -76,15 +76,18 @@ impl PreProcessEcmaAst {
       let ret = ast.program.with_mut(|fields| {
         let target: OxcESTarget = bundle_options.target.into();
         let mut transformer_options = TransformOptions::from(target);
-        match parse_type {
-          OxcParseType::Js => {}
-          OxcParseType::Jsx | OxcParseType::Tsx => {
-            transformer_options.jsx.jsx_plugin = true;
+        // The oxc jsx_plugin is enabled by default, we need to disable it.
+        transformer_options.jsx.jsx_plugin = false;
+
+        match &bundle_options.jsx {
+          Jsx::Disable => unreachable!("Jsx::Disable should be failed at parser."),
+          Jsx::Preserve => {}
+          Jsx::Enable(jsx) => {
+            transformer_options.jsx = jsx.clone();
+            if matches!(parse_type, OxcParseType::Tsx | OxcParseType::Jsx) {
+              transformer_options.jsx.jsx_plugin = true;
+            }
           }
-          OxcParseType::Ts => {}
-        }
-        if let Some(jsx) = &bundle_options.jsx {
-          transformer_options.jsx = jsx.clone();
         }
 
         Transformer::new(fields.allocator, Path::new(path), &transformer_options)

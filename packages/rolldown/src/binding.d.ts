@@ -338,7 +338,7 @@ export interface BindingInputOptions {
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
-  jsx?: JsxOptions
+  jsx?: BindingJsx
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions
@@ -365,6 +365,11 @@ export interface BindingJsonSourcemap {
 export interface BindingJsWatchChangeEvent {
   event: string
 }
+
+export type BindingJsx =
+  | { type: 'Disable' }
+  | { type: 'Preserve' }
+  | { type: 'Enable', field0: JsxOptions }
 
 export declare enum BindingLogLevel {
   Silent = 0,

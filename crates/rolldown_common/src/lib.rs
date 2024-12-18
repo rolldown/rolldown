@@ -25,6 +25,7 @@ pub mod bundler_options {
       inject_import::InjectImport,
       input_item::InputItem,
       is_external::IsExternal,
+      jsx::Jsx,
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       output_exports::OutputExports,

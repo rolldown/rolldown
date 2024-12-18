@@ -58,7 +58,7 @@ export class PluginContext extends MinimalPluginContext {
     if (id === this.currentLoadingModule) {
       this.onLog(
         LOG_LEVEL_WARN,
-        logCycleLoading(super.pluginName, this.currentLoadingModule),
+        logCycleLoading(this.pluginName, this.currentLoadingModule),
       )
     }
     // resolveDependencies always true at rolldown

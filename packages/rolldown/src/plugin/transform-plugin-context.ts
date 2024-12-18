@@ -50,7 +50,7 @@ export class TransformPluginContext extends PluginContext {
     if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId)
     e.id = this.moduleId
     e.hook = 'transform'
-    return error(logPluginError(normalizeLog(e), super.pluginName))
+    return error(logPluginError(normalizeLog(e), this.pluginName))
   }
 
   public getCombinedSourcemap(): SourceMap {

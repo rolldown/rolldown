@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 // cSpell:disable
 use binding_watch_option::BindingWatchOption;
-use oxc_transform_napi::JsxOptions;
 use rustc_hash::FxBuildHasher;
 
 use crate::types::{
@@ -13,12 +12,14 @@ use derive_more::Debug;
 use napi_derive::napi;
 
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
+use binding_jsx::BindingJsx;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 mod binding_checks_options;
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
+mod binding_jsx;
 mod binding_watch_option;
 // mod binding_jsx_options;
 mod binding_resolve_options;
@@ -80,7 +81,7 @@ pub struct BindingInputOptions {
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
   #[debug(skip)]
-  pub jsx: Option<JsxOptions>,
+  pub jsx: Option<BindingJsx>,
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,

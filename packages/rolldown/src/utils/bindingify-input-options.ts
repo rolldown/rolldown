@@ -207,21 +207,31 @@ function bindingifyInput(
   })
 }
 
+// The `automatic` is most user usages, so it is different rollup's default value `false`
 function bindingifyJsx(input: InputOptions['jsx']): BindingInputOptions['jsx'] {
+  if (input === false) {
+    return { type: 'Disable' }
+  }
   if (input) {
-    const mode = input.mode ?? 'classic'
+    if (input.mode === 'preserve') {
+      return { type: 'Preserve' }
+    }
+    const mode = input.mode ?? 'automatic'
     return {
-      runtime: mode,
-      importSource:
-        mode === 'classic'
-          ? input.importSource
-          : mode === 'automatic'
-            ? input.jsxImportSource
-            : undefined,
-      pragma: input.factory,
-      pragmaFrag: input.fragment,
-      development: input.development,
-      refresh: input.refresh,
+      type: 'Enable',
+      field0: {
+        runtime: mode,
+        importSource:
+          mode === 'classic'
+            ? input.importSource
+            : mode === 'automatic'
+              ? input.jsxImportSource
+              : undefined,
+        pragma: input.factory,
+        pragmaFrag: input.fragment,
+        development: input.development,
+        refresh: input.refresh,
+      },
     }
   }
 }

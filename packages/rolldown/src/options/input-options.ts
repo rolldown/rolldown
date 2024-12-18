@@ -36,7 +36,7 @@ export type ModuleTypes = Record<
 >
 
 export interface JsxOptions {
-  mode?: 'classic' | 'automatic'
+  mode?: 'classic' | 'automatic' | 'preserve'
   factory?: string
   fragment?: string
   importSource?: string
@@ -147,7 +147,7 @@ export interface InputOptions {
    */
   inject?: Record<string, string | [string, string]>
   profilerNames?: boolean
-  jsx?: JsxOptions
+  jsx?: false | JsxOptions
   watch?: WatchOptions | false
   dropLabels?: string[]
   keepNames?: boolean

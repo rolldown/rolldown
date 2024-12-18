@@ -1,4 +1,3 @@
-use oxc::transformer::JsxOptions;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
@@ -6,6 +5,7 @@ use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
+use types::jsx::Jsx;
 use types::output_option::GlobalsOutputOption;
 use types::target::ESTarget;
 use types::watch_option::WatchOption;
@@ -155,7 +155,7 @@ pub struct BundlerOptions {
     serde(deserialize_with = "deserialize_jsx", default),
     schemars(with = "Option<FxHashMap<String, String>>")
   )]
-  pub jsx: Option<JsxOptions>,
+  pub jsx: Option<Jsx>,
   pub watch: Option<WatchOption>,
   pub comments: Option<Comments>,
   pub target: Option<ESTarget>,
@@ -239,15 +239,15 @@ where
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
-fn deserialize_jsx<'de, D>(deserializer: D) -> Result<Option<JsxOptions>, D::Error>
+fn deserialize_jsx<'de, D>(deserializer: D) -> Result<Option<Jsx>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  use oxc::transformer::JsxRuntime;
+  use oxc::transformer::{JsxOptions, JsxRuntime};
 
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
-    None => Ok(None),
+    None => Ok(Some(Jsx::default())),
     Some(Value::Object(obj)) => {
       let mut default_jsx_option = JsxOptions::default();
       for (k, v) in obj {
@@ -292,7 +292,7 @@ where
         }
       }
 
-      Ok(Some(default_jsx_option))
+      Ok(Some(Jsx::Enable(default_jsx_option)))
     }
     _ => Err(serde::de::Error::custom("jsx should be an object")),
   }

@@ -1,7 +1,7 @@
 import { defineConfig } from 'rolldown'
 
 export default defineConfig({
-  input: './index.js',
+  input: './entry.js',
   resolve: {
     // This needs to be explicitly set for now because oxc resolver doesn't
     // assume default exports conditions. Rolldown will ship with a default that
@@ -11,16 +11,14 @@ export default defineConfig({
   output: {
     plugins: [
       {
-        name: 'test-plugin',
-        outputOptions: function (options) {
-          console.log(options.banner)
-          options.banner = '/* banner */'
-          return options
-        },
+        name: 'ignore-side-effects',
+        // transform(_code, id) {
+        // 	return { moduleSideEffects: !id.endsWith("effect.js") };
+        // },
       },
     ],
   },
   experimental: {
-    enableComposingJsPlugins: true,
+    // enableComposingJsPlugins: true,
   },
 })

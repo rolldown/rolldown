@@ -113,7 +113,7 @@ impl EcmaCompiler {
     let allocator = Allocator::default();
     let program = Parser::new(&allocator, source_text, SourceType::default()).parse().program;
     let program = allocator.alloc(program);
-    let options = MinifierOptions { mangle: true, ..MinifierOptions::default() };
+    let options = MinifierOptions::default();
     let ret = Minifier::new(options).build(&allocator, program);
     let ret = Codegen::new()
       .with_options(CodegenOptions {

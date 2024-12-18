@@ -20,7 +20,7 @@
 * renderError hook should handle renderStart hook error ([#3121](https://github.com/rolldown/rolldown/issues/3121)) ([5407b76](https://github.com/rolldown/rolldown/commit/5407b76498f9134bdc91d4821fd403e0d3711ae0))
 * should create one sourcemap if transform hook not return ([#3107](https://github.com/rolldown/rolldown/issues/3107)) ([b30cd89](https://github.com/rolldown/rolldown/commit/b30cd890d92c9b6cf00823c3436250baa8222e99))
 * shouldn't have unexpected warning severity for error ([#3163](https://github.com/rolldown/rolldown/issues/3163)) ([f2dfbac](https://github.com/rolldown/rolldown/commit/f2dfbac769e551b5e66bd4a61f28605b4812b4d9))
-* support multi fn and classs expr keep_names ([#3054](https://github.com/rolldown/rolldown/issues/3054)) ([f44af55](https://github.com/rolldown/rolldown/commit/f44af5584b8e17555ead346e2fc02a65d900a348))
+* support multi fn and class expr keep_names ([#3054](https://github.com/rolldown/rolldown/issues/3054)) ([f44af55](https://github.com/rolldown/rolldown/commit/f44af5584b8e17555ead346e2fc02a65d900a348))
 * the renderError hooks should handle js errors ([#3108](https://github.com/rolldown/rolldown/issues/3108)) ([fff8244](https://github.com/rolldown/rolldown/commit/fff82445a95f948c221787d9961acad8f8fcfab9))
 * **umd:** ensure exports if module is wrapped ([#3089](https://github.com/rolldown/rolldown/issues/3089)) ([1e4dcb4](https://github.com/rolldown/rolldown/commit/1e4dcb4627f453e22638617edd42c37631ead4f5))
 * wasmHelperPlugin test ([#3120](https://github.com/rolldown/rolldown/issues/3120)) ([92a0ce9](https://github.com/rolldown/rolldown/commit/92a0ce97ec5da1c9dc3b2b045e7f7e1b6345ee8c))

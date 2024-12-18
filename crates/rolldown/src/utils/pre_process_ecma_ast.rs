@@ -132,12 +132,12 @@ impl PreProcessEcmaAst {
       if bundle_options.treeshake.enabled() && !has_lazy_export {
         // Perform dead code elimination.
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
-        let compressor = Compressor::new(allocator, CompressOptions::dead_code_elimination());
+        let compressor = Compressor::new(allocator, CompressOptions::all_false());
         if self.ast_changed {
           let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
           (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
         }
-        compressor.build_with_symbols_and_scopes(symbols, scopes, program);
+        compressor.dead_code_elimination_with_symbols_and_scopes(symbols, scopes, program);
       }
 
       Ok(())

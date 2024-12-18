@@ -37,5 +37,5 @@ assert.strictEqual(value.foo, "foo");
 (5:19) "value." --> (8:19) "value."
 (5:25) "foo, " --> (8:25) "foo, "
 (5:30) "'foo')" --> (8:30) "\"foo\")"
-(5:36) "" --> (8:36) ";\n"
+(5:36) [invalid] --> (8:36)
 ```

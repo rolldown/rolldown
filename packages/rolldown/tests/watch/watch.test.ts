@@ -499,7 +499,6 @@ async function ensureWriteFileSyncForWindowsNode22(
   filePath: string,
   content: string,
 ) {
-  fs.writeFileSync(filePath, '\n' + content + '\n')
   fs.writeFileSync(filePath, content)
 }
 
@@ -509,6 +508,5 @@ async function ensureWriteFileSyncForWindowsNode18(
 ) {
   // TODO: not sure the update event is not triggered at windows, but add it success
   // ref https://github.com/rolldown/rolldown/actions/runs/12213020539/job/34072162527?pr=3032 windows node 18/20
-  console.log(filePath, content)
   fs.writeFileSync(filePath, content)
 }

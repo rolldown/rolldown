@@ -11,6 +11,9 @@ export default defineTest({
         onLog: (level, log) => {
           expect(level).toBe('warn')
           expect(log.code).toBe('CYCLE_LOADING')
+          expect(log.message).toContain(
+            'cycle loading at test-plugin-context plugin',
+          )
           onLogFn()
         },
         async load(id) {

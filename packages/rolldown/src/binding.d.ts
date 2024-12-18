@@ -211,6 +211,7 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:transform'|
 'builtin:wasm-fallback'|
 'builtin:alias'|
+'builtin:deno-loader'|
 'builtin:json'|
 'builtin:build-import-analysis'|
 'builtin:replace'|
@@ -224,6 +225,12 @@ export interface BindingBundlerOptions {
 
 export interface BindingChecksOptions {
   circularDependency?: boolean
+}
+
+export interface BindingDenoLoaderPluginConfig {
+  importMap: string
+  importMapBaseUrl: string
+  entryPoints: Array<string>
 }
 
 export interface BindingEmittedAsset {

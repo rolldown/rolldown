@@ -20,3 +20,4 @@ export {
 export { transformPlugin } from './builtin-plugin/transform-plugin'
 export { replacePlugin } from './builtin-plugin/replace-plugin'
 export { aliasPlugin } from './builtin-plugin/alias-plugin'
+export { denoLoaderPlugin } from './builtin-plugin/deno-loader-plugin'

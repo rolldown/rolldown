@@ -21,6 +21,8 @@ pub enum BindingBuiltinPluginName {
   WasmFallback,
   #[napi(value = "builtin:alias")]
   Alias,
+  #[napi(value = "builtin:deno-loader")]
+  DenoLoader,
   #[napi(value = "builtin:json")]
   Json,
   #[napi(value = "builtin:build-import-analysis")]

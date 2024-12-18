@@ -111,6 +111,7 @@ impl<'a> LinkStage<'a> {
     self.determine_module_exports_kind();
     self.wrap_modules();
     self.generate_lazy_export();
+    self.determine_side_effects();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();

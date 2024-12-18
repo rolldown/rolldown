@@ -156,6 +156,9 @@ impl LinkStage<'_> {
       .iter_enumerated()
       .filter_map(|(idx, item)| item.side_effects().has_side_effects().then(|| idx))
       .map(|item| item)
+      .inspect(|item| {
+        dbg!(&self.module_table.modules[*item].id());
+      })
       .collect::<FxHashSet<ModuleIdx>>();
     let mut binding_ctx = BindImportsAndExportsContext {
       index_modules: &self.module_table.modules,

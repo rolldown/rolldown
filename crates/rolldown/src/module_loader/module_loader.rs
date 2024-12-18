@@ -225,10 +225,7 @@ impl ModuleLoader {
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
-            // could not block_on/spawn the main thread in WASI
-            std::thread::spawn(move || {
-              handle.spawn(task.run());
-            });
+            handle.spawn(task.run());
           }
           #[cfg(not(target_family = "wasm"))]
           tokio::spawn(task.run());

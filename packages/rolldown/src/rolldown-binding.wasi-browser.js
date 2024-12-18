@@ -14,7 +14,7 @@ const __wasi = new __WASI({
   fs: __fs,
   preopens: {
     '/': '/',
-  }
+  },
 })
 
 const __emnapiContext = __emnapiGetDefaultContext()
@@ -59,6 +59,7 @@ const {
 
 function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__OxcError_struct_0']?.()
+  __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()
   __napiInstance.exports['__napi_register__ErrorLabel_struct_1']?.()
   __napiInstance.exports['__napi_register__Severity_2']?.()
   __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()

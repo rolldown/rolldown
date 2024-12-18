@@ -70,7 +70,7 @@
     "build-wasi:debug": "run-s build-binding build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node",
     "# Scrips for docs #": "_",
-    "gen-docs": "typedoc",
+    "gen-doc-json": "typedoc",
     "# Scrips for checking #": "_",
     "test": "pnpm run --filter rolldown-tests go",
     "test:update": "vitest run -u",

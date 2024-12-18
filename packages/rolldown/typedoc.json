@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "json": "./out.json",
+  "json": "./doc.json",
   "pretty": true,
   "entryPoints": [
     "src/options/input-options.ts",

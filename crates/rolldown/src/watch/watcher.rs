@@ -1,12 +1,9 @@
 use arcstr::ArcStr;
-use dashmap::DashSet;
-use notify::{
-  event::ModifyKind, Config, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
-};
+use notify::{event::ModifyKind, Config, RecommendedWatcher, Watcher as NotifyWatcher};
 use rolldown_common::{
   BundleEvent, NotifyOption, WatcherChangeData, WatcherChangeKind, WatcherEvent,
 };
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
   path::Path,
@@ -35,10 +32,10 @@ enum WatcherChannelMsg {
 pub struct WatcherImpl {
   pub emitter: SharedWatcherEmitter,
   tasks: Vec<WatcherTask>,
-  inner: Arc<Mutex<RecommendedWatcher>>,
+  notify_watcher: Arc<Mutex<RecommendedWatcher>>,
+  notify_watch_files: Arc<FxDashSet<ArcStr>>,
   running: AtomicBool,
-  rerun: AtomicBool,
-  watch_files: FxDashSet<ArcStr>,
+  watch_changes: FxDashSet<WatcherChangeData>,
   tx: Arc<Sender<WatcherChannelMsg>>,
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
 }
@@ -62,44 +59,61 @@ impl WatcherImpl {
       }
       Config::default()
     };
-    let inner = RecommendedWatcher::new(
+    let notify_watcher = Arc::new(Mutex::new(RecommendedWatcher::new(
       move |res| {
         if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
           eprintln!("send watch event error {e:?}");
         };
       },
       watch_option,
-    )?;
-
+    )?));
+    let notify_watch_files = Arc::new(FxDashSet::default());
     let emitter = Arc::new(WatcherEmitter::new());
 
-    let tasks =
-      bundlers.into_iter().map(|bundler| WatcherTask::new(bundler, Arc::clone(&emitter))).collect();
+    let tasks = bundlers
+      .into_iter()
+      .map(|bundler| {
+        WatcherTask::new(
+          bundler,
+          Arc::clone(&emitter),
+          Arc::clone(&notify_watcher),
+          Arc::clone(&notify_watch_files),
+        )
+      })
+      .collect();
 
     Ok(Self {
       tasks,
       emitter,
-      inner: Arc::new(Mutex::new(inner)),
+      notify_watcher,
+      notify_watch_files,
       running: AtomicBool::default(),
-      watch_files: DashSet::default(),
-      rerun: AtomicBool::default(),
+      watch_changes: FxDashSet::default(),
       rx: Arc::new(Mutex::new(rx)),
       tx: cloned_tx,
     })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn invalidate(&self) {
-    if self.running.load(Ordering::Relaxed) {
-      self.rerun.store(true, Ordering::Relaxed);
-      return;
+  pub fn invalidate(&self, data: Option<WatcherChangeData>) {
+    tracing::debug!(name= "watch invalidate", running = ?self.running.load(Ordering::Relaxed));
+
+    if let Some(data) = data {
+      self.watch_changes.insert(data);
     }
-    if self.rerun.load(Ordering::Relaxed) {
+
+    if self.running.load(Ordering::Relaxed) {
       return;
     }
 
     let future = async move {
-      self.rerun.store(false, Ordering::Relaxed);
+      for change in self.watch_changes.iter() {
+        for task in &self.tasks {
+          task.on_change(change.path.as_str(), change.kind).await;
+          task.invalidate(change.path.as_str());
+        }
+      }
+      self.watch_changes.clear();
       let _ = self.run().await;
     };
 
@@ -122,33 +136,16 @@ impl WatcherImpl {
     self.running.store(true, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::Start))?;
 
-    let mut inner = self.inner.lock().await;
-
     for task in &self.tasks {
       task.run().await?;
-
-      for file in task.watch_files.iter() {
-        // we should skip the file that is already watched, here here some reasons:
-        // - The watching files has a ms level overhead.
-        // - Watching the same files multiple times will cost more overhead.
-        // TODO: tracking https://github.com/notify-rs/notify/issues/653
-        if self.watch_files.contains(file.as_str()) {
-          continue;
-        }
-        let path = Path::new(file.as_str());
-        if path.exists() {
-          tracing::debug!(name= "notify watch ", path = ?path);
-          inner.watch(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
-          self.watch_files.insert(file.clone());
-        }
-      }
     }
-
-    // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
-    std::mem::drop(inner);
 
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
+
+    if !self.watch_changes.is_empty() {
+      self.invalidate(None);
+    }
 
     Ok(())
   }
@@ -159,8 +156,9 @@ impl WatcherImpl {
     self.tx.send(WatcherChannelMsg::Close)?;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
-    let mut inner = self.inner.lock().await;
-    for path in self.watch_files.iter() {
+    let mut inner = self.notify_watcher.lock().await;
+    for path in self.notify_watch_files.iter() {
+      tracing::debug!(name= "notify close ", path = ?path.as_str());
       inner.unwatch(Path::new(path.as_str()))?;
     }
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::run`
@@ -181,14 +179,11 @@ impl WatcherImpl {
 }
 
 #[tracing::instrument(level = "debug", skip(watcher))]
-pub async fn on_change(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
+pub fn emit_change_event(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
     .emit(WatcherEvent::Change(WatcherChangeData { path: path.into(), kind }))
     .map_err(|e| eprintln!("Rolldown internal error: {e:?}"));
-  for task in &watcher.tasks {
-    task.on_change(path, kind).await;
-  }
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -204,20 +199,19 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
               tracing::debug!(name= "notify event ", event = ?event);
               for path in event.paths {
                 let id = path.to_string_lossy();
-                match event.kind {
-                  notify::EventKind::Create(_) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Create).await;
-                  }
+                if let Some(kind) = match event.kind {
+                  notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
                   notify::EventKind::Modify(
                     ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
                   ) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Update).await;
-                    watcher.invalidate();
+                    tracing::debug!(name= "notify updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
+                    Some(WatcherChangeKind::Update)
                   }
-                  notify::EventKind::Remove(_) => {
-                    on_change(&watcher, id.as_ref(), WatcherChangeKind::Delete).await;
-                  }
-                  _ => {}
+                  notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),
+                  _ => None,
+                } {
+                  emit_change_event(&watcher, id.as_ref(), kind);
+                  watcher.invalidate(Some(WatcherChangeData { path: id.into(), kind }));
                 }
               }
             }

@@ -1,28 +1,16 @@
-import { expect, test, vi, afterEach } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
 import { sleep } from '@tests/utils'
 
-const input = path.join(import.meta.dirname, './main.js')
-const output = path.join(import.meta.dirname, './dist/main.js')
-const outputDir = path.join(import.meta.dirname, './dist/')
-const foo = path.join(import.meta.dirname, './foo.js')
-
-afterEach(async () => {
-  // revert change
-  fs.writeFileSync(input, 'console.log(1)\n')
-  fs.writeFileSync(foo, 'console.log(1)\n')
-  // TODO: find a way to avoid emit the change event at next test
-  await sleep(60)
-})
-
 test.sequential('watch', async () => {
+  const { input, output } = await createTestInputAndOutput('watch')
   const watchChangeFn = vi.fn()
   const closeWatcherFn = vi.fn()
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
     plugins: [
       {
         watchChange(id, event) {
@@ -58,10 +46,38 @@ test.sequential('watch', async () => {
   expect(closeWatcherFn).toBeCalledTimes(1)
 })
 
-test.sequential('watch close', async () => {
+test.sequential('watch files after scan stage', async () => {
+  const { input, output } = await createTestInputAndOutput(
+    'watch-files-after-scan',
+  )
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
+    plugins: [
+      {
+        renderStart() {
+          fs.writeFileSync(input, 'console.log(2)')
+        },
+      },
+    ],
+  })
+  // should run build once
+  await waitBuildFinished(watcher)
+
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+  })
+
+  await watcher.close()
+})
+
+test.sequential('watch close', async () => {
+  const { input, output } = await createTestInputAndOutput('watch-close')
+  const watcher = watch({
+    input,
+    output: { file: output },
   })
   await waitBuildFinished(watcher)
 
@@ -77,15 +93,16 @@ test.sequential('watch close', async () => {
 })
 
 test.sequential('watch event', async () => {
+  const { input, outputDir } = await createTestInputAndOutput('watch-event')
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { dir: outputDir },
   })
 
   const events: any[] = []
   watcher.on('event', (event) => {
     if (event.code === 'BUNDLE_END') {
-      expect(event.output).toEqual([path.join(import.meta.dirname, './dist')])
+      expect(event.output).toEqual([outputDir])
       expect(event.duration).toBeTypeOf('number')
       events.push({ code: 'BUNDLE_END' })
     } else {
@@ -139,9 +156,12 @@ test.sequential('watch event', async () => {
 })
 
 test.sequential('watch event avoid deadlock #2806', async () => {
+  const { input, output } = await createTestInputAndOutput(
+    'watch-event-avoid-dead-lock',
+  )
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
   })
 
   const testFn = vi.fn()
@@ -169,28 +189,26 @@ test.sequential('watch event avoid deadlock #2806', async () => {
 })
 
 test.sequential('watch skipWrite', async () => {
-  const dir = path.join(import.meta.dirname, './skipWrite-dist/')
+  const { input, output } = await createTestInputAndOutput('watch-skipWrite')
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
-    output: {
-      dir,
-    },
+    output: { file: output },
     watch: {
       skipWrite: true,
     },
   })
   await waitBuildFinished(watcher)
 
-  expect(fs.existsSync(dir)).toBe(false)
+  expect(fs.existsSync(output)).toBe(false)
   await watcher.close()
 })
 
 test.sequential('PluginContext addWatchFile', async () => {
-  const foo = path.join(import.meta.dirname, './foo.js')
+  const { input, output } = await createTestInputAndOutput('addWatchFile')
+  const { input: foo } = await createTestInputAndOutput('addWatchFile-foo')
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
     plugins: [
       {
         buildStart() {
@@ -222,9 +240,10 @@ test.sequential('PluginContext addWatchFile', async () => {
 })
 
 test.sequential('watch include/exclude', async () => {
+  const { input, output } = await createTestInputAndOutput('include-exclude')
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
     watch: {
       exclude: 'main.js',
     },
@@ -246,14 +265,14 @@ test.sequential('watch include/exclude', async () => {
 
 test.sequential('error handling', async () => {
   // first build error, the watching could be work with recover error
-  fs.writeFileSync(input, 'conso le.log(1)')
-  // wait 60ms avoid the change event emit at first build
-  await new Promise((resolve) => {
-    setTimeout(resolve, 60)
-  })
+  const { input, output } = await createTestInputAndOutput(
+    'error-handling',
+    'conso le.log(1)',
+  )
+
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
   })
   const errors: string[] = []
   watcher.on('event', (event) => {
@@ -290,9 +309,12 @@ test.sequential('error handling', async () => {
 })
 
 test.sequential('error handling + plugin error', async () => {
+  const { input, output } = await createTestInputAndOutput(
+    'error-handling-plugin-error',
+  )
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
     plugins: [
       {
         transform() {
@@ -325,22 +347,22 @@ test.sequential('error handling + plugin error', async () => {
 })
 
 test.sequential('watch multiply options', async () => {
-  const fooOutputDir = path.join(import.meta.dirname, './foo-dist/')
-  const fooOutput = path.join(import.meta.dirname, './foo-dist/foo.js')
+  const { input, output, outputDir } = await createTestInputAndOutput(
+    'watch-multiply-options',
+  )
+  const {
+    input: foo,
+    output: fooOutput,
+    outputDir: fooOutputDir,
+  } = await createTestInputAndOutput('watch-multiply-options-foo')
   const watcher = watch([
     {
       input,
-      cwd: import.meta.dirname,
-      output: {
-        dir: outputDir,
-      },
+      output: { dir: outputDir },
     },
     {
       input: foo,
-      cwd: import.meta.dirname,
-      output: {
-        dir: fooOutputDir,
-      },
+      output: { dir: fooOutputDir },
     },
   ])
 
@@ -376,11 +398,17 @@ test.sequential('watch multiply options', async () => {
 })
 
 test.sequential('warning for multiply notify options', async () => {
+  const { input, output } = await createTestInputAndOutput(
+    'watch-multiply-options-warning',
+  )
+  const { input: foo } = await createTestInputAndOutput(
+    'watch-multiply-options-warning-foo',
+  )
   const onLogFn = vi.fn()
   const watcher = watch([
     {
       input,
-      cwd: import.meta.dirname,
+      output: { file: output },
       watch: {
         notify: {
           compareContents: false,
@@ -389,7 +417,7 @@ test.sequential('warning for multiply notify options', async () => {
     },
     {
       input: foo,
-      cwd: import.meta.dirname,
+      output: { file: output },
       watch: {
         notify: {
           compareContents: true,
@@ -415,16 +443,30 @@ test.sequential('warning for multiply notify options', async () => {
 })
 
 test.sequential('watch close immediately', async () => {
+  const { input, output } = await createTestInputAndOutput(
+    'watch-close-immediately',
+  )
   const watcher = watch({
     input,
-    cwd: import.meta.dirname,
+    output: { file: output },
   })
 
   await watcher.close()
 })
 
+async function createTestInputAndOutput(dirname: string, content?: string) {
+  const dir = path.join(import.meta.dirname, 'temp', dirname)
+  fs.mkdirSync(dir, { recursive: true })
+  const input = path.join(dir, './main.js')
+  fs.writeFileSync(input, content || 'console.log(1)')
+  await sleep(60) // TODO: find a way to avoid emit the change event at next test
+  const outputDir = path.join(dir, './dist')
+  const output = path.join(outputDir, 'main.js')
+  return { input, output, dir, outputDir }
+}
+
 async function waitUtil(expectFn: () => void) {
-  for (let tries = 0; tries < 10; tries++) {
+  for (let tries = 0; tries < 20; tries++) {
     try {
       await expectFn()
       return

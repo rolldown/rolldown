@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-linux-arm-gnueabihf",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "cpu": [
     "arm"
   ],

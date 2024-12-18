@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-wasm32-wasi",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "cpu": [
     "wasm32"
   ],

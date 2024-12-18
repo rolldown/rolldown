@@ -1,3 +1,71 @@
+## [0.15.1](https://github.com/rolldown/rolldown/compare/v0.15.0...v0.15.1) (2024-12-18)
+
+
+### Bug Fixes
+
+* avoid one JsError into_unknown twice ([#3020](https://github.com/rolldown/rolldown/issues/3020)) ([504ea76](https://github.com/rolldown/rolldown/commit/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1)), closes [/github.com/napi-rs/napi-rs/blob/main/crates/napi/src/error.rs#L245](https://github.com//github.com/napi-rs/napi-rs/blob/main/crates/napi/src/error.rs/issues/L245)
+* buildEnd hook should handle buildStart hook error ([#3117](https://github.com/rolldown/rolldown/issues/3117)) ([1ae46b7](https://github.com/rolldown/rolldown/commit/1ae46b7234656774fcf10edaa601488265ee562c))
+* call `closeBundle` on cli and one-shot `build` api ([#3026](https://github.com/rolldown/rolldown/issues/3026)) ([2969a22](https://github.com/rolldown/rolldown/commit/2969a22d3ee295cc2482b02cff2be3c1ed3c53c1))
+* dedupe external import binding for format `esm` ([#3082](https://github.com/rolldown/rolldown/issues/3082)) ([d1cf2f8](https://github.com/rolldown/rolldown/commit/d1cf2f85b3ffad14a1e771fd707282e7e2461042))
+* duplicated module import info ([#3171](https://github.com/rolldown/rolldown/issues/3171)) ([f0c42f8](https://github.com/rolldown/rolldown/commit/f0c42f8832dcf06104df3c5fc468dc085455db2a))
+* dynamic import tree-shaking boundary issue caused by object rest pattern ([#3041](https://github.com/rolldown/rolldown/issues/3041)) ([7b6a13b](https://github.com/rolldown/rolldown/commit/7b6a13b9fee2e06285f65016858b9fb3b8135b2c)), closes [/github.com/rolldown/rolldown/blob/5d0ff351bffaab3da5077615553470c10d0699b4/crates/rolldown/src/ast_scanner/dynamic_import.rs#L188](https://github.com//github.com/rolldown/rolldown/blob/5d0ff351bffaab3da5077615553470c10d0699b4/crates/rolldown/src/ast_scanner/dynamic_import.rs/issues/L188)
+* ensure legal identifier for require binding ([#3067](https://github.com/rolldown/rolldown/issues/3067)) ([64a831c](https://github.com/rolldown/rolldown/commit/64a831c576fdbbe1bafb88d61fc2663ac02777ef)), closes [#3056](https://github.com/rolldown/rolldown/issues/3056)
+* fix build output to stdout ([#3144](https://github.com/rolldown/rolldown/issues/3144)) ([9713459](https://github.com/rolldown/rolldown/commit/97134591948837b9beab6748657bb1dd47d600e6)), closes [/github.com/unjs/consola/blob/e510121bb9e53f099c9e3387f8467e3b30bf9edf/src/reporters/fancy.ts#L135-L143](https://github.com//github.com/unjs/consola/blob/e510121bb9e53f099c9e3387f8467e3b30bf9edf/src/reporters/fancy.ts/issues/L135-L143)
+* keep names for class/function expression ([#3051](https://github.com/rolldown/rolldown/issues/3051)) ([225f6a4](https://github.com/rolldown/rolldown/commit/225f6a41679fff165eff297ba21578a72b4d88eb))
+* make chunk export symbol deconflict stable ([#3022](https://github.com/rolldown/rolldown/issues/3022)) ([d31b48b](https://github.com/rolldown/rolldown/commit/d31b48b04519c5c0a6be58d77cb284e79ababeb9))
+* make ThisExpr span unique ([#3038](https://github.com/rolldown/rolldown/issues/3038)) ([897aa2c](https://github.com/rolldown/rolldown/commit/897aa2c8a02e1d08f1e556dff0aabcbfa761c9b6)), closes [/github.com/rolldown/rolldown/pull/3031#issuecomment-2516878862](https://github.com//github.com/rolldown/rolldown/pull/3031/issues/issuecomment-2516878862)
+* **node:** print correct version for nightly/canary ([#3126](https://github.com/rolldown/rolldown/issues/3126)) ([39f9197](https://github.com/rolldown/rolldown/commit/39f9197fe06acaab0d49206d02051696dc283bb3)), closes [#1579](https://github.com/rolldown/rolldown/issues/1579)
+* propagate augmented hash to parent chunks ([#3059](https://github.com/rolldown/rolldown/issues/3059)) ([5815d0f](https://github.com/rolldown/rolldown/commit/5815d0f6310bb54bb05bc0d38e642eae8561441b))
+* remove lazy parse expr hack ([#3118](https://github.com/rolldown/rolldown/issues/3118)) ([6d5c8ff](https://github.com/rolldown/rolldown/commit/6d5c8ffe99f9607958d95c451c841338690f3a09))
+* renderError hook should handle renderStart hook error ([#3121](https://github.com/rolldown/rolldown/issues/3121)) ([5407b76](https://github.com/rolldown/rolldown/commit/5407b76498f9134bdc91d4821fd403e0d3711ae0))
+* should create one sourcemap if transform hook not return ([#3107](https://github.com/rolldown/rolldown/issues/3107)) ([b30cd89](https://github.com/rolldown/rolldown/commit/b30cd890d92c9b6cf00823c3436250baa8222e99))
+* shouldn't have unexpected warning severity for error ([#3163](https://github.com/rolldown/rolldown/issues/3163)) ([f2dfbac](https://github.com/rolldown/rolldown/commit/f2dfbac769e551b5e66bd4a61f28605b4812b4d9))
+* support multi fn and classs expr keep_names ([#3054](https://github.com/rolldown/rolldown/issues/3054)) ([f44af55](https://github.com/rolldown/rolldown/commit/f44af5584b8e17555ead346e2fc02a65d900a348))
+* the renderError hooks should handle js errors ([#3108](https://github.com/rolldown/rolldown/issues/3108)) ([fff8244](https://github.com/rolldown/rolldown/commit/fff82445a95f948c221787d9961acad8f8fcfab9))
+* **umd:** ensure exports if module is wrapped ([#3089](https://github.com/rolldown/rolldown/issues/3089)) ([1e4dcb4](https://github.com/rolldown/rolldown/commit/1e4dcb4627f453e22638617edd42c37631ead4f5))
+* wasmHelperPlugin test ([#3120](https://github.com/rolldown/rolldown/issues/3120)) ([92a0ce9](https://github.com/rolldown/rolldown/commit/92a0ce97ec5da1c9dc3b2b045e7f7e1b6345ee8c))
+* **watch-cli:** respect output options ([#3136](https://github.com/rolldown/rolldown/issues/3136)) ([00ca411](https://github.com/rolldown/rolldown/commit/00ca411ed034fdb169e6d780402152168553529d))
+* wrong output when external import name is string literal ([#3116](https://github.com/rolldown/rolldown/issues/3116)) ([d303f26](https://github.com/rolldown/rolldown/commit/d303f269a0a07e1bc88985d88221426029b3deec)), closes [#3094](https://github.com/rolldown/rolldown/issues/3094)
+
+
+### Features
+
+* `keepNames` node binding ([#3027](https://github.com/rolldown/rolldown/issues/3027)) ([176666f](https://github.com/rolldown/rolldown/commit/176666fa328cf77657addaa04787061e9ac836b1)), closes [#2985](https://github.com/rolldown/rolldown/issues/2985)
+* `names` / `originalFileNames` support ([#3024](https://github.com/rolldown/rolldown/issues/3024)) ([daa17ff](https://github.com/rolldown/rolldown/commit/daa17ffeda9177b46805b7b9aeb578dee91f68a2)), closes [#2496](https://github.com/rolldown/rolldown/issues/2496)
+* **api:** `build` API write to disk by default ([#3019](https://github.com/rolldown/rolldown/issues/3019)) ([a83297c](https://github.com/rolldown/rolldown/commit/a83297cdf89b892b6a5f628fa8eacc538466341e))
+* **cjs:** support disable polyfill `require` by `OutputOptiond#polyfillRequire: 'false'` ([#3091](https://github.com/rolldown/rolldown/issues/3091)) ([b12b20a](https://github.com/rolldown/rolldown/commit/b12b20ad9e37651895c14bb418801858ab32587d))
+* compat with typescript's extension resolution ([#3078](https://github.com/rolldown/rolldown/issues/3078)) ([5f3ed63](https://github.com/rolldown/rolldown/commit/5f3ed6327b28155fd5e2074a451471ce546fed13)), closes [/github.com/evanw/esbuild/blob/a08f30db4a475472aa09cd89e2279a822266f6c7/internal/resolver/resolver.go#L1622-L1644](https://github.com//github.com/evanw/esbuild/blob/a08f30db4a475472aa09cd89e2279a822266f6c7/internal/resolver/resolver.go/issues/L1622-L1644) [#3075](https://github.com/rolldown/rolldown/issues/3075)
+* emit error for non-resolved absolute path ([#3080](https://github.com/rolldown/rolldown/issues/3080)) ([de64ad9](https://github.com/rolldown/rolldown/commit/de64ad96e4c827cf0908e64ca879a9c8837c9869)), closes [#3074](https://github.com/rolldown/rolldown/issues/3074)
+* emit error for non-resolved relative path ([#3074](https://github.com/rolldown/rolldown/issues/3074)) ([e1b52fc](https://github.com/rolldown/rolldown/commit/e1b52fc64b8e71c6b015f192d88d59dc3f6336d1))
+* expose the option `checks` to `inputOptions` ([#3052](https://github.com/rolldown/rolldown/issues/3052)) ([711c16c](https://github.com/rolldown/rolldown/commit/711c16c17bcccaf3402a59ff6ae61bdada717257)), closes [/github.com/rolldown/rolldown/blob/225f6a41679fff165eff297ba21578a72b4d88eb/packages/rolldown/tests/fixtures/onwarn/_config.ts#L8](https://github.com//github.com/rolldown/rolldown/blob/225f6a41679fff165eff297ba21578a72b4d88eb/packages/rolldown/tests/fixtures/onwarn/_config.ts/issues/L8)
+* give warning for multiply notify option ([#3085](https://github.com/rolldown/rolldown/issues/3085)) ([fe15409](https://github.com/rolldown/rolldown/commit/fe1540953158f69416a34edf2b187a618a1682e2))
+* imported empty module would be treated as esm ([#3093](https://github.com/rolldown/rolldown/issues/3093)) ([86db816](https://github.com/rolldown/rolldown/commit/86db816f55275c276126fbaad36f9e3169a52243))
+* **json_plugin:** add named_exports ([#2523](https://github.com/rolldown/rolldown/issues/2523)) ([198e22f](https://github.com/rolldown/rolldown/commit/198e22fee7285f1cd3da5dc893bcd1e3a98a1842))
+* keep name for ClassDecl ([#3023](https://github.com/rolldown/rolldown/issues/3023)) ([039c9fb](https://github.com/rolldown/rolldown/commit/039c9fbfabb3b91977b68d53081ef6be48caea16))
+* keep_names for FunctionDeclaration ([#3021](https://github.com/rolldown/rolldown/issues/3021)) ([751f8fc](https://github.com/rolldown/rolldown/commit/751f8fc268dc9f14a672b1d1fcc0e72f7713d6dc))
+* module side effects function type binding ([#3030](https://github.com/rolldown/rolldown/issues/3030)) ([071807e](https://github.com/rolldown/rolldown/commit/071807eef70c5143bf55a371a6cd7f5b500ebd7b)), closes [#2606](https://github.com/rolldown/rolldown/issues/2606)
+* **node:** support `SourceMap::toUrl`/`SourceMap::toString` ([#3064](https://github.com/rolldown/rolldown/issues/3064)) ([1f21417](https://github.com/rolldown/rolldown/commit/1f2141706a83da2e41e8d3e0fd05547df12f653f))
+* **node:** support ts config file ([#3134](https://github.com/rolldown/rolldown/issues/3134)) ([5fd2729](https://github.com/rolldown/rolldown/commit/5fd27298e46822e68ab667a1b0111d936bc8b5af))
+* **plugin/json:** support `stringify: 'auto'` ([#3103](https://github.com/rolldown/rolldown/issues/3103)) ([0ad8217](https://github.com/rolldown/rolldown/commit/0ad82178c12d31e591d091430c2b54bae2617b56))
+* **plugin/vite-resolve:** implement fileUrl properly ([#3040](https://github.com/rolldown/rolldown/issues/3040)) ([1083314](https://github.com/rolldown/rolldown/commit/108331456c9d276bf1608674f01c0d2c9d3a0091))
+* **plugin/vite-resolve:** support `resolve.dedupe` ([#3061](https://github.com/rolldown/rolldown/issues/3061)) ([2ec340e](https://github.com/rolldown/rolldown/commit/2ec340edda3da25c3be15562335b62d1a8a787f8))
+* **plugin/vite-resolve:** support Regex in noExternal ([#3039](https://github.com/rolldown/rolldown/issues/3039)) ([66086e7](https://github.com/rolldown/rolldown/commit/66086e72ca8d1596bc05fd70fca6cbd842962f84))
+* **rolldown_plugin_transform:** support both target & browserslist ([#3042](https://github.com/rolldown/rolldown/issues/3042)) ([c235a89](https://github.com/rolldown/rolldown/commit/c235a89b4d8891cd499ec67a13a3d9215a86195e))
+* **rolldown:** polyfill `import.meta.dirname|filename` in cjs ([#3053](https://github.com/rolldown/rolldown/issues/3053)) ([22747a3](https://github.com/rolldown/rolldown/commit/22747a36dba6b31280eaf64a9495033e54f6a6cb))
+* **string_wizard:** add `serde` feature ([#3140](https://github.com/rolldown/rolldown/issues/3140)) ([1265c2c](https://github.com/rolldown/rolldown/commit/1265c2c7955eeb6f7a5c3878b8d02af19457987b))
+* support ModuleInfo#exports ([#3170](https://github.com/rolldown/rolldown/issues/3170)) ([786b6d2](https://github.com/rolldown/rolldown/commit/786b6d2e63c8ca48ecb0dfb58699a576b1466fd9)), closes [/github.com/rollup/rollup/blob/master/src/Module.ts#L331](https://github.com//github.com/rollup/rollup/blob/master/src/Module.ts/issues/L331)
+* support multi alias in js side ([#3060](https://github.com/rolldown/rolldown/issues/3060)) ([71e2927](https://github.com/rolldown/rolldown/commit/71e2927939d5ca9c019478cda0fa5d745905f2db))
+* **watcher:** support multiply watch options ([#3037](https://github.com/rolldown/rolldown/issues/3037)) ([3ab9463](https://github.com/rolldown/rolldown/commit/3ab9463d41cc153db60cf039d7a1ff9313e1bca1))
+
+
+### Performance Improvements
+
+* remove sub optimal par_bridge ([#3072](https://github.com/rolldown/rolldown/issues/3072)) ([c66278b](https://github.com/rolldown/rolldown/commit/c66278bb5c3bdff4e294a5a5728701c7840476b2))
+* remove unnecessary collect ([#3070](https://github.com/rolldown/rolldown/issues/3070)) ([c60206c](https://github.com/rolldown/rolldown/commit/c60206c4b2018d45e635317fccef0efbb365a442))
+* **rolldown:** remove `AppendOnlyVec` from `reference_needed_symbols` ([#3164](https://github.com/rolldown/rolldown/issues/3164)) ([ff1ed90](https://github.com/rolldown/rolldown/commit/ff1ed90bc5c30a31b3a66b23e71f69fab163406f))
+
+
+
 # [0.15.0](https://github.com/rolldown/rolldown/compare/v0.14.0...v0.15.0) (2024-12-02)
 
 

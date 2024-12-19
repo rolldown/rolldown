@@ -1,8 +1,5 @@
-import type {
-  RolldownOutputAsset,
-  RolldownOutputChunk,
-} from './rolldown-output'
+import type { OutputAsset, OutputChunk } from './rolldown-output'
 
 export interface OutputBundle {
-  [fileName: string]: RolldownOutputAsset | RolldownOutputChunk
+  [fileName: string]: OutputAsset | OutputChunk
 }

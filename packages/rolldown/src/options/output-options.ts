@@ -5,7 +5,7 @@ import {
   SourcemapPathTransformOption,
 } from '../rollup'
 import { RolldownOutputPluginOption } from '../plugin'
-import { RolldownRenderedChunk } from '../types/rolldown-output'
+import { RenderedChunk } from '../types/rolldown-output'
 
 export type ModuleFormat =
   | 'es'
@@ -17,9 +17,7 @@ export type ModuleFormat =
   | 'umd'
   | 'experimental-app'
 
-export type AddonFunction = (
-  chunk: RolldownRenderedChunk,
-) => string | Promise<string>
+export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
 

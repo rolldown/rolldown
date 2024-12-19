@@ -1,7 +1,7 @@
 import {
-  RollupOutput,
-  RolldownOutputChunk,
-  RolldownOutputAsset,
+  RolldownOutput as RollupOutput,
+  OutputChunk as RolldownOutputChunk,
+  OutputAsset as RolldownOutputAsset,
 } from 'rolldown'
 import nodePath from 'node:path'
 import assert from 'node:assert'

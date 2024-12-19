@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import { ConfigExport } from '../types/config-export'
 import { pathToFileURL } from 'node:url'
 import { rolldown } from '../api/rolldown'
-import { RolldownOutputChunk } from '../types/rolldown-output'
+import { OutputChunk } from '../types/rolldown-output'
 
 export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const file = await bundleTsConfig(configFile)
@@ -60,8 +60,7 @@ async function bundleTsConfig(configFile: string): Promise<string> {
   })
 
   return result.output.find(
-    (chunk): chunk is RolldownOutputChunk =>
-      chunk.type === 'chunk' && chunk.isEntry,
+    (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
   )!.fileName
 }
 

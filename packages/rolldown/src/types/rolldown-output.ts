@@ -1,9 +1,7 @@
 import { AssetSource } from '../utils/asset-source'
-import type { OutputAsset, OutputChunk } from '../rollup'
-import type { HasProperty, IsPropertiesEqual, TypeAssert } from './assert'
-import type { RenderedChunk } from '../binding'
+import type { RenderedChunk as BindingRenderedChunk } from '../binding'
 
-export interface RolldownOutputAsset {
+export interface OutputAsset {
   type: 'asset'
   fileName: string
   /** @deprecated Use "originalFileNames" instead. */
@@ -13,10 +11,6 @@ export interface RolldownOutputAsset {
   /** @deprecated Use "names" instead. */
   name: string | undefined
   names: string[]
-}
-
-function _assertRolldownOutputAsset() {
-  type _ = TypeAssert<IsPropertiesEqual<RolldownOutputAsset, OutputAsset>>
 }
 
 export interface SourceMap {
@@ -30,18 +24,18 @@ export interface SourceMap {
   toUrl(): string
 }
 
-export interface RolldownRenderedModule {
+export interface RenderedModule {
   readonly code: string | null
   renderedLength: number
 }
 
-export interface RolldownRenderedChunk extends Omit<RenderedChunk, 'modules'> {
+export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   modules: {
-    [id: string]: RolldownRenderedModule
+    [id: string]: RenderedModule
   }
 }
 
-export interface RolldownOutputChunk {
+export interface OutputChunk {
   type: 'chunk'
   code: string
   name: string
@@ -49,7 +43,7 @@ export interface RolldownOutputChunk {
   exports: string[]
   fileName: string
   modules: {
-    [id: string]: RolldownRenderedModule
+    [id: string]: RenderedModule
   }
   imports: string[]
   dynamicImports: string[]
@@ -61,19 +55,6 @@ export interface RolldownOutputChunk {
   preliminaryFileName: string
 }
 
-function _assertRolldownOutputChunk() {
-  type _ = TypeAssert<
-    IsPropertiesEqual<Omit<RolldownOutputChunk, 'modules' | 'map'>, OutputChunk>
-  >
-}
-
 export interface RolldownOutput {
-  output: [
-    RolldownOutputChunk,
-    ...(RolldownOutputChunk | RolldownOutputAsset)[],
-  ]
-}
-
-function _assertRolldownOutput() {
-  type _ = TypeAssert<HasProperty<RolldownOutput, 'output'>>
+  output: [OutputChunk, ...(OutputChunk | OutputAsset)[]]
 }

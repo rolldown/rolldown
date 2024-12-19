@@ -15,7 +15,7 @@ use rolldown_utils::{
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(
   ctx: &GenerateContext<'_>,
-  mut export_mode: Option<&OutputExports>,
+  export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
   let export_items = get_export_items(chunk, link_output);
@@ -61,11 +61,7 @@ pub fn render_chunk_exports(
     OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
       let mut s = String::new();
       match chunk.kind {
-        ChunkKind::EntryPoint { module, is_user_defined, .. } => {
-          if !is_user_defined {
-            // `OutputExports` should only works for user-defined entry points.
-            export_mode = Some(&OutputExports::Named);
-          }
+        ChunkKind::EntryPoint { module, .. } => {
           let module =
             &link_output.module_table.modules[module].as_normal().expect("should be normal module");
           if matches!(module.exports_kind, ExportsKind::Esm) {

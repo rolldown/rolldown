@@ -6,7 +6,7 @@ use napi_derive::napi;
 use crate::bundler::{BindingBundlerOptions, Bundler};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use napi::{tokio, Env};
+use napi::Env;
 
 use crate::utils::handle_result;
 
@@ -83,17 +83,7 @@ impl BindingWatcher {
         }
       }
     };
-    #[cfg(target_family = "wasm")]
-    {
-      let handle = tokio::runtime::Handle::current();
-      // could not block_on/spawn the main thread in WASI
-      std::thread::spawn(move || {
-        handle.spawn(future);
-      });
-    }
-    #[cfg(not(target_family = "wasm"))]
-    tokio::spawn(future);
-
+    napi::tokio::spawn(future);
     self.inner.start().await;
     Ok(())
   }

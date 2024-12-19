@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc_index::IndexVec;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleTable, OutputFormat,
   ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
   WrapKind,
 };
@@ -559,6 +559,22 @@ impl<'a> LinkStage<'a> {
       });
     });
   }
+
+  /// A helper function used to debug symbol in link process
+  #[cfg(debug_assertions)]
+  #[allow(unused)]
+  pub fn debug_symbol_ref(&self, symbol_ref: SymbolRef) -> String {
+    common_debug_symbol_ref(symbol_ref, &self.module_table.modules, &self.symbols)
+  }
+}
+
+#[allow(unused)]
+pub fn common_debug_symbol_ref(
+  symbol_ref: SymbolRef,
+  modules: &IndexModules,
+  symbols: &SymbolRefDb,
+) -> String {
+  format!("{:?} -> {:?}", modules[symbol_ref.owner].stable_id(), symbol_ref.name(symbols))
 }
 
 fn is_external_dynamic_import(

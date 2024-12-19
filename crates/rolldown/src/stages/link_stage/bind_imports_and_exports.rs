@@ -10,7 +10,6 @@ use rolldown_common::{
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 #[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
   index_vec_ext::IndexVecExt,
@@ -23,7 +22,7 @@ use crate::{types::linking_metadata::LinkingMetadataVec, SharedOptions};
 
 use super::LinkStage;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ImportTracker {
   pub importer: ModuleIdx,
   pub importee: ModuleIdx,
@@ -157,6 +156,7 @@ impl LinkStage<'_> {
       .filter(|(_, item)| item.side_effects().has_side_effects())
       .map(|(idx, _)| idx)
       .collect::<FxHashSet<ModuleIdx>>();
+    let mut normal_symbol_exports_chain_map = FxHashMap::default();
     let mut binding_ctx = BindImportsAndExportsContext {
       index_modules: &self.module_table.modules,
       metas: &mut self.metas,
@@ -165,9 +165,9 @@ impl LinkStage<'_> {
       errors: Vec::default(),
       warnings: Vec::default(),
       external_import_binding_merger: FxHashMap::default(),
-      side_effects_modules,
+      side_effects_modules: &side_effects_modules,
+      normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
     };
-
     self.module_table.modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.idx());
     });
@@ -203,8 +203,7 @@ impl LinkStage<'_> {
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
     });
-
-    self.resolve_member_expr_refs();
+    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
   }
 
   fn add_exports_for_export_star(
@@ -280,15 +279,20 @@ impl LinkStage<'_> {
   /// export const c = 1;
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
-  fn resolve_member_expr_refs(&mut self) {
+  fn resolve_member_expr_refs(
+    &mut self,
+    side_effects_modules: &FxHashSet<ModuleIdx>,
+    normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
-    let resolved_maps = self
+    let resolved_meta_data = self
       .module_table
       .modules
       .par_iter()
       .map(|module| match module {
         Module::Normal(module) => {
-          let mut resolved = FxHashMap::default();
+          let mut resolved_map = FxHashMap::default();
+          let mut side_effects_dependency = vec![];
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
@@ -312,7 +316,7 @@ impl LinkStage<'_> {
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
                     // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
-                      resolved.insert(
+                      resolved_map.insert(
                         member_expr_ref.span,
                         (None, member_expr_ref.props[cursor..].to_vec()),
                       );
@@ -330,7 +334,7 @@ impl LinkStage<'_> {
                     break;
                   };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
-                    resolved.insert(
+                    resolved_map.insert(
                       member_expr_ref.span,
                       (None, member_expr_ref.props[cursor..].to_vec()),
                     );
@@ -346,6 +350,15 @@ impl LinkStage<'_> {
                   {
                     break;
                   }
+                  if let Some(chains) =
+                    normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)
+                  {
+                    for item in chains {
+                      if side_effects_modules.contains(&item.owner) {
+                        side_effects_dependency.push(item.owner);
+                      }
+                    }
+                  }
                   ns_symbol_list.push((canonical_ref, name.to_rstr()));
                   canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
                   canonical_ref_owner =
@@ -354,7 +367,7 @@ impl LinkStage<'_> {
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
                 if cursor > 0 {
-                  resolved.insert(
+                  resolved_map.insert(
                     member_expr_ref.span,
                     (Some(canonical_ref), member_expr_ref.props[cursor..].to_vec()),
                   );
@@ -363,17 +376,20 @@ impl LinkStage<'_> {
             });
           });
 
-          resolved
+          (resolved_map, side_effects_dependency)
         }
-        Module::External(_) => FxHashMap::default(),
+        Module::External(_) => (FxHashMap::default(), vec![]),
       })
       .collect::<Vec<_>>();
 
-    debug_assert_eq!(self.metas.len(), resolved_maps.len());
+    debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
     self.warnings.extend(warnings);
-    self.metas.par_iter_mut().zip(resolved_maps).for_each(|(meta, resolved_map)| {
-      meta.resolved_member_expr_refs = resolved_map;
-    });
+    self.metas.iter_mut_enumerated().zip(resolved_meta_data).for_each(
+      |((_idx, meta), (resolved_map, side_effects_dependency))| {
+        meta.resolved_member_expr_refs = resolved_map;
+        meta.dependencies.extend(side_effects_dependency);
+      },
+    );
   }
 }
 
@@ -386,7 +402,8 @@ struct BindImportsAndExportsContext<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
-  pub side_effects_modules: FxHashSet<ModuleIdx>,
+  pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
+  pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
 
 impl BindImportsAndExportsContext<'_> {
@@ -473,11 +490,12 @@ impl BindImportsAndExportsContext<'_> {
           ));
         }
         MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
-          for r in reexports {
+          for r in &reexports {
             if self.side_effects_modules.contains(&r.owner) {
               self.metas[module_id].dependencies.insert(r.owner);
             }
           }
+          self.normal_symbol_exports_chain_map.insert(*imported_as_ref, reexports);
 
           self.symbol_db.link(*imported_as_ref, symbol);
         }

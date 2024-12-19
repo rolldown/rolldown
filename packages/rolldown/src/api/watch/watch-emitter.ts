@@ -66,6 +66,7 @@ export class WatcherEmitter {
   async onEvent(event: BindingWatcherEvent): Promise<void> {
     console.log('onEvent start')
     const listeners = this.listeners.get(event.eventKind() as WatcherEvent)
+    console.log('onEvent 1111', listeners?.length)
     if (listeners) {
       switch (event.eventKind()) {
         case 'close':
@@ -117,6 +118,7 @@ export class WatcherEmitter {
           throw new Error(`Unknown event: ${event}`)
       }
     }
+    console.log('onEvent end', listeners?.length)
   }
 
   async close(): Promise<void> {

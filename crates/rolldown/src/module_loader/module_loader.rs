@@ -212,6 +212,7 @@ impl ModuleLoader {
             is_user_defined_entry,
             assert_module_type,
           );
+          tracing::debug!(name = "module task spawn");
           tokio::spawn(task.run());
           idx
         }

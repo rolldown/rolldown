@@ -76,6 +76,7 @@ impl BindingWatcher {
             if let Err(e) = listener.await_call(BindingWatcherEvent::new(event)).await {
               eprintln!("watcher listener error: {e:?}");
             }
+            tracing::debug!(name = "send event to js side end");
           }
           Err(e) => {
             eprintln!("watcher receiver error: {e:?}");

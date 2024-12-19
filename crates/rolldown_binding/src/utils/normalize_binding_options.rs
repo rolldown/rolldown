@@ -12,7 +12,7 @@ use napi::bindgen_prelude::Either;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption,
   ExperimentalOptions, HashCharacters, IsExternal, MatchGroup, ModuleType, OutputExports,
-  OutputFormat, Platform,
+  OutputFormat, Platform, RawMinifyOptions,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -199,7 +199,20 @@ pub fn normalize_binding_options(
       vite_mode: inner.vite_mode,
       resolve_new_url_to_asset: inner.resolve_new_url_to_asset,
     }),
-    minify: output_options.minify,
+    minify: output_options
+      .minify
+      .map(|opts| match opts {
+        napi::bindgen_prelude::Either3::A(opts) => Ok(opts.into()),
+        napi::bindgen_prelude::Either3::B(opts) => {
+          if opts == "dead-code-elimination-only" {
+            Ok(RawMinifyOptions::DeadCodeEliminationOnly)
+          } else {
+            Err(napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))
+          }
+        }
+        napi::bindgen_prelude::Either3::C(opts) => Ok(opts.into()),
+      })
+      .transpose()?,
     extend: output_options.extend,
     define: input_options.define.map(FxIndexMap::from_iter),
     inject: input_options

@@ -10,6 +10,7 @@ import type {
   AddonFunction,
   ChunkFileNamesFunction,
   GlobalsFunction,
+  MinifyOptions,
   ModuleFormat,
   OutputCliOptions,
   OutputOptions,
@@ -44,6 +45,13 @@ const GlobalsFunctionSchema = z
   .function()
   .args(z.string())
   .returns(z.string()) satisfies z.ZodType<GlobalsFunction>
+
+const MinifyOptionsSchema = z.strictObject({
+  mangle: z.boolean(),
+  compress: z.boolean(),
+  deadCodeElimination: z.boolean(),
+  removeWhitespace: z.boolean(),
+}) satisfies z.ZodType<MinifyOptions>
 
 const outputOptionsSchema = z.strictObject({
   dir: z
@@ -115,7 +123,11 @@ const outputOptionsSchema = z.strictObject({
     .or(chunkFileNamesFunctionSchema)
     .describe('Name pattern for emitted css secondary chunks')
     .optional(),
-  minify: z.boolean().describe('Minify the bundled file.').optional(),
+  minify: z
+    .boolean()
+    .or(MinifyOptionsSchema)
+    .describe('Minify the bundled file.')
+    .optional(),
   name: z.string().describe('Name for UMD / IIFE format outputs').optional(),
   globals: z
     .record(z.string())
@@ -191,6 +203,8 @@ export const outputCliOptionsSchema: z.ZodType<OutputCliOptions> =
           'Always generate `__esModule` marks in non-ESM formats, defaults to `if-default-prop` (use `--no-esModule` to always disable)',
         )
         .optional(),
+      // It is hard to handle the union type in json schema, so use this first.
+      minify: z.boolean().describe('Minify the bundled file.').optional(),
       globals: z
         .record(z.string())
         .describe(

@@ -6,7 +6,8 @@ use oxc::{
   allocator::Allocator,
   ast::AstBuilder,
   codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
-  minifier::{Minifier, MinifierOptions},
+  mangler::Mangler,
+  minifier::{CompressOptions, Compressor, MinifierOptions},
   parser::{ParseOptions, Parser},
   span::{SourceType, SPAN},
 };
@@ -109,19 +110,26 @@ impl EcmaCompiler {
     source_text: &str,
     enable_sourcemap: bool,
     filename: &str,
+    minifier_options: MinifierOptions,
+    run_compress: bool,
+    codegen_options: CodegenOptions,
   ) -> anyhow::Result<(String, Option<SourceMap>)> {
     let allocator = Allocator::default();
     let program = Parser::new(&allocator, source_text, SourceType::default()).parse().program;
     let program = allocator.alloc(program);
-    let options = MinifierOptions::default();
-    let ret = Minifier::new(options).build(&allocator, program);
+    if run_compress {
+      Compressor::new(&allocator, minifier_options.compress).build(program);
+    } else {
+      Compressor::new(&allocator, CompressOptions::all_false()).dead_code_elimination(program);
+    }
+    let mangler =
+      minifier_options.mangle.map(|opts| Mangler::new().with_options(opts).build(program));
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
-        minify: true,
-        ..CodegenOptions::default()
+        ..codegen_options
       })
-      .with_mangler(ret.mangler)
+      .with_mangler(mangler)
       .build(program);
     Ok((ret.code, ret.map))
   }

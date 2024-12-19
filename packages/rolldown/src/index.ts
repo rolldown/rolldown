@@ -11,7 +11,11 @@ import type {
   ExternalOption,
   JsxOptions,
 } from './options/input-options'
-import type { ModuleFormat, OutputOptions } from './options/output-options'
+import type {
+  ModuleFormat,
+  MinifyOptions,
+  OutputOptions,
+} from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {
   AsyncPluginHooks,
@@ -70,6 +74,7 @@ export type {
   RolldownBuild,
   InputOptions,
   NormalizedInputOptions,
+  MinifyOptions,
   OutputOptions,
   NormalizedOutputOptions,
   Plugin,

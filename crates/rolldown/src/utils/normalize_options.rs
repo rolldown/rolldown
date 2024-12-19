@@ -1,7 +1,7 @@
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  Comments, GlobalsOutputOption, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat,
-  Platform,
+  Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
+  OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -112,6 +112,9 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     _ => raw_options.inline_dynamic_imports.unwrap_or(false),
   };
 
+  let minify: MinifyOptions = raw_options.minify.unwrap_or_default().into();
+  let minify_mangle = if let MinifyOptions::Enabled(opts) = &minify { opts.mangle } else { false };
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -153,7 +156,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
     experimental,
-    minify: raw_options.minify.unwrap_or(false),
+    minify,
     define: raw_options.define.map(|inner| inner.into_iter().collect()).unwrap_or_default(),
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
@@ -163,7 +166,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default(),
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!raw_options.minify.unwrap_or(false)),
+    profiler_names: raw_options.profiler_names.unwrap_or(!minify_mangle),
     jsx: raw_options.jsx.unwrap_or_default(),
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),

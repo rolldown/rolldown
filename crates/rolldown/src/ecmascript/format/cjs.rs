@@ -63,12 +63,12 @@ pub fn render_cjs<'code>(
       }
       Some(export_mode)
     } else {
-      // There is no need for a non-ESM export kind for determining the export mode.
-      None
+      // The entry module which non-ESM export kind should be `named`.
+      Some(OutputExports::Named)
     }
   } else {
-    // No need for common chunks to determine the export mode.
-    None
+    // The common chunks should be `named`.
+    Some(OutputExports::Named)
   };
 
   // Runtime module should be placed before the generated `requires` in CJS format.
@@ -110,9 +110,7 @@ pub fn render_cjs<'code>(
     }
   }
 
-  let export_mode = export_mode.unwrap_or(OutputExports::Auto);
-
-  if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
+  if let Some(exports) = render_chunk_exports(ctx, export_mode.as_ref()) {
     source_joiner.append_source(exports);
   }
 

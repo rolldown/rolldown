@@ -4,7 +4,7 @@ import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin'
 import { logInputHookInOutputPlugin } from '../log/logs'
-import { LogHandler } from '../rollup'
+import { LogHandler } from '../types/misc'
 import { LOG_LEVEL_WARN } from '../log/logging'
 import { BuiltinPlugin } from '../builtin-plugin/constructors'
 

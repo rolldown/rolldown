@@ -13,7 +13,7 @@ import {
 } from './normalize-plugin-option'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { getObjectPlugins } from '../plugin/plugin-driver'
-import { LogHandler } from '../rollup'
+import { LogHandler } from '../types/misc'
 import { logMinifyWarning } from '../log/logs'
 import { getLogger, getOnLog } from '../log/logger'
 import { LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'

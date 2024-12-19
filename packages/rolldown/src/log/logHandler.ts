@@ -3,7 +3,7 @@ import type {
   LoggingFunctionWithPosition,
   LogHandler,
   RollupLog,
-} from '../rollup'
+} from '../types/misc'
 import {
   LOG_LEVEL_WARN,
   type LogLevel,

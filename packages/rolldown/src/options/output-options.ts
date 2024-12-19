@@ -3,7 +3,7 @@ import type { PreRenderedChunk } from '../binding'
 import {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
-} from '../rollup'
+} from '../types/misc'
 import { RolldownOutputPluginOption } from '../plugin'
 import { RenderedChunk } from '../types/rolldown-output'
 

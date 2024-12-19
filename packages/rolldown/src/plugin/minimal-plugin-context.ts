@@ -3,7 +3,7 @@ import type {
   LogHandler,
   LogLevelOption,
   RollupError,
-} from '../rollup'
+} from '../types/misc'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { getLogHandler, normalizeLog } from '../log/logHandler'

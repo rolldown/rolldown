@@ -7,7 +7,7 @@ import type {
   LogHandler,
   LogLevelOption,
   RollupError,
-} from '../rollup'
+} from '../types/misc'
 import { normalizeLog } from '../log/logHandler'
 import { PluginContext } from './plugin-context'
 import { augmentCodeLocation, error, logPluginError } from '../log/logs'

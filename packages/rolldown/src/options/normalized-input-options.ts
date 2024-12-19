@@ -1,4 +1,4 @@
-import type { LogHandler } from '../rollup'
+import type { LogHandler } from '../types/misc'
 import { BindingNormalizedOptions } from '../binding'
 import { InputOptions } from '..'
 

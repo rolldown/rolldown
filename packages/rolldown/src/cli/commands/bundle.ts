@@ -7,7 +7,7 @@ import { NormalizedCliOptions } from '../arguments/normalize'
 import { arraify } from '../../utils/misc'
 import { rolldown } from '../../api/rolldown'
 import { watch as rolldownWatch } from '../../api/watch'
-import type { RolldownOptions, RolldownOutput, RollupOutput } from '../..'
+import type { RolldownOptions, RolldownOutput } from '../..'
 import { loadConfig } from '../load-config'
 
 export async function bundleWithConfig(
@@ -163,7 +163,7 @@ type OutputEntry = {
   size: number
 }
 
-function collectOutputEntries(output: RollupOutput['output']): OutputEntry[] {
+function collectOutputEntries(output: RolldownOutput['output']): OutputEntry[] {
   return output.map((chunk) => ({
     type: chunk.type,
     fileName: chunk.fileName,

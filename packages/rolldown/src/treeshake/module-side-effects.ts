@@ -1,5 +1,4 @@
-import type Z from 'zod'
-import { z } from 'zod'
+import * as v from 'valibot'
 
 export interface ModuleSideEffectsRule {
   test?: RegExp
@@ -7,15 +6,17 @@ export interface ModuleSideEffectsRule {
   sideEffects: boolean
 }
 
-export const ModuleSideEffectsRuleSchema: Z.ZodType<ModuleSideEffectsRule> = z
-  .object({
-    test: z.instanceof(RegExp).optional(),
-    external: z.boolean().optional(),
-    sideEffects: z.boolean(),
-  })
-  .refine((data) => {
-    return data.test !== undefined || data.external !== undefined
-  }, 'Either `test` or `external` should be set.')
+export const ModuleSideEffectsRuleSchema: v.GenericSchema<ModuleSideEffectsRule> =
+  v.pipe(
+    v.object({
+      test: v.optional(v.instance(RegExp)),
+      external: v.optional(v.boolean()),
+      sideEffects: v.boolean(),
+    }),
+    v.check((data) => {
+      return data.test !== undefined || data.external !== undefined
+    }, 'Either `test` or `external` should be set.'),
+  )
 
 export type ModuleSideEffectsOption =
   | boolean
@@ -23,17 +24,46 @@ export type ModuleSideEffectsOption =
   | ((id: string, isResolved: boolean) => boolean | undefined)
   | 'no-external'
 
-export const ModuleSideEffectsOptionSchema: Z.ZodType<ModuleSideEffectsOption> =
-  z
-    .boolean()
-    .or(z.array(ModuleSideEffectsRuleSchema))
-    .or(
-      z
-        .function()
-        .args(z.string(), z.boolean())
-        .returns(z.boolean().optional()),
-    )
-    .or(z.literal('no-external'))
+export const ModuleSideEffectsOptionSchema: v.UnionSchema<
+  [
+    v.BooleanSchema<undefined>,
+    v.LiteralSchema<'no-external', undefined>,
+    v.ArraySchema<
+      v.GenericSchema<
+        ModuleSideEffectsRule,
+        ModuleSideEffectsRule,
+        v.BaseIssue<unknown>
+      >,
+      undefined
+    >,
+    v.SchemaWithPipe<
+      [
+        v.FunctionSchema<undefined>,
+        v.ArgsAction<
+          (...args: unknown[]) => unknown,
+          v.TupleSchema<
+            [v.StringSchema<undefined>, v.BooleanSchema<undefined>],
+            undefined
+          >
+        >,
+        v.ReturnsAction<
+          (args_0: string, args_1: boolean) => unknown,
+          v.OptionalSchema<v.BooleanSchema<undefined>, undefined>
+        >,
+      ]
+    >,
+  ],
+  undefined
+> = v.union([
+  v.boolean(),
+  v.literal('no-external'),
+  v.array(ModuleSideEffectsRuleSchema),
+  v.pipe(
+    v.function(),
+    v.args(v.tuple([v.string(), v.boolean()])),
+    v.returns(v.optional(v.boolean())),
+  ),
+])
 
 export type TreeshakingOptions =
   | {
@@ -42,10 +72,21 @@ export type TreeshakingOptions =
     }
   | boolean
 
-export const TreeshakingOptionsSchema: Z.ZodType<TreeshakingOptions> = z
-  .object({
-    moduleSideEffects: ModuleSideEffectsOptionSchema.optional(),
-    annotations: z.boolean().optional(),
-  })
-  .passthrough()
-  .or(z.boolean())
+export const TreeshakingOptionsSchema: v.UnionSchema<
+  [
+    v.BooleanSchema<undefined>,
+    v.LooseObjectSchema<
+      {
+        readonly annotations: v.OptionalSchema<
+          v.BooleanSchema<undefined>,
+          undefined
+        >
+      },
+      undefined
+    >,
+  ],
+  undefined
+> = v.union([
+  v.boolean(),
+  v.looseObject({ annotations: v.optional(v.boolean()) }),
+])

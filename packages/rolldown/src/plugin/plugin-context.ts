@@ -13,7 +13,7 @@ import { PluginContextData } from './plugin-context-data'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import { PartialNull } from '../types/utils'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
-import type { LogHandler, LogLevelOption } from '../rollup'
+import type { LogHandler, LogLevelOption } from '../types/misc'
 import { LOG_LEVEL_WARN } from '../log/logging'
 import { logCycleLoading } from '../log/logs'
 

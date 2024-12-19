@@ -4,7 +4,7 @@ import type {
   RollupError,
   RollupLog,
   WarningHandlerWithDefault,
-} from '../rollup'
+} from '../types/misc'
 import type { Plugin } from '../plugin'
 import {
   LOG_LEVEL_DEBUG,

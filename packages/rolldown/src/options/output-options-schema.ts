@@ -5,7 +5,7 @@ import type { PreRenderedChunk } from '../binding'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
-} from '../rollup'
+} from '../types/misc'
 import type {
   AddonFunction,
   ChunkFileNamesFunction,

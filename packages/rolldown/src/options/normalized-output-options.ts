@@ -3,7 +3,7 @@ import type { BindingNormalizedOptions } from '../binding'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
-} from '../rollup'
+} from '../types/misc'
 import type {
   ChunkFileNamesFunction,
   GlobalsFunction,

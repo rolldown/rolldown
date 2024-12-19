@@ -31,7 +31,7 @@ import {
   bindingifyWatchChange,
 } from './bindingify-watch-hooks'
 import { error, logPluginError } from '../log/logs'
-import type { LogHandler, LogLevelOption } from '../rollup'
+import type { LogHandler, LogLevelOption } from '../types/misc'
 import type { InputOptions } from '../options/input-options'
 
 export interface BindingifyPluginArgs {

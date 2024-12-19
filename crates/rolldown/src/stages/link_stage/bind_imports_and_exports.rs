@@ -9,7 +9,6 @@ use rolldown_common::{
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
-#[cfg(not(target_family = "wasm"))]
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
   index_vec_ext::IndexVecExt,

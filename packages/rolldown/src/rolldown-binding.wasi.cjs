@@ -82,9 +82,9 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
 })
 
 function __napi_rs_initialize_modules(__napiInstance) {
+  __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()
   __napiInstance.exports['__napi_register__OxcError_struct_0']?.()
   __napiInstance.exports['__napi_register__ErrorLabel_struct_1']?.()
-  __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()
   __napiInstance.exports['__napi_register__Severity_2']?.()
   __napiInstance.exports['__napi_register__IsolatedDeclarationsResult_struct_0']?.()
   __napiInstance.exports['__napi_register__IsolatedDeclarationsOptions_struct_1']?.()

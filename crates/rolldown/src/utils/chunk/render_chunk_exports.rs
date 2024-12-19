@@ -108,18 +108,7 @@ pub fn render_chunk_exports(
                       options,
                       &link_output.module_table.modules,
                     ) {
-                      concat_string!(
-                        "Object.defineProperty(exports, '",
-                        exported_name.as_str(),
-                        "', {
-  enumerable: true,
-  get: function () {
-    return ",
-                        exported_value.as_str(),
-                        ";
-  }
-});"
-                      )
+                      render_object_define_property(&exported_name, &exported_value)
                     } else {
                       concat_string!(
                         property_access_str("exports", exported_name.as_str()),
@@ -174,32 +163,12 @@ pub fn render_chunk_exports(
             if let Some(ns_alias) = &symbol.namespace_alias {
               let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
               let property_name = &ns_alias.property_name;
-              s.push_str(&concat_string!(
-                "Object.defineProperty(exports, '",
-                exported_name,
-                "', {
-  enumerable: true,
-  get: function () {
-    return ",
-                canonical_ns_name,
-                ".",
-                property_name,
-                ";\n  }
-});\n"
+              s.push_str(&render_object_define_property(
+                &exported_name,
+                &concat_string!(canonical_ns_name, ".", property_name),
               ));
             } else {
-              s.push_str(&concat_string!(
-                "Object.defineProperty(exports, '",
-                exported_name,
-                "', {
-  enumerable: true,
-  get: function () {
-    return ",
-                canonical_name,
-                ";
-  }
-});"
-              ));
+              s.push_str(&render_object_define_property(&exported_name, canonical_name));
             };
           });
         }
@@ -212,6 +181,22 @@ pub fn render_chunk_exports(
     }
     OutputFormat::App => None,
   }
+}
+
+#[inline]
+pub fn render_object_define_property(key: &str, value: &str) -> String {
+  concat_string!(
+    "Object.defineProperty(exports, '",
+    key,
+    "', {
+  enumerable: true,
+  get: function () {
+    return ",
+    value,
+    ";
+  }
+});"
+  )
 }
 
 pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {

@@ -7,6 +7,7 @@ export default defineTest({
     input: 'test',
     plugins: [
       {
+        name: 'virtual-module',
         resolveId(id) {
           if (id === 'test') {
             return '\0virtual:test'

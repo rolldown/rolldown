@@ -13,6 +13,7 @@ test.sequential('watch', async () => {
     output: { file: output },
     plugins: [
       {
+        name: 'test watchChange',
         watchChange(id, event) {
           // The macos emit create event when the file is changed, not sure the reason,
           // so here only check the update event
@@ -23,6 +24,7 @@ test.sequential('watch', async () => {
         },
       },
       {
+        name: 'test closeWatcher',
         closeWatcher() {
           closeWatcherFn()
         },
@@ -55,6 +57,7 @@ test.sequential('watch files after scan stage', async () => {
     output: { file: output },
     plugins: [
       {
+        name: 'test',
         renderStart() {
           fs.writeFileSync(input, 'console.log(2)')
         },
@@ -211,6 +214,7 @@ test.sequential('PluginContext addWatchFile', async () => {
     output: { file: output },
     plugins: [
       {
+        name: 'test',
         buildStart() {
           this.addWatchFile(foo)
         },
@@ -317,6 +321,7 @@ test.sequential('error handling + plugin error', async () => {
     output: { file: output },
     plugins: [
       {
+        name: 'test',
         transform() {
           this.error('plugin error')
         },
@@ -425,6 +430,7 @@ test.sequential('warning for multiply notify options', async () => {
       },
       plugins: [
         {
+          name: 'test',
           onLog: (level, log) => {
             onLogFn()
             expect(level).toBe('warn')

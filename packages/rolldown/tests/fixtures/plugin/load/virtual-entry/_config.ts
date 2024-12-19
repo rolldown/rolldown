@@ -12,6 +12,7 @@ export default defineTest({
     },
     plugins: [
       {
+        name: 'virtual-entry',
         resolveId(source) {
           if (source === entryName) {
             return source

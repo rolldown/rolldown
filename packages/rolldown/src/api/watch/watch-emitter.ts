@@ -64,6 +64,7 @@ export class WatcherEmitter {
   }
 
   async onEvent(event: BindingWatcherEvent): Promise<void> {
+    console.log('onEvent start')
     const listeners = this.listeners.get(event.eventKind() as WatcherEvent)
     if (listeners) {
       switch (event.eventKind()) {
@@ -77,6 +78,7 @@ export class WatcherEmitter {
         case 'event':
           for (const listener of listeners) {
             const code = event.bundleEventKind()
+            console.log(`onEvent event brach ${code}`)
             switch (code) {
               case 'BUNDLE_END':
                 const { duration, output } = event.bundleEndData()
@@ -96,7 +98,9 @@ export class WatcherEmitter {
                 break
 
               default:
+                console.log('onEvent event brach start')
                 await listener({ code })
+                console.log('onEvent event brach end')
                 break
             }
           }

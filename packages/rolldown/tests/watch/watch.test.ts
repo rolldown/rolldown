@@ -33,7 +33,7 @@ test.sequential('watch', async () => {
   await waitBuildFinished(watcher)
 
   // edit file
-  ensureWriteFileSyncForWindowsNode22(input, 'console.log(2)')
+  fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
       true,
@@ -231,7 +231,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   })
 
   // edit file
-  ensureWriteFileSyncForWindowsNode18(foo, 'console.log(2)\n')
+  fs.writeFileSync(foo, 'console.log(2)\n')
   await waitUtil(() => {
     expect(changeFn).toBeCalled()
   })
@@ -375,7 +375,7 @@ test.sequential('watch multiply options', async () => {
 
   await waitBuildFinished(watcher)
 
-  ensureWriteFileSyncForWindowsNode18(input, 'console.log(2)')
+  fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
       true,
@@ -385,7 +385,7 @@ test.sequential('watch multiply options', async () => {
   })
 
   events.length = 0
-  ensureWriteFileSyncForWindowsNode18(foo, 'console.log(2)')
+  fs.writeFileSync(foo, 'console.log(2)')
   await waitUtil(() => {
     expect(fs.readFileSync(fooOutput, 'utf-8').includes('console.log(2)')).toBe(
       true,
@@ -490,25 +490,4 @@ async function waitBuildFinished(
     })
     updateFn && updateFn()
   })
-}
-
-// TODO:
-// The windows maybe cannot emit the change event, write the file twice to ensure the change event emit.
-// ref https://github.com/rolldown/rolldown/actions/runs/12212639717/job/34071323644 windows node 22
-async function ensureWriteFileSyncForWindowsNode22(
-  filePath: string,
-  content: string,
-) {
-  fs.writeFileSync(filePath, '\n' + content + '\n')
-  fs.writeFileSync(filePath, content)
-}
-
-async function ensureWriteFileSyncForWindowsNode18(
-  filePath: string,
-  content: string,
-) {
-  // TODO: not sure the update event is not triggered at windows, but add it success
-  // ref https://github.com/rolldown/rolldown/actions/runs/12213020539/job/34072162527?pr=3032 windows node 18/20
-  console.log(filePath, content)
-  fs.writeFileSync(filePath, content)
 }

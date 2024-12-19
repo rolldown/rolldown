@@ -18,6 +18,7 @@ test('Plugin renderError hook', async () => {
   const renderErrorFn = vi.fn()
   const renderChunkFn = vi.fn()
   const error = await buildWithPlugin({
+    name: 'test',
     renderStart() {
       renderChunkFn()
       throw new Error('renderStart error')

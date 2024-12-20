@@ -38,7 +38,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // But we don't care about them in this method. This method is only used to check if a `IdentifierReference` from user code is a global variable.
       return false;
     };
-    self.scope.is_unresolved(reference_id)
+    self.scope.is_unresolved(
+      reference_id,
+      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.id),
+    )
   }
 
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {

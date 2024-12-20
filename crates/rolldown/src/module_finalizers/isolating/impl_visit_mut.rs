@@ -74,7 +74,12 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
       if let Some(named_import) = ident
         .reference_id
         .get()
-        .and_then(|reference_id| self.scope.symbol_id_for(reference_id))
+        .and_then(|reference_id| {
+          self.scope.symbol_id_for(
+            reference_id,
+            self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.module.idx),
+          )
+        })
         .map(|symbol_id| (self.ctx.module.idx, symbol_id).into())
         .and_then(|symbol_ref| self.ctx.module.named_imports.get(&symbol_ref))
       {
@@ -104,7 +109,10 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    if expr.is_global_require_call(self.scope) {
+    if expr.is_global_require_call(
+      self.scope,
+      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.module.idx),
+    ) {
       if let Some(ast::Argument::StringLiteral(request)) = expr.arguments.first_mut() {
         request.value = self.snippet.atom(self.get_importee_module(expr.span).stable_id());
       }

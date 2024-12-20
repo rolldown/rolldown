@@ -2525,7 +2525,6 @@ dependencies = [
 name = "rolldown_ecmascript"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "arcstr",
  "either",
  "oxc",

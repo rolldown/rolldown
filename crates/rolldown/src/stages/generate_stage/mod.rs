@@ -65,7 +65,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
 
-    let mut chunk_graph = self.generate_chunks().await?;
+    let mut chunk_graph = self.generate_chunks().await;
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
@@ -149,7 +149,7 @@ impl<'a> GenerateStage<'a> {
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
-  ) -> anyhow::Result<FxHashMap<ChunkIdx, ArcStr>> {
+  ) -> BuildResult<FxHashMap<ChunkIdx, ArcStr>> {
     let modules = &self.link_output.module_table.modules;
 
     let mut index_chunk_id_to_name = FxHashMap::default();

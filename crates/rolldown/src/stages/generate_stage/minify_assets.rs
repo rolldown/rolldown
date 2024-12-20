@@ -1,4 +1,5 @@
 use rolldown_ecmascript::EcmaCompiler;
+use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
@@ -7,7 +8,7 @@ use crate::type_alias::IndexAssets;
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
-  pub fn minify_assets(&mut self, assets: &mut IndexAssets) -> anyhow::Result<()> {
+  pub fn minify_assets(&mut self, assets: &mut IndexAssets) -> BuildResult<()> {
     if self.options.minify {
       assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
         match asset.meta {
@@ -17,7 +18,7 @@ impl GenerateStage<'_> {
               asset.content.try_as_inner_str()?,
               asset.map.is_some(),
               &asset.filename,
-            )?;
+            );
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {
               (Some(origin_map), Some(new_map)) => {

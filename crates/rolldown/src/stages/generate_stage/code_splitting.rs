@@ -20,7 +20,7 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
+  pub async fn generate_chunks(&mut self) -> ChunkGraph {
     if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {
       let user_defined_entry_count =
         self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
@@ -212,7 +212,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
-    Ok(chunk_graph)
+    chunk_graph
   }
 
   fn determine_reachable_modules_for_entry(

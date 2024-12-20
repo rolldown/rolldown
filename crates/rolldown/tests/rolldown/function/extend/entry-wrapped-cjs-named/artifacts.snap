@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+export default require_main();
+
+```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## main.js
+
+```js
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+module.exports = require_main();
+
+```
+---
+
+Variant: (format: Iife)
+
+# Assets
+
+## main.js
+
+```js
+(function(exports) {
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return require_main();
+  }
+});
+})(this.module = this.module || {});
+```
+---
+
+Variant: (format: Umd)
+
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define([exports], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.module = global.module || {})));
+})(this, function(exports) {
+Object.defineProperty(exports, '__esModule', { value: true });
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return require_main();
+  }
+});
+});
+```

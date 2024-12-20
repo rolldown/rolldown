@@ -1,21 +1,17 @@
 {
-  "config": {
-    "input": [
-      {
-        "name": "entry",
-        "import": "./entry.js"
-      }
-    ]
-  },
+  "expectExecuted": false,
   "configVariants": [
     {
       "format": "cjs"
     },
     {
-      "format": "iife"
+      "format": "iife",
+      "extend": true,
+      "name": "module"
     },
     {
       "format": "umd",
+      "extend": true,
       "name": "module"
     }
   ]

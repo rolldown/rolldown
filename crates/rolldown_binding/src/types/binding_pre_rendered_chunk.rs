@@ -17,7 +17,7 @@ impl From<rolldown_common::RollupPreRenderedChunk> for PreRenderedChunk {
       is_dynamic_entry: value.is_dynamic_entry,
       facade_module_id: value.facade_module_id.map(|x| x.to_string()),
       module_ids: value.module_ids.iter().map(|x| x.to_string()).collect(),
-      exports: value.exports,
+      exports: value.exports.iter().map(ToString::to_string).collect(),
     }
   }
 }

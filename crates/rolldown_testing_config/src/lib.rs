@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use rolldown_common::{BundlerOptions, OutputFormat};
+use rolldown_common::{BundlerOptions, OutputExports, OutputFormat};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -8,6 +8,9 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigVariant {
   pub format: Option<OutputFormat>,
+  pub extend: Option<bool>,
+  pub name: Option<String>,
+  pub exports: Option<OutputExports>,
 }
 
 impl ConfigVariant {
@@ -15,6 +18,15 @@ impl ConfigVariant {
     let mut config = config.clone();
     if let Some(format) = &self.format {
       config.format = Some(*format);
+    }
+    if let Some(exports) = &self.exports {
+      config.exports = Some(*exports);
+    }
+    if let Some(extend) = &self.extend {
+      config.extend = Some(*extend);
+    }
+    if let Some(name) = &self.name {
+      config.name = Some(name.to_string());
     }
     config
   }

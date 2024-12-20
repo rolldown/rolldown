@@ -13,7 +13,9 @@ use crate::{
     determine_export_mode::determine_export_mode,
     determine_use_strict::determine_use_strict,
     namespace_marker::render_namespace_markers,
-    render_chunk_exports::{get_export_items, render_chunk_exports},
+    render_chunk_exports::{
+      get_chunk_export_names, render_chunk_exports, render_object_define_property,
+    },
   },
 };
 
@@ -22,6 +24,7 @@ use super::utils::{
   render_modules_with_peek_runtime_module_at_first,
 };
 
+#[allow(clippy::too_many_lines)]
 pub async fn render_umd<'code>(
   ctx: &GenerateContext<'_>,
   banner: Option<&'code str>,
@@ -40,9 +43,9 @@ pub async fn render_umd<'code>(
   // umd wrapper start
 
   // Analyze the export information of the chunk.
-  let export_items = get_export_items(ctx.chunk, ctx.link_output);
-  let has_exports = !export_items.is_empty();
-  let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
+  let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
+  let has_exports = !export_names.is_empty();
+  let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
 
   let entry_module = ctx
     .chunk
@@ -50,7 +53,7 @@ pub async fn render_umd<'code>(
     .expect("iife format only have entry chunk");
 
   // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
-  let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_items)?;
+  let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
 
   let named_exports = matches!(&export_mode, OutputExports::Named);
 
@@ -131,8 +134,16 @@ pub async fn render_umd<'code>(
           &ctx.chunk.canonical_names,
         );
 
-        // return require_xxx();
-        source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
+        if named_exports {
+          // TODO merge with render_exports
+          source_joiner.append_source(render_object_define_property(
+            "default",
+            &concat_string!(wrapper_ref_name, "()"),
+          ));
+        } else {
+          // return require_xxx();
+          source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
+        }
       }
       WrapKind::None => {}
     }

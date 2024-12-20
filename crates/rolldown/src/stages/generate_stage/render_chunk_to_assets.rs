@@ -205,7 +205,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph: &ChunkGraph,
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
-  ) -> anyhow::Result<(IndexInstantiatedChunks, IndexChunkToAssets)> {
+  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToAssets)> {
     let mut index_chunk_to_assets: IndexChunkToAssets =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_preliminary_assets: IndexInstantiatedChunks =

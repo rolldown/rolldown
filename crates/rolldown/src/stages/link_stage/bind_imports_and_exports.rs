@@ -176,7 +176,7 @@ impl LinkStage<'_> {
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
       for (key, value) in map {
-        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.clone());
+        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.as_str());
         for symbol_ref in value {
           self.symbols.link(*symbol_ref, target_symbol);
         }
@@ -734,10 +734,7 @@ impl BindImportsAndExportsContext<'_> {
               .shimmed_missing_exports
               .entry(imported.clone())
               .or_insert_with(|| {
-                self.symbol_db.create_facade_root_symbol_ref(
-                  tracker.importee,
-                  imported.clone().to_string().into(),
-                )
+                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, imported.as_str())
               });
             return MatchImportKind::Normal(MatchImportKindNormal {
               symbol: *shimmed_symbol_ref,

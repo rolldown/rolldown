@@ -35,6 +35,7 @@ use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::borrow::Cow;
 use sugar_path::SugarPath;
 
 use crate::SharedOptions;
@@ -122,13 +123,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let default_export_ref = symbol_ref_db
-      .create_facade_root_symbol_ref(concat_string!(legitimized_repr_name, "_default").into());
+      .create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_default"));
     // This is used for converting "export default foo;" => "var [default_export_ref] = foo;"
     // And we consider [default_export_ref] never get reassigned.
     default_export_ref.flags_mut(&mut symbol_ref_db).insert(SymbolRefFlags::IS_NOT_REASSIGNED);
 
     let name = concat_string!(legitimized_repr_name, "_exports");
-    let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(name.into());
+    let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
 
     let result = ScanResult {
       named_imports: FxHashMap::default(),
@@ -293,14 +294,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
-    let namespace_ref: SymbolRef = self.result.symbol_ref_db.create_facade_root_symbol_ref(
-      concat_string!(
+    let namespace_ref: SymbolRef =
+      self.result.symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(
         "#LOCAL_NAMESPACE_IN_",
         itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default()),
         "#"
-      )
-      .into(),
-    );
+      ));
     let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref, span, None)
       .with_meta(init_meta);
 
@@ -403,16 +402,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     span_imported: Span,
   ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
+    let ident = if export_name == "default" {
+      let importee_repr =
+        self.result.import_records[record_id].module_request.as_path().representative_file_name();
+      let importee_repr = legitimize_identifier_name(&importee_repr);
+      Cow::Owned(concat_string!(importee_repr, "_default"))
+    } else {
+      // the export_name could be a string literal
+      legitimize_identifier_name(export_name)
+    };
     let generated_imported_as_ref =
-      self.result.symbol_ref_db.create_facade_root_symbol_ref(if export_name == "default" {
-        let importee_repr =
-          self.result.import_records[record_id].module_request.as_path().representative_file_name();
-        let importee_repr = legitimize_identifier_name(&importee_repr);
-        concat_string!(importee_repr, "_default").into()
-      } else {
-        // the export_name could be a string literal
-        legitimize_identifier_name(export_name).into()
-      });
+      self.result.symbol_ref_db.create_facade_root_symbol_ref(ident.as_ref());
 
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
@@ -440,7 +440,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let generated_imported_as_ref = self
       .result
       .symbol_ref_db
-      .create_facade_root_symbol_ref(legitimize_identifier_name(export_name).into());
+      .create_facade_root_symbol_ref(legitimize_identifier_name(export_name).as_ref());
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
       imported: Specifier::Star,

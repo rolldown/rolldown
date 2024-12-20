@@ -27,9 +27,7 @@ impl AstScopes {
     symbol_id: SymbolId,
     symbol_table: &'table SymbolTable,
   ) -> impl Iterator<Item = &'table Reference> + 'table {
-    symbol_table.resolved_references[symbol_id]
-      .iter()
-      .map(|reference_id| &symbol_table.references[*reference_id])
+    symbol_table.get_resolved_references(symbol_id)
   }
 }
 

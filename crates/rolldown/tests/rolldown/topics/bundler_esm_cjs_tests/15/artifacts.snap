@@ -77,7 +77,7 @@ return require_entry();
 ```
 ---
 
-Variant: (format: Umd)
+Variant: (format: Umd, name: "module")
 
 # Assets
 

@@ -34,10 +34,23 @@ impl ConfigVariant {
 
 impl Display for ConfigVariant {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let mut fields = vec![];
     if let Some(format) = &self.format {
-      write!(f, "(format: {format:?})")
-    } else {
+      fields.push(format!("format: {:?}", format));
+    }
+    if let Some(extend) = &self.extend {
+      fields.push(format!("extend: {:?}", extend));
+    }
+    if let Some(name) = &self.name {
+      fields.push(format!("name: {:?}", name));
+    }
+    if let Some(exports) = &self.exports {
+      fields.push(format!("exports: {:?}", exports));
+    }
+    if fields.is_empty() {
       write!(f, "()")
+    } else {
+      write!(f, "({})", fields.join(", "))
     }
   }
 }

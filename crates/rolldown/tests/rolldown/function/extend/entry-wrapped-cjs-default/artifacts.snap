@@ -40,7 +40,7 @@ module.exports = require_main();
 ```
 ---
 
-Variant: (format: Iife)
+Variant: (format: Iife, extend: true, name: "module")
 
 # Assets
 
@@ -63,7 +63,7 @@ return require_main();
 ```
 ---
 
-Variant: (format: Umd)
+Variant: (format: Umd, extend: true, name: "module")
 
 # Assets
 

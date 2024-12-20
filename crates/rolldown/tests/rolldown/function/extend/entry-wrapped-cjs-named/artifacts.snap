@@ -40,7 +40,7 @@ module.exports = require_main();
 ```
 ---
 
-Variant: (format: Iife)
+Variant: (format: Iife, extend: true, name: "module", exports: Named)
 
 # Assets
 
@@ -68,7 +68,7 @@ Object.defineProperty(exports, 'default', {
 ```
 ---
 
-Variant: (format: Umd)
+Variant: (format: Umd, extend: true, name: "module", exports: Named)
 
 # Assets
 

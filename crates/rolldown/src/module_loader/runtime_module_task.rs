@@ -179,12 +179,8 @@ impl RuntimeModuleTask {
       ast.contains_use_strict = pre_processor.contains_use_strict;
     });
 
-    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
-    let ast_scope = AstScopes::new(
-      scope,
-      std::mem::take(&mut symbol_table.references),
-      std::mem::take(&mut symbol_table.resolved_references),
-    );
+    let (symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
+    let ast_scope = AstScopes::new(scope);
     let facade_path = ModuleId::new("runtime");
     let scanner = AstScanner::new(
       self.module_idx,

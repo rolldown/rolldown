@@ -186,6 +186,10 @@ impl SymbolRefDb {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.get_scope_id(refer.symbol) == local_db.root_scope_id
   }
+
+  pub fn this_method_should_be_removed_get_symbol_table(&self, owner: ModuleIdx) -> &SymbolTable {
+    self.inner[owner].unpack_ref()
+  }
 }
 
 pub trait GetLocalDb {

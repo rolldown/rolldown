@@ -31,7 +31,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           return;
         }
       }
-      let reference_flag = self.scopes.references[ident.reference_id()].flags();
+      let reference_flag = self.result.symbol_ref_db.references[ident.reference_id()].flags();
       if reference_flag.is_write() {
         self.result.errors.push(BuildDiagnostic::assign_to_import(
           self.id.resource_id().clone(),

@@ -4,7 +4,7 @@ use oxc::{
     visit::walk,
     AstKind, Visit,
   },
-  semantic::{ReferenceId, SymbolId},
+  semantic::SymbolId,
   span::{GetSpan, Span},
 };
 use rolldown_common::{
@@ -48,6 +48,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         // In `NormalModule` the options is always `Some`, for `RuntimeModule` always enable annotations
         !self.options.treeshake.annotations(),
         self.options.jsx.is_jsx_preserve(),
+        &self.result.symbol_ref_db,
       )
       .detect_side_effect_of_stmt(stmt);
 
@@ -203,10 +204,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_class(&mut self, it: &ast::Class<'ast>) {
-    let previous_reference_id = self.cur_class_decl_and_symbol_referenced_ids.take();
-    self.cur_class_decl_and_symbol_referenced_ids = self.get_class_id_and_references_id(it);
+    let previous_class_decl_id = self.cur_class_decl.take();
+    self.cur_class_decl = self.get_class_id(it);
     walk::walk_class(self, it);
-    self.cur_class_decl_and_symbol_referenced_ids = previous_reference_id;
+    self.cur_class_decl = previous_class_decl_id;
   }
 
   fn visit_class_element(&mut self, it: &ast::ClassElement<'ast>) {
@@ -257,13 +258,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// visit `Class` of declaration
-  pub fn get_class_id_and_references_id(
-    &mut self,
-    class: &ast::Class<'ast>,
-  ) -> Option<(SymbolId, &'me Vec<ReferenceId>)> {
+  #[allow(clippy::unused_self)]
+  pub fn get_class_id(&mut self, class: &ast::Class<'ast>) -> Option<SymbolId> {
     let id = class.id.as_ref()?;
     let symbol_id = *id.symbol_id.get().unpack_ref();
-    Some((symbol_id, &self.scopes.resolved_references[symbol_id]))
+    Some(symbol_id)
   }
 
   fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {
@@ -297,10 +296,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
         self.check_import_assign(ident_ref, root_symbol_id.symbol);
 
-        if let Some((symbol_id, ids)) = self.cur_class_decl_and_symbol_referenced_ids {
-          if ids.contains(&ident_ref.reference_id()) {
-            self.result.self_referenced_class_decl_symbol_ids.insert(symbol_id);
+        match (self.cur_class_decl, self.resolve_symbol_from_reference(ident_ref)) {
+          (Some(cur_class_decl), Some(referenced_to)) if cur_class_decl == referenced_to => {
+            self.result.self_referenced_class_decl_symbol_ids.insert(cur_class_decl);
           }
+          _ => {}
         }
       }
       super::IdentifierReferenceKind::Other => {}

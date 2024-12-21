@@ -1,5 +1,4 @@
-import type Z from 'zod'
-import { z } from 'zod'
+import * as v from 'valibot'
 
 export type LogLevel = 'info' | 'debug' | 'warn'
 export type LogLevelOption = LogLevel | 'silent'
@@ -8,15 +7,24 @@ export type LogLevelWithError = LogLevel | 'error'
 export type RollupLog = any
 export type RollupLogWithString = RollupLog | string
 
-export const LogLevelSchema: Z.ZodType<LogLevel> = z
-  .literal('info')
-  .or(z.literal('debug'))
-  .or(z.literal('warn')) satisfies z.ZodType<LogLevel>
+export const LogLevelSchema: v.UnionSchema<
+  [
+    v.LiteralSchema<'debug', undefined>,
+    v.LiteralSchema<'info', undefined>,
+    v.LiteralSchema<'warn', undefined>,
+  ],
+  undefined
+> = v.union([v.literal('debug'), v.literal('info'), v.literal('warn')])
 
-export const LogLevelOptionSchema: Z.ZodType<LogLevelOption> =
-  LogLevelSchema.or(z.literal('silent'))
-export const LogLevelWithErrorSchema: Z.ZodType<LogLevelWithError> =
-  LogLevelSchema.or(z.literal('error'))
+export const LogLevelOptionSchema: v.UnionSchema<
+  [typeof LogLevelSchema, v.LiteralSchema<'silent', undefined>],
+  undefined
+> = v.union([LogLevelSchema, v.literal('silent')])
+
+export const LogLevelWithErrorSchema: v.UnionSchema<
+  [typeof LogLevelSchema, v.LiteralSchema<'error', undefined>],
+  undefined
+> = v.union([LogLevelSchema, v.literal('error')])
 
 export const LOG_LEVEL_SILENT: LogLevelOption = 'silent'
 export const LOG_LEVEL_ERROR = 'error'
@@ -32,6 +40,8 @@ export const logLevelPriority: Record<LogLevelOption, number> = {
 }
 
 // TODO RollupLog Fields
-export const RollupLogSchema: Z.ZodAny = z.any() satisfies z.ZodType<RollupLog>
-export const RollupLogWithStringSchema: Z.ZodUnion<[Z.ZodAny, Z.ZodString]> =
-  RollupLogSchema.or(z.string()) satisfies z.ZodType<RollupLogWithString>
+export const RollupLogSchema: v.AnySchema = v.any()
+export const RollupLogWithStringSchema: v.UnionSchema<
+  [v.AnySchema, v.StringSchema<undefined>],
+  undefined
+> = v.union([RollupLogSchema, v.string()])

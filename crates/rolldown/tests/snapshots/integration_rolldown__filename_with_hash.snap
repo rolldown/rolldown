@@ -1212,7 +1212,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_props
 
-- entry1-!~{000}~.js => entry1-CtCS6BI7.js
+- entry1-!~{000}~.js => entry1-DdJHIcHJ.js
 - entry2-!~{001}~.js => entry2-DEKpYNOz.js
 
 # tests/esbuild/default/mangle_props_avoid_collisions
@@ -1260,7 +1260,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_props_minify
 
-- entry1-!~{000}~.js => entry1-D3-VDu1L.js
+- entry1-!~{000}~.js => entry1-D-CncXsm.js
 - entry2-!~{001}~.js => entry2-DEKpYNOz.js
 
 # tests/esbuild/default/mangle_props_no_shorthand

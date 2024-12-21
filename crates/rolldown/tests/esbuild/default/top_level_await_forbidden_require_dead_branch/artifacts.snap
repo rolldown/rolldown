@@ -2,6 +2,14 @@
 source: crates/rolldown_testing/src/integration_test.rs
 snapshot_kind: text
 ---
+# warnings
+
+## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
+
+```text
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+
+```
 # Assets
 
 ## entry.js

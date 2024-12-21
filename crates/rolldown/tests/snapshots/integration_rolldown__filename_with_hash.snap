@@ -3999,6 +3999,14 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-1IepDXVC.js
 
+# tests/rolldown/function/extend/entry-wrapped-cjs-default
+
+- main-!~{000}~.js => main-CGXrhtLR.js
+
+# tests/rolldown/function/extend/entry-wrapped-cjs-named
+
+- main-!~{000}~.js => main-CGXrhtLR.js
+
 # tests/rolldown/function/extend/iife/namespace_default
 
 - main-!~{000}~.js => main-CYfxmU26.js

@@ -45,7 +45,7 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn exports(&self) -> Vec<String> {
-    self.inner.exports.clone()
+    self.inner.exports.iter().map(ToString::to_string).collect()
   }
 
   // RenderedChunk

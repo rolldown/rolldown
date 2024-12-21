@@ -15,7 +15,8 @@
       "format": "iife"
     },
     {
-      "format": "umd"
+      "format": "umd",
+      "name": "module"
     }
   ]
 }

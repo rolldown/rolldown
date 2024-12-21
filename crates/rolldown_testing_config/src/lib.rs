@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use rolldown_common::{BundlerOptions, OutputFormat};
+use rolldown_common::{BundlerOptions, OutputExports, OutputFormat};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -8,6 +8,9 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigVariant {
   pub format: Option<OutputFormat>,
+  pub extend: Option<bool>,
+  pub name: Option<String>,
+  pub exports: Option<OutputExports>,
 }
 
 impl ConfigVariant {
@@ -16,16 +19,39 @@ impl ConfigVariant {
     if let Some(format) = &self.format {
       config.format = Some(*format);
     }
+    if let Some(exports) = &self.exports {
+      config.exports = Some(*exports);
+    }
+    if let Some(extend) = &self.extend {
+      config.extend = Some(*extend);
+    }
+    if let Some(name) = &self.name {
+      config.name = Some(name.to_string());
+    }
     config
   }
 }
 
 impl Display for ConfigVariant {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let mut fields = vec![];
     if let Some(format) = &self.format {
-      write!(f, "(format: {format:?})")
-    } else {
+      fields.push(format!("format: {format:?}"));
+    }
+    if let Some(extend) = &self.extend {
+      fields.push(format!("extend: {extend:?}"));
+    }
+    if let Some(name) = &self.name {
+      fields.push(format!("name: {name:?}"));
+    }
+    if let Some(exports) = &self.exports {
+      fields.push(format!("exports: {exports:?}"));
+    }
+    fields.sort();
+    if fields.is_empty() {
       write!(f, "()")
+    } else {
+      write!(f, "({})", fields.join(", "))
     }
   }
 }

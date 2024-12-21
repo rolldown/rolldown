@@ -31,7 +31,7 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
       is_dynamic_entry: value.is_dynamic_entry,
       facade_module_id: value.facade_module_id.map(|x| x.to_string()),
       module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
-      exports: value.exports,
+      exports: value.exports.into_iter().map(|x| x.to_string()).collect(),
       file_name: value.filename.to_string(),
       modules: into_binding_chunk_modules(value.modules),
       imports: value.imports.iter().map(ArcStr::to_string).collect(),

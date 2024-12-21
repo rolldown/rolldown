@@ -474,6 +474,22 @@
     "ConfigVariant": {
       "type": "object",
       "properties": {
+        "exports": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OutputExports"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extend": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "format": {
           "anyOf": [
             {
@@ -482,6 +498,12 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
           ]
         }
       },

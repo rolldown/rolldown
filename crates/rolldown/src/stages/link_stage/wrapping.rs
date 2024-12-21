@@ -146,7 +146,7 @@ pub fn create_wrapper(
     //
     WrapKind::Cjs => {
       let wrapper_ref = symbols
-        .create_facade_root_symbol_ref(module.idx, format!("require_{}", &module.repr_name).into());
+        .create_facade_root_symbol_ref(module.idx, &format!("require_{}", &module.repr_name));
 
       let stmt_info = StmtInfo {
         stmt_idx: None,
@@ -175,8 +175,8 @@ pub fn create_wrapper(
     //   });
     //
     WrapKind::Esm => {
-      let wrapper_ref = symbols
-        .create_facade_root_symbol_ref(module.idx, format!("init_{}", &module.repr_name).into());
+      let wrapper_ref =
+        symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", &module.repr_name));
 
       let stmt_info = StmtInfo {
         stmt_idx: None,

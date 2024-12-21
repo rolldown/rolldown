@@ -162,7 +162,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
           };
           let is_used =
-            !self.result.symbol_ref_db.resolved_references[binding_symbol_id].is_empty();
+            !self.result.symbol_ref_db.get_resolved_reference_ids(binding_symbol_id).is_empty();
           if is_used {
             set.insert(binding_name.into());
           }
@@ -179,7 +179,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               self
                 .dynamic_import_usage_info
                 .dynamic_import_binding_reference_id
-                .extend(self.result.symbol_ref_db.resolved_references[symbol_id].iter());
+                .extend(self.result.symbol_ref_db.get_resolved_reference_ids(symbol_id));
             }
             // If the rest argument is not a BindingIdentifier, this is an unexpected case
             // because '...' must be followed by an identifier in declaration contexts.
@@ -201,7 +201,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id
-      .extend(self.result.symbol_ref_db.resolved_references[symbol_id].iter());
+      .extend(self.result.symbol_ref_db.get_resolved_reference_ids(symbol_id));
     Some(FxHashSet::default())
   }
 }

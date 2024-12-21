@@ -12,7 +12,11 @@ impl RuntimeModuleBrief {
   pub fn new(id: ModuleIdx, scope: &AstScopes) -> Self {
     Self {
       id,
-      name_to_symbol: scope.get_bindings(scope.root_scope_id()).clone().into_iter().collect(),
+      name_to_symbol: scope
+        .get_bindings(scope.root_scope_id())
+        .into_iter()
+        .map(|(name, &symbol_id)| (CompactString::new(name), symbol_id))
+        .collect(),
     }
   }
 

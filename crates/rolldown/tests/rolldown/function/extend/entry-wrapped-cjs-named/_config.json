@@ -1,0 +1,20 @@
+{
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "format": "iife",
+      "extend": true,
+      "name": "module",
+      "exports": "named"
+    },
+    {
+      "format": "umd",
+      "extend": true,
+      "name": "module",
+      "exports": "named"
+    }
+  ]
+}

@@ -46,6 +46,14 @@ module.exports = require_entry();
 
 Variant: (format: Iife)
 
+# warnings
+
+## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
+
+```text
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+
+```
 # Assets
 
 ## entry.js
@@ -69,18 +77,18 @@ return require_entry();
 ```
 ---
 
-Variant: (format: Umd)
+Variant: (format: Umd, name: "module")
 
 # Assets
 
 ## entry.js
 
 ```js
-(function(factory) {
-  
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
   typeof define === 'function' && define.amd ? define([], factory) :
-  factory();
-})(function() {
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.module = factory()));
+})(this, function() {
 
 
 //#region entry.js

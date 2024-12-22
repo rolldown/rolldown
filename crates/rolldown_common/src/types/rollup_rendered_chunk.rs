@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use crate::{ModuleId, RenderedModule};
@@ -12,7 +13,7 @@ pub struct RollupRenderedChunk {
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<ModuleId>,
   pub module_ids: Vec<ModuleId>,
-  pub exports: Vec<String>,
+  pub exports: Vec<Rstr>,
   // RenderedChunk
   pub filename: ArcStr,
   pub modules: FxHashMap<ModuleId, RenderedModule>,

@@ -18,7 +18,7 @@ pub fn render_chunk_exports(
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
-  let export_items = get_export_items(chunk, link_output);
+  let export_items = get_export_items(chunk, link_output).into_iter().collect::<Vec<_>>();
 
   match options.format {
     OutputFormat::Esm => {
@@ -222,23 +222,17 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
   }
 }
 
-pub fn get_chunk_export_names(
-  chunk: &Chunk,
-  graph: &LinkStageOutput,
-  options: &NormalizedBundlerOptions,
-) -> Vec<String> {
-  if matches!(options.format, OutputFormat::Esm) {
-    if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
-      let entry_meta = &graph.metas[*entry_id];
-      if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
-        return vec!["default".to_string()];
-      }
+pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<Rstr> {
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
+    let entry_meta = &graph.metas[*entry_id];
+    if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+      return vec![Rstr::new("default")];
     }
   }
 
   get_export_items(chunk, graph)
     .into_iter()
-    .map(|(exported_name, _)| exported_name.to_string())
+    .map(|(exported_name, _)| exported_name)
     .collect::<Vec<_>>()
 }
 

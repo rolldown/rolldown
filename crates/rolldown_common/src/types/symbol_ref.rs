@@ -89,3 +89,13 @@ impl SymbolRef {
     }
   }
 }
+
+/// passing a `SymbolRef`, it will return it's string repr, the format:
+/// `${stable_id} -> ${symbol_name}`
+pub fn common_debug_symbol_ref(
+  symbol_ref: SymbolRef,
+  modules: &IndexModules,
+  symbols: &SymbolRefDb,
+) -> String {
+  format!("{:?} -> {:?}", modules[symbol_ref.owner].stable_id(), symbol_ref.name(symbols))
+}

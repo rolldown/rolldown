@@ -187,6 +187,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       .dedup()
       .collect::<Vec<_>>();
     default_alias.sort_unstable();
+    default_alias.dedup();
 
     if !specifiers.is_empty()
       || !default_alias.is_empty()

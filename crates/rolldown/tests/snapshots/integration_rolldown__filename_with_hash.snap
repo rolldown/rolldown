@@ -915,11 +915,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle
 
-- entry-!~{000}~.js => entry-DzDZsgTk.js
+- entry-!~{000}~.js => entry-qpFBF9v6.js
 
 # tests/esbuild/default/import_forms_with_no_bundle
 
-- entry-!~{000}~.js => entry-3dXIjQ1H.js
+- entry-!~{000}~.js => entry-COyv-4Wz.js
 
 # tests/esbuild/default/import_fs_browser
 
@@ -1898,7 +1898,7 @@ snapshot_kind: text
 
 - external-def-!~{005}~.js => external-def-DMWRNYC1.js
 - external-default-!~{004}~.js => external-default-CeaZt81w.js
-- external-default2-!~{000}~.js => external-default2-xK1thd5K.js
+- external-default2-!~{000}~.js => external-default2-DUcUjrRi.js
 - external-ns-!~{001}~.js => external-ns-all2LFha.js
 - external-ns-def-!~{003}~.js => external-ns-def-CPrnmGVn.js
 - external-ns-default-!~{002}~.js => external-ns-default-Cbqf8eIs.js

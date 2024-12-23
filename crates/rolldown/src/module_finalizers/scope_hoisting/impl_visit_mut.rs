@@ -1,5 +1,3 @@
-// cSpell:disable
-
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
@@ -292,7 +290,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   // foo.js `export const bar = { a: 0 }`
   // main.js `import * as foo_exports from './foo.js';\n foo_exports.bar.a = 1;`
-  // The `foo_exports.bar.a` ast is `StaticMemberExpression(StaticMemberExpression)`, The outer StaticMemberExpression span is `foo_exports.bar.a`, the `visit_expression(Exprssion::MemberExpression)` is called with `foo_exports.bar`, the span is inner StaticMemberExpression.
+  // The `foo_exports.bar.a` ast is `StaticMemberExpression(StaticMemberExpression)`, The outer StaticMemberExpression span is `foo_exports.bar.a`, the `visit_expression(Expression::MemberExpression)` is called with `foo_exports.bar`, the span is inner StaticMemberExpression.
   fn visit_member_expression(&mut self, expr: &mut ast::MemberExpression<'ast>) {
     if let Some(new_expr) = self.try_rewrite_member_expr(expr) {
       match new_expr {
@@ -424,7 +422,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                   }
                 }
                 ast::Expression::FunctionExpression(fn_expression) => {
-                  // The `var fn = function foo() {}` shoulde be generate `__name(fn, 'foo')` to keep the name
+                  // The `var fn = function foo() {}` should generate `__name(fn, 'foo')` to keep the name
                   self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)));
                 }
                 _ => {}

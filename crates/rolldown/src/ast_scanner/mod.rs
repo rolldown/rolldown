@@ -34,6 +34,7 @@ use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
@@ -42,7 +43,9 @@ use crate::SharedOptions;
 
 #[derive(Debug)]
 pub struct ScanResult {
-  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
+  /// Using `IndexMap` to make sure the order of the named imports always sorted by the span of the
+  /// module
+  pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
@@ -132,7 +135,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
 
     let result = ScanResult {
-      named_imports: FxHashMap::default(),
+      named_imports: FxIndexMap::default(),
       named_exports: FxHashMap::default(),
       stmt_infos: {
         let mut stmt_infos = StmtInfos::default();

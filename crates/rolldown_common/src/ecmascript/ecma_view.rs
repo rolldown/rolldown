@@ -3,7 +3,7 @@ use bitflags::bitflags;
 use oxc::{semantic::SymbolId, span::Span};
 use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -96,7 +96,7 @@ pub struct EcmaView {
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
-  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
+  pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,

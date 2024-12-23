@@ -6,7 +6,7 @@ use oxc::{
   semantic::{SymbolFlags, SymbolId},
   span::Span,
 };
-use rolldown_common::Specifier;
+use rolldown_common::{Specifier, SymbolRef};
 use rolldown_error::BuildDiagnostic;
 
 use super::AstScanner;
@@ -15,10 +15,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn check_import_assign(&mut self, ident: &IdentifierReference, symbol_id: SymbolId) {
     let symbol_flag = self.result.symbol_ref_db.get_flags(symbol_id);
     if symbol_flag.contains(SymbolFlags::Import) {
+      let symbol_ref: SymbolRef = (self.idx, symbol_id).into();
       let is_namespace = self
         .result
         .named_imports
-        .get(&(self.idx, symbol_id).into())
+        .get(&symbol_ref)
         .is_some_and(|import| matches!(import.imported, Specifier::Star));
       if is_namespace {
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {

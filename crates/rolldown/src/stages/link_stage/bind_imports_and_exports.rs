@@ -175,9 +175,28 @@ impl LinkStage<'_> {
     self.warnings.extend(binding_ctx.warnings);
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
-      for (key, value) in map {
+      for (key, symbol_set) in map {
+        // "default" is special, we need to link all alias `default` into `default` local binding,
+        // rather than `default` export of external module
+        if key == "default" {
+          let mut grouped_symbol_refs = FxHashMap::default();
+          // group the external default import by the owner, because the owner may not be in same
+          // chunk.
+          for ele in symbol_set {
+            grouped_symbol_refs.entry(ele.owner).or_insert_with(Vec::default).push(*ele);
+          }
+          for (_, vec) in grouped_symbol_refs {
+            let mut iter = vec.into_iter();
+            if let Some(target_symbol) = iter.next() {
+              for symbol_ref in iter {
+                self.symbols.link(symbol_ref, target_symbol);
+              }
+            };
+          }
+          continue;
+        }
         let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.as_str());
-        for symbol_ref in value {
+        for symbol_ref in symbol_set {
           self.symbols.link(*symbol_ref, target_symbol);
         }
       }
@@ -424,7 +443,7 @@ impl BindImportsAndExportsContext<'_> {
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
       if is_esm && is_external {
         if let Specifier::Literal(ref name) = named_import.imported {
-          if name.as_str() != "default" && is_validate_identifier_name(name) {
+          if is_validate_identifier_name(name) {
             self
               .external_import_binding_merger
               .entry(rec.resolved_module)

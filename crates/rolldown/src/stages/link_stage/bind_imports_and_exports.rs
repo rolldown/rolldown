@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use arcstr::ArcStr;
 use indexmap::IndexSet;
 use oxc::span::CompactStr;
@@ -10,7 +12,7 @@ use rolldown_common::{
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
-  ecmascript::is_validate_identifier_name,
+  ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -176,26 +178,18 @@ impl LinkStage<'_> {
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
       for (key, symbol_set) in map {
-        // "default" is special, we need to link all alias `default` into `default` local binding,
-        // rather than `default` export of external module
-        if key == "default" {
-          let mut grouped_symbol_refs = FxHashMap::default();
-          // group the external default import by the owner, because the owner may not be in same
-          // chunk.
-          for ele in symbol_set {
-            grouped_symbol_refs.entry(ele.owner).or_insert_with(Vec::default).push(*ele);
-          }
-          for (_, vec) in grouped_symbol_refs {
-            let mut iter = vec.into_iter();
-            if let Some(target_symbol) = iter.next() {
-              for symbol_ref in iter {
-                self.symbols.link(symbol_ref, target_symbol);
-              }
-            };
-          }
-          continue;
-        }
-        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.as_str());
+        let name = if key.as_str() == "default" {
+          let key = symbol_set
+            .first()
+            .map_or_else(|| key.clone(), |sym_ref| sym_ref.name(&self.symbols).into());
+          Cow::Owned(key)
+        } else if is_validate_identifier_name(key.as_str()) {
+          Cow::Borrowed(key)
+        } else {
+          let legal_name = legitimize_identifier_name(key);
+          Cow::Owned(legal_name.as_ref().into())
+        };
+        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, &name);
         for symbol_ref in symbol_set {
           self.symbols.link(*symbol_ref, target_symbol);
         }
@@ -443,15 +437,13 @@ impl BindImportsAndExportsContext<'_> {
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
       if is_esm && is_external {
         if let Specifier::Literal(ref name) = named_import.imported {
-          if is_validate_identifier_name(name) {
-            self
-              .external_import_binding_merger
-              .entry(rec.resolved_module)
-              .or_default()
-              .entry(name.inner().clone())
-              .or_default()
-              .insert(*imported_as_ref);
-          }
+          self
+            .external_import_binding_merger
+            .entry(rec.resolved_module)
+            .or_default()
+            .entry(name.inner().clone())
+            .or_default()
+            .insert(*imported_as_ref);
         }
       }
       let ret = self.match_import_with_export(

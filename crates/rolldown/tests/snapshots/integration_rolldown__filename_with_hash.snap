@@ -875,15 +875,15 @@ snapshot_kind: text
 
 # tests/esbuild/default/forbid_string_export_names_no_bundle
 
-- entry-!~{000}~.js => entry-tCArwM3B.js
+- entry-!~{000}~.js => entry-DL-6Pfck.js
 
 # tests/esbuild/default/forbid_string_import_names_bundle
 
-- entry-!~{000}~.js => entry-D-RVKiCJ.js
+- entry-!~{000}~.js => entry-BxM_7lX3.js
 
 # tests/esbuild/default/forbid_string_import_names_no_bundle
 
-- entry-!~{000}~.js => entry-BZG3a0tS.js
+- entry-!~{000}~.js => entry-Dnm4H9T8.js
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
@@ -2988,11 +2988,11 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_browser
 
-- entry-!~{000}~.js => entry-CS_AmeWb.js
+- entry-!~{000}~.js => entry-CjS6Xk1k.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_force_module_before_main
 
-- entry-!~{000}~.js => entry-DfTGvGi8.js
+- entry-!~{000}~.js => entry-Dl0BWTdo.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main
 
@@ -3000,7 +3000,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
 
-- entry-!~{000}~.js => entry-CMIWMXOa.js
+- entry-!~{000}~.js => entry-t9fZl97Q.js
 
 # tests/esbuild/packagejson/package_json_dual_package_hazard_import_and_require_same_file
 
@@ -5001,8 +5001,8 @@ snapshot_kind: text
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.js => main-QQl6iDx9.js
-- main-QQl6iDx9.js.map
+- main-!~{000}~.js => main-HsBPAVFs.js
+- main-HsBPAVFs.js.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_export_named_function
 
@@ -5020,7 +5020,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/keep_names/expression
 
-- main-!~{000}~.js => main-CJwQpcsI.js
+- main-!~{000}~.js => main-32o5VT06.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

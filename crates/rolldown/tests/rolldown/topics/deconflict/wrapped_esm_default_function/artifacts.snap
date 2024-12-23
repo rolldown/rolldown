@@ -7,15 +7,15 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import assert, { default as assert$1 } from "node:assert";
+import assert from "node:assert";
 
 
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo$1 });
 function foo$1(a$1$1) {
-	assert$1.equal(a$1$1, a$1$1);
-	assert$1.equal(a$1, 1);
+	assert.equal(a$1$1, a$1$1);
+	assert.equal(a$1, 1);
 }
 var a$1;
 var init_foo = __esm({ "foo.js"() {
@@ -46,16 +46,16 @@ init_foo();
 (4:24) "foo(" --> (19:9) "foo$1("
 (4:28) "a$1) " --> (19:15) "a$1$1) "
 (4:33) "{\n" --> (19:22) "{\n"
-(5:2) "assert." --> (20:0) "\tassert$1."
-(5:9) "equal(" --> (20:10) "equal("
-(5:15) "a$1, " --> (20:16) "a$1$1, "
-(5:20) "a$1)" --> (20:23) "a$1$1)"
-(5:24) "\n" --> (20:29) ";\n"
-(6:2) "assert." --> (21:0) "\tassert$1."
-(6:9) "equal(" --> (21:10) "equal("
-(6:15) "a, " --> (21:16) "a$1, "
-(6:18) "1)" --> (21:21) "1)"
-(6:20) "\n" --> (21:23) ";\n"
+(5:2) "assert." --> (20:0) "\tassert."
+(5:9) "equal(" --> (20:8) "equal("
+(5:15) "a$1, " --> (20:14) "a$1$1, "
+(5:20) "a$1)" --> (20:21) "a$1$1)"
+(5:24) "\n" --> (20:27) ";\n"
+(6:2) "assert." --> (21:0) "\tassert."
+(6:9) "equal(" --> (21:8) "equal("
+(6:15) "a, " --> (21:14) "a$1, "
+(6:18) "1)" --> (21:19) "1)"
+(6:20) "\n" --> (21:21) ";\n"
 (7:1) "\n" --> (22:0) "}\n"
 (2:6) "a = " --> (25:1) "a$1 = "
 (2:10) "1;\n" --> (25:7) "1;\n"

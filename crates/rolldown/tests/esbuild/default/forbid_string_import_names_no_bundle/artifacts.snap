@@ -7,11 +7,11 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { 'an import' as anImport, 'another import' as an_export } from "./foo";
+import { 'an import' as an_import, 'another import' as another_import } from "./foo";
 
 //#region entry.js
-anImport();
+an_import();
 
 //#endregion
-export { an_export as 'an export' };
+export { another_import as 'an export' };
 ```

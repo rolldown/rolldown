@@ -21,7 +21,7 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { 'some import' as nested } from "external";
+import { 'some import' as some_import } from "external";
 
-export { nested };
+export { some_import as nested };
 ```

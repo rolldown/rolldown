@@ -2,7 +2,7 @@ use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
 use oxc::span::{CompactStr, Span, SPAN};
-use rolldown_common::{Interop, Module};
+use rolldown_common::{Interop, Module, SymbolRef};
 use rolldown_ecmascript_utils::TakeIn;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 
@@ -81,7 +81,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
           )
         })
         .map(|symbol_id| (self.ctx.module.idx, symbol_id).into())
-        .and_then(|symbol_ref| self.ctx.module.named_imports.get(&symbol_ref))
+        .and_then(|symbol_ref: SymbolRef| self.ctx.module.named_imports.get(&symbol_ref))
       {
         let rec = &self.ctx.module.import_records[named_import.record_id];
 

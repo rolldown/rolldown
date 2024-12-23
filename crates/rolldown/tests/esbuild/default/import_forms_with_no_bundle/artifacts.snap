@@ -117,15 +117,15 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import * as ns2 from "foo";
 import * as ns from "foo";
-import def, { a, a2, b, default as def2, default as def3 } from "foo";
+import * as ns2 from "foo";
+import def, { a, a2, b } from "foo";
 
 //#region entry.js
 const imp = [import("foo"), function nested() {
 	return import("foo");
 }];
-console.log(ns, a, b, def, def2, ns2, def3, a2, b, imp);
+console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
 
 //#endregion
 ```

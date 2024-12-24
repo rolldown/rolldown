@@ -200,6 +200,15 @@ impl NormalModule {
     }
   }
 
+  // If the module is an ESM module that follows the Node.js ESM spec, such as
+  // - extension is `.mjs`
+  // - `package.json` has `"type": "module"`
+  // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
+  #[inline]
+  pub fn should_consider_node_esm_spec(&self) -> bool {
+    self.ecma_view.def_format.is_esm()
+  }
+
   pub fn render(
     &self,
     options: &NormalizedBundlerOptions,

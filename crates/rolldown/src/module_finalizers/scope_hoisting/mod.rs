@@ -106,7 +106,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.snippet.builder.vec(),
               false,
             ),
-            self.ctx.module.interop(importee),
+            self.ctx.module.should_consider_node_esm_spec(),
           ),
         );
         return false;
@@ -774,16 +774,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let importee_wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
 
-              Some(self.snippet.promise_resolve_then_call_expr(
-                import_expr.span,
-                self.snippet.builder.vec1(self.snippet.return_stmt(
-                  self.snippet.to_esm_call_with_interop(
-                    to_esm_fn_name,
-                    self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                    self.ctx.module.interop(importee),
+              Some(
+                self.snippet.promise_resolve_then_call_expr(
+                  import_expr.span,
+                  self.snippet.builder.vec1(
+                    self.snippet.return_stmt(
+                      self.snippet.wrap_with_to_esm(
+                        self
+                          .snippet
+                          .builder
+                          .expression_identifier_reference(SPAN, to_esm_fn_name.as_str()),
+                        self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                        self.ctx.module.should_consider_node_esm_spec(),
+                      ),
+                    ),
                   ),
-                )),
-              ))
+                ),
+              )
             }
             WrapKind::None => {
               // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
@@ -913,10 +920,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         .alloc_call_expr_with_2arg_expr_expr(
                           re_export_fn_name,
                           self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                          self.snippet.to_esm_call_with_interop(
-                            to_esm_fn_name,
+                          self.snippet.wrap_with_to_esm(
+                            self
+                              .snippet
+                              .builder
+                              .expression_identifier_reference(SPAN, to_esm_fn_name.as_str()),
                             self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                            self.ctx.module.interop(importee),
+                            self.ctx.module.should_consider_node_esm_spec(),
                           ),
                         )
                         .into_in(self.alloc),

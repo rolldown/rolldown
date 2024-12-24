@@ -3798,9 +3798,9 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/format_cjs_with_module_cjs
 
-- main1-!~{000}~.js => main1-CrSHd4aj.js
-- main2-!~{001}~.js => main2-B23uKlB6.js
-- share-!~{002}~.js => share-DLyfVwQH.js
+- main1-!~{000}~.js => main1-DfLRKT4o.js
+- main2-!~{001}~.js => main2-C7PwSLJW.js
+- share-!~{002}~.js => share-nzv4KVp1.js
 
 # tests/rolldown/code_splitting/import_export_unicode
 
@@ -4504,9 +4504,9 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2903_4
 
-- main-!~{000}~.js => main-BAN7OO9f.js
-- main2-!~{001}~.js => main2-CFW6n5H3.js
-- chunk-!~{002}~.js => chunk-D3VMAunr.js
+- main-!~{000}~.js => main-KFPRjeWc.js
+- main2-!~{001}~.js => main2-BhrTg2bq.js
+- chunk-!~{002}~.js => chunk-CTfjR5yn.js
 
 # tests/rolldown/issues/376
 
@@ -5080,9 +5080,9 @@ snapshot_kind: text
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-BoT4utYZ.js
-- async-entry-!~{003}~.js => async-entry-B_S-BMIJ.js
-- shared-!~{001}~.js => shared-CmocJkWP.js
+- main-!~{000}~.js => main-BjIYVEi3.js
+- async-entry-!~{003}~.js => async-entry-BnjgiQak.js
+- shared-!~{001}~.js => shared-DTDWOKER.js
 
 # tests/rolldown/topics/live_bindings/on_demand_shorthand_pattern_cjs
 
@@ -5136,9 +5136,9 @@ snapshot_kind: text
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-DSxxgWLd.js
-- entry2-!~{001}~.js => entry2-CXxnJInr.js
-- main-!~{002}~.js => main-DallkI37.js
+- entry-!~{000}~.js => entry-DJvGRvVg.js
+- entry2-!~{001}~.js => entry2-D8lGxmt4.js
+- main-!~{002}~.js => main-Dw023PYF.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 

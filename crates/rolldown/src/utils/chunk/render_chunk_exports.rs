@@ -151,22 +151,26 @@ pub fn render_chunk_exports(
         });
         }
         ChunkKind::Common => {
-          export_items.into_iter().for_each(|(exported_name, export_ref)| {
-            let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
-            let symbol = link_output.symbol_db.get(canonical_ref);
-            let canonical_name = &chunk.canonical_names[&canonical_ref];
+          let rendered_items = export_items
+            .into_iter()
+            .map(|(exported_name, export_ref)| {
+              let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
+              let symbol = link_output.symbol_db.get(canonical_ref);
+              let canonical_name = &chunk.canonical_names[&canonical_ref];
 
-            if let Some(ns_alias) = &symbol.namespace_alias {
-              let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
-              let property_name = &ns_alias.property_name;
-              s.push_str(&render_object_define_property(
-                &exported_name,
-                &concat_string!(canonical_ns_name, ".", property_name),
-              ));
-            } else {
-              s.push_str(&render_object_define_property(&exported_name, canonical_name));
-            };
-          });
+              if let Some(ns_alias) = &symbol.namespace_alias {
+                let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+                let property_name = &ns_alias.property_name;
+                render_object_define_property(
+                  &exported_name,
+                  &concat_string!(canonical_ns_name, ".", property_name),
+                )
+              } else {
+                render_object_define_property(&exported_name, canonical_name)
+              }
+            })
+            .collect::<Vec<_>>();
+          s.push_str(&rendered_items.join("\n"));
         }
       }
 

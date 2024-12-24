@@ -2432,6 +2432,7 @@ dependencies = [
  "notify",
  "oxc",
  "oxc_index",
+ "oxc_traverse",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",

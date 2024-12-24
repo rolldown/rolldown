@@ -29,6 +29,7 @@ use sugar_path::SugarPath;
 use crate::utils::call_expression_ext::CallExpressionExt;
 
 mod rename;
+mod traverse;
 
 /// Finalizer for emitting output code with scope hoisting.
 pub struct ScopeHoistingFinalizer<'me, 'ast> {

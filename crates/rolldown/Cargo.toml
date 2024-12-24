@@ -29,6 +29,7 @@ memchr                    = { workspace = true }
 notify                    = { workspace = true }
 oxc                       = { workspace = true }
 oxc_index                 = { workspace = true }
+oxc_traverse              = { workspace = true }
 rolldown_common           = { workspace = true }
 rolldown_ecmascript       = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }

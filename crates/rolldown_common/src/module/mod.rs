@@ -5,8 +5,7 @@ use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
 use crate::{
-  types::interop, EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule,
-  ResolvedImportRecord,
+  EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord,
 };
 
 #[derive(Debug)]
@@ -130,13 +129,6 @@ impl Module {
     match self {
       Module::Normal(v) => v.source.len(),
       Module::External(_) => 0,
-    }
-  }
-
-  pub fn interop(&self) -> Option<interop::Interop> {
-    match self {
-      Module::Normal(v) => v.interop(),
-      Module::External(_) => None,
     }
   }
 }

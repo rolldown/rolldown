@@ -131,7 +131,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      module.interop(),
+      self.get_interop(module),
       &namespace_object_ref,
       import_decl.span,
     );
@@ -194,7 +194,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
         let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
         self.create_require_call_stmt(
           &module.stable_id().into(),
-          module.interop(),
+          self.get_interop(module),
           &namespace_object_ref,
           export_named_decl.span,
         );
@@ -319,7 +319,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      module.interop(),
+      self.get_interop(module),
       &namespace_object_ref,
       export_all_decl.span,
     );
@@ -380,5 +380,12 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
     let rec_id = self.ctx.module.imports[&span];
     let rec = &self.ctx.module.import_records[rec_id];
     &self.ctx.modules[rec.resolved_module]
+  }
+
+  fn get_interop(&self, importee: &Module) -> Option<Interop> {
+    match importee {
+      Module::Normal(importee) => self.ctx.module.interop(importee),
+      Module::External(_) => None,
+    }
   }
 }

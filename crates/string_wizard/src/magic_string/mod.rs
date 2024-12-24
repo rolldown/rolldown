@@ -188,12 +188,13 @@ impl<'text> MagicString<'text> {
   }
 }
 
-impl std::fmt::Display for MagicString<'_> {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+#[expect(clippy::to_string_trait_impl)] // `impl Display` causes extra allocation
+impl ToString for MagicString<'_> {
+  fn to_string(&self) -> String {
     let size_hint = self.len();
     let mut ret = String::with_capacity(size_hint);
     self.fragments().for_each(|f| ret.push_str(f));
-    write!(f, "{ret}")
+    ret
   }
 }
 

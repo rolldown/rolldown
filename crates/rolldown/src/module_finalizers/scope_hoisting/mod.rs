@@ -90,7 +90,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         // `require_foo`
         let importee_wrapper_ref_name =
-          self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+          self.finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false);
 
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
@@ -105,7 +105,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           binding_name_for_wrapper_call_ret,
           self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
-            self.snippet.call_expr_expr(importee_wrapper_ref_name),
+            self.snippet.builder.expression_call(
+              SPAN,
+              importee_wrapper_ref_name,
+              NONE,
+              self.snippet.builder.vec(),
+              false,
+            ),
             should_consider_node_esm_spec,
           ),
         );

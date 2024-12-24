@@ -3796,6 +3796,12 @@ snapshot_kind: text
 - b-!~{001}~.js => b-C3H3Nr5B.js
 - shared-!~{002}~.js => shared-xwhduHDy.js
 
+# tests/rolldown/code_splitting/format-cjs-with-module-cjs
+
+- main1-!~{000}~.js => main1-CrSHd4aj.js
+- main2-!~{001}~.js => main2-B23uKlB6.js
+- share-!~{002}~.js => share-DLyfVwQH.js
+
 # tests/rolldown/code_splitting/import_export_unicode
 
 - main-!~{002}~.js => main-LUITzlAe.js

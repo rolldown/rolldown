@@ -95,12 +95,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
 
-        // If the module is an ESM module that follows the Node.js ESM spec, such as
-        // - extension is `.mjs`
-        // - `package.json` has `"type": "module"`
-        // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
-        let should_consider_node_esm_spec = self.ctx.module.ecma_view.def_format.is_esm();
-
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret,
           self.snippet.wrap_with_to_esm(
@@ -112,7 +106,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.snippet.builder.vec(),
               false,
             ),
-            should_consider_node_esm_spec,
+            self.ctx.module.interop(importee),
           ),
         );
         return false;
@@ -786,7 +780,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.snippet.to_esm_call_with_interop(
                     to_esm_fn_name,
                     self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                    importee.interop(),
+                    self.ctx.module.interop(importee),
                   ),
                 )),
               ))
@@ -922,7 +916,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                           self.snippet.to_esm_call_with_interop(
                             to_esm_fn_name,
                             self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                            importee.interop(),
+                            self.ctx.module.interop(importee),
                           ),
                         )
                         .into_in(self.alloc),

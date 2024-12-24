@@ -3747,6 +3747,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-B3oqPrIA.js
 
+# tests/rolldown/cjs_compat/reexports_from_cjs
+
+- main-!~{000}~.js => main-BmVKMvGa.js
+
 # tests/rolldown/cjs_compat/require/create_require
 
 - main-!~{000}~.js => main-YcW2yFAx.js
@@ -4127,7 +4131,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-CtjRJ0Mq.js
+- main-!~{000}~.js => main-BO8f5rV_.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 

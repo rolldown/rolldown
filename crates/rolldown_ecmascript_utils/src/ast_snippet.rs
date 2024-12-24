@@ -745,9 +745,6 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
-  // If interop is None, using `require_foo()`
-  // If interop is babel, using __toESM(require_foo())
-  // If interop is node, using __toESM(require_foo(), 1)
   #[allow(clippy::needless_pass_by_value)]
   pub fn to_esm_call_with_interop(
     &self,
@@ -755,45 +752,48 @@ impl<'ast> AstSnippet<'ast> {
     call_expr: Expression<'ast>,
     interop: Option<Interop>,
   ) -> Expression<'ast> {
-    match interop {
-      None => call_expr,
-      Some(Interop::Babel) => self.call_expr_with_arg_expr_expr(to_esm_fn_name, call_expr),
-      Some(Interop::Node) => self.alloc_call_expr_with_2arg_expr_expr(
-        to_esm_fn_name,
-        call_expr,
-        self.builder.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal),
-      ),
-    }
+    self.wrap_with_to_esm(
+      self.builder.expression_identifier_reference(SPAN, to_esm_fn_name),
+      call_expr,
+      interop,
+    )
   }
 
-  // If `node_mode` is true, using `__toESM(expr, 1)`
-  // If `node_mode` is false, using `__toESM(expr)`
+  // If interop is None, using `require_foo()`
+  // If interop is babel, using __toESM(require_foo())
+  // If interop is node, using __toESM(require_foo(), 1)
+  #[allow(clippy::needless_pass_by_value)]
   pub fn wrap_with_to_esm(
     &self,
     to_esm_fn_expr: Expression<'ast>,
     expr: Expression<'ast>,
-    node_mode: bool,
+    interop: Option<Interop>,
   ) -> Expression<'ast> {
-    let args = if node_mode {
-      self.builder.vec_from_iter([
-        Argument::from(expr),
-        Argument::from(self.builder.expression_numeric_literal(
-          SPAN,
-          1.0,
-          None,
-          NumberBase::Decimal,
-        )),
-      ])
-    } else {
-      self.builder.vec1(Argument::from(expr))
-    };
-    ast::Expression::CallExpression(self.builder.alloc_call_expression(
-      SPAN,
-      to_esm_fn_expr,
-      NONE,
-      args,
-      false,
-    ))
+    match interop {
+      None => expr,
+      Some(Interop::Babel) => ast::Expression::CallExpression(self.builder.alloc_call_expression(
+        SPAN,
+        to_esm_fn_expr,
+        NONE,
+        self.builder.vec_from_iter([Argument::from(expr)]),
+        false,
+      )),
+      Some(Interop::Node) => ast::Expression::CallExpression(self.builder.alloc_call_expression(
+        SPAN,
+        to_esm_fn_expr,
+        NONE,
+        self.builder.vec_from_iter([
+          Argument::from(expr),
+          Argument::from(self.builder.expression_numeric_literal(
+            SPAN,
+            1.0,
+            None,
+            NumberBase::Decimal,
+          )),
+        ]),
+        false,
+      )),
+    }
   }
 
   /// convert `Expression` to

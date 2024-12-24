@@ -1,10 +1,10 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    ast::{self, Expression},
+    ast::{self, BindingPatternKind, Expression},
     match_member_expression,
   },
-  span::SPAN,
+  span::{Span, SPAN},
 };
 use oxc_traverse::Traverse;
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
@@ -353,6 +353,102 @@ impl<'ast, 'me> Traverse<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         }
       }
       _ => {}
+    }
+  }
+  fn enter_assignment_target_property(
+    &mut self,
+    property: &mut ast::AssignmentTargetProperty<'ast>,
+    _ctx: &mut oxc_traverse::TraverseCtx<'ast>,
+  ) {
+    if let ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(prop) = property {
+      if let Some(target) =
+        self.generate_finalized_simple_assignment_target_for_reference(&prop.binding)
+      {
+        *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
+          ast::AssignmentTargetPropertyProperty {
+            name: ast::PropertyKey::StaticIdentifier(
+              self.snippet.id_name(&prop.binding.name, prop.span).into_in(self.alloc),
+            ),
+            binding: if let Some(init) = prop.init.take() {
+              ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
+                ast::AssignmentTargetWithDefault {
+                  binding: ast::AssignmentTarget::from(target),
+                  init,
+                  span: Span::default(),
+                }
+                .into_in(self.alloc),
+              )
+            } else {
+              ast::AssignmentTargetMaybeDefault::from(target)
+            },
+            span: Span::default(),
+          }
+          .into_in(self.alloc),
+        );
+      } else {
+        prop.binding.reference_id.get_mut().take();
+      }
+    }
+  }
+
+  fn enter_simple_assignment_target(
+    &mut self,
+    target: &mut ast::SimpleAssignmentTarget<'ast>,
+    _ctx: &mut oxc_traverse::TraverseCtx<'ast>,
+  ) {
+    self.rewrite_simple_assignment_target(target);
+  }
+
+  fn enter_declaration(
+    &mut self,
+    it: &mut ast::Declaration<'ast>,
+    _ctx: &mut oxc_traverse::TraverseCtx<'ast>,
+  ) {
+    match it {
+      ast::Declaration::VariableDeclaration(decl) => {
+        match decl.declarations.as_mut_slice() {
+          [decl] => {
+            if let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
+              (&decl.id.kind, decl.init.as_mut())
+            {
+              match init {
+                ast::Expression::ClassExpression(class_expression) => {
+                  if let Some(element) = self.keep_name_helper_for_class(Some(
+                    class_expression.id.as_ref().unwrap_or_else(|| id),
+                  )) {
+                    class_expression.body.body.insert(0, element);
+                  }
+                }
+                ast::Expression::FunctionExpression(fn_expression) => {
+                  // The `var fn = function foo() {}` should generate `__name(fn, 'foo')` to keep the name
+                  self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)));
+                }
+                _ => {}
+              }
+            }
+          }
+          _ => {}
+        }
+      }
+      ast::Declaration::FunctionDeclaration(decl) => {
+        self.process_fn(decl.id.as_ref(), decl.id.as_ref());
+      }
+      ast::Declaration::ClassDeclaration(decl) => {
+        // need to insert `keep_names` helper, because `get_transformed_class_decl`
+        // will remove id in `class.id`
+        if let Some(element) = self.keep_name_helper_for_class(decl.id.as_ref()) {
+          decl.body.body.insert(0, element);
+        }
+        if let Some(decl) = self.get_transformed_class_decl(decl) {
+          *it = decl;
+        }
+        // deconflict class name
+      }
+      ast::Declaration::TSTypeAliasDeclaration(_)
+      | ast::Declaration::TSInterfaceDeclaration(_)
+      | ast::Declaration::TSEnumDeclaration(_)
+      | ast::Declaration::TSModuleDeclaration(_)
+      | ast::Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
     }
   }
 }

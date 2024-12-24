@@ -10,14 +10,16 @@ snapshot_kind: text
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports[Math.random() < 1 && "__esModule"] = true;
 	Object.defineProperty(exports, Math.random() < 1 && "default", { value: 123 });
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 
@@ -35,14 +37,16 @@ Variant: (format: Cjs)
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports[Math.random() < 1 && "__esModule"] = true;
 	Object.defineProperty(exports, Math.random() < 1 && "default", { value: 123 });
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 
@@ -62,14 +66,16 @@ Variant: (format: Iife)
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports[Math.random() < 1 && "__esModule"] = true;
 	Object.defineProperty(exports, Math.random() < 1 && "default", { value: 123 });
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 
@@ -93,14 +99,16 @@ Variant: (format: Umd)
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports[Math.random() < 1 && "__esModule"] = true;
 	Object.defineProperty(exports, Math.random() < 1 && "default", { value: 123 });
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 

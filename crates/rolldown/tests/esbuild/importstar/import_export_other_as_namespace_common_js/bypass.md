@@ -24,13 +24,15 @@ var ns = __toESM(require_foo());
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 
 //#endregion
 Object.defineProperty(exports, 'ns', {
@@ -45,15 +47,18 @@ Object.defineProperty(exports, 'ns', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,10 +2,11 @@
+@@ -1,11 +1,14 @@
++var import_foo;
+ var require_foo = __commonJS({
      "foo.js"(exports) {
          exports.foo = 123;
++        import_foo = __toESM(require_foo());
      }
  });
 -var entry_exports = {};
 -__export(entry_exports, {
 -    ns: () => ns
-+var import_foo = __toESM(require_foo());
++require_foo();
 +Object.defineProperty(exports, 'ns', {
 +    enumerable: true,
 +    get: function () {

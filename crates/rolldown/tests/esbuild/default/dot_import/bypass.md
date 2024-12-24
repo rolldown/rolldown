@@ -21,13 +21,15 @@ import assert from "node:assert";
 
 
 //#region index.js
+var import_dot_import;
 var require_dot_import = __commonJS({ "index.js"(exports) {
 	exports.x = 123;
+	import_dot_import = __toESM(require_dot_import());
 } });
 
 //#endregion
 //#region entry.js
-var import_dot_import = __toESM(require_dot_import());
+require_dot_import();
 assert.equal(import_dot_import.x, 123);
 
 //#endregion
@@ -37,16 +39,18 @@ assert.equal(import_dot_import.x, 123);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,9 @@
 -var require_index = __commonJS({
++var import_dot_import;
 +var require_dot_import = __commonJS({
      "index.js"(exports) {
          exports.x = 123;
++        import_dot_import = __toESM(require_dot_import());
      }
  });
 -var import__ = __toESM(require_index());
 -console.log(import__.x);
-+var import_dot_import = __toESM(require_dot_import());
++require_dot_import();
 +console.log(import_dot_import.x);
 
 ```

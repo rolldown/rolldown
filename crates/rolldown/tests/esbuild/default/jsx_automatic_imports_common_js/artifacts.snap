@@ -19,13 +19,15 @@ import { Fragment, jsx } from "react/jsx-runtime";
 
 
 //#region custom-react.js
+var import_custom_react;
 var require_custom_react = __commonJS({ "custom-react.js"(exports, module) {
 	module.exports = {};
+	import_custom_react = __toESM(require_custom_react());
 } });
 
 //#endregion
 //#region entry.jsx
-var import_custom_react = __toESM(require_custom_react());
+require_custom_react();
 console.log(jsx("div", { jsx: import_custom_react.jsx }), jsx(Fragment, { children: jsx(import_custom_react.Fragment, {}) }));
 
 //#endregion

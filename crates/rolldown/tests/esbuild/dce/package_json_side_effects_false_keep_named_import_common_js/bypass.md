@@ -22,14 +22,16 @@ console.log(import_demo_pkg.foo);
 
 
 //#region node_modules/demo-pkg/index.js
+var import_demo_pkg;
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	exports.foo = 123;
 	console.log("hello");
+	import_demo_pkg = __toESM(require_demo_pkg());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_demo_pkg = __toESM(require_demo_pkg());
+require_demo_pkg();
 console.log(import_demo_pkg.foo);
 
 //#endregion
@@ -39,13 +41,18 @@ console.log(import_demo_pkg.foo);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,6 +1,6 @@
+@@ -1,8 +1,10 @@
++var import_demo_pkg;
  var require_demo_pkg = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
 +    "node_modules/demo-pkg/index.js"(exports) {
          exports.foo = 123;
          console.log("hello");
++        import_demo_pkg = __toESM(require_demo_pkg());
      }
  });
+-var import_demo_pkg = __toESM(require_demo_pkg());
++require_demo_pkg();
+ console.log(import_demo_pkg.foo);
 
 ```

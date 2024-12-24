@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,13 +11,22 @@ import assert from "node:assert";
 
 
 //#region node_modules/pkg/foo.js
+var import_foo;
 var require_foo = __commonJS({ "node_modules/pkg/foo.js"(exports, module) {
 	module.exports = 123;
+	import_foo = __toESM(require_foo());
+} });
+
+//#endregion
+//#region node_modules/pkg/bar.js
+var require_bar = __commonJS({ "node_modules/pkg/bar.js"(exports, module) {
+	module.exports = "abc";
 } });
 
 //#endregion
 //#region node_modules/pkg/index.js
-var import_foo = __toESM(require_foo());
+require_foo();
+require_bar();
 
 //#endregion
 //#region entry.js

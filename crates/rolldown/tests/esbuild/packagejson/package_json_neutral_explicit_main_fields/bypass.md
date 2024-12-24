@@ -24,15 +24,17 @@ import assert from "node:assert";
 
 
 //#region node_modules/demo-pkg/main.js
+var import_main;
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	module.exports = function() {
 		return 123;
 	};
+	import_main = __toESM(require_main());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_main = __toESM(require_main());
+require_main();
 assert.equal((0, import_main.default)(), 123);
 
 //#endregion
@@ -42,18 +44,20 @@ assert.equal((0, import_main.default)(), 123);
 ===================================================================
 --- esbuild	/Users/user/project/out.js
 +++ rolldown	entry.js
-@@ -1,9 +1,9 @@
+@@ -1,9 +1,11 @@
++var import_main;
  var require_main = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/main.js"(exports, module) {
 +    "node_modules/demo-pkg/main.js"(exports, module) {
          module.exports = function () {
              return 123;
          };
++        import_main = __toESM(require_main());
      }
  });
 -var import_demo_pkg = __toESM(require_main());
 -console.log((0, import_demo_pkg.default)());
-+var import_main = __toESM(require_main());
++require_main();
 +console.log((0, import_main.default)());
 
 ```

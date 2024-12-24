@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,13 +10,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo.ts
+var import_foo;
 var require_foo = __commonJS({ "foo.ts"(exports) {
 	exports.foo = 123;
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.ts
-var import_foo = __toESM(require_foo());
+require_foo();
 let foo = 234;
 console.log(import_foo, import_foo.foo, foo);
 

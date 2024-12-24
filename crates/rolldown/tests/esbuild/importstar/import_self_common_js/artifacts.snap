@@ -11,10 +11,12 @@ snapshot_kind: text
 const node_assert = __toESM(require("node:assert"));
 
 //#region entry.js
+var import_entry;
 var require_entry = __commonJS({ "entry.js"(exports) {
-	var import_entry = __toESM(require_entry());
+	require_entry();
 	exports.foo = 123;
 	node_assert.default.equal(import_entry.foo, undefined);
+	import_entry = __toESM(require_entry());
 } });
 
 //#endregion

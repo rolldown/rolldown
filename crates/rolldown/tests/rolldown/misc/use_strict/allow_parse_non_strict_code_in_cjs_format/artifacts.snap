@@ -11,13 +11,15 @@ snapshot_kind: text
 const node_assert = __toESM(require("node:assert"));
 
 //#region cjs.js
+var import_cjs;
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = function foo$1(arguments$1) {};
+	import_cjs = __toESM(require_cjs());
 } });
 
 //#endregion
 //#region main.js
-var import_cjs = __toESM(require_cjs());
+require_cjs();
 (0, node_assert.default)(typeof import_cjs.default === "function");
 
 //#endregion

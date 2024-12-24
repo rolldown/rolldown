@@ -17,16 +17,18 @@ var require_util_browser = __commonJS({ "node_modules/util-browser/index.js"(exp
 
 //#endregion
 //#region node_modules/demo-pkg/main.js
+var import_main;
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	const util = require_util_browser();
 	module.exports = function() {
 		return ["main", util];
 	};
+	import_main = __toESM(require_main());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_main = __toESM(require_main());
+require_main();
 assert.deepEqual((0, import_main.default)(), ["main", "util-browser"]);
 
 //#endregion

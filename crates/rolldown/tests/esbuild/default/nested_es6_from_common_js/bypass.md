@@ -25,15 +25,17 @@ import assert from "node:assert";
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.fn = function() {
 		return 123;
 	};
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 (() => {
 	assert.equal((0, import_foo.fn)(), 123);
 })();
@@ -45,10 +47,18 @@ var import_foo = __toESM(require_foo());
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -6,6 +6,6 @@
+@@ -1,11 +1,13 @@
++var import_foo;
+ var require_foo = __commonJS({
+     "foo.js"(exports) {
+         exports.fn = function () {
+             return 123;
+         };
++        import_foo = __toESM(require_foo());
      }
  });
- var import_foo = __toESM(require_foo());
+-var import_foo = __toESM(require_foo());
++require_foo();
  (() => {
 -    console.log((0, import_foo.fn)());
 +    assert.equal((0, import_foo.fn)(), 123);

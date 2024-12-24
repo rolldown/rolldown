@@ -25,6 +25,12 @@
   diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
+## [package_json_side_effects_false_remove_bare_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js/diff.md)
+  diff
+## [package_json_side_effects_false_remove_named_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_named_import_common_js/diff.md)
+  diff
+## [package_json_side_effects_false_remove_star_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_star_import_common_js/diff.md)
+  diff
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread/diff.md)
   diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
@@ -62,11 +68,8 @@
 ## [package_json_side_effects_false_keep_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6)
 ## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6)
 ## [package_json_side_effects_false_no_warning_in_node_modules_issue999](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999)
-## [package_json_side_effects_false_remove_bare_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js)
 ## [package_json_side_effects_false_remove_bare_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6)
-## [package_json_side_effects_false_remove_named_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_named_import_common_js)
 ## [package_json_side_effects_false_remove_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_named_import_es6)
-## [package_json_side_effects_false_remove_star_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_star_import_common_js)
 ## [package_json_side_effects_false_remove_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_star_import_es6)
 ## [package_json_side_effects_keep_export_default_expr](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_keep_export_default_expr)
 ## [package_json_side_effects_nested_directory_remove](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_nested_directory_remove)

@@ -11,14 +11,16 @@ import assert from "node:assert";
 
 
 //#region commonjs.js
+var import_commonjs;
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = { bar: 1 };
+	import_commonjs = __toESM(require_commonjs(), 1);
 } });
 
 //#endregion
 //#region reexports.mjs
 var reexports_exports = {};
-var import_commonjs = __toESM(require_commonjs(), 1);
+require_commonjs();
 __reExport(reexports_exports, __toESM(require_commonjs(), 1));
 assert.equal(import_commonjs.bar, 1);
 

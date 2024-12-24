@@ -11,13 +11,15 @@ import assert from "node:assert";
 
 
 //#region codes.json
+var import_codes;
 var require_codes = __commonJS({ "codes.json"(exports, module) {
 	module.exports = { "foo": "bar" };
+	import_codes = __toESM(require_codes());
 } });
 
 //#endregion
 //#region main.js
-var import_codes = __toESM(require_codes());
+require_codes();
 const codes2 = require_codes();
 assert.strictEqual(import_codes.default, codes2);
 

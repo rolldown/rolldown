@@ -22,13 +22,15 @@ import assert from "node:assert";
 
 
 //#region foo.js
+var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.x = 123;
+	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 assert.deepEqual(import_foo, {
 	default: { x: 123 },
 	x: 123
@@ -42,14 +44,17 @@ assert.equal(import_foo.foo, undefined);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,6 +2,6 @@
+@@ -1,7 +1,9 @@
++var import_foo;
+ var require_foo = __commonJS({
      "foo.js"(exports) {
          exports.x = 123;
++        import_foo = __toESM(require_foo());
      }
  });
 -var ns = __toESM(require_foo());
 -console.log(ns, ns.foo);
-+var import_foo = __toESM(require_foo());
++require_foo();
 +console.log(import_foo, import_foo.foo);
 
 ```

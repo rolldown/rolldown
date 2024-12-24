@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -14,16 +15,18 @@ var require_util_node = __commonJS({ "node_modules/demo-pkg/util-node.js"() {} }
 
 //#endregion
 //#region node_modules/demo-pkg/main.js
+var import_main;
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	const util = require_util_node();
 	module.exports = function(obj) {
 		return util.inspect(obj);
 	};
+	import_main = __toESM(require_main());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_main = __toESM(require_main());
+require_main();
 assert.deepEqual((0, import_main.default)(), {});
 
 //#endregion

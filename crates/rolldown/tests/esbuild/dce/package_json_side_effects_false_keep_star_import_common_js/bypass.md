@@ -23,14 +23,16 @@ import assert from "node:assert";
 
 
 //#region node_modules/demo-pkg/index.js
+var import_demo_pkg;
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	exports.foo = 123;
 	console.log("hello");
+	import_demo_pkg = __toESM(require_demo_pkg());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_demo_pkg = __toESM(require_demo_pkg());
+require_demo_pkg();
 assert.deepEqual(import_demo_pkg, {
 	default: { foo: 123 },
 	foo: 123
@@ -43,17 +45,19 @@ assert.deepEqual(import_demo_pkg, {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,8 +1,8 @@
+@@ -1,8 +1,10 @@
++var import_demo_pkg;
  var require_demo_pkg = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
 +    "node_modules/demo-pkg/index.js"(exports) {
          exports.foo = 123;
          console.log("hello");
++        import_demo_pkg = __toESM(require_demo_pkg());
      }
  });
 -var ns = __toESM(require_demo_pkg());
 -console.log(ns);
-+var import_demo_pkg = __toESM(require_demo_pkg());
++require_demo_pkg();
 +console.log(import_demo_pkg);
 
 ```

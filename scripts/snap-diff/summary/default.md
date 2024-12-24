@@ -23,6 +23,8 @@
   missing
 ## entry_names_non_portable_character
   missing
+## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js/diff.md)
+  diff
 ## [export_forms_common_js](../../../crates/rolldown/tests/esbuild/default/export_forms_common_js/diff.md)
   diff
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
@@ -34,6 +36,8 @@
 ## [import_abs_path_with_query_parameter](../../../crates/rolldown/tests/esbuild/default/import_abs_path_with_query_parameter/diff.md)
   diff
 ## [import_meta_common_js](../../../crates/rolldown/tests/esbuild/default/import_meta_common_js/diff.md)
+  diff
+## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js/diff.md)
   diff
 ## [import_missing_neither_es6_nor_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_neither_es6_nor_common_js/diff.md)
   diff
@@ -53,6 +57,8 @@
   missing
 ## jsx_dev_self_edge_cases
   missing
+## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js/diff.md)
+  diff
 ## [legal_comments_avoid_slash_tag_end_of_file](../../../crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file/diff.md)
   diff
 ## [legal_comments_avoid_slash_tag_external](../../../crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external/diff.md)
@@ -155,7 +161,6 @@
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
 ## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
-## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_fs_node](../../../crates/rolldown/tests/esbuild/default/export_fs_node)
 ## [export_fs_node_in_common_js_module](../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module)
@@ -167,13 +172,11 @@
 ## [iife_es5](../../../crates/rolldown/tests/esbuild/default/iife_es5)
 ## [import_meta_es6](../../../crates/rolldown/tests/esbuild/default/import_meta_es6)
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
-## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
 ## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
 ## [inject_jsx_dot_names](../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names)
 ## [inject_with_define](../../../crates/rolldown/tests/esbuild/default/inject_with_define)
-## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [jsx_this_property_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_esm)
 ## [jsx_this_value_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_esm)

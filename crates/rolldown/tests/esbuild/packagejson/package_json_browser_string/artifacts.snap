@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,15 +11,17 @@ import assert from "node:assert";
 
 
 //#region node_modules/demo-pkg/browser.js
+var import_browser;
 var require_browser = __commonJS({ "node_modules/demo-pkg/browser.js"(exports, module) {
 	module.exports = function() {
 		return 123;
 	};
+	import_browser = __toESM(require_browser());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_browser = __toESM(require_browser());
+require_browser();
 assert.equal((0, import_browser.default)(), 123);
 
 //#endregion

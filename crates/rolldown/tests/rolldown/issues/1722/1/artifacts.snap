@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -25,13 +26,15 @@ export { main, sub };
 
 
 //#region sub.cjs
+var import_sub;
 var require_sub = __commonJS({ "sub.cjs"(exports, module) {
 	module.exports.sub = "sub";
+	import_sub = __toESM(require_sub());
 } });
 
 //#endregion
 //#region main.js
-var import_sub = __toESM(require_sub());
+require_sub();
 const main = "main";
 
 //#endregion

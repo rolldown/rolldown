@@ -35,16 +35,18 @@ var require_util_node = __commonJS({ "node_modules/demo-pkg/util-node.js"() {} }
 
 //#endregion
 //#region node_modules/demo-pkg/main.js
+var import_main;
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	const util = require_util_node();
 	module.exports = function(obj) {
 		return util.inspect(obj);
 	};
+	import_main = __toESM(require_main());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_main = __toESM(require_main());
+require_main();
 assert.deepEqual((0, import_main.default)(), {});
 
 //#endregion
@@ -54,11 +56,12 @@ assert.deepEqual((0, import_main.default)(), {});
 ===================================================================
 --- esbuild	/Users/user/project/out.js
 +++ rolldown	entry.js
-@@ -1,13 +1,13 @@
+@@ -1,13 +1,15 @@
  var require_util_node = __commonJS({
 -    "(disabled):Users/user/project/node_modules/demo-pkg/util-node"() {}
 +    "node_modules/demo-pkg/util-node.js"() {}
  });
++var import_main;
  var require_main = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/main.js"(exports, module) {
 -        var util = require_util_node();
@@ -67,11 +70,12 @@ assert.deepEqual((0, import_main.default)(), {});
          module.exports = function (obj) {
              return util.inspect(obj);
          };
++        import_main = __toESM(require_main());
      }
  });
 -var import_demo_pkg = __toESM(require_main());
 -console.log((0, import_demo_pkg.default)());
-+var import_main = __toESM(require_main());
++require_main();
 +console.log((0, import_main.default)());
 
 ```

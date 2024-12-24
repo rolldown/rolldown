@@ -6,11 +6,13 @@ use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias,
+  NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, WrapKind,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_std_utils::OptionExt;
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::IndexVecExt,
@@ -121,7 +123,50 @@ impl LinkStage<'_> {
   /// ```
   ///
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
+  #[expect(clippy::too_many_lines)]
   pub fn bind_imports_and_exports(&mut self) {
+    self.sorted_modules.iter().copied().for_each(|importer_idx| {
+      let Some(importer) = self.module_table.modules[importer_idx].as_normal() else {
+        return;
+      };
+
+      let imported_wrapped_cjs_modules = importer
+        .ecma_view
+        .import_records
+        .iter()
+        .filter_map(|import_rec| {
+          let importee = &self.module_table.modules[import_rec.resolved_module];
+          let importee_meta = &self.metas[importee.idx()];
+          match (import_rec.kind, importee_meta.wrap_kind) {
+            (ImportKind::Import, WrapKind::Cjs) => {
+              Some((importer.should_consider_node_esm_spec(), import_rec.resolved_module))
+            }
+            _ => None,
+          }
+        })
+        .collect::<Vec<_>>();
+
+      imported_wrapped_cjs_modules.iter().for_each(
+        |(should_consider_node_esm_spec, cjs_module_idx)| {
+          let cjs_module = self.module_table.modules[*cjs_module_idx].as_normal_mut().unpack();
+          let meta = &self.metas[cjs_module.idx];
+          if *should_consider_node_esm_spec {
+            cjs_module.generate_esm_namespace_in_cjs_node_mode_stmt(
+              &mut self.symbols,
+              &self.runtime,
+              meta.wrapper_ref.unpack(),
+            );
+          } else {
+            cjs_module.generate_esm_namespace_in_cjs_stmt(
+              &mut self.symbols,
+              &self.runtime,
+              meta.wrapper_ref.unpack(),
+            );
+          }
+        },
+      );
+    });
+
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
       let Module::Normal(module) = &self.module_table.modules[module_id] else {
@@ -613,17 +658,23 @@ impl BindImportsAndExportsContext<'_> {
       let importer = &self.index_modules[tracker.importer];
       let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
       let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_id];
+      let importee = &self.index_modules[importer_record.resolved_module];
 
       let kind = match import_status {
-        ImportStatus::CommonJS => match &tracker.imported {
-          Specifier::Star => {
-            MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
+        ImportStatus::CommonJS => {
+          let esm_namespace = if importer.as_normal().unpack().should_consider_node_esm_spec() {
+            importee.as_normal().unpack().esm_namespace_in_cjs_node_mode.unpack_ref().namespace_ref
+          } else {
+            importee.as_normal().unpack().esm_namespace_in_cjs.unpack_ref().namespace_ref
+          };
+          match &tracker.imported {
+            Specifier::Star => MatchImportKind::Namespace { namespace_ref: esm_namespace },
+            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
+              namespace_ref: esm_namespace,
+              alias: alias.clone(),
+            },
           }
-          Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-            namespace_ref: importer_record.namespace_ref,
-            alias: alias.clone(),
-          },
-        },
+        }
         ImportStatus::DynamicFallback { namespace_ref } => match &tracker.imported {
           Specifier::Star => MatchImportKind::Namespace { namespace_ref },
           Specifier::Literal(alias) => {

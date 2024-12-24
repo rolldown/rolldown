@@ -20,10 +20,12 @@ module.exports = require_entry();
 const node_assert = __toESM(require("node:assert"));
 
 //#region entry.js
+var import_entry;
 var require_entry = __commonJS({ "entry.js"(exports) {
-	var import_entry = __toESM(require_entry());
+	require_entry();
 	exports.foo = 123;
 	node_assert.default.equal(import_entry.foo, undefined);
+	import_entry = __toESM(require_entry());
 } });
 
 //#endregion
@@ -35,14 +37,17 @@ module.exports = require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,9 @@
+@@ -1,8 +1,11 @@
 +var node_assert = __toESM(require("node:assert"));
++var import_entry;
  var require_entry = __commonJS({
      "entry.js"(exports) {
-         var import_entry = __toESM(require_entry());
+-        var import_entry = __toESM(require_entry());
++        require_entry();
          exports.foo = 123;
 -        console.log(import_entry.foo);
 +        node_assert.default.equal(import_entry.foo, undefined);
++        import_entry = __toESM(require_entry());
      }
  });
  module.exports = require_entry();

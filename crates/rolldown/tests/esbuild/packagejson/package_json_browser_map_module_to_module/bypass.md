@@ -42,16 +42,18 @@ var require_node_pkg_browser = __commonJS({ "node_modules/node-pkg-browser/index
 
 //#endregion
 //#region node_modules/demo-pkg/index.js
+var import_demo_pkg;
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports, module) {
 	const fn$1 = require_node_pkg_browser();
 	module.exports = function() {
 		return fn$1();
 	};
+	import_demo_pkg = __toESM(require_demo_pkg());
 } });
 
 //#endregion
 //#region src/entry.js
-var import_demo_pkg = __toESM(require_demo_pkg());
+require_demo_pkg();
 assert.equal((0, import_demo_pkg.default)(), 123);
 
 //#endregion
@@ -61,7 +63,7 @@ assert.equal((0, import_demo_pkg.default)(), 123);
 ===================================================================
 --- esbuild	/Users/user/project/out.js
 +++ rolldown	entry.js
-@@ -1,16 +1,16 @@
+@@ -1,17 +1,19 @@
  var require_node_pkg_browser = __commonJS({
 -    "Users/user/project/node_modules/node-pkg-browser/index.js"(exports, module) {
 +    "node_modules/node-pkg-browser/index.js"(exports, module) {
@@ -70,6 +72,7 @@ assert.equal((0, import_demo_pkg.default)(), 123);
          };
      }
  });
++var import_demo_pkg;
  var require_demo_pkg = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports, module) {
 -        var fn2 = require_node_pkg_browser();
@@ -79,8 +82,11 @@ assert.equal((0, import_demo_pkg.default)(), 123);
 -            return fn2();
 +            return fn$1();
          };
++        import_demo_pkg = __toESM(require_demo_pkg());
      }
  });
- var import_demo_pkg = __toESM(require_demo_pkg());
+-var import_demo_pkg = __toESM(require_demo_pkg());
++require_demo_pkg();
+ console.log((0, import_demo_pkg.default)());
 
 ```

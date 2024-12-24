@@ -27,10 +27,10 @@ console.log(
 ```
 ### rolldown
 ```js
-import { __toESM, require_empty } from "./empty.js";
+import { import_empty, require_empty } from "./empty.js";
 
 //#region entry-nope.js
-var import_empty = __toESM(require_empty());
+require_empty();
 console.log(void 0, void 0, import_empty.nope);
 
 //#endregion
@@ -50,8 +50,8 @@ console.log(void 0, void 0, import_empty.nope);
 -var js = __toESM(require_empty());
 -var cjs = __toESM(require_empty2());
 -console.log(void 0, void 0, void 0);
-+import {__toESM, require_empty} from "./empty.js";
-+var import_empty = __toESM(require_empty());
++import {import_empty, require_empty} from "./empty.js";
++require_empty();
 +console.log(void 0, void 0, import_empty.nope);
 
 ```
@@ -81,10 +81,10 @@ console.log(
 ```
 ### rolldown
 ```js
-import { __toESM, require_empty } from "./empty.js";
+import { import_empty, require_empty } from "./empty.js";
 
 //#region entry-default.js
-var import_empty = __toESM(require_empty());
+require_empty();
 console.log(void 0, void 0, import_empty.default);
 
 //#endregion
@@ -104,8 +104,8 @@ console.log(void 0, void 0, import_empty.default);
 -var js = __toESM(require_empty());
 -var cjs = __toESM(require_empty2());
 -console.log(js.default, void 0, cjs.default);
-+import {__toESM, require_empty} from "./empty.js";
-+var import_empty = __toESM(require_empty());
++import {import_empty, require_empty} from "./empty.js";
++require_empty();
 +console.log(void 0, void 0, import_empty.default);
 
 ```

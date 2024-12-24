@@ -10,16 +10,18 @@ snapshot_kind: text
 
 
 //#region foo.cjs
+var import_foo;
 var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 	module[Math.random() < 1 && "exports"] = {
 		default: { bar: 123 },
 		__esModule: true
 	};
+	import_foo = __toESM(require_foo(), 1);
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo(), 1);
+require_foo();
 input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123;
 
 //#endregion
@@ -36,16 +38,18 @@ Variant: (format: Cjs)
 
 
 //#region foo.cjs
+var import_foo;
 var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 	module[Math.random() < 1 && "exports"] = {
 		default: { bar: 123 },
 		__esModule: true
 	};
+	import_foo = __toESM(require_foo(), 1);
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo(), 1);
+require_foo();
 input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123;
 
 //#endregion
@@ -64,16 +68,18 @@ Variant: (format: Iife)
 
 
 //#region foo.cjs
+var import_foo;
 var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 	module[Math.random() < 1 && "exports"] = {
 		default: { bar: 123 },
 		__esModule: true
 	};
+	import_foo = __toESM(require_foo(), 1);
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo(), 1);
+require_foo();
 input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123;
 
 //#endregion
@@ -96,16 +102,18 @@ Variant: (format: Umd)
 
 
 //#region foo.cjs
+var import_foo;
 var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 	module[Math.random() < 1 && "exports"] = {
 		default: { bar: 123 },
 		__esModule: true
 	};
+	import_foo = __toESM(require_foo(), 1);
 } });
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo(), 1);
+require_foo();
 input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123;
 
 //#endregion

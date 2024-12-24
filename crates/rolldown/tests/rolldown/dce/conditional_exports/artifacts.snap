@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -18,13 +19,15 @@ var init_lib_prod = __esm({ "lib.prod.js"() {
 
 //#endregion
 //#region lib.js
+var import_lib;
 var require_lib = __commonJS({ "lib.js"(exports, module) {
 	module.exports = (init_lib_prod(), __toCommonJS(lib_prod_exports));
+	import_lib = __toESM(require_lib());
 } });
 
 //#endregion
 //#region main.js
-var import_lib = __toESM(require_lib());
+require_lib();
 
 //#endregion
 var lib = import_lib.default;

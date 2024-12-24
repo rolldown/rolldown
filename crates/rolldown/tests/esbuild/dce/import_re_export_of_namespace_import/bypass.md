@@ -23,13 +23,22 @@ import assert from "node:assert";
 
 
 //#region node_modules/pkg/foo.js
+var import_foo;
 var require_foo = __commonJS({ "node_modules/pkg/foo.js"(exports, module) {
 	module.exports = 123;
+	import_foo = __toESM(require_foo());
+} });
+
+//#endregion
+//#region node_modules/pkg/bar.js
+var require_bar = __commonJS({ "node_modules/pkg/bar.js"(exports, module) {
+	module.exports = "abc";
 } });
 
 //#endregion
 //#region node_modules/pkg/index.js
-var import_foo = __toESM(require_foo());
+require_foo();
+require_bar();
 
 //#endregion
 //#region entry.js
@@ -46,13 +55,23 @@ assert.equal(
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,6 @@
+@@ -1,7 +1,15 @@
++var import_foo;
  var require_foo = __commonJS({
 -    "Users/user/project/node_modules/pkg/foo.js"(exports, module) {
 +    "node_modules/pkg/foo.js"(exports, module) {
          module.exports = 123;
++        import_foo = __toESM(require_foo());
      }
  });
- var import_foo = __toESM(require_foo());
+-var import_foo = __toESM(require_foo());
++var require_bar = __commonJS({
++    "node_modules/pkg/bar.js"(exports, module) {
++        module.exports = "abc";
++    }
++});
++require_foo();
++require_bar();
+ console.log(import_foo.default);
 
 ```

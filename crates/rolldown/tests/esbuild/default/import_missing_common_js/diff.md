@@ -1,5 +1,3 @@
-# Reason 
-1. cjs module lexer can't recognize esbuild interop pattern
 # Diff
 ## /out.js
 ### esbuild
@@ -7,17 +5,13 @@
 // foo.js
 var require_foo = __commonJS({
   "foo.js"(exports) {
-    exports.foo = 123;
+    exports.x = 123;
   }
 });
 
 // entry.js
-var entry_exports = {};
-__export(entry_exports, {
-  bar: () => import_foo.bar
-});
-module.exports = __toCommonJS(entry_exports);
 var import_foo = __toESM(require_foo());
+console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 ```
 ### rolldown
 ```js
@@ -26,46 +20,32 @@ var import_foo = __toESM(require_foo());
 //#region foo.js
 var import_foo;
 var require_foo = __commonJS({ "foo.js"(exports) {
-	exports.foo = 123;
+	exports.x = 123;
 	import_foo = __toESM(require_foo());
 } });
 
 //#endregion
 //#region entry.js
 require_foo();
+console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 //#endregion
-Object.defineProperty(exports, 'bar', {
-  enumerable: true,
-  get: function () {
-    return import_foo.bar;
-  }
-});
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,14 @@
+@@ -1,7 +1,9 @@
 +var import_foo;
  var require_foo = __commonJS({
      "foo.js"(exports) {
-         exports.foo = 123;
+         exports.x = 123;
 +        import_foo = __toESM(require_foo());
      }
  });
--var entry_exports = {};
--__export(entry_exports, {
--    bar: () => import_foo.bar
-+require_foo();
-+Object.defineProperty(exports, 'bar', {
-+    enumerable: true,
-+    get: function () {
-+        return import_foo.bar;
-+    }
- });
--module.exports = __toCommonJS(entry_exports);
 -var import_foo = __toESM(require_foo());
++require_foo();
+ console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 ```

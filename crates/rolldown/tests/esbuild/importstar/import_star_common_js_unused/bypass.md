@@ -29,7 +29,7 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+require_foo();
 let foo = 234;
 assert.equal(foo, 234);
 
@@ -46,7 +46,7 @@ assert.equal(foo, 234);
      }
  });
 -var ns = __toESM(require_foo());
-+var import_foo = __toESM(require_foo());
++require_foo();
  var foo = 234;
  console.log(foo);
 

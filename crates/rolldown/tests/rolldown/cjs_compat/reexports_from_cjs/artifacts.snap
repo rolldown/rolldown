@@ -16,10 +16,10 @@ var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 } });
 
 //#endregion
-//#region reexports.js
+//#region reexports.mjs
 var reexports_exports = {};
-var import_commonjs = __toESM(require_commonjs());
-__reExport(reexports_exports, __toESM(require_commonjs()));
+var import_commonjs = __toESM(require_commonjs(), 1);
+__reExport(reexports_exports, __toESM(require_commonjs(), 1));
 assert.equal(import_commonjs.bar, 1);
 
 //#endregion

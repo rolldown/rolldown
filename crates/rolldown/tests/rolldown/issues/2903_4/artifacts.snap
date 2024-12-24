@@ -15,7 +15,8 @@ Object.defineProperty(exports, '__commonJS', {
   get: function () {
     return __commonJS;
   }
-});Object.defineProperty(exports, '__toESM', {
+});
+Object.defineProperty(exports, '__toESM', {
   enumerable: true,
   get: function () {
     return __toESM;

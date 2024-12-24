@@ -89,17 +89,20 @@ Object.defineProperty(exports, '__toCommonJS', {
   get: function () {
     return __toCommonJS;
   }
-});Object.defineProperty(exports, 'bar', {
+});
+Object.defineProperty(exports, 'bar', {
   enumerable: true,
   get: function () {
     return bar;
   }
-});Object.defineProperty(exports, 'foo_exports', {
+});
+Object.defineProperty(exports, 'foo_exports', {
   enumerable: true,
   get: function () {
     return foo_exports;
   }
-});Object.defineProperty(exports, 'init_foo', {
+});
+Object.defineProperty(exports, 'init_foo', {
   enumerable: true,
   get: function () {
     return init_foo;

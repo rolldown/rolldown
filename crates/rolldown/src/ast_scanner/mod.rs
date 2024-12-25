@@ -72,7 +72,7 @@ pub struct ScanResult {
   /// temporarily
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
-  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
+  pub new_url_references: FxHashMap<Address, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Address, ThisExprReplaceKind>,
 }
 

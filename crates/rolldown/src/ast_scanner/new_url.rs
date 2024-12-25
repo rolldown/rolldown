@@ -1,4 +1,7 @@
-use oxc::ast::{ast::NewExpression, Comment};
+use oxc::{
+  allocator::Address,
+  ast::{ast::NewExpression, Comment},
+};
 use rolldown_common::{get_leading_comment, ImportKind, ImportRecordMeta, ModuleType};
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -53,6 +56,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let idx =
       self.add_import_record(path, ImportKind::NewUrl, expr.span, ImportRecordMeta::empty());
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
-    self.result.new_url_references.insert(expr.span, idx);
+    self.result.new_url_references.insert(Address::from_ptr(expr), idx);
   }
 }

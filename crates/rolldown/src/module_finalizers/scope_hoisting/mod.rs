@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator, IntoIn},
+  allocator::{self, Address, Allocator, IntoIn},
   ast::{
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
@@ -466,7 +466,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    let span = expr.span();
+    let expr_address = Address::from_ptr(expr);
     let first_arg_string_literal =
       expr.arguments.first_mut().and_then(|arg| arg.as_expression_mut()).and_then(
         |item| match item {
@@ -475,7 +475,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         },
       )?;
 
-    let &rec_idx = self.ctx.module.new_url_references.get(&span)?;
+    let &rec_idx = self.ctx.module.new_url_references.get(&expr_address)?;
     let rec = &self.ctx.module.import_records[rec_idx];
 
     let importee = &self.ctx.modules[rec.resolved_module].as_normal()?;

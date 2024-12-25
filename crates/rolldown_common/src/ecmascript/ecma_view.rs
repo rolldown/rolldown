@@ -124,7 +124,7 @@ pub struct EcmaView {
   pub meta: EcmaViewMeta,
   pub mutations: Vec<BoxedSourceMutation>,
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
-  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
+  pub new_url_references: FxHashMap<Address, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Address, ThisExprReplaceKind>,
 }
 

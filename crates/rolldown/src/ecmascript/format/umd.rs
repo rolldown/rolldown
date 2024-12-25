@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
-use rolldown_common::{ChunkKind, ExternalModule, OutputExports, WrapKind};
+use rolldown_common::{ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use crate::{
   ecmascript::{
@@ -14,7 +14,7 @@ use crate::{
     determine_use_strict::determine_use_strict,
     namespace_marker::render_namespace_markers,
     render_chunk_exports::{
-      get_chunk_export_names, render_chunk_exports, render_object_define_property,
+      get_chunk_export_names, render_chunk_exports, render_wrapped_entry_chunk,
     },
   },
 };
@@ -111,42 +111,8 @@ pub async fn render_umd<'code>(
     import_code,
   );
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
-    let entry_meta = &ctx.link_output.metas[entry_id];
-    match entry_meta.wrap_kind {
-      WrapKind::Esm => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        // init_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
-      }
-      WrapKind::Cjs => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-
-        // require_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-
-        if named_exports {
-          // TODO merge with render_exports
-          source_joiner.append_source(render_object_define_property(
-            "default",
-            &concat_string!(wrapper_ref_name, "()"),
-          ));
-        } else {
-          // return require_xxx();
-          source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
-        }
-      }
-      WrapKind::None => {}
-    }
+  if let Some(source) = render_wrapped_entry_chunk(ctx, Some(&export_mode)) {
+    source_joiner.append_source(source);
   }
 
   //  exports

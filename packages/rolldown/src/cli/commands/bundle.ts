@@ -32,7 +32,7 @@ export async function bundleWithConfig(
 export async function bundleWithCliOptions(
   cliOptions: NormalizedCliOptions,
 ): Promise<void> {
-  if (cliOptions.output.dir) {
+  if (cliOptions.output.dir || cliOptions.output.file) {
     const operation = cliOptions.watch ? watchInner : bundleInner
     await operation({}, cliOptions)
     return

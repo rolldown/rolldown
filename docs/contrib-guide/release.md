@@ -1,12 +1,14 @@
 # Release Workflow
 
-## Semantic Versioning
+## Normal version
 
 :::tip Maintainers only
 This section is for maintainers with push and release privileges only.
 :::
 
-1. Run `just bump packages [patch|minor|major]` to bump all non-private packages with semantic versioning.
+1. Run `just bump-packages [patch|minor|major]` to bump all non-private packages with semantic versioning.
+
+You could also bump to a specific version by running `just bump-packages 1.0.0-beta.1`
 
 2. Run `git switch -c release-v[version]` to create a new branch for the release.
 

@@ -151,7 +151,7 @@ bench-node-par:
 
 # RELEASING
 
-bump packages *args:
+bump-packages *args:
     node ./scripts/misc/bump-version.js {{ args }}
 
 changelog:

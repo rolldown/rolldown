@@ -5,6 +5,7 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use oxc::allocator::Address;
 use oxc::ast::ast::MemberExpression;
 use oxc::ast::{ast, AstKind};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, SymbolTable};
@@ -72,7 +73,7 @@ pub struct ScanResult {
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
-  pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+  pub this_expr_replace_map: FxHashMap<Address, ThisExprReplaceKind>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -104,7 +105,7 @@ pub struct AstScanner<'me, 'ast> {
   dynamic_import_usage_info: DynamicImportUsageInfo,
   ignore_comment: &'static str,
   /// "top level" `this` AstNode range in source code
-  top_level_this_expr_set: FxHashSet<Span>,
+  top_level_this_expr_set: FxHashSet<Address>,
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
 }

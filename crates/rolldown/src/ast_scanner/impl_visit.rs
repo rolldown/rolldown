@@ -1,4 +1,5 @@
 use oxc::{
+  allocator::Address,
   ast::{
     ast::{self, BindingPatternKind, Expression, IdentifierReference},
     visit::walk,
@@ -198,7 +199,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
     if !self.is_this_nested() {
-      self.top_level_this_expr_set.insert(it.span);
+      self.top_level_this_expr_set.insert(Address::from_ptr(it));
     }
     walk::walk_this_expression(self, it);
   }

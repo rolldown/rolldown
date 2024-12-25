@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use bitflags::bitflags;
-use oxc::{semantic::SymbolId, span::Span};
+use oxc::{allocator::Address, semantic::SymbolId, span::Span};
 use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -31,9 +31,9 @@ pub enum ThisExprReplaceKind {
 #[inline]
 #[allow(clippy::implicit_hasher)]
 pub fn generate_replace_this_expr_map(
-  set: &FxHashSet<Span>,
+  set: &FxHashSet<Address>,
   kind: ThisExprReplaceKind,
-) -> FxHashMap<Span, ThisExprReplaceKind> {
+) -> FxHashMap<Address, ThisExprReplaceKind> {
   set.iter().map(|span| (*span, kind)).collect()
 }
 
@@ -125,7 +125,7 @@ pub struct EcmaView {
   pub mutations: Vec<BoxedSourceMutation>,
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
-  pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+  pub this_expr_replace_map: FxHashMap<Address, ThisExprReplaceKind>,
 }
 
 bitflags! {

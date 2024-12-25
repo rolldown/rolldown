@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, IntoIn},
+  allocator::{self, GetAddress, IntoIn},
   ast::{
     ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
     match_member_expression,
@@ -265,7 +265,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::Expression::ThisExpression(this_expr) => {
-        if let Some(kind) = self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.span) {
+        if let Some(kind) =
+          self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.address())
+        {
           match kind {
             ThisExprReplaceKind::Exports => {
               *expr = self.snippet.builder.expression_identifier_reference(SPAN, "exports");

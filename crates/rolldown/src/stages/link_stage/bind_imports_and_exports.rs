@@ -6,8 +6,9 @@ use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  EcmaModuleAstUsage, ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias,
+  NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -619,10 +620,24 @@ impl BindImportsAndExportsContext<'_> {
           Specifier::Star => {
             MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
           }
-          Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-            namespace_ref: importer_record.namespace_ref,
-            alias: alias.clone(),
-          },
+          Specifier::Literal(alias) => {
+            if alias.as_str() == "default" {
+              let module = self.index_modules[tracker.importee].as_normal().unwrap();
+              if module.ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
+                MatchImportKind::NormalAndNamespace {
+                  namespace_ref: importer_record.namespace_ref,
+                  alias: alias.clone(),
+                }
+              } else {
+                MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
+              }
+            } else {
+              MatchImportKind::NormalAndNamespace {
+                namespace_ref: importer_record.namespace_ref,
+                alias: alias.clone(),
+              }
+            }
+          }
         },
         ImportStatus::DynamicFallback { namespace_ref } => match &tracker.imported {
           Specifier::Star => MatchImportKind::Namespace { namespace_ref },

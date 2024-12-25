@@ -951,7 +951,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/import_missing_common_js
 
-- entry-!~{000}~.js => entry-Ku_qaOyJ.js
+- entry-!~{000}~.js => entry-BxxX1Cjo.js
 
 # tests/esbuild/default/import_missing_neither_es6_nor_common_js
 

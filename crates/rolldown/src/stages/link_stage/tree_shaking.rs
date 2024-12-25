@@ -126,8 +126,6 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
-    self.determine_side_effects();
-
     let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
       .module_table
       .modules
@@ -189,7 +187,7 @@ impl LinkStage<'_> {
     );
   }
 
-  fn determine_side_effects(&mut self) {
+  pub fn determine_side_effects(&mut self) {
     #[derive(Debug, Clone, Copy)]
     enum SideEffectCache {
       None,

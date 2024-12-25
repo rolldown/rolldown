@@ -7,7 +7,7 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import assert, { default as assert$1, default as assert$2 } from "node:assert";
+import assert from "node:assert";
 
 
 //#region a.js
@@ -21,14 +21,14 @@ var Bar$1 = class {
 		__name(this, "Bar");
 	}
 };
-assert$2.strictEqual(Foo$2.name, "Foo");
-assert$2.strictEqual(Bar$1.name, "Bar");
+assert.strictEqual(Foo$2.name, "Foo");
+assert.strictEqual(Bar$1.name, "Bar");
 var fn$2 = function() {};
 __name(fn$2, "fn");
 var fn2$1 = function() {};
 __name(fn2$1, "fn2");
-assert$2.strictEqual(fn$2.name, "fn");
-assert$2.strictEqual(fn2$1.name, "fn2");
+assert.strictEqual(fn$2.name, "fn");
+assert.strictEqual(fn2$1.name, "fn2");
 
 //#endregion
 //#region b.js
@@ -38,13 +38,13 @@ var Foo$1 = class Foo$3 {
 	}
 };
 var Bar = class {};
-assert$1.strictEqual(Foo$1.name, "Foo");
-assert$1.strictEqual(Bar.name, "Bar");
+assert.strictEqual(Foo$1.name, "Foo");
+assert.strictEqual(Bar.name, "Bar");
 var fn$1 = function fn$3() {};
 __name(fn$1, "fn");
 var fn2 = function() {};
-assert$1.strictEqual(fn$1.name, "fn");
-assert$1.strictEqual(fn2.name, "fn2");
+assert.strictEqual(fn$1.name, "fn");
+assert.strictEqual(fn2.name, "fn2");
 
 //#endregion
 //#region main.js

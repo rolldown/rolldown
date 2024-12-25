@@ -14,7 +14,7 @@ const __wasi = new __WASI({
   fs: __fs,
   preopens: {
     '/': '/',
-  }
+  },
 })
 
 const __emnapiContext = __emnapiGetDefaultContext()

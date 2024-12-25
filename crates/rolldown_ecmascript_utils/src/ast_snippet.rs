@@ -768,6 +768,7 @@ impl<'ast> AstSnippet<'ast> {
 
   // If `node_mode` is true, using `__toESM(expr, 1)`
   // If `node_mode` is false, using `__toESM(expr)`
+  #[allow(clippy::needless_pass_by_value)]
   pub fn wrap_with_to_esm(
     &self,
     to_esm_fn_expr: Expression<'ast>,

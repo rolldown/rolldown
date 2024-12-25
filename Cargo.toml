@@ -140,9 +140,9 @@ lightningcss        = { version = "1.0.0-alpha.57" }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.23", features = ["async", "anyhow"] }
-napi-build          = { version = "2.1.3" }
-napi-derive         = { version = "3.0.0-alpha.21", default-features = false, features = ["type-def"] }
+napi                = { version = "3.0.0-alpha.24", features = ["async", "anyhow"] }
+napi-build          = { version = "2.1.4" }
+napi-derive         = { version = "3.0.0-alpha.22", default-features = false, features = ["type-def"] }
 notify              = { version = "7.0.0" }
 phf                 = "0.11.2"
 rayon               = "1.10.0"
@@ -171,8 +171,8 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates with the same version
-oxc                = { version = "0.42.0", features = ["transformer", "minifier", "semantic", "codegen"] }
-oxc_transform_napi = { version = "0.42.0" }
+oxc                = { version = "0.43.0", features = ["transformer", "minifier", "semantic", "codegen"] }
+oxc_transform_napi = { version = "0.43.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

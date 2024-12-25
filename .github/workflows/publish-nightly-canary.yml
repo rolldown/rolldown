@@ -1,4 +1,4 @@
-name: A - Publish Nightly/Canary
+name: Publish Nightly/Canary
 
 on:
   # Manually released. This will publish under the canary npm tag.
@@ -33,7 +33,6 @@ jobs:
     if: github.repository == 'rolldown/rolldown'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # for softprops/action-gh-release@v1
       id-token: write # for `npm publish --provenance`
     needs:
       - plan
@@ -91,3 +90,5 @@ jobs:
 
       - name: Publish
         run: node ./scripts/ci/publish-rolldown-to-npm.js ${{ needs.plan.outputs.npm-tag }}
+        env:
+          NPM_CONFIG_PROVENANCE: true # https://github.com/pnpm/pnpm/issues/6435

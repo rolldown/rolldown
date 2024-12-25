@@ -1,12 +1,21 @@
 import { getCodeFrame } from '../utils/code-frame'
 import { locate } from './locate-character'
-import type { RollupLog } from '../rollup'
+import type { RollupLog } from '../types/misc'
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
-  MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION'
+  MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
+  MINIFY_WARNING = 'MINIFY_WARNING'
+
+export function logMinifyWarning(): RollupLog {
+  return {
+    code: MINIFY_WARNING,
+    message:
+      'The built-in minifier is still under development. Setting "minify: true" is not recommended for production use.',
+  }
+}
 
 export function logInvalidLogPosition(pluginName: string): RollupLog {
   return {

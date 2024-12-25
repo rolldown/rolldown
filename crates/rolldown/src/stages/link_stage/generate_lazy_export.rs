@@ -2,7 +2,7 @@ use indexmap::map::Entry;
 use oxc::{
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
-  span::{CompactStr, SPAN},
+  span::SPAN,
 };
 use rolldown_common::{
   AstScopes, ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
@@ -206,7 +206,7 @@ fn json_object_expr_to_esm(
 
   // recreate semantic data
   #[allow(clippy::cast_possible_truncation)]
-  let (mut symbol_table, scope) = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
+  let (symbol_table, scope) = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
     SemanticBuilder::new().with_scope_tree_child_ids(true).with_stats(Stats {
       nodes: declaration_binding_names.len().next_power_of_two() as u32,
       scopes: 1,
@@ -219,20 +219,15 @@ fn json_object_expr_to_esm(
 
   // update semantic data of module
   let root_scope_id = scope.root_scope_id();
-  let ast_scope = AstScopes::new(
-    scope,
-    std::mem::take(&mut symbol_table.references),
-    std::mem::take(&mut symbol_table.resolved_references),
-  );
+  let ast_scope = AstScopes::new(scope);
   let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, module_idx, root_scope_id);
 
   let legitimized_repr_name = legitimize_identifier_name(&module.repr_name);
-  let default_export_ref = symbol_ref_db
-    .create_facade_root_symbol_ref(concat_string!(legitimized_repr_name, "_default").into());
+  let default_export_ref =
+    symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_default"));
 
   let name = concat_string!(legitimized_repr_name, "_exports");
-  let namespace_object_ref =
-    symbol_ref_db.create_facade_root_symbol_ref(CompactStr::from(name.as_ref()));
+  let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
   module.namespace_object_ref = namespace_object_ref;
   module.default_export_ref = default_export_ref;
 

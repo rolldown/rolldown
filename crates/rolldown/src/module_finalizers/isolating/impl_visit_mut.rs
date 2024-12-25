@@ -2,7 +2,7 @@ use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
 use oxc::ast::visit::walk_mut;
 use oxc::ast::VisitMut;
 use oxc::span::{CompactStr, Span, SPAN};
-use rolldown_common::{Interop, Module};
+use rolldown_common::{Interop, Module, SymbolRef};
 use rolldown_ecmascript_utils::TakeIn;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 
@@ -74,9 +74,14 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
       if let Some(named_import) = ident
         .reference_id
         .get()
-        .and_then(|reference_id| self.scope.symbol_id_for(reference_id))
+        .and_then(|reference_id| {
+          self.scope.symbol_id_for(
+            reference_id,
+            self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.module.idx),
+          )
+        })
         .map(|symbol_id| (self.ctx.module.idx, symbol_id).into())
-        .and_then(|symbol_ref| self.ctx.module.named_imports.get(&symbol_ref))
+        .and_then(|symbol_ref: SymbolRef| self.ctx.module.named_imports.get(&symbol_ref))
       {
         let rec = &self.ctx.module.import_records[named_import.record_id];
 
@@ -104,7 +109,10 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    if expr.is_global_require_call(self.scope) {
+    if expr.is_global_require_call(
+      self.scope,
+      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.module.idx),
+    ) {
       if let Some(ast::Argument::StringLiteral(request)) = expr.arguments.first_mut() {
         request.value = self.snippet.atom(self.get_importee_module(expr.span).stable_id());
       }
@@ -123,7 +131,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      module.interop(),
+      self.get_interop(module),
       &namespace_object_ref,
       import_decl.span,
     );
@@ -186,7 +194,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
         let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
         self.create_require_call_stmt(
           &module.stable_id().into(),
-          module.interop(),
+          self.get_interop(module),
           &namespace_object_ref,
           export_named_decl.span,
         );
@@ -311,7 +319,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
     let namespace_object_ref = self.create_namespace_object_ref_for_module(module);
     self.create_require_call_stmt(
       &module.stable_id().into(),
-      module.interop(),
+      self.get_interop(module),
       &namespace_object_ref,
       export_all_decl.span,
     );
@@ -372,5 +380,12 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
     let rec_id = self.ctx.module.imports[&span];
     let rec = &self.ctx.module.import_records[rec_id];
     &self.ctx.modules[rec.resolved_module]
+  }
+
+  fn get_interop(&self, importee: &Module) -> Option<Interop> {
+    match importee {
+      Module::Normal(importee) => self.ctx.module.interop(importee),
+      Module::External(_) => None,
+    }
   }
 }

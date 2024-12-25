@@ -23,6 +23,19 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }
   });
 
+  let minify = raw_options.minify.unwrap_or(false);
+
+  let mut raw_define = raw_options.define.unwrap_or_default();
+  if matches!(platform, Platform::Browser) && !raw_define.contains_key("process.env.NODE_ENV") {
+    if minify {
+      raw_define.insert("process.env.NODE_ENV".to_string(), "'production'".to_string());
+    } else {
+      raw_define.insert("process.env.NODE_ENV".to_string(), "'development'".to_string());
+    }
+  }
+
+  let define = raw_define.into_iter().collect();
+
   // Take out resolve options
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
 
@@ -153,8 +166,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
     experimental,
-    minify: raw_options.minify.unwrap_or(false),
-    define: raw_options.define.map(|inner| inner.into_iter().collect()).unwrap_or_default(),
+    minify,
+    define,
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
     extend: raw_options.extend.unwrap_or(false),

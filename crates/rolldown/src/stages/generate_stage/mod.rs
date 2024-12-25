@@ -65,7 +65,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
 
-    let mut chunk_graph = self.generate_chunks().await?;
+    let mut chunk_graph = self.generate_chunks().await;
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
@@ -149,7 +149,7 @@ impl<'a> GenerateStage<'a> {
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
-  ) -> anyhow::Result<FxHashMap<ChunkIdx, ArcStr>> {
+  ) -> BuildResult<FxHashMap<ChunkIdx, ArcStr>> {
     let modules = &self.link_output.module_table.modules;
 
     let mut index_chunk_id_to_name = FxHashMap::default();
@@ -228,7 +228,7 @@ impl<'a> GenerateStage<'a> {
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
       chunk.name = Some(pre_generated_chunk_name.clone());
       index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.clone());
-      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
+      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output);
 
       let asset_filename_template = &self.options.asset_filenames;
       let extracted_asset_hash_pattern = extract_hash_pattern(asset_filename_template.template());

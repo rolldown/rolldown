@@ -110,17 +110,7 @@ impl ModuleLoader {
 
     let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
-    #[cfg(target_family = "wasm")]
-    {
-      task.run();
-    }
-    // task is sync, but execution time is too short at the moment
-    // so we are using spawn instead of spawn_blocking here to avoid an additional blocking thread creation within tokio
-    #[cfg(not(target_family = "wasm"))]
-    {
-      let handle = tokio::runtime::Handle::current();
-      handle.spawn(async { task.run() });
-    }
+    tokio::spawn(async { task.run() });
 
     Ok(Self {
       tx,
@@ -199,7 +189,7 @@ impl ModuleLoader {
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(
             idx,
-            legitimize_identifier_name(resolved_id.id.as_str()).into(),
+            legitimize_identifier_name(resolved_id.id.as_str()).as_ref(),
           );
           let ext = ExternalModule::new(
             idx,
@@ -222,15 +212,6 @@ impl ModuleLoader {
             is_user_defined_entry,
             assert_module_type,
           );
-          #[cfg(target_family = "wasm")]
-          {
-            let handle = tokio::runtime::Handle::current();
-            // could not block_on/spawn the main thread in WASI
-            std::thread::spawn(move || {
-              handle.spawn(task.run());
-            });
-          }
-          #[cfg(not(target_family = "wasm"))]
           tokio::spawn(task.run());
           idx
         }

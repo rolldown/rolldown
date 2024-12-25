@@ -1,8 +1,8 @@
 import {
   RolldownOutput,
-  RolldownOutputAsset,
-  RolldownOutputChunk,
-  RolldownRenderedChunk,
+  OutputAsset,
+  OutputChunk,
+  RenderedChunk,
   SourceMap,
 } from './types/rolldown-output'
 import type {
@@ -63,8 +63,8 @@ export { defineConfig, rolldown, watch, build }
 export const VERSION: string = version
 
 export type {
-  RolldownOutputAsset,
-  RolldownOutputChunk,
+  OutputAsset,
+  OutputChunk,
   RolldownOptions,
   RolldownOutput,
   RolldownBuild,
@@ -110,17 +110,7 @@ export type {
   WatchOptions,
   RolldownWatcher,
   BuildOptions,
+  RenderedChunk,
 }
 
-// Exports for compatibility
-
-export type {
-  RolldownOutput as RollupOutput,
-  RolldownOptions as RollupOptions,
-  RolldownBuild as RollupBuild,
-  RolldownOutputChunk as OutputChunk,
-  RolldownOutputAsset as OutputAsset,
-  RolldownRenderedChunk as RenderedChunk,
-  RolldownWatcher as RollupWatcher,
-}
-export type { RollupError, RollupLog, LoggingFunction } from './rollup'
+export type { RollupError, RollupLog, LoggingFunction } from './types/misc'

@@ -1,7 +1,4 @@
-use super::stages::{
-  link_stage::{LinkStage, LinkStageOutput},
-  scan_stage::ScanStageOutput,
-};
+use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
   bundler_builder::BundlerBuilder,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
@@ -16,7 +13,7 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -43,37 +40,16 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    let dir = self.options.cwd.join(&self.options.dir);
+    let scan_stage_output = self.scan().await?;
 
-    let mut output = self.bundle_up(/* is_write */ true).await?;
-
-    self.fs.create_dir_all(&dir).map_err(|err| {
-      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
-    })?;
-
-    for chunk in &output.assets {
-      let dest = dir.join(chunk.filename());
-      if let Some(p) = dest.parent() {
-        if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).unwrap();
-        }
-      };
-      self
-        .fs
-        .write(&dest, chunk.content_as_bytes())
-        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
-    }
-
-    self.plugin_driver.write_bundle(&mut output.assets, &self.options).await?;
-
-    output.warnings.append(&mut self.warnings);
-
-    Ok(output)
+    self.bundle_write(scan_stage_output).await
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    self.bundle_up(/* is_write */ false).await.map(|mut output| {
+    let scan_stage_output = self.scan().await?;
+
+    self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
       output.warnings.append(&mut self.warnings);
       output
     })
@@ -117,13 +93,48 @@ impl Bundler {
     Ok(scan_stage_output)
   }
 
-  async fn try_build(&mut self) -> BuildResult<LinkStageOutput> {
-    let build_info = self.scan().await?;
-    Ok(LinkStage::new(build_info, &self.options).link())
+  pub async fn bundle_write(
+    &mut self,
+    scan_stage_output: ScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
+    let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
+
+    let dist_dir = if self.options.file.is_some() {
+      Cow::Borrowed(&self.options.cwd)
+    } else {
+      Cow::Owned(self.options.cwd.join(&self.options.dir))
+    };
+
+    self.fs.create_dir_all(&dist_dir).map_err(|err| {
+      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dist_dir).context(err)
+    })?;
+
+    for chunk in &output.assets {
+      let dest = dist_dir.join(chunk.filename());
+      if let Some(p) = dest.parent() {
+        if !self.fs.exists(p) {
+          self.fs.create_dir_all(p).unwrap();
+        }
+      };
+      self
+        .fs
+        .write(&dest, chunk.content_as_bytes())
+        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
+    }
+
+    self.plugin_driver.write_bundle(&mut output.assets, &self.options).await?;
+
+    output.warnings.append(&mut self.warnings);
+
+    Ok(output)
   }
 
   #[allow(clippy::missing_transmute_annotations)]
-  async fn bundle_up(&mut self, is_write: bool) -> BuildResult<BundleOutput> {
+  async fn bundle_up(
+    &mut self,
+    scan_stage_output: ScanStageOutput,
+    is_write: bool,
+  ) -> BuildResult<BundleOutput> {
     if self.closed {
       return Err(
         anyhow::anyhow!(
@@ -133,7 +144,7 @@ impl Bundler {
       );
     }
 
-    let mut link_stage_output = self.try_build().await?;
+    let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)

@@ -7,7 +7,7 @@ import { NormalizedCliOptions } from '../arguments/normalize'
 import { arraify } from '../../utils/misc'
 import { rolldown } from '../../api/rolldown'
 import { watch as rolldownWatch } from '../../api/watch'
-import type { RolldownOptions, RolldownOutput, RollupOutput } from '../..'
+import type { ConfigExport, RolldownOutput } from '../..'
 import { loadConfig } from '../load-config'
 
 export async function bundleWithConfig(
@@ -22,17 +22,17 @@ export async function bundleWithConfig(
   }
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message
-  const configList = arraify(config)
-  const operation = cliOptions.watch ? watchInner : bundleInner
-  for (const config of configList) {
-    await operation(config, cliOptions)
+  if (cliOptions.watch) {
+    await watchInner(config, cliOptions)
+  } else {
+    await bundleInner(config, cliOptions)
   }
 }
 
 export async function bundleWithCliOptions(
   cliOptions: NormalizedCliOptions,
 ): Promise<void> {
-  if (cliOptions.output.dir) {
+  if (cliOptions.output.dir || cliOptions.output.file) {
     const operation = cliOptions.watch ? watchInner : bundleInner
     await operation({}, cliOptions)
     return
@@ -68,19 +68,25 @@ export async function bundleWithCliOptions(
 }
 
 async function watchInner(
-  options: RolldownOptions,
+  config: ConfigExport,
   cliOptions: NormalizedCliOptions,
 ) {
   // Only if watch is true in CLI can we use watch mode.
   // We should not make it `await`, as it never ends.
-  const watcher = await rolldownWatch({
-    ...options,
-    ...cliOptions.input,
-    output: {
-      ...options?.output,
-      ...cliOptions.output,
-    },
+
+  let normalizedConfig = arraify(config).map((option) => {
+    return {
+      ...option,
+      ...cliOptions.input,
+      output: arraify(option.output || {}).map((output) => {
+        return {
+          ...output,
+          ...cliOptions.output,
+        }
+      }),
+    }
   })
+  const watcher = await rolldownWatch(normalizedConfig)
 
   onExit((code: number | null | undefined) => {
     Promise.resolve(watcher.close()).finally(() => {
@@ -125,29 +131,39 @@ async function watchInner(
 }
 
 async function bundleInner(
-  options: RolldownOptions,
+  config: ConfigExport,
   cliOptions: NormalizedCliOptions,
 ) {
   const startTime = performance.now()
 
-  const build = await rolldown({ ...options, ...cliOptions.input })
-  try {
-    const bundleOutput = await build.write({
-      ...options?.output,
-      ...cliOptions.output,
-    })
+  const result = []
 
-    const endTime = performance.now()
-
-    printBundleOutputPretty(bundleOutput)
-
-    logger.log(``)
-    const duration = endTime - startTime
-    // If the build time is more than 1s, we should display it in seconds.
-    logger.success(`Finished in ${colors.bold(ms(duration))}`)
-  } finally {
-    await build.close()
+  const configList = arraify(config)
+  for (const config of configList) {
+    const outputList = arraify(config.output || {})
+    for (const output of outputList) {
+      // run multiply instance at sequential
+      const build = await rolldown({ ...config, ...cliOptions.input })
+      try {
+        result.push(
+          await build.write({
+            ...output,
+            ...cliOptions.output,
+          }),
+        )
+      } finally {
+        await build.close()
+      }
+    }
   }
+
+  result.forEach(printBundleOutputPretty)
+  logger.log(``)
+
+  const endTime = performance.now()
+  const duration = endTime - startTime
+  // If the build time is more than 1s, we should display it in seconds.
+  logger.success(`Finished in ${colors.bold(ms(duration))}`)
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {
@@ -163,7 +179,7 @@ type OutputEntry = {
   size: number
 }
 
-function collectOutputEntries(output: RollupOutput['output']): OutputEntry[] {
+function collectOutputEntries(output: RolldownOutput['output']): OutputEntry[] {
   return output.map((chunk) => ({
     type: chunk.type,
     fileName: chunk.fileName,

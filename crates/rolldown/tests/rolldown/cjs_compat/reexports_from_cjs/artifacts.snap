@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+
+//#region commonjs.js
+var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
+	module.exports = { bar: 1 };
+} });
+
+//#endregion
+//#region reexports.mjs
+var reexports_exports = {};
+var import_commonjs = __toESM(require_commonjs(), 1);
+__reExport(reexports_exports, __toESM(require_commonjs(), 1));
+assert.equal(import_commonjs.bar, 1);
+
+//#endregion
+//#region main.mjs
+assert.equal(reexports_exports.bar, 1);
+
+//#endregion
+```

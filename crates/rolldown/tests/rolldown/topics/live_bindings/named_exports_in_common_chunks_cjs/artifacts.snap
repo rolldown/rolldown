@@ -66,12 +66,14 @@ Object.defineProperty(exports, 'count', {
   get: function () {
     return count;
   }
-});Object.defineProperty(exports, 'inc', {
+});
+Object.defineProperty(exports, 'inc', {
   enumerable: true,
   get: function () {
     return inc;
   }
-});Object.defineProperty(exports, 'reset', {
+});
+Object.defineProperty(exports, 'reset', {
   enumerable: true,
   get: function () {
     return reset;

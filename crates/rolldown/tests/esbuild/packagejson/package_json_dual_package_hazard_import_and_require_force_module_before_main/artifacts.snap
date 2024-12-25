@@ -1,12 +1,13 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-import assert, { default as assert$1 } from "node:assert";
+import assert from "node:assert";
 
 
 //#region node_modules/demo-pkg/module.js
@@ -19,7 +20,7 @@ var init_module = __esm({ "node_modules/demo-pkg/module.js"() {
 
 //#endregion
 //#region src/test-main.js
-assert$1.deepEqual((init_module(), __toCommonJS(module_exports)), { default: "module" });
+assert.deepEqual((init_module(), __toCommonJS(module_exports)), { default: "module" });
 
 //#endregion
 //#region src/test-module.js

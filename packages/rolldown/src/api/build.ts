@@ -1,14 +1,16 @@
-import type { RolldownOptions } from '../types/rolldown-options'
+import { InputOptions } from '../options/input-options'
+import { OutputOptions } from '../options/output-options'
 import type { RolldownOutput } from '../types/rolldown-output'
 import { rolldown } from './rolldown'
 
-export interface BuildOptions extends RolldownOptions {
+export interface BuildOptions extends InputOptions {
   /**
    * Write the output to the file system
    *
    * @default true
    */
   write?: boolean
+  output?: OutputOptions
 }
 
 async function build(options: BuildOptions): Promise<RolldownOutput>

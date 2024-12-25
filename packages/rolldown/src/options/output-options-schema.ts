@@ -5,7 +5,7 @@ import type { PreRenderedChunk } from '../binding'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
-} from '../rollup'
+} from '../types/misc'
 import type {
   AddonFunction,
   ChunkFileNamesFunction,
@@ -14,7 +14,7 @@ import type {
   OutputCliOptions,
   OutputOptions,
 } from '../options/output-options'
-import { RolldownRenderedChunk } from '../types/rolldown-output'
+import { RenderedChunk } from '../types/rolldown-output'
 
 const ModuleFormatSchema = z
   .literal('es')
@@ -30,7 +30,7 @@ const ModuleFormatSchema = z
 
 const addonFunctionSchema = z
   .function()
-  .args(zodExt.phantom<RolldownRenderedChunk>())
+  .args(zodExt.phantom<RenderedChunk>())
   .returns(
     z.string().or(z.promise(z.string())),
   ) satisfies z.ZodType<AddonFunction>

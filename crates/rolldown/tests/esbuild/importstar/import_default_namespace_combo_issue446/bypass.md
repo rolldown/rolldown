@@ -1,6 +1,35 @@
 # Reason
 1. Rolldown extract common chunk
+2. Rolldown try to merge external default import binding
 # Diff
+## /out/external-default2.js
+### esbuild
+```js
+// external-default2.js
+import def, { default as default2 } from "external";
+console.log(def, default2);
+```
+### rolldown
+```js
+import def from "external";
+
+//#region external-default2.js
+console.log(def, def);
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/external-default2.js
++++ rolldown	external-default2.js
+@@ -1,2 +1,2 @@
+-import def, {default as default2} from "external";
+-console.log(def, default2);
++import def from "external";
++console.log(def, def);
+
+```
 ## /out/external-ns.js
 ### esbuild
 ```js

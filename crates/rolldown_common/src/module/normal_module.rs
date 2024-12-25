@@ -184,8 +184,12 @@ impl NormalModule {
     })
   }
 
-  pub fn interop(&self) -> Option<Interop> {
-    if matches!(self.ecma_view.exports_kind, ExportsKind::CommonJs) {
+  // If the module is an ESM module that follows the Node.js ESM spec, such as
+  // - extension is `.mjs`
+  // - `package.json` has `"type": "module"`
+  // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
+  pub fn interop(&self, importee: &NormalModule) -> Option<Interop> {
+    if matches!(importee.ecma_view.exports_kind, ExportsKind::CommonJs) {
       if self.ecma_view.def_format.is_esm() {
         Some(Interop::Node)
       } else {
@@ -194,6 +198,15 @@ impl NormalModule {
     } else {
       None
     }
+  }
+
+  // If the module is an ESM module that follows the Node.js ESM spec, such as
+  // - extension is `.mjs`
+  // - `package.json` has `"type": "module"`
+  // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
+  #[inline]
+  pub fn should_consider_node_esm_spec(&self) -> bool {
+    self.ecma_view.def_format.is_esm()
   }
 
   pub fn render(

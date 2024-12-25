@@ -14,7 +14,7 @@ import type {
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
 } from '../binding'
-import { LogHandler } from '../rollup'
+import { LogHandler } from '../types/misc'
 import { LogLevelOption } from '../log/logging'
 
 export function bindingifyInputOptions(

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -126,10 +127,10 @@ console.log(def, ns.default);
 ## external-default2.js
 
 ```js
-import def, { default as default2 } from "external";
+import def from "external";
 
 //#region external-default2.js
-console.log(def, default2);
+console.log(def, def);
 
 //#endregion
 ```

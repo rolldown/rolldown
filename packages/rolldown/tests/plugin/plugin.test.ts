@@ -18,6 +18,7 @@ test('Plugin renderError hook', async () => {
   const renderErrorFn = vi.fn()
   const renderChunkFn = vi.fn()
   const error = await buildWithPlugin({
+    name: 'test',
     renderStart() {
       renderChunkFn()
       throw new Error('renderStart error')
@@ -35,6 +36,7 @@ describe('Plugin buildEnd hook', async () => {
   test('call buildEnd hook with error', async () => {
     const buildEndFn = vi.fn()
     const error = await buildWithPlugin({
+      name: 'test',
       buildStart() {
         throw new Error('buildStart error')
       },
@@ -50,6 +52,7 @@ describe('Plugin buildEnd hook', async () => {
   test('call buildEnd hook without error', async () => {
     const buildEndFn = vi.fn()
     const error = await buildWithPlugin({
+      name: 'test',
       buildEnd: (error) => {
         buildEndFn()
         expect(error).toBeUndefined()
@@ -64,6 +67,7 @@ describe('Plugin closeBundle hook', async () => {
   test('call closeBundle hook if has error', async () => {
     const closeBundleFn = vi.fn()
     const error = await buildWithPlugin({
+      name: 'test',
       load() {
         throw new Error('load error')
       },
@@ -82,6 +86,7 @@ describe('Plugin closeBundle hook', async () => {
       cwd: import.meta.dirname,
       plugins: [
         {
+          name: 'test',
           closeBundle: () => {
             closeBundleFn()
           },
@@ -110,6 +115,7 @@ describe('Plugin closeBundle hook', async () => {
 
 test('call transformContext error', async () => {
   const error = await buildWithPlugin({
+    name: 'test',
     transform() {
       this.error('transform hook error')
     },

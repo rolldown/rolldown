@@ -1,8 +1,8 @@
 import type {
   SourceMap,
   RolldownOutput,
-  RolldownOutputAsset,
-  RolldownOutputChunk,
+  OutputAsset,
+  OutputChunk,
 } from '../types/rolldown-output'
 import type { OutputBundle } from '../types/output-bundle'
 import type {
@@ -40,7 +40,7 @@ function transformToRollupSourceMap(map: string): SourceMap {
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
   changed?: ChangedOutputs,
-): RolldownOutputChunk {
+): OutputChunk {
   const chunk = {
     type: 'chunk',
     get code() {
@@ -71,14 +71,14 @@ function transformToRollupOutputChunk(
     },
     sourcemapFileName: bindingChunk.sourcemapFileName || null,
     preliminaryFileName: bindingChunk.preliminaryFileName,
-  } as RolldownOutputChunk
+  } as OutputChunk
   const cache: Record<string | symbol, any> = {}
   return new Proxy(chunk, {
     get(target, p) {
       if (p in cache) {
         return cache[p]
       }
-      return target[p as keyof RolldownOutputChunk]
+      return target[p as keyof OutputChunk]
     },
     set(target, p, newValue): boolean {
       cache[p] = newValue
@@ -91,7 +91,7 @@ function transformToRollupOutputChunk(
 function transformToRollupOutputAsset(
   bindingAsset: BindingOutputAsset,
   changed?: ChangedOutputs,
-): RolldownOutputAsset {
+): OutputAsset {
   const asset = {
     type: 'asset',
     fileName: bindingAsset.fileName,
@@ -102,14 +102,14 @@ function transformToRollupOutputAsset(
     },
     name: bindingAsset.name ?? undefined,
     names: bindingAsset.names,
-  } as RolldownOutputAsset
+  } as OutputAsset
   const cache: Record<string | symbol, any> = {}
   return new Proxy(asset, {
     get(target, p) {
       if (p in cache) {
         return cache[p]
       }
-      return target[p as keyof RolldownOutputAsset]
+      return target[p as keyof OutputAsset]
     },
     set(target, p, newValue): boolean {
       cache[p] = newValue

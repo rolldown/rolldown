@@ -1,0 +1,89 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+export default require_main();
+
+```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## main.js
+
+```js
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+module.exports = require_main();
+
+```
+---
+
+Variant: (extend: true, format: Iife, name: "module")
+
+# Assets
+
+## main.js
+
+```js
+this.module = (function() {
+
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+return require_main();
+
+})();
+```
+---
+
+Variant: (extend: true, format: Umd, name: "module")
+
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
+  typeof define === 'function' && define.amd ? define([], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.module = factory()));
+})(this, function() {
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"() {
+	require_main();
+} });
+
+//#endregion
+return require_main();
+
+});
+```

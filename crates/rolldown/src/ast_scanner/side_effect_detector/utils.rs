@@ -3,7 +3,7 @@ use oxc::{
     ast::{self, Expression, MemberExpression},
     comments_range, Comment, CommentKind,
   },
-  semantic::ReferenceId,
+  semantic::{ReferenceId, SymbolTable},
   span::{Atom, Span},
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
@@ -76,12 +76,13 @@ fn merged_known_primitive_types(
   scope: &AstScopes,
   left: &Expression,
   right: &Expression,
+  symbol_table: &SymbolTable,
 ) -> PrimitiveType {
-  let left_type = known_primitive_type(scope, left);
+  let left_type = known_primitive_type(scope, left, symbol_table);
   if left_type == PrimitiveType::Unknown {
     return PrimitiveType::Unknown;
   }
-  let right_type = known_primitive_type(scope, right);
+  let right_type = known_primitive_type(scope, right, symbol_table);
   if right_type == PrimitiveType::Unknown {
     return PrimitiveType::Unknown;
   }
@@ -92,11 +93,16 @@ fn merged_known_primitive_types(
 }
 
 #[allow(clippy::too_many_lines)]
-pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> PrimitiveType {
+pub(crate) fn known_primitive_type(
+  scope: &AstScopes,
+  expr: &Expression,
+  symbol_table: &SymbolTable,
+) -> PrimitiveType {
   match expr {
     Expression::NullLiteral(_) => PrimitiveType::Null,
     Expression::Identifier(id)
-      if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap()) =>
+      if id.name == "undefined"
+        && scope.is_unresolved(id.reference_id.get().unwrap(), symbol_table) =>
     {
       PrimitiveType::Undefined
     }
@@ -124,7 +130,7 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
       UnaryOperator::LogicalNot | UnaryOperator::Delete => PrimitiveType::Boolean,
       UnaryOperator::UnaryPlus => PrimitiveType::Number, // Cannot be bigint because that throws an exception
       UnaryOperator::UnaryNegation | UnaryOperator::BitwiseNot => {
-        let value = known_primitive_type(scope, &e.argument);
+        let value = known_primitive_type(scope, &e.argument, symbol_table);
         if value == PrimitiveType::BigInt {
           return PrimitiveType::BigInt;
         }
@@ -136,11 +142,11 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
     },
     Expression::LogicalExpression(e) => match e.operator {
       LogicalOperator::Or | LogicalOperator::And => {
-        merged_known_primitive_types(scope, &e.left, &e.right)
+        merged_known_primitive_types(scope, &e.left, &e.right, symbol_table)
       }
       LogicalOperator::Coalesce => {
-        let left = known_primitive_type(scope, &e.left);
-        let right = known_primitive_type(scope, &e.right);
+        let left = known_primitive_type(scope, &e.left, symbol_table);
+        let right = known_primitive_type(scope, &e.right, symbol_table);
         if left == PrimitiveType::Null || left == PrimitiveType::Undefined {
           return right;
         }
@@ -167,8 +173,8 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
       | BinaryOperator::Instanceof
       | BinaryOperator::In => PrimitiveType::Boolean,
       BinaryOperator::Addition => {
-        let left = known_primitive_type(scope, &e.left);
-        let right = known_primitive_type(scope, &e.right);
+        let left = known_primitive_type(scope, &e.left, symbol_table);
+        let right = known_primitive_type(scope, &e.right, symbol_table);
         if left == PrimitiveType::String || right == PrimitiveType::String {
           PrimitiveType::String
         } else if left == PrimitiveType::BigInt && right == PrimitiveType::BigInt {
@@ -199,9 +205,11 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
     },
 
     Expression::AssignmentExpression(e) => match e.operator {
-      oxc::syntax::operator::AssignmentOperator::Assign => known_primitive_type(scope, &e.right),
+      oxc::syntax::operator::AssignmentOperator::Assign => {
+        known_primitive_type(scope, &e.right, symbol_table)
+      }
       oxc::syntax::operator::AssignmentOperator::Addition => {
-        let right = known_primitive_type(scope, &e.right);
+        let right = known_primitive_type(scope, &e.right, symbol_table);
         if right == PrimitiveType::String {
           PrimitiveType::String
         } else {
@@ -227,13 +235,22 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
   }
 }
 
-pub fn can_change_strict_to_loose(scope: &AstScopes, a: &Expression, b: &Expression) -> bool {
-  let x = known_primitive_type(scope, a);
-  let y = known_primitive_type(scope, b);
+pub fn can_change_strict_to_loose(
+  scope: &AstScopes,
+  a: &Expression,
+  b: &Expression,
+  symbol_table: &SymbolTable,
+) -> bool {
+  let x = known_primitive_type(scope, a, symbol_table);
+  let y = known_primitive_type(scope, b, symbol_table);
   x == y && !matches!(x, PrimitiveType::Unknown | PrimitiveType::Mixed)
 }
 
-pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
+pub fn is_primitive_literal(
+  scope: &AstScopes,
+  expr: &Expression,
+  symbol_table: &SymbolTable,
+) -> bool {
   match expr {
     Expression::NullLiteral(_)
     | Expression::BooleanLiteral(_)
@@ -248,7 +265,8 @@ pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
       true
     }
     Expression::Identifier(id)
-      if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap()) =>
+      if id.name == "undefined"
+        && scope.is_unresolved(id.reference_id.get().unwrap(), symbol_table) =>
     {
       true
     }
@@ -323,9 +341,10 @@ pub fn is_side_effect_free_unbound_identifier_ref(
   value: &Expression,
   guard_condition: &Expression,
   mut is_yes_branch: bool,
+  symbol_table: &SymbolTable,
 ) -> Option<bool> {
   let ident = value.as_identifier()?;
-  let is_unresolved = scope.is_unresolved(ident.reference_id());
+  let is_unresolved = scope.is_unresolved(ident.reference_id(), symbol_table);
   if !is_unresolved {
     return Some(false);
   }
@@ -397,12 +416,13 @@ pub fn is_side_effect_free_unbound_identifier_ref(
 pub fn maybe_side_effect_free_global_constructor(
   scope: &AstScopes,
   expr: &ast::NewExpression<'_>,
+  symbol_table: &oxc::semantic::SymbolTable,
 ) -> bool {
   let Some(ident) = expr.callee.as_identifier() else {
     return false;
   };
 
-  if scope.is_unresolved(ident.reference_id()) {
+  if scope.is_unresolved(ident.reference_id(), symbol_table) {
     match ident.name.as_str() {
       "WeakSet" | "WeakMap" => match expr.arguments.len() {
         0 => return true,
@@ -411,7 +431,7 @@ pub fn maybe_side_effect_free_global_constructor(
           match arg {
             ast::Argument::NullLiteral(_) => return true,
             ast::Argument::Identifier(id)
-              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
             {
               return true
             }
@@ -426,7 +446,7 @@ pub fn maybe_side_effect_free_global_constructor(
         1 => {
           let arg = &expr.arguments[0];
           let known_primitive_type =
-            arg.as_expression().map(|item| known_primitive_type(scope, item));
+            arg.as_expression().map(|item| known_primitive_type(scope, item, symbol_table));
           if let Some(primitive_ty) = known_primitive_type {
             if matches!(
               primitive_ty,
@@ -449,7 +469,7 @@ pub fn maybe_side_effect_free_global_constructor(
           match arg {
             ast::Argument::NullLiteral(_) | ast::Argument::ArrayExpression(_) => return true,
             ast::Argument::Identifier(id)
-              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
             {
               return true
             }
@@ -465,7 +485,7 @@ pub fn maybe_side_effect_free_global_constructor(
           match arg {
             ast::Argument::NullLiteral(_) => return true,
             ast::Argument::Identifier(id)
-              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
             {
               return true
             }

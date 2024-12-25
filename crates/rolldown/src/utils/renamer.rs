@@ -144,11 +144,12 @@ impl<'name> Renamer<'name> {
       stack: &mut Vec<Cow<FxHashMap<Rstr, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
-      let bindings = module.scope.get_bindings(scope_id);
+      let mut bindings = module.scope.get_bindings(scope_id).iter().collect::<Vec<_>>();
+      bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
       let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
-      bindings.iter().for_each(|(binding_name, symbol_id)| {
-        let binding_ref: SymbolRef = (module.idx, *symbol_id).into();
+      bindings.iter().for_each(|(binding_name, &symbol_id)| {
+        let binding_ref: SymbolRef = (module.idx, symbol_id).into();
 
         let mut count = 1;
         let mut candidate_name = binding_name.to_rstr();

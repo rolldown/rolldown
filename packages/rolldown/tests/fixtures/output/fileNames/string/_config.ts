@@ -1,4 +1,4 @@
-import type { RolldownOutputChunk } from 'rolldown'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
 import { defineTest } from '@tests'
 import { expect } from 'vitest'
 

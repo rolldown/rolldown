@@ -1,5 +1,5 @@
 import { BindingError } from '../binding'
-import { RollupError } from '../rollup'
+import { RollupError } from '../types/misc'
 
 export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
   const errors = rawErrors.map((e) =>

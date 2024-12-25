@@ -9,6 +9,7 @@ export default defineTest({
     input: ['main.js', 'entry.js'],
     plugins: [
       {
+        name: 'virtual-module',
         resolveId(id) {
           if (id === '\0module') {
             return id

@@ -1,9 +1,9 @@
 import { BindingRenderedModule } from '../binding'
-import { RolldownRenderedModule } from '../types/rolldown-output'
+import { RenderedModule } from '../types/rolldown-output'
 
 export function transformToRenderedModule(
   bindingRenderedModule: BindingRenderedModule,
-): RolldownRenderedModule {
+): RenderedModule {
   return {
     get code() {
       return bindingRenderedModule.code

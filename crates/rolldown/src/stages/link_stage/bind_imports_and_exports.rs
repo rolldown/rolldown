@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use arcstr::ArcStr;
 use indexmap::IndexSet;
 use oxc::span::CompactStr;
@@ -9,21 +11,19 @@ use rolldown_common::{
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
-#[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  ecmascript::is_validate_identifier_name,
+  ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::IndexVecExt,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{types::linking_metadata::LinkingMetadataVec, SharedOptions};
 
 use super::LinkStage;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ImportTracker {
   pub importer: ModuleIdx,
   pub importee: ModuleIdx,
@@ -41,14 +41,24 @@ impl MatchingContext {
   }
 }
 
+#[derive(Debug, Eq)]
+pub struct MatchImportKindNormal {
+  symbol: SymbolRef,
+  reexports: Vec<SymbolRef>,
+}
+
+impl PartialEq for MatchImportKindNormal {
+  fn eq(&self, other: &Self) -> bool {
+    self.symbol == other.symbol
+  }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum MatchImportKind {
   /// The import is either external or not defined.
   _Ignore,
   // "sourceIndex" and "ref" are in use
-  Normal {
-    symbol: SymbolRef,
-  },
+  Normal(MatchImportKindNormal),
   // "namespaceRef" and "alias" are in use
   Namespace {
     namespace_ref: SymbolRef,
@@ -140,7 +150,14 @@ impl LinkStage<'_> {
       }
       meta.resolved_exports = resolved_exports;
     });
-
+    let side_effects_modules = self
+      .module_table
+      .modules
+      .iter_enumerated()
+      .filter(|(_, item)| item.side_effects().has_side_effects())
+      .map(|(idx, _)| idx)
+      .collect::<FxHashSet<ModuleIdx>>();
+    let mut normal_symbol_exports_chain_map = FxHashMap::default();
     let mut binding_ctx = BindImportsAndExportsContext {
       index_modules: &self.module_table.modules,
       metas: &mut self.metas,
@@ -149,8 +166,9 @@ impl LinkStage<'_> {
       errors: Vec::default(),
       warnings: Vec::default(),
       external_import_binding_merger: FxHashMap::default(),
+      side_effects_modules: &side_effects_modules,
+      normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
     };
-
     self.module_table.modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.idx());
     });
@@ -159,9 +177,20 @@ impl LinkStage<'_> {
     self.warnings.extend(binding_ctx.warnings);
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
-      for (key, value) in map {
-        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, key.clone());
-        for symbol_ref in value {
+      for (key, symbol_set) in map {
+        let name = if key.as_str() == "default" {
+          let key = symbol_set
+            .first()
+            .map_or_else(|| key.clone(), |sym_ref| sym_ref.name(&self.symbols).into());
+          Cow::Owned(key)
+        } else if is_validate_identifier_name(key.as_str()) {
+          Cow::Borrowed(key)
+        } else {
+          let legal_name = legitimize_identifier_name(key);
+          Cow::Owned(legal_name.as_ref().into())
+        };
+        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, &name);
+        for symbol_ref in symbol_set {
           self.symbols.link(*symbol_ref, target_symbol);
         }
       }
@@ -186,8 +215,7 @@ impl LinkStage<'_> {
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
     });
-
-    self.resolve_member_expr_refs();
+    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
   }
 
   fn add_exports_for_export_star(
@@ -263,15 +291,20 @@ impl LinkStage<'_> {
   /// export const c = 1;
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
-  fn resolve_member_expr_refs(&mut self) {
+  fn resolve_member_expr_refs(
+    &mut self,
+    side_effects_modules: &FxHashSet<ModuleIdx>,
+    normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
-    let resolved_maps = self
+    let resolved_meta_data = self
       .module_table
       .modules
       .par_iter()
       .map(|module| match module {
         Module::Normal(module) => {
-          let mut resolved = FxHashMap::default();
+          let mut resolved_map = FxHashMap::default();
+          let mut side_effects_dependency = vec![];
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
@@ -295,7 +328,7 @@ impl LinkStage<'_> {
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
                     // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
-                      resolved.insert(
+                      resolved_map.insert(
                         member_expr_ref.span,
                         (None, member_expr_ref.props[cursor..].to_vec()),
                       );
@@ -313,7 +346,7 @@ impl LinkStage<'_> {
                     break;
                   };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
-                    resolved.insert(
+                    resolved_map.insert(
                       member_expr_ref.span,
                       (None, member_expr_ref.props[cursor..].to_vec()),
                     );
@@ -329,6 +362,15 @@ impl LinkStage<'_> {
                   {
                     break;
                   }
+                  if let Some(chains) =
+                    normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)
+                  {
+                    for item in chains {
+                      if side_effects_modules.contains(&item.owner) {
+                        side_effects_dependency.push(item.owner);
+                      }
+                    }
+                  }
                   ns_symbol_list.push((canonical_ref, name.to_rstr()));
                   canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
                   canonical_ref_owner =
@@ -337,7 +379,7 @@ impl LinkStage<'_> {
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
                 if cursor > 0 {
-                  resolved.insert(
+                  resolved_map.insert(
                     member_expr_ref.span,
                     (Some(canonical_ref), member_expr_ref.props[cursor..].to_vec()),
                   );
@@ -346,17 +388,20 @@ impl LinkStage<'_> {
             });
           });
 
-          resolved
+          (resolved_map, side_effects_dependency)
         }
-        Module::External(_) => FxHashMap::default(),
+        Module::External(_) => (FxHashMap::default(), vec![]),
       })
       .collect::<Vec<_>>();
 
-    debug_assert_eq!(self.metas.len(), resolved_maps.len());
+    debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
     self.warnings.extend(warnings);
-    self.metas.par_iter_mut().zip(resolved_maps).for_each(|(meta, resolved_map)| {
-      meta.resolved_member_expr_refs = resolved_map;
-    });
+    self.metas.iter_mut_enumerated().zip(resolved_meta_data).for_each(
+      |((_idx, meta), (resolved_map, side_effects_dependency))| {
+        meta.resolved_member_expr_refs = resolved_map;
+        meta.dependencies.extend(side_effects_dependency);
+      },
+    );
   }
 }
 
@@ -369,6 +414,8 @@ struct BindImportsAndExportsContext<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
+  pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
+  pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
 
 impl BindImportsAndExportsContext<'_> {
@@ -390,15 +437,13 @@ impl BindImportsAndExportsContext<'_> {
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
       if is_esm && is_external {
         if let Specifier::Literal(ref name) = named_import.imported {
-          if name.as_str() != "default" && is_validate_identifier_name(name) {
-            self
-              .external_import_binding_merger
-              .entry(rec.resolved_module)
-              .or_default()
-              .entry(name.inner().clone())
-              .or_default()
-              .insert(*imported_as_ref);
-          }
+          self
+            .external_import_binding_merger
+            .entry(rec.resolved_module)
+            .or_default()
+            .entry(name.inner().clone())
+            .or_default()
+            .insert(*imported_as_ref);
         }
       }
       let ret = self.match_import_with_export(
@@ -454,7 +499,14 @@ impl BindImportsAndExportsContext<'_> {
             exporter,
           ));
         }
-        MatchImportKind::Normal { symbol } => {
+        MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
+          for r in &reexports {
+            if self.side_effects_modules.contains(&r.owner) {
+              self.metas[module_id].dependencies.insert(r.owner);
+            }
+          }
+          self.normal_symbol_exports_chain_map.insert(*imported_as_ref, reexports);
+
           self.symbol_db.link(*imported_as_ref, symbol);
         }
         MatchImportKind::Namespace { namespace_ref } => {
@@ -545,6 +597,7 @@ impl BindImportsAndExportsContext<'_> {
     let _enter = tracking_span.enter();
 
     let mut ambiguous_results = vec![];
+    let mut reexports = vec![];
     let ret = loop {
       for prev_tracker in ctx.tracker_stack.iter().rev() {
         if prev_tracker.importer == tracker.importer
@@ -600,7 +653,10 @@ impl BindImportsAndExportsContext<'_> {
               );
               ambiguous_results.push(ambiguous_result);
             } else {
-              ambiguous_results.push(MatchImportKind::Normal { symbol: *ambiguous_ref });
+              ambiguous_results.push(MatchImportKind::Normal(MatchImportKindNormal {
+                symbol: *ambiguous_ref,
+                reexports: vec![],
+              }));
             }
           }
 
@@ -612,19 +668,23 @@ impl BindImportsAndExportsContext<'_> {
             let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_id];
             match &self.index_modules[rec.resolved_module] {
               Module::External(_) => {
-                break MatchImportKind::Normal { symbol: another_named_import.imported_as };
+                break MatchImportKind::Normal(MatchImportKindNormal {
+                  symbol: another_named_import.imported_as,
+                  reexports: vec![],
+                });
               }
               Module::Normal(importee) => {
                 tracker.importee = importee.idx;
                 tracker.importer = owner.idx();
                 tracker.imported = another_named_import.imported.clone();
                 tracker.imported_as = another_named_import.imported_as;
+                reexports.push(another_named_import.imported_as);
                 continue;
               }
             }
           }
 
-          break MatchImportKind::Normal { symbol };
+          break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
         }
         ImportStatus::_CommonJSWithoutExports => todo!(),
         ImportStatus::_Disabled => todo!(),
@@ -632,7 +692,10 @@ impl BindImportsAndExportsContext<'_> {
           if self.options.format.keep_esm_import_export_syntax() {
             // Imports from external modules should not be converted to CommonJS
             // if the output format preserves the original ES6 import statements
-            break MatchImportKind::Normal { symbol: tracker.imported_as };
+            break MatchImportKind::Normal(MatchImportKindNormal {
+              symbol: tracker.imported_as,
+              reexports: vec![],
+            });
           }
 
           match &tracker.imported {
@@ -652,13 +715,13 @@ impl BindImportsAndExportsContext<'_> {
 
     for ambiguous_result in &ambiguous_results {
       if *ambiguous_result != ret {
-        if let MatchImportKind::Normal { symbol } = ret {
+        if let MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) = ret {
           return MatchImportKind::Ambiguous {
             symbol_ref: symbol,
             potentially_ambiguous_symbol_refs: ambiguous_results
               .iter()
               .filter_map(|kind| match *kind {
-                MatchImportKind::Normal { symbol } => Some(symbol),
+                MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
                 MatchImportKind::Namespace { namespace_ref }
                 | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
                 _ => None,
@@ -682,12 +745,12 @@ impl BindImportsAndExportsContext<'_> {
               .shimmed_missing_exports
               .entry(imported.clone())
               .or_insert_with(|| {
-                self.symbol_db.create_facade_root_symbol_ref(
-                  tracker.importee,
-                  imported.clone().to_string().into(),
-                )
+                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, imported.as_str())
               });
-            return MatchImportKind::Normal { symbol: *shimmed_symbol_ref };
+            return MatchImportKind::Normal(MatchImportKindNormal {
+              symbol: *shimmed_symbol_ref,
+              reexports: vec![],
+            });
           }
         }
       }

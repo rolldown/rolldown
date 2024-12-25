@@ -1,4 +1,4 @@
-use oxc::{semantic::SymbolId, span::CompactStr};
+use oxc::semantic::SymbolId;
 use rolldown_std_utils::OptionExt;
 
 use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
@@ -24,7 +24,7 @@ impl SymbolRef {
   }
 
   pub fn set_name(&self, db: &mut SymbolRefDb, name: &str) {
-    db.inner[self.owner].unpack_ref_mut().set_name(self.symbol, CompactStr::new(name));
+    db.inner[self.owner].unpack_ref_mut().set_name(self.symbol, name);
   }
 
   /// Not all symbols have flags info, we only care about part of them.
@@ -88,4 +88,14 @@ impl SymbolRef {
       Module::External(_) => true,
     }
   }
+}
+
+/// passing a `SymbolRef`, it will return it's string repr, the format:
+/// `${stable_id} -> ${symbol_name}`
+pub fn common_debug_symbol_ref(
+  symbol_ref: SymbolRef,
+  modules: &IndexModules,
+  symbols: &SymbolRefDb,
+) -> String {
+  format!("{:?} -> {:?}", modules[symbol_ref.owner].stable_id(), symbol_ref.name(symbols))
 }

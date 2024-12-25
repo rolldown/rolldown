@@ -109,7 +109,7 @@ impl EcmaCompiler {
     source_text: &str,
     enable_sourcemap: bool,
     filename: &str,
-  ) -> anyhow::Result<(String, Option<SourceMap>)> {
+  ) -> (String, Option<SourceMap>) {
     let allocator = Allocator::default();
     let program = Parser::new(&allocator, source_text, SourceType::default()).parse().program;
     let program = allocator.alloc(program);
@@ -123,7 +123,7 @@ impl EcmaCompiler {
       })
       .with_mangler(ret.mangler)
       .build(program);
-    Ok((ret.code, ret.map))
+    (ret.code, ret.map)
   }
 }
 

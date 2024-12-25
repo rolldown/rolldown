@@ -13,7 +13,7 @@ import { PluginContextData } from './plugin-context-data'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
 import { PartialNull } from '../types/utils'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
-import type { LogHandler, LogLevelOption } from '../rollup'
+import type { LogHandler, LogLevelOption } from '../types/misc'
 import { LOG_LEVEL_WARN } from '../log/logging'
 import { logCycleLoading } from '../log/logs'
 
@@ -58,7 +58,7 @@ export class PluginContext extends MinimalPluginContext {
     if (id === this.currentLoadingModule) {
       this.onLog(
         LOG_LEVEL_WARN,
-        logCycleLoading(super.pluginName, this.currentLoadingModule),
+        logCycleLoading(this.pluginName, this.currentLoadingModule),
       )
     }
     // resolveDependencies always true at rolldown

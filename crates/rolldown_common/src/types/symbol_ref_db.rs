@@ -1,8 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
+use oxc::semantic::SymbolId;
 use oxc::semantic::{NodeId, ScopeId, SymbolFlags, SymbolTable};
 use oxc::span::SPAN;
-use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
@@ -49,8 +49,7 @@ impl SymbolRefDbForModule {
       owner_idx,
       root_scope_id: top_level_scope_id,
       classic_data: symbol_table
-        .names
-        .iter()
+        .names()
         .map(|_name| SymbolRefDataClassic { link: None, chunk_id: None, namespace_alias: None })
         .collect(),
       symbol_table,
@@ -59,7 +58,7 @@ impl SymbolRefDbForModule {
   }
 
   // The `facade` means the symbol is actually not exist in the AST.
-  pub fn create_facade_root_symbol_ref(&mut self, name: CompactString) -> SymbolRef {
+  pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
     self.classic_data.push(SymbolRefDataClassic {
       link: None,
       chunk_id: None,
@@ -118,11 +117,7 @@ impl SymbolRefDb {
     self.inner[module_id] = Some(local_db);
   }
 
-  pub fn create_facade_root_symbol_ref(
-    &mut self,
-    owner: ModuleIdx,
-    name: CompactString,
-  ) -> SymbolRef {
+  pub fn create_facade_root_symbol_ref(&mut self, owner: ModuleIdx, name: &str) -> SymbolRef {
     self.ensure_exact_capacity(owner);
     self.inner[owner].unpack_ref_mut().create_facade_root_symbol_ref(name)
   }
@@ -185,6 +180,10 @@ impl SymbolRefDb {
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.get_scope_id(refer.symbol) == local_db.root_scope_id
+  }
+
+  pub fn this_method_should_be_removed_get_symbol_table(&self, owner: ModuleIdx) -> &SymbolTable {
+    self.inner[owner].unpack_ref()
   }
 }
 

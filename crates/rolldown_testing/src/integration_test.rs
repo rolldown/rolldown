@@ -374,7 +374,7 @@ impl IntegrationTest {
               chunk.filename.as_str(),
               chunk.is_entry,
               chunk.is_dynamic_entry,
-              chunk.exports
+              chunk.exports.iter().map(ToString::to_string).collect::<Vec<_>>()
             ))]
           }
           Output::Asset(_) => vec![],

@@ -1,6 +1,4 @@
-import type { RolldownOutputChunk } from 'rolldown'
 import { defineTest } from '@tests'
-import { expect } from 'vitest'
 
 const outroText = '/* outro test */\n'
 

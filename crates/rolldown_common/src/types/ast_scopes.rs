@@ -1,35 +1,33 @@
-use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId};
-use oxc_index::IndexVec;
+use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId, SymbolTable};
 
 #[derive(Debug)]
 pub struct AstScopes {
   inner: ScopeTree,
-  pub references: IndexVec<ReferenceId, Reference>,
-  pub resolved_references: IndexVec<SymbolId, Vec<ReferenceId>>,
 }
 
 impl AstScopes {
-  pub fn new(
-    inner: ScopeTree,
-    references: IndexVec<ReferenceId, Reference>,
-    resolved_references: IndexVec<SymbolId, Vec<ReferenceId>>,
-  ) -> Self {
-    Self { inner, references, resolved_references }
+  pub fn new(inner: ScopeTree) -> Self {
+    Self { inner }
   }
 
-  pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {
-    self.references[reference_id].symbol_id().is_none()
+  pub fn is_unresolved(&self, reference_id: ReferenceId, symbol_table: &SymbolTable) -> bool {
+    symbol_table.references[reference_id].symbol_id().is_none()
   }
 
-  pub fn symbol_id_for(&self, reference_id: ReferenceId) -> Option<SymbolId> {
-    self.references[reference_id].symbol_id()
+  pub fn symbol_id_for(
+    &self,
+    reference_id: ReferenceId,
+    symbol_table: &SymbolTable,
+  ) -> Option<SymbolId> {
+    symbol_table.references[reference_id].symbol_id()
   }
 
-  pub fn get_resolved_references(
+  pub fn get_resolved_references<'table>(
     &self,
     symbol_id: SymbolId,
-  ) -> impl Iterator<Item = &Reference> + '_ {
-    self.resolved_references[symbol_id].iter().map(|reference_id| &self.references[*reference_id])
+    symbol_table: &'table SymbolTable,
+  ) -> impl Iterator<Item = &'table Reference> + 'table {
+    symbol_table.get_resolved_references(symbol_id)
   }
 }
 

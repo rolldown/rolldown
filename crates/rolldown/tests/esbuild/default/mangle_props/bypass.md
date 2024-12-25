@@ -69,7 +69,7 @@ function shouldNotMangle() {
 		"baz_"() {}
 	};
 	let { "bar_": bar_ } = foo;
-	({["bar_"]: bar_} = foo);
+	({"bar_": bar_} = foo);
 	class foo_ {
 		"bar_" = 0;
 		"baz_"() {}
@@ -90,7 +90,7 @@ export { shouldMangle, shouldNotMangle };
 ===================================================================
 --- esbuild	/out/entry1.js
 +++ rolldown	entry1.js
-@@ -1,29 +1,29 @@
+@@ -1,23 +1,23 @@
 -export function shouldMangle() {
 +function shouldMangle() {
      let foo = {
@@ -126,13 +126,6 @@ export { shouldMangle, shouldNotMangle };
          "bar_": 0,
          "baz_"() {}
      };
-     let {"bar_": bar_} = foo;
--    ({"bar_": bar_} = foo);
-+    ({["bar_"]: bar_} = foo);
-     class foo_ {
-         "bar_" = 0;
-         "baz_"() {}
-         static "bar_" = 0;
 @@ -33,4 +33,5 @@
          "bar_": bar_,
          "foo_": foo_

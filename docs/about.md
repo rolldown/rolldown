@@ -1,5 +1,7 @@
 # About Rolldown
 
+<!-- Note: this page is kept for potential external links to it, but no longer exposed in the navigation. -->
+
 ## TL;DR
 
 Rolldown is a JavaScript bundler written in Rust intended to serve as the future bundler used in [Vite](https://vitejs.dev/). It provides Rollup-compatible APIs and plugin interface, but is more similar to esbuild in scope.

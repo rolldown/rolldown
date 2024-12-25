@@ -147,6 +147,24 @@ describe('config', () => {
       expect(status.exitCode).toBe(0)
       expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
+
+    it('should allow multiply options', async () => {
+      const cwd = cliFixturesDir('config-multiply-options')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+
+    it('should allow multiply output', async () => {
+      const cwd = cliFixturesDir('config-multiply-output')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
   })
 })
 
@@ -165,6 +183,38 @@ describe('watch cli', () => {
       subprocess.kill('SIGINT')
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
+    }, 300)
+  })
+
+  it('should allow multiply options', async () => {
+    const cwd = cliFixturesDir('config-multiply-options')
+    const subprocess = execa({
+      cwd,
+    })`rolldown -c rolldown.config.ts -d watch-dist-options -w`
+    setTimeout(() => {
+      subprocess.kill('SIGINT')
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(
+        true,
+      )
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(
+        true,
+      )
+    }, 300)
+  })
+
+  it('should allow multiply output', async () => {
+    const cwd = cliFixturesDir('config-multiply-output')
+    const subprocess = execa({
+      cwd,
+    })`rolldown -c rolldown.config.ts -d watch-dist-output -w`
+    setTimeout(() => {
+      subprocess.kill('SIGINT')
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(
+        true,
+      )
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(
+        true,
+      )
     }, 300)
   })
 })

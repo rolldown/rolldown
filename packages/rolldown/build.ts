@@ -1,4 +1,4 @@
-import { defineConfig, rolldown } from './src/index'
+import { defineConfig, OutputOptions, rolldown } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
@@ -173,6 +173,6 @@ const configs = defineConfig([
 
 ;(async () => {
   for (const config of configs) {
-    await (await rolldown(config)).write(config.output)
+    await (await rolldown(config)).write(config.output as OutputOptions)
   }
 })()

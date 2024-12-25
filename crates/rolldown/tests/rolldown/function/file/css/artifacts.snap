@@ -4,12 +4,12 @@ snapshot_kind: text
 ---
 # Assets
 
-## out.css
+## dist/out.css
 
 ```css
 
 ```
-## out.css
+## dist/out.css
 
 ```css
 body {

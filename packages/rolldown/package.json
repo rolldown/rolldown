@@ -44,7 +44,12 @@
       "require": "./dist/cjs/parallel-plugin.cjs",
       "import": "./dist/esm/parallel-plugin.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./parseAst": {
+      "types": "./dist/types/parse-ast-index.d.ts",
+      "require": "./dist/cjs/parse-ast-index.cjs",
+      "import": "./dist/esm/parse-ast-index.mjs"
+    }
   },
   "imports": {
     "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.mjs"
@@ -100,7 +105,8 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@oxc-project/types": "0.43.0"
   },
   "peerDependencies": {
     "@babel/runtime": ">=7"

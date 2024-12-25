@@ -22,6 +22,7 @@ pub mod options;
 pub mod parallel_js_plugin_registry;
 pub mod types;
 pub mod utils;
+pub use oxc_parser_napi;
 pub use oxc_transform_napi;
 mod type_aliases;
 pub mod watcher;

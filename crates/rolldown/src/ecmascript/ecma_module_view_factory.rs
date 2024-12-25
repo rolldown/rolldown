@@ -17,10 +17,7 @@ use sugar_path::SugarPath;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
-  utils::{
-    make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
-    parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},
-  },
+  utils::parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},
   SharedOptions,
 };
 
@@ -28,13 +25,14 @@ fn scan_ast(
   module_idx: ModuleIdx,
   id: &ArcStr,
   ast: &mut EcmaAst,
-  symbols: SymbolTable,
+  symbol_table: SymbolTable,
   scopes: ScopeTree,
   module_def_format: ModuleDefFormat,
   options: &SharedOptions,
 ) -> BuildResult<(AstScopes, ScanResult, SymbolRef)> {
-  let (symbol_table, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
-  let module_id = ModuleId::new(ArcStr::clone(id));
+  let module_id = ModuleId::new(id);
+  let ast_scopes = AstScopes::new(scopes);
+
   let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
@@ -49,6 +47,7 @@ fn scan_ast(
     ast.comments(),
     options,
   );
+
   let namespace_object_ref = scanner.namespace_object_ref;
   let scan_result = scanner.scan(ast.program())?;
 

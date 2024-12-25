@@ -42,7 +42,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         ));
       }
     }
-    // TODO: namespace
   }
 
   pub fn get_span_if_namespace_specifier_updated(&mut self) -> Option<(Span, &'ast str)> {

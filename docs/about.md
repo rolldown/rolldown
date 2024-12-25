@@ -1,11 +1,13 @@
 # About Rolldown
 
+<!-- Note: this page is kept for potential external links to it, but no longer exposed in the navigation. -->
+
 ## TL;DR
 
-Rolldown is a JavaScript bundler written in Rust intended to serve as the future bundler used in [Vite](https://vitejs.dev/). It provides Rollup-compatible APIs and plugin interface, but will be more similar to esbuild in scope.
+Rolldown is a JavaScript bundler written in Rust intended to serve as the future bundler used in [Vite](https://vitejs.dev/). It provides Rollup-compatible APIs and plugin interface, but is more similar to esbuild in scope.
 
-:::warning 🚧 Work in Progress
-Rolldown is currently in active development and not usable for production yet. but we are open sourcing it now, so we can start collaborating with community contributors.
+:::warning 🚧 Beta Software
+Rolldown is currently in beta status. While it can already handle most production use cases, there may still be bugs and rough edges. Most notably, the built-in minification feature is still in early work-in-progress status.
 :::
 
 ## Why we are building Rolldown
@@ -34,11 +36,11 @@ Ideally, we hope Vite can leverage a single bundler that provides native-level p
 
 **This is why we are building Rolldown.**
 
-Rolldown is written in [Rust](https://www.rust-lang.org/) and built on top of [Oxc](https://oxc-project.github.io/), currently leveraging its parser and resolver. We also plan to leverage Oxc's transformer and minifier when they become available in the future.
+Rolldown is written in [Rust](https://www.rust-lang.org/) and built on top of [Oxc](https://oxc-project.github.io/), leveraging its parser, resolver, transformer, and minifier (early WIP).
 
 Our long term goal is for Vite users (directly or indirectly through a framework) to be able to transition to a Vite version that uses Rolldown internally with minimal friction.
 
-At the same time, Rolldown will also be directly usable as a standalone bundler.
+At the same time, Rolldown can also be directly usable as a standalone bundler.
 
 ## Rollup compatibility & difference
 
@@ -46,13 +48,13 @@ Rolldown aims to align with Rollup's API and plugin interface as much as possibl
 
 We started with the intention of a JS to Rust port, but soon realized that in order to achieve the best possible performance, we have to prioritize writing code in a way that aligns with how Rust works. The internal architecture of Rolldown is closer to that of esbuild rather than Rollup, and our chunk splitting logic may end up being different from that of Rollup's.
 
-Rolldown's scope is also larger than Rollup's and more similar to esbuild. It comes with built-in CommonJS support, `node_modules` resolution, and will also support TypeScript / JSX transforms and minification in the future.
+Rolldown's scope is also larger than Rollup's and more similar to esbuild. It comes with built-in ESM / CommonJS module interop, `node_modules` resolution, TypeScript / JSX transforms, and minification.
 
 ## Why Not Incrementally Improve Rollup?
 
-Vite is standing on the shoulder of giants, and owes a lot of its success to Rollup. We have a good collaboration relationship with Rollup's current maintainer [Lukas](https://github.com/lukastaegert), and are highly appreciative towards his brilliant work. We reached out to Lukas before starting to work on Rolldown to make sure he is aware of and ok with it. The consensus was that it is good to explore both incremental improvements (by Lukas) and ground-up re-implementation (by us) in parallel.
+Vite is standing on the shoulder of giants, and owes a lot of its success to Rollup. We are highly appreciative towards the brilliant work of Rollup's current maintainer [Lukas](https://github.com/lukastaegert). We reached out to Lukas before starting to work on Rolldown to make sure he is aware of and ok with it. The consensus was that it is good to explore both incremental improvements (by Lukas) and ground-up re-implementation (by us) in parallel.
 
-Our thesis is that given the single-threaded nature of JavaScript and the complexity of bundlers, it is extremely unlikely to achieve the performance level we are aiming for via incremental changes. The performance gain from partially moving components to Rust is often significantly offset by the cost of passing data between Rust and JavaScript, as shown in Rollup 4's adoption of the Rust-based SWC parser. To achieve optimal performance, the entire parse / transform / codegen pipeline needs to happen on the native side, and be parallelized as much as possible. This is only feasible with a ground-up implementation.
+Our thesis is that given the single-threaded nature of JavaScript and the complexity of bundlers, it is extremely unlikely to achieve the performance level we are aiming for via incremental changes. The performance gain from partially moving components to Rust is often significantly offset by the cost of passing data between Rust and JavaScript, as shown in Rollup 4's adoption of the Rust-based SWC parser. To achieve optimal performance, the entire parse / transform / codegen pipeline needs to happen on the native side, and be parallelized as much as possible. This is only feasible with a ground-up implementation, and is proven by Rolldown's 10~20x speed up compared to Rollup.
 
 ## Roadmap
 

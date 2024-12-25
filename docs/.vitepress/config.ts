@@ -5,6 +5,41 @@ import {
   localIconLoader,
 } from 'vitepress-plugin-group-icons'
 
+const sharedSidebar = [
+  {
+    text: 'User Guide',
+    items: [
+      { text: 'Introduction', link: '/guide/index.md' },
+      { text: 'Getting Started', link: '/guide/getting-started.md' },
+      { text: 'Notable Features', link: '/guide/features.md' },
+      {
+        text: 'Plugin Development',
+        link: '/guide/plugin-development.md',
+      },
+    ],
+  },
+  {
+    text: 'Reference',
+    items: [
+      {
+        text: 'Config Options',
+        link: '/reference/config-options.md',
+      },
+      { text: 'Bundler API', link: '/reference/bundler-api.md' },
+      { text: 'Plugin API', link: '/reference/plugin-api.md' },
+      { text: 'Command Line Interface', link: '/reference/cli.md' },
+    ],
+  },
+  {
+    text: 'In Depth',
+    items: [
+      { text: 'Why Bundlers', link: '/guide/in-depth/why-bundlers.md' },
+      { text: 'Module Types', link: '/guide/in-depth/module-types.md' },
+      // { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
+    ],
+  },
+]
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'Rolldown',
@@ -32,11 +67,8 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      {
-        text: 'About',
-        link: '/about.md',
-      },
-      { text: 'Guide', link: '/guide/' },
+      { text: 'User Guide', link: '/guide/' },
+      { text: 'Reference', link: '/reference/config-options.md' },
       { text: 'Contribute', link: '/contrib-guide/' },
       {
         text: 'Resources',
@@ -70,31 +102,21 @@ export default defineConfig({
     ],
 
     sidebar: {
-      '/guide/': [
-        {
-          text: 'Guide',
-          items: [{ text: 'Getting Started', link: '/guide/index.md' }],
-        },
-        {
-          text: 'Config',
-          items: [
-            { text: 'Configuration', link: '/guide/config/config.md' },
-            { text: 'Command Line Interface', link: '/guide/config/cli.md' },
-          ],
-        },
-        {
-          text: 'In Depth',
-          items: [
-            { text: 'Module Types', link: '/guide/in-depth/module-type.md' },
-            { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
-          ],
-        },
-      ],
+      '/guide/': sharedSidebar,
+      '/reference/': sharedSidebar,
       '/contrib-guide/': [
-        { text: 'Overview', link: '/contrib-guide/' },
         {
-          text: 'Etiquette',
-          link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+          text: 'Contribution Guide',
+          items: [
+            {
+              text: 'Overview',
+              link: '/contrib-guide/',
+            },
+            {
+              text: 'Etiquette',
+              link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+            },
+          ],
         },
         {
           text: 'Development',
@@ -139,7 +161,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2023-present Rolldown Team & Contributors',
+      copyright: 'Copyright © 2023-present VoidZero Inc.',
     },
   },
 
@@ -154,7 +176,7 @@ export default defineConfig({
             '../public/lightning-down.svg',
           ),
         },
-      }),
+      }) as any,
     ],
   },
   markdown: {

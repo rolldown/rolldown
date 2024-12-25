@@ -4256,6 +4256,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-iuKz2ghl.js
 - main-iuKz2ghl.js.map
 
+# tests/rolldown/function/minify/inject_node_env
+
+- main-!~{000}~.js => main-CihG9yyg.js
+
 # tests/rolldown/function/module_types/asset
 
 - main-!~{000}~.js => main-DOQUAn8i.js

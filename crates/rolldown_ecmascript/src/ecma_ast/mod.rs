@@ -3,10 +3,11 @@ use std::fmt::Debug;
 use crate::EcmaCompiler;
 use arcstr::ArcStr;
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, CloneIn},
   ast::ast::{Comment, Program},
   span::SourceType,
 };
+use program_cell::{ProgramCellDependent, ProgramCellOwner};
 
 use self::program_cell::ProgramCell;
 
@@ -37,6 +38,25 @@ impl EcmaAst {
 
   pub fn comments(&self) -> &oxc::allocator::Vec<'_, Comment> {
     &self.program.borrow_dependent().program.comments
+  }
+
+  /// Clone the `Program` with another `Allocator`.
+  /// and copy rest fields, this is used to cache the Ast in incremental compilation
+  /// use another `Allocator` to avoid memory leak because.
+  #[must_use]
+  pub fn clone_with_another_arena(&self) -> EcmaAst {
+    let program = ProgramCell::new(
+      ProgramCellOwner { source: self.source().clone(), allocator: Allocator::default() },
+      |owner| {
+        let program = self.program().clone_in(&owner.allocator);
+        ProgramCellDependent { program }
+      },
+    );
+    EcmaAst {
+      program,
+      source_type: self.source_type,
+      contains_use_strict: self.contains_use_strict,
+    }
   }
 }
 

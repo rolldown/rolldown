@@ -1,6 +1,6 @@
 {
   "config": {
-    "file": "out.js"
+    "file": "dist/out.css"
   },
   "expectExecuted": false
 }

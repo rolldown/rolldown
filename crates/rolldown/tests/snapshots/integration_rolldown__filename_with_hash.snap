@@ -4093,17 +4093,17 @@ snapshot_kind: text
 
 # tests/rolldown/function/file/css
 
-- out.css => out.css
-- out.css
+- dist/out.css => dist/out.css
+- dist/out.css
 
 # tests/rolldown/function/file/js
 
-- out.js => out.js
+- dist/out.css => dist/out.css
 
 # tests/rolldown/function/file/js_css
 
-- out.js => out.js
-- out.css
+- dist/out.css => dist/out.css
+- dist/out.css
 
 # tests/rolldown/function/format/app/export-all
 

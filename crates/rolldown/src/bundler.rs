@@ -13,7 +13,7 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -99,14 +99,18 @@ impl Bundler {
   ) -> BuildResult<BundleOutput> {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
-    let dir = self.options.cwd.join(&self.options.dir);
+    let dist_dir = if self.options.file.is_some() {
+      Cow::Borrowed(&self.options.cwd)
+    } else {
+      Cow::Owned(self.options.cwd.join(&self.options.dir))
+    };
 
-    self.fs.create_dir_all(&dir).map_err(|err| {
-      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
+    self.fs.create_dir_all(&dist_dir).map_err(|err| {
+      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dist_dir).context(err)
     })?;
 
     for chunk in &output.assets {
-      let dest = dir.join(chunk.filename());
+      let dest = dist_dir.join(chunk.filename());
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();

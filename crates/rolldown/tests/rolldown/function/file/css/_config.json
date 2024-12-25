@@ -6,7 +6,7 @@
         "import": "./main.css"
       }
     ],
-    "file": "out.css"
+    "file": "dist/out.css"
   },
   "expectExecuted": false
 }

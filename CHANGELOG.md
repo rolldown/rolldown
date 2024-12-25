@@ -1,3 +1,37 @@
+# [1.0.0-beta.1](https://github.com/rolldown/rolldown/compare/v0.15.1...v1.0.0-beta.1) (2024-12-25)
+
+
+### Bug Fixes
+
+* `dir` should be ignored if `file` is set ([#3229](https://github.com/rolldown/rolldown/issues/3229)) ([6bcbc40](https://github.com/rolldown/rolldown/commit/6bcbc401c4338fe49db917131930166071ade2db))
+* barrel exports optimization related side effects dependency should be reserved. ([#3190](https://github.com/rolldown/rolldown/issues/3190)) ([9678464](https://github.com/rolldown/rolldown/commit/9678464a33a44fcb91b384a0c6afaf61683dc019))
+* **cli:** with `--file` or `-o`, shouldn't print bundle output to stdout ([#3228](https://github.com/rolldown/rolldown/issues/3228)) ([aafbb17](https://github.com/rolldown/rolldown/commit/aafbb17789b21e1dc749bc660128cfae71c9120b))
+* **iife/umd:** named exports if module wrapped ([#3195](https://github.com/rolldown/rolldown/issues/3195)) ([7a360ce](https://github.com/rolldown/rolldown/commit/7a360ce2c7fdd1fbcd7724f7e3a679cf3265c3ed))
+* **interop:** should detect importer is esm module ([#3212](https://github.com/rolldown/rolldown/issues/3212)) ([f9fc700](https://github.com/rolldown/rolldown/commit/f9fc700f00b9a4ef3659c70d2be4d7cd61b492c8))
+* merge external default import ([#3203](https://github.com/rolldown/rolldown/issues/3203)) ([2e7b4b6](https://github.com/rolldown/rolldown/commit/2e7b4b6c061eb77cd93cf7325d9f61da1d3698ea))
+* merge external string alias import ([#3205](https://github.com/rolldown/rolldown/issues/3205)) ([527bbe0](https://github.com/rolldown/rolldown/commit/527bbe0adda30799a1fd1ce4ad614f0ce24eff61)), closes [#3199](https://github.com/rolldown/rolldown/issues/3199)
+* meta.dependency should consider reexport chain owner that has side effects. ([#3181](https://github.com/rolldown/rolldown/issues/3181)) ([2643701](https://github.com/rolldown/rolldown/commit/2643701b4b3b4488e1855baf667e14529bfa849e))
+* **node:** make `name` property required for plugins ([#3192](https://github.com/rolldown/rolldown/issues/3192)) ([f85bcfa](https://github.com/rolldown/rolldown/commit/f85bcfa2aea16327ec3fb77119ce08e96802a007)), closes [/github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/rollup/types.d.ts#L518](https://github.com//github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/rollup/types.d.ts/issues/L518)
+* **splitting:** ensure correct symbol reference if module is cjs ([#3210](https://github.com/rolldown/rolldown/issues/3210)) ([8bc593b](https://github.com/rolldown/rolldown/commit/8bc593b442c11470ca14fda9fa7804f685214b17))
+* using correct plugin name at PluginContext ([#3179](https://github.com/rolldown/rolldown/issues/3179)) ([0b1f06c](https://github.com/rolldown/rolldown/commit/0b1f06c7dd7da2d55a5d3eff0686dc15a339f4cf))
+* watch files after scan stage ([#3149](https://github.com/rolldown/rolldown/issues/3149)) ([4e41a08](https://github.com/rolldown/rolldown/commit/4e41a08a3b4763c3435dd87ba493cb78d0faabe7)), closes [/github.com/rollup/rollup/blob/master/src/watch/watch.ts#L209](https://github.com//github.com/rollup/rollup/blob/master/src/watch/watch.ts/issues/L209)
+
+
+### Features
+
+* **cli:** support array output ([#3217](https://github.com/rolldown/rolldown/issues/3217)) ([4151674](https://github.com/rolldown/rolldown/commit/41516747902be37884a116f1aa3e9d0f4ae4f198))
+* emit a warning when `minify: true` ([#3182](https://github.com/rolldown/rolldown/issues/3182)) ([ef5d11b](https://github.com/rolldown/rolldown/commit/ef5d11bf497c91f5d225359fbf5b84a243e57358)), closes [#3173](https://github.com/rolldown/rolldown/issues/3173)
+* inject `NODE_ENV` based on minify option for browser platform ([#3230](https://github.com/rolldown/rolldown/issues/3230)) ([e313bf9](https://github.com/rolldown/rolldown/commit/e313bf916775d367f87dc8a2ae43ef93d8752297))
+* support jsx false and preserve ([#3176](https://github.com/rolldown/rolldown/issues/3176)) ([69e2c3b](https://github.com/rolldown/rolldown/commit/69e2c3b875bc2475e5d302c78c9ad5244549451e))
+* **wasm:** wasi worker threads reuse ([#3183](https://github.com/rolldown/rolldown/issues/3183)) ([cc6f557](https://github.com/rolldown/rolldown/commit/cc6f5579708ed011fd79b61038a5793b3d030d70))
+
+
+### Performance Improvements
+
+* remove extra allocation on `MagicString#to_string` ([#3211](https://github.com/rolldown/rolldown/issues/3211)) ([98978bc](https://github.com/rolldown/rolldown/commit/98978bca115387897524b837fd75224008f3e9c7))
+
+
+
 ## [0.15.1](https://github.com/rolldown/rolldown/compare/v0.15.0...v0.15.1) (2024-12-18)
 
 

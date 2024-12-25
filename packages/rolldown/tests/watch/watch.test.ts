@@ -2,7 +2,7 @@ import { expect, test, vi } from 'vitest'
 import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
-import { sleep } from '@tests/utils'
+import { sleep, waitUtil } from '@tests/utils'
 
 test.sequential('watch', async () => {
   const { input, output } = await createTestInputAndOutput('watch')
@@ -469,17 +469,6 @@ async function createTestInputAndOutput(dirname: string, content?: string) {
   const outputDir = path.join(dir, './dist')
   const output = path.join(outputDir, 'main.js')
   return { input, output, dir, outputDir }
-}
-
-async function waitUtil(expectFn: () => void) {
-  for (let tries = 0; tries < 20; tries++) {
-    try {
-      await expectFn()
-      return
-    } catch {}
-    await sleep(50)
-  }
-  expectFn()
 }
 
 async function waitBuildFinished(

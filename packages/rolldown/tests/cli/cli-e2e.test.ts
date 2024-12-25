@@ -1,7 +1,7 @@
 import { describe, test, it, expect } from 'vitest'
 import { $, execa } from 'execa'
 import { stripAnsi } from 'consola/utils'
-import { testsDir } from '@tests/utils'
+import { testsDir, waitUtil } from '@tests/utils'
 import path from 'node:path'
 import fs from 'node:fs'
 
@@ -178,43 +178,54 @@ describe('watch cli', () => {
 
   it('should handle output options', async () => {
     const cwd = cliFixturesDir('watch-cli-option')
-    const subprocess = execa({ cwd })`rolldown index.ts -d dist -w -s`
-    setTimeout(() => {
-      subprocess.kill('SIGINT')
+    const controller = new AbortController()
+    execa({
+      cwd,
+      cancelSignal: controller.signal,
+      gracefulCancel: true,
+    })`rolldown index.ts -d dist -w -s`
+    waitUtil(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
-    }, 300)
+    })
+    controller.abort()
   })
 
   it('should allow multiply options', async () => {
     const cwd = cliFixturesDir('config-multiply-options')
-    const subprocess = execa({
+    const controller = new AbortController()
+    execa({
       cwd,
+      cancelSignal: controller.signal,
+      gracefulCancel: true,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`
-    setTimeout(() => {
-      subprocess.kill('SIGINT')
+    waitUtil(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(
         true,
       )
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(
         true,
       )
-    }, 300)
+    })
+    controller.abort()
   })
 
   it('should allow multiply output', async () => {
     const cwd = cliFixturesDir('config-multiply-output')
-    const subprocess = execa({
+    const controller = new AbortController()
+    execa({
       cwd,
+      cancelSignal: controller.signal,
+      gracefulCancel: true,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`
-    setTimeout(() => {
-      subprocess.kill('SIGINT')
+    waitUtil(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(
         true,
       )
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(
         true,
       )
-    }, 300)
+    })
+    controller.abort()
   })
 })

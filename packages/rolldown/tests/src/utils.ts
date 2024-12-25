@@ -85,3 +85,14 @@ export function getLocation(source: string, search: string | number) {
 
   throw new Error('Could not determine location of character')
 }
+
+export async function waitUtil(expectFn: () => void) {
+  for (let tries = 0; tries < 20; tries++) {
+    try {
+      await expectFn()
+      return
+    } catch {}
+    await sleep(50)
+  }
+  expectFn()
+}

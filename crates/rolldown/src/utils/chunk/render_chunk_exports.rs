@@ -32,7 +32,6 @@ pub fn render_wrapped_entry_chunk(
       WrapKind::Cjs => {
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
-        // require_xxx
         let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
           *wrapper_ref,
           ctx.chunk_idx,
@@ -41,7 +40,7 @@ pub fn render_wrapped_entry_chunk(
 
         match ctx.options.format {
           OutputFormat::Esm => {
-            // "export default require_xxx();"
+            // export default require_xxx();
             Some(concat_string!("export default ", wrapper_ref_name.as_str(), "();\n"))
           }
           OutputFormat::Cjs => {

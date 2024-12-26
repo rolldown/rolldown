@@ -2,7 +2,8 @@
   "expectExecuted": false,
   "configVariants": [
     {
-      "format": "cjs"
+      "format": "cjs",
+      "exports": "named"
     },
     {
       "format": "iife",

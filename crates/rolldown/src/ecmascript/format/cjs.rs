@@ -10,7 +10,7 @@ use crate::{
     determine_use_strict::determine_use_strict, render_chunk_exports::render_chunk_exports,
   },
 };
-use rolldown_common::{ExportsKind, OutputExports};
+use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
@@ -51,23 +51,18 @@ pub fn render_cjs<'code>(
   let export_mode = if let Some(entry_module) =
     ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table)
   {
-    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-      let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
-      let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
-      let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
-      // Only `named` export can we render the namespace markers.
-      if matches!(&export_mode, OutputExports::Named) {
-        if let Some(marker) =
-          render_namespace_markers(ctx.options.es_module, has_default_export, false)
-        {
-          source_joiner.append_source(marker.to_string());
-        }
+    let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
+    let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
+    let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
+    // Only `named` export can we render the namespace markers.
+    if matches!(&export_mode, OutputExports::Named) && entry_module.exports_kind.is_esm() {
+      if let Some(marker) =
+        render_namespace_markers(ctx.options.es_module, has_default_export, false)
+      {
+        source_joiner.append_source(marker.to_string());
       }
-      Some(export_mode)
-    } else {
-      // The entry module which non-ESM export kind should be `named`.
-      Some(OutputExports::Named)
     }
+    Some(export_mode)
   } else {
     // The common chunks should be `named`.
     Some(OutputExports::Named)

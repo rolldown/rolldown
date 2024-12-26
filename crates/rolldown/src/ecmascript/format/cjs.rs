@@ -1,6 +1,8 @@
 use crate::utils::chunk::determine_export_mode::determine_export_mode;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
-use crate::utils::chunk::render_chunk_exports::get_chunk_export_names;
+use crate::utils::chunk::render_chunk_exports::{
+  get_chunk_export_names, render_wrapped_entry_chunk,
+};
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -8,7 +10,7 @@ use crate::{
     determine_use_strict::determine_use_strict, render_chunk_exports::render_chunk_exports,
   },
 };
-use rolldown_common::{ExportsKind, OutputExports, WrapKind};
+use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
@@ -49,23 +51,18 @@ pub fn render_cjs<'code>(
   let export_mode = if let Some(entry_module) =
     ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table)
   {
-    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-      let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
-      let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
-      let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
-      // Only `named` export can we render the namespace markers.
-      if matches!(&export_mode, OutputExports::Named) {
-        if let Some(marker) =
-          render_namespace_markers(ctx.options.es_module, has_default_export, false)
-        {
-          source_joiner.append_source(marker.to_string());
-        }
+    let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
+    let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
+    let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
+    // Only `named` export can we render the namespace markers.
+    if matches!(&export_mode, OutputExports::Named) && entry_module.exports_kind.is_esm() {
+      if let Some(marker) =
+        render_namespace_markers(ctx.options.es_module, has_default_export, false)
+      {
+        source_joiner.append_source(marker.to_string());
       }
-      Some(export_mode)
-    } else {
-      // The entry module which non-ESM export kind should be `named`.
-      Some(OutputExports::Named)
     }
+    Some(export_mode)
   } else {
     // The common chunks should be `named`.
     Some(OutputExports::Named)
@@ -80,34 +77,8 @@ pub fn render_cjs<'code>(
     render_cjs_chunk_imports(ctx),
   );
 
-  if let Some(entry_id) = ctx.chunk.entry_module_idx() {
-    let entry_meta = &ctx.link_output.metas[entry_id];
-    match entry_meta.wrap_kind {
-      WrapKind::Esm => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        // init_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
-      }
-      WrapKind::Cjs => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-
-        // require_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-
-        // module.exports = require_xxx();
-        source_joiner.append_source(concat_string!("module.exports = ", wrapper_ref_name, "();\n"));
-      }
-      WrapKind::None => {}
-    }
+  if let Some(source) = render_wrapped_entry_chunk(ctx, export_mode.as_ref()) {
+    source_joiner.append_source(source);
   }
 
   if let Some(exports) = render_chunk_exports(ctx, export_mode.as_ref()) {

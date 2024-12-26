@@ -388,6 +388,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               ast::AssignmentTargetMaybeDefault::from(target)
             },
             span: Span::default(),
+            computed: false,
           }
           .into_in(self.alloc),
         );

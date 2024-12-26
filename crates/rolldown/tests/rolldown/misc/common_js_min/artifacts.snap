@@ -1,10 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-var __create=Object.create,__defProp=Object.defineProperty,__getOwnPropDesc=Object.getOwnPropertyDescriptor,__getOwnPropNames=Object.getOwnPropertyNames,__getProtoOf=Object.getPrototypeOf,__hasOwnProp=Object.prototype.hasOwnProperty,__commonJSMin=(l,m)=>()=>(m||l((m={exports:{}}).exports,m),m.exports),__copyProps=(l,m,n,o)=>{if(m&&typeof m==="object"||typeof m==="function"){for(var p=__getOwnPropNames(m),q=0,r=p.length,s;q<r;q++)if(s=p[q],!__hasOwnProp.call(l,s)&&s!==n)__defProp(l,s,{get:((t)=>m[t]).bind(null,s),enumerable:!(o=__getOwnPropDesc(m,s))||o.enumerable})}return l},__toESM=(l,m,n)=>(n=l!=null?__create(__getProtoOf(l)):{},__copyProps(m||!l||!l.__esModule?__defProp(n,"default",{value:l,enumerable:!0}):n,l)),require_shared=__commonJSMin((exports,m)=>{m.exports=123}),import_shared=__toESM(require_shared());assert.equal(import_shared.foo,123);
+var __create=Object.create,__defProp=Object.defineProperty,__getOwnPropDesc=Object.getOwnPropertyDescriptor,__getOwnPropNames=Object.getOwnPropertyNames,__getProtoOf=Object.getPrototypeOf,__hasOwnProp=Object.prototype.hasOwnProperty,__commonJSMin=(l,m)=>()=>(m||l((m={exports:{}}).exports,m),m.exports),__copyProps=(l,m,n,o)=>{if(m&&typeof m==="object"||typeof m==="function"){for(var p=__getOwnPropNames(m),q=0,r=p.length,s;q<r;q++)if(s=p[q],!__hasOwnProp.call(l,s)&&s!==n)__defProp(l,s,{get:(t=>m[t]).bind(null,s),enumerable:!(o=__getOwnPropDesc(m,s))||o.enumerable})}return l},__toESM=(l,m,n)=>(n=l!=null?__create(__getProtoOf(l)):{},__copyProps(m||!l||!l.__esModule?__defProp(n,"default",{value:l,enumerable:!0}):n,l)),require_shared=__commonJSMin((exports,m)=>{m.exports=123}),import_shared=__toESM(require_shared());assert.equal(import_shared.foo,123);
 ```

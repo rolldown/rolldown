@@ -311,7 +311,12 @@ impl<'ast> TakeIn<'ast> for ast::AssignmentTargetMaybeDefault<'ast> {
 
 impl<'ast> TakeIn<'ast> for ast::AssignmentTargetPropertyProperty<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self { name: TakeIn::dummy(alloc), span: TakeIn::dummy(alloc), binding: TakeIn::dummy(alloc) }
+    Self {
+      name: TakeIn::dummy(alloc),
+      span: TakeIn::dummy(alloc),
+      binding: TakeIn::dummy(alloc),
+      computed: TakeIn::dummy(alloc),
+    }
   }
 }
 

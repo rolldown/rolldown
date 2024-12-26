@@ -25,7 +25,7 @@
 use crate::ecmascript::format::utils::namespace::generate_identifier;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::utils::chunk::render_chunk_exports::{
-  get_chunk_export_names, render_object_define_property,
+  get_chunk_export_names, render_wrapped_entry_chunk,
 };
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
@@ -36,7 +36,7 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{ExternalModule, OutputExports, WrapKind};
+use rolldown_common::{ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
@@ -47,7 +47,7 @@ use super::utils::{
 };
 
 /// The main function for rendering the IIFE format chunks.
-#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(clippy::too_many_arguments)]
 pub async fn render_iife<'code>(
   ctx: &GenerateContext<'_>,
   hashbang: Option<&'code str>,
@@ -148,41 +148,8 @@ pub async fn render_iife<'code>(
     import_code,
   );
 
-  if let Some(entry_id) = ctx.chunk.entry_module_idx() {
-    let entry_meta = &ctx.link_output.metas[entry_id];
-    match entry_meta.wrap_kind {
-      WrapKind::Esm => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        // init_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-        source_joiner.append_source(concat_string!(wrapper_ref_name, "();"));
-      }
-      WrapKind::Cjs => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-
-        // require_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-        if named_exports {
-          // TODO merge with render_exports
-          source_joiner.append_source(render_object_define_property(
-            "default",
-            &concat_string!(wrapper_ref_name, "()"),
-          ));
-        } else {
-          // return require_xxx();
-          source_joiner.append_source(concat_string!("return ", wrapper_ref_name, "();\n"));
-        }
-      }
-      WrapKind::None => {}
-    }
+  if let Some(source) = render_wrapped_entry_chunk(ctx, Some(&export_mode)) {
+    source_joiner.append_source(source);
   }
 
   // iife exports

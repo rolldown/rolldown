@@ -4,10 +4,10 @@ import { expect } from 'vitest'
 export default defineTest({
   config: {
     output: {
-      file: 'out.js',
+      file: 'dist/out.js',
     },
   },
   afterTest: function (output) {
-    expect(output.output[0].fileName).toMatchInlineSnapshot(`"out.js"`)
+    expect(output.output[0].fileName).toMatchInlineSnapshot(`"dist/out.js"`)
   },
 })

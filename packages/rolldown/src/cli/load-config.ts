@@ -8,7 +8,7 @@ import { OutputChunk } from '../types/rolldown-output'
 export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const file = await bundleTsConfig(configFile)
   try {
-    return (await import(pathToFileURL(file).href)).default
+    return (await import(file)).default
   } finally {
     fs.unlink(file, () => {}) // Ignore errors
   }
@@ -18,7 +18,6 @@ async function bundleTsConfig(configFile: string): Promise<string> {
   const dirnameVarName = 'injected_original_dirname'
   const filenameVarName = 'injected_original_filename'
   const importMetaUrlVarName = 'injected_original_import_meta_url'
-
   const bundle = await rolldown({
     input: configFile,
     platform: 'node',
@@ -59,10 +58,10 @@ async function bundleTsConfig(configFile: string): Promise<string> {
     sourcemap: 'inline',
     entryFileNames: 'rolldown.config.[hash].js',
   })
-  const basename = result.output.find(
+  const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
   )!.fileName
-  return path.resolve(outputDir, basename)
+  return path.join(outputDir, fileName)
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs']
@@ -74,6 +73,7 @@ const SUPPORTED_CONFIG_FORMATS = [
 
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   const ext = path.extname(configPath)
+  const rawConfigPath = path.resolve(configPath)
 
   try {
     if (
@@ -81,9 +81,9 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
         SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
     ) {
-      return (await import(pathToFileURL(configPath).href)).default
+      return (await import(rawConfigPath)).default
     } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
-      return await loadTsConfig(configPath)
+      return await loadTsConfig(rawConfigPath)
     } else {
       throw new Error(
         `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(',')}\` but got \`${ext}\``,

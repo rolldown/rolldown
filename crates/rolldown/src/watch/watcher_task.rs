@@ -23,7 +23,7 @@ use tokio::sync::Mutex;
 pub struct WatcherTask {
   pub emitter: SharedWatcherEmitter,
   bundler: Arc<Mutex<Bundler>>,
-  invalidate: AtomicBool,
+  pub invalidate_flag: AtomicBool,
   notify_watcher: Arc<Mutex<RecommendedWatcher>>,
   notify_watch_files: Arc<FxDashSet<ArcStr>>,
   pub watch_files: FxDashSet<ArcStr>,
@@ -39,7 +39,7 @@ impl WatcherTask {
     Self {
       emitter,
       bundler,
-      invalidate: AtomicBool::new(true),
+      invalidate_flag: AtomicBool::new(true),
       watch_files: FxDashSet::default(),
       notify_watcher,
       notify_watch_files: notify_watched_files,
@@ -48,7 +48,7 @@ impl WatcherTask {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn run(&self) -> BuildResult<()> {
-    if !self.invalidate.load(Ordering::Relaxed) {
+    if !self.invalidate_flag.load(Ordering::Relaxed) {
       return Ok(());
     }
     let mut bundler = self.bundler.lock().await;
@@ -98,7 +98,7 @@ impl WatcherTask {
       }
     }
 
-    self.invalidate.store(false, Ordering::Relaxed);
+    self.invalidate_flag.store(false, Ordering::Relaxed);
 
     Ok(())
   }
@@ -160,7 +160,7 @@ impl WatcherTask {
   pub fn invalidate(&self, path: &str) {
     // invalidate the watcher task if the changed file is in the watch list
     if self.watch_files.contains(path) {
-      self.invalidate.store(true, Ordering::Relaxed);
+      self.invalidate_flag.store(true, Ordering::Relaxed);
     }
   }
 

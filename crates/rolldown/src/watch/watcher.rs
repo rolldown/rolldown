@@ -28,7 +28,10 @@ enum WatcherChannelMsg {
   NotifyEvent(notify::Result<notify::Event>),
   Close,
 }
-
+enum ExecChannelMsg {
+  Exec,
+  Close,
+}
 pub struct WatcherImpl {
   pub emitter: SharedWatcherEmitter,
   tasks: Vec<WatcherTask>,
@@ -38,6 +41,8 @@ pub struct WatcherImpl {
   watch_changes: FxDashSet<WatcherChangeData>,
   tx: Arc<Sender<WatcherChannelMsg>>,
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
+  exec_tx: Arc<Sender<ExecChannelMsg>>,
+  exec_rx: Arc<Mutex<Receiver<ExecChannelMsg>>>,
 }
 
 impl WatcherImpl {
@@ -47,6 +52,7 @@ impl WatcherImpl {
     notify_option: Option<NotifyOption>,
   ) -> Result<Self> {
     let (tx, rx) = channel();
+    let (exec_tx, exec_rx) = channel();
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
@@ -91,6 +97,8 @@ impl WatcherImpl {
       watch_changes: FxDashSet::default(),
       rx: Arc::new(Mutex::new(rx)),
       tx: cloned_tx,
+      exec_tx: Arc::new(exec_tx),
+      exec_rx: Arc::new(Mutex::new(exec_rx)),
     })
   }
 
@@ -105,28 +113,7 @@ impl WatcherImpl {
     if self.running.load(Ordering::Relaxed) {
       return;
     }
-
-    let future = async move {
-      for change in self.watch_changes.iter() {
-        for task in &self.tasks {
-          task.on_change(change.path.as_str(), change.kind).await;
-          task.invalidate(change.path.as_str());
-        }
-      }
-      self.watch_changes.clear();
-      let _ = self.run().await;
-    };
-
-    #[cfg(target_family = "wasm")]
-    {
-      futures::executor::block_on(future);
-    }
-    #[cfg(not(target_family = "wasm"))]
-    {
-      tokio::task::block_in_place(move || {
-        tokio::runtime::Handle::current().block_on(future);
-      });
-    }
+    self.exec_tx.send(ExecChannelMsg::Exec).unwrap();
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -154,6 +141,7 @@ impl WatcherImpl {
   pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
     self.tx.send(WatcherChannelMsg::Close)?;
+    self.exec_tx.send(ExecChannelMsg::Close)?;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
     let mut inner = self.notify_watcher.lock().await;
@@ -175,6 +163,33 @@ impl WatcherImpl {
 
   pub async fn start(&self) {
     let _ = self.run().await;
+    let future = async move {
+      while let Ok(msg) = self.exec_rx.lock().await.recv() {
+        match msg {
+          ExecChannelMsg::Exec => {
+            for change in self.watch_changes.iter() {
+              for task in &self.tasks {
+                task.on_change(change.path.as_str(), change.kind).await;
+                task.invalidate(change.path.as_str());
+              }
+            }
+            self.watch_changes.clear();
+            let _ = self.run().await;
+          }
+          ExecChannelMsg::Close => break,
+        }
+      }
+    };
+    #[cfg(target_family = "wasm")]
+    {
+      futures::executor::block_on(future);
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+      tokio::task::block_in_place(move || {
+        tokio::runtime::Handle::current().block_on(future);
+      });
+    }
   }
 }
 

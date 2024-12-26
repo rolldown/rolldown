@@ -52,16 +52,17 @@ async function bundleTsConfig(configFile: string): Promise<string> {
       },
     ],
   })
+  const outputDir = path.dirname(configFile)
   const result = await bundle.write({
-    dir: path.dirname(configFile),
+    dir: outputDir,
     format: 'esm',
     sourcemap: 'inline',
     entryFileNames: 'rolldown.config.[hash].js',
   })
-
-  return result.output.find(
+  const basename = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
   )!.fileName
+  return path.resolve(outputDir, basename)
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs']

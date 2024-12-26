@@ -8,7 +8,7 @@ import { OutputChunk } from '../types/rolldown-output'
 export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const file = await bundleTsConfig(configFile)
   try {
-    return (await import(file)).default
+    return (await import(pathToFileURL(file).href)).default
   } finally {
     fs.unlink(file, () => {}) // Ignore errors
   }
@@ -73,7 +73,6 @@ const SUPPORTED_CONFIG_FORMATS = [
 
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   const ext = path.extname(configPath)
-  const rawConfigPath = path.resolve(configPath)
 
   try {
     if (
@@ -81,8 +80,9 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
         SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
     ) {
-      return (await import(rawConfigPath)).default
+      return (await import(pathToFileURL(configPath).href)).default
     } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
+      const rawConfigPath = path.resolve(configPath)
       return await loadTsConfig(rawConfigPath)
     } else {
       throw new Error(

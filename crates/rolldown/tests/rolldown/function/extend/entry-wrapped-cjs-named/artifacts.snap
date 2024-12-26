@@ -20,7 +20,7 @@ export default require_main();
 ```
 ---
 
-Variant: (format: Cjs)
+Variant: (exports: Named, format: Cjs)
 
 # Assets
 
@@ -35,8 +35,12 @@ var require_main = __commonJS({ "main.js"() {
 } });
 
 //#endregion
-module.exports = require_main();
-
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return require_main();
+  }
+});
 ```
 ---
 

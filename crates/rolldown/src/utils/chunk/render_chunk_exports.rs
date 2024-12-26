@@ -44,8 +44,15 @@ pub fn render_wrapped_entry_chunk(
             Some(concat_string!("export default ", wrapper_ref_name.as_str(), "();\n"))
           }
           OutputFormat::Cjs => {
-            // module.exports = require_xxx();
-            Some(concat_string!("module.exports = ", wrapper_ref_name, "();\n"))
+            if matches!(&export_mode, Some(OutputExports::Named)) {
+              Some(render_object_define_property(
+                "default",
+                &concat_string!(wrapper_ref_name, "()"),
+              ))
+            } else {
+              // module.exports = require_xxx();
+              Some(concat_string!("module.exports = ", wrapper_ref_name, "();\n"))
+            }
           }
           OutputFormat::Iife | OutputFormat::Umd => {
             if matches!(&export_mode, Some(OutputExports::Named)) {

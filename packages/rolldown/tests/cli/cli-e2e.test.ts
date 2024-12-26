@@ -148,6 +148,13 @@ describe('config', () => {
       expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
 
+    it('should allow loading ts config from non-working dir', async () => {
+      const cwd = cliFixturesDir()
+      const status = await $({ cwd })`rolldown -c ./ext-ts/rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+
     it('should allow multiply options', async () => {
       const cwd = cliFixturesDir('config-multiply-options')
       const status = await $({

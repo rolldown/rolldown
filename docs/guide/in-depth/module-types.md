@@ -1,6 +1,6 @@
 # Module Types
 
-As a web bundler, JavaScript is not the only file type with built-in support in Rolldown. For example, Rolldown can handle TypeScript and JSX files directly, parsing and transforming them to JavaScript before bundling them. We refer to these file types with fist-class support in Rolldown as **Module Types**.
+As a web bundler, JavaScript is not the only file type with built-in support in Rolldown. For example, Rolldown can handle TypeScript and JSX files directly, parsing and transforming them to JavaScript before bundling them. We refer to these file types with first-class support in Rolldown as **Module Types**.
 
 ## How module types affect users
 

@@ -8,7 +8,7 @@ This page documents some notable features in Rolldown that do not have built-in 
 - Default: `browser`
 - Possible values: `browser | node | neutral`
 
-Similar to [esbuild's `platform` option](https://esbuild.github.io/api/#platform), this option some sensible defaults regarding module resolution and how to handle `process.env.NODE_ENV`.
+Similar to [esbuild's `platform` option](https://esbuild.github.io/api/#platform), this option provides some sensible defaults regarding module resolution and how to handle `process.env.NODE_ENV`.
 
 **Notable differences from esbuild:**
 

@@ -2,7 +2,7 @@
 
 ## Skipping the build step is impractical
 
-With the general availability of native ES modules and HTTP/2 in modern browsers, some developers are advocating for a unbundled approach for shipping web applications, even in production. While this approach works for smaller applications, in our opinion bundling is still very much necessary if you are shipping anything non-trivial and care about performance (which translates to better user experience).
+With the general availability of native ES modules and HTTP/2 in modern browsers, some developers are advocating for an unbundled approach for shipping web applications, even in production. While this approach works for smaller applications, in our opinion bundling is still very much necessary if you are shipping anything non-trivial and care about performance (which translates to better user experience).
 
 Even in a polished unbundled deployment model, a build step is still often unavoidable. Take Rails 8's default import-map-based approach for example: all JavaScript assets still go through a build step in order to fingerprint the assets and generate the import map and modulepreload directives. It's just handled via `importmap-rails` and Propshaft instead of a JavaScript bundler.
 
@@ -55,7 +55,7 @@ With these factors combined, users download less code, and your servers use less
 
 ## Improve JavaScript execution performance
 
-JavaScript is a interpreted language, and modern JavaScript engines often employ advanced JIT compilation to make it run faster. However, there is also non-trivial cost involved in parsing and compiling JavaScript.
+JavaScript is an interpreted language, and modern JavaScript engines often employ advanced JIT compilation to make it run faster. However, there is also non-trivial cost involved in parsing and compiling JavaScript.
 
 Sending less JavaScript code not only saves bandwidth - it also means less JavaScript needs to be compiled and evaluated in the browser, leading to faster application startup time.
 
@@ -63,4 +63,4 @@ Some bundlers / minifiers also can perform optimizations like constant folding /
 
 ---
 
-In conclusion, bundling is still a beneficial and in many cases a necessary step in web development, and will continue to be so in the foreseeable future.
+In conclusion, bundling is still a beneficial, and in many cases necessary step in web development, and will continue to be so in the foreseeable future.

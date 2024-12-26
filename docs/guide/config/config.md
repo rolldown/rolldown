@@ -53,3 +53,11 @@ export default defineConfig([
 _We’re planning to use JSON Schema to automatically generate the configuration options here in the future. Stay tuned!_
 
 For the time being, you can refer to the `/packages/rolldown/src/options` folder for the available options (utilizing the `zod` schema).
+
+<script setup>
+import { data } from '../../components/options-doc.data.ts'
+</script>
+
+```js-vue
+{{data}}
+```

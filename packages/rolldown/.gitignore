@@ -2,3 +2,4 @@
 *.node
 *.wasm
 tests/watch/temp
+options-doc.json

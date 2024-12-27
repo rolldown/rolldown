@@ -957,12 +957,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           match &mut default_decl.declaration {
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
-              let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+              match expr {
+                Expression::Identifier(_id)
+                  if self
+                    .ctx
+                    .module
+                    .default_export_ref
+                    .is_safe_to_remove_direct_default_export_stmt_that_reference_to_this_symbol(
+                      self.ctx.symbol_db,
+                    ) =>
+                {
+                  // Remove this statement by ignoring it
+                  return;
+                }
+                _ => {
+                  // "export default [expr];" => "var default_export_ref = [expr];"
+                  let canonical_name_for_default_export_ref =
+                    self.canonical_name_for(self.ctx.module.default_export_ref);
+                  top_stmt = self
+                    .snippet
+                    .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+                }
+              }
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"

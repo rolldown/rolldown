@@ -111,7 +111,6 @@ let bar$11 = 123;
 var foo$3 = class foo$3 {
 	static x = new foo$3();
 };
-var interface_merged_default = foo$3;
 let bar$10 = 123;
 
 //#endregion
@@ -179,7 +178,7 @@ var entry_default = [
 	bar$12,
 	declare_let_default,
 	bar$11,
-	interface_merged_default,
+	foo$3,
 	bar$10,
 	interface_nested_default,
 	bar$9,
@@ -205,7 +204,7 @@ export { entry_default as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,37 +1,39 @@
+@@ -1,37 +1,38 @@
  var declare_class_default = foo;
 -var bar = 123;
 +var bar$12 = 123;
@@ -222,7 +221,6 @@ export { entry_default as default };
 -var interface_merged_default = foo2;
 -var bar3 = 123;
 -if (true) {}
-+var interface_merged_default = foo$3;
 +var bar$10 = 123;
  var interface_nested_default = foo;
 -var bar4 = 123;
@@ -274,7 +272,7 @@ export { entry_default as default };
 +var bar$1 = 123;
 +var type_only_namespace_exported_default = foo;
 +var bar = 123;
-+var entry_default = [declare_class_default, bar$12, declare_let_default, bar$11, interface_merged_default, bar$10, interface_nested_default, bar$9, type_nested_default, bar$8, value_namespace_default, bar$7, value_namespace_merged_default, bar$6, bar$5, bar$4, bar$3, bar$2, bar$1, bar];
++var entry_default = [declare_class_default, bar$12, declare_let_default, bar$11, foo$3, bar$10, interface_nested_default, bar$9, type_nested_default, bar$8, value_namespace_default, bar$7, value_namespace_merged_default, bar$6, bar$5, bar$4, bar$3, bar$2, bar$1, bar];
  export {entry_default as default};
 
 ```

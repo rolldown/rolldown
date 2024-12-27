@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -21,7 +22,6 @@ let bar$11 = 123;
 var foo$3 = class foo$3 {
 	static x = new foo$3();
 };
-var interface_merged_default = foo$3;
 let bar$10 = 123;
 
 //#endregion
@@ -89,7 +89,7 @@ var entry_default = [
 	bar$12,
 	declare_let_default,
 	bar$11,
-	interface_merged_default,
+	foo$3,
 	bar$10,
 	interface_nested_default,
 	bar$9,

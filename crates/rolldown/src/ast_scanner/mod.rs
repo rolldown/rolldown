@@ -31,7 +31,7 @@ use rolldown_common::{
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_rstr::Rstr;
-use rolldown_std_utils::PathExt;
+use rolldown_std_utils::{OptionExt, PathExt};
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -555,9 +555,44 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scopes.symbol_id_for(ref_id, &self.result.symbol_ref_db)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
-    use oxc::ast::ast::ExportDefaultDeclarationKind;
+    // `export default [expr]` would be converted to `var default_symbol = [expr]` to ensure that there's no live binding
+    // between the default export and the original expression.
+    // For example,
+    // ```js
+    // // foo.js
+    // let foo = 1;
+    // export default foo;
+    // export const updateFoo = () => foo++;
+    // // main.js
+    // import foo, { updateFoo } from './foo.js';
+    // console.log(foo); // 1
+    // updateFoo();
+    // console.log(foo); // Still 1, because live binding is not kept in this case following the spec.
+    // ```
+    // However, thing is different for `export { foo as default }`. In this pattern , `default` becomes a live binding and
+    // you'll get `2` in the second `console.log(foo)`.
+    // In rolldown, we transform `export default [expr]` to `var default_symbol = [expr]` to trigger a copy of the value
+    // to ensure that there's no live binding.
+
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      ast::ExportDefaultDeclarationKind::Identifier(id_ref) => {
+        if let Some(sym_ref) = self
+          .resolve_symbol_from_reference(id_ref)
+          .map(|sym_id| SymbolRef::from((self.idx, sym_id)))
+        {
+          self.ensure_analyzed_symbol_ref(sym_ref);
+          let ref_flags = sym_ref.flags_mut(&mut self.result.symbol_ref_db);
+          ref_flags.insert(SymbolRefFlags::DIRECT_DEFAULT_EXPORT);
+
+          if ref_flags.intersects(SymbolRefFlags::IS_CONST | SymbolRefFlags::IS_NOT_REASSIGNED) {
+            Some((self.resolve_symbol_from_reference(id_ref).unpack(), id_ref.span))
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
         .id
         .as_ref()
@@ -567,11 +602,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .as_ref()
         .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      _ => None,
     };
 
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
 
+    self.result.default_export_ref = (self.idx, reference).into();
     self.add_declared_id(reference);
     self.add_local_default_export(reference, span);
   }
@@ -741,6 +778,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           flags.contains(ScopeFlags::Function) && !flags.contains(ScopeFlags::Arrow)
         })
       })
+  }
+
+  /// Notes(hyf0):
+  /// - Will be refactored while refactor `SymbolRefDb`
+  /// - A temporary solution to reduce duplicated code
+  pub fn ensure_analyzed_symbol_ref(&mut self, sym_ref: SymbolRef) {
+    let is_const = self.result.symbol_ref_db.get_flags(sym_ref.symbol).is_const_variable();
+    // If there is any write reference to the local variable, it is reassigned.
+    let is_reassigned = self
+      .scopes
+      .get_resolved_references(sym_ref.symbol, &self.result.symbol_ref_db)
+      .any(Reference::is_write);
+
+    let ref_flags = sym_ref.flags_mut(&mut self.result.symbol_ref_db);
+    if is_const {
+      ref_flags.insert(SymbolRefFlags::IS_CONST);
+    }
+    if !is_reassigned {
+      ref_flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
+    }
   }
 }
 

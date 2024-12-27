@@ -142,7 +142,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
-- entry-!~{000}~.js => entry-DEf6BuM2.js
+- entry-!~{000}~.js => entry-BzUlHViz.js
 
 # tests/esbuild/dce/drop_labels
 
@@ -3498,7 +3498,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry-Dvm1Kh44.js
+- entry-!~{000}~.js => entry-CZvlCpOA.js
 
 # tests/esbuild/ts/ts_export_equals
 
@@ -4272,9 +4272,9 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/asset
 
-- main-!~{000}~.js => main-DOQUAn8i.js
+- main-!~{000}~.js => main-DI4amju1.js
 - assets/foo-D91Zmg_q.txt
-- main-DOQUAn8i.js.map
+- main-DI4amju1.js.map
 
 # tests/rolldown/function/module_types/base64/binary
 
@@ -4298,11 +4298,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/module_types/binary/node
 
-- main-!~{000}~.js => main-D7ClqlDG.js
+- main-!~{000}~.js => main-CuAxS_Kh.js
 
 # tests/rolldown/function/module_types/binary/text
 
-- main-!~{000}~.js => main-CIxS1K5q.js
+- main-!~{000}~.js => main-C9E9IvnQ.js
 
 # tests/rolldown/function/module_types/dataurl/binary
 
@@ -4528,7 +4528,7 @@ snapshot_kind: text
 
 # tests/rolldown/issues/376
 
-- main-!~{000}~.js => main-CfuHZZW7.js
+- main-!~{000}~.js => main-UPq34K30.js
 
 # tests/rolldown/misc/ambiguous_star_export
 
@@ -4594,7 +4594,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/invalid_ident_repr
 
-- main-!~{000}~.js => main-BlImAHc4.js
+- main-!~{000}~.js => main-DnqeQSW5.js
 
 # tests/rolldown/misc/merge_external_import
 

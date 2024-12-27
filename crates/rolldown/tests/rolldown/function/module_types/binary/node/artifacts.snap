@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -15,8 +16,7 @@ var text_default = __toBinaryNode("IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn
 //#endregion
 //#region main.js
 assert(text_default instanceof Uint8Array);
-var main_default = text_default;
 
 //#endregion
-export { main_default as default };
+export { text_default as default };
 ```

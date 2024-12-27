@@ -22,22 +22,22 @@ const myFunc = () => {
 	;
 	console.log("keep");
 };
-var entry_default = myFunc;
 
 //#endregion
-export { entry_default as default };
+export { myFunc as default };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,6 @@
+@@ -1,5 +1,5 @@
  var myFunc = () => {
 +    ;
      console.log("keep");
  };
- var entry_default = myFunc;
- export {entry_default as default};
+-var entry_default = myFunc;
+-export {entry_default as default};
++export {myFunc as default};
 
 ```

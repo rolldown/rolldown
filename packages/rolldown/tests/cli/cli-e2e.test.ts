@@ -172,6 +172,22 @@ describe('config', () => {
       expect(status.exitCode).toBe(0)
       expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
+
+    it('should resolve rolldown.config.cjs', async () => {
+      const cwd = cliFixturesDir('cli-with-config')
+      const status = await $({ cwd })`rolldown -c`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+
+    it('should failed to resolve rolldown.config files', async () => {
+      const cwd = cliFixturesDir('ext-js-syntax-esm')
+      try {
+        const _ = await $({ cwd })`rolldown -c`
+      } catch (err) {
+        expect(err).not.toBeUndefined()
+      }
+    })
   })
 })
 

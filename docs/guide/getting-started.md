@@ -193,10 +193,6 @@ export default defineConfig([
 
 Rolldown's plugin API is identical to that of Rollup's, so you can reuse most of the existing Rollup plugins when using Rolldown. That said, Rolldown provides many [built-in features](./features.md) that make it unnecessary to use plugins.
 
-```js
-
-```
-
 ## Using the API
 
 Rolldown provides a JavaScript API that is compatible with [Rollup's](https://rollupjs.org/javascript-api/), which separates `input` and `output` options:

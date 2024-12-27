@@ -12,19 +12,12 @@ snapshot_kind: text
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.x = 123;
-	exports.y = 456;
-} });
-
-//#endregion
-//#region lib.js
-var require_lib = __commonJS({ "lib.js"(exports, module) {
-	module.exports = require_foo();
 } });
 
 //#endregion
 //#region entry.js
-var import_lib = __toESM(require_lib());
-console.log((0, import_lib.default)(import_lib.x, import_lib.y));
+var import_foo = __toESM(require_foo());
+console.log(import_foo(import_foo.x, import_foo.y));
 
 //#endregion
 ```

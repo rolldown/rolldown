@@ -208,3 +208,9 @@ exports[`config > no package.json > should bundle in ext-js-syntax-cjs 1`] = `
 
 "
 `;
+
+exports[`config > no package.json > should resolve rolldown.config.cjs 1`] = `
+"<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
+`;

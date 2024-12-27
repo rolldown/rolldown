@@ -181,7 +181,7 @@ describe('config', () => {
     })
 
     it('should failed to resolve rolldown.config files', async () => {
-      const cwd = cliFixturesDir('ext-js-syntax-esm')
+      const cwd = cliFixturesDir('cli-without-config')
       try {
         const _ = await $({ cwd })`rolldown -c`
       } catch (err) {

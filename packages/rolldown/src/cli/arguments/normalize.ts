@@ -42,7 +42,7 @@ export function normalizeCliOptions(
     watch: options.watch ?? false,
   } as NormalizedCliOptions
   if (typeof options.config === 'string') {
-    result.config = options.config ? options.config : 'rolldown.config.js'
+    result.config = options.config
   }
   const reservedKeys = ['help', 'version', 'config', 'watch']
   const keysOfInput = (inputCliOptionsSchema as Z.AnyZodObject).keyof()._def

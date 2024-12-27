@@ -8,7 +8,7 @@ import { version } from '../../package.json'
 async function main() {
   const cliOptions = parseCliArguments()
 
-  if (cliOptions.config) {
+  if (cliOptions.config || cliOptions.config === '') {
     await bundleWithConfig(cliOptions.config, cliOptions)
     return
   }

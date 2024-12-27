@@ -88,6 +88,18 @@ impl SymbolRef {
       Module::External(_) => true,
     }
   }
+
+  pub fn is_safe_to_remove_direct_default_export_stmt_that_reference_to_this_symbol(
+    &self,
+    db: &SymbolRefDb,
+  ) -> bool {
+    let Some(flags) = self.flags(db) else {
+      return false;
+    };
+
+    flags.contains(SymbolRefFlags::DIRECT_DEFAULT_EXPORT | SymbolRefFlags::IS_NOT_REASSIGNED)
+      || flags.contains(SymbolRefFlags::DIRECT_DEFAULT_EXPORT | SymbolRefFlags::IS_CONST)
+  }
 }
 
 /// passing a `SymbolRef`, it will return it's string repr, the format:

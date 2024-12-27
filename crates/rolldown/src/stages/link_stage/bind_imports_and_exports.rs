@@ -622,6 +622,7 @@ impl BindImportsAndExportsContext<'_> {
           }
           Specifier::Literal(alias) => {
             if alias.as_str() == "default" {
+              // SAFETY: `ExternalModule` has no `ExportsKind`, here the module must be `NormalModule`
               let module = self.index_modules[tracker.importee].as_normal().unwrap();
               if module.ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
                 MatchImportKind::NormalAndNamespace {

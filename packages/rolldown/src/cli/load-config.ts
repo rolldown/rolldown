@@ -1,18 +1,11 @@
-import path from 'node:path'
 import fs from 'node:fs'
-import { ConfigExport } from '../types/config-export'
+import path from 'node:path'
+import { cwd } from 'node:process'
+import { readdir } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { rolldown } from '../api/rolldown'
-import { OutputChunk } from '../types/rolldown-output'
-
-export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
-  const file = await bundleTsConfig(configFile)
-  try {
-    return (await import(pathToFileURL(file).href)).default
-  } finally {
-    fs.unlink(file, () => {}) // Ignore errors
-  }
-}
+import type { ConfigExport } from '../types/config-export'
+import type { OutputChunk } from '../types/rolldown-output'
 
 async function bundleTsConfig(configFile: string): Promise<string> {
   const dirnameVarName = 'injected_original_dirname'
@@ -71,8 +64,30 @@ const SUPPORTED_CONFIG_FORMATS = [
   ...SUPPORTED_TS_CONFIG_FORMATS,
 ]
 
+const DEFAULT_CONFIG_BASE = 'rolldown.config'
+
+async function findConfigFileNameInCwd(): Promise<string> {
+  const filesInWorkingDirectory = new Set(await readdir(cwd()))
+  for (const extension of SUPPORTED_CONFIG_FORMATS) {
+    const fileName = `${DEFAULT_CONFIG_BASE}${extension}`
+    if (filesInWorkingDirectory.has(fileName)) return fileName
+  }
+  throw new Error('No `rolldown.config` configuration file found.')
+}
+
+export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
+  const file = await bundleTsConfig(configFile)
+  try {
+    return (await import(pathToFileURL(file).href)).default
+  } finally {
+    fs.unlink(file, () => {}) // Ignore errors
+  }
+}
+
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
-  const ext = path.extname(configPath)
+  const ext = path.extname(
+    (configPath = configPath || (await findConfigFileNameInCwd())),
+  )
 
   try {
     if (

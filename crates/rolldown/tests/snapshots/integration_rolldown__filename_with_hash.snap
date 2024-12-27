@@ -3905,6 +3905,10 @@ snapshot_kind: text
 - ./chunks/async.mjs => ./chunks/async.mjs
 - ./chunks/shared.mjs => ./chunks/shared.mjs
 
+# tests/rolldown/function/es-target
+
+- main-!~{000}~.js => main-DnkndBar.js
+
 # tests/rolldown/function/es_module/always
 
 - main-!~{000}~.js => main-Bc3gwGwX.js

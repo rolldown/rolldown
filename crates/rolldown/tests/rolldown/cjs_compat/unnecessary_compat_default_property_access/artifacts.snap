@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+
+//#region commonjs.js
+var require_commonjs = __commonJS({ "commonjs.js"(exports) {
+	exports.foo = 1e3;
+} });
+
+//#endregion
+//#region main.js
+var import_commonjs = __toESM(require_commonjs());
+console.log(`mod.foo: `, import_commonjs.foo);
+
+//#endregion
+```

@@ -22,7 +22,7 @@ var require_node = __commonJS({ "../../../../../../../node_modules/.pnpm/util-de
 //#endregion
 //#region main.js
 const exports$1 = require_node();
-node_assert.default.strictEqual(node_util.deprecate, exports$1);
+node_assert.strictEqual(node_util.deprecate, exports$1);
 
 //#endregion
 ```

@@ -5,7 +5,7 @@ use oxc::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
       MemberExpression, Statement, VariableDeclarationKind,
     },
-    Comment, NONE,
+    AstType, Comment, NONE,
   },
   semantic::SymbolId,
   span::{Atom, GetSpan, SPAN},
@@ -37,6 +37,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
   pub comments: oxc::allocator::Vec<'ast, Comment>,
+  pub ancestor_type: Vec<AstType>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -197,14 +198,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if let Some(ns_alias) = namespace_alias {
-      expr = ast::Expression::StaticMemberExpression(
-        self.snippet.builder.alloc_static_member_expression(
-          SPAN,
-          expr,
-          self.snippet.id_name(&ns_alias.property_name, SPAN),
-          false,
-        ),
-      );
+      expr = if ns_alias.property_name.as_str() == "default"
+        && matches!(self.ancestor_type.last(), Some(&AstType::MemberExpression))
+      {
+        expr
+      } else {
+        ast::Expression::StaticMemberExpression(
+          self.snippet.builder.alloc_static_member_expression(
+            SPAN,
+            expr,
+            self.snippet.id_name(&ns_alias.property_name, SPAN),
+            false,
+          ),
+        )
+      };
       if preserve_this_semantic_if_needed {
         expr = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), expr);
       }

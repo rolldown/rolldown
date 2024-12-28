@@ -24,11 +24,11 @@ var shared_default = count;
 //#endregion
 //#region async-entry.js
 reset();
-node_assert.default.strictEqual(shared_default, 0);
-node_assert.default.strictEqual(shared_default, shared_default);
+node_assert.strictEqual(shared_default, 0);
+node_assert.strictEqual(shared_default, shared_default);
 inc();
-node_assert.default.strictEqual(shared_default, 0);
-node_assert.default.strictEqual(shared_default, shared_default);
+node_assert.strictEqual(shared_default, 0);
+node_assert.strictEqual(shared_default, shared_default);
 
 //#endregion
 ```

@@ -436,6 +436,7 @@ export interface BindingOutputOptions {
   advancedChunks?: BindingAdvancedChunksOptions
   comments?: 'none' | 'preserve-legal'
   polyfillRequire?: boolean
+  target?: string
 }
 
 export interface BindingPluginContextResolvedId {

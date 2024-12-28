@@ -108,4 +108,5 @@ pub struct BindingOutputOptions {
   #[napi(ts_type = "'none' | 'preserve-legal'")]
   pub comments: Option<String>,
   pub polyfill_require: Option<bool>,
+  pub target: Option<String>,
 }

@@ -54,6 +54,7 @@ OPTIONS
   --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --shim-missing-exports      Create shim variables for missing exports.
+  --target <target>           The JavaScript target environment.
 
 EXAMPLES
 

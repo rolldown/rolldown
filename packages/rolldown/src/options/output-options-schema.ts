@@ -155,6 +155,23 @@ const outputOptionsSchema = z.strictObject({
     .enum(['none', 'preserve-legal'])
     .describe('Control comments in the output')
     .optional(),
+  target: z
+    .enum([
+      'es6',
+      'es2015',
+      'es2016',
+      'es2017',
+      'es2018',
+      'es2019',
+      'es2020',
+      'es2021',
+      'es2022',
+      'es2023',
+      'es2024',
+      'esnext',
+    ])
+    .describe('The JavaScript target environment.')
+    .optional(),
 }) satisfies z.ZodType<OutputOptions>
 
 const getAddonDescription = (

@@ -239,8 +239,7 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     drop_labels: input_options.drop_labels,
-    // the target is not ready to expose yet
-    target: None,
+    target: output_options.target.as_deref().map(std::str::FromStr::from_str).transpose()?,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
   };

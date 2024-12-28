@@ -27,12 +27,12 @@ pub enum ESTarget {
 }
 
 impl FromStr for ESTarget {
-  type Err = String;
+  type Err = anyhow::Error;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
       "es5" => Ok(Self::Es5),
-      "es2015" => Ok(Self::Es2015),
+      "es2015" | "es6" => Ok(Self::Es2015),
       "es2016" => Ok(Self::Es2016),
       "es2017" => Ok(Self::Es2017),
       "es2018" => Ok(Self::Es2018),
@@ -43,7 +43,7 @@ impl FromStr for ESTarget {
       "es2023" => Ok(Self::Es2023),
       "es2024" => Ok(Self::Es2024),
       "esnext" => Ok(Self::EsNext),
-      _ => Err(format!("Invalid target \"{s}\".")),
+      _ => Err(anyhow::anyhow!("Invalid target \"{s}\".")),
     }
   }
 }

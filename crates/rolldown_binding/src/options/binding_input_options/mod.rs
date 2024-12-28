@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use binding_target::BindingTarget;
 // cSpell:disable
 use binding_watch_option::BindingWatchOption;
 use rustc_hash::FxBuildHasher;
@@ -24,7 +23,6 @@ mod binding_jsx;
 mod binding_watch_option;
 // mod binding_jsx_options;
 mod binding_resolve_options;
-mod binding_target;
 mod treeshake;
 
 #[napi(object, object_to_js = false)]
@@ -87,7 +85,10 @@ pub struct BindingInputOptions {
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
-  pub target: Option<BindingTarget>,
+  #[napi(
+    ts_type = "'ES2015'| 'ES2016'| 'ES2017'| 'ES2018'| 'ES2019'| 'ES2020'| 'ES2021'| 'ES2022'| 'ES2023'| 'ES2024'| 'ESNext'"
+  )]
+  pub target: Option<String>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

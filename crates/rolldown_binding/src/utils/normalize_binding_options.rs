@@ -19,6 +19,7 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
@@ -239,7 +240,11 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     drop_labels: input_options.drop_labels,
-    target: input_options.target.map(Into::into),
+    target: input_options
+      .target
+      .map(|target| rolldown::ESTarget::from_str(&target))
+      .transpose()
+      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
   };

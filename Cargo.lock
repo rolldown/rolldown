@@ -2504,6 +2504,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "bitflags 2.6.0",
+ "cow-utils",
  "dashmap 6.1.0",
  "either",
  "glob-match",

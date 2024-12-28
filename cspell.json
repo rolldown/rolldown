@@ -212,7 +212,8 @@
     "मेरेशॉर्ट्सखाओ",
     "bluesky",
     "voidzero",
-    "minifiers"
+    "minifiers",
+    "esmodule"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

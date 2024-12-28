@@ -133,6 +133,7 @@ bitflags! {
     pub struct EcmaModuleAstUsage: u8 {
         const ModuleRef = 1;
         const ExportsRef = 1 << 1;
+        const EsModuleFlag = 1 << 2;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

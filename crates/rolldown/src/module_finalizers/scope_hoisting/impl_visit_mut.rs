@@ -14,6 +14,12 @@ use rolldown_ecmascript_utils::{ExpressionExt, TakeIn};
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
+  fn enter_node(&mut self, kind: oxc::ast::AstType) {
+    self.ancestor_type.push(kind);
+  }
+  fn leave_node(&mut self, _: oxc::ast::AstType) {
+    self.ancestor_type.pop();
+  }
   #[allow(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and

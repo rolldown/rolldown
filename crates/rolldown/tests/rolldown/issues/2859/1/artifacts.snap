@@ -68,7 +68,7 @@ const assert = __toESM(require("assert"));
 //#region main.js
 Promise.resolve().then(function() {
 	return require("./lib.js");
-}).then((exports$1) => assert.default.deepStrictEqual({ ...exports$1 }, {
+}).then((exports$1) => assert.deepStrictEqual({ ...exports$1 }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

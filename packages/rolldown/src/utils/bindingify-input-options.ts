@@ -74,7 +74,6 @@ export function bindingifyInputOptions(
     dropLabels: inputOptions.dropLabels,
     keepNames: inputOptions.keepNames,
     checks: inputOptions.checks,
-    target: inputOptions.target,
   }
 }
 

@@ -240,7 +240,7 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     drop_labels: input_options.drop_labels,
-    target: input_options
+    target: output_options
       .target
       .map(|target| rolldown::ESTarget::from_str(&target))
       .transpose()

@@ -108,4 +108,8 @@ pub struct BindingOutputOptions {
   #[napi(ts_type = "'none' | 'preserve-legal'")]
   pub comments: Option<String>,
   pub polyfill_require: Option<bool>,
+  #[napi(
+    ts_type = "'ES2015'| 'ES2016'| 'ES2017'| 'ES2018'| 'ES2019'| 'ES2020'| 'ES2021'| 'ES2022'| 'ES2023'| 'ES2024'| 'ESNext'"
+  )]
+  pub target: Option<String>,
 }

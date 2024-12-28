@@ -58,6 +58,7 @@ export function bindingifyOutputOptions(
     inlineDynamicImports: outputOptions.inlineDynamicImports,
     advancedChunks: outputOptions.advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
+    target: outputOptions.target,
   }
 }
 

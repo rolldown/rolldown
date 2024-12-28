@@ -23,6 +23,19 @@ export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
 
 export type GlobalsFunction = (name: string) => string
 
+export type ESTarget =
+  | 'ES2015'
+  | 'ES2016'
+  | 'ES2017'
+  | 'ES2018'
+  | 'ES2019'
+  | 'ES2020'
+  | 'ES2021'
+  | 'ES2022'
+  | 'ES2023'
+  | 'ES2024'
+  | 'ESNext'
+
 export interface OutputOptions {
   dir?: string
   file?: string
@@ -77,6 +90,7 @@ export interface OutputOptions {
   comments?: 'none' | 'preserve-legal'
   plugins?: RolldownOutputPluginOption
   polyfillRequire?: boolean
+  target?: ESTarget
 }
 
 interface OverwriteOutputOptionsForCli {
@@ -90,6 +104,7 @@ interface OverwriteOutputOptionsForCli {
     minSize?: number
     minShareCount?: number
   }
+  target?: string
 }
 
 export type OutputCliOptions = Omit<

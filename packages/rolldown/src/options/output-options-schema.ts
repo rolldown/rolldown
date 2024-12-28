@@ -155,6 +155,21 @@ const outputOptionsSchema = z.strictObject({
     .enum(['none', 'preserve-legal'])
     .describe('Control comments in the output')
     .optional(),
+  target: z
+    .enum([
+      'ES2015',
+      'ES2016',
+      'ES2017',
+      'ES2018',
+      'ES2019',
+      'ES2020',
+      'ES2021',
+      'ES2022',
+      'ES2023',
+      'ES2024',
+      'ESNext',
+    ])
+    .optional(),
 }) satisfies z.ZodType<OutputOptions>
 
 const getAddonDescription = (
@@ -205,6 +220,29 @@ export const outputCliOptionsSchema: z.ZodType<OutputCliOptions> =
             .describe('Minimum share count of the chunk')
             .optional(),
         })
+        .optional(),
+      target: z
+        .string()
+        .refine(
+          (val: string) =>
+            [
+              'es2015',
+              'es2016',
+              'es2017',
+              'es2018',
+              'es2019',
+              'es2020',
+              'es2021',
+              'es2022',
+              'es2023',
+              'es2024',
+              'esnext',
+            ].includes(val.toLowerCase()),
+          (val: string) => ({
+            message: `Invalid target "${val}"`,
+          }),
+        )
+        .describe('The JavaScript target environment.')
         .optional(),
     })
     .omit({

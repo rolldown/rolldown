@@ -85,10 +85,6 @@ pub struct BindingInputOptions {
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
-  #[napi(
-    ts_type = "'ES2015'| 'ES2016'| 'ES2017'| 'ES2018'| 'ES2019'| 'ES2020'| 'ES2021'| 'ES2022'| 'ES2023'| 'ES2024'| 'ESNext'"
-  )]
-  pub target: Option<String>,
 }
 
 pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

@@ -2,4 +2,3 @@
 *.node
 *.wasm
 tests/watch/temp
-!tests/fixtures/misc/target

@@ -28,7 +28,7 @@ pub enum ESTarget {
 }
 
 impl FromStr for ESTarget {
-  type Err = String;
+  type Err = anyhow::Error;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     let lowercase = s.cow_to_lowercase();
@@ -45,7 +45,7 @@ impl FromStr for ESTarget {
       "es2023" => Ok(Self::Es2023),
       "es2024" => Ok(Self::Es2024),
       "esnext" => Ok(Self::EsNext),
-      _ => Err(format!("Invalid target \"{s}\".")),
+      _ => Err(anyhow::anyhow!("Invalid target \"{s}\".")),
     }
   }
 }

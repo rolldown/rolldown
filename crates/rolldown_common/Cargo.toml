@@ -20,7 +20,6 @@ workspace = true
 anyhow              = { workspace = true }
 arcstr              = { workspace = true }
 bitflags            = { workspace = true }
-cow-utils           = { workspace = true }
 dashmap             = { workspace = true }
 either              = { workspace = true }
 glob-match          = { workspace = true }

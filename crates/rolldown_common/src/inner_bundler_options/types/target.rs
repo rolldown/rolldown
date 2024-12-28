@@ -1,5 +1,4 @@
 // cspell:ignore Estarget
-use cow_utils::CowUtils;
 use oxc::transformer::ESTarget as OxcEstarget;
 use std::str::FromStr;
 
@@ -31,10 +30,9 @@ impl FromStr for ESTarget {
   type Err = anyhow::Error;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let lowercase = s.cow_to_lowercase();
-    match lowercase.as_ref() {
+    match s {
       "es5" => Ok(Self::Es5),
-      "es2015" => Ok(Self::Es2015),
+      "es2015" | "es6" => Ok(Self::Es2015),
       "es2016" => Ok(Self::Es2016),
       "es2017" => Ok(Self::Es2017),
       "es2018" => Ok(Self::Es2018),

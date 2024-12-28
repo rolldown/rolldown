@@ -4,13 +4,13 @@ import { defineTest } from '@tests'
 export default defineTest({
   config: {
     output: {
-      target: 'ES2015',
+      target: 'es2015',
     },
     plugins: [
       {
         name: 'test-plugin',
         outputOptions: function (options) {
-          expect(options.target).toBe('ES2015')
+          expect(options.target).toBe('es2015')
         },
       },
     ],

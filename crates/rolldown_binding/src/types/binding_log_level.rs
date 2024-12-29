@@ -1,6 +1,5 @@
-use std::fmt::{self, Display, Formatter};
-
 use napi_derive::napi;
+use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 #[napi]

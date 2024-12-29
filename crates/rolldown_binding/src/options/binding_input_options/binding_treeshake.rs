@@ -11,6 +11,7 @@ use crate::{
 
 pub(crate) type BindingModuleSideEffects =
   Either3<bool, Vec<BindingModuleSideEffectsRule>, JsCallback<(String, bool), Option<bool>>>;
+
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingTreeshake {
   #[napi(
@@ -19,6 +20,7 @@ pub struct BindingTreeshake {
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
 }
+
 impl Debug for BindingTreeshake {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingTreeshake")

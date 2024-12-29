@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use rolldown_common::{ModuleId, RenderedModule};
 use rustc_hash::{FxBuildHasher, FxHashMap};
 
-use super::binding_rendered_module::BindingRenderedModule;
+use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi_derive::napi(object)]
 #[derive(Default, Debug)]
@@ -33,7 +33,7 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
       module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
       exports: value.exports.into_iter().map(|x| x.to_string()).collect(),
       file_name: value.filename.to_string(),
-      modules: into_binding_chunk_modules(value.modules),
+      modules: into_binding_chunk_modules(&value.modules),
       imports: value.imports.iter().map(ArcStr::to_string).collect(),
       dynamic_imports: value.dynamic_imports.iter().map(ArcStr::to_string).collect(),
     }
@@ -42,7 +42,7 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
 
 #[allow(clippy::implicit_hasher)]
 pub fn into_binding_chunk_modules(
-  modules: FxHashMap<ModuleId, RenderedModule>,
+  modules: &FxHashMap<ModuleId, RenderedModule>,
 ) -> HashMap<String, BindingRenderedModule, FxBuildHasher> {
-  modules.into_iter().map(|(key, value)| (key.to_string(), value.into())).collect()
+  modules.iter().map(|(key, value)| (key.to_string(), value.clone().into())).collect()
 }

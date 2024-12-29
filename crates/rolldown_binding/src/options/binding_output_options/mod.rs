@@ -1,15 +1,19 @@
-mod types;
+mod binding_advanced_chunks_options;
+mod binding_pre_rendered_chunk;
 
-use crate::types::js_callback::{JsCallback, MaybeAsyncJsCallback};
-
-use super::super::types::binding_rendered_chunk::RenderedChunk;
-use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
-use crate::types::binding_pre_rendered_chunk::PreRenderedChunk;
 use derive_more::Debug;
 use napi::Either;
 use napi_derive::napi;
 use rustc_hash::FxHashMap;
-use types::binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+
+use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+use binding_pre_rendered_chunk::PreRenderedChunk;
+
+use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::types::{
+  binding_rendered_chunk::RenderedChunk,
+  js_callback::{JsCallback, MaybeAsyncJsCallback},
+};
 
 pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 pub type ChunkFileNamesOutputOption = Either<String, JsCallback<PreRenderedChunk, String>>;

@@ -1,29 +1,29 @@
-use std::collections::HashMap;
-
-// cSpell:disable
-use binding_watch_option::BindingWatchOption;
-use rustc_hash::FxBuildHasher;
-
-use crate::types::{
-  binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
-};
-use binding_inject_import::BindingInjectImport;
-use derive_more::Debug;
-use napi_derive::napi;
-
-use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
-use binding_jsx::BindingJsx;
-
-use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 mod binding_checks_options;
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
 mod binding_jsx;
-mod binding_watch_option;
-// mod binding_jsx_options;
 mod binding_resolve_options;
-mod treeshake;
+mod binding_treeshake;
+mod binding_watch_option;
+
+use derive_more::Debug;
+use napi_derive::napi;
+use rustc_hash::FxBuildHasher;
+use std::collections::HashMap;
+
+use binding_inject_import::BindingInjectImport;
+use binding_input_item::BindingInputItem;
+use binding_jsx::BindingJsx;
+use binding_resolve_options::BindingResolveOptions;
+use binding_watch_option::BindingWatchOption;
+
+use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::types::{
+  binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
+};
+
+pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -71,7 +71,7 @@ pub struct BindingInputOptions {
   // extra
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
-  pub treeshake: Option<treeshake::BindingTreeshake>,
+  pub treeshake: Option<binding_treeshake::BindingTreeshake>,
 
   pub module_types: Option<HashMap<String, String, FxBuildHasher>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
@@ -86,5 +86,3 @@ pub struct BindingInputOptions {
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
 }
-
-pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;

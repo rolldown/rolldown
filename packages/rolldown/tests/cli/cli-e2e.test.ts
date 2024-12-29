@@ -204,10 +204,10 @@ describe('watch cli', () => {
     const controller = new AbortController()
     execa({
       cwd,
+      reject: false,
       cancelSignal: controller.signal,
-      gracefulCancel: true,
     })`rolldown index.ts -d dist -w -s`
-    waitUtil(() => {
+    await waitUtil(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true)
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true)
     })
@@ -219,10 +219,10 @@ describe('watch cli', () => {
     const controller = new AbortController()
     execa({
       cwd,
+      reject: false,
       cancelSignal: controller.signal,
-      gracefulCancel: true,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`
-    waitUtil(() => {
+    await waitUtil(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(
         true,
       )
@@ -238,10 +238,10 @@ describe('watch cli', () => {
     const controller = new AbortController()
     execa({
       cwd,
+      reject: false,
       cancelSignal: controller.signal,
-      gracefulCancel: true,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`
-    waitUtil(() => {
+    await waitUtil(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(
         true,
       )

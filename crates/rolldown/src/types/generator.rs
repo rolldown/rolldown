@@ -58,7 +58,7 @@ impl GenerateContext<'_> {
         if is_symbol_in_other_chunk {
           // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
           // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
-          // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
+          // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
 
           let exported_name = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
             .exports_to_other_chunks[&canonical_ref];

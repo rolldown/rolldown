@@ -56,7 +56,7 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn modules(&self) -> HashMap<String, BindingRenderedModule, FxBuildHasher> {
-    into_binding_chunk_modules(self.inner.modules.clone())
+    into_binding_chunk_modules(&self.inner.modules)
   }
 
   #[napi(getter)]

@@ -68,7 +68,7 @@ test: test-rust test-node
 # run all tests and update snapshot
 test-update:
     just test-rust
-    just test-node all -u
+    just test-node all --update
 
 test-rust:
     cargo test --workspace --exclude rolldown_binding
@@ -81,12 +81,13 @@ test-node-only preset="all" *args="":
     just _test-node-{{ preset }} {{ args }}
 
 _test-node-all *args="":
-    pnpm run --recursive --parallel --filter=!rollup-tests test {{ args }}
+    just _test-node-rolldown {{ args }}
     # We run rollup tests separately to have a clean output.
     pnpm run --filter rollup-tests test
 
 _test-node-rolldown *args:
-    pnpm run --filter rolldown test {{ args }}
+    pnpm run --filter rolldown-tests test:main {{ args }}
+    pnpm run --filter rolldown-tests test:watcher {{ args }}
 
 _test-node-rollup command="":
     pnpm run --filter rollup-tests test{{ command }}

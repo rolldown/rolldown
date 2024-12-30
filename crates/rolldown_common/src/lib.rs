@@ -114,7 +114,7 @@ pub use crate::{
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,
   types::output::{Output, OutputAsset},
-  types::output_chunk::OutputChunk,
+  types::output_chunk::{Modules, OutputChunk},
   types::outputs_diagnostics::OutputsDiagnostics,
   types::package_json::PackageJson,
   types::rendered_module::RenderedModule,

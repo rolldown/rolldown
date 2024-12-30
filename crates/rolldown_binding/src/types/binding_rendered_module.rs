@@ -4,6 +4,7 @@ use rolldown_common::RenderedModule;
 use std::fmt::Debug;
 
 #[napi]
+#[derive(Clone)]
 pub struct BindingRenderedModule {
   #[napi(skip)]
   pub inner: RenderedModule,

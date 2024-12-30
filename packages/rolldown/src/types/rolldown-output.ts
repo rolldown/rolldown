@@ -33,6 +33,15 @@ export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   modules: {
     [id: string]: RenderedModule
   }
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId: string | null
+  moduleIds: Array<string>
+  exports: Array<string>
+  fileName: string
+  imports: Array<string>
+  dynamicImports: Array<string>
 }
 
 export interface OutputChunk {

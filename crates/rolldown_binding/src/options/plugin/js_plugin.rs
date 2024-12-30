@@ -5,15 +5,17 @@ use crate::types::{
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{
-  Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, ResolvedIdHookFilter,
-  TransformHookFilter,
+  Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, TransformHookFilter,
 };
-use std::{borrow::Cow, ops::Deref, sync::Arc};
+use rolldown_utils::pattern_filter;
+use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
+use sugar_path::SugarPath;
 
 use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
+    binding_js_or_regex::bindingify_string_or_regex_array,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
   BindingPluginOptions,
@@ -79,12 +81,35 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id {
+      if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
+        let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
+        let normalized_id = stabilized_path.to_string_lossy();
+
+        let exclude =
+          resolve_id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
+        let include =
+          resolve_id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+
+        let is_filter = pattern_filter::filter(
+          exclude.as_deref(),
+          include.as_deref(),
+          args.specifier,
+          &normalized_id,
+        )
+        .inner();
+
+        if !is_filter {
+          return Ok(None);
+        }
+      }
+
       let custom = args
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
         .map(|v| *v);
-      Ok(
-        cb.await_call((
+
+      let result = cb
+        .await_call((
           ctx.clone().into(),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
@@ -94,9 +119,9 @@ impl Plugin for JsPlugin {
             custom,
           },
         ))
-        .await?
-        .map(Into::into),
-      )
+        .await?;
+
+      Ok(result.map(Into::into))
     } else {
       Ok(None)
     }
@@ -477,16 +502,6 @@ impl Plugin for JsPlugin {
     match self.inner.transform_filter {
       Some(ref item) => {
         let filter = TransformHookFilter::try_from(item.clone())?;
-        Ok(Some(filter))
-      }
-      None => Ok(None),
-    }
-  }
-
-  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    match self.inner.resolve_id_filter {
-      Some(ref item) => {
-        let filter = ResolvedIdHookFilter::try_from(item.clone())?;
         Ok(Some(filter))
       }
       None => Ok(None),

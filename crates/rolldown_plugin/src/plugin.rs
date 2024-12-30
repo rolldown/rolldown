@@ -5,7 +5,7 @@ use crate::{
   plugin_hook_meta::PluginHookMeta,
   types::{
     hook_build_start_args::HookBuildStartArgs,
-    hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
+    hook_filter::{LoadHookFilter, TransformHookFilter},
     hook_render_error::HookRenderErrorArgs,
     hook_render_start_args::HookRenderStartArgs,
     hook_transform_ast_args::HookTransformAstArgs,
@@ -296,10 +296,6 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
-    Ok(None)
-  }
-
-  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
     Ok(None)
   }
 

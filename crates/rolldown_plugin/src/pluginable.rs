@@ -475,10 +475,6 @@ impl<T: Plugin> Pluginable for T {
     Plugin::transform_filter(self)
   }
 
-  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    Plugin::resolve_id_filter(self)
-  }
-
   fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
     Plugin::load_filter(self)
   }

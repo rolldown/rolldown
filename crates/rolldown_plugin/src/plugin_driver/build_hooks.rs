@@ -17,7 +17,7 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
 
-use super::hook_filter::{filter_load, filter_resolve_id, filter_transform};
+use super::hook_filter::{filter_load, filter_transform};
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
@@ -90,10 +90,6 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_id_meta)
     {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
-        continue;
-      }
-      let filter_option = &self.index_plugin_filters[plugin_idx];
-      if filter_resolve_id(filter_option, args.specifier, ctx.cwd()) == Some(false) {
         continue;
       }
       if let Some(r) = plugin

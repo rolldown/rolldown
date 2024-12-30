@@ -11,6 +11,7 @@ pub struct BindingGeneralHookFilter {
 #[derive(Default, Clone)]
 pub struct BindingTransformHookFilter {
   pub code: Option<BindingGeneralHookFilter>,
+  #[napi(ts_type = "Array<string>")]
   pub module_type: Option<Vec<BindingModuleType>>,
   pub id: Option<BindingGeneralHookFilter>,
 }

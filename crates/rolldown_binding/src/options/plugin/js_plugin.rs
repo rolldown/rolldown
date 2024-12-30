@@ -87,51 +87,49 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    if let Some(cb) = &self.resolve_id {
-      if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
-        let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
-        let normalized_id = stabilized_path.to_string_lossy();
+    let Some(cb) = &self.resolve_id else { return Ok(None) };
 
-        let exclude =
-          resolve_id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-        let include =
-          resolve_id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+    if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
+      let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
+      let normalized_id = stabilized_path.to_string_lossy();
 
-        let matched = pattern_filter::filter(
-          exclude.as_deref(),
-          include.as_deref(),
-          args.specifier,
-          &normalized_id,
-        )
-        .inner();
+      let exclude =
+        resolve_id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
+      let include =
+        resolve_id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
 
-        if !matched {
-          return Ok(None);
-        }
+      let matched = pattern_filter::filter(
+        exclude.as_deref(),
+        include.as_deref(),
+        args.specifier,
+        &normalized_id,
+      )
+      .inner();
+
+      if !matched {
+        return Ok(None);
       }
+    }
 
-      let custom = args
+    let extra_args = BindingHookResolveIdExtraArgs {
+      is_entry: args.is_entry,
+      kind: args.kind.to_string(),
+      custom: args
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
-        .map(|v| *v);
+        .map(|v| *v),
+    };
 
-      let result = cb
-        .await_call((
-          ctx.clone().into(),
-          args.specifier.to_string(),
-          args.importer.map(str::to_string),
-          BindingHookResolveIdExtraArgs {
-            is_entry: args.is_entry,
-            kind: args.kind.to_string(),
-            custom,
-          },
-        ))
-        .await?;
-
-      Ok(result.map(Into::into))
-    } else {
-      Ok(None)
-    }
+    Ok(
+      cb.await_call((
+        ctx.clone().into(),
+        args.specifier.to_string(),
+        args.importer.map(str::to_string),
+        extra_args,
+      ))
+      .await?
+      .map(Into::into),
+    )
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -167,34 +165,30 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    if let Some(cb) = &self.load {
-      if let Some(load_filter) = &self.load_filter {
-        let stabilized_path = Path::new(args.id).relative(ctx.cwd());
-        let normalized_id = stabilized_path.to_string_lossy();
+    let Some(cb) = &self.load else { return Ok(None) };
 
-        let exclude =
-          load_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-        let include =
-          load_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+    if let Some(load_filter) = &self.load_filter {
+      let stabilized_path = Path::new(args.id).relative(ctx.cwd());
+      let normalized_id = stabilized_path.to_string_lossy();
 
-        let matched =
-          pattern_filter::filter(exclude.as_deref(), include.as_deref(), args.id, &normalized_id)
-            .inner();
+      let exclude =
+        load_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
+      let include =
+        load_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
 
-        if !matched {
-          return Ok(None);
-        }
+      let matched =
+        pattern_filter::filter(exclude.as_deref(), include.as_deref(), args.id, &normalized_id)
+          .inner();
+
+      if !matched {
+        return Ok(None);
       }
-
-      Ok(
-        cb.await_call((ctx.clone().into(), args.id.to_string()))
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
-      )
-    } else {
-      Ok(None)
     }
+
+    cb.await_call((ctx.clone().into(), args.id.to_string()))
+      .await?
+      .map(TryInto::try_into)
+      .transpose()
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {

@@ -539,7 +539,7 @@ fn filter_transform(
   module_type: &ModuleType,
   code: &str,
 ) -> anyhow::Result<bool> {
-  let Some(transform_hook_filter_options) = transform_filter.as_ref() else {
+  let Some(transform_hook_filter_options) = transform_filter else {
     return Ok(true);
   };
 

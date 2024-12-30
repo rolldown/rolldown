@@ -5218,6 +5218,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-Doi277_p.js
 - lib-!~{001}~.js => lib-BDaXVMdd.js
 
+# tests/rolldown/tree_shaking/dynamic_require_unused_by_function
+
+- main-!~{000}~.js => main-DlLhFYAd.js
+
 # tests/rolldown/tree_shaking/export_default
 
 - main-!~{000}~.js => main-BG86bJeA.js

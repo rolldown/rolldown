@@ -68,7 +68,7 @@ test: test-rust test-node
 # run all tests and update snapshot
 test-update:
     just test-rust
-    just test-node all -u
+    just test-node all --update
 
 test-rust:
     cargo test --workspace --exclude rolldown_binding

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "mocha --file ./src/intercept/check.js test/test.js",
-    "test-u": "mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js",
+    "test--update": "mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js",
     "type-check": "tsc --noEmit"
   },
   "keywords": [],

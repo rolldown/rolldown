@@ -28,7 +28,7 @@
     "unified": "^11.0.5"
   },
   "devDependencies": {
-    "@oxc-node/core": "^0.0.15",
+    "@oxc-node/core": "^0.0.16",
     "@types/diff": "^6.0.0",
     "@types/lodash-es": "^4.17.12",
     "acorn": "^8.12.1",

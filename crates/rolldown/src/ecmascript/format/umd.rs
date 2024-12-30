@@ -138,7 +138,7 @@ fn render_amd_dependencies(externals: &[&ExternalModule], has_exports: bool) -> 
   let mut dependencies = Vec::with_capacity(externals.len());
   if has_exports {
     dependencies.reserve(1);
-    dependencies.push("exports".to_string());
+    dependencies.push("'exports'".to_string());
   }
   externals.iter().for_each(|external| {
     dependencies.push(format!("'{}'", external.name.as_str()));

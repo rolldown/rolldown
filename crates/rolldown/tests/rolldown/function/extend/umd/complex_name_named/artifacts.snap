@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
-  typeof define === 'function' && define.amd ? define([exports], factory) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.test = global.test || {},global.test.module = global.test.module || {})));
 })(this, function(exports) {
 "use strict";

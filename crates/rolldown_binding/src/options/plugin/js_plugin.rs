@@ -5,7 +5,7 @@ use crate::types::{
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{
-  Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, TransformHookFilter,
+  Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, TransformHookFilter,
 };
 use rolldown_utils::pattern_filter;
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
@@ -162,30 +162,34 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    let Some(cb) = &self.load else { return Ok(None) };
+    if let Some(cb) = &self.load {
+      if let Some(load_filter) = &self.load_filter {
+        let stabilized_path = Path::new(args.id).relative(ctx.cwd());
+        let normalized_id = stabilized_path.to_string_lossy();
 
-    if let Some(load_filter) = &self.load_filter {
-      let stabilized_path = Path::new(args.id).relative(ctx.cwd());
-      let normalized_id = stabilized_path.to_string_lossy();
+        let exclude =
+          load_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
+        let include =
+          load_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
 
-      let exclude =
-        load_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-      let include =
-        load_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+        let is_filter =
+          pattern_filter::filter(exclude.as_deref(), include.as_deref(), args.id, &normalized_id)
+            .inner();
 
-      let matched =
-        pattern_filter::filter(exclude.as_deref(), include.as_deref(), args.id, &normalized_id)
-          .inner();
-
-      if !matched {
-        return Ok(None);
+        if !is_filter {
+          return Ok(None);
+        }
       }
-    }
 
-    cb.await_call((ctx.clone().into(), args.id.to_string()))
-      .await?
-      .map(TryInto::try_into)
-      .transpose()
+      Ok(
+        cb.await_call((ctx.clone().into(), args.id.to_string()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -526,16 +530,6 @@ impl Plugin for JsPlugin {
     match self.inner.transform_filter {
       Some(ref item) => {
         let filter = TransformHookFilter::try_from(item.clone())?;
-        Ok(Some(filter))
-      }
-      None => Ok(None),
-    }
-  }
-
-  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
-    match self.inner.load_filter {
-      Some(ref item) => {
-        let filter = LoadHookFilter::try_from(item.clone())?;
         Ok(Some(filter))
       }
       None => Ok(None),

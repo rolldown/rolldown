@@ -17,7 +17,7 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
 
-use super::hook_filter::{filter_load, filter_transform};
+use super::hook_filter::filter_transform;
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]

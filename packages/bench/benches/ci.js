@@ -9,7 +9,11 @@ const DIRNAME = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
 const PROJECT_ROOT = nodePath.resolve(DIRNAME, '..')
 const REPO_ROOT = nodePath.resolve(PROJECT_ROOT, '../..')
 
-const bench = new tinyBench.Bench()
+const bench = new tinyBench.Bench({
+  iterations: 10,
+  warmupIterations: 5,
+})
+bench.threshold = 1
 
 for (const suite of expandSuitesWithDerived(suitesForCI)) {
   const rolldownSuiteList = getRolldownSuiteList(suite)

@@ -1,26 +1,86 @@
 use std::collections::HashMap;
 
 use arcstr::ArcStr;
-use rolldown_common::{ModuleId, RenderedModule};
-use rustc_hash::{FxBuildHasher, FxHashMap};
+use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rustc_hash::FxBuildHasher;
 
 use crate::types::binding_rendered_module::BindingRenderedModule;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi]
 #[derive(Default, Debug)]
 pub struct RenderedChunk {
   // PreRenderedChunk
-  pub name: String,
-  pub is_entry: bool,
-  pub is_dynamic_entry: bool,
-  pub facade_module_id: Option<String>,
-  pub module_ids: Vec<String>,
-  pub exports: Vec<String>,
+  name: String,
+  is_entry: bool,
+  is_dynamic_entry: bool,
+  facade_module_id: Option<String>,
+  module_ids: Vec<String>,
+  exports: Vec<String>,
   // RenderedChunk
-  pub file_name: String,
-  pub modules: HashMap<String, BindingRenderedModule, FxBuildHasher>,
-  pub imports: Vec<String>,
-  pub dynamic_imports: Vec<String>,
+  file_name: String,
+  modules: BindingModules,
+  imports: Vec<String>,
+  dynamic_imports: Vec<String>,
+}
+
+#[napi_derive::napi]
+impl RenderedChunk {
+  #[napi(getter)]
+  pub fn get_name(&self) -> String {
+    self.name.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_is_entry(&self) -> bool {
+    self.is_entry
+  }
+
+  #[napi(getter)]
+  pub fn get_is_dynamic_entry(&self) -> bool {
+    self.is_dynamic_entry
+  }
+
+  #[napi(getter)]
+  pub fn get_facade_module_id(&self) -> Option<String> {
+    self.facade_module_id.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_module_ids(&self) -> Vec<String> {
+    self.module_ids.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_exports(&self) -> Vec<String> {
+    self.exports.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_file_name(&self) -> String {
+    self.file_name.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_modules(&self) -> BindingModules {
+    self.modules.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_imports(&self) -> Vec<String> {
+    self.imports.clone()
+  }
+
+  #[napi(getter)]
+  pub fn get_dynamic_imports(&self) -> Vec<String> {
+    self.dynamic_imports.clone()
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Default, Debug, Clone)]
+pub struct BindingModules {
+  pub value: Vec<BindingRenderedModule>,
+  pub id_to_index: HashMap<String, u32, FxBuildHasher>,
 }
 
 impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
@@ -33,16 +93,31 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
       module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
       exports: value.exports.into_iter().map(|x| x.to_string()).collect(),
       file_name: value.filename.to_string(),
-      modules: into_binding_chunk_modules(&value.modules),
+      modules: value.modules.into(),
       imports: value.imports.iter().map(ArcStr::to_string).collect(),
       dynamic_imports: value.dynamic_imports.iter().map(ArcStr::to_string).collect(),
     }
   }
 }
+#[allow(clippy::cast_possible_truncation)]
+impl From<&rolldown_common::Modules> for BindingModules {
+  fn from(modules: &rolldown_common::Modules) -> Self {
+    let value = modules.value.par_iter().map(|x| x.clone().into()).collect();
+    let id_to_index =
+      modules.key_to_index.iter().map(|(key, value)| (key.to_string(), *value as u32)).collect();
+    Self { value, id_to_index }
+  }
+}
 
-#[allow(clippy::implicit_hasher)]
-pub fn into_binding_chunk_modules(
-  modules: &FxHashMap<ModuleId, RenderedModule>,
-) -> HashMap<String, BindingRenderedModule, FxBuildHasher> {
-  modules.iter().map(|(key, value)| (key.to_string(), value.clone().into())).collect()
+#[allow(clippy::cast_possible_truncation)]
+impl From<rolldown_common::Modules> for BindingModules {
+  fn from(modules: rolldown_common::Modules) -> Self {
+    let value = modules.value.into_par_iter().map(std::convert::Into::into).collect();
+    let id_to_index = modules
+      .key_to_index
+      .into_iter()
+      .map(|(key, value)| (key.to_string(), value as u32))
+      .collect();
+    Self { value, id_to_index }
+  }
 }

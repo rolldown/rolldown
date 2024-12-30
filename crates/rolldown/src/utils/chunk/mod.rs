@@ -56,7 +56,7 @@ pub fn generate_rendered_chunk(
       .as_deref()
       .expect("should have preliminary_filename")
       .clone(),
-    modules: render_modules,
+    modules: render_modules.into(),
     imports: chunk
       .cross_chunk_imports
       .iter()

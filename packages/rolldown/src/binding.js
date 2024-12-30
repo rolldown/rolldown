@@ -381,6 +381,7 @@ module.exports.BindingWatcherChangeData = nativeBinding.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = nativeBinding.BindingWatcherEvent
 module.exports.Bundler = nativeBinding.Bundler
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
+module.exports.RenderedChunk = nativeBinding.RenderedChunk
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = nativeBinding.BindingHookSideEffects
 module.exports.BindingLogLevel = nativeBinding.BindingLogLevel

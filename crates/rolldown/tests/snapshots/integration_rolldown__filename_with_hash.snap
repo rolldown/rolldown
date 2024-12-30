@@ -4003,7 +4003,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/export_mode/umd/complex_name_named
 
-- main-!~{000}~.js => main-B-NtGB4s.js
+- main-!~{000}~.js => main-BkCc2oZg.js
 
 # tests/rolldown/function/export_mode/umd/default
 
@@ -4011,7 +4011,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/export_mode/umd/named
 
-- main-!~{000}~.js => main-1IepDXVC.js
+- main-!~{000}~.js => main-CN1hXJdB.js
 
 # tests/rolldown/function/extend/entry-wrapped-cjs-default
 
@@ -4051,7 +4051,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/extend/umd/complex_name_named
 
-- main-!~{000}~.js => main-D3X6MaUW.js
+- main-!~{000}~.js => main-X_NhzZZT.js
 
 # tests/rolldown/function/extend/umd/default
 
@@ -4059,7 +4059,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/extend/umd/named
 
-- main-!~{000}~.js => main-Z8m7JadQ.js
+- main-!~{000}~.js => main-D34li3Gg.js
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -4205,11 +4205,11 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/umd/conflict_exports_key
 
-- main-!~{000}~.js => main-DAn3MhpI.js
+- main-!~{000}~.js => main-BEbDV2PD.js
 
 # tests/rolldown/function/format/umd/conflict_exports_key_loop
 
-- main-!~{000}~.js => main-B_hzLodb.js
+- main-!~{000}~.js => main-Bx8Ewikv.js
 
 # tests/rolldown/function/format/umd/external_modules
 
@@ -4225,7 +4225,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 
-- main-!~{000}~.js => main-16uYF9-n.js
+- main-!~{000}~.js => main-BKeSTii8.js
 
 # tests/rolldown/function/inject
 

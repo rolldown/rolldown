@@ -56,6 +56,11 @@ impl PluginDriver {
 
       plugins.into_iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
+        // TODO: Error handling
+        index_plugin_filters.push(HookFilterOptions {
+          load: plugin.call_load_filter().unwrap(),
+          transform: plugin.call_transform_filter().unwrap(),
+        });
         index_contexts.push(
           PluginContextImpl {
             skipped_resolve_calls: vec![],

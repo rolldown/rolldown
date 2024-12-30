@@ -4,16 +4,11 @@ use crate::types::{
   binding_outputs::{to_js_diagnostic, update_outputs},
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use anyhow::Ok;
-use rolldown::ModuleType;
-use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
-use rolldown_utils::pattern_filter::{self, FilterResult};
-use std::{
-  borrow::Cow,
-  ops::Deref,
-  path::{Path, PathBuf},
-  sync::Arc,
+use rolldown_plugin::{
+  Plugin, __inner::SharedPluginable, typedmap::TypedMapKey, LoadHookFilter, TransformHookFilter,
 };
+use rolldown_utils::pattern_filter;
+use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 use sugar_path::SugarPath;
 
 use super::{
@@ -21,6 +16,7 @@ use super::{
   types::{
     binding_hook_filter::BindingTransformHookFilter,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
+    binding_js_or_regex::bindingify_string_or_regex_array,
     binding_js_or_regex::bindingify_string_or_regex_array,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
@@ -86,49 +82,51 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    let Some(cb) = &self.resolve_id else { return Ok(None) };
+    if let Some(cb) = &self.resolve_id {
+      if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
+        let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
+        let normalized_id = stabilized_path.to_string_lossy();
 
-    if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
-      let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
-      let normalized_id = stabilized_path.to_string_lossy();
+        let exclude =
+          resolve_id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
+        let include =
+          resolve_id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
 
-      let exclude =
-        resolve_id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-      let include =
-        resolve_id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+        let is_filter = pattern_filter::filter(
+          exclude.as_deref(),
+          include.as_deref(),
+          args.specifier,
+          &normalized_id,
+        )
+        .inner();
 
-      let matched = pattern_filter::filter(
-        exclude.as_deref(),
-        include.as_deref(),
-        args.specifier,
-        &normalized_id,
-      )
-      .inner();
-
-      if !matched {
-        return Ok(None);
+        if !is_filter {
+          return Ok(None);
+        }
       }
-    }
 
-    let extra_args = BindingHookResolveIdExtraArgs {
-      is_entry: args.is_entry,
-      kind: args.kind.to_string(),
-      custom: args
+      let custom = args
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
-        .map(|v| *v),
-    };
+        .map(|v| *v);
 
-    Ok(
-      cb.await_call((
-        ctx.clone().into(),
-        args.specifier.to_string(),
-        args.importer.map(str::to_string),
-        extra_args,
-      ))
-      .await?
-      .map(Into::into),
-    )
+      let result = cb
+        .await_call((
+          ctx.clone().into(),
+          args.specifier.to_string(),
+          args.importer.map(str::to_string),
+          BindingHookResolveIdExtraArgs {
+            is_entry: args.is_entry,
+            kind: args.kind.to_string(),
+            custom,
+          },
+        ))
+        .await?;
+
+      Ok(result.map(Into::into))
+    } else {
+      Ok(None)
+    }
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -523,65 +521,24 @@ impl Plugin for JsPlugin {
   fn close_watcher_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     self.close_watcher_meta.as_ref().map(Into::into)
   }
-}
 
-/// If the transform hook is filtered out and need to be skipped.
-/// Using `Option<bool>` for better programming experience.
-/// return `None` means it is early return, should not be skipped.
-/// return `Some(false)` means it should be skipped.
-/// return `Some(true)` means it should not be skipped.
-/// Since transform has three different filter, so we need to check all of them.
-fn filter_transform(
-  transform_filter: Option<&BindingTransformHookFilter>,
-  id: &str,
-  cwd: &PathBuf,
-  module_type: &ModuleType,
-  code: &str,
-) -> anyhow::Result<bool> {
-  let Some(transform_hook_filter_options) = transform_filter else {
-    return Ok(true);
-  };
-
-  let mut fallback_ret =
-    if let Some(ref module_type_filter) = transform_hook_filter_options.module_type {
-      if module_type_filter
-        .iter()
-        .map(ModuleType::from_str_with_fallback)
-        .any(|ty| ty == *module_type)
-      {
-        return Ok(true);
+  fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    match self.inner.transform_filter {
+      Some(ref item) => {
+        let filter = TransformHookFilter::try_from(item.clone())?;
+        Ok(Some(filter))
       }
-      false
-    } else {
-      true
-    };
-
-  if let Some(ref id_filter) = transform_hook_filter_options.id {
-    let stabilized_path = Path::new(id).relative(cwd);
-    let normalized_id = stabilized_path.to_string_lossy();
-
-    let exclude = id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-    let include = id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
-
-    let id_res = pattern_filter::filter(exclude.as_deref(), include.as_deref(), id, &normalized_id);
-    // it matched by `exclude` or `include`, early return
-    if let FilterResult::Match(id_res) = id_res {
-      return Ok(id_res);
+      None => Ok(None),
     }
-    fallback_ret = fallback_ret && id_res.inner();
   }
 
-  if let Some(ref code_filter) = transform_hook_filter_options.code {
-    let exclude = code_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-    let include = code_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
-
-    let code_res = pattern_filter::filter_code(exclude.as_deref(), include.as_deref(), code);
-    // it matched by `exclude` or `include`, early return
-    if let FilterResult::Match(code_res) = code_res {
-      return Ok(code_res);
+  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    match self.inner.load_filter {
+      Some(ref item) => {
+        let filter = LoadHookFilter::try_from(item.clone())?;
+        Ok(Some(filter))
+      }
+      None => Ok(None),
     }
-    fallback_ret = fallback_ret && code_res.inner();
   }
-
-  Ok(fallback_ret)
 }

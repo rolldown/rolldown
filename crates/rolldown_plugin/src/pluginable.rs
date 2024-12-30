@@ -456,4 +456,12 @@ impl<T: Plugin> Pluginable for T {
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Plugin::transform_ast_meta(self)
   }
+
+  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
+    Plugin::transform_filter(self)
+  }
+
+  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
+    Plugin::load_filter(self)
+  }
 }

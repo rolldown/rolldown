@@ -21,8 +21,6 @@ use super::{
   types::{
     binding_hook_filter::BindingTransformHookFilter,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
-    binding_js_or_regex::bindingify_string_or_regex_array,
-    binding_js_or_regex::bindingify_string_or_regex_array,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
   BindingPluginOptions,
@@ -93,14 +91,9 @@ impl Plugin for JsPlugin {
       let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
       let normalized_id = stabilized_path.to_string_lossy();
 
-      let exclude =
-        resolve_id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-      let include =
-        resolve_id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
-
       let matched = pattern_filter::filter(
-        exclude.as_deref(),
-        include.as_deref(),
+        resolve_id_filter.exclude.as_deref(),
+        resolve_id_filter.include.as_deref(),
         args.specifier,
         &normalized_id,
       )
@@ -171,14 +164,13 @@ impl Plugin for JsPlugin {
       let stabilized_path = Path::new(args.id).relative(ctx.cwd());
       let normalized_id = stabilized_path.to_string_lossy();
 
-      let exclude =
-        load_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-      let include =
-        load_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
-
-      let matched =
-        pattern_filter::filter(exclude.as_deref(), include.as_deref(), args.id, &normalized_id)
-          .inner();
+      let matched = pattern_filter::filter(
+        load_filter.exclude.as_deref(),
+        load_filter.include.as_deref(),
+        args.id,
+        &normalized_id,
+      )
+      .inner();
 
       if !matched {
         return Ok(None);
@@ -539,48 +531,50 @@ fn filter_transform(
   module_type: &ModuleType,
   code: &str,
 ) -> anyhow::Result<bool> {
-  let Some(transform_hook_filter_options) = transform_filter else {
+  let Some(transform_filter) = transform_filter else {
     return Ok(true);
   };
 
-  let mut fallback_ret =
-    if let Some(ref module_type_filter) = transform_hook_filter_options.module_type {
-      if module_type_filter
-        .iter()
-        .map(ModuleType::from_str_with_fallback)
-        .any(|ty| ty == *module_type)
-      {
-        return Ok(true);
-      }
-      false
-    } else {
-      true
-    };
+  let mut fallback_ret = if let Some(ref module_type_filter) = transform_filter.module_type {
+    if module_type_filter.iter().any(|ty| &**ty == module_type) {
+      return Ok(true);
+    }
+    false
+  } else {
+    true
+  };
 
-  if let Some(ref id_filter) = transform_hook_filter_options.id {
+  if let Some(ref id_filter) = transform_filter.id {
     let stabilized_path = Path::new(id).relative(cwd);
     let normalized_id = stabilized_path.to_string_lossy();
 
-    let exclude = id_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-    let include = id_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+    let id_res = pattern_filter::filter(
+      id_filter.exclude.as_deref(),
+      id_filter.include.as_deref(),
+      id,
+      &normalized_id,
+    );
 
-    let id_res = pattern_filter::filter(exclude.as_deref(), include.as_deref(), id, &normalized_id);
     // it matched by `exclude` or `include`, early return
     if let FilterResult::Match(id_res) = id_res {
       return Ok(id_res);
     }
+
     fallback_ret = fallback_ret && id_res.inner();
   }
 
-  if let Some(ref code_filter) = transform_hook_filter_options.code {
-    let exclude = code_filter.exclude.clone().map(bindingify_string_or_regex_array).transpose()?;
-    let include = code_filter.include.clone().map(bindingify_string_or_regex_array).transpose()?;
+  if let Some(ref code_filter) = transform_filter.code {
+    let code_res = pattern_filter::filter_code(
+      code_filter.exclude.as_deref(),
+      code_filter.include.as_deref(),
+      code,
+    );
 
-    let code_res = pattern_filter::filter_code(exclude.as_deref(), include.as_deref(), code);
     // it matched by `exclude` or `include`, early return
     if let FilterResult::Match(code_res) = code_res {
       return Ok(code_res);
     }
+
     fallback_ret = fallback_ret && code_res.inner();
   }
 

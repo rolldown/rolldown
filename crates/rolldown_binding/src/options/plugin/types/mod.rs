@@ -10,5 +10,6 @@ pub mod binding_hook_side_effects;
 pub mod binding_hook_transform_output;
 pub mod binding_js_or_regex;
 pub mod binding_limited_boolean;
+pub mod binding_module_type;
 pub mod binding_plugin_context_resolve_options;
 pub mod binding_plugin_transform_extra_args;

@@ -17,8 +17,6 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
 
-use super::hook_filter::filter_transform;
-
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
@@ -171,13 +169,9 @@ impl PluginDriver {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
-    for (plugin_idx, plugin, ctx) in
+    for (_plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
-      let filter_option = &self.index_plugin_filters[plugin_idx];
-      if !filter_transform(filter_option, id, ctx.cwd(), module_type, &code) {
-        continue;
-      }
       if let Some(r) = plugin
         .call_transform(
           Arc::new(TransformPluginContext::new(

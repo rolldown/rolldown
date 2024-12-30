@@ -23,6 +23,5 @@ pub type LoadHookFilter = ResolvedIdHookFilter;
 
 #[derive(Debug)]
 pub struct HookFilterOptions {
-  pub load: Option<LoadHookFilter>,
   pub transform: Option<TransformHookFilter>,
 }

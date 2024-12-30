@@ -17,7 +17,7 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
 
-use super::hook_filter::{filter_load, filter_transform};
+use super::hook_filter::filter_transform;
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
@@ -150,13 +150,9 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (plugin_idx, plugin, ctx) in
+    for (_plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
-      let filter_option = &self.index_plugin_filters[plugin_idx];
-      if filter_load(filter_option, args.id, ctx.cwd()) == Some(false) {
-        continue;
-      }
       if let Some(r) = plugin.call_load(ctx, args).await? {
         return Ok(Some(r));
       }

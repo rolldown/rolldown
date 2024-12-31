@@ -4,9 +4,7 @@ use super::plugin_context::PluginContext;
 use crate::{
   plugin_hook_meta::PluginHookMeta,
   types::{
-    hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
-    hook_render_error::HookRenderErrorArgs,
-    hook_transform_ast_args::HookTransformAstArgs,
+    hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
     hook_write_bundle_args::HookWriteBundleArgs,
   },
   HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookGenerateBundleArgs,
@@ -208,18 +206,6 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_close_watcher_meta(&self) -> Option<PluginHookMeta> {
     None
-  }
-
-  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
-    Ok(None)
-  }
-
-  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    Ok(None)
-  }
-
-  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
-    Ok(None)
   }
 }
 
@@ -469,17 +455,5 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Plugin::transform_ast_meta(self)
-  }
-
-  fn call_transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
-    Plugin::transform_filter(self)
-  }
-
-  fn call_resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    Plugin::resolve_id_filter(self)
-  }
-
-  fn call_load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
-    Plugin::load_filter(self)
   }
 }

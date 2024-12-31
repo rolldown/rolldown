@@ -4,11 +4,8 @@ use super::plugin_context::PluginContext;
 use crate::{
   plugin_hook_meta::PluginHookMeta,
   types::{
-    hook_build_start_args::HookBuildStartArgs,
-    hook_filter::{LoadHookFilter, ResolvedIdHookFilter, TransformHookFilter},
-    hook_render_error::HookRenderErrorArgs,
-    hook_render_start_args::HookRenderStartArgs,
-    hook_transform_ast_args::HookTransformAstArgs,
+    hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
+    hook_render_start_args::HookRenderStartArgs, hook_transform_ast_args::HookTransformAstArgs,
     hook_transform_output::HookTransformOutput,
   },
   HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
@@ -293,17 +290,5 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
     None
-  }
-
-  fn transform_filter(&self) -> anyhow::Result<Option<TransformHookFilter>> {
-    Ok(None)
-  }
-
-  fn resolve_id_filter(&self) -> anyhow::Result<Option<ResolvedIdHookFilter>> {
-    Ok(None)
-  }
-
-  fn load_filter(&self) -> anyhow::Result<Option<LoadHookFilter>> {
-    Ok(None)
   }
 }

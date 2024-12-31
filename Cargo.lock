@@ -2494,6 +2494,7 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
+ "sugar_path",
  "tracing",
 ]
 
@@ -2607,7 +2608,6 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "string_wizard",
- "sugar_path",
  "tokio",
  "tracing",
  "typedmap",

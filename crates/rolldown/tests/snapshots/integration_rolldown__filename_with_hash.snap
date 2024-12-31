@@ -5058,6 +5058,11 @@ snapshot_kind: text
 - main-!~{000}~.js => main-Bgp745YR.js
 - async-entry-!~{001}~.js => async-entry-C3udqLaX.js
 
+# tests/rolldown/topics/live_bindings/default_export_decl
+
+- foo-!~{001}~.js => foo-CwbvmM48.js
+- main-!~{000}~.js => main-86hi34DA.js
+
 # tests/rolldown/topics/live_bindings/default_export_expr
 
 - main-!~{000}~.js => main-DgPIUb8W.js

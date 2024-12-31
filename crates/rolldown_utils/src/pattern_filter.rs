@@ -7,6 +7,12 @@ pub enum StringOrRegex {
   Regex(HybridRegex),
 }
 
+impl AsRef<StringOrRegex> for StringOrRegex {
+  fn as_ref(&self) -> &StringOrRegex {
+    self
+  }
+}
+
 impl StringOrRegex {
   pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
     if let Some(flag) = flag {
@@ -25,14 +31,14 @@ impl StringOrRegex {
 /// for multiple filters, you should use `FilterResult` to determine if the `id` is matched.
 /// See doc of [FilterResult]
 pub fn filter(
-  exclude: Option<&[StringOrRegex]>,
-  include: Option<&[StringOrRegex]>,
+  exclude: Option<&[impl AsRef<StringOrRegex>]>,
+  include: Option<&[impl AsRef<StringOrRegex>]>,
   id: &str,
   stable_id: &str,
 ) -> FilterResult {
   if let Some(exclude) = exclude {
     for pattern in exclude {
-      let v = match pattern {
+      let v = match pattern.as_ref() {
         StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id),
         StringOrRegex::Regex(re) => re.matches(id),
       };
@@ -43,7 +49,7 @@ pub fn filter(
   }
   if let Some(include) = include {
     for pattern in include {
-      let v = match pattern {
+      let v = match pattern.as_ref() {
         StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id),
         StringOrRegex::Regex(re) => re.matches(id),
       };
@@ -80,13 +86,13 @@ impl FilterResult {
 
 /// Same as above but for `code`
 pub fn filter_code(
-  exclude: Option<&[StringOrRegex]>,
-  include: Option<&[StringOrRegex]>,
+  exclude: Option<&[impl AsRef<StringOrRegex>]>,
+  include: Option<&[impl AsRef<StringOrRegex>]>,
   code: &str,
 ) -> FilterResult {
   if let Some(exclude) = exclude {
     for pattern in exclude {
-      let v = match pattern {
+      let v = match pattern.as_ref() {
         StringOrRegex::String(pattern) => code.contains(pattern),
         StringOrRegex::Regex(re) => re.matches(code),
       };
@@ -97,7 +103,7 @@ pub fn filter_code(
   }
   if let Some(include) = include {
     for pattern in include {
-      let v = match pattern {
+      let v = match pattern.as_ref() {
         StringOrRegex::String(pattern) => code.contains(pattern),
         StringOrRegex::Regex(re) => re.matches(code),
       };

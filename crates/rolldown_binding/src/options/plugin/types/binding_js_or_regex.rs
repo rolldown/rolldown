@@ -46,11 +46,25 @@ impl FromNapiValue for JsRegExp {
 }
 
 #[derive(Debug, Clone)]
-pub struct BindingStringOrRegex(pub Either<String, JsRegExp>);
+pub struct BindingStringOrRegex(StringOrRegex);
 
 impl FromNapiValue for BindingStringOrRegex {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
-    Ok(Self(Either::from_napi_value(env, napi_val)?))
+    let value = Either::<String, JsRegExp>::from_napi_value(env, napi_val)?;
+    let value = match value {
+      Either::A(inner) => StringOrRegex::String(inner),
+      Either::B(inner) => {
+        let reg = HybridRegex::with_flags(&inner.source, &inner.flags)?;
+        StringOrRegex::Regex(reg)
+      }
+    };
+    Ok(Self(value))
+  }
+}
+
+impl AsRef<StringOrRegex> for BindingStringOrRegex {
+  fn as_ref(&self) -> &StringOrRegex {
+    &self.0
   }
 }
 
@@ -59,8 +73,8 @@ impl TryFrom<BindingStringOrRegex> for HybridRegex {
 
   fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
     match value.0 {
-      Either::A(value) => HybridRegex::new(&value),
-      Either::B(value) => HybridRegex::try_from(value),
+      StringOrRegex::String(value) => HybridRegex::new(&value),
+      StringOrRegex::Regex(value) => Ok(value),
     }
   }
 }
@@ -77,14 +91,7 @@ impl TryFrom<BindingStringOrRegex> for StringOrRegex {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
-    let ret = match value.0 {
-      Either::A(inner) => StringOrRegex::String(inner),
-      Either::B(inner) => {
-        let reg = HybridRegex::with_flags(&inner.source, &inner.flags)?;
-        StringOrRegex::Regex(reg)
-      }
-    };
-    Ok(ret)
+    Ok(value.0)
   }
 }
 

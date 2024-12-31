@@ -1,0 +1,16 @@
+{
+    "config": {
+       "input": [
+        {
+            "name": "main",
+            "import": "main.js"
+        },
+        {
+            "name": "foo",
+            "import": "foo.js"
+        }
+       ],
+      "format": "cjs",
+      "exports": "named"
+    }
+}

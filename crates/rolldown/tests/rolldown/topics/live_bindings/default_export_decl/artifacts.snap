@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## foo.js
+
+```js
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
+
+//#region foo.js
+function foo() {}
+
+//#endregion
+exports.default = foo
+```
+## main.js
+
+```js
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
+
+//#region main.js
+var Main = class {};
+
+//#endregion
+exports.default = Main
+```

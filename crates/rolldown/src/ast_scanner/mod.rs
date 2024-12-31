@@ -127,9 +127,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let default_export_ref = symbol_ref_db
       .create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_default"));
-    // This is used for converting "export default foo;" => "var [default_export_ref] = foo;"
-    // And we consider [default_export_ref] never get reassigned.
-    default_export_ref.flags_mut(&mut symbol_ref_db).insert(SymbolRefFlags::IS_NOT_REASSIGNED);
 
     let name = concat_string!(legitimized_repr_name, "_exports");
     let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
@@ -367,10 +364,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
+    // The default symbol ref never get reassigned.
+    let symbol_ref: SymbolRef = (self.idx, local).into();
+    symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IS_NOT_REASSIGNED);
+
     self
       .result
       .named_exports
-      .insert("default".into(), LocalExport { referenced: (self.idx, local).into(), span });
+      .insert("default".into(), LocalExport { referenced: symbol_ref, span });
   }
 
   /// Record `export { [imported] as [export_name] } from ...` statement.

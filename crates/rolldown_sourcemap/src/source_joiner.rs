@@ -6,7 +6,7 @@ use crate::source::Source;
 pub struct SourceJoiner<'source> {
   inner: Vec<Box<dyn Source + Send + 'source>>,
   prepend_source: Vec<Box<dyn Source + Send + 'source>>,
-  enable_sourcemap: bool,
+  pub enable_sourcemap: bool,
   names_len: usize,
   sources_len: usize,
   tokens_len: usize,

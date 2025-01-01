@@ -66,6 +66,7 @@ impl GenerateStage<'_> {
       ..
     } in assets
     {
+      // TODO: refactor if-else to match
       if let InstantiationKind::Ecma(ecma_meta) = rendered_chunk {
         let mut code = code.try_into_string()?;
         let rendered_chunk = ecma_meta.rendered_chunk;
@@ -162,6 +163,15 @@ impl GenerateStage<'_> {
           map,
           sourcemap_filename,
           preliminary_filename: preliminary_filename.to_string(),
+        })));
+      } else if let InstantiationKind::Css(_) = rendered_chunk {
+        // TODO: add sourcemap to output
+
+        output.push(Output::Asset(Box::new(OutputAsset {
+          filename: filename.clone().into(),
+          source: code,
+          original_file_names: vec![],
+          names: vec![],
         })));
       } else {
         output.push(Output::Asset(Box::new(OutputAsset {

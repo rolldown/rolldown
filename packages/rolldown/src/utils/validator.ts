@@ -1,7 +1,8 @@
 import * as v from 'valibot'
-import * as valibotExt from './valibot-ext'
 import { colors } from '../cli/colors'
 import type { RolldownPluginOption } from '../plugin'
+
+const stringOrRegExpSchema = v.union([v.string(), v.instance(RegExp)])
 
 const LogLevelSchema = v.union([
   v.literal('debug'),
@@ -22,12 +23,12 @@ const inputOptionSchema = v.union([
 ])
 
 const externalSchema = v.union([
-  valibotExt.stringOrRegExp(),
-  v.array(valibotExt.stringOrRegExp()),
+  stringOrRegExpSchema,
+  v.array(stringOrRegExpSchema),
   v.pipe(
     v.function(),
     v.args(v.tuple([v.string(), v.optional(v.string()), v.boolean()])),
-    v.returns(valibotExt.voidNullableWith(v.boolean())),
+    v.returns(v.nullish(v.boolean())),
   ),
 ])
 
@@ -83,15 +84,14 @@ const jsxOptionsSchema = v.strictObject({
   ),
 })
 
-const stringOrRegExpSchema = v.union([
-  valibotExt.stringOrRegExp(),
-  v.array(valibotExt.stringOrRegExp()),
-])
-
 const watchOptionsSchema = v.strictObject({
   chokidar: v.optional(v.any()),
-  exclude: v.optional(stringOrRegExpSchema),
-  include: v.optional(stringOrRegExpSchema),
+  exclude: v.optional(
+    v.union([stringOrRegExpSchema, v.array(stringOrRegExpSchema)]),
+  ),
+  include: v.optional(
+    v.union([stringOrRegExpSchema, v.array(stringOrRegExpSchema)]),
+  ),
   notify: v.pipe(
     v.optional(
       v.strictObject({
@@ -121,13 +121,13 @@ const resolveOptionsSchema = v.strictObject({
     v.record(v.string(), v.union([v.string(), v.array(v.string())])),
   ),
   aliasFields: v.optional(v.array(v.array(v.string()))),
-  conditionNames: valibotExt.optionalStringArray(),
+  conditionNames: v.optional(v.array(v.string())),
   extensionAlias: v.optional(v.record(v.string(), v.array(v.string()))),
   exportsFields: v.optional(v.array(v.array(v.string()))),
-  extensions: valibotExt.optionalStringArray(),
-  mainFields: valibotExt.optionalStringArray(),
-  mainFiles: valibotExt.optionalStringArray(),
-  modules: valibotExt.optionalStringArray(),
+  extensions: v.optional(v.array(v.string())),
+  mainFields: v.optional(v.array(v.string())),
+  mainFiles: v.optional(v.array(v.string())),
+  modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
   tsconfigFilename: v.optional(v.string()),
 })
@@ -173,7 +173,7 @@ const OnwarnSchema = v.pipe(
 
 const inputOptionsSchema = v.strictObject({
   input: v.optional(inputOptionSchema),
-  plugins: v.optional(valibotExt.phantom<RolldownPluginOption>()),
+  plugins: v.optional(v.custom<RolldownPluginOption>(() => true)),
   external: v.optional(externalSchema),
   resolve: v.optional(resolveOptionsSchema),
   cwd: v.pipe(
@@ -268,6 +268,25 @@ const inputCliOptionsSchema = v.omit(
   ],
 )
 
-export function validateInputCliOptions(options: any): boolean {
-  return v.safeParse(inputCliOptionsSchema, options).success
+const cliOptionsSchema = v.strictObject({
+  config: v.pipe(
+    v.optional(v.union([v.string(), v.boolean()])),
+    v.description('Path to the config file (default: `rolldown.config.js`)'),
+  ),
+  help: v.pipe(v.optional(v.boolean()), v.description('Show help')),
+  version: v.pipe(
+    v.optional(v.boolean()),
+
+    v.description('Show version number'),
+  ),
+  watch: v.pipe(
+    v.optional(v.boolean()),
+
+    v.description('Watch files in bundle and rebuild on changes'),
+  ),
+  ...inputCliOptionsSchema.entries,
+})
+
+export function validateCliOptions(options: any): boolean {
+  return v.safeParse(cliOptionsSchema, options).success
 }

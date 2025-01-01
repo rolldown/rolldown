@@ -1,22 +1,12 @@
-use std::ops::{Deref, DerefMut};
-
 use napi::{bindgen_prelude::FromNapiValue, sys, JsString};
 use rolldown::ModuleType;
 
 #[derive(Debug, Clone)]
 pub struct BindingModuleType(ModuleType);
 
-impl Deref for BindingModuleType {
-  type Target = ModuleType;
-
-  fn deref(&self) -> &Self::Target {
+impl AsRef<ModuleType> for BindingModuleType {
+  fn as_ref(&self) -> &ModuleType {
     &self.0
-  }
-}
-
-impl DerefMut for BindingModuleType {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.0
   }
 }
 

@@ -10,14 +10,12 @@ pub struct BindingWatchOption {
   pub exclude: Option<Vec<BindingStringOrRegex>>,
 }
 
-impl TryFrom<BindingWatchOption> for rolldown_common::WatchOption {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingWatchOption) -> Result<Self, Self::Error> {
-    Ok(Self {
+impl From<BindingWatchOption> for rolldown_common::WatchOption {
+  fn from(value: BindingWatchOption) -> Self {
+    Self {
       skip_write: value.skip_write.unwrap_or_default(),
-      include: value.include.map(bindingify_string_or_regex_array).transpose()?,
-      exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?,
-    })
+      include: value.include.map(bindingify_string_or_regex_array),
+      exclude: value.exclude.map(bindingify_string_or_regex_array),
+    }
   }
 }

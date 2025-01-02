@@ -134,12 +134,51 @@ impl<'a> GenerateStage<'a> {
           sourcemap_filename,
           preliminary_filename: preliminary_filename.to_string(),
         })));
-      } else if let InstantiationKind::Css(_) = rendered_chunk {
-        // TODO: add sourcemap to output
+      } else if let InstantiationKind::Css(css_meta) = rendered_chunk {
+        let mut code = code.try_into_string()?;
+        let rendered_chunk = css_meta.rendered_chunk;
+        if let Some(map) = map.as_mut() {
+          let file_base_name =
+            Path::new(rendered_chunk.filename.as_str()).file_name().expect("should have file name");
+          map.set_file(file_base_name.to_string_lossy().as_ref());
+
+          let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
+          let map_path = file_dir.join(&map_filename);
+
+          self
+            .process_code_and_sourcemap(&mut code, map, &map_path, rendered_chunk.debug_id)
+            .await?;
+
+          if let Some(sourcemap) = &self.options.sourcemap {
+            match sourcemap {
+              SourceMapType::File | SourceMapType::Hidden => {
+                let source = map.to_json_string();
+                output_assets.push(Output::Asset(Box::new(OutputAsset {
+                  filename: map_filename.as_str().into(),
+                  source: source.into(),
+                  original_file_names: vec![],
+                  names: vec![],
+                })));
+                if matches!(sourcemap, SourceMapType::File) {
+                  let source_mapping_url = Path::new(&map_filename)
+                    .file_name()
+                    .expect("should have filename")
+                    .to_string_lossy();
+                  code.push_str(&format!("\n/*# sourceMappingURL={source_mapping_url} */"));
+                }
+              }
+              SourceMapType::Inline => {
+                let data_url = map.to_data_url();
+                code.push_str("\n//# sourceMappingURL=");
+                code.push_str(&data_url);
+              }
+            }
+          }
+        }
 
         output.push(Output::Asset(Box::new(OutputAsset {
           filename: filename.clone().into(),
-          source: code,
+          source: code.into(),
           original_file_names: vec![],
           names: vec![],
         })));

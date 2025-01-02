@@ -170,10 +170,8 @@ pub struct BindingViteResolvePluginConfig {
   pub runtime: String,
 }
 
-impl TryFrom<BindingViteResolvePluginConfig> for ViteResolveOptions {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingViteResolvePluginConfig) -> Result<Self, Self::Error> {
+impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
+  fn from(value: BindingViteResolvePluginConfig) -> Self {
     let external = match value.external {
       napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsExternal::True,
       napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsExternal::Vec(v),
@@ -181,11 +179,11 @@ impl TryFrom<BindingViteResolvePluginConfig> for ViteResolveOptions {
     let no_external = match value.no_external {
       napi::Either::A(_) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::new_true(),
       napi::Either::B(v) => rolldown_plugin_vite_resolve::ResolveOptionsNoExternal::new_vec(
-        bindingify_string_or_regex_array(v)?,
+        bindingify_string_or_regex_array(v),
       ),
     };
 
-    Ok(Self {
+    Self {
       resolve_options: value.resolve_options.into(),
       environment_consumer: value.environment_consumer,
       environment_name: value.environment_name,
@@ -222,7 +220,7 @@ impl TryFrom<BindingViteResolvePluginConfig> for ViteResolveOptions {
       ),
 
       runtime: value.runtime,
-    })
+    }
   }
 }
 
@@ -288,25 +286,23 @@ impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
   fn try_from(value: BindingAliasPluginConfig) -> Result<Self, Self::Error> {
     let mut ret = Vec::with_capacity(value.entries.len());
     for item in value.entries {
-      ret.push(Alias { find: item.find.try_into()?, replacement: item.replacement });
+      ret.push(Alias { find: item.find.into(), replacement: item.replacement });
     }
 
     Ok(Self { entries: ret })
   }
 }
 
-impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingTransformPluginConfig) -> Result<Self, Self::Error> {
-    Ok(TransformPlugin {
-      include: value.include.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
-      exclude: value.exclude.map(bindingify_string_or_regex_array).transpose()?.unwrap_or_default(),
+impl From<BindingTransformPluginConfig> for TransformPlugin {
+  fn from(value: BindingTransformPluginConfig) -> Self {
+    Self {
+      include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
+      exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
       jsx_inject: value.jsx_inject,
       react_refresh: value.react_refresh.unwrap_or_default(),
       target: value.target,
       browserslist: value.browserslist,
-    })
+    }
   }
 }
 
@@ -346,7 +342,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
       BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin {}),
       BindingBuiltinPluginName::Transform => {
         let plugin = if let Some(options) = plugin.options {
-          BindingTransformPluginConfig::from_unknown(options)?.try_into()?
+          BindingTransformPluginConfig::from_unknown(options)?.into()
         } else {
           TransformPlugin::default()
         };
@@ -411,7 +407,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           ));
         };
 
-        Arc::new(ViteResolvePlugin::new(config.try_into()?))
+        Arc::new(ViteResolvePlugin::new(config.into()))
       }
     })
   }

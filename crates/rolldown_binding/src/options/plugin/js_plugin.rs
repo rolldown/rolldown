@@ -536,7 +536,7 @@ fn filter_transform(
   };
 
   let mut fallback_ret = if let Some(ref module_type_filter) = transform_filter.module_type {
-    if module_type_filter.iter().any(|ty| &**ty == module_type) {
+    if module_type_filter.iter().any(|ty| ty.as_ref() == module_type) {
       return Ok(true);
     }
     false

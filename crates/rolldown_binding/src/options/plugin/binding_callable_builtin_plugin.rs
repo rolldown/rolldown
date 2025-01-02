@@ -30,7 +30,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn CallablePluginAsyncTrait> {
           ));
         };
 
-        Arc::new(ViteResolvePlugin::new(config.try_into()?))
+        Arc::new(ViteResolvePlugin::new(config.into()))
       }
       _ => return Err(napi::Error::new(napi::Status::InvalidArg, "Non-callable builtin plugin.")),
     })

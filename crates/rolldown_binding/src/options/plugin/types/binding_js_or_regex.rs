@@ -45,6 +45,14 @@ impl FromNapiValue for JsRegExp {
   }
 }
 
+impl TryFrom<JsRegExp> for HybridRegex {
+  type Error = anyhow::Error;
+
+  fn try_from(value: JsRegExp) -> Result<Self, Self::Error> {
+    HybridRegex::with_flags(&value.source, &value.flags)
+  }
+}
+
 #[derive(Debug, Clone)]
 pub struct BindingStringOrRegex(StringOrRegex);
 
@@ -79,28 +87,12 @@ impl TryFrom<BindingStringOrRegex> for HybridRegex {
   }
 }
 
-impl TryFrom<JsRegExp> for HybridRegex {
-  type Error = anyhow::Error;
-
-  fn try_from(value: JsRegExp) -> Result<Self, Self::Error> {
-    HybridRegex::with_flags(&value.source, &value.flags)
+impl From<BindingStringOrRegex> for StringOrRegex {
+  fn from(value: BindingStringOrRegex) -> Self {
+    value.0
   }
 }
 
-impl TryFrom<BindingStringOrRegex> for StringOrRegex {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
-    Ok(value.0)
-  }
-}
-
-pub fn bindingify_string_or_regex_array(
-  items: Vec<BindingStringOrRegex>,
-) -> anyhow::Result<Vec<StringOrRegex>> {
-  let mut ret = Vec::with_capacity(items.len());
-  for i in items {
-    ret.push(i.try_into()?);
-  }
-  Ok(ret)
+pub fn bindingify_string_or_regex_array(items: Vec<BindingStringOrRegex>) -> Vec<StringOrRegex> {
+  items.into_iter().map(|item| item.0).collect()
 }

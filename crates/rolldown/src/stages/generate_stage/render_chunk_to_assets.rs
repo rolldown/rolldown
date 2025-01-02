@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use futures::future::try_join_all;
 use oxc_index::{index_vec, IndexVec};
@@ -7,6 +7,7 @@ use rolldown_common::{
   SourceMapType,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{
   concat_string,
   indexmap::FxIndexSet,
@@ -78,40 +79,9 @@ impl<'a> GenerateStage<'a> {
           let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
           let map_path = file_dir.join(&map_filename);
 
-          if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
-            let mut x_google_ignore_list = vec![];
-            for (index, source) in map.get_sources().enumerate() {
-              if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
-                #[allow(clippy::cast_possible_truncation)]
-                x_google_ignore_list.push(index as u32);
-              }
-            }
-            if !x_google_ignore_list.is_empty() {
-              map.set_x_google_ignore_list(x_google_ignore_list);
-            }
-          }
-
-          if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
-            let mut sources = Vec::with_capacity(map.get_sources().count());
-            for source in map.get_sources() {
-              sources.push(
-                sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?,
-              );
-            }
-            map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-          }
-
-          if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
-            let debug_id_str = uuid_v4_string_from_u128(rendered_chunk.debug_id);
-            map.set_debug_id(&debug_id_str);
-            code.push_str("\n//# debugId=");
-            code.push_str(debug_id_str.as_str());
-          }
-
-          // Normalize the windows path at final.
-          let sources =
-            map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
-          map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+          self
+            .process_code_and_sourcemap(&mut code, map, &map_path, rendered_chunk.debug_id)
+            .await?;
 
           if let Some(sourcemap) = &self.options.sourcemap {
             match sourcemap {
@@ -326,6 +296,49 @@ impl<'a> GenerateStage<'a> {
       })
       .collect::<Vec<_>>();
     chunk_to_codegen_ret
+  }
+
+  async fn process_code_and_sourcemap<'b>(
+    &self,
+    code: &'b mut String,
+    map: &'b mut SourceMap,
+    map_path: &'b PathBuf,
+    debug_id: u128,
+  ) -> BuildResult<()> {
+    if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
+      let mut x_google_ignore_list = vec![];
+      for (index, source) in map.get_sources().enumerate() {
+        if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
+          #[allow(clippy::cast_possible_truncation)]
+          x_google_ignore_list.push(index as u32);
+        }
+      }
+      if !x_google_ignore_list.is_empty() {
+        map.set_x_google_ignore_list(x_google_ignore_list);
+      }
+    }
+
+    if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
+      let mut sources = Vec::with_capacity(map.get_sources().count());
+      for source in map.get_sources() {
+        sources
+          .push(sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?);
+      }
+      map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+    }
+
+    if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
+      let debug_id_str = uuid_v4_string_from_u128(debug_id);
+      map.set_debug_id(&debug_id_str);
+      code.push_str("\n//# debugId=");
+      code.push_str(debug_id_str.as_str());
+    }
+
+    // Normalize the windows path at final.
+    let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
+    map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+
+    Ok(())
   }
 }
 

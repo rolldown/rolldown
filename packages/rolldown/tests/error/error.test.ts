@@ -122,3 +122,18 @@ test('call transformContext error', async () => {
   })
   expect(error!.message).toContain('transform hook error')
 })
+
+test('should error with output.dir + output.file', async () => {
+  try {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+    })
+    await build.write({
+      dir: 'dist',
+      file: 'index.js',
+    })
+  } catch (error: any) {
+    expect(error.message).toContain('Invalid value for option "output.dir"')
+  }
+})

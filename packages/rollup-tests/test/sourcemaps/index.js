@@ -34,9 +34,7 @@ runTestSuiteWithSamples(
 						let customOutputOptions = (config.options || {}).output || {};
 						const outputOptions = {
 							exports: 'auto',
-							dir: directory + '/_actual/',
-							entryFileNames: customOutputOptions.file ? path.basename(customOutputOptions.file) : 'bundle.' + format + '.js',
-							// file: directory + '/_actual/bundle.' + format + '.js',
+							file: directory + '/_actual/bundle.' + format + '.js',
 							format,
 							sourcemap: true,
 							...customOutputOptions

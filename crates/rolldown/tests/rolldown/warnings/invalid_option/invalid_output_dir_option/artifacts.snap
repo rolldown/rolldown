@@ -7,7 +7,7 @@ snapshot_kind: text
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Warning: Invalid value for option "output.dir" - "output.dir" is ignored. you must set either "output.file" for a single-file build or "output.dir" when generating multiple chunks.
+[INVALID_OPTION] Warning: Invalid value for option "output.dir" - you must set either "output.file" for a single-file build or "output.dir" when generating multiple chunks.
 
 ```
 # Assets

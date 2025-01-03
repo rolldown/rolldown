@@ -65,6 +65,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.ctx.runtime.resolve_symbol(name)
   }
 
+  pub fn finalized_expr_for_runtime_symbol(&self, name: &str) -> ast::Expression<'ast> {
+    self.finalized_expr_for_symbol_ref(self.ctx.runtime.resolve_symbol(name), false)
+  }
+
   /// If return true the import stmt should be removed,
   /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
@@ -85,8 +89,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
 
         // `__toESM`
-        let to_esm_fn_name =
-          self.finalized_expr_for_symbol_ref(self.canonical_ref_for_runtime("__toESM"), false);
+        let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
 
         // `require_foo`
         let importee_wrapper_ref_name =
@@ -353,18 +356,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     });
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let mut export_call_expr = self.snippet.call_expr(self.canonical_name_for_runtime("__export"));
-    export_call_expr.arguments.push(ast::Argument::from(self.snippet.id_ref_expr(var_name, SPAN)));
-    export_call_expr
-      .arguments
-      .push(ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)));
-    let export_call_stmt = ast::Statement::ExpressionStatement(
-      ast::ExpressionStatement {
-        expression: ast::Expression::CallExpression(export_call_expr.into_in(self.alloc)),
-        ..TakeIn::dummy(self.alloc)
-      }
-      .into_in(self.alloc),
+    let export_call_expr = self.snippet.builder.expression_call(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__export"),
+      NONE,
+      self.snippet.builder.vec_from_array([
+        ast::Argument::from(self.snippet.id_ref_expr(var_name, SPAN)),
+        ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
+      ]),
+      false,
     );
+    let export_call_stmt = self.snippet.builder.statement_expression(SPAN, export_call_expr);
     let mut ret = vec![decl_stmt, export_call_stmt];
     ret.extend(re_export_external_stmts.unwrap_or_default());
 
@@ -618,7 +620,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // use `__require` instead of `require`
         if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
           *call_expr.callee.get_inner_expression_mut() =
-            self.finalized_expr_for_symbol_ref(self.canonical_ref_for_runtime("__require"), false);
+            self.finalized_expr_for_runtime_symbol("__require");
         }
         let rewrite_ast = match &self.ctx.modules[rec.resolved_module] {
           Module::Normal(importee) => {
@@ -685,11 +687,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     // `xxx_exports`
                     let namespace_object_ref_expr =
                       self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false);
-                    let to_commonjs_ref = self.canonical_ref_for_runtime("__toCommonJS");
                     // `__toCommonJS`
-                    let to_commonjs_expr =
-                      self.finalized_expr_for_symbol_ref(to_commonjs_ref, false);
-
+                    let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                     // `init_xxx()`
                     let wrap_ref_call_expr =
                       ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(

@@ -57,6 +57,7 @@ pub use crate::{
     Chunk,
   },
   css::{
+    css_asset_meta::CssAssetMeta,
     css_module::CssModule,
     css_module_idx::CssModuleIdx,
     css_view::{CssAssetNameReplacer, CssRenderer, CssView},

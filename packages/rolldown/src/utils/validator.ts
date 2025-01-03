@@ -313,11 +313,14 @@ const addonFunctionSchema = v.pipe(
   ),
 )
 
-const chunkFileNamesFunctionSchema = v.pipe(
-  v.function(),
-  v.args(v.tuple([v.custom<PreRenderedChunk>(() => true)])),
-  v.returns(v.string()),
-)
+const chunkFileNamesSchema = v.union([
+  v.string(),
+  v.pipe(
+    v.function(),
+    v.args(v.tuple([v.custom<PreRenderedChunk>(() => true)])),
+    v.returns(v.string()),
+  ),
+])
 
 const GlobalsFunctionSchema = v.pipe(
   v.function(),
@@ -402,22 +405,10 @@ const outputOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Name pattern for asset files'),
   ),
-  entryFileNames: v.pipe(
-    v.optional(v.union([v.string(), chunkFileNamesFunctionSchema])),
-    v.description('Name pattern for emitted entry chunks'),
-  ),
-  chunkFileNames: v.pipe(
-    v.optional(v.union([v.string(), chunkFileNamesFunctionSchema])),
-    v.description('Name pattern for emitted secondary chunks'),
-  ),
-  cssEntryFileNames: v.pipe(
-    v.optional(v.union([v.string(), chunkFileNamesFunctionSchema])),
-    v.description('Name pattern for emitted css entry chunks'),
-  ),
-  cssChunkFileNames: v.pipe(
-    v.optional(v.union([v.string(), chunkFileNamesFunctionSchema])),
-    v.description('Name pattern for emitted css secondary chunks'),
-  ),
+  entryFileNames: v.optional(chunkFileNamesSchema),
+  chunkFileNames: v.optional(chunkFileNamesSchema),
+  cssEntryFileNames: v.optional(chunkFileNamesSchema),
+  cssChunkFileNames: v.optional(chunkFileNamesSchema),
   minify: v.pipe(
     v.optional(v.boolean()),
     v.description('Minify the bundled file'),
@@ -463,6 +454,22 @@ const getAddonDescription = (
 
 const outputCliOverrideSchema = v.strictObject({
   // Reject all functions in CLI
+  entryFileNames: v.pipe(
+    v.optional(v.string()),
+    v.description('Name pattern for emitted entry chunks'),
+  ),
+  chunkFileNames: v.pipe(
+    v.optional(v.string()),
+    v.description('Name pattern for emitted secondary chunks'),
+  ),
+  cssEntryFileNames: v.pipe(
+    v.optional(v.string()),
+    v.description('Name pattern for emitted css entry chunks'),
+  ),
+  cssChunkFileNames: v.pipe(
+    v.optional(v.string()),
+    v.description('Name pattern for emitted css secondary chunks'),
+  ),
   banner: v.pipe(
     v.optional(v.string()),
     v.description(getAddonDescription('top', 'outside')),

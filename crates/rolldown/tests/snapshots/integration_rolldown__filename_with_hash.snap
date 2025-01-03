@@ -3800,6 +3800,12 @@ snapshot_kind: text
 - b-!~{001}~.js => b-C3H3Nr5B.js
 - shared-!~{002}~.js => shared-xwhduHDy.js
 
+# tests/rolldown/code_splitting/format_cjs_with_esm_require_esm
+
+- main1-!~{000}~.js => main1-BAlyLRtA.js
+- main2-!~{001}~.js => main2-CfVwQve5.js
+- chunk-!~{002}~.js => chunk-m_k7nO7a.js
+
 # tests/rolldown/code_splitting/format_cjs_with_module_cjs
 
 - main1-!~{000}~.js => main1-DfLRKT4o.js

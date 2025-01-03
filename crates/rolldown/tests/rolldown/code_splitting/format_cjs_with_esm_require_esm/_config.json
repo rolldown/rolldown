@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main1",
+        "import": "main1.js"
+      },
+      {
+        "name": "main2",
+        "import": "main2.js"
+      }
+    ],
+    "external": [
+      "node:assert"
+    ],
+    "format":"cjs"
+  }
+}

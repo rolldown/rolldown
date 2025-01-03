@@ -7,8 +7,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
-  MINIFY_WARNING = 'MINIFY_WARNING',
-  INVALID_OPTION = 'INVALID_OPTION'
+  MINIFY_WARNING = 'MINIFY_WARNING'
 
 export function logMinifyWarning(): RollupLog {
   return {
@@ -49,13 +48,6 @@ export function logMultiplyNotifyOption(): RollupLog {
   return {
     code: MULTIPLY_NOTIFY_OPTION,
     message: `Found multiply notify option at watch options, using first one to start notify watcher.`,
-  }
-}
-
-export function logOutputDirInvalidOption(): RollupLog {
-  return {
-    code: INVALID_OPTION,
-    message: `Invalid value for option "output.dir" - you must set either "output.file" for a single-file build or "output.dir" when generating multiple chunks.`,
   }
 }
 

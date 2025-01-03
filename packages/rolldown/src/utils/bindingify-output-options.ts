@@ -1,8 +1,7 @@
 import { unimplemented } from './misc'
+import { transformRenderedChunk } from './transform-rendered-chunk'
 import type { BindingOutputOptions } from '../binding'
 import type { OutputOptions } from '../options/output-options'
-import { transformRenderedChunk } from './transform-rendered-chunk'
-import { error, logOutputDirInvalidOption } from '../log/logs'
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
@@ -29,10 +28,6 @@ export function bindingifyOutputOptions(
     globals,
     file,
   } = outputOptions
-
-  if (typeof dir === 'string' && typeof file === 'string') {
-    return error(logOutputDirInvalidOption())
-  }
 
   return {
     dir,

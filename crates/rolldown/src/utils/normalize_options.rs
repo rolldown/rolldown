@@ -12,8 +12,37 @@ pub struct NormalizeOptionsReturn {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
+fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnostic> {
+  let mut warnings: Vec<BuildDiagnostic> = Vec::new();
+
+  if raw_options.dir.is_some() && raw_options.file.is_some() {
+    warnings.push(
+      BuildDiagnostic::invalid_option(InvalidOptionType::InvalidOutputDirOption)
+        .with_severity_warning(),
+    );
+  }
+
+  match raw_options.format {
+    Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) => {
+      if matches!(raw_options.inline_dynamic_imports, Some(false)) {
+        warnings.push(
+          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
+            format.to_string(),
+          ))
+          .with_severity_warning(),
+        );
+      }
+    }
+    _ => {}
+  }
+
+  warnings
+}
+
 #[allow(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
 pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOptionsReturn {
+  let warnings = verify_raw_options(&raw_options);
+
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
   let platform = raw_options.platform.unwrap_or(match format {
@@ -38,8 +67,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   // Take out resolve options
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
-
-  let mut warnings: Vec<BuildDiagnostic> = Vec::new();
 
   let mut loaders = FxHashMap::from(
     [
@@ -111,17 +138,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   }
 
   let inline_dynamic_imports = match format {
-    OutputFormat::Umd | OutputFormat::Iife => {
-      if matches!(raw_options.inline_dynamic_imports, Some(false)) {
-        warnings.push(
-          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
-            format.to_string(),
-          ))
-          .with_severity_warning(),
-        );
-      }
-      true
-    }
+    OutputFormat::Umd | OutputFormat::Iife => true,
     _ => raw_options.inline_dynamic_imports.unwrap_or(false),
   };
 

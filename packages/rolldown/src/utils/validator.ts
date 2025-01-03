@@ -238,7 +238,6 @@ const inputOptionsSchema = v.strictObject({
     v.optional(v.array(v.string())),
     v.description('Remove labeled statements with these label names'),
   ),
-
   checks: v.optional(checksOptionsSchema),
 })
 
@@ -449,6 +448,7 @@ const outputOptionsSchema = v.strictObject({
     v.description('Control comments in the output'),
   ),
   target: v.pipe(
+    // TODO: Verify if it needs to be changed to a union literal
     v.optional(v.enum(ESTarget)),
     v.description('The JavaScript target environment'),
   ),

@@ -20,6 +20,7 @@ use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
@@ -378,7 +379,7 @@ impl ModuleLoader {
     );
 
     self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
-
+    let mut none_empty_importer_module = vec![];
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
@@ -388,10 +389,10 @@ impl ModuleLoader {
         let mut module = module.expect("Module tasks did't complete as expected");
 
         if let Some(module) = module.as_normal_mut() {
-          let id = ModuleIdx::from(id);
+          let idx = ModuleIdx::from(id);
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[id]);
+          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[idx]);
           for importer in &importers {
             if importer.kind.is_static() {
               module.importers.insert(importer.importer_path.clone());
@@ -400,10 +401,7 @@ impl ModuleLoader {
             }
           }
           if !importers.is_empty() {
-            self
-              .shared_context
-              .plugin_driver
-              .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
+            none_empty_importer_module.push(idx);
           }
         }
 
@@ -411,6 +409,16 @@ impl ModuleLoader {
       })
       .collect();
 
+    none_empty_importer_module.into_par_iter().for_each(|idx| {
+      let module = &modules[idx];
+      let Some(module) = module.as_normal() else {
+        return;
+      };
+      self
+        .shared_context
+        .plugin_driver
+        .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
+    });
     // if `inline_dynamic_imports` is set to be true, here we should not put dynamic imports to entries
     if !self.options.inline_dynamic_imports {
       let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();

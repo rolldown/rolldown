@@ -1,11 +1,13 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use oxc_index::IndexVec;
+#[cfg(debug_assertions)]
+use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  common_debug_symbol_ref, dynamic_import_usage::DynamicImportExportsUsage, EntryPoint,
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef,
-  SymbolRefDb, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
+  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -568,7 +570,7 @@ impl<'a> LinkStage<'a> {
   /// given any `SymbolRef` the function will return the string representation of the symbol
   /// format: `${stable_id} -> ${symbol_name}`
   #[cfg(debug_assertions)]
-  #[allow(unused)]
+  #[cfg_attr(debug_assertions, allow(unused))]
   pub fn debug_symbol_ref(&self, symbol_ref: SymbolRef) -> String {
     common_debug_symbol_ref(symbol_ref, &self.module_table.modules, &self.symbols)
   }

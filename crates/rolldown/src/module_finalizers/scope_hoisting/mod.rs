@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator, IntoIn},
+  allocator::{self, Allocator, CloneIn, IntoIn},
   ast::{
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
@@ -277,11 +277,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
-    let var_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
-    // construct `var ns_name = {}`
-    let decl_stmt = self
-      .snippet
-      .var_decl_stmt(var_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
+    let binding_name_for_namespace_object_ref =
+      self.canonical_name_for(self.ctx.module.namespace_object_ref);
+    // construct `var [binding_name_for_namespace_object_ref] = {}`
+    let decl_stmt = self.snippet.var_decl_stmt(
+      binding_name_for_namespace_object_ref,
+      ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)),
+    );
 
     let exports_len = self.ctx.linking_info.canonical_exports().count();
 
@@ -289,28 +291,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut re_export_external_stmts: Option<_> = None;
     if !export_all_externals_rec_ids.is_empty() {
-      // construct `__reExport(exports, foo_exports)`
-      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+      // construct `__reExport(importer_exports, importee_exports)`
+      let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
       match self.ctx.options.format {
         OutputFormat::Esm => {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
+            // importee_exports
             let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
             let m = self.ctx.modules.get(rec.resolved_module);
             let Some(Module::External(module)) = m else {
               return vec![];
             };
-            // Insert `import * as ns from 'ext'`external module in esm format
-            // Insert `__reExport(exports, ns)`
             let importee_name = &module.name;
             vec![
+              // Insert `import * as ns from 'ext'`external module in esm format
               self.snippet.import_star_stmt(importee_name, importee_namespace_name),
+              // Insert `__reExport(foo_exports, ns)`
               self.snippet.builder.statement_expression(
                 SPAN,
                 self.snippet.call_expr_with_2arg_expr(
-                  re_export_fn_name,
-                  var_name,
-                  importee_namespace_name,
+                  re_export_fn_ref.clone_in(self.alloc),
+                  self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
+                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
                 ),
               ),
             ]
@@ -319,14 +322,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
           let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
-            // Insert `__reExport(exports, require('ext'))`
-            let importer_namespace_name =
-              self.canonical_name_for(self.ctx.module.namespace_object_ref);
+            // Insert `__reExport(importer_exports, require('ext'))`
+            let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
+            // importer_exports
+            let importer_namespace_ref_expr =
+              self.finalized_expr_for_symbol_ref(self.ctx.module.namespace_object_ref, false, None);
             let rec = &self.ctx.module.import_records[idx];
             let importee = &self.ctx.modules[rec.resolved_module];
-            let expression = self.snippet.alloc_call_expr_with_2arg_expr_expr(
-              re_export_fn_name,
-              self.snippet.id_ref_expr(importer_namespace_name, SPAN),
+            let expression = self.snippet.call_expr_with_2arg_expr(
+              re_export_fn_ref,
+              importer_namespace_ref_expr,
               self.snippet.call_expr_with_arg_expr_expr(
                 "require",
                 self.snippet.string_literal_expr(importee.id(), SPAN),
@@ -378,7 +383,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       self.finalized_expr_for_runtime_symbol("__export"),
       NONE,
       self.snippet.builder.vec_from_array([
-        ast::Argument::from(self.snippet.id_ref_expr(var_name, SPAN)),
+        ast::Argument::from(self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN)),
         ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
       ]),
       false,
@@ -648,16 +653,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                let wrap_ref_name =
-                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
+                  importee_linking_info.wrapper_ref.unwrap(),
+                  false,
+                  None,
+                );
                 if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                  Some(self.snippet.call_expr_expr(wrap_ref_name))
+                  Some(ast::Expression::CallExpression(
+                    self.snippet.alloc_simple_call_expr(wrap_ref_expr),
+                  ))
                 } else {
-                  let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-                  let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                  let ns_name =
+                    self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, None);
+                  let to_commonjs_ref_name = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                   Some(
                     self.snippet.seq2_in_paren_expr(
-                      self.snippet.call_expr_expr(wrap_ref_name),
+                      ast::Expression::CallExpression(
+                        self.snippet.alloc_simple_call_expr(wrap_ref_expr),
+                      ),
                       ast::Expression::StaticMemberExpression(
                         ast::StaticMemberExpression {
                           object: self
@@ -891,16 +904,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 match importee.exports_kind {
                   ExportsKind::Esm => {
                     if importee_linking_info.has_dynamic_exports {
-                      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                      let importer_namespace_name =
-                        self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                      let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
+                      // exports
+                      let importer_namespace_ref = self.finalized_expr_for_symbol_ref(
+                        self.ctx.module.namespace_object_ref,
+                        false,
+                        None,
+                      );
+                      // otherExports
+                      let importee_namespace_ref = self.finalized_expr_for_symbol_ref(
+                        importee.namespace_object_ref,
+                        false,
+                        None,
+                      );
                       // __reExport(exports, otherExports)
-                      let importee_namespace_name =
-                        self.canonical_name_for(importee.namespace_object_ref);
                       let expression = self.snippet.call_expr_with_2arg_expr(
-                        re_export_fn_name,
-                        importer_namespace_name,
-                        importee_namespace_name,
+                        re_export_fn_ref,
+                        importer_namespace_ref,
+                        importee_namespace_ref,
                       );
                       let stmt = ast::Statement::ExpressionStatement(
                         ast::ExpressionStatement { span: expression.span(), expression }
@@ -910,30 +931,49 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     }
                   }
                   ExportsKind::CommonJs => {
-                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                    let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
-                    // __reExport(exports, __toESM(require_xxxx()))
-                    let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
-                    let importee_wrapper_ref_name =
-                      self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                    let expression = self.snippet.alloc_call_expr_with_2arg_expr_expr(
-                      re_export_fn_name,
-                      self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                      self.snippet.wrap_with_to_esm(
-                        self
-                          .snippet
-                          .builder
-                          .expression_identifier_reference(SPAN, to_esm_fn_name.as_str()),
-                        self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                        self.ctx.module.should_consider_node_esm_spec(),
-                      ),
+                    let re_export_fn_name = self.finalized_expr_for_runtime_symbol("__reExport");
+
+                    // importer_exports
+                    let importer_namespace_ref = self.finalized_expr_for_symbol_ref(
+                      self.ctx.module.namespace_object_ref,
+                      false,
+                      None,
                     );
-                    let stmt = ast::Statement::ExpressionStatement(
-                      ast::ExpressionStatement { span: expression.span(), expression }
-                        .into_in(self.alloc),
+
+                    // __toESM
+                    let to_esm_fn_ref = self.finalized_expr_for_runtime_symbol("__toESM");
+
+                    // require_foo
+                    let importee_wrapper_ref_expr = self.finalized_expr_for_symbol_ref(
+                      importee_linking_info.wrapper_ref.unwrap(),
+                      false,
+                      None,
                     );
-                    program.body.push(stmt);
+
+                    // __reExport(importer_exports, __toESM(require_foo()))
+                    program.body.push(ast::Statement::ExpressionStatement(
+                      ast::ExpressionStatement {
+                        span: SPAN,
+                        expression: self.snippet.call_expr_with_2arg_expr_expr(
+                          re_export_fn_name,
+                          importer_namespace_ref,
+                          self.snippet.wrap_with_to_esm(
+                            to_esm_fn_ref,
+                            ast::Expression::CallExpression(
+                              self.snippet.builder.alloc_call_expression(
+                                SPAN,
+                                importee_wrapper_ref_expr,
+                                NONE,
+                                self.snippet.builder.vec(),
+                                false,
+                              ),
+                            ),
+                            self.ctx.module.should_consider_node_esm_spec(),
+                          ),
+                        ),
+                      }
+                      .into_in(self.alloc),
+                    ));
                   }
                   ExportsKind::None => {}
                 }

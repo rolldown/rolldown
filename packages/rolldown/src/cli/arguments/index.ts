@@ -1,4 +1,3 @@
-import { schema as objectSchema } from './schema'
 import { alias, type OptionConfig } from './alias'
 import {
   camelCaseToKebabCase,
@@ -9,7 +8,10 @@ import {
 import { parseArgs } from 'node:util'
 import { normalizeCliOptions, type NormalizedCliOptions } from './normalize'
 import { logger } from '../logger'
-import type { Schema } from './types'
+import { getJsonSchema } from '../../utils/validator'
+import type { Schema } from '../../types/schema'
+
+const objectSchema = getJsonSchema()
 
 export const flattenedSchema: Record<string, Schema> = flattenSchema(
   objectSchema.properties,

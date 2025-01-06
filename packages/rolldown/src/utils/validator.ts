@@ -3,9 +3,9 @@ import { colors } from '../cli/colors'
 import { toJsonSchema } from '@valibot/to-json-schema'
 import type { PreRenderedChunk } from '../binding'
 import type { RolldownPluginOption } from '../plugin'
-import type { TreeshakingOptions } from '../treeshake'
 import type { ObjectSchema } from '../types/schema'
 import type { RenderedChunk } from '../types/rolldown-output'
+import type { TreeshakingOptions } from '../types/module-side-effects'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,

@@ -188,9 +188,6 @@ importers:
       valibot:
         specifier: 1.0.0-beta.9
         version: 1.0.0-beta.9(typescript@5.6.3)
-      zod:
-        specifier: ^3.23.8
-        version: 3.23.8
     optionalDependencies:
       '@rolldown/binding-darwin-arm64':
         specifier: workspace:*
@@ -298,9 +295,6 @@ importers:
       why-is-node-running:
         specifier: ^3.0.0
         version: 3.2.1
-      zod-to-json-schema:
-        specifier: ^3.23.2
-        version: 3.23.5(zod@3.23.8)
 
   packages/rolldown/npm/darwin-arm64: {}
 
@@ -6199,14 +6193,6 @@ packages:
   yoctocolors@2.1.1:
     resolution: {integrity: sha512-GQHQqAopRhwU8Kt1DDM8NjibDXHC8eoh1erhGAJPEyveY9qqVeXvVikNKrDz69sHowPMorbPUrH/mx8c50eiBQ==}
     engines: {node: '>=18'}
-
-  zod-to-json-schema@3.23.5:
-    resolution: {integrity: sha512-5wlSS0bXfF/BrL4jPAbz9da5hDlDptdEppYfe+x4eIJ7jioqKG9uUxOwPzqof09u/XeVdrgFu29lZi+8XNDJtA==}
-    peerDependencies:
-      zod: ^3.23.3
-
-  zod@3.23.8:
-    resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -12226,12 +12212,6 @@ snapshots:
   yoctocolors-cjs@2.1.2: {}
 
   yoctocolors@2.1.1: {}
-
-  zod-to-json-schema@3.23.5(zod@3.23.8):
-    dependencies:
-      zod: 3.23.8
-
-  zod@3.23.8: {}
 
   zwitch@2.0.4: {}
 

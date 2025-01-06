@@ -1,7 +1,9 @@
 import * as v from 'valibot'
 import { colors } from '../cli/colors'
+import { toJsonSchema } from '@valibot/to-json-schema'
 import type { PreRenderedChunk } from '../binding'
 import type { RolldownPluginOption } from '../plugin'
+import type { ObjectSchema } from '../types/schema'
 import type { RenderedChunk } from '../types/rolldown-output'
 import type {
   SourcemapIgnoreListOption,
@@ -439,7 +441,6 @@ const outputOptionsSchema = v.strictObject({
     v.description('Control comments in the output'),
   ),
   target: v.pipe(
-    // TODO: Verify if it needs to be changed to a union literal
     v.optional(v.enum(ESTarget)),
     v.description('The JavaScript target environment'),
   ),
@@ -541,13 +542,23 @@ const cliOptionsSchema = v.strictObject({
   ),
   watch: v.pipe(
     v.optional(v.boolean()),
-
     v.description('Watch files in bundle and rebuild on changes'),
   ),
   ...inputCliOptionsSchema.entries,
   ...outputCliOptionsSchema.entries,
 })
 
-export function validateCliOptions(options: any): boolean {
-  return v.safeParse(cliOptionsSchema, options).success
+export function validateCliOptions<T>(options: T): [T, string[]?] {
+  let parsed = v.safeParse(cliOptionsSchema, options)
+
+  return [
+    parsed.output as T,
+    parsed.issues
+      ?.map((issue) => issue.path?.join(', '))
+      .filter((v) => v !== undefined),
+  ]
+}
+
+export function getJsonSchema(): ObjectSchema {
+  return toJsonSchema(cliOptionsSchema) as ObjectSchema
 }

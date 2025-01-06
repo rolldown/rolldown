@@ -4,12 +4,13 @@
  */
 import { logger } from '../logger'
 import { setNestedProperty } from './utils'
-import { CliOptions, cliOptionsSchema } from './schema'
+import { validateCliOptions } from '../../utils/validator'
 import { inputCliOptionsSchema } from '../../options/input-options-schema'
 import { outputCliOptionsSchema } from '../../options/output-options-schema'
+import type Z from 'zod'
 import type { InputOptions } from '../../options/input-options'
 import type { OutputOptions } from '../../options/output-options'
-import type Z from 'zod'
+import type { CliOptions } from './alias'
 
 export interface NormalizedCliOptions {
   input: InputOptions
@@ -24,16 +25,18 @@ export function normalizeCliOptions(
   cliOptions: CliOptions,
   positionals: string[],
 ): NormalizedCliOptions {
-  const parsed = cliOptionsSchema.safeParse(cliOptions)
-  const options = parsed.data ?? {}
-  if (!parsed.success) {
-    parsed.error.errors.forEach((error) => {
+  const [data, errors] = validateCliOptions<CliOptions>(cliOptions)
+  const options = data ?? {}
+
+  if (errors?.length) {
+    errors.forEach((error) => {
       logger.error(
-        `Invalid value for option ${error.path.join(', ')}. You can use \`rolldown -h\` to see the help.`,
+        `Invalid value for option ${error}. You can use \`rolldown -h\` to see the help.`,
       )
     })
     process.exit(1)
   }
+
   const result = {
     input: {} as InputOptions,
     output: {} as OutputOptions,

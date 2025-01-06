@@ -1,20 +1,35 @@
-import type { Schema } from './types'
+import type { Schema } from '../../types/schema'
 
-export function getSchemaType(
-  schema: Schema,
-): 'string' | 'boolean' | 'object' | 'number' | 'array' {
+type SchemaType = 'string' | 'boolean' | 'object' | 'number' | 'array'
+
+const priority: SchemaType[] = [
+  'object',
+  'array',
+  'string',
+  'number',
+  'boolean',
+]
+
+export function getSchemaType(schema: Schema): SchemaType {
   if ('anyOf' in schema) {
-    const types = schema.anyOf.map((s) => getSchemaType(s))
+    const types: SchemaType[] = schema.anyOf.map(getSchemaType)
+
     // Order: object > array > string > number > boolean
-    if (types.includes('object')) return 'object'
-    else if (types.includes('array')) return 'array'
-    else if (types.includes('string')) return 'string'
-    else if (types.includes('number')) return 'number'
-    else if (types.includes('boolean')) return 'boolean'
+    let result: SchemaType | undefined = priority.find((type) =>
+      types.includes(type),
+    )
+
+    if (result) {
+      return result
+    }
   }
 
   if ('type' in schema) {
-    return schema.type as 'string' | 'boolean' | 'object' | 'number' | 'array'
+    return schema.type as SchemaType
+  }
+
+  if ('const' in schema) {
+    return typeof schema.const as SchemaType
   }
 
   return 'object'
@@ -25,6 +40,10 @@ export function flattenSchema(
   base: Record<string, Schema> = {},
   parent: string = '',
 ): Record<string, Schema> {
+  if (schema === undefined) {
+    return base
+  }
+
   for (const [k, value] of Object.entries(schema)) {
     const key = parent ? `${parent}.${k}` : k
     if (getSchemaType(value) === 'object') {
@@ -37,6 +56,7 @@ export function flattenSchema(
       base[key] = value
     }
   }
+
   return base
 }
 

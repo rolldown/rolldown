@@ -1,4 +1,12 @@
-import { CliOptions } from './schema'
+import type { InputCliOptions } from '../../options/input-options'
+import type { OutputCliOptions } from '../../options/output-options'
+
+export interface CliOptions extends InputCliOptions, OutputCliOptions {
+  config?: string | boolean
+  help?: boolean
+  version?: boolean
+  watch?: boolean
+}
 
 export interface OptionConfig {
   abbreviation?: string

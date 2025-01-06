@@ -3,6 +3,7 @@ import { colors } from '../cli/colors'
 import { toJsonSchema } from '@valibot/to-json-schema'
 import type { PreRenderedChunk } from '../binding'
 import type { RolldownPluginOption } from '../plugin'
+import type { TreeshakingOptions } from '../treeshake'
 import type { ObjectSchema } from '../types/schema'
 import type { RenderedChunk } from '../types/rolldown-output'
 import type {
@@ -548,6 +549,10 @@ const cliOptionsSchema = v.strictObject({
   ...outputCliOptionsSchema.entries,
 })
 
+export function validateTreeShakingOptions(options: TreeshakingOptions): void {
+  v.parse(TreeshakingOptionsSchema, options)
+}
+
 export function validateCliOptions<T>(options: T): [T, string[]?] {
   let parsed = v.safeParse(cliOptionsSchema, options)
 
@@ -557,6 +562,14 @@ export function validateCliOptions<T>(options: T): [T, string[]?] {
       ?.map((issue) => issue.path?.join(', '))
       .filter((v) => v !== undefined),
   ]
+}
+
+export function getInputCliKeys(): string[] {
+  return v.keyof(inputCliOptionsSchema).options
+}
+
+export function getOutputCliKeys(): string[] {
+  return v.keyof(outputCliOptionsSchema).options
 }
 
 export function getJsonSchema(): ObjectSchema {

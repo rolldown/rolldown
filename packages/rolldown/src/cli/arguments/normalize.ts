@@ -4,13 +4,14 @@
  */
 import { logger } from '../logger'
 import { setNestedProperty } from './utils'
-import { validateCliOptions } from '../../utils/validator'
-import { inputCliOptionsSchema } from '../../options/input-options-schema'
-import { outputCliOptionsSchema } from '../../options/output-options-schema'
-import type Z from 'zod'
+import {
+  getInputCliKeys,
+  getOutputCliKeys,
+  validateCliOptions,
+} from '../../utils/validator'
+import type { CliOptions } from './alias'
 import type { InputOptions } from '../../options/input-options'
 import type { OutputOptions } from '../../options/output-options'
-import type { CliOptions } from './alias'
 
 export interface NormalizedCliOptions {
   input: InputOptions
@@ -26,8 +27,6 @@ export function normalizeCliOptions(
   positionals: string[],
 ): NormalizedCliOptions {
   const [data, errors] = validateCliOptions<CliOptions>(cliOptions)
-  const options = data ?? {}
-
   if (errors?.length) {
     errors.forEach((error) => {
       logger.error(
@@ -37,6 +36,7 @@ export function normalizeCliOptions(
     process.exit(1)
   }
 
+  const options = data ?? {}
   const result = {
     input: {} as InputOptions,
     output: {} as OutputOptions,
@@ -44,15 +44,15 @@ export function normalizeCliOptions(
     version: options.version ?? false,
     watch: options.watch ?? false,
   } as NormalizedCliOptions
+
   if (typeof options.config === 'string') {
     result.config = options.config
   }
+
+  const keysOfInput = getInputCliKeys()
+  const keysOfOutput = getOutputCliKeys()
   const reservedKeys = ['help', 'version', 'config', 'watch']
-  const keysOfInput = (inputCliOptionsSchema as Z.AnyZodObject).keyof()._def
-    .values as string[]
-  // Because input is the positional args, we shouldn't include it in the input schema.
-  const keysOfOutput = (outputCliOptionsSchema as Z.AnyZodObject).keyof()._def
-    .values as string[]
+
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.')
     const [primary] = keys
@@ -65,8 +65,10 @@ export function normalizeCliOptions(
       process.exit(1)
     }
   }
+
   if (!result.config && positionals.length > 0) {
     result.input.input = positionals
   }
+
   return result
 }

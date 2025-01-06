@@ -1,6 +1,5 @@
 import { BindingBundlerOptions } from '../binding'
 import { PluginDriver } from '../plugin/plugin-driver'
-import { TreeshakingOptionsSchema } from '../treeshake'
 import { bindingifyInputOptions } from './bindingify-input-options'
 import { bindingifyOutputOptions } from './bindingify-output-options'
 import { composeJsPlugins } from './compose-js-plugins'
@@ -16,6 +15,7 @@ import { getObjectPlugins } from '../plugin/plugin-driver'
 import { LogHandler } from '../types/misc'
 import { logMinifyWarning } from '../log/logs'
 import { getLogger, getOnLog } from '../log/logger'
+import { validateTreeShakingOptions } from './validator'
 import { LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
@@ -27,11 +27,10 @@ export async function createBundlerOptions(
   const pluginDriver = new PluginDriver()
   inputOptions = await pluginDriver.callOptionsHook(inputOptions)
   if (inputOptions.treeshake !== undefined) {
-    TreeshakingOptionsSchema.parse(inputOptions.treeshake)
+    validateTreeShakingOptions(inputOptions.treeshake)
   }
 
   const inputPlugins = await normalizePluginOption(inputOptions.plugins)
-
   const outputPlugins = await normalizePluginOption(outputOptions.plugins)
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO

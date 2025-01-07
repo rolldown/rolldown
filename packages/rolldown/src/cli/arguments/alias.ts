@@ -20,7 +20,6 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   config: {
     abbreviation: 'c',
     hint: 'filename',
-    default: 'rolldown.config.js',
   },
   help: {
     abbreviation: 'h',

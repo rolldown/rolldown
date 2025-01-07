@@ -8,7 +8,6 @@ use super::module_finalizers::scope_hoisting::{
 };
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
-pub mod call_expression_ext;
 pub mod chunk;
 pub mod ecma_visitors;
 pub mod extract_meaningful_input_name_from_path;

@@ -1,3 +1,7 @@
+<script setup lang="ts">
+  import { data } from '../data-loading/node-version.data.js'
+</script>
+
 # Setup the project
 
 ## Prerequisites
@@ -33,7 +37,7 @@ cargo install just
 
 :::
 
-- Install Node.js >= 20.11 / 21.2
+- Install Node.js >= {{ data.nodeVersion }} / 21.2.0
 
 ## `just setup`
 
@@ -65,7 +69,7 @@ Rolldown is built on Rust and requires `rustup` and `cargo` to exist in your env
 
 Rolldown is a npm package built with [NAPI-RS](https://napi.rs/) and is published to the npm registry, and as such requires Node.js and pnpm (for dependency management).
 
-We recommend installing Node.js with a version manager, like [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm). Make sure to install and use Node.js version 18.18.0+, which is the minimum requirement for this project. You can skip this step if you are already using a Node.js version manager of your choice and on a Node.js version that meets the requirement.
+We recommend installing Node.js with a version manager, like [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm). Make sure to install and use Node.js version {{ data.nodeVersion }}+, which is the minimum requirement for this project. You can skip this step if you are already using a Node.js version manager of your choice and on a Node.js version that meets the requirement.
 
 #### Setup pnpm
 

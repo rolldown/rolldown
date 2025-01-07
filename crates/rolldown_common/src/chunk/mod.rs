@@ -124,7 +124,12 @@ impl Chunk {
     make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
   ) -> anyhow::Result<PreliminaryFilename> {
     if let Some(file) = &options.file {
-      return Ok(PreliminaryFilename::new(file.clone(), None));
+      let basename = PathBuf::from(file)
+        .file_name()
+        .expect("The file should have basename")
+        .to_string_lossy()
+        .to_string();
+      return Ok(PreliminaryFilename::new(basename, None));
     }
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
     let extracted_hash_pattern = extract_hash_pattern(filename_template.template());

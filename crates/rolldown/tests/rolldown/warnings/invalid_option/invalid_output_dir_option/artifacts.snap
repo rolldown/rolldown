@@ -12,7 +12,7 @@ snapshot_kind: text
 ```
 # Assets
 
-## dist/main.js
+## main.js
 
 ```js
 

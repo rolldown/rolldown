@@ -46,7 +46,10 @@ pub struct NormalizedBundlerOptions {
   pub entry_filenames: ChunkFilenamesOutputOption,
   pub chunk_filenames: ChunkFilenamesOutputOption,
   pub asset_filenames: FilenameTemplate,
-  pub dir: String,
+  // The user specified output directory config
+  pub dir: Option<String>,
+  // The rolldown resolved output directory from `dir` or `file`.
+  pub out_dir: String,
   pub file: Option<String>,
   pub format: OutputFormat,
   pub exports: OutputExports,

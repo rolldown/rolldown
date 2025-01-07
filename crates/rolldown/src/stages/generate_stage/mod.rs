@@ -271,7 +271,7 @@ impl<'a> GenerateStage<'a> {
           chunk.asset_absolute_preliminary_filenames.insert(
             module.idx,
             preliminary
-              .absolutize_with(self.options.cwd.join(&self.options.dir))
+              .absolutize_with(self.options.cwd.join(&self.options.out_dir))
               .expect_into_string(),
           );
           chunk.asset_preliminary_filenames.insert(module.idx, preliminary);
@@ -282,12 +282,12 @@ impl<'a> GenerateStage<'a> {
 
       chunk.absolute_preliminary_filename = Some(
         preliminary_filename
-          .absolutize_with(self.options.cwd.join(&self.options.dir))
+          .absolutize_with(self.options.cwd.join(&self.options.out_dir))
           .expect_into_string(),
       );
       chunk.css_absolute_preliminary_filename = Some(
         css_preliminary_filename
-          .absolutize_with(self.options.cwd.join(&self.options.dir))
+          .absolutize_with(self.options.cwd.join(&self.options.out_dir))
           .expect_into_string(),
       );
       chunk.preliminary_filename = Some(preliminary_filename);

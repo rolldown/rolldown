@@ -27,7 +27,7 @@ impl Generator for AssetGenerator {
       let preliminary_filename =
         ctx.chunk.asset_preliminary_filenames.get(&asset_module.idx).unpack();
       let file_path =
-        ctx.options.cwd.as_path().join(&ctx.options.dir).join(preliminary_filename.as_str());
+        ctx.options.cwd.as_path().join(&ctx.options.out_dir).join(preliminary_filename.as_str());
       let file_dir = file_path.parent().expect("chunk file name should have a parent");
       instantiated_chunks.push(InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,

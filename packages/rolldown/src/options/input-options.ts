@@ -1,13 +1,13 @@
-import { RolldownPluginOption } from '../plugin'
-import {
+import type { RolldownPluginOption } from '../plugin'
+import type {
   LogLevel,
   LogLevelOption,
   LogLevelWithError,
   RollupLog,
   RollupLogWithString,
 } from '../log/logging'
-import { TreeshakingOptions } from '../treeshake'
-import { NullValue, StringOrRegExp } from '../types/utils'
+import type { NullValue, StringOrRegExp } from '../types/utils'
+import type { TreeshakingOptions } from '../types/module-side-effects'
 
 export type InputOption = string | string[] | Record<string, string>
 

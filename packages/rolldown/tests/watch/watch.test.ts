@@ -158,6 +158,29 @@ test.sequential('watch event', async () => {
   })
 })
 
+test.sequential('watch BUNDLE_END event output + "file" option', async () => {
+  const { input, output } = await createTestInputAndOutput('watch-event')
+  const watcher = watch({
+    input,
+    output: { file: output },
+  })
+
+  const eventFn = vi.fn()
+  watcher.on('event', (event) => {
+    if (event.code === 'BUNDLE_END') {
+      eventFn()
+      expect(event.output).toEqual([output])
+    }
+  })
+
+  await waitUtil(() => {
+    // test first build event
+    expect(eventFn).toBeCalled()
+  })
+
+  await watcher.close()
+})
+
 test.sequential('watch event avoid deadlock #2806', async () => {
   const { input, output } = await createTestInputAndOutput(
     'watch-event-avoid-dead-lock',

@@ -44,7 +44,9 @@ jobs:
           node-version: 18
 
       - name: Node Test For Node18
-        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+        run: |
+          pnpm run --filter rolldown-tests test:main 
+          pnpm run --filter rolldown-tests test:watcher
 
       - name: Rollup Test Node18
         run: pnpm run --filter rollup-tests test
@@ -58,7 +60,9 @@ jobs:
           node-version: 20
 
       - name: Node Test For Node20
-        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+        run: |
+          pnpm run --filter rolldown-tests test:main 
+          pnpm run --filter rolldown-tests test:watcher
 
       - name: Rollup Test Node20
         run: pnpm run --filter rollup-tests test
@@ -72,7 +76,9 @@ jobs:
           node-version: 22
 
       - name: Node Test For Node22
-        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+        run: |
+          pnpm run --filter rolldown-tests test:main 
+          pnpm run --filter rolldown-tests test:watcher
 
       - name: Rollup Test Node22
         run: pnpm run --filter rollup-tests test

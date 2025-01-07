@@ -7,13 +7,13 @@ snapshot_kind: text
 ## dist/out.css
 
 ```css
-
-```
-## dist/out.css
-
-```css
 body {
   background-color: #f0f0f0;
 }
+
+```
+## out.css
+
+```css
 
 ```

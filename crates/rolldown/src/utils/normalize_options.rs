@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{
   Comments, GlobalsOutputOption, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat,
@@ -142,6 +144,18 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     _ => raw_options.inline_dynamic_imports.unwrap_or(false),
   };
 
+  // If the `file` is provided, use the parent directory of the file as the `out_dir`.
+  // Otherwise, use the `dir` if provided, or default to `dist`.
+  let out_dir = raw_options.file.as_ref().map_or_else(
+    || raw_options.dir.clone().unwrap_or_else(|| "dist".to_string()),
+    |file| {
+      Path::new(file.as_str())
+        .parent()
+        .map(|parent| parent.to_string_lossy().to_string())
+        .unwrap_or_default()
+    },
+  );
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -170,7 +184,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     intro: raw_options.intro,
     outro: raw_options.outro,
     es_module: raw_options.es_module.unwrap_or_default(),
-    dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
+    dir: raw_options.dir,
+    out_dir,
     file: raw_options.file,
     format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),

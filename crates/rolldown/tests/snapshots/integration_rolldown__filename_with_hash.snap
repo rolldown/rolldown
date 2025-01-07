@@ -4103,16 +4103,16 @@ snapshot_kind: text
 
 # tests/rolldown/function/file/css
 
-- dist/out.css => dist/out.css
+- out.css => out.css
 - dist/out.css
 
 # tests/rolldown/function/file/js
 
-- dist/out.css => dist/out.css
+- out.js => out.js
 
 # tests/rolldown/function/file/js_css
 
-- dist/out.css => dist/out.css
+- out.css => out.css
 - dist/out.css
 
 # tests/rolldown/function/format/app/export-all
@@ -5296,7 +5296,7 @@ snapshot_kind: text
 
 # tests/rolldown/warnings/invalid_option/invalid_output_dir_option
 
-- dist/main.js => dist/main.js
+- main.js => main.js
 
 # tests/rolldown/warnings/invalid_option/unsupported_code_splitting_format
 

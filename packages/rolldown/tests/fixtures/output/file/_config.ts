@@ -8,6 +8,6 @@ export default defineTest({
     },
   },
   afterTest: function (output) {
-    expect(output.output[0].fileName).toMatchInlineSnapshot(`"dist/out.js"`)
+    expect(output.output[0].fileName).toBe('out.js')
   },
 })

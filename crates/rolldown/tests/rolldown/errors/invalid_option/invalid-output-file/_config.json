@@ -1,6 +1,6 @@
 {
   "config": {
-    "file": "dist.js",
+    "file": "dist/index.js",
     "name": "wrap"
   },
   "expectError": true

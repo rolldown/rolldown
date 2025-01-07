@@ -46,9 +46,9 @@ impl IntegrationTest {
     let mut bundler = Bundler::new(options);
 
     if self.test_meta.write_to_disk {
-      if bundler.options().dir.as_path().is_dir() {
-        std::fs::remove_dir_all(&bundler.options().dir)
-          .context(bundler.options().dir.clone())
+      if bundler.options().out_dir.as_path().is_dir() {
+        std::fs::remove_dir_all(&bundler.options().out_dir)
+          .context(bundler.options().out_dir.clone())
           .expect("Failed to clean the output directory");
       }
       bundler.write().await
@@ -73,7 +73,7 @@ impl IntegrationTest {
     let cwd = bundler.options().cwd.clone();
 
     let bundle_output = if self.test_meta.write_to_disk {
-      let abs_output_dir = cwd.join(&bundler.options().dir);
+      let abs_output_dir = cwd.join(&bundler.options().out_dir);
       if abs_output_dir.is_dir() {
         std::fs::remove_dir_all(&abs_output_dir)
           .context(format!("{abs_output_dir:?}"))
@@ -128,7 +128,7 @@ impl IntegrationTest {
       let cwd = bundler.options().cwd.clone();
 
       let bundle_output = if self.test_meta.write_to_disk {
-        let abs_output_dir = cwd.join(&bundler.options().dir);
+        let abs_output_dir = cwd.join(&bundler.options().out_dir);
         if abs_output_dir.is_dir() {
           std::fs::remove_dir_all(&abs_output_dir)
             .context(format!("{abs_output_dir:?}"))
@@ -440,7 +440,7 @@ impl IntegrationTest {
 
   fn execute_output_assets(bundler: &Bundler, test_title: &str) {
     let cwd = bundler.options().cwd.clone();
-    let dist_folder = cwd.join(&bundler.options().dir);
+    let dist_folder = cwd.join(&bundler.options().out_dir);
 
     let is_expect_executed_under_esm = matches!(bundler.options().format, OutputFormat::Esm)
       || (!matches!(bundler.options().format, OutputFormat::Cjs)

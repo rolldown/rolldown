@@ -4,9 +4,9 @@ snapshot_kind: text
 ---
 # Assets
 
-## dist/out.css
+## out.js
 
-```css
+```js
 
 //#region main.js
 var main_default = "hello, world";

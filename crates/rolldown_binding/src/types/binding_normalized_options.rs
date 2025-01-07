@@ -107,8 +107,7 @@ impl BindingNormalizedOptions {
 
   #[napi(getter)]
   pub fn dir(&self) -> Option<String> {
-    // NOTE: rollup returns undefined when `dir` is not set
-    Some(self.inner.dir.clone())
+    self.inner.dir.clone()
   }
 
   #[napi(getter)]

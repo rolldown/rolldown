@@ -175,7 +175,7 @@ describe('config', () => {
 
     it('should resolve rolldown.config.cjs', async () => {
       const cwd = cliFixturesDir('cli-with-config')
-      const status = await $({ cwd })`rolldown -c`
+      const status = await $({ cwd })`rolldown -c rolldown.config.cjs`
       expect(status.exitCode).toBe(0)
       expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })

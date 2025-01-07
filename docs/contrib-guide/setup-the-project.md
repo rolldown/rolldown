@@ -1,3 +1,7 @@
+<script setup lang="ts">
+  import { data } from '../data-loading/node-version.data.js'
+</script>
+
 # Setup the project
 
 ## Prerequisites
@@ -33,7 +37,7 @@ cargo install just
 
 :::
 
-- Install Node.js >= 20.11 / 21.2
+- Install Node.js >= {{ data.nodeVersion }} / 21.2.0
 
 ## `just setup`
 

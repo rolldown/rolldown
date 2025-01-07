@@ -3769,6 +3769,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-Ch6LZeOP.js
 
+# tests/rolldown/cjs_compat/unnecessary_compat_default_property_access
+
+- main-!~{000}~.js => main-DgUbt0hI.js
+
 # tests/rolldown/code_splitting/basic
 
 - main1-!~{000}~.js => main1-CHIdXZDI.js

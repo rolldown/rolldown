@@ -40,8 +40,8 @@ let bar = 123;
 //#endregion
 //#region entry.js
 console.log(exports, module.exports);
-node_assert.default.deepEqual(test_exports$1, { foo: 123 });
-node_assert.default.deepEqual(test_exports, { bar: 123 });
+node_assert.deepEqual(test_exports$1, { foo: 123 });
+node_assert.deepEqual(test_exports, { bar: 123 });
 
 //#endregion
 ```
@@ -68,10 +68,10 @@ node_assert.default.deepEqual(test_exports, { bar: 123 });
  var bar = 123;
 -console.log(exports, module.exports, test_exports, test_exports2);
 +console.log(exports, module.exports);
-+node_assert.default.deepEqual(test_exports$1, {
++node_assert.deepEqual(test_exports$1, {
 +    foo: 123
 +});
-+node_assert.default.deepEqual(test_exports, {
++node_assert.deepEqual(test_exports, {
 +    bar: 123
 +});
 

@@ -31,9 +31,9 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 //#region entry.js
 var import_foo = __toESM(require_foo());
 let foo = 234;
-node_assert.default.equal(import_foo.foo, 123);
-node_assert.default.equal(import_foo.foo, 123);
-node_assert.default.equal(foo, 234);
+node_assert.equal(import_foo.foo, 123);
+node_assert.equal(import_foo.foo, 123);
+node_assert.equal(foo, 234);
 
 //#endregion
 ```
@@ -54,8 +54,8 @@ node_assert.default.equal(foo, 234);
 -console.log(ns.foo, ns.foo, foo2);
 +var import_foo = __toESM(require_foo());
 +var foo = 234;
-+node_assert.default.equal(import_foo.foo, 123);
-+node_assert.default.equal(import_foo.foo, 123);
-+node_assert.default.equal(foo, 234);
++node_assert.equal(import_foo.foo, 123);
++node_assert.equal(import_foo.foo, 123);
++node_assert.equal(foo, 234);
 
 ```

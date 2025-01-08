@@ -2779,7 +2779,6 @@ dependencies = [
 name = "rolldown_resolver"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "arcstr",
  "dashmap 6.1.0",
  "itertools 0.13.0",

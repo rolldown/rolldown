@@ -166,7 +166,7 @@ pub async fn resolve_id_with_plugins(
     }));
   }
 
-  resolve_id(resolver, request, importer, import_kind, is_user_defined_entry)
+  Ok(resolve_id(resolver, request, importer, import_kind, is_user_defined_entry))
 }
 
 fn resolve_id(
@@ -175,13 +175,22 @@ fn resolve_id(
   importer: Option<&str>,
   import_kind: ImportKind,
   is_user_defined_entry: bool,
-) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+) -> Result<ResolvedId, ResolveError> {
   let resolved =
-    resolver.resolve(importer.map(Path::new), request, import_kind, is_user_defined_entry)?;
+    resolver.resolve(importer.map(Path::new), request, import_kind, is_user_defined_entry);
 
-  if let Err(err) = resolved {
-    match err {
-      ResolveError::Builtin { resolved, is_runtime_module } => Ok(Ok(ResolvedId {
+  match resolved {
+    Ok(resolved) => Ok(ResolvedId {
+      id: resolved.path,
+      ignored: false,
+      module_def_format: resolved.module_def_format,
+      is_external: false,
+      package_json: resolved.package_json,
+      side_effects: None,
+      is_external_without_side_effects: false,
+    }),
+    Err(err) => match err {
+      ResolveError::Builtin { resolved, is_runtime_module } => Ok(ResolvedId {
         // `resolved` is always prefixed with "node:" in compliance with the ESM specification.
         // we needs to use `is_runtime_module` to get the original specifier
         is_external_without_side_effects: is_existing_node_builtin_modules(&resolved),
@@ -195,8 +204,8 @@ fn resolve_id(
         module_def_format: ModuleDefFormat::Unknown,
         package_json: None,
         side_effects: None,
-      })),
-      ResolveError::Ignored(p) => Ok(Ok(ResolvedId {
+      }),
+      ResolveError::Ignored(p) => Ok(ResolvedId {
         //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
         id: p.to_str().expect("Should be valid utf8").into(),
         ignored: true,
@@ -205,18 +214,8 @@ fn resolve_id(
         package_json: None,
         side_effects: None,
         is_external_without_side_effects: false,
-      })),
-      _ => Ok(Err(err)),
-    }
-  } else {
-    Ok(resolved.map(|resolved| ResolvedId {
-      id: resolved.path,
-      ignored: false,
-      module_def_format: resolved.module_def_format,
-      is_external: false,
-      package_json: resolved.package_json,
-      side_effects: None,
-      is_external_without_side_effects: false,
-    }))
+      }),
+      _ => Err(err),
+    },
   }
 }

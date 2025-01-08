@@ -35,6 +35,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // bailout if the importee is a external module
         // see rollup/test/function/samples/side-effects-only-default-exports/ as an
         // example
+        // TODO: maybe we could relex the restriction if `platform: node` and the external module
+        // is a node builtin module
         self.ctx.modules[importee_idx].as_normal()?;
         self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref().and_then(|alias| {
           if alias.property_name.as_str() == "default" {

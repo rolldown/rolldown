@@ -9,7 +9,8 @@ pub use crate::{
     allocator_ext::AllocatorExt,
     ast_ext::{
       binding_identifier_ext::BindingIdentifierExt, binding_pattern_ext::BindingPatternExt,
-      expression_ext::ExpressionExt, statement_ext::StatementExt,
+      call_expression_ext::CallExpressionExt, expression_ext::ExpressionExt,
+      statement_ext::StatementExt,
     },
     span_ext::SpanExt,
   },

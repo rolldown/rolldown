@@ -15,7 +15,8 @@ use rolldown_common::{
   Platform, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::{
-  AllocatorExt, AstSnippet, BindingPatternExt, ExpressionExt, StatementExt, TakeIn,
+  AllocatorExt, AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  TakeIn,
 };
 
 mod finalizer_context;
@@ -25,8 +26,6 @@ use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use sugar_path::SugarPath;
-
-use crate::utils::call_expression_ext::CallExpressionExt;
 
 mod rename;
 

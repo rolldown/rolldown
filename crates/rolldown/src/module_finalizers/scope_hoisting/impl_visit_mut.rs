@@ -10,6 +10,7 @@ use oxc::{
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, TakeIn};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::ScopeHoistingFinalizer;
 
@@ -20,6 +21,27 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // we don't want oxc to generate hashbang statement in module level since we already handle
     // them in chunk level
     program.hashbang.take();
+
+    // init namespace_alias_symbol_id
+    self.namespace_alias_symbol_id = self
+      .ctx
+      .module
+      .ecma_view
+      .named_imports
+      .keys()
+      .filter_map(|&symbol_ref| {
+        self.ctx.symbol_db.get(symbol_ref).namespace_alias.as_ref().and_then(|alias| {
+          if alias.property_name.as_str() == "default" {
+            Some(symbol_ref.symbol)
+          } else {
+            None
+          }
+        })
+      })
+      .collect::<FxHashSet<_>>();
+
+    // dbg!(&self.ctx.module.idx);
+    // dbg!(&self.namespace_alias_symbol_and_valid_ref_id);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
@@ -79,7 +101,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             self.canonical_ref_for_runtime("__commonJSMin")
           };
 
-          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false);
+          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, None);
 
           let old_body = program.body.take_in(self.alloc);
 
@@ -100,7 +122,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           } else {
             self.canonical_ref_for_runtime("__esmMin")
           };
-          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false);
+          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, None);
           let old_body = program.body.take_in(self.alloc);
 
           let mut fn_stmts = allocator::Vec::new_in(self.alloc);
@@ -292,6 +314,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   // main.js `import * as foo_exports from './foo.js';\n foo_exports.bar.a = 1;`
   // The `foo_exports.bar.a` ast is `StaticMemberExpression(StaticMemberExpression)`, The outer StaticMemberExpression span is `foo_exports.bar.a`, the `visit_expression(Expression::MemberExpression)` is called with `foo_exports.bar`, the span is inner StaticMemberExpression.
   fn visit_member_expression(&mut self, expr: &mut ast::MemberExpression<'ast>) {
+    let flag = self.ctx.module.is_virtual();
+
+    // if !flag {
+    //   dbg!(&expr);
+    // }
     if let Some(new_expr) = self.try_rewrite_member_expr(expr) {
       match new_expr {
         match_member_expression!(Expression) => {
@@ -302,6 +329,12 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
     } else {
+      if !flag {
+        dbg!(&expr);
+      }
+      if let Some(ref_id) = self.try_get_valid_namespace_alias_ref_id_from_member_expr(expr) {
+        self.valid_namespace_alias_ref_id.insert(ref_id);
+      };
       walk_mut::walk_member_expression(self, expr);
     }
   }

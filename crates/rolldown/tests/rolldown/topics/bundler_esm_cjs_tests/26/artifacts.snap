@@ -17,7 +17,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default.default.bar === 123 && import_foo.default.bar === void 0;
+input.works = import_foo.default.default.bar === 123 && import_foo.bar === void 0;
 
 //#endregion
 ```
@@ -40,7 +40,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default.default.bar === 123 && import_foo.default.bar === void 0;
+input.works = import_foo.default.default.bar === 123 && import_foo.bar === void 0;
 
 //#endregion
 ```
@@ -65,7 +65,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default.default.bar === 123 && import_foo.default.bar === void 0;
+input.works = import_foo.default.default.bar === 123 && import_foo.bar === void 0;
 
 //#endregion
 })();
@@ -94,7 +94,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default.default.bar === 123 && import_foo.default.bar === void 0;
+input.works = import_foo.default.default.bar === 123 && import_foo.bar === void 0;
 
 //#endregion
 });

@@ -24,7 +24,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     )?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let mut expr = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee);
+    let mut expr = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee, Some(reference_id));
 
     // See https://github.com/oxc-project/oxc/issues/4606
 

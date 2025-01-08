@@ -28,7 +28,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 
 //#endregion
 //#region entry.js
-node_assert.default.deepEqual(require_cjs(), { foo: process });
+node_assert.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
 })(node_assert);

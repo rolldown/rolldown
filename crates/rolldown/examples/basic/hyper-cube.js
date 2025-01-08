@@ -1,7 +1,3 @@
-import cube from './cube.js';
+exports.test = 10000;
+exports.a = 2000;
 
-// This is only imported by one entry module and
-// shares a chunk with that module
-export default function hyperCube(x) {
-	return cube(x) * x;
-}

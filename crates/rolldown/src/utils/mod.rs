@@ -2,7 +2,7 @@ use oxc::ast::VisitMut;
 use rolldown_common::NormalModule;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use super::module_finalizers::scope_hoisting::{
   ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,

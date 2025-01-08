@@ -25,7 +25,7 @@ pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 mod rename;
@@ -179,7 +179,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     true
   }
 
-  #[track_caller]
   fn finalized_expr_for_symbol_ref(
     &self,
     symbol_ref: SymbolRef,
@@ -238,11 +237,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if let Some(ns_alias) = namespace_alias {
-      let valid_namespace_alias_ref_id = original_reference_id
-        .map(|item| self.valid_namespace_alias_ref_id.contains(&item))
-        .unwrap_or_default();
-      dbg!(&valid_namespace_alias_ref_id);
-      expr = if valid_namespace_alias_ref_id {
+      let is_valid_namespace_alias_ref_id =
+        original_reference_id.is_some_and(|item| self.valid_namespace_alias_ref_id.contains(&item));
+      expr = if is_valid_namespace_alias_ref_id {
         expr
       } else {
         ast::Expression::StaticMemberExpression(
@@ -255,8 +252,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         )
       };
 
-      dbg!(&expr);
-      dbg!(&std::panic::Location::caller());
       if preserve_this_semantic_if_needed {
         expr = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), expr);
       }

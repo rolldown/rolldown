@@ -10,7 +10,7 @@ use oxc::{
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, TakeIn};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use super::ScopeHoistingFinalizer;
 
@@ -39,9 +39,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         })
       })
       .collect::<FxHashSet<_>>();
-
-    // dbg!(&self.ctx.module.idx);
-    // dbg!(&self.namespace_alias_symbol_and_valid_ref_id);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
@@ -314,11 +311,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   // main.js `import * as foo_exports from './foo.js';\n foo_exports.bar.a = 1;`
   // The `foo_exports.bar.a` ast is `StaticMemberExpression(StaticMemberExpression)`, The outer StaticMemberExpression span is `foo_exports.bar.a`, the `visit_expression(Expression::MemberExpression)` is called with `foo_exports.bar`, the span is inner StaticMemberExpression.
   fn visit_member_expression(&mut self, expr: &mut ast::MemberExpression<'ast>) {
-    let flag = self.ctx.module.is_virtual();
-
-    // if !flag {
-    //   dbg!(&expr);
-    // }
     if let Some(new_expr) = self.try_rewrite_member_expr(expr) {
       match new_expr {
         match_member_expression!(Expression) => {
@@ -329,9 +321,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
     } else {
-      if !flag {
-        dbg!(&expr);
-      }
       if let Some(ref_id) = self.try_get_valid_namespace_alias_ref_id_from_member_expr(expr) {
         self.valid_namespace_alias_ref_id.insert(ref_id);
       };

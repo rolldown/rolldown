@@ -2,8 +2,6 @@ use std::fmt::Debug;
 
 use oxc_sourcemap::SourceMap;
 
-use crate::lines_count;
-
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;
   fn content(&self) -> &str;
@@ -79,4 +77,17 @@ impl Source for &Box<dyn Source + Send + Sync> {
   fn lines_count(&self) -> u32 {
     self.as_ref().lines_count()
   }
+}
+
+#[allow(clippy::cast_possible_truncation)]
+#[inline]
+fn lines_count(str: &str) -> u32 {
+  memchr::memmem::find_iter(str.as_bytes(), "\n").count() as u32
+}
+
+#[test]
+fn test() {
+  assert_eq!(lines_count("a\nb\nc"), 2);
+  assert_eq!(lines_count("a\nb\nc\n"), 3);
+  assert_eq!(lines_count("a"), 0);
 }

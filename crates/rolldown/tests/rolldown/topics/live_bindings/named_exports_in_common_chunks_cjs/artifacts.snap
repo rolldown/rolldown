@@ -14,14 +14,14 @@ const node_assert = __toESM(require("node:assert"));
 
 //#region async-entry.js
 require_shared.reset();
-node_assert.strictEqual(require_shared.count, 0);
-node_assert.strictEqual(require_shared.count, require_shared.count);
+node_assert.default.strictEqual(require_shared.count, 0);
+node_assert.default.strictEqual(require_shared.count, require_shared.count);
 require_shared.inc();
-node_assert.strictEqual(require_shared.count, 1);
-node_assert.strictEqual(require_shared.count, require_shared.count);
+node_assert.default.strictEqual(require_shared.count, 1);
+node_assert.default.strictEqual(require_shared.count, require_shared.count);
 require_shared.inc();
-node_assert.strictEqual(require_shared.count, 2);
-node_assert.strictEqual(require_shared.count, require_shared.count);
+node_assert.default.strictEqual(require_shared.count, 2);
+node_assert.default.strictEqual(require_shared.count, require_shared.count);
 
 //#endregion
 ```

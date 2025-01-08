@@ -24,8 +24,8 @@ let bar = 123;
 //#endregion
 //#region entry.js
 console.log(exports, module.exports);
-node_assert.deepEqual(test_exports$1, { foo: 123 });
-node_assert.deepEqual(test_exports, { bar: 123 });
+node_assert.default.deepEqual(test_exports$1, { foo: 123 });
+node_assert.default.deepEqual(test_exports, { bar: 123 });
 
 //#endregion
 ```

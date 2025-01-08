@@ -23,7 +23,7 @@ const node_assert = __toESM(require("node:assert"));
 var require_entry = __commonJS({ "entry.js"(exports) {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
-	node_assert.equal(import_entry.foo, undefined);
+	node_assert.default.equal(import_entry.foo, undefined);
 } });
 
 //#endregion
@@ -42,7 +42,7 @@ module.exports = require_entry();
          var import_entry = __toESM(require_entry());
          exports.foo = 123;
 -        console.log(import_entry.foo);
-+        node_assert.equal(import_entry.foo, undefined);
++        node_assert.default.equal(import_entry.foo, undefined);
      }
  });
  module.exports = require_entry();

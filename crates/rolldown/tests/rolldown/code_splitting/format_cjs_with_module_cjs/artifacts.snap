@@ -13,7 +13,7 @@ const node_assert = require_share$1.__toESM(require("node:assert"));
 
 //#region main1.js
 var import_share = require_share$1.__toESM(require_share$1.require_share());
-node_assert.equal((0, import_share.share)(), 1);
+node_assert.default.equal((0, import_share.share)(), 1);
 
 //#endregion
 ```
@@ -26,7 +26,7 @@ const node_assert = require_share$1.__toESM(require("node:assert"));
 
 //#region main2.js
 var import_share = require_share$1.__toESM(require_share$1.require_share());
-node_assert.equal((0, import_share.share)(), 1);
+node_assert.default.equal((0, import_share.share)(), 1);
 
 //#endregion
 ```

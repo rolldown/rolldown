@@ -42,7 +42,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 
 //#endregion
 //#region entry.js
-node_assert.deepEqual(require_cjs(), { foo: process });
+node_assert.default.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
 })(node_assert);
@@ -73,7 +73,7 @@ node_assert.deepEqual(require_cjs(), { foo: process });
 -    init_shims();
 -    console.log(require_cjs());
 -})();
-+    node_assert.deepEqual(require_cjs(), {
++    node_assert.default.deepEqual(require_cjs(), {
 +        foo: process
 +    });
 +})(node_assert);

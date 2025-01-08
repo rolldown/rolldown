@@ -12,9 +12,9 @@ snapshot_kind: text
 const node_assert = __toESM(require("node:assert"));
 
 //#region main.js
-node_assert.equal(require("url").pathToFileURL(__filename), require("url").pathToFileURL(__filename).href);
-node_assert.equal(__dirname, __dirname);
-node_assert.equal(__filename, __filename);
+node_assert.default.equal(require("url").pathToFileURL(__filename), require("url").pathToFileURL(__filename).href);
+node_assert.default.equal(__dirname, __dirname);
+node_assert.default.equal(__filename, __filename);
 
 //#endregion
 //# sourceMappingURL=main.js.map
@@ -24,21 +24,21 @@ node_assert.equal(__filename, __filename);
 
 ```
 - ../main.js
-(2:0) "assert." --> (27:0) "node_assert."
-(2:7) "equal(" --> (27:12) "equal("
-(2:13) "require(" --> (27:18) "require("
-(2:21) "\"url\")" --> (27:26) "\"url\")"
-(2:27) "." --> (27:32) "."
-(2:28) "pathToFileURL(" --> (27:33) "pathToFileURL("
-(2:42) "__filename)" --> (27:47) "__filename)"
-(2:53) ", import.meta.url)" --> (27:58) ", require(\"url\").pathToFileURL(__filename).href)"
-(2:71) "\n" --> (27:106) ";\n"
-(3:0) "assert." --> (28:0) "node_assert."
-(3:7) "equal(" --> (28:12) "equal("
-(3:13) "__dirname, import.meta.dirname)" --> (28:18) "__dirname, __dirname)"
-(3:44) "\n" --> (28:39) ";\n"
-(4:0) "assert." --> (29:0) "node_assert."
-(4:7) "equal(" --> (29:12) "equal("
-(4:13) "__filename, import.meta.filename)" --> (29:18) "__filename, __filename)"
-(4:46) "\n" --> (29:41) ";\n"
+(2:0) "assert." --> (27:0) "node_assert.default."
+(2:7) "equal(" --> (27:20) "equal("
+(2:13) "require(" --> (27:26) "require("
+(2:21) "\"url\")" --> (27:34) "\"url\")"
+(2:27) "." --> (27:40) "."
+(2:28) "pathToFileURL(" --> (27:41) "pathToFileURL("
+(2:42) "__filename)" --> (27:55) "__filename)"
+(2:53) ", import.meta.url)" --> (27:66) ", require(\"url\").pathToFileURL(__filename).href)"
+(2:71) "\n" --> (27:114) ";\n"
+(3:0) "assert." --> (28:0) "node_assert.default."
+(3:7) "equal(" --> (28:20) "equal("
+(3:13) "__dirname, import.meta.dirname)" --> (28:26) "__dirname, __dirname)"
+(3:44) "\n" --> (28:47) ";\n"
+(4:0) "assert." --> (29:0) "node_assert.default."
+(4:7) "equal(" --> (29:20) "equal("
+(4:13) "__filename, import.meta.filename)" --> (29:26) "__filename, __filename)"
+(4:46) "\n" --> (29:49) ";\n"
 ```

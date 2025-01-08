@@ -28,9 +28,15 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .module
       .ecma_view
       .named_imports
-      .keys()
-      .filter_map(|&symbol_ref| {
-        self.ctx.symbol_db.get(symbol_ref).namespace_alias.as_ref().and_then(|alias| {
+      .iter()
+      .filter_map(|(symbol_ref, v)| {
+        let rec_id = v.record_id;
+        let importee_idx = self.ctx.module.ecma_view.import_records[rec_id].resolved_module;
+        // bailout if the importee is a external module
+        // see rollup/test/function/samples/side-effects-only-default-exports/ as an
+        // example
+        self.ctx.modules[importee_idx].as_normal()?;
+        self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref().and_then(|alias| {
           if alias.property_name.as_str() == "default" {
             Some(symbol_ref.symbol)
           } else {

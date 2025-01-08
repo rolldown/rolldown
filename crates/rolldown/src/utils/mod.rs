@@ -39,7 +39,7 @@ pub fn finalize_normal_module(
       snippet: AstSnippet::new(alloc),
       comments: oxc_program.comments.take_in(alloc),
       namespace_alias_symbol_id: FxHashSet::default(),
-      valid_namespace_alias_ref_id: FxHashSet::default(),
+      interested_namespace_alias_ref_id: FxHashSet::default(),
     };
     finalizer.visit_program(oxc_program);
     oxc_program.comments = finalizer.comments.take_in(alloc);

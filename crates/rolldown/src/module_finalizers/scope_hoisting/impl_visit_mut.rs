@@ -322,7 +322,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     } else {
       if let Some(ref_id) = self.try_get_valid_namespace_alias_ref_id_from_member_expr(expr) {
-        self.valid_namespace_alias_ref_id.insert(ref_id);
+        self.interested_namespace_alias_ref_id.insert(ref_id);
       };
       walk_mut::walk_member_expression(self, expr);
     }

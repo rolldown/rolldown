@@ -37,12 +37,12 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
   pub comments: oxc::allocator::Vec<'ast, Comment>,
-  /// The key are `SymbolRef` imported from a cjs module which has `namespace_alias`
+  /// `SymbolRef` imported from a cjs module which has `namespace_alias`
   /// more details please refer [`rolldown_common::types::symbol_ref_db::SymbolRefDataClassic`].
-  /// The value are all valid `ReferenceId` of `IdentifierReference` which is the object of `MemberExpression` and the property is not
-  /// a `"default"` property access
   pub namespace_alias_symbol_id: FxHashSet<SymbolId>,
-  pub valid_namespace_alias_ref_id: FxHashSet<ReferenceId>,
+  /// All `ReferenceId` of `IdentifierReference` we are interested, the `IdentifierReference` should be the object of `MemberExpression` and the property is not
+  /// a `"default"` property access
+  pub interested_namespace_alias_ref_id: FxHashSet<ReferenceId>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -237,8 +237,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if let Some(ns_alias) = namespace_alias {
-      let is_valid_namespace_alias_ref_id =
-        original_reference_id.is_some_and(|item| self.valid_namespace_alias_ref_id.contains(&item));
+      let is_valid_namespace_alias_ref_id = original_reference_id
+        .is_some_and(|item| self.interested_namespace_alias_ref_id.contains(&item));
       expr = if is_valid_namespace_alias_ref_id {
         expr
       } else {

@@ -29,4 +29,6 @@ pub enum BindingBuiltinPluginName {
   Replace,
   #[napi(value = "builtin:vite-resolve")]
   ViteResolve,
+  #[napi(value = "builtin:module-federation")]
+  ModuleFederation,
 }

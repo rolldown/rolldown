@@ -10,6 +10,7 @@ use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
+use rolldown_plugin_module_federation::ModuleFederationPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_plugin_transform::TransformPlugin;
@@ -409,6 +410,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
 
         Arc::new(ViteResolvePlugin::new(config.into()))
       }
+      BindingBuiltinPluginName::ModuleFederation => Arc::new(ModuleFederationPlugin::new()),
     })
   }
 }

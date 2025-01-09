@@ -2484,6 +2484,7 @@ dependencies = [
  "rolldown_plugin_json",
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
+ "rolldown_plugin_module_federation",
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_replace",
  "rolldown_plugin_transform",
@@ -2699,6 +2700,13 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "rolldown_plugin_module_federation"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
 ]
 
 [[package]]

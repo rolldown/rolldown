@@ -56,6 +56,11 @@ impl NormalModule {
     self.ecma_view.meta.has_star_export()
   }
 
+  #[inline]
+  pub fn is_js_module(&self) -> bool {
+    matches!(self.module_type, ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx)
+  }
+
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.to_string(),

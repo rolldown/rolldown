@@ -177,7 +177,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     specifier: &str,
     import_kind: ImportKind,
     is_user_defined_entry: bool,
-  ) -> anyhow::Result<Result<ResolveReturn, ResolveError>> {
+  ) -> Result<ResolveReturn, ResolveError> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::NewUrl => &self.new_url_resolver,
@@ -217,18 +217,15 @@ impl<F: FileSystem + Default> Resolver<F> {
       }
     }
 
-    match resolution {
-      Ok(info) => {
-        let package_json = info.package_json().map(|p| self.cached_package_json(p));
-        let module_type = infer_module_def_format(&info);
-        Ok(Ok(build_resolve_ret(
-          info.full_path().to_str().expect("Should be valid utf8").to_string(),
-          module_type,
-          package_json,
-        )))
-      }
-      Err(err) => Ok(Err(err)),
-    }
+    resolution.map(|info| {
+      let package_json = info.package_json().map(|p| self.cached_package_json(p));
+      let module_type = infer_module_def_format(&info);
+      build_resolve_ret(
+        info.full_path().to_str().expect("Should be valid utf8").to_string(),
+        module_type,
+        package_json,
+      )
+    })
   }
 
   fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {

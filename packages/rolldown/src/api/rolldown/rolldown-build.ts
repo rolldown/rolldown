@@ -52,7 +52,8 @@ export class RolldownBuild {
   }
 
   async close(): Promise<void> {
-    const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker({})
+    if (this.closed || this.#bundler == null) return
+    const { bundler, stopWorkers } = this.#bundler
     await stopWorkers?.()
     await bundler.close()
   }

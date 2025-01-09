@@ -3743,6 +3743,10 @@ snapshot_kind: text
 - main-!~{000}~.js => main-DG9N9GYV.js
 - commonjs-!~{002}~.js => commonjs-CSBJmDSx.js
 
+# tests/rolldown/cjs_compat/react-like
+
+- main-!~{000}~.js => main-CI7vFg_S.js
+
 # tests/rolldown/cjs_compat/reexport_commonjs
 
 - main-!~{000}~.js => main-B3oqPrIA.js

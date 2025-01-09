@@ -4776,11 +4776,11 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/26
 
-- entry-!~{000}~.js => entry-BZrpy6wF.js
+- entry-!~{000}~.js => entry-COqKinjX.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/27
 
-- entry-!~{000}~.js => entry-CcqbmhYR.js
+- entry-!~{000}~.js => entry-Bfyt_uBe.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/28
 

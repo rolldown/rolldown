@@ -346,7 +346,6 @@ impl<'a> LinkStage<'a> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          // dbg!(&importee_linking_info.wrapper_ref);
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());

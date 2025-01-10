@@ -44,7 +44,7 @@ impl BuildEvent for UnloadableDependency {
     if let Some(context) = &self.context {
       let importer_file = diagnostic.add_file(context.importer_id.clone(), context.source.clone());
 
-      diagnostic.title = format!(r#"Could not load {}"#, self.resolved);
+      diagnostic.title = format!("Could not load {}", self.resolved);
 
       diagnostic.add_label(
         &importer_file,

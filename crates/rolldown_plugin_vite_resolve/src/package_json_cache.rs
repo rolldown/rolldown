@@ -74,7 +74,7 @@ impl TryFrom<PackageJsonWithPeerDependenciesRaw> for PackageJsonWithOptionalPeer
       name: value.name,
       optional_peer_dependencies: peer_dependencies
         .into_keys()
-        .filter(|dep| peer_dependencies_meta.get(dep).map_or(false, |meta| meta.optional))
+        .filter(|dep| peer_dependencies_meta.get(dep).is_some_and(|meta| meta.optional))
         .collect(),
     })
   }

@@ -21,6 +21,7 @@ opt-level     = "z"
 strip         = "none"
 
 [workspace.lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(used_linker)'] }
 
 [workspace.lints.clippy]
 # Guidelines

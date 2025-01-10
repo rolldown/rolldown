@@ -71,14 +71,14 @@ impl Plugin for ManifestPlugin {
 
             // If JS chunk and asset chunk are both generated from the same source file,
             // prioritize JS chunk as it contains more information
-            if !manifest.get(&src).map_or(false, |m| {
+            if !manifest.get(&src).is_some_and(|m| {
               m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
             }) {
               manifest.insert(src.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
             }
 
             for original_file_name in &asset.original_file_names {
-              if !manifest.get(original_file_name).map_or(false, |m| {
+              if !manifest.get(original_file_name).is_some_and(|m| {
                 m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
               }) {
                 manifest

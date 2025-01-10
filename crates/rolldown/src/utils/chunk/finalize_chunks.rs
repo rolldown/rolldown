@@ -112,7 +112,7 @@ pub fn finalize_assets(
       })
     })
     .flatten()
-    .collect::<FxHashMap<ArcStr, _>>();
+    .collect::<FxHashMap<_, _>>();
 
   let mut assets: IndexAssets = preliminary_assets
     .into_par_iter()

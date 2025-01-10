@@ -13,7 +13,7 @@ use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
-  extract_hash_pattern::extract_hash_pattern, hash_placeholder::HashPlaceholderGenerator,
+  extract_hash_pattern::extract_hash_patterns, hash_placeholder::HashPlaceholderGenerator,
   indexmap::FxIndexMap, BitSet,
 };
 use rustc_hash::FxHashMap;
@@ -132,10 +132,10 @@ impl Chunk {
       return Ok(PreliminaryFilename::new(basename, None));
     }
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
-    let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+    let extracted_hash_pattern = extract_hash_patterns(filename_template.template());
 
-    let hash_placeholder =
-      extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+    let hash_placeholder = extracted_hash_pattern
+      .map(|p| hash_placeholder_generator.generate(p.iter().map(|p| p.len.unwrap_or(8)).collect()));
 
     let name = if hash_placeholder.is_some() {
       make_unique_name(chunk_name);
@@ -147,7 +147,7 @@ impl Chunk {
 
     let rendered = filename_template.render(&FileNameRenderOptions {
       name: Some(&name),
-      hash: hash_placeholder.as_deref(),
+      hashes: hash_placeholder.as_deref(),
       ..Default::default()
     });
 
@@ -169,10 +169,10 @@ impl Chunk {
     }
     let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
 
-    let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+    let extracted_hash_pattern = extract_hash_patterns(filename_template.template());
 
-    let hash_placeholder =
-      extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+    let hash_placeholder = extracted_hash_pattern
+      .map(|p| hash_placeholder_generator.generate(p.iter().map(|p| p.len.unwrap_or(8)).collect()));
 
     let name = if hash_placeholder.is_some() {
       make_unique_name(chunk_name);
@@ -183,7 +183,7 @@ impl Chunk {
     };
     let rendered = filename_template.render(&FileNameRenderOptions {
       name: Some(&name),
-      hash: hash_placeholder.as_deref(),
+      hashes: hash_placeholder.as_deref(),
       ..Default::default()
     });
 

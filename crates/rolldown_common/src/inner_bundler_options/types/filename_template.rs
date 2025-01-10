@@ -22,7 +22,7 @@ impl From<String> for FilenameTemplate {
 #[derive(Debug, Default)]
 pub struct FileNameRenderOptions<'me> {
   pub name: Option<&'me str>,
-  pub hash: Option<&'me str>,
+  pub hashes: Option<&'me [String]>,
   pub ext: Option<&'me str>,
 }
 
@@ -32,10 +32,12 @@ impl FilenameTemplate {
     if let Some(name) = options.name {
       tmp = tmp.replace("[name]", name);
     }
-    if let Some(hash) = options.hash {
-      if let Some(start) = tmp.find("[hash") {
-        if let Some(end) = tmp[start + 5..].find(']') {
-          tmp.replace_range(start..=start + end + 5, hash);
+    if let Some(hashes) = &options.hashes {
+      for hash in *hashes {
+        if let Some(start) = tmp.find("[hash") {
+          if let Some(end) = tmp[start + 5..].find(']') {
+            tmp.replace_range(start..=start + end + 5, hash.as_str());
+          }
         }
       }
     }
@@ -53,12 +55,12 @@ fn basic() {
 
 #[test]
 fn hash_with_len() {
-  let file_template = FilenameTemplate::new("[name]-[hash:3].js".to_string());
+  let file_template = FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string());
   let str = file_template.render(&FileNameRenderOptions {
     name: Some("hello"),
-    hash: Some("abc"),
+    hashes: Some(&vec![String::from("abc"), String::from("def")]),
     ext: None,
   });
 
-  assert_eq!(str, "hello-abc.js");
+  assert_eq!(str, "hello-abc-def.js");
 }

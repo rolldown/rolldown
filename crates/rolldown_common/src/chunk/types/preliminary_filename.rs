@@ -8,15 +8,15 @@ pub struct PreliminaryFilename {
   /// Might contains preliminary hash
   filename: ArcStr,
   /// Something like `!~{abcd}~`
-  hash_placeholder: Option<String>,
+  hash_placeholder: Option<Vec<String>>,
 }
 
 impl PreliminaryFilename {
-  pub fn new(filename: String, hash_placeholder: Option<String>) -> Self {
+  pub fn new(filename: String, hash_placeholder: Option<Vec<String>>) -> Self {
     Self { filename: filename.into(), hash_placeholder }
   }
 
-  pub fn hash_placeholder(&self) -> Option<&str> {
+  pub fn hash_placeholder(&self) -> Option<&[String]> {
     self.hash_placeholder.as_deref()
   }
 }

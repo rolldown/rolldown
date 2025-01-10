@@ -58,7 +58,7 @@ fn hash_with_len() {
   let file_template = FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string());
   let str = file_template.render(&FileNameRenderOptions {
     name: Some("hello"),
-    hashes: Some(&vec![String::from("abc"), String::from("def")]),
+    hashes: Some(&[String::from("abc"), String::from("def")]),
     ext: None,
   });
 

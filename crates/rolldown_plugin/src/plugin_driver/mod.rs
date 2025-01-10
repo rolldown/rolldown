@@ -100,6 +100,7 @@ impl PluginDriver {
     &self,
     tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
   ) {
+    self.file_emitter.set_context_load_modules_tx(tx.clone()).await;
     let mut tx_guard = self.tx.lock().await;
     *tx_guard = tx;
   }

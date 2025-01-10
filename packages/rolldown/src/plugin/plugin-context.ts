@@ -25,6 +25,14 @@ export interface EmittedAsset {
   source: AssetSource
 }
 
+export interface EmittedChunk {
+  type: 'chunk'
+  name?: string
+  fileName?: string
+  id: string
+  importer?: string
+}
+
 export type EmittedFile = EmittedAsset
 
 export interface PluginContextResolveOptions {
@@ -137,6 +145,11 @@ export class PluginContext extends MinimalPluginContext {
       originalFileName: file.originalFileName || undefined,
       source: bindingAssetSource(file.source),
     })
+  }
+
+  // TODO: find a way to avoid async here
+  public async emitChunk(chunk: EmittedChunk): Promise<string> {
+    return this.context.emitChunk(chunk)
   }
 
   public getFileName(referenceId: string): string {

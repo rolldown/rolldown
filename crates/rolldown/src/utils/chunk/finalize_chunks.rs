@@ -103,12 +103,15 @@ pub fn finalize_assets(
 
   let final_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
-    .flat_map(|(idx, (hash, _))| {
+    .filter_map(|(idx, (hash, _))| {
       let asset = &preliminary_assets[idx];
-      asset.preliminary_filename.hash_placeholder().into_iter().flat_map(|placeholders| {
-        placeholders.iter().map(|placeholder| (placeholder.into(), &hash[..placeholder.len()]))
+      asset.preliminary_filename.hash_placeholder().map(|placeholders| {
+        placeholders
+          .iter()
+          .map(|placeholder| (placeholder.clone().into(), &hash[..placeholder.len()]))
       })
     })
+    .flatten()
     .collect::<FxHashMap<ArcStr, _>>();
 
   let mut assets: IndexAssets = preliminary_assets

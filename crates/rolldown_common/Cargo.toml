@@ -24,7 +24,6 @@ dashmap             = { workspace = true }
 either              = { workspace = true }
 glob-match          = { workspace = true }
 itertools           = { workspace = true }
-lightningcss        = { workspace = true }
 oxc                 = { workspace = true }
 oxc_index           = { workspace = true }
 oxc_resolver        = { workspace = true }

@@ -153,7 +153,7 @@ impl ViteResolvePlugin {
 
   async fn resolve_id_internal(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     let scan =
-      args.custom.get(&ResolveIdOptionsScan {}).map_or(false, |v| *v) || self.resolve_options.scan;
+      args.custom.get(&ResolveIdOptionsScan {}).is_some_and(|v| *v) || self.resolve_options.scan;
 
     if args.specifier.starts_with('\0')
       || args.specifier.starts_with("virtual:")
@@ -211,7 +211,7 @@ impl ViteResolvePlugin {
 
     let additional_options = AdditionalOptions::new(
       self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
-      self.resolve_options.prefer_relative || args.importer.map_or(false, |i| i.ends_with(".html")),
+      self.resolve_options.prefer_relative || args.importer.is_some_and(|i| i.ends_with(".html")),
       is_from_ts_importer(args.importer),
     );
     let resolver = self.resolvers.get(additional_options);

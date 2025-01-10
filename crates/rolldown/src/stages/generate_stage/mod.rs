@@ -90,7 +90,7 @@ impl<'a> GenerateStage<'a> {
       .filter(|(_ast, owner)| {
         self.link_output.module_table.modules[*owner]
           .as_normal()
-          .map_or(false, |m| m.meta.is_included())
+          .is_some_and(|m| m.meta.is_included())
       })
       .for_each(|(ast, owner)| {
         let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {

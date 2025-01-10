@@ -19,7 +19,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let is_second_arg_import_meta_url = expr
       .arguments
       .get(1)
-      .map_or(false, |arg| arg.as_expression().is_some_and(ExpressionExt::is_import_meta_url));
+      .is_some_and(|arg| arg.as_expression().is_some_and(ExpressionExt::is_import_meta_url));
 
     if !is_second_arg_import_meta_url {
       return;

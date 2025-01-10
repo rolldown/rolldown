@@ -215,7 +215,7 @@ impl PluginDriver {
       // If sourcemap  hasn't `sources`, using original id to fill it.
       let source = map.get_source(0);
       if source.map_or(true, str::is_empty)
-        || (map.get_sources().count() == 1 && source.map_or(true, |source| source != id))
+        || (map.get_sources().count() == 1 && (source != Some(id)))
       {
         map.set_sources(vec![id]);
       }

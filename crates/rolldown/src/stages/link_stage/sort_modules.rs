@@ -2,6 +2,7 @@ use std::iter;
 
 use rolldown_common::{Module, ModuleIdx};
 use rolldown_error::BuildDiagnostic;
+use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
@@ -39,13 +40,14 @@ impl LinkStage<'_> {
       .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
       .collect::<Vec<_>>();
 
+    let mut next_exec_order = 0;
+
+    let mut executed_ids = FxHashSet::with_capacity(self.module_table.modules.len());
     let mut stack_indexes_of_executing_id = FxHashMap::default();
-    let mut executed_ids = FxHashSet::default();
-    executed_ids.shrink_to(self.module_table.modules.len());
 
     let mut sorted_modules = Vec::with_capacity(self.module_table.modules.len());
-    let mut next_exec_order = 0;
     let mut circular_dependencies = FxHashSet::default();
+
     while let Some(status) = execution_stack.pop() {
       match status {
         Status::ToBeExecuted(id) => {
@@ -88,7 +90,6 @@ impl LinkStage<'_> {
           }
         }
         Status::WaitForExit(id) => {
-          executed_ids.insert(id);
           match &mut self.module_table.modules[id] {
             Module::Normal(module) => {
               debug_assert!(module.exec_order == u32::MAX);
@@ -108,13 +109,12 @@ impl LinkStage<'_> {
     }
 
     if !circular_dependencies.is_empty() {
-      let cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
-      for cycle in cycles {
+      for cycle in circular_dependencies {
         let paths = cycle
           .iter()
-          .copied()
-          .filter_map(|id| self.module_table.modules[id].as_normal())
-          .map(|module| module.id.to_string())
+          .filter_map(|id| {
+            self.module_table.modules[*id].as_normal().map(|module| module.id.to_string())
+          })
           .collect::<Vec<_>>();
         self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }

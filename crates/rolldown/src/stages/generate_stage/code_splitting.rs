@@ -18,7 +18,7 @@ pub struct SplittingInfo {
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
-impl<'a> GenerateStage<'a> {
+impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> ChunkGraph {
     if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {

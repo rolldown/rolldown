@@ -24,5 +24,9 @@
       "matchPackagePrefixes": ["oxc"],
       "enabled": false
     }
-  ]
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "extends": ["schedule:weekly"]
+  }
 }

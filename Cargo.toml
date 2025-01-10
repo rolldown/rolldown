@@ -20,9 +20,6 @@ lto           = "thin"
 opt-level     = "z"
 strip         = "none"
 
-[workspace.lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(used_linker)'] }
-
 [workspace.lints.clippy]
 # Guidelines
 # - We should only disable rules globally if they are either false positives, chaotic, or does not make sense.

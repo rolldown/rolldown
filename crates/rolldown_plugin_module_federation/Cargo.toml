@@ -16,3 +16,4 @@ workspace = true
 
 [dependencies]
 rolldown_plugin = { workspace = true }
+rustc-hash      = { workspace = true }

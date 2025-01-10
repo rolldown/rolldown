@@ -2707,6 +2707,7 @@ name = "rolldown_plugin_module_federation"
 version = "0.1.0"
 dependencies = [
  "rolldown_plugin",
+ "rustc-hash",
 ]
 
 [[package]]

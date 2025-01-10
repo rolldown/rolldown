@@ -253,7 +253,7 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   let is_js_like_extension = info
     .path()
     .extension()
-    .map_or(false, |ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
+    .is_some_and(|ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
   if let Some(package_json) =
     is_js_like_extension.then(|| info.package_json()).and_then(|item| item)
   {

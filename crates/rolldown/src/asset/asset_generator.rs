@@ -9,9 +9,7 @@ pub struct AssetGenerator;
 
 impl Generator for AssetGenerator {
   #[allow(clippy::too_many_lines)]
-  async fn instantiate_chunk<'a>(
-    ctx: &mut GenerateContext<'a>,
-  ) -> Result<BuildResult<GenerateOutput>> {
+  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
     let asset_modules = ctx
       .chunk
       .modules

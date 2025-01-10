@@ -102,7 +102,7 @@ impl<'a> SideEffectDetector<'a> {
         }
 
         let value_side_effect = def.r#static
-          && def.value.as_ref().map_or(false, |init| self.detect_side_effect_of_expr(init));
+          && def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init));
         value_side_effect
       }
       ClassElement::AccessorProperty(def) => {
@@ -443,7 +443,7 @@ impl<'a> SideEffectDetector<'a> {
     declarators: &[ast::VariableDeclarator],
   ) -> bool {
     declarators.iter().any(|decl| {
-      decl.init.as_ref().map_or(false, |init| match init {
+      decl.init.as_ref().is_some_and(|init| match init {
         Expression::NullLiteral(_) => false,
         // Side effect detection of identifier is different with other position when as initialization of using declaration.
         // Only global variable `undefined` is considered as side effect free.
@@ -496,7 +496,7 @@ impl<'a> SideEffectDetector<'a> {
             named_decl
               .declaration
               .as_ref()
-              .map_or(false, |decl| self.detect_side_effect_of_decl(decl))
+              .is_some_and(|decl| self.detect_side_effect_of_decl(decl))
           }
         }
         ast::ModuleDeclaration::TSExportAssignment(_)
@@ -516,10 +516,10 @@ impl<'a> SideEffectDetector<'a> {
       Statement::IfStatement(if_stmt) => {
         self.detect_side_effect_of_expr(&if_stmt.test)
           || self.detect_side_effect_of_stmt(&if_stmt.consequent)
-          || if_stmt.alternate.as_ref().map_or(false, |stmt| self.detect_side_effect_of_stmt(stmt))
+          || if_stmt.alternate.as_ref().is_some_and(|stmt| self.detect_side_effect_of_stmt(stmt))
       }
       Statement::ReturnStatement(ret_stmt) => {
-        ret_stmt.argument.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
+        ret_stmt.argument.as_ref().is_some_and(|expr| self.detect_side_effect_of_expr(expr))
       }
       Statement::LabeledStatement(labeled_stmt) => {
         self.detect_side_effect_of_stmt(&labeled_stmt.body)
@@ -529,16 +529,16 @@ impl<'a> SideEffectDetector<'a> {
           || try_stmt
             .handler
             .as_ref()
-            .map_or(false, |handler| self.detect_side_effect_of_block(&handler.body))
+            .is_some_and(|handler| self.detect_side_effect_of_block(&handler.body))
           || try_stmt
             .finalizer
             .as_ref()
-            .map_or(false, |finalizer| self.detect_side_effect_of_block(finalizer))
+            .is_some_and(|finalizer| self.detect_side_effect_of_block(finalizer))
       }
       Statement::SwitchStatement(switch_stmt) => {
         self.detect_side_effect_of_expr(&switch_stmt.discriminant)
           || switch_stmt.cases.iter().any(|case| {
-            case.test.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
+            case.test.as_ref().is_some_and(|expr| self.detect_side_effect_of_expr(expr))
               || case.consequent.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
           })
       }

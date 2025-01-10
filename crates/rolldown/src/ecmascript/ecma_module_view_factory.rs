@@ -62,8 +62,8 @@ pub struct CreateEcmaViewReturn {
 }
 
 #[allow(clippy::too_many_lines)]
-pub async fn create_ecma_view<'any>(
-  ctx: &mut CreateModuleContext<'any>,
+pub async fn create_ecma_view(
+  ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));

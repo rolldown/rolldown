@@ -72,7 +72,7 @@ impl MagicString<'_> {
   }
 
   pub fn indent_with(&mut self, opts: IndentOptions) -> &mut Self {
-    if opts.indentor.map_or(false, |s| s.is_empty()) {
+    if opts.indentor.is_some_and(|s| s.is_empty()) {
       return self;
     }
     struct IndentReplacer {

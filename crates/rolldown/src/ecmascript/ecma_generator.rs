@@ -30,9 +30,7 @@ pub struct EcmaGenerator;
 
 impl Generator for EcmaGenerator {
   #[allow(clippy::too_many_lines)]
-  async fn instantiate_chunk<'a>(
-    ctx: &mut GenerateContext<'a>,
-  ) -> Result<BuildResult<GenerateOutput>> {
+  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
     let mut rendered_modules = FxHashMap::default();
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources = ctx

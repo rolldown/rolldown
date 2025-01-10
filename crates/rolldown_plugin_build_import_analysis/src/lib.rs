@@ -121,7 +121,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   }
 
   fn is_top_level(&self) -> bool {
-    self.scope_stack.last().map_or(false, |flags| flags.contains(ScopeFlags::Top))
+    self.scope_stack.last().is_some_and(|flags| flags.contains(ScopeFlags::Top))
   }
 
   /// ```js

@@ -8,9 +8,7 @@ pub struct CssGenerator;
 
 impl Generator for CssGenerator {
   #[allow(clippy::too_many_lines)]
-  async fn instantiate_chunk<'a>(
-    ctx: &mut GenerateContext<'a>,
-  ) -> Result<BuildResult<GenerateOutput>> {
+  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
     let mut ordered_css_modules = ctx
       .chunk
       .modules

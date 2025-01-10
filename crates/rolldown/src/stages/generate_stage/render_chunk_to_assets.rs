@@ -30,7 +30,7 @@ use crate::{
 
 use super::GenerateStage;
 
-impl<'a> GenerateStage<'a> {
+impl GenerateStage<'_> {
   #[allow(clippy::too_many_lines)]
   pub async fn render_chunk_to_assets(
     &mut self,

@@ -25,7 +25,7 @@ impl SideEffectDetector<'_> {
   pub fn is_pure_function_or_constructor_call(&self, span: Span) -> bool {
     let leading_comment = self.leading_comment_for(span);
 
-    leading_comment.map_or(false, |(_comment, comment_text)| {
+    leading_comment.is_some_and(|(_comment, comment_text)| {
       PURE_COMMENTS.find_iter(comment_text).next().is_some()
     })
   }

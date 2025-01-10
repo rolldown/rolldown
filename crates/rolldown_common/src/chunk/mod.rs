@@ -85,9 +85,9 @@ impl Chunk {
     }
   }
 
-  pub async fn filename_template<'a>(
+  pub async fn filename_template(
     &self,
-    options: &'a NormalizedBundlerOptions,
+    options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
     let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
@@ -100,9 +100,9 @@ impl Chunk {
     Ok(FilenameTemplate::new(ret))
   }
 
-  pub async fn css_filename_template<'a>(
+  pub async fn css_filename_template(
     &self,
-    options: &'a NormalizedBundlerOptions,
+    options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
     let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)

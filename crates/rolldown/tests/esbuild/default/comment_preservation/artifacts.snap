@@ -259,10 +259,11 @@ for (a in b);
 for (a in b);
 for (a of b);
 for (a of b);
-if (a);
+a;
 with(a);
 while (a);
-do {} while (a);
+do;
+while (a);
 switch (a) {}
 
 //#endregion

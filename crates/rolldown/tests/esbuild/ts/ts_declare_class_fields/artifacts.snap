@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -10,9 +11,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region define-false/index.ts
 var Foo = class {
 	a;
-	[(() => null, c)];
+	[c];
 	static A;
-	static [(() => null, C)];
+	static [C];
 };
 (() => new Foo())();
 
@@ -20,9 +21,9 @@ var Foo = class {
 //#region define-true/index.ts
 var Bar = class {
 	a;
-	[(() => null, c)];
+	[c];
 	static A;
-	static [(() => null, C)];
+	static [C];
 };
 (() => new Bar())();
 

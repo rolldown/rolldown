@@ -65,11 +65,11 @@ snapshot_kind: text
 
 # tests/esbuild/dce/dce_class_static_blocks
 
-- entry-!~{000}~.js => entry-DJ1KcdEc.js
+- entry-!~{000}~.js => entry-B3RgYr4X.js
 
 # tests/esbuild/dce/dce_class_static_blocks_minify_syntax
 
-- entry-!~{000}~.js => entry-DJ1KcdEc.js
+- entry-!~{000}~.js => entry-B3RgYr4X.js
 
 # tests/esbuild/dce/dce_of_decorators
 
@@ -90,7 +90,7 @@ snapshot_kind: text
 # tests/esbuild/dce/dce_of_iife
 
 - keep-these-!~{001}~.js => keep-these-BajvjPE6.js
-- remove-these-!~{000}~.js => remove-these-BsTnoCfm.js
+- remove-these-!~{000}~.js => remove-these-DIvwSOQb.js
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -617,7 +617,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/arguments_special_case_no_bundle
 
-- entry-!~{000}~.js => entry-B9uwgirV.js
+- entry-!~{000}~.js => entry-IPjX3xv3.js
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -662,7 +662,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-BuJFijAd.js
+- entry-!~{000}~.js => entry-CHabtxwx.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -2652,7 +2652,7 @@ snapshot_kind: text
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-Cjob_n3j.js
+- entry-!~{000}~.js => entry-BCTeR0yx.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -3376,7 +3376,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-Cv720Yl5.js
+- entry-!~{000}~.js => entry-D-iTC7WH.js
 
 # tests/esbuild/ts/ts_declare_const
 
@@ -3526,23 +3526,23 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_import_equals_bundle
 
-- entry-!~{000}~.js => entry-t0U6LasQ.js
+- entry-!~{000}~.js => entry-DeP0E7iL.js
 
 # tests/esbuild/ts/ts_import_equals_elimination_test
 
-- entry-!~{000}~.js => entry-SKMDuDqt.js
+- entry-!~{000}~.js => entry-DQ8jqO_x.js
 
 # tests/esbuild/ts/ts_import_equals_tree_shaking_false
 
-- entry-!~{000}~.js => entry-t0U6LasQ.js
+- entry-!~{000}~.js => entry-DeP0E7iL.js
 
 # tests/esbuild/ts/ts_import_equals_tree_shaking_true
 
-- entry-!~{000}~.js => entry-t0U6LasQ.js
+- entry-!~{000}~.js => entry-DeP0E7iL.js
 
 # tests/esbuild/ts/ts_import_equals_undefined_import
 
-- entry-!~{000}~.js => entry-DTtRuQbn.js
+- entry-!~{000}~.js => entry-DZfMbAEp.js
 
 # tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
 
@@ -5360,6 +5360,6 @@ snapshot_kind: text
 
 # tests/rollup/simplify-with-destructuring
 
-- main-!~{000}~.js => main-CmNIxAKe.js
+- main-!~{000}~.js => main-3MCZbPq8.js
 
 ```

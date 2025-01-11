@@ -10,7 +10,6 @@ keepThisButRemoveTheIIFE;
 ```js
 
 //#region remove-these.js
-(() => {})();
 (() => {})(keepThisButRemoveTheIIFE);
 (() => {
 	/* @__PURE__ */ removeMe();
@@ -26,9 +25,8 @@ var removeThis2 = (() => 123)();
 ===================================================================
 --- esbuild	/out/remove-these.js
 +++ rolldown	remove-these.js
-@@ -1,1 +1,8 @@
+@@ -1,1 +1,7 @@
 -keepThisButRemoveTheIIFE;
-+(() => {})();
 +(() => {})(keepThisButRemoveTheIIFE);
 +(() => {
 +    removeMe();

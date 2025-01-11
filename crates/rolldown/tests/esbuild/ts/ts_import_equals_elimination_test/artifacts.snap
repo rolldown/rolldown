@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -13,7 +14,6 @@ var b = a.b;
 var c = b.c;
 var x = foo.x;
 var y = x.y;
-var z = y.z;
 let bar = c;
 
 //#endregion

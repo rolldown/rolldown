@@ -23,7 +23,6 @@ var b = a.b;
 var c = b.c;
 var x = foo.x;
 var y = x.y;
-var z = y.z;
 let bar = c;
 
 //#endregion
@@ -34,13 +33,12 @@ export { bar };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,8 @@
+@@ -1,5 +1,7 @@
  var a = foo.a;
  var b = a.b;
  var c = b.c;
 +var x = foo.x;
 +var y = x.y;
-+var z = y.z;
  var bar = c;
  export {bar};
 

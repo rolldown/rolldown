@@ -41,7 +41,10 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
     if self.ctx.module.exports_kind.is_esm() {
       program.body.push(self.snippet.builder.statement_expression(
         SPAN,
-        self.snippet.call_expr_with_arg_expr("__toCommonJS", "exports"),
+        self.snippet.call_expr_with_arg_expr(
+          self.snippet.id_ref_expr("__toCommonJS", SPAN),
+          self.snippet.id_ref_expr("exports", SPAN),
+        ),
       ));
     }
 
@@ -333,7 +336,11 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
       None => {
         self.generated_imports.push(self.snippet.builder.statement_expression(
           SPAN,
-          self.snippet.call_expr_with_2arg_expr("__reExport", "exports", &namespace_object_ref),
+          self.snippet.call_expr_with_2arg_expr(
+            self.snippet.id_ref_expr("__reExport", SPAN),
+            self.snippet.id_ref_expr("exports", SPAN),
+            self.snippet.id_ref_expr("namespace_object_ref", SPAN),
+          ),
         ));
       }
     }

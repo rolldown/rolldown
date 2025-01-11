@@ -56,11 +56,7 @@ pub use crate::{
     },
     Chunk,
   },
-  css::{
-    css_module::CssModule,
-    css_module_idx::CssModuleIdx,
-    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
-  },
+  css::css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   ecmascript::{
     comment_annotation::{get_leading_comment, ROLLDOWN_IGNORE},
     dynamic_import_usage,

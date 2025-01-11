@@ -2510,7 +2510,6 @@ dependencies = [
  "either",
  "glob-match",
  "itertools 0.13.0",
- "lightningcss",
  "oxc",
  "oxc_index",
  "oxc_resolver",

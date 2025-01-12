@@ -75,6 +75,7 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
+      Arc::clone(&self.cache),
     )
     .scan()
     .await

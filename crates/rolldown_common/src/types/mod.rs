@@ -3,6 +3,7 @@ pub mod asset_idx;
 pub mod asset_meta;
 pub mod ast_scopes;
 pub mod bundler_file_system;
+pub mod cache;
 pub mod chunk_idx;
 pub mod chunk_kind;
 pub mod ecma_ast_idx;

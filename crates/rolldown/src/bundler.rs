@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 
-use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{Cache, NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -25,6 +25,8 @@ pub struct Bundler {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
+  #[allow(unused)]
+  pub(crate) cache: Arc<Cache>,
 }
 
 impl Bundler {

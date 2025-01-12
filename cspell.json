@@ -213,7 +213,8 @@
     "bluesky",
     "voidzero",
     "minifiers",
-    "esmodule"
+    "esmodule",
+    "mapref"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

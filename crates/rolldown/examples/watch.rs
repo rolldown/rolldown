@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown::{Bundler, BundlerOptions, InputItem, ResolveOptions, Watcher};
+use rolldown::{Bundler, BundlerOptions, ExperimentalOptions, InputItem, ResolveOptions, Watcher};
 use rolldown_testing::workspace::root_dir;
 use tokio::sync::Mutex;
 
@@ -23,6 +23,7 @@ async fn main() {
       ),
       ..Default::default()
     }),
+    experimental: Some(ExperimentalOptions { incremental_build: Some(true), ..Default::default() }),
     ..Default::default()
   });
   let watcher = Watcher::new(vec![Arc::new(Mutex::new(bundler))], None).unwrap();

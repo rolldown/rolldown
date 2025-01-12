@@ -561,6 +561,12 @@
             "null"
           ]
         },
+        "incrementalBuild": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "resolveNewUrlToAsset": {
           "type": [
             "boolean",

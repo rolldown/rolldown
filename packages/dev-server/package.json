@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "type": "module",
+  "bin": {
+    "rds": "./bin/cli.js"
+  },
   "exports": {
     ".": {
       "default": "./dist/index.js",
@@ -17,7 +20,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "sirv": "^3.0.0",
-    "rolldown": "workspace:*"
+    "connect": "^3.7.0",
+    "rolldown": "workspace:*",
+    "sirv": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/connect": "^3.4.38"
   }
 }

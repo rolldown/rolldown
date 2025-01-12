@@ -126,6 +126,12 @@ impl LinkStage<'_> {
         }
       });
     }
+    self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
+      |ecma_module| {
+        let linking_info = &mut self.metas[ecma_module.idx];
+        create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
+      },
+    );
   }
 }
 

@@ -9,7 +9,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopes,
   EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
-  ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
+  ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
 };
 
 bitflags! {
@@ -126,6 +126,14 @@ pub struct EcmaView {
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+
+  /// - Represents the `import_xxx` in `const import_xxx = __toESM(require_xxx());`
+  /// - Only exist when this module is a cjs module and get imported by static `import` statement.
+  pub esm_namespace_in_cjs: Option<EsmNamespaceInCjs>,
+
+  /// - Represents the `import_xxx` in `const import_xxx = __toESM(require_xxx(), 1);`
+  /// - Only exist when this module is a cjs module and get imported by static `import` statement.
+  pub esm_namespace_in_cjs_node_mode: Option<EsmNamespaceInCjs>,
 }
 
 bitflags! {
@@ -148,4 +156,10 @@ impl SourceMutation for ImportMetaRolldownAssetReplacer {
     magic_string
       .replace_all("import.meta.__ROLLDOWN_ASSET_FILENAME", format!("\"{}\"", self.asset_filename));
   }
+}
+
+#[derive(Debug)]
+pub struct EsmNamespaceInCjs {
+  pub namespace_ref: SymbolRef,
+  pub stmt_info_idx: StmtInfoIdx,
 }

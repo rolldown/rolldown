@@ -22,9 +22,11 @@
   "dependencies": {
     "connect": "^3.7.0",
     "rolldown": "workspace:*",
+    "serve-static": "^1.16.2",
     "sirv": "^3.0.0"
   },
   "devDependencies": {
-    "@types/connect": "^3.4.38"
+    "@types/connect": "^3.4.38",
+    "@types/serve-static": "^1.15.7"
   }
 }

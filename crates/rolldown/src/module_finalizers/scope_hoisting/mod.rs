@@ -349,19 +349,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.canonical_name_for(self.ctx.module.namespace_object_ref);
             let rec = &self.ctx.module.import_records[idx];
             let importee = &self.ctx.modules[rec.resolved_module];
-            let stmt: ast::Statement = self
-              .snippet
-              .alloc_call_expr_with_2arg_expr_expr(
-                re_export_fn_name,
-                self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                self.snippet.call_expr_with_arg_expr_expr(
-                  "require",
-                  self.snippet.string_literal_expr(importee.id(), SPAN),
-                ),
-              )
-              .into_in(self.alloc);
-
-            stmt
+            let expression = self.snippet.alloc_call_expr_with_2arg_expr_expr(
+              re_export_fn_name,
+              self.snippet.id_ref_expr(importer_namespace_name, SPAN),
+              self.snippet.call_expr_with_arg_expr_expr(
+                "require",
+                self.snippet.string_literal_expr(importee.id(), SPAN),
+              ),
+            );
+            ast::Statement::ExpressionStatement(
+              ast::ExpressionStatement { span: expression.span(), expression }.into_in(self.alloc),
+            )
           });
           re_export_external_stmts = Some(stmts.collect());
         }
@@ -924,16 +922,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       // __reExport(exports, otherExports)
                       let importee_namespace_name =
                         self.canonical_name_for(importee.namespace_object_ref);
-                      program.body.push(
-                        self
-                          .snippet
-                          .call_expr_with_2arg_expr(
-                            re_export_fn_name,
-                            importer_namespace_name,
-                            importee_namespace_name,
-                          )
+                      let expression = self.snippet.call_expr_with_2arg_expr(
+                        re_export_fn_name,
+                        importer_namespace_name,
+                        importee_namespace_name,
+                      );
+                      let stmt = ast::Statement::ExpressionStatement(
+                        ast::ExpressionStatement { span: expression.span(), expression }
                           .into_in(self.alloc),
                       );
+                      program.body.push(stmt);
                     }
                   }
                   ExportsKind::CommonJs => {
@@ -944,23 +942,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
                     let importee_wrapper_ref_name =
                       self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                    program.body.push(
-                      self
-                        .snippet
-                        .alloc_call_expr_with_2arg_expr_expr(
-                          re_export_fn_name,
-                          self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                          self.snippet.wrap_with_to_esm(
-                            self
-                              .snippet
-                              .builder
-                              .expression_identifier_reference(SPAN, to_esm_fn_name.as_str()),
-                            self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                            self.ctx.module.should_consider_node_esm_spec(),
-                          ),
-                        )
+                    let expression = self.snippet.alloc_call_expr_with_2arg_expr_expr(
+                      re_export_fn_name,
+                      self.snippet.id_ref_expr(importer_namespace_name, SPAN),
+                      self.snippet.wrap_with_to_esm(
+                        self
+                          .snippet
+                          .builder
+                          .expression_identifier_reference(SPAN, to_esm_fn_name.as_str()),
+                        self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                        self.ctx.module.should_consider_node_esm_spec(),
+                      ),
+                    );
+                    let stmt = ast::Statement::ExpressionStatement(
+                      ast::ExpressionStatement { span: expression.span(), expression }
                         .into_in(self.alloc),
                     );
+                    program.body.push(stmt);
                   }
                   ExportsKind::None => {}
                 }

@@ -28,9 +28,9 @@ var Bar = class {
 //#region define-false/index.ts
 var Foo = class {
 	a;
-	[(() => null, c)];
+	[c];
 	static A;
-	static [(() => null, C)];
+	static [C];
 };
 (() => new Foo())();
 
@@ -38,9 +38,9 @@ var Foo = class {
 //#region define-true/index.ts
 var Bar = class {
 	a;
-	[(() => null, c)];
+	[c];
 	static A;
-	static [(() => null, C)];
+	static [C];
 };
 (() => new Bar())();
 
@@ -56,9 +56,9 @@ var Bar = class {
 -var Foo = class {};
 +var Foo = class {
 +    a;
-+    [(() => null, c)];
++    [c];
 +    static A;
-+    static [(() => null, C)];
++    static [C];
 +};
  (() => new Foo())();
 -var _a;
@@ -68,10 +68,10 @@ var Bar = class {
 -        __publicField(this, _a);
 -    }
 +    a;
-+    [(() => null, c)];
++    [c];
      static A;
 -    static [(_a = (() => null, c), () => null, C)];
-+    static [(() => null, C)];
++    static [C];
  };
  (() => new Bar())();
 

@@ -463,10 +463,11 @@ for (a in b);
 for (a in b);
 for (a of b);
 for (a of b);
-if (a);
+a;
 with(a);
 while (a);
-do {} while (a);
+do;
+while (a);
 switch (a) {}
 
 //#endregion
@@ -476,7 +477,7 @@ switch (a) {}
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,113 @@
+@@ -1,350 +1,114 @@
 +
 +
 +//#region entry.js
@@ -926,10 +927,11 @@ switch (a) {}
 +for (a in b);
 +for (a of b);
 +for (a of b);
-+if (a);
++a;
 +with(a);
 +while (a);
-+do {} while (a);
++do;
++while (a);
 +switch (a) {}
 +
 +//#endregion

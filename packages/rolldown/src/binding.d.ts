@@ -227,7 +227,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:json'|
 'builtin:build-import-analysis'|
 'builtin:replace'|
-'builtin:vite-resolve';
+'builtin:vite-resolve'|
+'builtin:module-federation';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -404,6 +405,14 @@ export interface BindingMatchGroup {
   minShareCount?: number
 }
 
+export interface BindingModuleFederationPluginOption {
+  name: string
+  filename?: string
+  expose: Record<string, string>
+  remotes: Record<string, BindingRemote>
+  shared: Record<string, BindingShared>
+}
+
 export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
@@ -529,6 +538,14 @@ export interface BindingPluginWithIndex {
   plugin: BindingPluginOptions
 }
 
+export interface BindingRemote {
+  type?: string
+  name: string
+  entry: string
+  entryGlobalName?: string
+  shareScope?: string
+}
+
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
@@ -549,6 +566,15 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   tsconfigFilename?: string
+}
+
+export interface BindingShared {
+  name: string
+  version?: string
+  shareScope?: string
+  singleton?: boolean
+  requiredVersion?: string
+  strictVersion?: boolean
 }
 
 export interface BindingSourcemap {

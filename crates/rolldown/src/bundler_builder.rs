@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_common::FileEmitter;
+use rolldown_common::{Cache, FileEmitter};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
@@ -44,6 +44,7 @@ impl BundlerBuilder {
       fs: OsFileSystem,
       warnings,
       _log_guard: maybe_guard,
+      cache: Arc::new(Cache::default()),
     }
   }
 

@@ -1,6 +1,7 @@
 import { getCodeFrame } from '../utils/code-frame'
 import { locate } from './locate-character'
 import type { RollupLog } from '../types/misc'
+import { colors } from '../cli/colors'
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
@@ -20,8 +21,9 @@ export function logParseError(message: string): RollupLog {
 export function logMinifyWarning(): RollupLog {
   return {
     code: MINIFY_WARNING,
-    message:
+    message: colors.yellow(
       'The built-in minifier is still under development. Setting "minify: true" is not recommended for production use.',
+    ),
   }
 }
 

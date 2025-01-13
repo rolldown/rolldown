@@ -135,7 +135,6 @@ itertools           = "0.14.0"
 itoa                = "1.0.11"
 json-strip-comments = "1.0.4"
 jsonschema          = { version = "0.28.0", default-features = false }
-lightningcss        = { version = "1.0.0-alpha.57" }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"

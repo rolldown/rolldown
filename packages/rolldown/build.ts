@@ -16,6 +16,7 @@ const shared = defineConfig({
     'parallel-plugin': './src/parallel-plugin',
     'parallel-plugin-worker': './src/parallel-plugin-worker',
     'experimental-index': './src/experimental-index',
+    'parse-ast-index': './src/parse-ast-index',
   },
   platform: 'node',
   external: [

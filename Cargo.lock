@@ -221,6 +221,9 @@ name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bitvec"
@@ -401,6 +404,7 @@ dependencies = [
  "itoa",
  "rustversion",
  "ryu",
+ "serde",
  "static_assertions",
 ]
 
@@ -1630,6 +1634,7 @@ checksum = "cec658f00dfc309515494dc7343b9df9a4f9460f6305c5f7fbfb04b94be8c480"
 dependencies = [
  "allocator-api2",
  "bumpalo",
+ "serde",
  "simdutf8",
 ]
 
@@ -1649,6 +1654,8 @@ dependencies = [
  "oxc_regular_expression",
  "oxc_span",
  "oxc_syntax",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1735,6 +1742,9 @@ name = "oxc_estree"
 version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ee870cab03de94f4482767d083cff5cb2daf129b043c8cdc542670300d319cb"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "oxc_index"
@@ -1831,6 +1841,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_parser_napi"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d192c1136f7cd0eefc884d478601f5eec2ebab74a8d5261fdf7e0af936d87370"
+dependencies = [
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "oxc",
+ "oxc_ast",
+ "oxc_data_structures",
+ "oxc_napi",
+ "rustc-hash",
+ "self_cell",
+ "serde_json",
+ "string_wizard 0.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "oxc_regular_expression"
 version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1843,6 +1872,7 @@ dependencies = [
  "oxc_span",
  "phf",
  "rustc-hash",
+ "serde",
  "unicode-id-start",
 ]
 
@@ -1916,6 +1946,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast_macros",
  "oxc_estree",
+ "serde",
 ]
 
 [[package]]
@@ -1936,7 +1967,9 @@ dependencies = [
  "phf",
  "rustc-hash",
  "ryu-js",
+ "serde",
  "unicode-id-start",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -2452,7 +2485,8 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "sanitize-filename",
- "string_wizard",
+ "serde",
+ "string_wizard 0.0.25",
  "sugar_path",
  "testing_macros",
  "tokio",
@@ -2475,6 +2509,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "oxc_parser_napi",
  "oxc_transform_napi",
  "rolldown",
  "rolldown_common",
@@ -2527,7 +2562,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "string_wizard",
+ "string_wizard 0.0.25",
  "sugar_path",
 ]
 
@@ -2610,7 +2645,8 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_utils",
  "rustc-hash",
- "string_wizard",
+ "serde",
+ "string_wizard 0.0.25",
  "tokio",
  "tracing",
  "typedmap",
@@ -2730,7 +2766,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_testing",
  "rustc-hash",
- "string_wizard",
+ "string_wizard 0.0.25",
  "tokio",
 ]
 
@@ -3184,6 +3220,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "string_wizard"
+version = "0.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bb58bc508ea1c7f771111be7870d0c8079410c0fe7e026454c7baa7998cf2a5"
+dependencies = [
+ "oxc_index",
+ "oxc_sourcemap",
+ "rustc-hash",
+ "serde",
+]
+
+[[package]]
 name = "sugar_path"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3554,6 +3602,64 @@ name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
+
+[[package]]
+name = "wasm-bindgen"
+version = "0.2.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1edc8929d7499fc4e8f0be2262a241556cfc54a0bea223790e71446f2aab1ef5"
+dependencies = [
+ "cfg-if",
+ "once_cell",
+ "rustversion",
+ "wasm-bindgen-macro",
+]
+
+[[package]]
+name = "wasm-bindgen-backend"
+version = "0.2.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f0a0651a5c2bc21487bde11ee802ccaf4c51935d0d3d42a6101f98161700bc6"
+dependencies = [
+ "bumpalo",
+ "log",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.85",
+ "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-macro"
+version = "0.2.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fe63fc6d09ed3792bd0897b314f53de8e16568c2b3f7982f468c0bf9bd0b407"
+dependencies = [
+ "quote",
+ "wasm-bindgen-macro-support",
+]
+
+[[package]]
+name = "wasm-bindgen-macro-support"
+version = "0.2.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ae87ea40c9f689fc23f209965b6fb8a99ad69aeeb0231408be24920604395de"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.85",
+ "wasm-bindgen-backend",
+ "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-shared"
+version = "0.2.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a05d73b933a847d6cccdda8f838a22ff101ad9bf93e33684f39c1f5f0eece3d"
+dependencies = [
+ "unicode-ident",
+]
 
 [[package]]
 name = "winapi"

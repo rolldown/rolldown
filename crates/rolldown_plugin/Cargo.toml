@@ -12,7 +12,9 @@ version              = "0.1.0"
 doctest = false
 
 [features]
-inner = []
+default = ["serde"]
+inner   = []
+serde   = ["dep:serde", "oxc_index/serde"]
 
 [lints]
 workspace = true
@@ -30,7 +32,11 @@ rolldown_resolver   = { workspace = true }
 rolldown_sourcemap  = { workspace = true }
 rolldown_utils      = { workspace = true }
 rustc-hash          = { workspace = true }
+serde               = { workspace = true, optional = true }
 string_wizard       = { workspace = true }
 tokio               = { workspace = true, features = ["sync"] }
 tracing             = { workspace = true }
 typedmap            = { workspace = true, features = ["dashmap"] }
+
+[package.metadata.cargo-shear]
+ignored = ["serde"]

@@ -42,4 +42,6 @@ string_wizard       = { workspace = true }
 sugar_path          = { workspace = true }
 
 [features]
+default                     = ["serde"]
 deserialize_bundler_options = ["dep:schemars", "dep:serde"]
+serde                       = ["dep:serde", "oxc_index/serde"]

@@ -14,6 +14,10 @@ doctest = false
 [lints]
 workspace = true
 
+[features]
+default = ["serde"]
+serde   = ["dep:serde", "oxc_index/serde"]
+
 [dependencies]
 anyhow                    = { workspace = true }
 append-only-vec           = { workspace = true }
@@ -45,6 +49,7 @@ rolldown_tracing          = { workspace = true }
 rolldown_utils            = { workspace = true }
 rustc-hash                = { workspace = true }
 sanitize-filename         = { workspace = true }
+serde                     = { workspace = true, optional = true }
 string_wizard             = { workspace = true }
 sugar_path                = { workspace = true }
 tokio                     = { workspace = true, features = ["rt", "macros", "sync"] }
@@ -59,3 +64,6 @@ rolldown_testing = { workspace = true }
 sugar_path       = { workspace = true }
 testing_macros   = { workspace = true }
 tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+
+[package.metadata.cargo-shear]
+ignored = ["serde"]

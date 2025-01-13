@@ -146,7 +146,7 @@ fn is_special_query(ext: &str) -> bool {
 fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
   let value_as_string = serde_json::to_string(value)?;
   if value.is_object() && !value.is_null() && value_as_string.len() > 10 * 1000 {
-    Ok(format!("JSON.parse({})", serde_json::to_string(&value_as_string)?))
+    Ok(format!("/*#__PURE__*/ JSON.parse({})", serde_json::to_string(&value_as_string)?))
   } else {
     Ok(value_as_string)
   }

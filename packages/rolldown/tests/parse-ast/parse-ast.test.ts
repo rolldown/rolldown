@@ -15,6 +15,7 @@ test('rolldown/parseAst parseSync + error', async () => {
   const result = parseAst('test.js', '\nconso le.log("hello")')
   try {
     result.program
+    expect.unreachable()
   } catch (error: any) {
     expect(error.message).toMatchInlineSnapshot(`
       "Parse failed with 1 error:

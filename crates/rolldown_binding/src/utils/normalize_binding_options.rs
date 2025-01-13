@@ -198,6 +198,8 @@ pub fn normalize_binding_options(
       disable_live_bindings: inner.disable_live_bindings,
       vite_mode: inner.vite_mode,
       resolve_new_url_to_asset: inner.resolve_new_url_to_asset,
+      // TODO: binding
+      incremental_build: None,
     }),
     minify: output_options.minify,
     extend: output_options.extend,

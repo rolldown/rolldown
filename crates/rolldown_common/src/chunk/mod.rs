@@ -29,6 +29,8 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub name: Option<ArcStr>,
+  // emit_chunk specifed filename
+  pub file_name: Option<ArcStr>,
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
@@ -51,15 +53,14 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(name: Option<ArcStr>, bits: BitSet, modules: Vec<ModuleIdx>, kind: ChunkKind) -> Self {
-    Self {
-      exec_order: u32::MAX,
-      modules,
-      name: name.map(Into::into),
-      bits,
-      kind,
-      ..Self::default()
-    }
+  pub fn new(
+    name: Option<ArcStr>,
+    file_name: Option<ArcStr>,
+    bits: BitSet,
+    modules: Vec<ModuleIdx>,
+    kind: ChunkKind,
+  ) -> Self {
+    Self { exec_order: u32::MAX, modules, name, file_name, bits, kind, ..Self::default() }
   }
 
   pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {
@@ -130,6 +131,9 @@ impl Chunk {
         .to_string_lossy()
         .to_string();
       return Ok(PreliminaryFilename::new(basename, None));
+    }
+    if let Some(file_name) = &self.file_name {
+      return Ok(PreliminaryFilename::new(file_name.to_string(), None));
     }
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
     let extracted_hash_pattern = extract_hash_pattern(filename_template.template());

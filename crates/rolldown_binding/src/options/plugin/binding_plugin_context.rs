@@ -5,7 +5,8 @@ use napi_derive::napi;
 use rolldown_plugin::PluginContext;
 
 use super::types::{
-  binding_emitted_asset::BindingEmittedAsset, binding_hook_side_effects::BindingHookSideEffects,
+  binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
+  binding_hook_side_effects::BindingHookSideEffects,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
 };
 
@@ -75,6 +76,11 @@ impl BindingPluginContext {
   #[napi]
   pub fn emit_file(&self, file: BindingEmittedAsset) -> String {
     self.inner.emit_file(file.into()).to_string()
+  }
+
+  #[napi]
+  pub async fn emit_chunk(&self, file: BindingEmittedChunk) -> anyhow::Result<String> {
+    self.inner.emit_chunk(file.into()).await.map(|id| id.to_string())
   }
 
   #[napi]

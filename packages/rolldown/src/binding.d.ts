@@ -104,6 +104,7 @@ export declare class BindingPluginContext {
   load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
+  emitChunk(file: BindingEmittedChunk): Promise<string>
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
@@ -273,6 +274,13 @@ export interface BindingEmittedAsset {
   fileName?: string
   originalFileName?: string
   source: BindingAssetSource
+}
+
+export interface BindingEmittedChunk {
+  name?: string
+  fileName?: string
+  id: string
+  importer?: string
 }
 
 export interface BindingExperimentalOptions {

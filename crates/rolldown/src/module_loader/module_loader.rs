@@ -240,6 +240,7 @@ impl ModuleLoader {
         name,
         id: self.try_spawn_new_task(info, None, true, None),
         kind: EntryPointKind::UserDefined,
+        file_name: None,
       })
       .inspect(|e| {
         user_defined_entry_ids.insert(e.id);
@@ -248,6 +249,7 @@ impl ModuleLoader {
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
     let mut dynamic_import_exports_usage_pairs = vec![];
+    let mut extra_entry_points = vec![];
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
     while self.remaining > 0 {
@@ -354,6 +356,14 @@ impl ModuleLoader {
         ModuleLoaderMsg::FetchModule(resolve_id) => {
           self.try_spawn_new_task(resolve_id, None, false, None);
         }
+        ModuleLoaderMsg::AddEntryModule(data) => {
+          extra_entry_points.push(EntryPoint {
+            name: data.name,
+            id: self.try_spawn_new_task(data.resolved_id, None, true, None),
+            kind: EntryPointKind::UserDefined,
+            file_name: data.file_name,
+          });
+        }
         ModuleLoaderMsg::BuildErrors(e) => {
           errors.extend(e);
           self.remaining -= 1;
@@ -430,8 +440,12 @@ impl ModuleLoader {
         name: None,
         id,
         kind: EntryPointKind::DynamicImport,
+        file_name: None,
       }));
     }
+
+    extra_entry_points.sort_unstable_by_key(|entry| modules[entry.id].stable_id());
+    entry_points.extend(extra_entry_points);
 
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },

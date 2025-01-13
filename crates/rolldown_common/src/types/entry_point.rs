@@ -7,6 +7,7 @@ pub struct EntryPoint {
   pub name: Option<ArcStr>,
   pub id: ModuleIdx,
   pub kind: EntryPointKind,
+  pub file_name: Option<ArcStr>,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]

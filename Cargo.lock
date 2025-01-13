@@ -2564,6 +2564,7 @@ dependencies = [
  "serde_json",
  "string_wizard 0.0.25",
  "sugar_path",
+ "tokio",
 ]
 
 [[package]]

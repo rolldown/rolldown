@@ -155,7 +155,7 @@ serde               = { version = "1.0.203", features = ["derive"] }
 serde_json          = "1.0.117"
 simdutf8            = { version = "0.1.5" }
 smallvec            = "1.13.2"
-string_wizard       = { path = "./crates/string_wizard" }
+string_wizard       = { path = "./crates/string_wizard", features = ["serde"] }
 sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
 testing_macros      = "1.0.0"
 tokio               = { version = "1.38.0", default-features = false }
@@ -171,14 +171,15 @@ xxhash-rust         = "0.8.10"
 
 # oxc crates with the same version
 oxc                = { version = "0.45.0", features = ["transformer", "minifier", "semantic", "codegen"] }
+oxc_parser_napi    = { version = "0.45.0" }
 oxc_transform_napi = { version = "0.45.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
-oxc_index     = { version = "2", features = ["rayon"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver  = { version = "3" }                       # https://github.com/oxc-project/oxc-resolver
-oxc_sourcemap = { version = "1" }                       # https://github.com/oxc-project/oxc-sourcemap
+oxc_index     = { version = "2", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
+oxc_resolver  = { version = "3" }                                # https://github.com/oxc-project/oxc-resolver
+oxc_sourcemap = { version = "1" }                                # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]
 codegen-units = 1

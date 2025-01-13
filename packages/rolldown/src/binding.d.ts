@@ -147,10 +147,38 @@ export declare class Bundler {
   get closed(): boolean
 }
 
+export declare class MagicString {
+  /** Get source text from utf8 offset. */
+  getSourceText(start: number, end: number): string
+  /** Get 0-based line and column number from utf8 offset. */
+  getLineColumnNumber(offset: number): LineColumn
+  /** Get UTF16 byte offset from UTF8 byte offset. */
+  getUtf16ByteOffset(offset: number): number
+  length(): number
+  toString(): string
+  append(input: string): this
+  appendLeft(index: number, input: string): this
+  appendRight(index: number, input: string): this
+  indent(): this
+  prepend(input: string): this
+  prependLeft(index: number, input: string): this
+  prependRight(index: number, input: string): this
+  relocate(start: number, end: number, to: number): this
+  remove(start: number, end: number): this
+}
+
 export declare class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
+}
+
+export declare class ParseResult {
+  get program(): import("@oxc-project/types").Program
+  get module(): EcmaScriptModule
+  get comments(): Array<Comment>
+  get errors(): Array<OxcError>
+  get magicString(): MagicString
 }
 
 export declare class RenderedChunk {
@@ -640,12 +668,36 @@ export interface BindingWatchOption {
   exclude?: Array<BindingStringOrRegex>
 }
 
+export interface Comment {
+  type: 'Line' | 'Block'
+  value: string
+  start: number
+  end: number
+}
+
 export interface CompilerAssumptions {
   ignoreFunctionLength?: boolean
   noDocumentAll?: boolean
   objectRestNoSymbols?: boolean
   pureGetters?: boolean
   setPublicClassFields?: boolean
+}
+
+export interface EcmaScriptModule {
+  /**
+   * Has ESM syntax.
+   *
+   * i.e. `import` and `export` statements, and `import.meta`.
+   *
+   * Dynamic imports `import('foo')` are ignored since they can be used in non-ESM files.
+   */
+  hasModuleSyntax: boolean
+  /** Import Statements. */
+  staticImports: Array<StaticImport>
+  /** Export Statements. */
+  staticExports: Array<StaticExport>
+  /** Span positions` of `import.meta` */
+  importMetas: Array<Span>
 }
 
 export interface ErrorLabel {
@@ -658,6 +710,53 @@ export interface Es2015Options {
   /** Transform arrow functions into function expressions. */
   arrowFunction?: ArrowFunctionsOptions
 }
+
+export interface ExportExportName {
+  kind: ExportExportNameKind
+  name?: string
+  start?: number
+  end?: number
+}
+
+export type ExportExportNameKind = /** `export { name } */
+'Name'|
+/** `export default expression` */
+'Default'|
+/** `export * from "mod" */
+'None';
+
+export interface ExportImportName {
+  kind: ExportImportNameKind
+  name?: string
+  start?: number
+  end?: number
+}
+
+export type ExportImportNameKind = /** `export { name } */
+'Name'|
+/** `export * as ns from "mod"` */
+'All'|
+/** `export * from "mod"` */
+'AllButDefault'|
+/** Does not have a specifier. */
+'None';
+
+export interface ExportLocalName {
+  kind: ExportLocalNameKind
+  name?: string
+  start?: number
+  end?: number
+}
+
+export type ExportLocalNameKind = /** `export { name } */
+'Name'|
+/** `export default expression` */
+'Default'|
+/**
+ * If the exported value is not locally accessible from within the module.
+ * `export default function () {}`
+ */
+'None';
 
 export interface ExtensionAliasItem {
   target: string
@@ -689,6 +788,20 @@ export type HelperMode = /**
 export interface Helpers {
   mode?: HelperMode
 }
+
+export interface ImportName {
+  kind: ImportNameKind
+  name?: string
+  start?: number
+  end?: number
+}
+
+export type ImportNameKind = /** `import { x } from "mod"` */
+'Name'|
+/** `import * as ns from "mod"` */
+'NamespaceObject'|
+/** `import defaultExport from "mod"` */
+'Default';
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
 export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult
@@ -837,12 +950,54 @@ export interface JsxOptions {
   refresh?: boolean | ReactRefreshOptions
 }
 
+export interface LineColumn {
+  line: number
+  column: number
+}
+
+export interface OverwriteOptions {
+  contentOnly: boolean
+}
+
 export interface OxcError {
   severity: Severity
   message: string
   labels: Array<ErrorLabel>
   helpMessage?: string
 }
+
+/**
+ * Parse asynchronously.
+ *
+ * Note: This function can be slower than `parseSync` due to the overhead of spawning a thread.
+ */
+export declare function parseAsync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
+
+export interface ParserOptions {
+  sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  /** Treat the source text as `js`, `jsx`, `ts`, or `tsx`. */
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx'
+  /**
+   * Emit `ParenthesizedExpression` in AST.
+   *
+   * If this option is true, parenthesized expressions are represented by
+   * (non-standard) `ParenthesizedExpression` nodes that have a single `expression` property
+   * containing the expression inside parentheses.
+   *
+   * Default: true
+   */
+  preserveParens?: boolean
+}
+
+/** Parse synchronously. */
+export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
+
+/**
+ * Parse without returning anything.
+ *
+ * This is for benchmark purposes such as measuring napi communication overhead.
+ */
+export declare function parseWithoutReturn(filename: string, sourceText: string, options?: ParserOptions | undefined | null): void
 
 export interface PreRenderedChunk {
   name: string
@@ -884,6 +1039,91 @@ export interface SourceMap {
   sourcesContent?: Array<string>
   version: number
   x_google_ignoreList?: Array<number>
+}
+
+export interface SourceMapOptions {
+  includeContent?: boolean
+  source?: string
+  hires?: boolean
+}
+
+export interface Span {
+  start: number
+  end: number
+}
+
+export interface StaticExport {
+  start: number
+  end: number
+  entries: Array<StaticExportEntry>
+}
+
+export interface StaticExportEntry {
+  start: number
+  end: number
+  moduleRequest?: ValueSpan
+  /** The name under which the desired binding is exported by the module`. */
+  importName: ExportImportName
+  /** The name used to export this binding by this module. */
+  exportName: ExportExportName
+  /** The name that is used to locally access the exported value from within the importing module. */
+  localName: ExportLocalName
+}
+
+export interface StaticImport {
+  /** Start of import statement. */
+  start: number
+  /** End of import statement. */
+  end: number
+  /**
+   * Import source.
+   *
+   * ```js
+   * import { foo } from "mod";
+   * //                   ^^^
+   * ```
+   */
+  moduleRequest: ValueSpan
+  /**
+   * Import specifiers.
+   *
+   * Empty for `import "mod"`.
+   */
+  entries: Array<StaticImportEntry>
+}
+
+export interface StaticImportEntry {
+  /**
+   * The name under which the desired binding is exported by the module.
+   *
+   * ```js
+   * import { foo } from "mod";
+   * //       ^^^
+   * import { foo as bar } from "mod";
+   * //       ^^^
+   * ```
+   */
+  importName: ImportName
+  /**
+   * The name that is used to locally access the imported value from within the importing module.
+   * ```js
+   * import { foo } from "mod";
+   * //       ^^^
+   * import { foo as bar } from "mod";
+   * //              ^^^
+   * ```
+   */
+  localName: ValueSpan
+  /**
+   * Whether this binding is for a TypeScript type-only import.
+   *
+   * `true` for the following imports:
+   * ```ts
+   * import type { foo } from "mod";
+   * import { type foo } from "mod";
+   * ```
+   */
+  isType: boolean
 }
 
 /**
@@ -1032,4 +1272,10 @@ export interface TypeScriptOptions {
    * @default false
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
+}
+
+export interface ValueSpan {
+  value: string
+  start: number
+  end: number
 }

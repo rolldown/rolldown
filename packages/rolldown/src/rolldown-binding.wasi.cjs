@@ -85,21 +85,56 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__OxcError_struct_0']?.()
   __napiInstance.exports['__napi_register__ErrorLabel_struct_1']?.()
   __napiInstance.exports['__napi_register__Severity_2']?.()
+<<<<<<< HEAD
   __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()
+=======
+  __napiInstance.exports['__napi_register__OxcError_struct_0']?.()
+  __napiInstance.exports['__napi_register__SourceMap_struct_0']?.()
+  __napiInstance.exports['__napi_register__ErrorLabel_struct_1']?.()
+  __napiInstance.exports['__napi_register__Severity_2']?.()
+  __napiInstance.exports['__napi_register__MagicString_struct_0']?.()
+>>>>>>> ff003683e (chore: rebase)
   __napiInstance.exports['__napi_register__IsolatedDeclarationsResult_struct_0']?.()
   __napiInstance.exports['__napi_register__IsolatedDeclarationsOptions_struct_1']?.()
+  __napiInstance.exports['__napi_register__LineColumn_struct_1']?.()
   __napiInstance.exports['__napi_register__isolated_declaration_2']?.()
+  __napiInstance.exports['__napi_register__OverwriteOptions_struct_2']?.()
+  __napiInstance.exports['__napi_register__SourceMapOptions_struct_3']?.()
   __napiInstance.exports['__napi_register__TransformResult_struct_3']?.()
   __napiInstance.exports['__napi_register__TransformOptions_struct_4']?.()
   __napiInstance.exports['__napi_register__CompilerAssumptions_struct_5']?.()
+  __napiInstance.exports['__napi_register__MagicString_impl_18']?.()
   __napiInstance.exports['__napi_register__TypeScriptOptions_struct_6']?.()
+  __napiInstance.exports['__napi_register__ParserOptions_struct_19']?.()
   __napiInstance.exports['__napi_register__JsxOptions_struct_7']?.()
+  __napiInstance.exports['__napi_register__ParseResult_struct_20']?.()
   __napiInstance.exports['__napi_register__ReactRefreshOptions_struct_8']?.()
   __napiInstance.exports['__napi_register__ArrowFunctionsOptions_struct_9']?.()
   __napiInstance.exports['__napi_register__Es2015Options_struct_10']?.()
+  __napiInstance.exports['__napi_register__ParseResult_impl_26']?.()
   __napiInstance.exports['__napi_register__Helpers_struct_11']?.()
   __napiInstance.exports['__napi_register__HelperMode_12']?.()
+  __napiInstance.exports['__napi_register__Comment_struct_27']?.()
+  __napiInstance.exports['__napi_register__EcmaScriptModule_struct_28']?.()
+  __napiInstance.exports['__napi_register__Span_struct_29']?.()
+  __napiInstance.exports['__napi_register__ValueSpan_struct_30']?.()
   __napiInstance.exports['__napi_register__transform_13']?.()
+  __napiInstance.exports['__napi_register__StaticImport_struct_31']?.()
+  __napiInstance.exports['__napi_register__StaticImportEntry_struct_32']?.()
+  __napiInstance.exports['__napi_register__ImportNameKind_33']?.()
+  __napiInstance.exports['__napi_register__ImportName_struct_34']?.()
+  __napiInstance.exports['__napi_register__StaticExportEntry_struct_35']?.()
+  __napiInstance.exports['__napi_register__StaticExport_struct_36']?.()
+  __napiInstance.exports['__napi_register__ExportImportNameKind_37']?.()
+  __napiInstance.exports['__napi_register__ExportImportName_struct_38']?.()
+  __napiInstance.exports['__napi_register__ExportExportNameKind_39']?.()
+  __napiInstance.exports['__napi_register__ExportExportName_struct_40']?.()
+  __napiInstance.exports['__napi_register__ExportLocalName_struct_41']?.()
+  __napiInstance.exports['__napi_register__ExportLocalNameKind_42']?.()
+  __napiInstance.exports['__napi_register__parse_without_return_43']?.()
+  __napiInstance.exports['__napi_register__parse_sync_44']?.()
+  __napiInstance.exports['__napi_register__ResolveTask_impl_45']?.()
+  __napiInstance.exports['__napi_register__parse_async_46']?.()
   __napiInstance.exports['__napi_register__BindingBundlerOptions_struct_0']?.()
   __napiInstance.exports['__napi_register__Bundler_struct_1']?.()
   __napiInstance.exports['__napi_register__Bundler_impl_8']?.()
@@ -214,14 +249,23 @@ module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
 module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.Bundler = __napiModule.exports.Bundler
+module.exports.MagicString = __napiModule.exports.MagicString
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
+module.exports.ParseResult = __napiModule.exports.ParseResult
 module.exports.RenderedChunk = __napiModule.exports.RenderedChunk
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
+module.exports.ExportExportNameKind = __napiModule.exports.ExportExportNameKind
+module.exports.ExportImportNameKind = __napiModule.exports.ExportImportNameKind
+module.exports.ExportLocalNameKind = __napiModule.exports.ExportLocalNameKind
 module.exports.HelperMode = __napiModule.exports.HelperMode
+module.exports.ImportNameKind = __napiModule.exports.ImportNameKind
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration
+module.exports.parseAsync = __napiModule.exports.parseAsync
+module.exports.parseSync = __napiModule.exports.parseSync
+module.exports.parseWithoutReturn = __napiModule.exports.parseWithoutReturn
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.Severity = __napiModule.exports.Severity
 module.exports.transform = __napiModule.exports.transform

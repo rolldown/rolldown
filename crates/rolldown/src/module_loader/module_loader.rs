@@ -10,7 +10,7 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
+  Cache, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
   ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleSideEffects,
   ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions, RUNTIME_MODULE_ID,
@@ -79,6 +79,7 @@ impl ModuleLoader {
     options: SharedOptions,
     resolver: SharedResolver,
     plugin_driver: SharedPluginDriver,
+    cache: Arc<Cache>,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -104,6 +105,7 @@ impl ModuleLoader {
       fs,
       plugin_driver,
       meta,
+      cache,
     });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();

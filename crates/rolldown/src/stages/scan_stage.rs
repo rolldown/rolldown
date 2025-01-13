@@ -3,8 +3,8 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ImportKind, ModuleIdx, ModuleTable,
-  ResolvedId, RuntimeModuleBrief, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, Cache, EntryPoint, ImportKind, ModuleIdx,
+  ModuleTable, ResolvedId, RuntimeModuleBrief, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs::OsFileSystem;
@@ -24,6 +24,7 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
+  cache: Arc<Cache>,
 }
 
 #[derive(Debug)]
@@ -43,8 +44,9 @@ impl ScanStage {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
+    cache: Arc<Cache>,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver }
+    Self { options, plugin_driver, fs, resolver, cache }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -60,6 +62,7 @@ impl ScanStage {
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
+      Arc::clone(&self.cache),
     )?;
 
     let user_entries = self.resolve_user_defined_entries().await?;

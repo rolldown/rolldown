@@ -47,7 +47,7 @@ impl WatcherTask {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn run(&self) -> BuildResult<()> {
+  pub async fn run(&self, changed_files: &[ArcStr]) -> BuildResult<()> {
     if !self.invalidate_flag.load(Ordering::Relaxed) {
       return Ok(());
     }
@@ -58,7 +58,9 @@ impl WatcherTask {
     self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
 
     bundler.plugin_driver.clear();
-
+    for file in changed_files {
+      bundler.cache.invalidate(file);
+    }
     let result = {
       let result = bundler.scan().await;
       // FIXME(hyf0): probably should have a more official API/better way to get watch files

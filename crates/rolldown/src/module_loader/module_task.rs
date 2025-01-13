@@ -110,61 +110,8 @@ impl ModuleTask {
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
 
-    // Run plugin load to get content first, if it is None using read fs as fallback.
-    let result = load_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_id,
-      &self.ctx.fs,
-      &mut sourcemap_chain,
-      &mut hook_side_effects,
-      &self.ctx.options,
-      self.asserted_module_type.as_ref(),
-    )
-    .await;
-
-    let (source, mut module_type) = result.map_err(|err| {
-      BuildDiagnostic::unloadable_dependency(
-        self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
-        self.owner.as_ref().map(|owner| UnloadableDependencyContext {
-          importer_id: owner.importer_id.as_str().into(),
-          importee_span: owner.importee_span,
-          source: owner.source.clone(),
-        }),
-        err,
-      )
-    })?;
-
-    if let Some(asserted) = &self.asserted_module_type {
-      module_type = asserted.clone();
-    }
-
-    let mut source = match source {
-      StrOrBytes::Str(source) => {
-        // Run plugin transform.
-        let source = transform_source(
-          &self.ctx.plugin_driver,
-          &self.resolved_id,
-          source,
-          &mut sourcemap_chain,
-          &mut hook_side_effects,
-          &mut module_type,
-        )
-        .await?;
-        source.into()
-      }
-      StrOrBytes::Bytes(_) => source,
-    };
-
-    // TODO: module type should be able to updated by transform hook, for now we don't impl it.
-    if let ModuleType::Custom(_) = module_type {
-      // TODO: should provide some diagnostics for user how they should handle the module type.
-      // e.g.
-      // sass -> recommended npm install `sass` etc
-      Err(anyhow::anyhow!(
-        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
-        self.resolved_id.id
-      ))?;
-    };
+    let (mut source, module_type) =
+      self.load_source_phase(&mut sourcemap_chain, &mut hook_side_effects).await?;
 
     let asset_view = if matches!(module_type, ModuleType::Asset) {
       let asset_source = source.into_bytes();
@@ -281,6 +228,90 @@ impl ModuleTask {
     }
 
     Ok(())
+  }
+
+  async fn load_source_without_cache(
+    &self,
+    sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
+    hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
+  ) -> BuildResult<(StrOrBytes, ModuleType)> {
+    let result = load_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_id,
+      &self.ctx.fs,
+      sourcemap_chain,
+      hook_side_effects,
+      &self.ctx.options,
+      self.asserted_module_type.as_ref(),
+    )
+    .await;
+    let (source, mut module_type) = result.map_err(|err| {
+      BuildDiagnostic::unloadable_dependency(
+        self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
+        self.owner.as_ref().map(|owner| UnloadableDependencyContext {
+          importer_id: owner.importer_id.as_str().into(),
+          importee_span: owner.importee_span,
+          source: owner.source.clone(),
+        }),
+        err,
+      )
+    })?;
+    if let Some(asserted) = &self.asserted_module_type {
+      module_type = asserted.clone();
+    }
+    let source = match source {
+      StrOrBytes::Str(source) => {
+        // Run plugin transform.
+        let source = transform_source(
+          &self.ctx.plugin_driver,
+          &self.resolved_id,
+          source,
+          sourcemap_chain,
+          hook_side_effects,
+          &mut module_type,
+        )
+        .await?;
+        source.into()
+      }
+      StrOrBytes::Bytes(_) => source,
+    };
+    if let ModuleType::Custom(_) = module_type {
+      // TODO: should provide some diagnostics for user how they should handle the module type.
+      // e.g.
+      // sass -> recommended npm install `sass` etc
+      Err(anyhow::anyhow!(
+        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        self.resolved_id.id
+      ))?;
+    };
+    Ok((source, module_type))
+  }
+
+  // TODO: cache source_map_chain and hook_side_effects
+  fn load_source_with_cache(&self) -> Option<(StrOrBytes, ModuleType)> {
+    self
+      .ctx
+      .cache
+      .get_raw_source_and_module_type(&self.resolved_id.id)
+      .map(|item| item.value().clone())
+  }
+
+  async fn load_source_phase(
+    &mut self,
+    sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
+    hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
+  ) -> BuildResult<(StrOrBytes, ModuleType)> {
+    let incremental_build_enabled = self.ctx.options.experimental.is_incremental_build_enabled();
+    if incremental_build_enabled {
+      if let Some(value) = self.load_source_with_cache() {
+        return Ok(value);
+      }
+    }
+    let value = self.load_source_without_cache(sourcemap_chain, hook_side_effects).await?;
+    if incremental_build_enabled {
+      self.ctx.cache.insert_raw_source_and_module_type(self.resolved_id.id.clone(), value.clone());
+    }
+    Ok(value)
   }
 
   pub(crate) async fn resolve_id(

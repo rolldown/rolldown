@@ -117,14 +117,13 @@ impl WatcherImpl {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn run(&self) -> BuildResult<()> {
+  pub async fn run(&self, changed_files: &[ArcStr]) -> BuildResult<()> {
     self.emitter.emit(WatcherEvent::ReStart)?;
 
     self.running.store(true, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::Start))?;
-
     for task in &self.tasks {
-      task.run().await?;
+      task.run(changed_files).await?;
     }
 
     self.running.store(false, Ordering::Relaxed);
@@ -162,7 +161,7 @@ impl WatcherImpl {
   }
 
   pub async fn start(&self) {
-    let _ = self.run().await;
+    let _ = self.run(&[]).await;
     let future = async move {
       while let Ok(msg) = self.exec_rx.lock().await.recv() {
         match msg {
@@ -173,8 +172,10 @@ impl WatcherImpl {
                 task.invalidate(change.path.as_str());
               }
             }
+            let changed_files =
+              self.watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
             self.watch_changes.clear();
-            let _ = self.run().await;
+            let _ = self.run(&changed_files).await;
           }
           ExecChannelMsg::Close => break,
         }

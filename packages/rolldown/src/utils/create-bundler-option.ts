@@ -24,8 +24,6 @@ export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
 ): Promise<BundlerOptionWithStopWorker> {
-  const pluginDriver = new PluginDriver()
-  inputOptions = await pluginDriver.callOptionsHook(inputOptions)
   if (inputOptions.treeshake !== undefined) {
     validateTreeShakingOptions(inputOptions.treeshake)
   }
@@ -41,7 +39,7 @@ export async function createBundlerOptions(
   )
 
   // The `outputOptions` hook is called with the input plugins and the output plugins
-  outputOptions = pluginDriver.callOutputOptionsHook(
+  outputOptions = PluginDriver.callOutputOptionsHook(
     [...inputPlugins, ...outputPlugins],
     outputOptions,
   )

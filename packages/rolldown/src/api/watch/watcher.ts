@@ -2,6 +2,7 @@ import { BindingWatcher } from '../../binding'
 import { LOG_LEVEL_WARN } from '../../log/logging'
 import { logMultiplyNotifyOption } from '../../log/logs'
 import { WatchOptions } from '../../options/watch-options'
+import { PluginDriver } from '../../plugin/plugin-driver'
 import {
   BundlerOptionWithStopWorker,
   createBundlerOptions,
@@ -56,9 +57,10 @@ export async function createWatcher(
   const bundlerOptions = await Promise.all(
     options
       .map((option) =>
-        arraify(option.output || {}).map((output) =>
-          createBundlerOptions(option, output),
-        ),
+        arraify(option.output || {}).map(async (output) => {
+          const inputOptions = await PluginDriver.callOptionsHook(option)
+          return createBundlerOptions(inputOptions, output)
+        }),
       )
       .flat(),
   )

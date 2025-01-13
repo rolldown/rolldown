@@ -3,6 +3,7 @@ import pkgJson from './package.json' with { type: 'json' }
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
 import { globSync } from 'glob'
+import { colors } from './src/cli/colors'
 
 const outputDir = 'dist'
 
@@ -79,9 +80,14 @@ const configs = defineConfig([
               // Move the binary file to dist
               wasmFiles.forEach((file) => {
                 const fileName = nodePath.basename(file)
-                console.log('[build:done] Copying', file, `to ${copyTo}`)
+                console.log(
+                  colors.green('[build:done]'),
+                  'Copying',
+                  file,
+                  `to ${copyTo}`,
+                )
                 fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
-                console.log(`[build:done] Cleaning ${file}`)
+                console.log(colors.green('[build:done]'), `Cleaning ${file}`)
                 try {
                   // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.
                   // We could safely ignore the error.
@@ -92,9 +98,14 @@ const configs = defineConfig([
               // Move the binary file to dist
               nodeFiles.forEach((file) => {
                 const fileName = nodePath.basename(file)
-                console.log('[build:done] Copying', file, `to ${copyTo}`)
+                console.log(
+                  colors.green('[build:done]'),
+                  'Copying',
+                  file,
+                  `to ${copyTo}`,
+                )
                 fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
-                console.log(`[build:done] Cleaning ${file}`)
+                console.log(colors.green('[build:done]'), `Cleaning ${file}`)
                 try {
                   fsExtra.rmSync(file)
                 } catch {}
@@ -103,7 +114,12 @@ const configs = defineConfig([
 
             wasiShims.forEach((file) => {
               const fileName = nodePath.basename(file)
-              console.log('[build:done] Copying', file, 'to ./dist/shared')
+              console.log(
+                colors.green('[build:done]'),
+                'Copying',
+                file,
+                'to ./dist/shared',
+              )
               fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
             })
           }
@@ -116,7 +132,12 @@ const configs = defineConfig([
           })
           types.forEach((file) => {
             const fileName = nodePath.basename(file)
-            console.log('[build:done] Copying', file, 'to ./dist/shared')
+            console.log(
+              colors.green('[build:done]'),
+              'Copying',
+              file,
+              'to ./dist/shared',
+            )
             fsExtra.copyFileSync(file, nodePath.join(distTypesDir, fileName))
           })
         },

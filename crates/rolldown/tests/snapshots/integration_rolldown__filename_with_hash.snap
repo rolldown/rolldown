@@ -3448,7 +3448,7 @@ snapshot_kind: text
 # tests/esbuild/ts/ts_enum_tree_shaking
 
 - namespace-after-!~{007}~.js => namespace-after-DZpeV8JR.js
-- namespace-before-!~{006}~.js => namespace-before-CS2dHM6o.js
+- namespace-before-!~{006}~.js => namespace-before-TdGWDJEo.js
 - sibling-enum-after-!~{005}~.js => sibling-enum-after-DGVKXUwl.js
 - sibling-enum-before-!~{003}~.js => sibling-enum-before-JkM-8yZQ.js
 - sibling-enum-middle-!~{004}~.js => sibling-enum-middle-BboZ8JM1.js
@@ -3498,7 +3498,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry-Dvm1Kh44.js
+- entry-!~{000}~.js => entry-CRfDwfRt.js
 
 # tests/esbuild/ts/ts_export_equals
 

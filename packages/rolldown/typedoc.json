@@ -1,0 +1,11 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "json": "./options-doc.json",
+  "pretty": true,
+  "entryPoints": [
+    "src/options/input-options.ts",
+    "src/options/output-options.ts"
+  ],
+  "sort": ["source-order"],
+  "readme": "none"
+}

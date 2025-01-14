@@ -82,5 +82,5 @@ export function viteResolvePlugin(
 export function moduleFederationPlugin(
   config: BindingModuleFederationPluginOption,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:load-fallback', config)
+  return new BuiltinPlugin('builtin:module-federation', config)
 }

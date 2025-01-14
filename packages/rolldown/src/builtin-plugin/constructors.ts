@@ -6,6 +6,7 @@ import {
   BindingJsonPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   type BindingViteResolvePluginConfig,
+  BindingModuleFederationPluginOption,
 } from '../binding'
 import { makeBuiltinPluginCallable } from './utils'
 
@@ -76,4 +77,10 @@ export function viteResolvePlugin(
         : 'node',
   })
   return makeBuiltinPluginCallable(builtinPlugin)
+}
+
+export function moduleFederationPlugin(
+  config: BindingModuleFederationPluginOption,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:load-fallback', config)
 }

@@ -13,13 +13,13 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin-context',
-        async load() {
-          await this.emitChunk({
+        load() {
+          this.emitFile({
             type: 'chunk',
             name: 'main-with-name',
             id: './main.js',
           })
-          await this.emitChunk({
+          this.emitFile({
             type: 'chunk',
             fileName: 'main-with-fileName.js',
             id: './main.js',

@@ -134,22 +134,19 @@ export class PluginContext extends MinimalPluginContext {
     return { ...res, ...info }
   }
 
-  public emitFile(file: EmittedAsset): string {
-    if (file.type !== 'asset') {
-      return unimplemented(
-        'PluginContext.emitFile: only asset type is supported',
-      )
+  public emitFile(file: EmittedAsset | EmittedChunk): string {
+    // @ts-expect-error
+    if (file.type === 'prebuilt-chunk') {
+      return unimplemented('PluginContext.emitFile with type prebuilt-chunk')
+    }
+    if (file.type === 'chunk') {
+      return this.context.emitChunk(file)
     }
     return this.context.emitFile({
       ...file,
       originalFileName: file.originalFileName || undefined,
       source: bindingAssetSource(file.source),
     })
-  }
-
-  // TODO: find a way to avoid async here
-  public async emitChunk(chunk: EmittedChunk): Promise<string> {
-    return this.context.emitChunk(chunk)
   }
 
   public getFileName(referenceId: string): string {

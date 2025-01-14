@@ -8,7 +8,7 @@ export default defineConfig({
       name: 'mf-remote',
       filename: 'remote-entry.js',
       exposes: {
-        './button': './button.js',
+        './button': './button.jsx',
       },
       shared: {
         react: {

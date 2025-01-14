@@ -4,5 +4,6 @@ packages:
   - packages/rolldown/npm/*
   - docs
   - examples/*
+  - examples/module-federation/*
   - scripts
   - crates/rolldown/tests/rolldown/topics/npm_packages

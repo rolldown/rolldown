@@ -444,9 +444,9 @@ export interface BindingMatchGroup {
 export interface BindingModuleFederationPluginOption {
   name: string
   filename?: string
-  expose: Record<string, string>
-  remotes: Record<string, BindingRemote>
-  shared: Record<string, BindingShared>
+  expose?: Record<string, string>
+  remotes?: Record<string, BindingRemote>
+  shared?: Record<string, BindingShared>
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {
@@ -576,7 +576,6 @@ export interface BindingPluginWithIndex {
 
 export interface BindingRemote {
   type?: string
-  name: string
   entry: string
   entryGlobalName?: string
   shareScope?: string
@@ -605,7 +604,6 @@ export interface BindingResolveOptions {
 }
 
 export interface BindingShared {
-  name: string
   version?: string
   shareScope?: string
   singleton?: boolean

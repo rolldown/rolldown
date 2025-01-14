@@ -1,41 +1,12 @@
 use crate::types::generator::{GenerateContext, GenerateOutput, Generator};
 
 use anyhow::Result;
-use rolldown_common::{
-  Chunk, CssAssetMeta, InstantiatedChunk, InstantiationKind, RollupRenderedChunk,
-};
+use rolldown_common::{CssAssetMeta, InstantiatedChunk, InstantiationKind};
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
 use string_wizard::SourceMapOptions;
 
 pub struct CssGenerator;
-
-// ref: crates/rolldown/src/utils/chunk/mod.rs -> generate_rendered_chunk
-fn generate_css_rendered_chunk(chunk: &Chunk) -> RollupRenderedChunk {
-  let pre_rendered_chunk =
-    chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk");
-
-  let filename =
-    chunk.css_preliminary_filename.as_deref().expect("should have preliminary_filename").clone();
-
-  RollupRenderedChunk {
-    name: pre_rendered_chunk.name.clone(),
-    is_entry: pre_rendered_chunk.is_entry,
-    is_dynamic_entry: pre_rendered_chunk.is_dynamic_entry,
-    facade_module_id: pre_rendered_chunk.facade_module_id.clone(),
-    module_ids: pre_rendered_chunk.module_ids.clone(), // contains js module ids
-    exports: pre_rendered_chunk.exports.clone(),
-
-    // seems we only use these 2 fields for css
-    filename,
-    debug_id: 0,
-
-    // not used
-    modules: Default::default(),
-    imports: Default::default(),
-    dynamic_imports: Default::default(),
-  }
-}
 
 impl Generator for CssGenerator {
   #[allow(clippy::too_many_lines)]
@@ -94,14 +65,22 @@ impl Generator for CssGenerator {
     );
     let file_dir = file_path.parent().expect("chunk file name should have a parent");
 
-    let rendered_chunk = generate_css_rendered_chunk(ctx.chunk);
+    let css_asset_meta = CssAssetMeta {
+      filename: ctx
+        .chunk
+        .css_preliminary_filename
+        .as_deref()
+        .expect("should have preliminary_filename")
+        .clone(),
+      debug_id: 0,
+    };
 
     Ok(Ok(GenerateOutput {
       chunks: vec![InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,
         content: content.into(),
         map,
-        kind: InstantiationKind::from(CssAssetMeta { rendered_chunk }),
+        kind: InstantiationKind::from(css_asset_meta),
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx

@@ -3,7 +3,6 @@ use rustc_hash::FxHashMap;
 #[derive(Debug)]
 pub struct Remote {
   pub r#type: Option<String>,
-  pub name: String,
   pub entry: String,
   pub entry_global_name: Option<String>,
   pub share_scope: Option<String>,
@@ -11,7 +10,6 @@ pub struct Remote {
 
 #[derive(Debug)]
 pub struct Shared {
-  pub name: String,
   pub version: Option<String>,
   pub share_scope: Option<String>,
   pub singleton: Option<bool>,

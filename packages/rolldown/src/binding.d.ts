@@ -576,7 +576,6 @@ export interface BindingPluginWithIndex {
 
 export interface BindingRemote {
   type?: string
-  name: string
   entry: string
   entryGlobalName?: string
   shareScope?: string
@@ -605,7 +604,6 @@ export interface BindingResolveOptions {
 }
 
 export interface BindingShared {
-  name: string
   version?: string
   shareScope?: string
   singleton?: boolean

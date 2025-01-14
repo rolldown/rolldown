@@ -6,7 +6,6 @@ use rustc_hash::FxBuildHasher;
 #[napi(object)]
 pub struct BindingRemote {
   pub r#type: Option<String>,
-  pub name: String,
   pub entry: String,
   pub entry_global_name: Option<String>,
   pub share_scope: Option<String>,
@@ -16,7 +15,6 @@ impl From<BindingRemote> for rolldown_plugin_module_federation::Remote {
   fn from(value: BindingRemote) -> Self {
     Self {
       r#type: value.r#type,
-      name: value.name,
       entry: value.entry,
       entry_global_name: value.entry_global_name,
       share_scope: value.share_scope,
@@ -26,7 +24,6 @@ impl From<BindingRemote> for rolldown_plugin_module_federation::Remote {
 
 #[napi(object)]
 pub struct BindingShared {
-  pub name: String,
   pub version: Option<String>,
   pub share_scope: Option<String>,
   pub singleton: Option<bool>,
@@ -37,7 +34,6 @@ pub struct BindingShared {
 impl From<BindingShared> for rolldown_plugin_module_federation::Shared {
   fn from(value: BindingShared) -> Self {
     Self {
-      name: value.name,
       version: value.version,
       share_scope: value.share_scope,
       singleton: value.singleton,

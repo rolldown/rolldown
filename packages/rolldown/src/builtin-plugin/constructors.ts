@@ -7,6 +7,7 @@ import {
   BindingBuildImportAnalysisPluginConfig,
   type BindingViteResolvePluginConfig,
   BindingModuleFederationPluginOption,
+  BindingRemote,
 } from '../binding'
 import { makeBuiltinPluginCallable } from './utils'
 
@@ -79,8 +80,25 @@ export function viteResolvePlugin(
   return makeBuiltinPluginCallable(builtinPlugin)
 }
 
+export type ModuleFederationPluginOption = Omit<
+  BindingModuleFederationPluginOption,
+  'remotes'
+> & {
+  remotes?: Record<string, string | BindingRemote>
+}
+
 export function moduleFederationPlugin(
-  config: BindingModuleFederationPluginOption,
+  config: ModuleFederationPluginOption,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:module-federation', config)
+  return new BuiltinPlugin('builtin:module-federation', {
+    ...config,
+    remotes:
+      config.remotes &&
+      Object.values(config.remotes).map((entry) => {
+        if (typeof entry === 'string') {
+          return { entry }
+        }
+        return entry
+      }),
+  })
 }

@@ -23,7 +23,7 @@ pub struct Shared {
 pub struct ModuleFederationPluginOption {
   pub name: String,
   pub filename: Option<String>,
-  pub expose: FxHashMap<String, String>,
-  pub remotes: FxHashMap<String, Remote>,
-  pub shared: FxHashMap<String, Shared>,
+  pub expose: Option<FxHashMap<String, String>>,
+  pub remotes: Option<FxHashMap<String, Remote>>,
+  pub shared: Option<FxHashMap<String, Shared>>,
 }

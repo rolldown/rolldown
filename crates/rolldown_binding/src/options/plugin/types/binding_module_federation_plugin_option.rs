@@ -51,9 +51,9 @@ impl From<BindingShared> for rolldown_plugin_module_federation::Shared {
 pub struct BindingModuleFederationPluginOption {
   pub name: String,
   pub filename: Option<String>,
-  pub expose: HashMap<String, String, FxBuildHasher>,
-  pub remotes: HashMap<String, BindingRemote, FxBuildHasher>,
-  pub shared: HashMap<String, BindingShared, FxBuildHasher>,
+  pub expose: Option<HashMap<String, String, FxBuildHasher>>,
+  pub remotes: Option<HashMap<String, BindingRemote, FxBuildHasher>>,
+  pub shared: Option<HashMap<String, BindingShared, FxBuildHasher>>,
 }
 
 impl From<BindingModuleFederationPluginOption>
@@ -64,8 +64,8 @@ impl From<BindingModuleFederationPluginOption>
       name: value.name,
       filename: value.filename,
       expose: value.expose,
-      remotes: value.remotes.into_iter().map(|(k, v)| (k, v.into())).collect(),
-      shared: value.shared.into_iter().map(|(k, v)| (k, v.into())).collect(),
+      remotes: value.remotes.map(|r| r.into_iter().map(|(k, v)| (k, v.into())).collect()),
+      shared: value.shared.map(|r| r.into_iter().map(|(k, v)| (k, v.into())).collect()),
     }
   }
 }

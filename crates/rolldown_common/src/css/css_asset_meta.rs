@@ -1,6 +1,7 @@
-use crate::RollupRenderedChunk;
+use arcstr::ArcStr;
 
 #[derive(Debug)]
 pub struct CssAssetMeta {
-  pub rendered_chunk: RollupRenderedChunk,
+  pub filename: ArcStr,
+  pub debug_id: u128,
 }

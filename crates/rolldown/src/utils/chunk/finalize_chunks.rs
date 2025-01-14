@@ -128,9 +128,9 @@ pub fn finalize_assets(
         ecma_meta.rendered_chunk.debug_id = debug_id;
       }
       if let InstantiationKind::Css(css_meta) = &mut asset.kind {
-        css_meta.rendered_chunk.filename = filename.clone();
+        css_meta.filename = filename.clone();
         let (_, debug_id) = index_final_hashes[asset_idx];
-        css_meta.rendered_chunk.debug_id = debug_id;
+        css_meta.debug_id = debug_id;
       }
 
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced

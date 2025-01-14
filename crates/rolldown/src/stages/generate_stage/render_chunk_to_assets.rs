@@ -138,19 +138,15 @@ impl GenerateStage<'_> {
         }
         InstantiationKind::Css(css_meta) => {
           let mut code = code.try_into_string()?;
-          let rendered_chunk = css_meta.rendered_chunk;
           if let Some(map) = map.as_mut() {
-            let file_base_name = Path::new(rendered_chunk.filename.as_str())
-              .file_name()
-              .expect("should have file name");
+            let file_base_name =
+              Path::new(css_meta.filename.as_str()).file_name().expect("should have file name");
             map.set_file(file_base_name.to_string_lossy().as_ref());
 
-            let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
+            let map_filename = format!("{}.map", css_meta.filename.as_str());
             let map_path = file_dir.join(&map_filename);
 
-            self
-              .process_code_and_sourcemap(&mut code, map, &map_path, rendered_chunk.debug_id)
-              .await?;
+            self.process_code_and_sourcemap(&mut code, map, &map_path, css_meta.debug_id).await?;
 
             if let Some(sourcemap) = &self.options.sourcemap {
               match sourcemap {

@@ -15,6 +15,7 @@ export {
   jsonPlugin,
   buildImportAnalysisPlugin,
   viteResolvePlugin,
+  moduleFederationPlugin,
 } from './builtin-plugin/constructors'
 
 export { transformPlugin } from './builtin-plugin/transform-plugin'

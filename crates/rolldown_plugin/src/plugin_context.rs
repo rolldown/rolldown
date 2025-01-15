@@ -170,11 +170,7 @@ impl PluginContextImpl {
   }
 
   pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    let resolved_id = self
-      .resolve(&chunk.id, chunk.importer.as_deref(), None)
-      .await?
-      .map_err(|e| anyhow::format_err!("Failed to resolve emitted chunk id: {}", e))?;
-    self.file_emitter.emit_chunk(chunk, resolved_id).await
+    self.file_emitter.emit_chunk(Arc::new(chunk)).await
   }
 
   pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> ArcStr {

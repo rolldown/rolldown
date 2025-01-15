@@ -29,9 +29,6 @@ var import_foo = __toESM(require_foo());
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
-
-//#endregion
-//#region bar.js
 var import_foo = __toESM(require_foo());
 
 //#endregion

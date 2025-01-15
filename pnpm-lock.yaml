@@ -99,9 +99,9 @@ importers:
 
   examples/module-federation/host:
     dependencies:
-      '@module-federation/enhanced':
+      '@module-federation/runtime':
         specifier: ^0.8.8
-        version: 0.8.8(@rspack/core@1.1.8)(react-dom@17.0.2(react@17.0.2))(react@17.0.2)(typescript@5.6.3)
+        version: 0.8.8
       react:
         specifier: ^17.0.2
         version: 17.0.2
@@ -373,9 +373,9 @@ importers:
 
   packages/rolldown/tests/fixtures/builtin-plugin/module-federation:
     dependencies:
-      '@module-federation/enhanced':
+      '@module-federation/runtime':
         specifier: ^0.8.8
-        version: 0.8.8(@rspack/core@1.1.8)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.6.3)
+        version: 0.8.8
 
   packages/rollup-tests:
     dependencies:
@@ -8204,14 +8204,6 @@ snapshots:
       '@types/semver': 7.5.8
       semver: 7.6.3
 
-  '@module-federation/data-prefetch@0.8.8(react-dom@17.0.2(react@17.0.2))(react@17.0.2)':
-    dependencies:
-      '@module-federation/runtime': 0.8.8
-      '@module-federation/sdk': 0.8.8
-      fs-extra: 9.1.0
-      react: 17.0.2
-      react-dom: 17.0.2(react@17.0.2)
-
   '@module-federation/data-prefetch@0.8.8(react-dom@19.0.0(react@17.0.2))(react@17.0.2)':
     dependencies:
       '@module-federation/runtime': 0.8.8
@@ -8219,14 +8211,6 @@ snapshots:
       fs-extra: 9.1.0
       react: 17.0.2
       react-dom: 19.0.0(react@17.0.2)
-
-  '@module-federation/data-prefetch@0.8.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
-    dependencies:
-      '@module-federation/runtime': 0.8.8
-      '@module-federation/sdk': 0.8.8
-      fs-extra: 9.1.0
-      react: 19.0.0
-      react-dom: 19.0.0(react@19.0.0)
 
   '@module-federation/dts-plugin@0.8.8(typescript@5.6.3)':
     dependencies:
@@ -8253,60 +8237,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@module-federation/enhanced@0.8.8(@rspack/core@1.1.8)(react-dom@17.0.2(react@17.0.2))(react@17.0.2)(typescript@5.6.3)':
-    dependencies:
-      '@module-federation/bridge-react-webpack-plugin': 0.8.8
-      '@module-federation/data-prefetch': 0.8.8(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
-      '@module-federation/dts-plugin': 0.8.8(typescript@5.6.3)
-      '@module-federation/error-codes': 0.8.8
-      '@module-federation/inject-external-runtime-core-plugin': 0.8.8(@module-federation/runtime-tools@0.8.8)
-      '@module-federation/managers': 0.8.8
-      '@module-federation/manifest': 0.8.8(typescript@5.6.3)
-      '@module-federation/rspack': 0.8.8(@rspack/core@1.1.8)(typescript@5.6.3)
-      '@module-federation/runtime-tools': 0.8.8
-      '@module-federation/sdk': 0.8.8
-      btoa: 1.2.1
-      upath: 2.0.1
-    optionalDependencies:
-      typescript: 5.6.3
-    transitivePeerDependencies:
-      - '@rspack/core'
-      - bufferutil
-      - debug
-      - react
-      - react-dom
-      - supports-color
-      - utf-8-validate
-
   '@module-federation/enhanced@0.8.8(@rspack/core@1.1.8)(react-dom@19.0.0(react@17.0.2))(react@17.0.2)(typescript@5.6.3)':
     dependencies:
       '@module-federation/bridge-react-webpack-plugin': 0.8.8
       '@module-federation/data-prefetch': 0.8.8(react-dom@19.0.0(react@17.0.2))(react@17.0.2)
-      '@module-federation/dts-plugin': 0.8.8(typescript@5.6.3)
-      '@module-federation/error-codes': 0.8.8
-      '@module-federation/inject-external-runtime-core-plugin': 0.8.8(@module-federation/runtime-tools@0.8.8)
-      '@module-federation/managers': 0.8.8
-      '@module-federation/manifest': 0.8.8(typescript@5.6.3)
-      '@module-federation/rspack': 0.8.8(@rspack/core@1.1.8)(typescript@5.6.3)
-      '@module-federation/runtime-tools': 0.8.8
-      '@module-federation/sdk': 0.8.8
-      btoa: 1.2.1
-      upath: 2.0.1
-    optionalDependencies:
-      typescript: 5.6.3
-    transitivePeerDependencies:
-      - '@rspack/core'
-      - bufferutil
-      - debug
-      - react
-      - react-dom
-      - supports-color
-      - utf-8-validate
-
-  '@module-federation/enhanced@0.8.8(@rspack/core@1.1.8)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.6.3)':
-    dependencies:
-      '@module-federation/bridge-react-webpack-plugin': 0.8.8
-      '@module-federation/data-prefetch': 0.8.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@module-federation/dts-plugin': 0.8.8(typescript@5.6.3)
       '@module-federation/error-codes': 0.8.8
       '@module-federation/inject-external-runtime-core-plugin': 0.8.8(@module-federation/runtime-tools@0.8.8)

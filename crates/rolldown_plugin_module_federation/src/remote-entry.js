@@ -1,4 +1,4 @@
-import { init as runtimeInit } from '@module-federation/enhanced/runtime';
+import { init as runtimeInit } from '@module-federation/runtime';
 
 const usedRemotes = []
 const usedShared = {}

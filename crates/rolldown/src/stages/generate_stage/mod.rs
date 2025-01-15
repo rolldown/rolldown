@@ -16,7 +16,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt};
 use rolldown_utils::{
   concat_string,
-  extract_hash_pattern::extract_hash_pattern,
+  extract_hash_pattern::extract_hash_patterns,
   hash_placeholder::HashPlaceholderGenerator,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
   sanitize_file_name::sanitize_file_name,
@@ -231,7 +231,7 @@ impl<'a> GenerateStage<'a> {
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output);
 
       let asset_filename_template = &self.options.asset_filenames;
-      let extracted_asset_hash_pattern = extract_hash_pattern(asset_filename_template.template());
+      let extracted_asset_hash_pattern = extract_hash_patterns(asset_filename_template.template());
 
       let preliminary_filename = chunk
         .generate_preliminary_filename(
@@ -255,14 +255,14 @@ impl<'a> GenerateStage<'a> {
 
       chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()).for_each(|module| {
         if module.asset_view.is_some() {
-          let hash_placeholder = extracted_asset_hash_pattern
-            .as_ref()
-            .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+          let hash_placeholder = extracted_asset_hash_pattern.as_ref().map(|p| {
+            hash_placeholder_generator.generate(p.iter().map(|p| p.len.unwrap_or(8)).collect())
+          });
           let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack();
           let preliminary = PreliminaryFilename::new(
             asset_filename_template.render(&FileNameRenderOptions {
               name: Some(name),
-              hash: hash_placeholder.as_deref(),
+              hashes: hash_placeholder.as_deref(),
               ext: module.id.as_path().extension().and_then(|s| s.to_str()),
             }),
             hash_placeholder,

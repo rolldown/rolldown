@@ -32,11 +32,14 @@ pub fn finalize_assets(
   let asset_idx_by_placeholder = preliminary_assets
     .iter_enumerated()
     .filter_map(|(asset_idx, asset)| {
-      asset
-        .preliminary_filename
-        .hash_placeholder()
-        .map(|hash_placeholder| (hash_placeholder.into(), asset_idx))
+      asset.preliminary_filename.hash_placeholder().map(|placeholders| {
+        placeholders
+          .iter()
+          .map(|hash_placeholder| (hash_placeholder.into(), asset_idx))
+          .collect::<Vec<_>>()
+      })
     })
+    .flatten()
     .collect::<FxHashMap<ArcStr, _>>();
 
   let index_direct_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
@@ -102,11 +105,13 @@ pub fn finalize_assets(
     .iter_enumerated()
     .filter_map(|(idx, (hash, _))| {
       let asset = &preliminary_assets[idx];
-      asset
-        .preliminary_filename
-        .hash_placeholder()
-        .map(|hash_placeholder| (hash_placeholder.into(), &hash[..hash_placeholder.len()]))
+      asset.preliminary_filename.hash_placeholder().map(|placeholders| {
+        placeholders
+          .iter()
+          .map(|placeholder| (placeholder.clone().into(), &hash[..placeholder.len()]))
+      })
     })
+    .flatten()
     .collect::<FxHashMap<_, _>>();
 
   let mut assets: IndexAssets = preliminary_assets

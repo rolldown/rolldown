@@ -13,7 +13,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin-context',
-        load() {
+        buildStart() {
           this.emitFile({
             type: 'chunk',
             name: 'main-with-name',

@@ -16,10 +16,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
+var import_foo = __toESM(require_foo(), 1);
 
 //#endregion
 //#region entry.mts
-var import_foo = __toESM(require_foo(), 1);
 input.works = import_foo.default.default.bar === 123;
 
 //#endregion
@@ -42,10 +42,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
+var import_foo = __toESM(require_foo(), 1);
 
 //#endregion
 //#region entry.mts
-var import_foo = __toESM(require_foo(), 1);
 input.works = import_foo.default.default.bar === 123;
 
 //#endregion
@@ -70,10 +70,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
+var import_foo = __toESM(require_foo(), 1);
 
 //#endregion
 //#region entry.mts
-var import_foo = __toESM(require_foo(), 1);
 input.works = import_foo.default.default.bar === 123;
 
 //#endregion
@@ -102,10 +102,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
+var import_foo = __toESM(require_foo(), 1);
 
 //#endregion
 //#region entry.mts
-var import_foo = __toESM(require_foo(), 1);
 input.works = import_foo.default.default.bar === 123;
 
 //#endregion

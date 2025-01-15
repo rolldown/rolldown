@@ -52,6 +52,7 @@
 
 //#region c.js
 var require_c = __commonJS({ "c.js"() {} });
+var import_c = __toESM(require_c());
 
 //#endregion
 //#region b.js
@@ -82,7 +83,7 @@ return require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,22 @@
+@@ -1,31 +1,23 @@
 -(() => {
 -    var c_exports = {};
 -    var init_c = __esm({
@@ -93,6 +94,7 @@ return require_entry();
 +    var require_c = __commonJS({
 +        "c.js"() {}
      });
++    var import_c = __toESM(require_c());
      var b_exports = {};
      var init_b = __esm({
 -        "b.js"() {

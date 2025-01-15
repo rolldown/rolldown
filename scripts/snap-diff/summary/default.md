@@ -23,6 +23,8 @@
   missing
 ## entry_names_non_portable_character
   missing
+## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js/diff.md)
+  diff
 ## [export_forms_common_js](../../../crates/rolldown/tests/esbuild/default/export_forms_common_js/diff.md)
   diff
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
@@ -155,7 +157,6 @@
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
 ## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
-## [es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_fs_node](../../../crates/rolldown/tests/esbuild/default/export_fs_node)
 ## [export_fs_node_in_common_js_module](../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module)

@@ -259,6 +259,30 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
+  /// `var [name];`
+  pub fn var_decl_without_init(
+    &self,
+    name: PassedStr,
+  ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
+    let declarations = self.builder.vec1(self.builder.variable_declarator(
+      SPAN,
+      ast::VariableDeclarationKind::Var,
+      self.builder.binding_pattern(
+        self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
+        NONE,
+        false,
+      ),
+      None,
+      false,
+    ));
+    self.builder.alloc_variable_declaration(
+      SPAN,
+      ast::VariableDeclarationKind::Var,
+      declarations,
+      false,
+    )
+  }
+
   pub fn var_decl_multiple_names(
     &self,
     names: &[(&str, &str)],

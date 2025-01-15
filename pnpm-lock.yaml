@@ -376,10 +376,6 @@ importers:
       '@module-federation/enhanced':
         specifier: ^0.8.8
         version: 0.8.8(@rspack/core@1.1.8)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.6.3)
-    devDependencies:
-      rolldown:
-        specifier: workspace:*
-        version: link:../../../..
 
   packages/rollup-tests:
     dependencies:

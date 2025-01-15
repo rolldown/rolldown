@@ -12,6 +12,7 @@ pub mod augment_chunk_hash;
 pub mod chunk;
 pub mod ecma_visitors;
 pub mod extract_meaningful_input_name_from_path;
+pub mod load_entry_module;
 pub mod load_source;
 pub mod normalize_options;
 pub mod parse_to_ecma_ast;

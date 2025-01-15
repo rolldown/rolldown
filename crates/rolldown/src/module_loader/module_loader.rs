@@ -3,6 +3,7 @@ use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
+use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
 use oxc::semantic::{ScopeId, SymbolTable};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
@@ -355,11 +356,25 @@ impl ModuleLoader {
           self.try_spawn_new_task(resolve_id, None, false, None);
         }
         ModuleLoaderMsg::AddEntryModule(data) => {
+          let result = load_entry_module(
+            &self.shared_context.resolver,
+            &self.shared_context.plugin_driver,
+            &data.id,
+            data.importer.as_deref(),
+          )
+          .await;
+          let resolved_id = match result {
+            Ok(result) => result,
+            Err(e) => {
+              errors.push(e);
+              continue;
+            }
+          };
           extra_entry_points.push(EntryPoint {
-            name: data.name,
-            id: self.try_spawn_new_task(data.resolved_id, None, true, None),
+            name: data.name.clone(),
+            id: self.try_spawn_new_task(resolved_id, None, true, None),
             kind: EntryPointKind::UserDefined,
-            file_name: data.file_name,
+            file_name: data.file_name.clone(),
           });
         }
         ModuleLoaderMsg::BuildErrors(e) => {

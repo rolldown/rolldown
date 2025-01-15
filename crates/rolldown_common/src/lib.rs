@@ -78,7 +78,7 @@ pub use crate::{
     runtime_module_brief::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, NormalModuleTaskResult},
-    ExtraEntryModuleData, ModuleLoaderMsg,
+    ModuleLoaderMsg,
   },
   types::asset::Asset,
   types::asset_idx::AssetIdx,

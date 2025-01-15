@@ -1,6 +1,5 @@
 use crate::{
-  ExtraEntryModuleData, FileNameRenderOptions, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
-  OutputAsset, ResolvedId, StrOrBytes,
+  FileNameRenderOptions, ModuleLoaderMsg, NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -38,7 +37,7 @@ pub struct FileEmitter {
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
-  chunks: FxDashMap<ArcStr, EmittedChunk>,
+  chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
@@ -59,11 +58,7 @@ impl FileEmitter {
     }
   }
 
-  pub async fn emit_chunk(
-    &self,
-    chunk: EmittedChunk,
-    resolved_id: ResolvedId,
-  ) -> anyhow::Result<ArcStr> {
+  pub async fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
     let reference_id = self.assign_reference_id(Some(chunk.id.as_str().into()));
     self
     .tx
@@ -73,7 +68,7 @@ impl FileEmitter {
     .context(
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
-    .send(ModuleLoaderMsg::AddEntryModule(ExtraEntryModuleData { file_name: chunk.file_name.clone(), name: chunk.name.clone(), resolved_id }))
+    .send(ModuleLoaderMsg::AddEntryModule(Arc::clone(&chunk)))
     .await?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)

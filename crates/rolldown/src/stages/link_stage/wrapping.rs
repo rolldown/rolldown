@@ -15,15 +15,15 @@ struct Context<'a> {
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
-  let is_visited = &mut ctx.visited_modules[target];
-  if *is_visited {
-    return;
-  }
-  *is_visited = true;
-
   let Module::Normal(module) = &ctx.modules[target] else {
     return;
   };
+
+  // Only consider `NormalModule`
+  if ctx.visited_modules[target] {
+    return;
+  }
+  ctx.visited_modules[target] = true;
 
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
     ctx.linking_infos[target].wrap_kind = match module.exports_kind {
@@ -78,27 +78,11 @@ impl LinkStage<'_> {
   pub fn wrap_modules(&mut self) {
     let mut visited_modules_for_wrapping =
       oxc_index::index_vec![false; self.module_table.modules.len()];
-
     let mut visited_modules_for_dynamic_exports =
       oxc_index::index_vec![false; self.module_table.modules.len()];
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
-      let linking_info = &self.metas[module_id];
-
-      let need_to_wrap = self.options.experimental.is_strict_execution_order_enabled()
-        || matches!(linking_info.wrap_kind, WrapKind::Cjs | WrapKind::Esm);
-
-      if need_to_wrap {
-        wrap_module_recursively(
-          &mut Context {
-            visited_modules: &mut visited_modules_for_wrapping,
-            linking_infos: &mut self.metas,
-            modules: &self.module_table.modules,
-          },
-          module_id,
-        );
-      }
 
       if module.has_star_export() {
         has_dynamic_exports_due_to_export_star(
@@ -109,12 +93,29 @@ impl LinkStage<'_> {
         );
       }
 
+      let is_strict_execution_order = self.options.experimental.is_strict_execution_order_enabled();
+      let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind, WrapKind::None);
+
+      if is_strict_execution_order && is_wrap_kind_none {
+        self.metas[module_id].wrap_kind = match module.exports_kind {
+          ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
+          ExportsKind::CommonJs => WrapKind::Cjs,
+        }
+      }
+
+      let need_to_wrap = is_strict_execution_order || !is_wrap_kind_none;
+
+      // The `modules` don't seem to be sorted,
+      // and if the module is `WrapKind::None`, it might still be wrapped next iter.
+      if need_to_wrap {
+        visited_modules_for_wrapping[module_id] = true;
+      }
+
       module.import_records.iter().for_each(|rec| {
-        let importee_id = rec.resolved_module;
-        let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
+        let Module::Normal(importee) = &self.module_table.modules[rec.resolved_module] else {
           return;
         };
-        if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+        if matches!(importee.exports_kind, ExportsKind::CommonJs) || need_to_wrap {
           wrap_module_recursively(
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,

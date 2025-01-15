@@ -1,0 +1,10 @@
+{
+  "name": "@test-fixture/module-federation",
+  "private": true,
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  },
+  "dependencies": {
+    "@module-federation/enhanced": "^0.8.8"
+  }
+}

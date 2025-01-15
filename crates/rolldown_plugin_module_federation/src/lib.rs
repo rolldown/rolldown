@@ -18,6 +18,24 @@ impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
     Self { options }
   }
+
+  pub fn generate_remote_entry_code(&self) -> String {
+    let expose = self
+      .options
+      .exposes
+      .as_ref()
+      .map(|exposes| {
+        exposes
+          .iter()
+          .map(|(key, value)| concat_string!("'", key, "': () => import('", value, "')"))
+          .collect::<Vec<_>>()
+          .join(", ")
+      })
+      .unwrap_or_default();
+    include_str!("remote-entry.js")
+      .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
+      .to_string()
+  }
 }
 
 impl Plugin for ModuleFederationPlugin {
@@ -64,22 +82,8 @@ impl Plugin for ModuleFederationPlugin {
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id == REMOTE_ENTRY {
-      let expose = self
-        .options
-        .exposes
-        .as_ref()
-        .map(|exposes| {
-          exposes
-            .iter()
-            .map(|(key, value)| concat_string!("'", key, "': () => import('", value, "')"))
-            .collect::<Vec<_>>()
-            .join(", ")
-        })
-        .unwrap_or_default();
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("remote-entry.js")
-          .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
-          .to_string(),
+        code: self.generate_remote_entry_code(),
         ..Default::default()
       }));
     }

@@ -22,7 +22,7 @@ pub struct EmittedAsset {
   pub source: StrOrBytes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EmittedChunk {
   pub name: Option<ArcStr>,
   pub file_name: Option<ArcStr>,

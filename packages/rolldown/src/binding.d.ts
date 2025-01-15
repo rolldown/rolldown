@@ -444,7 +444,7 @@ export interface BindingMatchGroup {
 export interface BindingModuleFederationPluginOption {
   name: string
   filename?: string
-  expose?: Record<string, string>
+  exposes?: Record<string, string>
   remotes?: Record<string, BindingRemote>
   shared?: Record<string, BindingShared>
 }

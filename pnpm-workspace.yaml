@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - packages/rolldown/tests
+  - packages/rolldown/tests/fixtures/builtin-plugin/module-federation
   - packages/rolldown/npm/*
   - docs
   - examples/*

@@ -1,7 +1,4 @@
-use std::{
-  borrow::Cow,
-  sync::atomic::{AtomicBool, Ordering},
-};
+use std::borrow::Cow;
 
 mod option;
 pub use option::{ModuleFederationPluginOption, Remote, Shared};
@@ -15,12 +12,11 @@ const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 pub struct ModuleFederationPlugin {
   #[allow(dead_code)]
   options: ModuleFederationPluginOption,
-  remote_entry_added: AtomicBool,
 }
 
 impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
-    Self { options, remote_entry_added: AtomicBool::default() }
+    Self { options }
   }
 }
 
@@ -29,26 +25,30 @@ impl Plugin for ModuleFederationPlugin {
     Cow::Borrowed("builtin:module-federation")
   }
 
-  async fn resolve_id(
+  async fn build_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if self.options.exposes.is_some() {
+      ctx
+        .emit_chunk(EmittedChunk {
+          file_name: Some(
+            self.options.filename.as_deref().expect("The expose filename is required").into(),
+          ),
+          id: REMOTE_ENTRY.to_string(),
+          ..Default::default()
+        })
+        .await?;
+    }
+    Ok(())
+  }
+
+  async fn resolve_id(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if !self.remote_entry_added.load(Ordering::Relaxed) {
-      self.remote_entry_added.store(true, Ordering::Relaxed);
-      if self.options.exposes.is_some() {
-        let r = ctx
-          .emit_chunk(EmittedChunk {
-            file_name: Some(
-              self.options.filename.as_deref().expect("The expose filename is required").into(),
-            ),
-            id: REMOTE_ENTRY.to_string(),
-            ..Default::default()
-          })
-          .await;
-        dbg!(r);
-      }
-    }
     if args.specifier == REMOTE_ENTRY {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
         id: REMOTE_ENTRY.to_string(),
@@ -63,7 +63,6 @@ impl Plugin for ModuleFederationPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    println!("111 exposes: {:?}", args.id);
     if args.id == REMOTE_ENTRY {
       let expose = self
         .options

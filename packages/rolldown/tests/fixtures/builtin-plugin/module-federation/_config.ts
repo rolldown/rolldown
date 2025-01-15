@@ -6,7 +6,6 @@ import { expect } from 'vitest'
 
 export default defineTest({
   config: {
-    external: ['@module-federation/enhanced'],
     plugins: [
       moduleFederationPlugin({
         name: 'mf-remote',

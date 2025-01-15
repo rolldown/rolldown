@@ -116,26 +116,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
-        // Replace the statement with something like `require_foo()`
+        // Remove this statement
 
-        // `require_foo`
-        let importee_wrapper_ref_name = self.finalized_expr_for_symbol_ref(
-          importee_linking_info.wrapper_ref.unwrap(),
-          false,
-          None,
-        );
-
-        *stmt = self.snippet.builder.statement_expression(
-          SPAN,
-          ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-            SPAN,
-            importee_wrapper_ref_name,
-            NONE,
-            self.snippet.builder.vec(),
-            false,
-          )),
-        );
-        return false;
+        return true;
       }
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.

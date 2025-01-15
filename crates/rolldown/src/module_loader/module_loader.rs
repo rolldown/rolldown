@@ -3,7 +3,7 @@ use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
-use crate::utils::resolve_id::resolve_id;
+use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
 use oxc::semantic::{ScopeId, SymbolTable};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
@@ -16,11 +16,9 @@ use rolldown_common::{
   ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions, RUNTIME_MODULE_ID,
 };
-use rolldown_error::ResultExt;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_resolver::ResolveError;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
@@ -360,30 +358,17 @@ impl ModuleLoader {
           self.try_spawn_new_task(resolve_id, None, false, None);
         }
         ModuleLoaderMsg::AddEntryModule(data) => {
-          let result = resolve_id(
+          let result = load_entry_module(
             &self.shared_context.resolver,
             &self.shared_context.plugin_driver,
-            data.id.as_str(),
+            &data.id,
             data.importer.as_deref(),
-            true,
-            ImportKind::Import,
-            None,
-            Arc::default(),
-            true,
           )
-          .await?;
+          .await;
           let resolved_id = match result {
             Ok(result) => result,
             Err(e) => {
-              match e {
-                ResolveError::NotFound(_) => {
-                  errors.push(BuildDiagnostic::unresolved_entry(data.id.as_str(), None));
-                }
-                ResolveError::PackagePathNotExported(..) => {
-                  errors.push(BuildDiagnostic::unresolved_entry(data.id.as_str(), Some(e)));
-                }
-                _ => errors.push(Err(e).map_err_to_unhandleable()?),
-              }
+              errors.push(e);
               continue;
             }
           };

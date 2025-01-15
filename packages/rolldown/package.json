@@ -75,7 +75,7 @@
     "build-wasi:debug": "run-s build-binding build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node",
     "# Scrips for checking #": "_",
-    "type-check": "tsc"
+    "type-check": "tsc --noEmit"
   },
   "napi": {
     "binaryName": "rolldown-binding",

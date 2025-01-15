@@ -28,13 +28,13 @@ export default defineTest({
         "expose.js",
       ]
     `)
-
     // Test the exposed module
+    // @ts-nocheck
     const expose = await import('./dist/expose.js')
-    // @ts-ignore
     expect(expose.value).toBe('expose')
 
     // Test the remote entry
+    // @ts-nocheck
     const remote = await import('./dist/remote-entry.js')
     const remoteExpose = await remote.get('./expose')
     expect(remoteExpose.value).toBe('expose')

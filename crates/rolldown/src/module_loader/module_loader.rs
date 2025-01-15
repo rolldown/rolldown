@@ -219,10 +219,6 @@ impl ModuleLoader {
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
   ) -> BuildResult<ModuleLoaderOutput> {
-    if self.options.input.is_empty() {
-      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
-    }
-
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 

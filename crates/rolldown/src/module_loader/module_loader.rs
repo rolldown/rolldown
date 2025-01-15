@@ -52,7 +52,7 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
-  tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
+  pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
@@ -222,8 +222,6 @@ impl ModuleLoader {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
-    self.shared_context.plugin_driver.set_context_load_modules_tx(Some(self.tx.clone())).await;
-
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
@@ -390,7 +388,6 @@ impl ModuleLoader {
       },
     );
 
-    self.shared_context.plugin_driver.set_context_load_modules_tx(None).await;
     let mut none_empty_importer_module = vec![];
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules

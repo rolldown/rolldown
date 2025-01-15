@@ -55,8 +55,6 @@ impl ScanStage {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
-    self.plugin_driver.build_start(&self.options).await?;
-
     let module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
@@ -65,7 +63,19 @@ impl ScanStage {
       Arc::clone(&self.cache),
     )?;
 
+    // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
+    self
+      .plugin_driver
+      .file_emitter
+      .set_context_load_modules_tx(Some(module_loader.tx.clone()))
+      .await;
+
+    self.plugin_driver.build_start(&self.options).await?;
+
     let user_entries = self.resolve_user_defined_entries().await?;
+
+    // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
+    self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
 
     let ModuleLoaderOutput {
       module_table,
@@ -76,6 +86,10 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
     } = module_loader.fetch_all_modules(user_entries).await?;
+
+    self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
+
+    self.plugin_driver.set_context_load_modules_tx(None).await;
 
     Ok(ScanStageOutput {
       module_table,

@@ -71,7 +71,7 @@ impl FileEmitter {
     .await
     .as_ref()
     .context(
-      "The `PluginContext.emitFile` with `type: 'chunk'` only work at `resolveId/load/transform/moduleParsed` hooks.",
+      "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
     .send(ModuleLoaderMsg::AddEntryModule(ExtraEntryModuleData { file_name: chunk.file_name.clone(), name: chunk.name.clone(), resolved_id }))
     .await?;

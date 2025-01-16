@@ -110,6 +110,16 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
+    if let Some(remotes) = self.options.remotes.as_ref() {
+      for remote in remotes {
+        if args.specifier.starts_with(&remote.name) {
+          return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+            id: args.specifier.to_string(),
+            ..Default::default()
+          }));
+        }
+      }
+    }
     Ok(None)
   }
 
@@ -129,6 +139,31 @@ impl Plugin for ModuleFederationPlugin {
         code: self.generate_init_host_code(),
         ..Default::default()
       }));
+    }
+    if let Some(remotes) = self.options.remotes.as_ref() {
+      for remote in remotes {
+        if args.id.starts_with(&remote.name) {
+          if args.id.ends_with("/proxy") {
+            return Ok(Some(rolldown_plugin::HookLoadOutput {
+              code: concat_string!(
+                "import { loadRemote } from '@module-federation/runtime';\nexport default await loadRemote('",
+                args.id.strip_suffix("/proxy").expect("remotes should have /proxy"),
+                "')"
+              ),
+              ..Default::default()
+            }));
+          } else {
+            return Ok(Some(rolldown_plugin::HookLoadOutput {
+              code: concat_string!(
+                "import value from '",
+                args.id,
+                "/proxy'\nmodule.exports = value"
+              ),
+              ..Default::default()
+            }));
+          }
+        }
+      }
     }
     Ok(None)
   }

@@ -7,6 +7,7 @@ import path from 'node:path'
 
 export default defineTest({
   config: {
+    external: ['node:assert'],
     plugins: [
       moduleFederationPlugin({
         name: 'mf-remote',

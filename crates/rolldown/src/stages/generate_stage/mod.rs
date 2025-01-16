@@ -1,6 +1,7 @@
-use std::collections::hash_map::Entry;
+use std::{any::Any, collections::hash_map::Entry};
 
 use arcstr::ArcStr;
+use futures::future::Join;
 use oxc::ast::VisitMut;
 use oxc_index::IndexVec;
 use rolldown_ecmascript_utils::AstSnippet;
@@ -52,6 +53,10 @@ pub struct GenerateStage<'a> {
   plugin_driver: &'a SharedPluginDriver,
 }
 
+enum DropMessage<T: Send> {
+  Value(T),
+  Close,
+}
 impl<'a> GenerateStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
@@ -63,6 +68,18 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    let (tx, rx): (
+      std::sync::mpsc::Sender<DropMessage<Box<dyn Send>>>,
+      std::sync::mpsc::Receiver<DropMessage<Box<dyn Send>>>,
+    ) = std::sync::mpsc::channel();
+    let handle = std::thread::spawn(move || {
+      while let Ok(msg) = rx.recv() {
+        match msg {
+          DropMessage::Value(value) => drop(value),
+          DropMessage::Close => break,
+        }
+      }
+    });
     self.plugin_driver.render_start(self.options).await?;
 
     let mut chunk_graph = self.generate_chunks().await;
@@ -138,8 +155,15 @@ impl<'a> GenerateStage<'a> {
           });
         }
       });
+    let ret = self.render_chunk_to_assets(&mut chunk_graph).await;
+    let symbol_db = std::mem::take(&mut self.link_output.symbol_db);
+    tx.send(DropMessage::Value(Box::new(symbol_db))).unwrap();
+    let ast_table = std::mem::take(&mut self.link_output.ast_table);
+    tx.send(DropMessage::Value(Box::new(ast_table))).unwrap();
+    tx.send(DropMessage::Close).unwrap();
 
-    self.render_chunk_to_assets(&mut chunk_graph).await
+    handle.join().unwrap();
+    ret
   }
 
   /// Notices:

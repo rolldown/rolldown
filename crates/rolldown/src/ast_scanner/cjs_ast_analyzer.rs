@@ -3,24 +3,33 @@ use oxc::ast::{
   ast::{self, Expression, PropertyKey},
   AstKind,
 };
+use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::AstScanner;
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   #[allow(clippy::too_many_lines)]
-  pub fn check_es_module_flag(&self, ty: &EsModuleFlagCheckType) -> Option<bool> {
+  pub fn cjs_ast_analyzer(&mut self, ty: &CjsGlobalAssignmentType) -> Option<()> {
+    match ty {
+      CjsGlobalAssignmentType::ModuleExportsAssignment => {
+        self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+      }
+      CjsGlobalAssignmentType::ExportsAssignment => {
+        self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+      }
+    }
     let cursor = self.visit_path.len() - 1;
     let parent = self.visit_path.get(cursor)?;
-    match parent {
+    let v = match parent {
       AstKind::MemberExpression(member_expr) => match ty {
         // two scenarios:
         // 1. module.exports.__esModule = true;
         // 2. Object.defineProperty(module.exports, "__esModule", { value: true });
-        EsModuleFlagCheckType::ModuleExportsAssignment => {
+        CjsGlobalAssignmentType::ModuleExportsAssignment => {
           let property_name = member_expr.static_property_name()?;
           if property_name != "exports" {
-            return Some(false);
+            return None;
           }
           let parent_parent_kind = self.visit_path.get(cursor - 1)?;
           match parent_parent_kind {
@@ -33,7 +42,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             _ => None,
           }
         }
-        EsModuleFlagCheckType::ExportsAssignment => {
+        CjsGlobalAssignmentType::ExportsAssignment => {
           // one scenario:
           // 1. exports.__esModule = true;
           self.check_assignment_target_property_is_es_module(member_expr, cursor)
@@ -45,11 +54,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.check_object_define_property_es_module_flag(arg, cursor)
       }
       _ => None,
-    }
+    };
+    if v.unwrap_or_default() {
+      self.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
+    };
+    None
   }
 
   fn check_object_define_property_es_module_flag(
-    &self,
+    &mut self,
     arg: &ast::Argument<'_>,
     base_cursor: usize,
   ) -> Option<bool> {
@@ -114,7 +127,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-pub enum EsModuleFlagCheckType {
+pub(crate) enum CjsGlobalAssignmentType {
   ModuleExportsAssignment,
   ExportsAssignment,
 }

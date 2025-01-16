@@ -1,5 +1,5 @@
+mod cjs_ast_analyzer;
 pub mod dynamic_import;
-mod esmodule_flag_analyzer;
 pub mod impl_visit;
 mod import_assign_analyzer;
 mod new_url;

@@ -16,8 +16,7 @@ use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
 use super::{
-  esmodule_flag_analyzer::EsModuleFlagCheckType, side_effect_detector::SideEffectDetector,
-  AstScanner,
+  cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector, AstScanner,
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -274,22 +273,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
           match ident_ref.name.as_str() {
             "module" => {
-              if self
-                .check_es_module_flag(&EsModuleFlagCheckType::ModuleExportsAssignment)
-                .unwrap_or_default()
-              {
-                self.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
-              };
-              self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+              self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ModuleExportsAssignment);
             }
             "exports" => {
-              if self
-                .check_es_module_flag(&EsModuleFlagCheckType::ExportsAssignment)
-                .unwrap_or_default()
-              {
-                self.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
-              };
-              self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+              self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
             }
             _ => {}
           }

@@ -116,6 +116,16 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
+    if let Some(remotes) = self.options.remotes.as_ref() {
+      for remote in remotes {
+        if args.specifier.starts_with(&remote.name) {
+          return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+            id: args.specifier.to_string(),
+            ..Default::default()
+          }));
+        }
+      }
+    }
     Ok(None)
   }
 

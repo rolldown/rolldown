@@ -56,7 +56,7 @@ function normalizeParseError(
       e.message +
       '\n' +
       e.labels
-        .map((label) => {
+        .map((label: any) => {
           const location = locate(sourceText, label.start, { offsetLine: 1 })
           if (!location) {
             return

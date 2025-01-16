@@ -172,7 +172,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       source,
       id: file_path,
       comments,
-      ast_usage: EcmaModuleAstUsage::empty(),
+      ast_usage: EcmaModuleAstUsage::empty()
+        .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
+        .union(EcmaModuleAstUsage::IsCjsReexport),
       cur_class_decl: None,
       visit_path: vec![],
       ignore_comment: options.experimental.get_ignore_comment(),

@@ -3726,6 +3726,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-dkPkDMUw.js
 
+# tests/rolldown/cjs_compat/issue-3364
+
+- main-!~{000}~.js => main-DxJL3OFZ.js
+
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
 - main-!~{000}~.js => main-CHsy3Qsk.js
@@ -4800,7 +4804,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/26
 
-- entry-!~{000}~.js => entry-BSUvXAXr.js
+- entry-!~{000}~.js => entry-CuKLiroA.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/27
 

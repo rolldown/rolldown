@@ -210,9 +210,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if let Some(ns_alias) = namespace_alias {
-      let is_valid_namespace_alias_ref_id = original_reference_id
-        .is_some_and(|item| self.interested_namespace_alias_ref_id.contains(&item));
-      expr = if is_valid_namespace_alias_ref_id {
+      let meta = &self.ctx.linking_infos[ns_alias.namespace_ref.owner];
+      expr = if meta.safe_cjs_to_eliminate_interop_default
+        && original_reference_id
+          .is_some_and(|item| self.interested_namespace_alias_ref_id.contains(&item))
+      {
         expr
       } else {
         ast::Expression::StaticMemberExpression(

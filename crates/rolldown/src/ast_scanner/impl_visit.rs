@@ -87,6 +87,18 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         );
       }
     }
+
+    // check if the module is a reexport cjs module e.g.
+    // module.exports = require('a');
+    // normalize ast usage flag
+    if self.ast_usage.contains(EcmaModuleAstUsage::ModuleRef)
+      || !self.ast_usage.contains(EcmaModuleAstUsage::ExportsRef)
+    {
+      self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
+    }
+    if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
+      self.ast_usage.remove(EcmaModuleAstUsage::IsCjsReexport);
+    }
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
@@ -270,16 +282,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {
     match self.resolve_identifier_reference(ident_ref) {
       super::IdentifierReferenceKind::Global => {
-        if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleOrExports) {
-          match ident_ref.name.as_str() {
-            "module" => {
-              self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ModuleExportsAssignment);
-            }
-            "exports" => {
-              self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
-            }
-            _ => {}
+        match ident_ref.name.as_str() {
+          "module" => {
+            self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ModuleExportsAssignment);
           }
+          "exports" => {
+            self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
+          }
+          _ => {}
         }
         self.process_global_identifier_ref_by_ancestor(ident_ref);
       }

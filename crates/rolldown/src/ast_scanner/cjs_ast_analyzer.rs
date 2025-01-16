@@ -6,6 +6,8 @@ use oxc::ast::{
 use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript_utils::ExpressionExt;
 
+use crate::ast_scanner::IdentifierReferenceKind;
+
 use super::AstScanner;
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -34,10 +36,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           let parent_parent_kind = self.visit_path.get(cursor - 1)?;
           match parent_parent_kind {
             AstKind::MemberExpression(parent_parent) => {
-              self.check_assignment_target_property_is_es_module(parent_parent, cursor - 1)
+              self.check_assignment_target_property(parent_parent, cursor - 1)
             }
-            AstKind::Argument(arg) => {
-              self.check_object_define_property_es_module_flag(arg, cursor - 1)
+            AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
+            AstKind::SimpleAssignmentTarget(target) => {
+              if !self.check_assignment_is_cjs_reexport(target, cursor - 1).unwrap_or_default() {
+                self.ast_usage.remove(EcmaModuleAstUsage::IsCjsReexport);
+              }
+              None
             }
             _ => None,
           }
@@ -45,13 +51,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         CjsGlobalAssignmentType::ExportsAssignment => {
           // one scenario:
           // 1. exports.__esModule = true;
-          self.check_assignment_target_property_is_es_module(member_expr, cursor)
+          self.check_assignment_target_property(member_expr, cursor)
         }
       },
       AstKind::Argument(arg) => {
         // one scenario:
         // 1. Object.defineProperty(exports, "__esModule", { value: true });
-        self.check_object_define_property_es_module_flag(arg, cursor)
+        self.check_object_define_property(arg, cursor)
       }
       _ => None,
     };
@@ -61,7 +67,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     None
   }
 
-  fn check_object_define_property_es_module_flag(
+  /// Check if the argument is a valid `Object.defineProperty` call expression for `__esModule` flag.
+  fn check_object_define_property(
     &mut self,
     arg: &ast::Argument<'_>,
     base_cursor: usize,
@@ -105,13 +112,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     Some(flag)
   }
 
-  fn check_assignment_target_property_is_es_module(
-    &self,
+  /// Check if the member expression is a valid assignment target for `__esModule` flag.
+  fn check_assignment_target_property(
+    &mut self,
     member_expr: &ast::MemberExpression<'_>,
     base_cursor: usize,
   ) -> Option<bool> {
-    let property_name = member_expr.static_property_name()?;
-    if property_name != "__esModule" {
+    let static_property_name = member_expr.static_property_name();
+    if static_property_name.is_none() {
+      self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
+    }
+    if static_property_name != Some("__esModule") {
       return Some(false);
     }
 
@@ -124,6 +135,30 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return Some(false);
     };
     Some(bool_lit.value)
+  }
+
+  /// check if the `module` is used as : module.exports = require('mod');
+  fn check_assignment_is_cjs_reexport(
+    &mut self,
+    _target: &ast::SimpleAssignmentTarget<'_>,
+    base_cursor: usize,
+  ) -> Option<bool> {
+    self.visit_path.get(base_cursor - 1)?.as_assignment_target()?;
+
+    let assignment_expr = self.visit_path.get(base_cursor - 2)?.as_assignment_expression()?;
+    let ast::Expression::CallExpression(call_expr) = &assignment_expr.right else {
+      return Some(false);
+    };
+    let Some(callee) = call_expr.callee.as_identifier() else {
+      return Some(false);
+    };
+    if !(callee.name == "require"
+      && matches!(self.resolve_identifier_reference(callee), IdentifierReferenceKind::Global,)
+      && call_expr.arguments.len() == 1)
+    {
+      return Some(false);
+    }
+    Some(call_expr.arguments.first()?.as_expression()?.as_string_literal().is_some())
   }
 }
 

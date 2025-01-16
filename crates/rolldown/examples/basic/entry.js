@@ -1,4 +1,2 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
-
-console.log(hyperCube(5));
+module.exports = require('mod')
+exports['trest']= require('mod').test

@@ -157,6 +157,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       new_url_references: FxHashMap::default(),
       this_expr_replace_map: FxHashMap::default(),
     };
+    dbg!(&result.ast_usage);
 
     Self {
       idx,
@@ -172,7 +173,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       source,
       id: file_path,
       comments,
-      ast_usage: EcmaModuleAstUsage::empty(),
+      ast_usage: EcmaModuleAstUsage::empty()
+        .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
+        .union(EcmaModuleAstUsage::IsCjsReexport),
       cur_class_decl: None,
       visit_path: vec![],
       ignore_comment: options.experimental.get_ignore_comment(),

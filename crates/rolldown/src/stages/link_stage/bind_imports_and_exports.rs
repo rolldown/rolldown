@@ -6,9 +6,9 @@ use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias,
-  NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, WrapKind,
+  EcmaModuleAstUsage, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, ModuleType,
+  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -261,6 +261,82 @@ impl LinkStage<'_> {
       meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
     });
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
+    self.update_cjs_module_meta();
+  }
+
+  /// Update the metadata of CommonJS modules.
+  /// - Safe to eliminate interop default export
+  /// e.g.
+  /// ```js
+  /// // index.js
+  /// import a from './a'
+  /// a.something // this property could safely rewrite to `a.something` rather than `a.default.something`
+  ///
+  /// // a.js
+  /// module.exports = require('./mod.js')
+  ///
+  /// // mod.js
+  /// exports.something = 1
+  /// ```
+  fn update_cjs_module_meta(&mut self) {
+    let mut cache = FxHashMap::default();
+    /// caller should guarantee that the idx of module belongs to a normal module
+    fn recursive_update_cjs_module_interop_default_removable(
+      module_tables: &IndexModules,
+      module_idx: ModuleIdx,
+      cache: &mut FxHashMap<ModuleIdx, bool>,
+    ) -> bool {
+      if let Some(&result) = cache.get(&module_idx) {
+        return result;
+      }
+      let module = module_tables[module_idx].as_normal().unwrap();
+      let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+        module.import_records.iter().all(|item| {
+          let importee = match module_tables[item.resolved_module].as_normal() {
+            Some(importee) => importee,
+            None => {
+              return false;
+            }
+          };
+          if importee.exports_kind.is_commonjs() {
+            recursive_update_cjs_module_interop_default_removable(
+              module_tables,
+              importee.idx,
+              cache,
+            )
+          } else {
+            false
+          }
+        })
+      } else {
+        module.ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
+      };
+      cache.insert(module_idx, v);
+      v
+    }
+    let cjs_exports_type_modules = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(|module| {
+        let Module::Normal(module) = module else {
+          return None;
+        };
+        if module.exports_kind.is_commonjs() {
+          Some(module.idx)
+        } else {
+          None
+        }
+      })
+      .collect::<Vec<_>>();
+    for module_idx in cjs_exports_type_modules {
+      let v = recursive_update_cjs_module_interop_default_removable(
+        &self.module_table.modules,
+        module_idx,
+        &mut cache,
+      );
+      self.metas[module_idx].safe_cjs_to_eliminate_interop_default = v;
+    }
   }
 
   fn add_exports_for_export_star(

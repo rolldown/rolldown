@@ -142,6 +142,9 @@ bitflags! {
         const ModuleRef = 1;
         const ExportsRef = 1 << 1;
         const EsModuleFlag = 1 << 2;
+        const AllStaticExportPropertyAccess = 1 << 3;
+        /// module.exports = require('mod');
+        const IsCjsReexport = 1 << 4;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

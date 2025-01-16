@@ -3853,6 +3853,16 @@ snapshot_kind: text
 - main-!~{000}~.js => main-zCm21e_0.js
 - splited_lib-!~{001}~.js => splited_lib-DAxw7KSg.js
 
+# tests/rolldown/function/advanced_chunks/max_module_size
+
+- main-!~{000}~.js => main-B_ImQwm7.js
+- smaller-than-20-!~{001}~.js => smaller-than-20-DNN9if2g.js
+
+# tests/rolldown/function/advanced_chunks/max_module_size_fallback
+
+- main-!~{000}~.js => main-B_ImQwm7.js
+- smaller-than-20-!~{001}~.js => smaller-than-20-DNN9if2g.js
+
 # tests/rolldown/function/advanced_chunks/min_module_size
 
 - main-!~{000}~.js => main-BNXCTvis.js

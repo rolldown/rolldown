@@ -3726,7 +3726,7 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-dkPkDMUw.js
 
-# tests/rolldown/cjs_compat/issue-3364
+# tests/rolldown/cjs_compat/issue_3364
 
 - main-!~{000}~.js => main-DxJL3OFZ.js
 

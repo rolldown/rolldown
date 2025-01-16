@@ -7,6 +7,7 @@ use rustc_hash::FxBuildHasher;
 pub struct BindingRemote {
   pub r#type: Option<String>,
   pub entry: String,
+  pub name: String,
   pub entry_global_name: Option<String>,
   pub share_scope: Option<String>,
 }
@@ -16,6 +17,7 @@ impl From<BindingRemote> for rolldown_plugin_module_federation::Remote {
     Self {
       r#type: value.r#type,
       entry: value.entry,
+      name: value.name,
       entry_global_name: value.entry_global_name,
       share_scope: value.share_scope,
     }
@@ -48,7 +50,7 @@ pub struct BindingModuleFederationPluginOption {
   pub name: String,
   pub filename: Option<String>,
   pub exposes: Option<HashMap<String, String, FxBuildHasher>>,
-  pub remotes: Option<HashMap<String, BindingRemote, FxBuildHasher>>,
+  pub remotes: Option<Vec<BindingRemote>>,
   pub shared: Option<HashMap<String, BindingShared, FxBuildHasher>>,
 }
 
@@ -60,7 +62,7 @@ impl From<BindingModuleFederationPluginOption>
       name: value.name,
       filename: value.filename,
       exposes: value.exposes,
-      remotes: value.remotes.map(|r| r.into_iter().map(|(k, v)| (k, v.into())).collect()),
+      remotes: value.remotes.map(|r| r.into_iter().map(Into::into).collect()),
       shared: value.shared.map(|r| r.into_iter().map(|(k, v)| (k, v.into())).collect()),
     }
   }

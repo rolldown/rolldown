@@ -94,11 +94,16 @@ export function moduleFederationPlugin(
     ...config,
     remotes:
       config.remotes &&
-      Object.values(config.remotes).map((entry) => {
-        if (typeof entry === 'string') {
-          return { entry }
+      Object.entries(config.remotes).map(([name, remote]) => {
+        if (typeof remote === 'string') {
+          const [entryGlobalName] = remote.split('@')
+          const entry = remote.replace(entryGlobalName + '@', '')
+          return { entry, name }
         }
-        return entry
+        return {
+          ...remote,
+          name: remote.name ?? name,
+        }
       }),
   })
 }

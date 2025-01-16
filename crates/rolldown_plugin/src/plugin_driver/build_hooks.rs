@@ -249,7 +249,12 @@ impl PluginDriver {
     {
       args.ast = plugin.call_transform_ast(
         ctx,
-        HookTransformAstArgs { cwd: args.cwd, ast: args.ast, id: args.id },
+        HookTransformAstArgs {
+          cwd: args.cwd,
+          ast: args.ast,
+          id: args.id,
+          is_user_defined_entry: args.is_user_defined_entry,
+        },
       )?;
     }
     Ok(args.ast)

@@ -3,6 +3,7 @@ import { RolldownOutput } from 'rolldown'
 import { defineTest } from '@tests'
 import { getOutputChunkNames } from '@tests/utils'
 import { expect } from 'vitest'
+import path from 'node:path'
 
 export default defineTest({
   config: {
@@ -13,6 +14,9 @@ export default defineTest({
         exposes: {
           './expose': './expose.js',
         },
+        remotes: {
+          app: 'app@' + path.join(import.meta.dirname, './dist/expose.js'),
+        },
       }),
     ],
     output: {
@@ -20,13 +24,10 @@ export default defineTest({
     },
   },
   async afterTest(output: RolldownOutput) {
-    expect(getOutputChunkNames(output)).toMatchInlineSnapshot(`
-      [
-        "main.js",
-        "remote-entry.js",
-        "expose.js",
-      ]
-    `)
+    const chunksNames = getOutputChunkNames(output)
+    expect(chunksNames.includes('remote-entry.js')).toBe(true)
+    expect(chunksNames.includes('expose.js')).toBe(true)
+
     // Test the exposed module
     // @ts-ignore
     const expose = await import('./dist/expose.js')

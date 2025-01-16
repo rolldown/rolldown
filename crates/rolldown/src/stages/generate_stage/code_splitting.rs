@@ -352,6 +352,20 @@ impl GenerateStage<'_> {
           continue;
         }
 
+        let allow_min_module_size =
+          match_group.min_module_size.map_or(chunking_options.min_module_size, Some);
+        let allow_max_module_size =
+          match_group.max_module_size.map_or(chunking_options.max_module_size, Some);
+
+        let is_min_module_size_satisfied = allow_min_module_size
+          .map_or(true, |min_module_size| normal_module.size() >= min_module_size);
+        let is_max_module_size_satisfied = allow_max_module_size
+          .map_or(true, |max_module_size| normal_module.size() <= max_module_size);
+
+        if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
+          continue;
+        }
+
         if let Some(allow_min_share_count) =
           match_group.min_share_count.map_or(chunking_options.min_share_count, Some)
         {

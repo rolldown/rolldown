@@ -212,6 +212,8 @@ pub fn normalize_binding_options(
     advanced_chunks: output_options.advanced_chunks.map(|inner| AdvancedChunksOptions {
       min_size: inner.min_size,
       min_share_count: inner.min_share_count,
+      min_module_size: None,
+      max_module_size: None,
       groups: inner.groups.map(|inner| {
         inner
           .into_iter()
@@ -221,6 +223,8 @@ pub fn normalize_binding_options(
             priority: item.priority,
             min_size: item.min_size,
             min_share_count: item.min_share_count,
+            max_module_size: None,
+            min_module_size: None,
           })
           .collect::<Vec<_>>()
       }),

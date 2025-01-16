@@ -157,7 +157,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       new_url_references: FxHashMap::default(),
       this_expr_replace_map: FxHashMap::default(),
     };
-    dbg!(&result.ast_usage);
 
     Self {
       idx,

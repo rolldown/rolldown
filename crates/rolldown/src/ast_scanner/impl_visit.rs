@@ -14,7 +14,6 @@ use rolldown_common::{
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
-use rolldown_utils::ecmascript::property_access_str;
 
 use super::{
   cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector, AstScanner,
@@ -100,9 +99,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
       self.ast_usage.remove(EcmaModuleAstUsage::IsCjsReexport);
     }
-
-    dbg!(&self.id);
-    dbg!(&self.ast_usage);
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {

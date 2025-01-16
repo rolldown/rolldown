@@ -266,7 +266,7 @@ impl LinkStage<'_> {
 
   /// Update the metadata of CommonJS modules.
   /// - Safe to eliminate interop default export
-  /// e.g.
+  ///   e.g.
   /// ```js
   /// // index.js
   /// import a from './a'
@@ -279,7 +279,6 @@ impl LinkStage<'_> {
   /// exports.something = 1
   /// ```
   fn update_cjs_module_meta(&mut self) {
-    let mut cache = FxHashMap::default();
     /// caller should guarantee that the idx of module belongs to a normal module
     fn recursive_update_cjs_module_interop_default_removable(
       module_tables: &IndexModules,
@@ -292,11 +291,8 @@ impl LinkStage<'_> {
       let module = module_tables[module_idx].as_normal().unwrap();
       let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         module.import_records.iter().all(|item| {
-          let importee = match module_tables[item.resolved_module].as_normal() {
-            Some(importee) => importee,
-            None => {
-              return false;
-            }
+          let Some(importee) = module_tables[item.resolved_module].as_normal() else {
+            return false;
           };
           if importee.exports_kind.is_commonjs() {
             recursive_update_cjs_module_interop_default_removable(
@@ -314,6 +310,8 @@ impl LinkStage<'_> {
       cache.insert(module_idx, v);
       v
     }
+
+    let mut cache = FxHashMap::default();
     let cjs_exports_type_modules = self
       .module_table
       .modules

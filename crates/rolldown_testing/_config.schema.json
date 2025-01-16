@@ -72,6 +72,20 @@
             "$ref": "#/definitions/MatchGroup"
           }
         },
+        "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
         "minShareCount": {
           "type": [
             "integer",
@@ -695,6 +709,20 @@
         "name"
       ],
       "properties": {
+        "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
         "minShareCount": {
           "type": [
             "integer",

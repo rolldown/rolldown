@@ -323,6 +323,11 @@ impl NormalModule {
       stmt_info_idx,
     });
   }
+
+  #[expect(clippy::cast_precision_loss)]
+  pub fn size(&self) -> f64 {
+    self.ecma_view.source.len() as f64
+  }
 }
 
 #[derive(Debug)]

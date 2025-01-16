@@ -445,7 +445,7 @@ export interface BindingModuleFederationPluginOption {
   name: string
   filename?: string
   exposes?: Record<string, string>
-  remotes?: Record<string, BindingRemote>
+  remotes?: Array<BindingRemote>
   shared?: Record<string, BindingShared>
 }
 
@@ -577,6 +577,7 @@ export interface BindingPluginWithIndex {
 export interface BindingRemote {
   type?: string
   entry: string
+  name: string
   entryGlobalName?: string
   shareScope?: string
 }

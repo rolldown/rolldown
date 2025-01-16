@@ -4,6 +4,7 @@ use rustc_hash::FxHashMap;
 pub struct Remote {
   pub r#type: Option<String>,
   pub entry: String,
+  pub name: String,
   pub entry_global_name: Option<String>,
   pub share_scope: Option<String>,
 }
@@ -22,6 +23,6 @@ pub struct ModuleFederationPluginOption {
   pub name: String,
   pub filename: Option<String>,
   pub exposes: Option<FxHashMap<String, String>>,
-  pub remotes: Option<FxHashMap<String, Remote>>,
+  pub remotes: Option<Vec<Remote>>,
   pub shared: Option<FxHashMap<String, Shared>>,
 }

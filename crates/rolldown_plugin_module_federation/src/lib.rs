@@ -2,15 +2,22 @@ use std::borrow::Cow;
 
 mod option;
 pub use option::{ModuleFederationPluginOption, Remote, Shared};
+use oxc::{
+  ast::{
+    ast::{ImportOrExportKind, Statement},
+    AstBuilder, NONE,
+  },
+  span::SPAN,
+};
 use rolldown_common::EmittedChunk;
 use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::concat_string;
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
+const INIT_HOST: &str = "mf:init-host.js";
 
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
-  #[allow(dead_code)]
   options: ModuleFederationPluginOption,
 }
 
@@ -34,6 +41,36 @@ impl ModuleFederationPlugin {
       .unwrap_or_default();
     include_str!("remote-entry.js")
       .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
+      .to_string()
+  }
+
+  pub fn generate_init_host_code(&self) -> String {
+    let remotes = self
+      .options
+      .remotes
+      .as_ref()
+      .map(|remotes| {
+        remotes
+          .iter()
+          .map(|value| {
+            concat_string!(
+              "{ entryGlobalName: '",
+              value.entry_global_name.as_deref().unwrap_or_else(|| &value.name),
+              "', name: '",
+              value.name,
+              "', entry: '",
+              value.entry,
+              "', type: '",
+              value.r#type.as_deref().unwrap_or("var"),
+              "' }"
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ")
+      })
+      .unwrap_or_default();
+    include_str!("init-host.js")
+      .replace("__REMOTES__", &concat_string!("[", remotes, "]"))
       .to_string()
   }
 }
@@ -67,9 +104,9 @@ impl Plugin for ModuleFederationPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier == REMOTE_ENTRY {
+    if args.specifier == REMOTE_ENTRY || args.specifier == INIT_HOST {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-        id: REMOTE_ENTRY.to_string(),
+        id: args.specifier.to_string(),
         ..Default::default()
       }));
     }
@@ -87,6 +124,37 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
+    if args.id == INIT_HOST {
+      return Ok(Some(rolldown_plugin::HookLoadOutput {
+        code: self.generate_init_host_code(),
+        ..Default::default()
+      }));
+    }
     Ok(None)
+  }
+
+  fn transform_ast(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    mut args: rolldown_plugin::HookTransformAstArgs,
+  ) -> rolldown_plugin::HookTransformAstReturn {
+    if args.is_user_defined_entry && self.options.remotes.is_some() {
+      args.ast.program.with_mut(|fields| {
+        let ast_builder = AstBuilder::new(fields.allocator);
+        fields.program.body.insert(
+          0,
+          Statement::from(ast_builder.module_declaration_import_declaration(
+            SPAN,
+            None,
+            ast_builder.string_literal(SPAN, ast_builder.atom(INIT_HOST), None),
+            None,
+            NONE,
+            ImportOrExportKind::Value,
+          )),
+        );
+      });
+    }
+
+    Ok(args.ast)
   }
 }

@@ -84,6 +84,7 @@ pub fn parse_to_ecma_ast(
     cwd: &options.cwd,
     ast: ecma_ast,
     id: stable_id,
+    is_user_defined_entry,
   })?;
 
   PreProcessEcmaAst::default().build(

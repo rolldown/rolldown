@@ -7,7 +7,7 @@ import chalk from 'chalk'
 /**
  * @param {string} name
  * @param {(bench: import('tinybench').Bench) => void} collectBenches
- * @param {import('tinybench').Options} [options]
+ * @param {import('tinybench').BenchOptions} [options]
  */
 export function group(name, collectBenches, options) {
   const bench = new tinyBench.Bench(options)

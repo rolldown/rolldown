@@ -2,7 +2,7 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
-  "packageManager": "pnpm@9.12.3",
+  "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=18.20.3"
   },
@@ -25,7 +25,7 @@
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepare": "husky install"
+    "prepare": "husky prepare"
   },
   "license": "MIT",
   "devDependencies": {
@@ -33,7 +33,7 @@
     "@babel/runtime": "7.26.0",
     "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "22.8.7",
+    "@types/node": "22.10.7",
     "cjs-module-lexer": "^1.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",

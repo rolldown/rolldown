@@ -26,6 +26,9 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
           queue.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());
         }
         ast::BindingPatternKind::ObjectPattern(obj_pat) => {
+          if let Some(obj_pat) = &obj_pat.rest {
+            queue.push(&obj_pat.argument.kind);
+          }
           queue.extend(obj_pat.properties.iter().map(|prop| &prop.value.kind).rev());
         }
         //

@@ -3,14 +3,12 @@ import nodeAssert from 'node:assert'
 import nodeFs from 'node:fs'
 
 /**
- * @param  {string[]} joined
- *
  * @description
  * - Get the absolute path to the root of the workspace. The root is always the directory containing the root `Cargo.toml`, `package.json`, `pnpm-workspace.yaml` etc.
  * - `workspaceRoot('packages')` equals to `path.resolve(workspaceRoot(), 'packages')`
  *
  */
-export function workspaceRoot(...joined) {
+export function workspaceRoot(...joined: string[]) {
   return nodePath.resolve(import.meta.dirname, '../../..', ...joined)
 }
 

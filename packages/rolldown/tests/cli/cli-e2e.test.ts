@@ -1,9 +1,9 @@
 import { describe, test, it, expect } from 'vitest'
 import { $, execa } from 'execa'
 import { stripAnsi } from 'consola/utils'
-import { testsDir, waitUtil } from '@tests/utils'
 import path from 'node:path'
 import fs from 'node:fs'
+import { testsDir, waitUtil } from 'rolldown-tests/utils'
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined)

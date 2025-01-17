@@ -1,5 +1,5 @@
-import { defineTest } from '@tests'
-import { getOutputChunk } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputChunk } from 'rolldown-tests/utils'
 import { expect, vi } from 'vitest'
 
 const fn = vi.fn()

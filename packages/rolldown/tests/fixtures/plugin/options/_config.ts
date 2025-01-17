@@ -1,7 +1,7 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect, vi } from 'vitest'
 import path from 'node:path'
-import { getOutputChunk } from '@tests/utils'
+import { getOutputChunk } from 'rolldown-tests/utils'
 
 const fn = vi.fn()
 

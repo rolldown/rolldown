@@ -1,6 +1,6 @@
 import { expect, vi } from 'vitest'
 import path from 'node:path'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 
 const entry = path.join(__dirname, './main.js')
 

@@ -1,10 +1,10 @@
-import { defineSuite } from '../utils.js'
 import nodePath from 'node:path'
-import { REPO_ROOT } from '../utils.js'
-import _ from 'lodash'
-import { default as parallelBabelPlugin } from '../parallel-babel-plugin/index.js'
-import { babelPlugin } from '../parallel-babel-plugin/impl.js'
 import { builtinModules } from 'node:module'
+
+import { REPO_ROOT, defineSuite } from '../utils'
+import { default as parallelBabelPlugin } from '../parallel-babel-plugin/index'
+import { babelPlugin } from '../parallel-babel-plugin/impl'
+import type { BenchSuite } from '../types'
 
 const inputs = [nodePath.join(REPO_ROOT, './tmp/bench/rome/src/entry.ts')]
 
@@ -12,10 +12,7 @@ const esbuildOptions = {
   tsconfig: nodePath.join(REPO_ROOT, './tmp/bench/rome/src/tsconfig.json'),
 }
 
-/**
- * @type {import('../types.js').BenchSuite['rolldownOptions']}
- */
-const rolldownOptionsForParallelism = [
+const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
   {
     name: 'js-single',
     options: {
@@ -40,7 +37,7 @@ const rolldownOptionsForParallelism = [
       external: builtinModules,
       // Need this due rome is not written with `isolatedModules: true`
       shimMissingExports: true,
-      plugins: [parallelBabelPlugin()],
+      plugins: [parallelBabelPlugin({})],
       resolve: {
         extensions: ['.ts'],
         tsconfigFilename: nodePath.join(

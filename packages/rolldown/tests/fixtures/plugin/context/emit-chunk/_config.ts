@@ -1,6 +1,6 @@
 // cSpell:disable
-import { defineTest } from '@tests'
-import { getOutputFileNames } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputFileNames } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
 
 export default defineTest({

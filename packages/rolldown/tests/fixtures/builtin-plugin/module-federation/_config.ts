@@ -1,7 +1,7 @@
 import { moduleFederationPlugin } from 'rolldown/experimental'
 import { RolldownOutput } from 'rolldown'
-import { defineTest } from '@tests'
-import { getOutputChunkNames } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputChunkNames } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
 import path from 'node:path'
 

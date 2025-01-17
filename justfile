@@ -22,7 +22,7 @@ setup-submodule:
     git submodule update --init
 
 setup-bench:
-    node ./scripts/misc/setup-benchmark-input/index.js
+    node --import @oxc-node/core/register ./scripts/misc/setup-benchmark-input/index.js
 
 # Update the submodule to the latest commit
 update-submodule:

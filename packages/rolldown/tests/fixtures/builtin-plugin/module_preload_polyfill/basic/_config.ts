@@ -1,6 +1,6 @@
 import { modulePreloadPolyfillPlugin } from 'rolldown/experimental'
 import { RolldownOutput } from 'rolldown'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import * as path from 'path'
 import { expect } from 'vitest'
 

@@ -1,5 +1,5 @@
-import { defineTest } from '@tests'
-import { getOutputAssetNames, getOutputFileNames } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputAssetNames, getOutputFileNames } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
 
 export default defineTest({

@@ -19,7 +19,7 @@
     "/tmp",
     "/packages/rolldown/npm",
     "scripts/snap-diff/**/*.{txt,md}",
-    "packages/rolldown/src/binding.js",
+    "packages/rolldown/src/binding.cjs",
     "/CHANGELOG.md",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
     "/packages/rollup-tests/src/ignored-by-unsupported-features.md",

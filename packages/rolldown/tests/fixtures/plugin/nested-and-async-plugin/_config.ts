@@ -1,5 +1,5 @@
 import { InputOptions } from 'rolldown'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 
 const pluginA = {
   name: 'nested-plugin-1',

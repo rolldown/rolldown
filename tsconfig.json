@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "$comment": "The config is for pure Js projects, which are executed by Node.js directly.",
+  "include": [],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "declaration": true,
+    "noEmit": true,
+    "isolatedDeclarations": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "references": [
+    { "path": "./packages/bench" },
+    { "path": "./packages/rolldown" },
+    { "path": "./packages/rolldown/tests" },
+    { "path": "./packages/rollup-tests" },
+    { "path": "./packages/testing" }
+  ]
+}

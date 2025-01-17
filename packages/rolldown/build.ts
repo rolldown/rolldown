@@ -1,8 +1,10 @@
-import { defineConfig, OutputOptions, rolldown } from './src/index'
-import pkgJson from './package.json' with { type: 'json' }
 import nodePath from 'node:path'
+
 import fsExtra from 'fs-extra'
 import { globSync } from 'glob'
+
+import { defineConfig, OutputOptions, rolldown } from './src/index'
+import pkgJson from './package.json' with { type: 'json' }
 import { colors } from './src/cli/colors'
 
 const outputDir = 'dist'
@@ -19,6 +21,9 @@ const shared = defineConfig({
     'parse-ast-index': './src/parse-ast-index',
   },
   platform: 'node',
+  resolve: {
+    extensions: ['.js', '.cjs', '.mjs', '.ts'],
+  },
   external: [
     /rolldown-binding\..*\.node/,
     /rolldown-binding\..*\.wasm/,
@@ -145,7 +150,7 @@ const configs = defineConfig([
       },
 
       {
-        name: 'cleanup binding.js',
+        name: 'cleanup binding.cjs',
         transform: {
           filter: {
             code: {
@@ -153,7 +158,7 @@ const configs = defineConfig([
             },
           },
           handler(code, id) {
-            if (id.endsWith('binding.js')) {
+            if (id.endsWith('binding.cjs')) {
               const ret = code.replace(
                 'require = createRequire(__filename)',
                 '',
@@ -193,8 +198,6 @@ const configs = defineConfig([
   },
 ])
 
-;(async () => {
-  for (const config of configs) {
-    await (await rolldown(config)).write(config.output as OutputOptions)
-  }
-})()
+for (const config of configs) {
+  await (await rolldown(config)).write(config.output as OutputOptions)
+}

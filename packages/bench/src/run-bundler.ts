@@ -4,18 +4,11 @@ import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
+
+import type { BenchSuite, RolldownBenchSuite } from './types'
 import { PROJECT_ROOT } from './utils.js'
 
-/**
- * @typedef {import('./types.js').BenchSuite} BenchSuite
- * @typedef {import('./types.js').RolldownBenchSuite} RolldownBenchSuite
- */
-
-/**
- * @param {BenchSuite} suite
- * @returns {RolldownBenchSuite[]}
- */
-export function getRolldownSuiteList(suite) {
+export function getRolldownSuiteList(suite: BenchSuite): RolldownBenchSuite[] {
   const rolldownOptionsList = Array.isArray(suite.rolldownOptions)
     ? suite.rolldownOptions
     : [{ name: 'default', options: suite.rolldownOptions }]
@@ -27,10 +20,7 @@ export function getRolldownSuiteList(suite) {
   }))
 }
 
-/**
- * @param {RolldownBenchSuite} suite
- */
-export async function runRolldown(suite) {
+export async function runRolldown(suite: RolldownBenchSuite) {
   const { output: outputOptions = {}, ...inputOptions } = suite.options ?? {}
   const build = await rolldown.rolldown({
     platform: 'node',
@@ -44,10 +34,7 @@ export async function runRolldown(suite) {
   await build.close()
 }
 
-/**
- * @param {BenchSuite} suite
- */
-export async function runEsbuild(suite) {
+export async function runEsbuild(suite: BenchSuite) {
   const options = suite.esbuildOptions ?? {}
   await esbuild.build({
     platform: 'node',
@@ -61,10 +48,7 @@ export async function runEsbuild(suite) {
   })
 }
 
-/**
- * @param {BenchSuite} suite
- */
-export async function runRollup(suite) {
+export async function runRollup(suite: BenchSuite) {
   const { output: outputOptions = {}, ...inputOptions } =
     suite.rollupOptions ?? {}
   const build = await rollup.rollup({
@@ -77,7 +61,6 @@ export async function runRollup(suite) {
         exportConditions: ['import'],
         mainFields: ['module', 'browser', 'main'],
       }),
-      // @ts-expect-error
       commonjs(),
     ],
     ...inputOptions,

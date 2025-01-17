@@ -1,8 +1,8 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect, vi } from 'vitest'
 
 const fn = vi.fn()
-import { getOutputChunkNames } from '@tests/utils'
+import { getOutputChunkNames } from 'rolldown-tests/utils'
 
 export default defineTest({
   config: {

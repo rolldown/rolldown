@@ -1,4 +1,12 @@
 {
-  "extends": "../../tsconfig.pure-js.json",
-  "include": ["src/**/*.js", "index.d.ts"]
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedDeclarations": false,
+    "outDir": "./dist"
+  }
 }

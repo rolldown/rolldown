@@ -1,3 +1,6 @@
 {
-  "name": "stringify"
+  "name": "@test-fixture/stringify",
+  "devDependencies": {
+    "rolldown-tests": "workspace:*"
+  }
 }

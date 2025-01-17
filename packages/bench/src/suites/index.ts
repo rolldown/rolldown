@@ -1,11 +1,9 @@
 import nodePath from 'node:path'
 import { PROJECT_ROOT, REPO_ROOT } from '../utils.js'
-import _ from 'lodash'
+import { cloneDeepWith, set } from 'lodash-es'
 import { suiteRomeTs } from './rome-ts.js'
+import type { BenchSuite } from '../types.js'
 
-/**
- * @type {import('../types.js').BenchSuite[]}
- */
 export const suitesForCI = [
   {
     title: 'threejs10x',
@@ -47,15 +45,11 @@ export const suites = [
   ...suitesForCI,
 ]
 
-/**
- *
- * @param {import('../run-bundler.js').BenchSuite[]} suites
- */
-export function expandSuitesWithDerived(suites) {
+export function expandSuitesWithDerived(suites: BenchSuite[]) {
   return suites.flatMap((suite) => {
     const expanded = [suite]
     if (suite.derived?.sourcemap) {
-      const derived = _.cloneDeepWith(suite, (value) => {
+      const derived = cloneDeepWith(suite, (value) => {
         // We should pay attention to this while using singletons in config
         if (typeof value === 'function') {
           return value
@@ -63,13 +57,13 @@ export function expandSuitesWithDerived(suites) {
       })
       derived.title = `${suite.title}-sourcemap`
       delete derived.derived
-      _.set(derived, 'esbuildOptions.sourcemap', true)
-      _.set(derived, 'rolldownOptions.output.sourcemap', true)
-      _.set(derived, 'rollupOptions.output.sourcemap', true)
+      set(derived, 'esbuildOptions.sourcemap', true)
+      set(derived, 'rolldownOptions.output.sourcemap', true)
+      set(derived, 'rollupOptions.output.sourcemap', true)
       expanded.push(derived)
     }
     if (suite.derived?.minify) {
-      const derived = _.cloneDeepWith(suite, (value) => {
+      const derived = cloneDeepWith(suite, (value) => {
         // We should pay attention to this while using singletons in config
         if (typeof value === 'function') {
           return value
@@ -77,12 +71,12 @@ export function expandSuitesWithDerived(suites) {
       })
       derived.title = `${suite.title}-minify`
       delete derived.derived
-      _.set(derived, 'esbuildOptions.minify', true)
-      _.set(derived, 'rolldownOptions.output.minify', true)
+      set(derived, 'esbuildOptions.minify', true)
+      set(derived, 'rolldownOptions.output.minify', true)
       expanded.push(derived)
     }
     if (suite.derived?.minify && suite.derived?.sourcemap) {
-      const derived = _.cloneDeepWith(suite, (value) => {
+      const derived = cloneDeepWith(suite, (value) => {
         // We should pay attention to this while using singletons in config
         if (typeof value === 'function') {
           return value
@@ -90,10 +84,10 @@ export function expandSuitesWithDerived(suites) {
       })
       derived.title = `${suite.title}-minify-sourcemap`
       delete derived.derived
-      _.set(derived, 'esbuildOptions.sourcemap', true)
-      _.set(derived, 'rolldownOptions.output.sourcemap', true)
-      _.set(derived, 'esbuildOptions.minify', true)
-      _.set(derived, 'rolldownOptions.output.minify', true)
+      set(derived, 'esbuildOptions.sourcemap', true)
+      set(derived, 'rolldownOptions.output.sourcemap', true)
+      set(derived, 'esbuildOptions.minify', true)
+      set(derived, 'rolldownOptions.output.minify', true)
       expanded.push(derived)
     }
     return expanded

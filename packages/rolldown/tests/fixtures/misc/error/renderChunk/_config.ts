@@ -1,4 +1,4 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { assert, expect } from 'vitest'
 
 export default defineTest({

@@ -25,4 +25,5 @@ pub struct ModuleFederationPluginOption {
   pub exposes: Option<FxHashMap<String, String>>,
   pub remotes: Option<Vec<Remote>>,
   pub shared: Option<FxHashMap<String, Shared>>,
+  pub runtime_plugins: Option<Vec<String>>,
 }

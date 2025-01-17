@@ -7,20 +7,28 @@ import path from 'node:path'
 
 export default defineTest({
   config: {
-    external: ['node:assert', '@module-federation/runtime'],
+    external: ['node:assert', 'node:fs', '@module-federation/runtime'],
     plugins: [
+      moduleFederationPlugin({
+        name: 'mf-host',
+        remotes: {
+          app: {
+            name: 'app',
+            type: 'module',
+            entry:
+              'file://' +
+              path.join(import.meta.dirname, './dist/remote-entry.js'),
+          },
+        },
+        runtimePlugins: [
+          path.join(import.meta.dirname, 'mf-runtime-plugin.js'),
+        ],
+      }),
       moduleFederationPlugin({
         name: 'mf-remote',
         filename: 'remote-entry.js',
         exposes: {
           './expose': './expose.js',
-        },
-        remotes: {
-          app: {
-            name: 'app',
-            type: 'module',
-            entry: path.join(import.meta.dirname, './dist/remote-entry.js'),
-          },
         },
       }),
     ],
@@ -46,7 +54,12 @@ export default defineTest({
     expect(typeof remote.init).toBe('function')
 
     // Test host
+    // Here avoid starting dev-server to load the remote script.
+    // - using module federation runtime `createScriptNode` to load the remote script, but the internal implementation using `fetch`, it is not support `file` protocol url. And also it is using `vm.SourceTextModule` to execute esm, tis feature is only available with the `--experimental-vm-modules` command flag enabled.
+    // - Using module federation runtime plugin to load the remote, here setting the `globalThis.remote` and using it at `mf-runtime-plugin.js`.
     // @ts-ignore
-    // await import('./dist/main.js')
+    globalThis.remote = remote
+    // @ts-ignore
+    await import('./dist/main.js')
   },
 })

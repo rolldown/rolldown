@@ -1,12 +1,14 @@
 import { init } from '@module-federation/runtime';
 
+__PLUGINS__
+
 const usedRemotes = __REMOTES__;
 const usedShared = {};
 const initRes = init({
     name: "mf-host",
     remotes: usedRemotes, 
     shared: usedShared,
-    // plugins: [$runtimePlugin_0()],
+    plugins,
     shareStrategy: 'version-first'
 });
 

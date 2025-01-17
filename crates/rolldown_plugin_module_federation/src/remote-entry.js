@@ -1,5 +1,7 @@
 import { init as runtimeInit } from '@module-federation/runtime';
 
+__PLUGINS__
+
 const usedRemotes = []
 const usedShared = {}
 
@@ -13,19 +15,21 @@ export function get(moduleName) {
 
 const initTokens = {}
 const shareScopeName = "default"
+const name = "mf-remote"
 
 export async function init(shared={}, initScope=[]) {
     const initRes = runtimeInit({
-        name: "mf-remote",
+        name,
         remotes: usedRemotes,
         shared: usedShared,
+        plugins,
         shareStrategy: 'version-first'
     });
     // handling circular init calls
     var initToken = initTokens[shareScopeName];
     if (!initToken)
         initToken = initTokens[shareScopeName] = {
-            from: mfName
+            from: name
         };
     if (initScope.indexOf(initToken) >= 0)
         return;

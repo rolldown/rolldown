@@ -25,7 +25,7 @@
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepare": "husky install"
+    "prepare": "husky prepare"
   },
   "license": "MIT",
   "devDependencies": {

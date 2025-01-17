@@ -11,6 +11,20 @@
     "cross-env": "^7.0.3",
     "rolldown": "workspace:*",
     "vite": "^6.0.0",
-    "vitest": "^2.0.0"
+    "vitest": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.7"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    },
+    "./utils": {
+      "import": "./src/utils.ts"
+    },
+    "./types": {
+      "types": "./src/types.ts"
+    }
   }
 }

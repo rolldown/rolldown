@@ -1,6 +1,6 @@
 // cSpell:disable
-import { defineTest } from '@tests'
-import { getOutputAsset } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputAsset } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'

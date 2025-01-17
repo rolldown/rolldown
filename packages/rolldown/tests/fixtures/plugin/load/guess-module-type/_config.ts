@@ -1,4 +1,4 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import * as fs from 'fs'
 import { vi } from 'vitest'
 

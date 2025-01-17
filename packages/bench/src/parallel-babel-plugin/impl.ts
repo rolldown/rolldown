@@ -1,9 +1,12 @@
-import { defineParallelPluginImplementation } from 'rolldown/parallel-plugin'
+import {
+  defineParallelPluginImplementation,
+  type ParallelPluginImplementation,
+} from 'rolldown/parallel-plugin'
+import type { Plugin } from 'rolldown'
 import babel from '@babel/core'
 import nodePath from 'node:path'
 
-/** @returns {import('rolldown').Plugin} */
-export const babelPlugin = () => {
+export const babelPlugin = (): Plugin => {
   const partialConfig = babel.loadPartialConfig({
     presets: [
       ['@babel/preset-env', { bugfixes: true }],
@@ -29,12 +32,15 @@ export const babelPlugin = () => {
           throw new Error('failed to parse')
         }
         let diffAst = performance.now() - now
-        const ret = /** @type {babel.BabelFileResult} */ (
-          babel.transformFromAstSync(ast, code, {
-            ...partialConfig?.options,
-            filename: id,
-          })
-        )
+        const ret =
+          /** @type {babel.BabelFileResult} */ babel.transformFromAstSync(
+            ast,
+            code,
+            {
+              ...partialConfig?.options,
+              filename: id,
+            },
+          )
         let diffTrans = performance.now() - now - diffAst
         console.log(
           id,
@@ -45,12 +51,16 @@ export const babelPlugin = () => {
           'trans: ',
           diffTrans,
         )
-        return { code: /** @type {string} */ (ret.code) }
+        return { code: /** @type {string} */ ret?.code ?? void 0 }
       }
     },
   }
 }
 
-export default defineParallelPluginImplementation((_options, _context) => {
-  return babelPlugin()
-})
+const impl: ParallelPluginImplementation = defineParallelPluginImplementation(
+  (_options, _context) => {
+    return babelPlugin()
+  },
+)
+
+export default impl

@@ -1,4 +1,7 @@
 {
-  "name": "stringify",
-  "const": true
+  "name": "@test-fixture/named-exports",
+  "const": true,
+  "devDependencies": {
+    "rolldown-tests": "workspace:*"
+  }
 }

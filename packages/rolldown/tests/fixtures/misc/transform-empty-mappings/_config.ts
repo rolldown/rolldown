@@ -1,5 +1,5 @@
-import { defineTest } from '@tests'
-import { getLocation } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getLocation } from 'rolldown-tests/utils'
 import { SourceMapConsumer } from 'source-map'
 import { expect } from 'vitest'
 

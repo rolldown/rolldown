@@ -1,16 +1,15 @@
 // bencher.js is a simple wrapper around tinybench that provides better display of benchmark results.
 
-import * as tinyBench from 'tinybench'
-import _ from 'lodash'
+import { Bench, BenchOptions } from 'tinybench'
+import { sortBy } from 'lodash-es'
 import chalk from 'chalk'
 
-/**
- * @param {string} name
- * @param {(bench: import('tinybench').Bench) => void} collectBenches
- * @param {import('tinybench').BenchOptions} [options]
- */
-export function group(name, collectBenches, options) {
-  const bench = new tinyBench.Bench(options)
+export function group(
+  name: string,
+  collectBenches: (bench: Bench) => void,
+  options?: BenchOptions,
+) {
+  const bench = new Bench(options)
   collectBenches(bench)
   return {
     async run() {
@@ -36,7 +35,7 @@ export function group(name, collectBenches, options) {
               mean: task.result.mean,
             }
           })
-          resultsForDisplay = _.sortBy(resultsForDisplay, 'mean')
+          resultsForDisplay = sortBy(resultsForDisplay, 'mean')
 
           // Show which benchmark is the fastest
           resultsForDisplay.forEach((result, idx) => {

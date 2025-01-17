@@ -10,6 +10,6 @@
   },
   "dependencies": {
     "@module-federation/enhanced": "^0.8.8",
-    "react": "^17.0.2"
+    "react": "^19.0.0"
   }
 }

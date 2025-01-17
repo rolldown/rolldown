@@ -1,6 +1,6 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
-import { getOutputChunk } from '@tests/utils'
+import { getOutputChunk } from 'rolldown-tests/utils'
 
 export default defineTest({
   config: {

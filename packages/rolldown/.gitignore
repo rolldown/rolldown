@@ -2,3 +2,4 @@
 *.node
 *.wasm
 tests/watch/temp
+lib

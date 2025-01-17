@@ -1,4 +1,4 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { stripVTControlCharacters } from 'util'
 import { expect } from 'vitest'
 

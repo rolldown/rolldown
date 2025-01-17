@@ -1,9 +1,10 @@
 {
-  "name": "scripts",
+  "name": "@rolldown-internal/scripts",
   "private": true,
   "type": "module",
   "scripts": {
     "type-check": "tsc -b",
+    "setup-bench": "node --import @oxc-node/core/register ./misc/setup-benchmark-input/index.js",
     "esbuild-snap-diff": "node --import @oxc-node/core/register ./snap-diff/index.ts"
   },
   "dependencies": {

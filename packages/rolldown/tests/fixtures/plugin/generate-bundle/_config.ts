@@ -1,8 +1,9 @@
-import { defineTest } from '@tests'
-import { expect } from 'vitest'
 import path from 'node:path'
+
+import { expect } from 'vitest'
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { getOutputChunk } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputChunk } from 'rolldown-tests/utils'
 
 const entry = path.join(__dirname, './main.js')
 

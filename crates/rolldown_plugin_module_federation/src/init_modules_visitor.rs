@@ -22,9 +22,9 @@ pub struct InitModuleVisitor<'ast, 'a> {
   pub statements: Vec<Statement<'ast>>,
 }
 
-impl<'ast, 'a> InitModuleVisitor<'ast, 'a> {
+impl InitModuleVisitor<'_, '_> {
   pub fn detect_static_module_decl(&mut self, request: &str) {
-    if is_remote_module(request, &self.options) {
+    if is_remote_module(request, self.options) {
       // import * as ns from 'app/App'
       // await ns.__mf__init__module__()
       let name = legitimize_identifier_name(request);
@@ -52,7 +52,7 @@ impl<'ast, 'a> InitModuleVisitor<'ast, 'a> {
               .ast_builder
               .member_expression_static(
                 SPAN,
-                self.ast_builder.expression_identifier_reference(SPAN, name).into(),
+                self.ast_builder.expression_identifier_reference(SPAN, name),
                 self.ast_builder.identifier_name(SPAN, INIT_MODULE),
                 false,
               )

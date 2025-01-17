@@ -16,6 +16,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   asset::asset_generator::AssetGenerator,
+  bundler::DropMessage,
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
@@ -40,6 +41,11 @@ impl GenerateStage<'_> {
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
     let (mut instantiated_chunks, index_chunk_to_assets) =
       self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
+
+    let symbol_db = std::mem::take(&mut self.link_output.symbol_db);
+    self.tx.send(DropMessage::Value(Box::new(symbol_db))).unwrap();
+    let ast_table = std::mem::take(&mut self.link_output.ast_table);
+    self.tx.send(DropMessage::Value(Box::new(ast_table))).unwrap();
 
     render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
 

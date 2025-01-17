@@ -16,6 +16,11 @@ use rolldown_plugin::{
 use std::sync::Arc;
 use tracing_chrome::FlushGuard;
 
+pub(crate) enum DropMessage<T: Send> {
+  Value(T),
+  Close,
+}
+
 pub struct Bundler {
   pub closed: bool,
   pub(crate) fs: OsFileSystem,
@@ -145,8 +150,21 @@ impl Bundler {
 
     let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
 
+    let (tx, rx): (
+      std::sync::mpsc::Sender<DropMessage<Box<dyn Send>>>,
+      std::sync::mpsc::Receiver<DropMessage<Box<dyn Send>>>,
+    ) = std::sync::mpsc::channel();
+
+    let handle = std::thread::spawn(move || {
+      while let Ok(msg) = rx.recv() {
+        match msg {
+          DropMessage::Value(value) => drop(value),
+          DropMessage::Close => break,
+        }
+      }
+    });
     let bundle_output =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
+      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver, tx.clone())
         .generate()
         .await; // Notice we don't use `?` to break the control flow here.
 
@@ -165,6 +183,9 @@ impl Bundler {
     self.plugin_driver.generate_bundle(&mut output.assets, is_write, &self.options).await?;
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
+
+    tx.send(DropMessage::Close).unwrap();
+    handle.join().unwrap();
 
     Ok(output)
   }

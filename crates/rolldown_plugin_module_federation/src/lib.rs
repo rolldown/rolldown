@@ -1,17 +1,20 @@
 use std::borrow::Cow;
 
+mod init_modules_visitor;
 mod option;
+mod utils;
 pub use option::{ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
   ast::{
     ast::{ImportOrExportKind, Statement},
-    AstBuilder, NONE,
+    AstBuilder, VisitMut, NONE,
   },
   span::SPAN,
 };
 use rolldown_common::EmittedChunk;
 use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::concat_string;
+use utils::is_remote_module;
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 const INIT_HOST: &str = "mf:init-host.js";
@@ -104,21 +107,14 @@ impl Plugin for ModuleFederationPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier == REMOTE_ENTRY || args.specifier == INIT_HOST {
+    if args.specifier == REMOTE_ENTRY
+      || args.specifier == INIT_HOST
+      || is_remote_module(args.specifier, &self.options)
+    {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
         id: args.specifier.to_string(),
         ..Default::default()
       }));
-    }
-    if let Some(remotes) = self.options.remotes.as_ref() {
-      for remote in remotes {
-        if args.specifier.starts_with(&remote.name) {
-          return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-            id: args.specifier.to_string(),
-            ..Default::default()
-          }));
-        }
-      }
     }
     Ok(None)
   }
@@ -140,30 +136,13 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
-    if let Some(remotes) = self.options.remotes.as_ref() {
-      for remote in remotes {
-        if args.id.starts_with(&remote.name) {
-          if args.id.ends_with("/proxy") {
-            return Ok(Some(rolldown_plugin::HookLoadOutput {
-              code: concat_string!(
-                "import { loadRemote } from '@module-federation/runtime';\nexport default await loadRemote('",
-                args.id.strip_suffix("/proxy").expect("remotes should have /proxy"),
-                "')"
-              ),
-              ..Default::default()
-            }));
-          } else {
-            return Ok(Some(rolldown_plugin::HookLoadOutput {
-              code: concat_string!(
-                "import value from '",
-                args.id,
-                "/proxy'\nmodule.exports = value"
-              ),
-              ..Default::default()
-            }));
-          }
-        }
-      }
+    if is_remote_module(args.id, &self.options) {
+      return Ok(Some(rolldown_plugin::HookLoadOutput {
+        code: include_str!("remote-module.js")
+          .replace("__REMOTE__MODULE__ID__", args.id)
+          .to_string(),
+        ..Default::default()
+      }));
     }
     Ok(None)
   }
@@ -189,6 +168,19 @@ impl Plugin for ModuleFederationPlugin {
         );
       });
     }
+
+    args.ast.program.with_mut(|fields| {
+      let ast_builder = AstBuilder::new(fields.allocator);
+      let mut init_modules_visitor = init_modules_visitor::InitModuleVisitor {
+        ast_builder,
+        options: &self.options,
+        statements: vec![],
+      };
+      init_modules_visitor.visit_program(fields.program);
+      let old_body = fields.program.body.drain(..).collect::<Vec<_>>();
+      fields.program.body.extend(init_modules_visitor.statements);
+      fields.program.body.extend(old_body);
+    });
 
     Ok(args.ast)
   }

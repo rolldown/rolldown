@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import Button from '@button/button'
+import Button from 'button/button'
 
 const root = ReactDOM.createRoot(document.getElementById('app'))
 root.render(

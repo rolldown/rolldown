@@ -1,6 +1,7 @@
 {
   "name": "@test-fixture/module-federation",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@module-federation/runtime": "^0.8.8"
   },

@@ -7,6 +7,7 @@ import path from 'node:path'
 
 export default defineTest({
   config: {
+    external: ['node:assert', '@module-federation/runtime'],
     plugins: [
       moduleFederationPlugin({
         name: 'mf-remote',
@@ -15,7 +16,11 @@ export default defineTest({
           './expose': './expose.js',
         },
         remotes: {
-          app: 'app@' + path.join(import.meta.dirname, './dist/expose.js'),
+          app: {
+            name: 'app',
+            type: 'module',
+            entry: path.join(import.meta.dirname, './dist/remote-entry.js'),
+          },
         },
       }),
     ],
@@ -39,5 +44,9 @@ export default defineTest({
     const remoteExpose = await remote.get('./expose')
     expect(remoteExpose.value).toBe('expose')
     expect(typeof remote.init).toBe('function')
+
+    // Test host
+    // @ts-ignore
+    // await import('./dist/main.js')
   },
 })

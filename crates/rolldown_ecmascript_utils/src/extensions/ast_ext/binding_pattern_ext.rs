@@ -15,25 +15,25 @@ pub trait BindingPatternExt<'ast> {
 
 impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
   fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier<'ast>>; 1]> {
-    let mut queue = vec![&self.kind];
+    let mut stack = vec![&self.kind];
     let mut ret = SmallVec::default();
-    while let Some(binding_kind) = queue.pop() {
+    while let Some(binding_kind) = stack.pop() {
       match binding_kind {
         ast::BindingPatternKind::BindingIdentifier(id) => {
           ret.push(id);
         }
         ast::BindingPatternKind::ArrayPattern(arr_pat) => {
-          queue.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());
+          stack.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());
         }
         ast::BindingPatternKind::ObjectPattern(obj_pat) => {
           if let Some(obj_pat) = &obj_pat.rest {
-            queue.push(&obj_pat.argument.kind);
+            stack.push(&obj_pat.argument.kind);
           }
-          queue.extend(obj_pat.properties.iter().map(|prop| &prop.value.kind).rev());
+          stack.extend(obj_pat.properties.iter().map(|prop| &prop.value.kind).rev());
         }
         //
         ast::BindingPatternKind::AssignmentPattern(assign_pat) => {
-          queue.push(&assign_pat.left.kind);
+          stack.push(&assign_pat.left.kind);
         }
       };
     }

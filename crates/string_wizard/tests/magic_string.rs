@@ -405,4 +405,14 @@ mod misc {
     s.prepend("xyz");
     assert_eq!(s.to_string(), "xyzxyz");
   }
+
+  #[test]
+  fn has_changed() {
+    let mut s = MagicString::new(" abcde   fghijkl ");
+    assert!(s.clone().prepend("  ").has_changed());
+    assert!(s.clone().overwrite(1, 2, "b").has_changed());
+    assert!(s.clone().remove(1, 6).has_changed());
+    s.indent();
+    assert!(s.has_changed());
+  }
 }

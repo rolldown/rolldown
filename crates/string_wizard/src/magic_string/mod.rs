@@ -83,6 +83,11 @@ impl<'text> MagicString<'text> {
     self.len() == 0
   }
 
+  /// Indicates if the string has been changed.
+  pub fn has_changed(&self) -> bool {
+    self.source.len() != self.len() || self.source != self.to_string()
+  }
+
   fn prepend_intro(&mut self, content: impl Into<CowStr<'text>>) {
     self.intro.push_front(content.into());
   }

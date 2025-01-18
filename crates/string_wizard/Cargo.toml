@@ -17,7 +17,7 @@ serde         = { workspace = true, optional = true }
 insta = { workspace = true }
 
 [features]
-default   = ["sourcemap"]
+default   = ["sourcemap", "serde"]
 serde     = ["dep:serde", "oxc_index/serde"]
 sourcemap = ["dep:oxc_sourcemap"]
 

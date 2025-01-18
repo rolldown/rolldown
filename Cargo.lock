@@ -1633,7 +1633,7 @@ dependencies = [
  "rustc-hash",
  "self_cell",
  "serde_json",
- "string_wizard 0.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "string_wizard 0.0.25",
 ]
 
 [[package]]
@@ -2140,7 +2140,7 @@ dependencies = [
  "rustc-hash",
  "sanitize-filename",
  "serde",
- "string_wizard 0.0.25",
+ "string_wizard 0.0.26",
  "sugar_path",
  "testing_macros",
  "tokio",
@@ -2216,7 +2216,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "string_wizard 0.0.25",
+ "string_wizard 0.0.26",
  "sugar_path",
  "tokio",
 ]
@@ -2293,7 +2293,7 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "serde",
- "string_wizard 0.0.25",
+ "string_wizard 0.0.26",
  "tokio",
  "tracing",
  "typedmap",
@@ -2416,7 +2416,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_testing",
  "rustc-hash",
- "string_wizard 0.0.25",
+ "string_wizard 0.0.26",
  "tokio",
 ]
 
@@ -2825,8 +2825,9 @@ checksum = "e9557cb6521e8d009c51a8666f09356f4b817ba9ba0981a305bd86aee47bd35c"
 [[package]]
 name = "string_wizard"
 version = "0.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bb58bc508ea1c7f771111be7870d0c8079410c0fe7e026454c7baa7998cf2a5"
 dependencies = [
- "insta",
  "oxc_index",
  "oxc_sourcemap",
  "rustc-hash",
@@ -2835,10 +2836,9 @@ dependencies = [
 
 [[package]]
 name = "string_wizard"
-version = "0.0.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bb58bc508ea1c7f771111be7870d0c8079410c0fe7e026454c7baa7998cf2a5"
+version = "0.0.26"
 dependencies = [
+ "insta",
  "oxc_index",
  "oxc_sourcemap",
  "rustc-hash",

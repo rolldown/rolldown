@@ -3,7 +3,7 @@ description = "manipulate string like a wizard"
 edition     = "2021"
 license     = "MIT"
 name        = "string_wizard"
-version     = "0.0.25"
+version     = "0.0.26"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

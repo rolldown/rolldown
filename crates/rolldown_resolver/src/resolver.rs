@@ -11,23 +11,23 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, PackageJson as OxcPackageJson, Resolution, ResolveError,
-  ResolveOptions as OxcResolverOptions, ResolverGeneric, TsconfigOptions,
+  EnforceExtension, FsCache, PackageJsonSerde as OxcPackageJson, PackageType, Resolution,
+  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsconfigOptions,
 };
 
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   cwd: PathBuf,
-  default_resolver: ResolverGeneric<T>,
+  default_resolver: ResolverGeneric<FsCache<T>>,
   // Resolver for `import '...'` and `import(...)`
-  import_resolver: ResolverGeneric<T>,
+  import_resolver: ResolverGeneric<FsCache<T>>,
   // Resolver for `require('...')`
-  require_resolver: ResolverGeneric<T>,
+  require_resolver: ResolverGeneric<FsCache<T>>,
   // Resolver for `@import '...'` and `url('...')`
-  css_resolver: ResolverGeneric<T>,
+  css_resolver: ResolverGeneric<FsCache<T>>,
   // Resolver for `new URL(..., import.meta.url)`
-  new_url_resolver: ResolverGeneric<T>,
+  new_url_resolver: ResolverGeneric<FsCache<T>>,
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
@@ -138,8 +138,10 @@ impl<F: FileSystem + Default> Resolver<F> {
       ..resolve_options_with_default_conditions.clone()
     };
 
-    let default_resolver =
-      ResolverGeneric::new_with_file_system(fs, resolve_options_with_default_conditions);
+    let default_resolver = ResolverGeneric::new_with_cache(
+      Arc::new(FsCache::new(fs)),
+      resolve_options_with_default_conditions,
+    );
     let import_resolver =
       default_resolver.clone_with_options(resolve_options_with_import_conditions);
     let require_resolver =
@@ -234,7 +236,10 @@ impl<F: FileSystem + Default> Resolver<F> {
     } else {
       let pkg_json = Arc::new(
         PackageJson::new(oxc_pkg_json.path.clone())
-          .with_type(oxc_pkg_json.r#type.as_ref())
+          .with_type(oxc_pkg_json.r#type.map(|t| match t {
+            PackageType::CommonJs => "commonjs",
+            PackageType::Module => "module",
+          }))
           .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
       );
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
@@ -244,7 +249,9 @@ impl<F: FileSystem + Default> Resolver<F> {
 }
 
 /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
-fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
+fn infer_module_def_format<F: FileSystem + Default>(
+  info: &Resolution<FsCache<F>>,
+) -> ModuleDefFormat {
   let fmt = ModuleDefFormat::from_path(info.path());
 
   if !matches!(fmt, ModuleDefFormat::Unknown) {
@@ -257,12 +264,11 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   if let Some(package_json) =
     is_js_like_extension.then(|| info.package_json()).and_then(|item| item)
   {
-    let type_value = package_json.r#type.as_ref().and_then(|v| v.as_str());
-    if type_value == Some("module") {
-      return ModuleDefFormat::EsmPackageJson;
-    } else if type_value == Some("commonjs") {
-      return ModuleDefFormat::CjsPackageJson;
-    }
+    return match package_json.r#type {
+      Some(PackageType::CommonJs) => ModuleDefFormat::CjsPackageJson,
+      Some(PackageType::Module) => ModuleDefFormat::EsmPackageJson,
+      _ => ModuleDefFormat::Unknown,
+    };
   }
   ModuleDefFormat::Unknown
 }

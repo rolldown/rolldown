@@ -243,7 +243,7 @@ impl GenerateStage<'_> {
     });
   }
 
-  #[allow(clippy::too_many_lines)] // TODO(hyf0): refactor
+  #[allow(clippy::too_many_lines, clippy::cast_precision_loss)] // TODO(hyf0): refactor
   fn apply_advanced_chunks(
     &mut self,
     index_splitting_info: &IndexSplittingInfo,
@@ -408,11 +408,85 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      if let Some(allow_min_size) = match_groups[this_module_group.match_group_index]
+      let allow_min_size = match_groups[this_module_group.match_group_index]
         .min_size
         .map_or(chunking_options.min_size, Some)
+        .unwrap_or(0.0);
+
+      if this_module_group.sizes < allow_min_size {
+        continue;
+      }
+
+      if let Some(allow_max_size) = match_groups[this_module_group.match_group_index]
+        .max_size
+        .map_or(chunking_options.max_size, Some)
       {
-        if this_module_group.sizes < allow_min_size {
+        if this_module_group.sizes > allow_max_size {
+          // If the size of the group is larger than the max size, we should split the group into smaller groups.
+          let mut modules = this_module_group.modules.iter().copied().collect::<Vec<_>>();
+          modules.sort_by_key(|module_idx| {
+            (
+              // smaller size goes first
+              self.link_output.module_table.modules[*module_idx].size(),
+              self.link_output.module_table.modules[*module_idx].stable_id(),
+              self.link_output.module_table.modules[*module_idx].exec_order(),
+            )
+          });
+          // Make sure we sort the modules based on size in the end. Since we compute new group size from left to right, if a giant
+          // module is at the most left, it may cause a split-able group can't be split.
+
+          let mut left_size = 0f64;
+          let mut next_left_index = 0;
+          let mut right_size = 0f64;
+          let mut next_right_index = modules.len() - 1;
+
+          while left_size < allow_min_size && next_left_index < modules.len() {
+            left_size +=
+              self.link_output.module_table.modules[modules[next_left_index]].size() as f64;
+            next_left_index += 1;
+          }
+
+          while right_size < allow_min_size && next_right_index > 0 {
+            right_size +=
+              self.link_output.module_table.modules[modules[next_right_index]].size() as f64;
+            next_right_index -= 1;
+          }
+
+          if next_right_index < next_left_index {
+            // This branch means the group can't be split into two groups with the satisfied min size requirement.
+            // In this case, we just ignore the max size requirement and keep the group as a whole.
+          } else {
+            // TODO: Though, [0..next_left_index] is a valid group, we want to find a best split index that makes files in left group are in the same disk location.
+            let mut split_size = left_size;
+            loop {
+              if next_left_index <= next_right_index {
+                let next_size = split_size
+                  + self.link_output.module_table.modules[modules[next_left_index]].size() as f64;
+                if next_size > allow_max_size {
+                  break;
+                }
+                split_size = next_size;
+                next_left_index += 1;
+              } else {
+                break;
+              }
+            }
+            module_groups.push(ModuleGroup {
+              name: this_module_group.name.clone(),
+              match_group_index: this_module_group.match_group_index,
+              modules: modules[..next_left_index].iter().copied().collect(),
+              priority: this_module_group.priority,
+              sizes: split_size,
+            });
+            module_groups.push(ModuleGroup {
+              name: this_module_group.name.clone(),
+              match_group_index: this_module_group.match_group_index,
+              modules: modules[next_left_index..].iter().copied().collect(),
+              priority: this_module_group.priority,
+              sizes: right_size,
+            });
+          }
+
           continue;
         }
       }

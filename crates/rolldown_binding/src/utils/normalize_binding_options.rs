@@ -214,6 +214,7 @@ pub fn normalize_binding_options(
       min_share_count: inner.min_share_count,
       min_module_size: None,
       max_module_size: None,
+      max_size: None,
       groups: inner.groups.map(|inner| {
         inner
           .into_iter()
@@ -225,6 +226,7 @@ pub fn normalize_binding_options(
             min_share_count: item.min_share_count,
             max_module_size: None,
             min_module_size: None,
+            max_size: None,
           })
           .collect::<Vec<_>>()
       }),

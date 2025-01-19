@@ -29,7 +29,7 @@ let a = function(a$1) {
 	a$1[a$1["implicit_number"] = 0] = "implicit_number";
 	a$1[a$1["explicit_number"] = 123] = "explicit_number";
 	a$1["explicit_string"] = "xyz";
-	a$1[a$1["non_constant"] = a$1.foo] = "non_constant";
+	a$1[a$1["non_constant"] = foo] = "non_constant";
 	return a$1;
 }({});
 
@@ -62,7 +62,7 @@ console.log([
 +    a$1[a$1["implicit_number"] = 0] = "implicit_number";
 +    a$1[a$1["explicit_number"] = 123] = "explicit_number";
 +    a$1["explicit_string"] = "xyz";
-+    a$1[a$1["non_constant"] = a$1.foo] = "non_constant";
++    a$1[a$1["non_constant"] = foo] = "non_constant";
 +    return a$1;
 +})({});
 +console.log([a.implicit_number, a.explicit_number, a.explicit_string, a.non_constant]);

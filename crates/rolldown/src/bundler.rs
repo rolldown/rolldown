@@ -156,6 +156,13 @@ impl Bundler {
         .render_error(&HookRenderErrorArgs { errors: errs, cwd: &self.options.cwd })
         .await?;
     }
+    for ele in link_stage_output.module_table.modules.iter_mut() {
+      let Some(m) = ele.as_normal_mut() else {
+        continue;
+      };
+
+      self.cache.insert_scope(m.id.resource_id().clone(), std::mem::take(&mut m.scope.inner));
+    }
 
     let mut output = bundle_output?;
 

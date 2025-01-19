@@ -2,7 +2,7 @@ use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId, SymbolTable};
 
 #[derive(Debug)]
 pub struct AstScopes {
-  inner: ScopeTree,
+  pub inner: ScopeTree,
 }
 
 impl AstScopes {

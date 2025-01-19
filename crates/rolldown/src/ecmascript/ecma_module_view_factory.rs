@@ -60,7 +60,49 @@ pub struct CreateEcmaViewReturn {
   pub symbols: SymbolRefDbForModule,
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
 }
+pub async fn try_parse_ecma_ast_with_cache(
+  ctx: &mut CreateModuleContext<'_>,
+  module_id: &ModuleId,
+  stable_id: &str,
+  args: &CreateModuleViewArgs,
+) -> BuildResult<ParseToEcmaAstResult> {
+  if ctx.options.experimental.is_incremental_build_enabled() {
+    if let Some(v) = ctx.cache.get_ecma_ast(module_id.as_ref()).and_then(|ecma_ast| {
+      ctx.cache.get_symbol_table(module_id.as_ref()).and_then(|symbol_table| {
+        ctx.cache.get_has_lazy_export(module_id.as_ref()).and_then(|has_lazy_export| {
+          ctx.cache.remove_scope(module_id.as_ref()).map(|(_, scope_tree)| ParseToEcmaAstResult {
+            ast: ecma_ast.clone_with_another_arena(),
+            symbol_table: symbol_table.clone_with_another_arena(),
+            scope_tree,
+            has_lazy_export: *has_lazy_export,
+            warning: vec![],
+          })
+        })
+      })
+    }) {
+      return Ok(v);
+    };
+  }
+  let ret = parse_to_ecma_ast(
+    ctx.plugin_driver,
+    ctx.resolved_id.id.as_path(),
+    stable_id,
+    ctx.options,
+    &ctx.module_type,
+    args.source.clone(),
+    ctx.replace_global_define_config.as_ref(),
+    ctx.is_user_defined_entry,
+  )?;
 
+  if ctx.options.experimental.is_incremental_build_enabled() {
+    ctx.cache.insert_ecma_ast(module_id.resource_id().clone(), ret.ast.clone_with_another_arena());
+    ctx
+      .cache
+      .insert_symbol_table(module_id.as_ref().into(), ret.symbol_table.clone_with_another_arena());
+    ctx.cache.insert_has_lazy_export(module_id.as_ref().into(), ret.has_lazy_export);
+  }
+  Ok(ret)
+}
 #[allow(clippy::too_many_lines)]
 pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
@@ -69,16 +111,7 @@ pub async fn create_ecma_view(
   let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));
   let stable_id = id.stabilize(&ctx.options.cwd);
 
-  let parse_result = parse_to_ecma_ast(
-    ctx.plugin_driver,
-    ctx.resolved_id.id.as_path(),
-    &stable_id,
-    ctx.options,
-    &ctx.module_type,
-    args.source.clone(),
-    ctx.replace_global_define_config.as_ref(),
-    ctx.is_user_defined_entry,
-  )?;
+  let parse_result = try_parse_ecma_ast_with_cache(ctx, &id, &stable_id, &args).await?;
 
   let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export, warning } =
     parse_result;

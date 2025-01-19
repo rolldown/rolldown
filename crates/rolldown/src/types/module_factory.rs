@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleIdx, ModuleType, ResolvedId, StrOrBytes,
+  side_effects::HookSideEffects, Cache, ModuleIdx, ModuleType, ResolvedId, StrOrBytes,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::SharedPluginDriver;
@@ -17,6 +19,7 @@ pub struct CreateModuleContext<'a> {
   pub warnings: &'a mut Vec<BuildDiagnostic>,
   pub replace_global_define_config: Option<ReplaceGlobalDefinesConfig>,
   pub is_user_defined_entry: bool,
+  pub cache: &'a Cache,
 }
 
 pub struct CreateModuleViewArgs {

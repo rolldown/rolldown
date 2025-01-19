@@ -24,6 +24,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 use crate::{SharedOptions, SharedResolver};
@@ -60,6 +61,7 @@ pub struct ModuleLoader {
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
+  pub counter: Arc<AtomicU64>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -117,6 +119,7 @@ impl ModuleLoader {
     tokio::spawn(async { task.run() });
 
     Ok(Self {
+      counter: Arc::new(AtomicU64::new(0)),
       tx,
       rx,
       options,
@@ -204,6 +207,7 @@ impl ModuleLoader {
             owner,
             is_user_defined_entry,
             assert_module_type,
+            self.counter.clone(),
           );
 
           tokio::spawn(task.run());
@@ -454,7 +458,7 @@ impl ModuleLoader {
 
     extra_entry_points.sort_unstable_by_key(|entry| modules[entry.id].stable_id());
     entry_points.extend(extra_entry_points);
-
+    dbg!(&self.counter);
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbol_ref_db: self.symbol_ref_db,

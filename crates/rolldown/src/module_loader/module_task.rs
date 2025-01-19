@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use futures::future::join_all;
-use oxc::span::Span;
+use oxc::span::{Atom, Span};
 use oxc_index::IndexVec;
 use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
 use rolldown_resolver::ResolveError;
@@ -11,8 +11,15 @@ use rolldown_utils::{
   ecmascript::{self, legitimize_identifier_name},
   indexmap::FxIndexSet,
 };
-use std::sync::Arc;
+use std::{
+  ops::Index,
+  sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+  },
+};
 use sugar_path::SugarPath;
+use tokio::time::Instant;
 
 use rolldown_common::{
   EcmaRelated, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
@@ -53,6 +60,7 @@ pub struct ModuleTask {
   is_user_defined_entry: bool,
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
+  time_counter: Arc<AtomicU64>,
 }
 
 impl ModuleTask {
@@ -63,8 +71,10 @@ impl ModuleTask {
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
+    time_counter: Arc<AtomicU64>,
   ) -> Self {
     Self {
+      time_counter,
       ctx,
       module_idx: idx,
       resolved_id,
@@ -76,6 +86,7 @@ impl ModuleTask {
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
+    let start = Instant::now();
     if let Err(errs) = self.run_inner().await {
       self
         .ctx
@@ -84,6 +95,7 @@ impl ModuleTask {
         .await
         .expect("Send should not fail");
     }
+    self.time_counter.fetch_add(start.elapsed().as_nanos() as u64, Ordering::SeqCst);
   }
 
   #[expect(clippy::too_many_lines)]
@@ -147,6 +159,7 @@ impl ModuleTask {
         module_type: module_type.clone(),
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
         is_user_defined_entry: self.is_user_defined_entry,
+        cache: &self.ctx.cache,
       },
       CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
     )
@@ -164,14 +177,28 @@ impl ModuleTask {
       raw_import_records = ecma_raw_import_records;
     }
 
+    if self.ctx.options.experimental.is_incremental_build_enabled() {
+      self.ctx.cache.insert_ecma_ast(id.resource_id().clone(), ast.clone_with_another_arena());
+      self.ctx.cache.insert_symbol_table(id.as_ref().into(), symbols.clone_with_another_arena());
+    }
+
     let resolved_deps = self
-      .resolve_dependencies(
+      .try_resolve_dependencies_with_cache(
+        &id,
         &raw_import_records,
         ecma_view.source.clone(),
         &mut warnings,
         &module_type,
       )
       .await?;
+    // let resolved_deps = self
+    //   .resolve_dependencies(
+    //     &raw_import_records,
+    //     ecma_view.source.clone(),
+    //     &mut warnings,
+    //     &module_type,
+    //   )
+    //   .await?;
 
     if !matches!(module_type, ModuleType::Css) {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
@@ -348,6 +375,27 @@ impl ModuleTask {
       bundle_options,
     )
     .await
+  }
+
+  pub async fn try_resolve_dependencies_with_cache(
+    &mut self,
+    module_id: &ModuleId,
+    dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
+    source: ArcStr,
+    warnings: &mut Vec<BuildDiagnostic>,
+    module_type: &ModuleType,
+  ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
+    if self.ctx.options.experimental.is_incremental_build_enabled() {
+      if let Some(v) = self.ctx.cache.get_resolved_dep(module_id.as_ref()) {
+        return Ok(v.value().clone());
+      }
+    }
+
+    let v = self.resolve_dependencies(dependencies, source, warnings, module_type).await?;
+    if self.ctx.options.experimental.is_incremental_build_enabled() {
+      self.ctx.cache.insert_resolved_dep(module_id.as_ref().into(), v.clone());
+    }
+    Ok(v)
   }
 
   pub async fn resolve_dependencies(

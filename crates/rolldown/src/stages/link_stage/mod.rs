@@ -77,11 +77,7 @@ impl<'a> LinkStage<'a> {
             .iter()
             .filter_map(|rec| match rec.kind {
               ImportKind::DynamicImport => {
-                if options.inline_dynamic_imports {
-                  Some(rec.resolved_module)
-                } else {
-                  None
-                }
+                options.inline_dynamic_imports.then_some(rec.resolved_module)
               }
               ImportKind::Require => None,
               _ => Some(rec.resolved_module),

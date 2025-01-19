@@ -156,7 +156,7 @@ impl ManifestPlugin {
     ManifestChunk {
       file: chunk.filename.to_string(),
       name: Some(chunk.name.to_string()),
-      src: if chunk.facade_module_id.is_some() { Some(src) } else { None },
+      src: chunk.facade_module_id.is_some().then_some(src),
       is_entry: chunk.is_entry,
       is_dynamic_entry: chunk.is_dynamic_entry,
       imports: self.get_internal_imports(bundle, &chunk.imports),

@@ -58,7 +58,7 @@ let a_keep = function(a_keep$1) {
 	return a_keep$1;
 }({});
 let b_keep = function(b_keep$1) {
-	b_keep$1[b_keep$1["x"] = b_keep$1.foo] = "x";
+	b_keep$1[b_keep$1["x"] = foo] = "x";
 	return b_keep$1;
 }({});
 let c_keep = function(c_keep$1) {
@@ -127,7 +127,7 @@ console.log([
 +    return a_keep$1;
 +})({});
 +var b_keep = (function (b_keep$1) {
-+    b_keep$1[b_keep$1["x"] = b_keep$1.foo] = "x";
++    b_keep$1[b_keep$1["x"] = foo] = "x";
 +    return b_keep$1;
 +})({});
 +var c_keep = (function (c_keep$1) {

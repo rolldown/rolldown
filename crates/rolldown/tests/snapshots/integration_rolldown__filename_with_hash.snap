@@ -3412,7 +3412,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
 
-- entry-!~{000}~.js => entry-D7Rxx5nX.js
+- entry-!~{000}~.js => entry-BlPqB93e.js
 
 # tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot
 
@@ -3424,7 +3424,7 @@ snapshot_kind: text
 
 # tests/esbuild/ts/ts_enum_cross_module_tree_shaking
 
-- entry-!~{000}~.js => entry-BmMQYaWV.js
+- entry-!~{000}~.js => entry-DtTsj1aK.js
 
 # tests/esbuild/ts/ts_enum_define
 

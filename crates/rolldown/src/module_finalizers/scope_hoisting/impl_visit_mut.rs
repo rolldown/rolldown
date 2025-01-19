@@ -39,11 +39,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // is a node builtin module
         self.ctx.modules[importee_idx].as_normal()?;
         self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref().and_then(|alias| {
-          if alias.property_name.as_str() == "default" {
-            Some(symbol_ref.symbol)
-          } else {
-            None
-          }
+          (alias.property_name.as_str() == "default").then_some(symbol_ref.symbol)
         })
       })
       .collect::<FxHashSet<_>>();

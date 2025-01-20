@@ -157,6 +157,7 @@ export declare class MagicString {
   getUtf16ByteOffset(offset: number): number
   length(): number
   toString(): string
+  hasChanged(): boolean
   append(input: string): this
   appendLeft(index: number, input: string): this
   appendRight(index: number, input: string): this
@@ -166,6 +167,20 @@ export declare class MagicString {
   prependRight(index: number, input: string): this
   relocate(start: number, end: number, to: number): this
   remove(start: number, end: number): this
+  generateMap(options?: Partial<GenerateDecodedMapOptions>): {
+    toString: () => string;
+    toUrl: () => string;
+    toMap: () => {
+      file?: string
+      mappings: string
+      names: Array<string>
+      sourceRoot?: string
+      sources: Array<string>
+      sourcesContent?: Array<string>
+      version: number
+      x_google_ignoreList?: Array<number>
+    }
+  }
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -216,6 +231,9 @@ export interface BindingAdvancedChunksOptions {
   minSize?: number
   minShareCount?: number
   groups?: Array<BindingMatchGroup>
+  maxSize?: number
+  minModuleSize?: number
+  maxModuleSize?: number
 }
 
 export interface BindingAliasPluginAlias {
@@ -439,6 +457,9 @@ export interface BindingMatchGroup {
   priority?: number
   minSize?: number
   minShareCount?: number
+  minModuleSize?: number
+  maxModuleSize?: number
+  maxSize?: number
 }
 
 export interface BindingModuleFederationPluginOption {
@@ -690,6 +711,12 @@ export interface CompilerAssumptions {
   setPublicClassFields?: boolean
 }
 
+export interface DynamicImport {
+  start: number
+  end: number
+  moduleRequest: Span
+}
+
 export interface EcmaScriptModule {
   /**
    * Has ESM syntax.
@@ -699,10 +726,12 @@ export interface EcmaScriptModule {
    * Dynamic imports `import('foo')` are ignored since they can be used in non-ESM files.
    */
   hasModuleSyntax: boolean
-  /** Import Statements. */
+  /** Import statements. */
   staticImports: Array<StaticImport>
-  /** Export Statements. */
+  /** Export statements. */
   staticExports: Array<StaticExport>
+  /** Dynamic import expressions. */
+  dynamicImports: Array<DynamicImport>
   /** Span positions` of `import.meta` */
   importMetas: Array<Span>
 }
@@ -768,6 +797,15 @@ export type ExportLocalNameKind = /** `export { name } */
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
+}
+
+export interface GenerateDecodedMapOptions {
+  /** The filename of the file containing the original source. */
+  source?: string
+  /** Whether to include the original content in the map's `sourcesContent` array. */
+  includeContent: boolean
+  /** Whether the mapping should be high-resolution. */
+  hires: boolean | 'boundary'
 }
 
 export type HelperMode = /**

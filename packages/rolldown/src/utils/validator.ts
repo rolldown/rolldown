@@ -333,6 +333,9 @@ const GlobalsFunctionSchema = v.pipe(
 
 const AdvancedChunksSchema = v.strictObject({
   minSize: v.optional(v.number()),
+  maxSize: v.optional(v.number()),
+  minModuleSize: v.optional(v.number()),
+  maxModuleSize: v.optional(v.number()),
   minShareCount: v.optional(v.number()),
   groups: v.optional(
     v.array(
@@ -342,6 +345,9 @@ const AdvancedChunksSchema = v.strictObject({
         priority: v.optional(v.number()),
         minSize: v.optional(v.number()),
         minShareCount: v.optional(v.number()),
+        maxSize: v.optional(v.number()),
+        minModuleSize: v.optional(v.number()),
+        maxModuleSize: v.optional(v.number()),
       }),
     ),
   ),

@@ -153,7 +153,7 @@ bench-node-par:
 # RELEASING
 
 bump-packages *args:
-    node ./scripts/misc/bump-version.js {{ args }}
+    node --import @oxc-node/core/register ./scripts/misc/bump-version.js {{ args }}
 
 changelog:
     pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json

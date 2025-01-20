@@ -1,3 +1,60 @@
+# [1.0.0-beta.2](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2025-01-20)
+
+
+### Bug Fixes
+
+* bailout module.exports for eliminate interop default property access ([#3369](https://github.com/rolldown/rolldown/issues/3369)) ([4f55359](https://github.com/rolldown/rolldown/commit/4f553596cbf103169546e8c8c1f15368ed262640)), closes [#3364](https://github.com/rolldown/rolldown/issues/3364)
+* **cjs:** named exports if module wrapped ([#3235](https://github.com/rolldown/rolldown/issues/3235)) ([ee80c98](https://github.com/rolldown/rolldown/commit/ee80c98085d36c2949d9ee4734ac900e0b96e68a))
+* **cli:** allow load ts config file that are not in the working directory ([#3238](https://github.com/rolldown/rolldown/issues/3238)) ([fd29aff](https://github.com/rolldown/rolldown/commit/fd29affd53f3c641c5ed1e38a709cfbe2bba3e46)), closes [#3237](https://github.com/rolldown/rolldown/issues/3237)
+* **cli:** call options hook once with multiply output ([#3348](https://github.com/rolldown/rolldown/issues/3348)) ([ae34f38](https://github.com/rolldown/rolldown/commit/ae34f383870acad76e829fc1ab6700b7723ef59b))
+* **cli:** remove config default value ([#3307](https://github.com/rolldown/rolldown/issues/3307)) ([bcb0b35](https://github.com/rolldown/rolldown/commit/bcb0b35fda735a1266378e00854d87b54fbe7e9d))
+* dynamic require by unused function ([#3271](https://github.com/rolldown/rolldown/issues/3271)) ([d07e45c](https://github.com/rolldown/rolldown/commit/d07e45cce088f0f5acee935c496f01797e89094f)), closes [#3268](https://github.com/rolldown/rolldown/issues/3268) [/github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L3220-L3245](https://github.com//github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go/issues/L3220-L3245)
+* extract `RestElement` in `ObjectPattern`  ([#3374](https://github.com/rolldown/rolldown/issues/3374)) ([a65dcfe](https://github.com/rolldown/rolldown/commit/a65dcfedf5d6f2c52fbd173131ed5284567eb82f))
+* **live-bindings:** remove unnecessary bindings for the default export decl ([#3276](https://github.com/rolldown/rolldown/issues/3276)) ([2cb364b](https://github.com/rolldown/rolldown/commit/2cb364b30c36284a2887803eb648ca427d0acf9d))
+* make outdir behavior compatible with rollup if file is used ([#3304](https://github.com/rolldown/rolldown/issues/3304)) ([a1fb0ff](https://github.com/rolldown/rolldown/commit/a1fb0ffbcac5259a3b78a4d8dfa46b9a5862827c))
+* **plugin/json:** tree shake json named exports ([#3346](https://github.com/rolldown/rolldown/issues/3346)) ([b8f0e19](https://github.com/rolldown/rolldown/commit/b8f0e19b2e6b0024e61ae07496a0f988bc195925))
+* run just setup limited node version ([#3305](https://github.com/rolldown/rolldown/issues/3305)) ([14867ce](https://github.com/rolldown/rolldown/commit/14867ce9fdde0ec50692c4c2d77f0072ebce1018))
+* **splitting:** ensure correct __export symbol reference ([#3289](https://github.com/rolldown/rolldown/issues/3289)) ([31cc7b8](https://github.com/rolldown/rolldown/commit/31cc7b82e265ae53797ffabf7dda4c02a1c12b8b))
+* **umd:** should render `exports` correctly ([#3270](https://github.com/rolldown/rolldown/issues/3270)) ([6da18a6](https://github.com/rolldown/rolldown/commit/6da18a67dc6f6713ba519812eeb949496893f5a2)), closes [#3269](https://github.com/rolldown/rolldown/issues/3269)
+* **watcher:** respect file option for BundleEndEventData#output ([#3308](https://github.com/rolldown/rolldown/issues/3308)) ([09a6157](https://github.com/rolldown/rolldown/commit/09a6157e8a0aa5652c294fc940931d6202d4c765))
+
+
+### Features
+
+* add rolldown_plugin_module_federation crate ([#3328](https://github.com/rolldown/rolldown/issues/3328)) ([d046b47](https://github.com/rolldown/rolldown/commit/d046b47ef9af6900bb5a0b88cdb2013db4147c8d))
+* **advanced_chunks:** support `max_size` option ([#3383](https://github.com/rolldown/rolldown/issues/3383)) ([71c7e93](https://github.com/rolldown/rolldown/commit/71c7e93ae98dde8eb1bf3b0b8639abd49e7b28b3))
+* **advanced-chunks:** support `minModuleSize` and `maxModuleSize` options ([#3361](https://github.com/rolldown/rolldown/issues/3361)) ([1c2ef25](https://github.com/rolldown/rolldown/commit/1c2ef25de32a0d49b2bbfa4b3a0050a7d3c578a2))
+* basic cache ([#3339](https://github.com/rolldown/rolldown/issues/3339)) ([9e86366](https://github.com/rolldown/rolldown/commit/9e86366dffc3cc740541cd0c1d53bafe3441cc9d))
+* **cli:** resolve `rolldown.config` by default when `-c` is unspecified ([#3250](https://github.com/rolldown/rolldown/issues/3250)) ([f90856a](https://github.com/rolldown/rolldown/commit/f90856ad7b4a028369dcd2627c860343910d1333)), closes [#3248](https://github.com/rolldown/rolldown/issues/3248)
+* eliminate unnecessary default property access ([#3312](https://github.com/rolldown/rolldown/issues/3312)) ([cf4c254](https://github.com/rolldown/rolldown/commit/cf4c254ef613ca8dca381ca1831d9f9c122e3d13)), closes [1#L191-L201](https://github.com/1/issues/L191-L201)
+* esm_flag analyzer ([#3257](https://github.com/rolldown/rolldown/issues/3257)) ([3484a68](https://github.com/rolldown/rolldown/commit/3484a686c6aaa883682ab83e77fbe5ddc4005597))
+* export `RolldownPluginOption` type ([#3360](https://github.com/rolldown/rolldown/issues/3360)) ([f24e496](https://github.com/rolldown/rolldown/commit/f24e4969c4849c4b8d3e3fb2d29ee0977f5ca7ce))
+* export parseAst and parseAstAsync from 'rolldown/parseAst' ([#3208](https://github.com/rolldown/rolldown/issues/3208)) ([b2a06cb](https://github.com/rolldown/rolldown/commit/b2a06cbf810a3e411bb6aa51c471f24b7c22844d))
+* give error when using both the file and the dir option ([#3282](https://github.com/rolldown/rolldown/issues/3282)) ([82b4e30](https://github.com/rolldown/rolldown/commit/82b4e3062abaa7e4acf3ee1eea0553c7fd8ef13a))
+* merge generated `__toESM` calls of cjs modules ([#3343](https://github.com/rolldown/rolldown/issues/3343)) ([400b5e4](https://github.com/rolldown/rolldown/commit/400b5e4a3c7955feab5833bb287c36fb82c7ebbf))
+* **mf:** add init host code for entry ([#3365](https://github.com/rolldown/rolldown/issues/3365)) ([fc9d5a5](https://github.com/rolldown/rolldown/commit/fc9d5a5833ea5381af6d1da26de2d967c32bcd11))
+* **mf:** add option ([#3329](https://github.com/rolldown/rolldown/issues/3329)) ([72766d5](https://github.com/rolldown/rolldown/commit/72766d543b6836a93b3fd63d7dcd71e59499ecc6))
+* **mf:** generate remote entry ([#3330](https://github.com/rolldown/rolldown/issues/3330)) ([5cf14c3](https://github.com/rolldown/rolldown/commit/5cf14c352a23865a9d4d3709687935a903997900))
+* **mf:** load remote entry module ([#3366](https://github.com/rolldown/rolldown/issues/3366)) ([5bb588b](https://github.com/rolldown/rolldown/commit/5bb588b1002a7c54ceae10a63bfd8f8935c4c68d))
+* **node:** expose `maxSize` and `maxModuleSize` options ([#3386](https://github.com/rolldown/rolldown/issues/3386)) ([0be6271](https://github.com/rolldown/rolldown/commit/0be627144b29f4c8b90bb1701ac4a381f9081421))
+* **node:** expose moduleFederationPlugin ([#3352](https://github.com/rolldown/rolldown/issues/3352)) ([abc2c0a](https://github.com/rolldown/rolldown/commit/abc2c0a619d61f84b188ad0f7f87871176a88b79))
+* **node:** support `output.target` ([#3254](https://github.com/rolldown/rolldown/issues/3254)) ([b123256](https://github.com/rolldown/rolldown/commit/b1232566d6db04d06b55cedfee27ba0cca63e568)), closes [#3252](https://github.com/rolldown/rolldown/issues/3252)
+* **string_wizard:** add `.hasChanged()` ([#3379](https://github.com/rolldown/rolldown/issues/3379)) ([0d33eef](https://github.com/rolldown/rolldown/commit/0d33eef53148a166b287b99770cdd08fc73ee49f)), closes [/github.com/nuxt/nuxt/pull/30066#issuecomment-2532929079](https://github.com//github.com/nuxt/nuxt/pull/30066/issues/issuecomment-2532929079)
+* support emit chunk at buildStart hook ([#3357](https://github.com/rolldown/rolldown/issues/3357)) ([8c96981](https://github.com/rolldown/rolldown/commit/8c96981fb5e4a8a828cad02edf598dae1e60f306)), closes [/github.com/rolldown/rolldown/pull/3330/files#r1915910715](https://github.com//github.com/rolldown/rolldown/pull/3330/files/issues/r1915910715)
+* support PluginContext emitChunk ([#3327](https://github.com/rolldown/rolldown/issues/3327)) ([dc3fc06](https://github.com/rolldown/rolldown/commit/dc3fc06bccdda2d342c2da25c2e6bfee93b8d9cb)), closes [/github.com/rollup/rollup/blob/master/src/Chunk.ts#L420](https://github.com//github.com/rollup/rollup/blob/master/src/Chunk.ts/issues/L420)
+
+
+### Performance Improvements
+
+* `into_binding_chunk_modules` when chunk is large  ([#3267](https://github.com/rolldown/rolldown/issues/3267)) ([c7582a6](https://github.com/rolldown/rolldown/commit/c7582a6a8848c0281897fb672a05d0ad67e82939))
+* cache raw_source and module_type ([#3341](https://github.com/rolldown/rolldown/issues/3341)) ([6d849ea](https://github.com/rolldown/rolldown/commit/6d849eaa8f567e187769fddd3d79057f87a530ca))
+* improve hook filter related logic in `rolldown_binding` ([#3266](https://github.com/rolldown/rolldown/issues/3266)) ([65e3d8a](https://github.com/rolldown/rolldown/commit/65e3d8ad8d736fc23feb6edf0a911f9505dee529)), closes [#3265](https://github.com/rolldown/rolldown/issues/3265)
+* **link_stage:** improve `LinkStage#sort_modules` ([#3318](https://github.com/rolldown/rolldown/issues/3318)) ([8bb8e93](https://github.com/rolldown/rolldown/commit/8bb8e93c9dddd911d3781ebba2571b996537799a))
+* **link_stage:** improve `LinkStage#wrap_modules` ([#3321](https://github.com/rolldown/rolldown/issues/3321)) ([35fb1f8](https://github.com/rolldown/rolldown/commit/35fb1f881c48fcabe7137ba20e90d02d58cd3c5e)), closes [/github.com/rolldown/rolldown/blob/42ee4c997588b2ee205eceae36b48a18c95aed96/crates/rolldown/src/stages/link_stage/wrapping.rs#L89-L101](https://github.com//github.com/rolldown/rolldown/blob/42ee4c997588b2ee205eceae36b48a18c95aed96/crates/rolldown/src/stages/link_stage/wrapping.rs/issues/L89-L101)
+* parallel `to_module_info` ([#3293](https://github.com/rolldown/rolldown/issues/3293)) ([5571513](https://github.com/rolldown/rolldown/commit/5571513ecf6c6e642e9e7b588acf1b299f38d43c))
+
+
+
 # [1.0.0-beta.1](https://github.com/rolldown/rolldown/compare/v0.15.1...v1.0.0-beta.1) (2024-12-25)
 
 

@@ -2,5 +2,6 @@
   "name": "@test-fixture/build",
   "devDependencies": {
     "rolldown-tests": "workspace:*"
-  }
+  },
+  "version": "1.0.0-beta.2"
 }

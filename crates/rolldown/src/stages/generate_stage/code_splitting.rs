@@ -175,35 +175,40 @@ impl GenerateStage<'_> {
       .chunk_table
       .iter_enumerated()
       .sorted_unstable_by(|(index_a, a), (index_b, b)| {
+        // Helper constants
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
         match (&a.kind, &b.kind) {
-          (ChunkKind::EntryPoint { is_user_defined, .. }, ChunkKind::Common) => {
-            if *is_user_defined {
-              a_should_be_first
-            } else {
-              b_should_be_first
-            }
+          // EntryPoint (user-defined) should come before Common
+          (ChunkKind::EntryPoint { is_user_defined: true, .. }, ChunkKind::Common) => {
+            a_should_be_first
           }
-          (ChunkKind::Common, ChunkKind::EntryPoint { is_user_defined, .. }) => {
-            if *is_user_defined {
-              b_should_be_first
-            } else {
-              a_should_be_first
-            }
+          (ChunkKind::Common, ChunkKind::EntryPoint { is_user_defined: true, .. }) => {
+            b_should_be_first
           }
+
+          // EntryPoint (not user-defined) should come after Common
+          (ChunkKind::EntryPoint { is_user_defined: false, .. }, ChunkKind::Common) => {
+            b_should_be_first
+          }
+          (ChunkKind::Common, ChunkKind::EntryPoint { is_user_defined: false, .. }) => {
+            a_should_be_first
+          }
+
+          // Both are EntryPoints, compare by is_user_defined, then index
           (
             ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
             ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
           ) => {
-            if *a_is_user_defined && *b_is_user_defined {
-              // Using user specific order of entry
-              index_a.cmp(index_b)
-            } else {
-              a.exec_order.cmp(&b.exec_order)
+            match (a_is_user_defined, b_is_user_defined) {
+              (true, false) => a_should_be_first,
+              (false, true) => b_should_be_first,
+              _ => index_a.cmp(index_b), // Use index as the final fallback
             }
           }
+
+          // Compare execution order as the fallback
           _ => a.exec_order.cmp(&b.exec_order),
         }
       })

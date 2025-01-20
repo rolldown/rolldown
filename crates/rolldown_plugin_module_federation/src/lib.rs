@@ -123,7 +123,7 @@ impl Plugin for ModuleFederationPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == REMOTE_ENTRY
@@ -132,6 +132,13 @@ impl Plugin for ModuleFederationPlugin {
     {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
         id: args.specifier.to_string(),
+        ..Default::default()
+      }));
+    }
+    if args.specifier == "@module-federation/runtime" {
+      let resolve_id = ctx.resolve(args.specifier, None, None).await??;
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+        id: resolve_id.id.to_string(),
         ..Default::default()
       }));
     }

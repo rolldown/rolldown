@@ -1,11 +1,15 @@
 packages:
   - packages/*
   - packages/rolldown/tests
+<<<<<<< HEAD
   - packages/rolldown/tests/fixtures/builtin-plugin/json/build
   - packages/rolldown/tests/fixtures/builtin-plugin/json/stringify
   - packages/rolldown/tests/fixtures/builtin-plugin/json/side-effects
   - packages/rolldown/tests/fixtures/builtin-plugin/json/named-exports
   - packages/rolldown/tests/fixtures/builtin-plugin/module-federation
+=======
+  - packages/rolldown/tests/module-federation
+>>>>>>> bb4db8753 (refactor: test)
   - packages/rolldown/npm/*
   - docs
   - examples/*

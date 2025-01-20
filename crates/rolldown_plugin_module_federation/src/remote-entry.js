@@ -10,7 +10,7 @@ const exposesMap = __EXPOSES_MAP__
 export function get(moduleName) {
     if (!(moduleName in exposesMap))
         throw new Error(`Module ${moduleName} does not exist in container.`)
-    return exposesMap[moduleName]()
+    return exposesMap[moduleName]().then(m => () => m)
 }
 
 const initTokens = {}

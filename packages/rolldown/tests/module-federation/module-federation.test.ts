@@ -6,10 +6,13 @@ import { describe } from 'node:test'
 
 describe('module-federation', () => {
   test('module-federation', async () => {
+    // Make sure the host and remote using different @module-federation/runtime
+
     // build host
     await build({
       input: './main.js',
       cwd: import.meta.dirname,
+      external: ['node:assert', '@module-federation/runtime'],
       plugins: [
         moduleFederationPlugin({
           name: 'mf-host',
@@ -53,8 +56,8 @@ describe('module-federation', () => {
     // Test the remote entry
     // @ts-ignore
     const remote = await import('./dist/remote-entry.js')
-    const remoteExpose = await remote.get('./expose')
-    expect(remoteExpose.value).toBe('expose')
+    const remoteExposeFactory = await remote.get('./expose')
+    expect(remoteExposeFactory().value).toBe('expose')
     expect(typeof remote.init).toBe('function')
 
      // Test host

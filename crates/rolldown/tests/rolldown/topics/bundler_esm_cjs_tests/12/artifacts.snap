@@ -21,24 +21,16 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { __toCommonJS, bar, foo_exports, init_foo } from "./foo2.js";
+import { __toCommonJS, bar, foo_exports, init_foo } from "./foo.js";
 
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
-input.works = import("./foo.js").then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
+input.works = import("./foo2.js").then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
 //#endregion
 ```
 ## foo.js
-
-```js
-import { bar, init_foo } from "./foo2.js";
-
-init_foo();
-export { bar };
-```
-## foo2.js
 
 ```js
 
@@ -53,6 +45,14 @@ var init_foo = __esm({ "foo.js"() {
 
 //#endregion
 export { __toCommonJS, bar, foo_exports, init_foo };
+```
+## foo2.js
+
+```js
+import { bar, init_foo } from "./foo.js";
+
+init_foo();
+export { bar };
 ```
 ---
 
@@ -78,26 +78,18 @@ Variant: (format: Cjs)
 
 ```js
 "use strict";
-const require_foo = require('./foo2.js');
+const require_foo = require('./foo.js');
 
 //#region entry.js
 require_foo.init_foo();
 const foo = (require_foo.init_foo(), require_foo.__toCommonJS(require_foo.foo_exports));
 input.works = Promise.resolve().then(function() {
-	return require("./foo.js");
+	return require("./foo2.js");
 }).then((foo3) => foo.bar === 123 && foo.__esModule === true && require_foo.bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
 //#endregion
 ```
 ## foo.js
-
-```js
-const require_foo = require('./foo2.js');
-
-require_foo.init_foo();
-exports.bar = require_foo.bar
-```
-## foo2.js
 
 ```js
 "use strict";
@@ -136,6 +128,14 @@ Object.defineProperty(exports, 'init_foo', {
     return init_foo;
   }
 });
+```
+## foo2.js
+
+```js
+const require_foo = require('./foo.js');
+
+require_foo.init_foo();
+exports.bar = require_foo.bar
 ```
 ---
 

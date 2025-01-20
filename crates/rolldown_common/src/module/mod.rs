@@ -8,7 +8,7 @@ use crate::{
   EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Module {
   Normal(Box<NormalModule>),
   External(Box<ExternalModule>),

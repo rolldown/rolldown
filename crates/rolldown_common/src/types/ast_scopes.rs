@@ -4,6 +4,11 @@ use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId, SymbolTable};
 pub struct AstScopes {
   inner: ScopeTree,
 }
+impl Clone for AstScopes {
+  fn clone(&self) -> Self {
+    Self { inner: ScopeTree::default() }
+  }
+}
 
 impl AstScopes {
   pub fn new(inner: ScopeTree) -> Self {

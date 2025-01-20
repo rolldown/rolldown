@@ -7,7 +7,7 @@ use crate::{
   SourceMutation,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CssView {
   pub source: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,

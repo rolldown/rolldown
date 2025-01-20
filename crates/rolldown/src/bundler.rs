@@ -14,6 +14,7 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
 use std::sync::Arc;
+use tokio::time::Instant;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -92,7 +93,9 @@ impl Bundler {
     };
 
     self.plugin_driver.build_end(None).await?;
-
+    let start = Instant::now();
+    scan_stage_output.clone();
+    dbg!(&start.elapsed());
     Ok(scan_stage_output)
   }
 

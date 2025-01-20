@@ -1,4 +1,4 @@
-use std::collections::hash_map::Entry;
+use std::{collections::hash_map::Entry, sync::Arc};
 
 use arcstr::ArcStr;
 use oxc::ast::VisitMut;
@@ -305,7 +305,7 @@ impl<'a> GenerateStage<'a> {
           return;
         };
         let asset_filename: ArcStr = preliminary.as_str().into();
-        module.ecma_view.mutations.push(Box::new(ImportMetaRolldownAssetReplacer {
+        module.ecma_view.mutations.push(Arc::new(ImportMetaRolldownAssetReplacer {
           asset_filename: asset_filename.clone(),
         }));
         module_idx_to_filenames.insert(module_idx, asset_filename);
@@ -321,7 +321,7 @@ impl<'a> GenerateStage<'a> {
               let span = css_view.record_idx_to_span[idx];
               css_view
                 .mutations
-                .push(Box::new(CssAssetNameReplacer { span, asset_name: asset_filename.clone() }));
+                .push(Arc::new(CssAssetNameReplacer { span, asset_name: asset_filename.clone() }));
             }
           }
         }

@@ -12,7 +12,7 @@ use crate::{ChunkIdx, ModuleIdx, SymbolRef};
 
 use super::namespace_alias::NamespaceAlias;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SymbolRefDataClassic {
   /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
@@ -25,7 +25,7 @@ pub struct SymbolRefDataClassic {
 }
 
 bitflags::bitflags! {
-  #[derive(Debug, Default)]
+  #[derive(Debug, Default, Clone)]
   pub struct SymbolRefFlags: u8 {
     const IS_NOT_REASSIGNED = 1;
     /// If this symbol is declared by `const`. Eg. `const a = 1;`
@@ -41,6 +41,17 @@ pub struct SymbolRefDbForModule {
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
+}
+impl Clone for SymbolRefDbForModule {
+  fn clone(&self) -> Self {
+    Self {
+      owner_idx: self.owner_idx,
+      root_scope_id: self.root_scope_id,
+      symbol_table: self.symbol_table.clone_with_another_arena(),
+      flags: self.flags.clone(),
+      classic_data: self.classic_data.clone(),
+    }
+  }
 }
 
 impl SymbolRefDbForModule {
@@ -98,7 +109,7 @@ impl DerefMut for SymbolRefDbForModule {
 }
 
 // Information about symbols for all modules
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SymbolRefDb {
   pub(crate) inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }

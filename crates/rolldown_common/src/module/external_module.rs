@@ -3,7 +3,7 @@ use crate::{ImportRecordIdx, ModuleIdx, ResolvedImportRecord, SymbolRef};
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExternalModule {
   pub idx: ModuleIdx,
   pub exec_order: u32,

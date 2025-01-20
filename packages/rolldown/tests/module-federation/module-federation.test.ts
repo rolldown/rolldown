@@ -48,7 +48,7 @@ describe('module-federation', () => {
       ],
     })
 
-      // Test the exposed module
+    // Test the exposed module
     // @ts-ignore
     const expose = await import('./dist/expose.js')
     expect(expose.value).toBe('expose')
@@ -60,7 +60,7 @@ describe('module-federation', () => {
     expect(remoteExposeFactory().value).toBe('expose')
     expect(typeof remote.init).toBe('function')
 
-     // Test host
+    // Test host
     // Here avoid starting dev-server to load the remote script.
     // - using module federation runtime `createScriptNode` to load the remote script, but the internal implementation using `fetch`, it is not support `file` protocol url. And also it is using `vm.SourceTextModule` to execute esm, tis feature is only available with the `--experimental-vm-modules` command flag enabled.
     // - Using module federation runtime plugin to load the remote, here setting the `globalThis.remote` and using it at `mf-runtime-plugin.js`.

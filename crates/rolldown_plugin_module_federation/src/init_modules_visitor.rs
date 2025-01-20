@@ -23,6 +23,7 @@ pub struct InitModuleVisitor<'ast, 'a> {
 }
 
 impl InitModuleVisitor<'_, '_> {
+  #[allow(clippy::too_many_lines)]
   pub fn detect_static_module_decl(&mut self, request: &str) {
     if is_remote_module(request, self.options) {
       // import * as ns from 'app/App'

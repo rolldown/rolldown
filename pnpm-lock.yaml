@@ -396,39 +396,11 @@ importers:
         specifier: 22.10.7
         version: 22.10.7
 
-  packages/rolldown/tests/fixtures/builtin-plugin/json/build:
-    devDependencies:
-      rolldown-tests:
-        specifier: workspace:*
-        version: link:../../../..
-
-  packages/rolldown/tests/fixtures/builtin-plugin/json/named-exports:
-    devDependencies:
-      rolldown-tests:
-        specifier: workspace:*
-        version: link:../../../..
-
-  packages/rolldown/tests/fixtures/builtin-plugin/json/side-effects:
-    devDependencies:
-      rolldown-tests:
-        specifier: workspace:*
-        version: link:../../../..
-
-  packages/rolldown/tests/fixtures/builtin-plugin/json/stringify:
-    devDependencies:
-      rolldown-tests:
-        specifier: workspace:*
-        version: link:../../../..
-
   packages/rolldown/tests/module-federation:
     dependencies:
       '@module-federation/runtime':
         specifier: ^0.8.8
         version: 0.8.9
-    devDependencies:
-      rolldown-tests:
-        specifier: workspace:*
-        version: link:../../..
 
   packages/rollup-tests:
     dependencies:

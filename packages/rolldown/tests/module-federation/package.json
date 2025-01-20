@@ -4,5 +4,8 @@
   "type": "module",
   "dependencies": {
     "@module-federation/runtime": "^0.8.8"
+  },
+  "devDependencies": {
+    "rolldown-tests": "workspace:*"
   }
 }

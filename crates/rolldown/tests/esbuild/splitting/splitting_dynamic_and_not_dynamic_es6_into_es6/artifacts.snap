@@ -7,14 +7,21 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { bar } from "./foo.js";
+import { bar } from "./foo2.js";
 
 //#region entry.js
-import("./foo2.js").then(({ bar: b }) => console.log(bar, b));
+import("./foo.js").then(({ bar: b }) => console.log(bar, b));
 
 //#endregion
 ```
 ## foo.js
+
+```js
+import { bar } from "./foo2.js";
+
+export { bar };
+```
+## foo2.js
 
 ```js
 
@@ -22,12 +29,5 @@ import("./foo2.js").then(({ bar: b }) => console.log(bar, b));
 let bar = 123;
 
 //#endregion
-export { bar };
-```
-## foo2.js
-
-```js
-import { bar } from "./foo.js";
-
 export { bar };
 ```

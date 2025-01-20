@@ -7,14 +7,22 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { import_foo } from "./foo.js";
+import { import_foo } from "./foo2.js";
 
 //#region entry.js
-import("./foo2.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
+import("./foo.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
 
 //#endregion
 ```
 ## foo.js
+
+```js
+import { require_foo } from "./foo2.js";
+
+export default require_foo();
+
+```
+## foo2.js
 
 ```js
 
@@ -27,12 +35,4 @@ var import_foo = __toESM(require_foo());
 
 //#endregion
 export { import_foo, require_foo };
-```
-## foo2.js
-
-```js
-import { require_foo } from "./foo.js";
-
-export default require_foo();
-
 ```

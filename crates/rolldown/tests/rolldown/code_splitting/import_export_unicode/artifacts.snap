@@ -7,6 +7,13 @@ snapshot_kind: text
 ## foo.js
 
 ```js
+import { devil } from "./foo2.js";
+
+export { devil as '😈' };
+```
+## foo2.js
+
+```js
 
 //#region foo.js
 const devil = "devil";
@@ -14,20 +21,13 @@ const devil = "devil";
 //#endregion
 export { devil };
 ```
-## foo2.js
-
-```js
-import { devil } from "./foo.js";
-
-export { devil as '😈' };
-```
 ## main.js
 
 ```js
-import { devil } from "./foo.js";
+import { devil } from "./foo2.js";
 
 //#region main.js
-const moduleFoo = import("./foo2.js");
+const moduleFoo = import("./foo.js");
 
 //#endregion
 export { moduleFoo, devil as '😈' };

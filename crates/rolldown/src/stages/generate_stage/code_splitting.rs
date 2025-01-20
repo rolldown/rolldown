@@ -174,7 +174,7 @@ impl GenerateStage<'_> {
     let sorted_chunk_idx_vec = chunk_graph
       .chunk_table
       .iter_enumerated()
-      .sorted_unstable_by(|(index_a, a), (index_b, b)| {
+      .sorted_by(|(index_a, a), (index_b, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 

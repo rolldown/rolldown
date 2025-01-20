@@ -79,6 +79,13 @@
           ],
           "format": "double"
         },
+        "maxSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
         "minModuleSize": {
           "type": [
             "number",
@@ -710,6 +717,13 @@
       ],
       "properties": {
         "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxSize": {
           "type": [
             "number",
             "null"

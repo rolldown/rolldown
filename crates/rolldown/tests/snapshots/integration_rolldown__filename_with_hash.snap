@@ -3867,6 +3867,12 @@ snapshot_kind: text
 - main-!~{000}~.js => main-B_ImQwm7.js
 - smaller-than-20-!~{001}~.js => smaller-than-20-DNN9if2g.js
 
+# tests/rolldown/function/advanced_chunks/max_size
+
+- main-!~{000}~.js => main-DUJ0kPnw.js
+- 40max-size-!~{001}~.js => 40max-size-8HxCqiQ9.js
+- 40max-size-!~{003}~.js => 40max-size-CPuw6kxJ.js
+
 # tests/rolldown/function/advanced_chunks/min_module_size
 
 - main-!~{000}~.js => main-BNXCTvis.js

@@ -73,6 +73,9 @@ export interface OutputOptions {
   inlineDynamicImports?: boolean
   advancedChunks?: {
     minSize?: number
+    maxSize?: number
+    maxModuleSize?: number
+    minModuleSize?: number
     minShareCount?: number
     groups?: {
       name: string
@@ -80,6 +83,9 @@ export interface OutputOptions {
       priority?: number
       minSize?: number
       minShareCount?: number
+      maxSize?: number
+      maxModuleSize?: number
+      minModuleSize?: number
     }[]
   }
   /**

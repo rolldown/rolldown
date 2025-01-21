@@ -6,7 +6,10 @@ export default defineTest({
   config: {
     output: {
       assetFileNames: (asset) => {
-        if (asset.source === 'emitted.txt') {
+        if (
+          typeof asset.source === 'string' &&
+          asset.source === 'emitted.txt'
+        ) {
           return '1-[name].[ext]'
         }
         return '[name].[ext]'

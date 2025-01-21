@@ -101,8 +101,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn asset_filenames(&self) -> String {
-    self.inner.asset_filenames.template().to_string()
+  pub fn asset_filenames(&self) -> Either<String, Undefined> {
+    match &self.inner.asset_filenames {
+      rolldown::AssetFilenamesOutputOption::String(inner) => Either::A(inner.clone()),
+      rolldown::AssetFilenamesOutputOption::Fn(_) => Either::B(()),
+    }
   }
 
   #[napi(getter)]

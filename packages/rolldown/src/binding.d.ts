@@ -46,7 +46,7 @@ export declare class BindingNormalizedOptions {
   get cssChunkFilenames(): string | undefined
   get entryFilenames(): string | undefined
   get chunkFilenames(): string | undefined
-  get assetFilenames(): string
+  get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
   get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd'
@@ -493,7 +493,7 @@ export interface BindingNotifyOption {
 
 export interface BindingOutputOptions {
   name?: string
-  assetFileNames?: string
+  assetFileNames?: string | ((chunk: PreRenderedAsset) => string)
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
@@ -1044,6 +1044,12 @@ export declare function parseSync(filename: string, sourceText: string, options?
  * This is for benchmark purposes such as measuring napi communication overhead.
  */
 export declare function parseWithoutReturn(filename: string, sourceText: string, options?: ParserOptions | undefined | null): void
+
+export interface PreRenderedAsset {
+  names: Array<string>
+  originalFileNames: Array<string>
+  source: BindingAssetSource
+}
 
 export interface PreRenderedChunk {
   name: string

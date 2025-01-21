@@ -48,7 +48,7 @@ import {
   InternalModuleFormat,
   NormalizedOutputOptions,
 } from './options/normalized-output-options'
-import { PreRenderedChunk } from './binding'
+import { PreRenderedAsset, PreRenderedChunk } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'
@@ -91,6 +91,7 @@ export type {
   TransformPluginContext,
   ObjectHook,
   PreRenderedChunk,
+  PreRenderedAsset,
   SourceMap,
   SourceDescription,
   PartialNull,

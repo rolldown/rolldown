@@ -1,5 +1,5 @@
 import type { StringOrRegExp } from '../types/utils'
-import type { PreRenderedChunk } from '../binding'
+import type { PreRenderedAsset, PreRenderedChunk } from '../binding'
 import {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
@@ -20,6 +20,8 @@ export type ModuleFormat =
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
+
+export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string
 
 export type GlobalsFunction = (name: string) => string
 
@@ -61,7 +63,7 @@ export interface OutputOptions {
   outro?: string | AddonFunction
   extend?: boolean
   esModule?: boolean | 'if-default-prop'
-  assetFileNames?: string
+  assetFileNames?: string | AssetFileNamesFunction
   entryFileNames?: string | ChunkFileNamesFunction
   chunkFileNames?: string | ChunkFileNamesFunction
   cssEntryFileNames?: string | ChunkFileNamesFunction

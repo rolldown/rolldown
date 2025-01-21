@@ -10,7 +10,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
   ChunkIdx, ChunkKind, CssAssetNameReplacer, FileNameRenderOptions,
-  ImportMetaRolldownAssetReplacer, Module, PreliminaryFilename,
+  ImportMetaRolldownAssetReplacer, Module, PreliminaryFilename, RollupPreRenderedAsset,
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt};
@@ -230,9 +230,6 @@ impl<'a> GenerateStage<'a> {
       index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.clone());
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output);
 
-      let asset_filename_template = &self.options.asset_filenames;
-      let extracted_asset_hash_pattern = extract_hash_pattern(asset_filename_template.template());
-
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
@@ -253,12 +250,25 @@ impl<'a> GenerateStage<'a> {
         )
         .await?;
 
-      chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()).for_each(|module| {
-        if module.asset_view.is_some() {
+      for module in chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()) {
+        if let Some(asset_view) = module.asset_view.as_ref() {
+          let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack();
+          let asset_filename_template = &self
+            .options
+            .asset_filename_template(&RollupPreRenderedAsset {
+              names: vec![name.into()],
+              original_file_names: vec![],
+              // TODO: avoid source clone
+              source: asset_view.source.clone().to_vec().into(),
+            })
+            .await?;
+          let extracted_asset_hash_pattern =
+            extract_hash_pattern(asset_filename_template.template());
+
           let hash_placeholder = extracted_asset_hash_pattern
             .as_ref()
             .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
-          let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack();
+
           let preliminary = PreliminaryFilename::new(
             asset_filename_template.render(&FileNameRenderOptions {
               name: Some(name),
@@ -276,7 +286,7 @@ impl<'a> GenerateStage<'a> {
           );
           chunk.asset_preliminary_filenames.insert(module.idx, preliminary);
         }
-      });
+      }
 
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
 

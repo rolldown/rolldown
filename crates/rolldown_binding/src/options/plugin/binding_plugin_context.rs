@@ -74,8 +74,10 @@ impl BindingPluginContext {
   }
 
   #[napi]
-  pub fn emit_file(&self, file: BindingEmittedAsset) -> String {
-    self.inner.emit_file(file.into()).to_string()
+  pub fn emit_file(&self, file: BindingEmittedAsset) -> anyhow::Result<String> {
+    futures::executor::block_on(async {
+      self.inner.emit_file(file.into()).await.map(|id| id.to_string())
+    })
   }
 
   #[napi]

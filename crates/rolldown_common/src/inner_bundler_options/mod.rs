@@ -6,7 +6,7 @@ use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
-use types::output_option::GlobalsOutputOption;
+use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
 use types::target::ESTarget;
 use types::watch_option::WatchOption;
 
@@ -73,7 +73,12 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
-  pub asset_filenames: Option<String>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_asset_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub asset_filenames: Option<AssetFilenamesOutputOption>,
   pub dir: Option<String>,
   pub file: Option<String>,
   pub format: Option<OutputFormat>,
@@ -184,6 +189,17 @@ where
 fn deserialize_chunk_filenames<'de, D>(
   deserializer: D,
 ) -> Result<Option<ChunkFilenamesOutputOption>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<String>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_asset_filenames<'de, D>(
+  deserializer: D,
+) -> Result<Option<AssetFilenamesOutputOption>, D::Error>
 where
   D: Deserializer<'de>,
 {

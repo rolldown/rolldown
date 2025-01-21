@@ -1,5 +1,5 @@
 use oxc::ast::VisitMut;
-use rolldown_common::NormalModule;
+use rolldown_common::{AstScopes, NormalModule};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
 use rustc_hash::FxHashSet;
@@ -27,16 +27,16 @@ pub mod uuid;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(
-  module: &NormalModule,
   ctx: ScopeHoistingFinalizerContext<'_>,
   ast: &mut EcmaAst,
+  ast_scope: &AstScopes,
 ) {
   ast.program.with_mut(|fields| {
     let (oxc_program, alloc) = (fields.program, fields.allocator);
     let mut finalizer = ScopeHoistingFinalizer {
       alloc,
       ctx,
-      scope: &module.scope,
+      scope: ast_scope,
       snippet: AstSnippet::new(alloc),
       comments: oxc_program.comments.take_in(alloc),
       namespace_alias_symbol_id: FxHashSet::default(),

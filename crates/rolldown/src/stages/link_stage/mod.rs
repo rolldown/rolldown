@@ -19,7 +19,7 @@ use rolldown_utils::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  type_alias::IndexEcmaAst,
+  type_alias::{IndexAstScope, IndexEcmaAst},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,
 };
@@ -43,6 +43,7 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
+  pub ast_scope_table: IndexAstScope,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
@@ -58,6 +59,7 @@ pub struct LinkStage<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
+  pub ast_scope_table: IndexAstScope,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
@@ -92,6 +94,7 @@ impl<'a> LinkStage<'a> {
         })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
+      ast_scope_table: scan_stage_output.index_ast_scope,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
@@ -131,6 +134,7 @@ impl<'a> LinkStage<'a> {
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+      ast_scope_table: self.ast_scope_table,
     }
   }
 

@@ -96,12 +96,13 @@ impl<'a> GenerateStage<'a> {
         let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {
           return;
         };
+        let ast_scope_idx = module.ecma_view.ast_scope_idx.expect("scope idx should be set");
+        let ast_scope = &self.link_output.ast_scope_table[ast_scope_idx];
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
         let chunk = &chunk_graph.chunk_table[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
         if self.options.format.requires_scope_hoisting() {
           finalize_normal_module(
-            module,
             ScopeHoistingFinalizerContext {
               canonical_names: &chunk.canonical_names,
               id: module.idx,
@@ -117,13 +118,14 @@ impl<'a> GenerateStage<'a> {
               keep_name_statement_to_insert: Vec::new(),
             },
             ast,
+            ast_scope,
           );
         } else {
           ast.program.with_mut(|fields| {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {
               alloc,
-              scope: &module.scope,
+              scope: ast_scope,
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.modules,

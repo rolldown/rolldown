@@ -7,9 +7,9 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopes,
-  EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
-  ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
+  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopeIdx,
+  AstScopes, EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
+  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
 };
 
 bitflags! {
@@ -105,7 +105,7 @@ pub struct EcmaView {
   /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
-  pub scope: AstScopes,
+  pub ast_scope_idx: Option<AstScopeIdx>,
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   // the ids of all modules that statically import this module

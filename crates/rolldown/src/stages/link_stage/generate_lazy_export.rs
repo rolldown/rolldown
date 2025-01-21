@@ -264,7 +264,8 @@ fn json_object_expr_to_esm(
       .with_declared_symbols(vec![namespace_object_ref])
       .with_referenced_symbols(all_declared_symbols),
   );
-  module.ecma_view.scope = ast_scope;
+  let ast_scope_idx = module.ecma_view.ast_scope_idx.unwrap();
+  link_staged.ast_scope_table[ast_scope_idx] = ast_scope;
   link_staged.symbols.store_local_db(module_idx, symbol_ref_db);
   true
 }

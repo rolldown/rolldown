@@ -1,5 +1,5 @@
 use oxc::ast::VisitMut;
-use rolldown_common::{AstScopes, NormalModule};
+use rolldown_common::AstScopes;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
 use rustc_hash::FxHashSet;

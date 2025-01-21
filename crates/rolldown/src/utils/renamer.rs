@@ -1,8 +1,8 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopeIdx, AstScopes, IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken,
-  SymbolRef, SymbolRefDb,
+  AstScopes, IndexModules, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef,
+  SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
@@ -189,7 +189,7 @@ impl<'name> Renamer<'name> {
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
       let child_scopes = ast_scope.get_child_ids(scope_id);
       child_scopes.iter().for_each(|scope_id| {
-        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, &ast_scope);
+        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope);
       });
       stack.pop();
     }

@@ -8,8 +8,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopeIdx,
-  AstScopes, EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
-  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
+  EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
+  ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
 };
 
 bitflags! {

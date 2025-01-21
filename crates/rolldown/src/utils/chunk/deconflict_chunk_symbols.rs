@@ -14,8 +14,7 @@ pub fn deconflict_chunk_symbols(
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
-  let mut renamer =
-    Renamer::new(&link_output.symbol_db, link_output.module_table.modules.len(), format);
+  let mut renamer = Renamer::new(&link_output.symbol_db, format);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external

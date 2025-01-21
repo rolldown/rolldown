@@ -1,5 +1,7 @@
 import { init as runtimeInit } from '@module-federation/runtime';
 
+__PLUGINS__
+
 const usedRemotes = []
 const usedShared = {}
 
@@ -8,24 +10,26 @@ const exposesMap = __EXPOSES_MAP__
 export function get(moduleName) {
     if (!(moduleName in exposesMap))
         throw new Error(`Module ${moduleName} does not exist in container.`)
-    return exposesMap[moduleName]()
+    return exposesMap[moduleName]().then(m => () => m)
 }
 
 const initTokens = {}
 const shareScopeName = "default"
+const name = "mf-remote"
 
 export async function init(shared={}, initScope=[]) {
     const initRes = runtimeInit({
-        name: "mf-remote",
+        name,
         remotes: usedRemotes,
         shared: usedShared,
+        plugins,
         shareStrategy: 'version-first'
     });
     // handling circular init calls
     var initToken = initTokens[shareScopeName];
     if (!initToken)
         initToken = initTokens[shareScopeName] = {
-            from: mfName
+            from: name
         };
     if (initScope.indexOf(initToken) >= 0)
         return;

@@ -44,6 +44,7 @@ impl ModuleFederationPlugin {
       .unwrap_or_default();
     include_str!("remote-entry.js")
       .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
+      .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .to_string()
   }
 
@@ -74,7 +75,27 @@ impl ModuleFederationPlugin {
       .unwrap_or_default();
     include_str!("init-host.js")
       .replace("__REMOTES__", &concat_string!("[", remotes, "]"))
+      .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .to_string()
+  }
+
+  pub fn generate_runtime_plugins(&self) -> String {
+    let (plugin_imports, plugin_names) = self
+      .options
+      .runtime_plugins
+      .as_ref()
+      .map(|plugins| {
+        let mut plugin_imports = Vec::with_capacity(plugins.capacity());
+        let mut plugin_names = Vec::with_capacity(plugins.capacity());
+        for (index, plugin) in plugins.iter().enumerate() {
+          let plugin_name = format!("plugin{index}");
+          plugin_imports.push(concat_string!("import ", plugin_name, " from '", plugin, "';"));
+          plugin_names.push(concat_string!(plugin_name, "()"));
+        }
+        (plugin_imports.join("\n"), plugin_names.join(", "))
+      })
+      .unwrap_or_default();
+    concat_string!(plugin_imports, "const plugins = [", plugin_names, "];")
   }
 }
 
@@ -88,12 +109,10 @@ impl Plugin for ModuleFederationPlugin {
     ctx: &rolldown_plugin::PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    if self.options.exposes.is_some() {
+    if let Some(filename) = self.options.filename.as_deref() {
       ctx
         .emit_chunk(EmittedChunk {
-          file_name: Some(
-            self.options.filename.as_deref().expect("The expose filename is required").into(),
-          ),
+          file_name: Some(filename.into()),
           id: REMOTE_ENTRY.to_string(),
           ..Default::default()
         })
@@ -104,7 +123,7 @@ impl Plugin for ModuleFederationPlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == REMOTE_ENTRY
@@ -116,6 +135,13 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
+    if args.specifier == "@module-federation/runtime" {
+      let resolve_id = ctx.resolve(args.specifier, None, None).await??;
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+        id: resolve_id.id.to_string(),
+        ..Default::default()
+      }));
+    }
     Ok(None)
   }
 
@@ -124,13 +150,13 @@ impl Plugin for ModuleFederationPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    if args.id == REMOTE_ENTRY {
+    if args.id == REMOTE_ENTRY && self.options.filename.is_some() {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: self.generate_remote_entry_code(),
         ..Default::default()
       }));
     }
-    if args.id == INIT_HOST {
+    if args.id == INIT_HOST && self.options.filename.is_none() {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: self.generate_init_host_code(),
         ..Default::default()
@@ -152,7 +178,7 @@ impl Plugin for ModuleFederationPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     mut args: rolldown_plugin::HookTransformAstArgs,
   ) -> rolldown_plugin::HookTransformAstReturn {
-    if args.is_user_defined_entry && self.options.remotes.is_some() {
+    if args.is_user_defined_entry && self.options.filename.is_none() && args.id != REMOTE_ENTRY {
       args.ast.program.with_mut(|fields| {
         let ast_builder = AstBuilder::new(fields.allocator);
         fields.program.body.insert(

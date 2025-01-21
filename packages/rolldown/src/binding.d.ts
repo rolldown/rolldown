@@ -468,6 +468,7 @@ export interface BindingModuleFederationPluginOption {
   exposes?: Record<string, string>
   remotes?: Array<BindingRemote>
   shared?: Record<string, BindingShared>
+  runtimePlugins?: Array<string>
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {

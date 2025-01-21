@@ -5,7 +5,7 @@ packages:
   - packages/rolldown/tests/fixtures/builtin-plugin/json/stringify
   - packages/rolldown/tests/fixtures/builtin-plugin/json/side-effects
   - packages/rolldown/tests/fixtures/builtin-plugin/json/named-exports
-  - packages/rolldown/tests/fixtures/builtin-plugin/module-federation
+  - packages/rolldown/tests/module-federation
   - packages/rolldown/npm/*
   - docs
   - examples/*

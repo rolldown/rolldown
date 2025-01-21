@@ -9,7 +9,7 @@
     "rolldown": "workspace:*"
   },
   "dependencies": {
-    "@module-federation/enhanced": "^0.8.8",
+    "@module-federation/runtime": "^0.8.8",
     "react": "^19.0.0"
   }
 }

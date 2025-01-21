@@ -256,7 +256,7 @@ const InputCliOverrideSchema = v.strictObject({
     v.description('Inject import statements on demand'),
   ),
   treeshake: v.pipe(
-    v.optional(v.boolean(), true),
+    v.optional(v.boolean()),
     v.description('enable treeshaking'),
   ),
 })

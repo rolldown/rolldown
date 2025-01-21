@@ -83,6 +83,7 @@ pub use crate::{
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,
+  types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::cache::Cache,

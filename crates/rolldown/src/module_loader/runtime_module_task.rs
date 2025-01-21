@@ -122,7 +122,7 @@ impl RuntimeModuleTask {
         stmt_infos,
         imports,
         default_export_ref,
-        scope: ast_scope,
+        ast_scope_idx: None,
         exports_kind: ExportsKind::Esm,
         namespace_object_ref,
         def_format: ModuleDefFormat::EsmMjs,
@@ -162,6 +162,7 @@ impl RuntimeModuleTask {
         runtime,
         resolved_deps,
         raw_import_records,
+        ast_scope,
         local_symbol_ref_db: symbol_ref_db,
       }))
     {

@@ -321,7 +321,6 @@ export function bindingifyIntro(
       return handler.call(
         new PluginContext(
           args.outputOptions,
-
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -354,7 +353,6 @@ export function bindingifyOutro(
       return handler.call(
         new PluginContext(
           args.outputOptions,
-
           ctx,
           args.plugin,
           args.pluginContextData,

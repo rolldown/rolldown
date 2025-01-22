@@ -50,7 +50,6 @@ export function bindingifyCloseWatcher(
       await handler.call(
         new PluginContext(
           args.outputOptions,
-
           ctx,
           args.plugin,
           args.pluginContextData,

@@ -4564,6 +4564,10 @@ snapshot_kind: text
 - main2-!~{001}~.js => main2-Df1wJ9Xg.js
 - chunk-!~{002}~.js => chunk-CTfjR5yn.js
 
+# tests/rolldown/issues/3367
+
+- main-!~{000}~.js => main-CmNHUIHc.js
+
 # tests/rolldown/issues/376
 
 - main-!~{000}~.js => main-CfuHZZW7.js

@@ -5233,8 +5233,8 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/dynamic_import_await
 
-- main-!~{000}~.js => main-BKau19Lc.js
-- lib-!~{001}~.js => lib-azPbQopu.js
+- main-!~{000}~.js => main-CLLf2XCK.js
+- lib-!~{001}~.js => lib-BkCtmXqy.js
 
 # tests/rolldown/tree_shaking/dynamic_import_await_destruct
 

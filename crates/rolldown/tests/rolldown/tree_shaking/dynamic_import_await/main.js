@@ -9,3 +9,9 @@ lib.foo
 
 const lib2 = await import("./lib.js")
 lib.bar
+
+
+;(await import("./lib.js"))['baz']
+
+// this should not bailout
+;(await import("./lib.js")); 

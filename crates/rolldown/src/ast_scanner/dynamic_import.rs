@@ -76,11 +76,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         import_record_idx,
       ),
       AstKind::AwaitExpression(_) => {
-        let parent_parent = self.visit_path.get(ancestor_len - 2)?;
-        let AstKind::VariableDeclarator(var_decl) = parent_parent else {
-          return None;
-        };
-        self.update_dynamic_import_usage_info_from_binding_pattern(&var_decl.id, import_record_idx)
+        self.extract_init_set_from_await_expr_ancestor(import_record_idx)
       }
       _ => None,
     };
@@ -100,6 +96,34 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     };
     None
+  }
+
+  fn extract_init_set_from_await_expr_ancestor(
+    &mut self,
+    import_record_idx: ImportRecordIdx,
+  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
+    let remove_paren = self
+      .visit_path
+      .iter()
+      .rev()
+      .skip(1)
+      .find(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
+    match remove_paren {
+      // 1. const mod = await import('mod'); console.log(mod)
+      // 2. const {a} = await import('mod'); a.something;
+      AstKind::VariableDeclarator(var_decl) => {
+        self.update_dynamic_import_usage_info_from_binding_pattern(&var_decl.id, import_record_idx)
+      }
+      // 3. await import('mod');
+      // only side effects from `mod` is triggered
+      AstKind::ExpressionStatement(_) => Some(FxHashSet::default()),
+      // 4. (await import('mod')).a
+      AstKind::MemberExpression(expr) => {
+        Some(FxHashSet::from_iter([expr.static_property_name()?.into()]))
+      }
+      // for rest of the cases, just bailout, until we find other optimization could apply
+      _ => None,
+    }
   }
 
   fn init_dynamic_import_usage_with_member_expr(

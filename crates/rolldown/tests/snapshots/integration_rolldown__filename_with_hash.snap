@@ -390,7 +390,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js
 
-- src_entry-!~{000}~.js => src_entry-CTlSlzwS.js
+- src_entry-!~{000}~.js => src_entry-C1_bM_IH.js
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
@@ -455,7 +455,7 @@ snapshot_kind: text
 
 # tests/esbuild/dce/package_json_side_effects_true_keep_common_js
 
-- src_entry-!~{000}~.js => src_entry-CzVovYe7.js
+- src_entry-!~{000}~.js => src_entry-BuZUgjf8.js
 
 # tests/esbuild/dce/package_json_side_effects_true_keep_es6
 
@@ -1699,11 +1699,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-DyyBMBkV.js
+- entry-!~{000}~.js => entry-bg0ZuHRM.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-BYpXJ55m.js
+- entry-!~{000}~.js => entry-CjA06sAA.js
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 
@@ -1964,7 +1964,7 @@ snapshot_kind: text
 
 # tests/esbuild/importstar/import_star_common_js_unused
 
-- entry-!~{000}~.js => entry-DedZYym4.js
+- entry-!~{000}~.js => entry-DWljR0-a.js
 
 # tests/esbuild/importstar/import_star_export_import_star_capture
 
@@ -3696,7 +3696,7 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/exoprt_star_of_cjs
 
-- main-!~{000}~.js => main-CwRNmve4.js
+- main-!~{000}~.js => main-C2u52yTr.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
@@ -3708,11 +3708,11 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.js => main-C7Stnvyg.js
+- main-!~{000}~.js => main-DzxePG0p.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.js => main-CgnYM4l8.js
+- main-!~{000}~.js => main-C-Ar6s-k.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 
@@ -3732,14 +3732,14 @@ snapshot_kind: text
 
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
-- main-!~{000}~.js => main-CHsy3Qsk.js
-- main-CHsy3Qsk.js.map
+- main-!~{000}~.js => main-QyMkrf0L.js
+- main-QyMkrf0L.js.map
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
-- a-!~{000}~.js => a-CJh1wGYA.js
-- b-!~{001}~.js => b-CZKqeSHa.js
-- a-!~{002}~.js => a-DMz6_JJ1.js
+- a-!~{000}~.js => a-BmyHgSN5.js
+- b-!~{001}~.js => b-DFfZhfD4.js
+- a-!~{002}~.js => a-BFQkvuGY.js
 
 # tests/rolldown/cjs_compat/node_module_commonjs
 
@@ -4560,9 +4560,9 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2903_4
 
-- main-!~{000}~.js => main-NdJAqb49.js
-- main2-!~{001}~.js => main2-Df1wJ9Xg.js
-- chunk-!~{002}~.js => chunk-CTfjR5yn.js
+- main-!~{000}~.js => main-CFIqMfxf.js
+- main2-!~{001}~.js => main2-D_QQV5U8.js
+- chunk-!~{002}~.js => chunk-CiU4nd6f.js
 
 # tests/rolldown/issues/3367
 

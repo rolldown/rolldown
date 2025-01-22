@@ -21,7 +21,6 @@ snapshot_kind: text
 
 //#region c.js
 var require_c = __commonJS({ "c.js"() {} });
-var import_c = __toESM(require_c());
 
 //#endregion
 //#region b.js

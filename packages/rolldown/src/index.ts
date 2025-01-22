@@ -11,7 +11,11 @@ import type {
   ExternalOption,
   JsxOptions,
 } from './options/input-options'
-import type { ModuleFormat, OutputOptions } from './options/output-options'
+import type {
+  ModuleFormat,
+  OutputOptions,
+  PreRenderedAsset,
+} from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {
   AsyncPluginHooks,
@@ -48,7 +52,7 @@ import {
   InternalModuleFormat,
   NormalizedOutputOptions,
 } from './options/normalized-output-options'
-import { PreRenderedAsset, PreRenderedChunk } from './binding'
+import { PreRenderedChunk } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'

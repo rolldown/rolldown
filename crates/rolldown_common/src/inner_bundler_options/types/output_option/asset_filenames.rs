@@ -30,6 +30,13 @@ impl AssetFilenamesOutputOption {
       Self::Fn(value) => value(asset).await,
     }
   }
+
+  pub fn value(&self, fn_asset_filename: Option<String>) -> String {
+    match self {
+      Self::String(value) => value.clone(),
+      Self::Fn(_) => fn_asset_filename.expect("AssetFilenamesOutputOption   Fn should has value"),
+    }
+  }
 }
 
 impl From<String> for AssetFilenamesOutputOption {

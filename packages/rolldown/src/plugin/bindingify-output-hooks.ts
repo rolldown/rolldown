@@ -30,6 +30,7 @@ export function bindingifyRenderStart(
     plugin: async (ctx, opts) => {
       handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -56,6 +57,7 @@ export function bindingifyRenderChunk(
     plugin: async (ctx, code, chunk, opts) => {
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -101,6 +103,7 @@ export function bindingifyAugmentChunkHash(
     plugin: async (ctx, chunk) => {
       return await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -127,6 +130,7 @@ export function bindingifyRenderError(
     plugin: async (ctx, err) => {
       handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -158,6 +162,7 @@ export function bindingifyGenerateBundle(
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -192,6 +197,7 @@ export function bindingifyWriteBundle(
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -220,6 +226,7 @@ export function bindingifyCloseBundle(
     plugin: async (ctx) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -249,6 +256,7 @@ export function bindingifyBanner(
 
       return handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -280,6 +288,7 @@ export function bindingifyFooter(
 
       return handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -311,6 +320,8 @@ export function bindingifyIntro(
 
       return handler.call(
         new PluginContext(
+          args.outputOptions,
+
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -342,6 +353,8 @@ export function bindingifyOutro(
 
       return handler.call(
         new PluginContext(
+          args.outputOptions,
+
           ctx,
           args.plugin,
           args.pluginContextData,

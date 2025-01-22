@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests'
-import { getOutputAssetNames, getOutputFileNames } from 'rolldown-tests/utils'
+import { getOutputAssetNames } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
 
 export default defineTest({
@@ -8,7 +8,8 @@ export default defineTest({
       assetFileNames: (asset) => {
         if (
           typeof asset.source === 'string' &&
-          asset.source === 'emitted.txt'
+          asset.source === 'emitted' &&
+          asset.type === 'asset'
         ) {
           return '1-[name].[ext]'
         }

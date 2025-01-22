@@ -146,7 +146,7 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingInputOptions_struct_19']?.()
   __napiInstance.exports['__napi_register__BindingAdvancedChunksOptions_struct_20']?.()
   __napiInstance.exports['__napi_register__BindingMatchGroup_struct_21']?.()
-  __napiInstance.exports['__napi_register__PreRenderedAsset_struct_22']?.()
+  __napiInstance.exports['__napi_register__BindingPreRenderedAsset_struct_22']?.()
   __napiInstance.exports['__napi_register__PreRenderedChunk_struct_23']?.()
   __napiInstance.exports['__napi_register__BindingOutputOptions_struct_24']?.()
   __napiInstance.exports['__napi_register__BindingPluginContext_struct_25']?.()

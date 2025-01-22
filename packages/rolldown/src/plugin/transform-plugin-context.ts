@@ -14,9 +14,11 @@ import { augmentCodeLocation, error, logPluginError } from '../log/logs'
 import { PluginContextData } from './plugin-context-data'
 import type { Plugin } from './index'
 import { SourceMap } from '../types/rolldown-output'
+import { OutputOptions } from '../options/output-options'
 
 export class TransformPluginContext extends PluginContext {
   constructor(
+    outputOptions: OutputOptions,
     context: BindingPluginContext,
     plugin: Plugin,
     data: PluginContextData,
@@ -26,7 +28,7 @@ export class TransformPluginContext extends PluginContext {
     onLog: LogHandler,
     LogLevelOption: LogLevelOption,
   ) {
-    super(context, plugin, data, onLog, LogLevelOption, moduleId)
+    super(outputOptions, context, plugin, data, onLog, LogLevelOption, moduleId)
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {

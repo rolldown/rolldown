@@ -101,7 +101,7 @@ impl Plugin for ManifestPlugin {
     // let outputLength = Array.isArray(output) ? output.length : 1
     // if output_count >= outputLength {
     ctx
-      .emit_file(EmittedAsset {
+      .emit_file_async(EmittedAsset {
         file_name: Some(self.config.out_path.as_str().into()),
         name: None,
         original_file_name: None,

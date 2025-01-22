@@ -22,8 +22,8 @@ use super::{
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{
-  EsModuleFlag, FilenameTemplate, GlobalsOutputOption, HashCharacters, InjectImport, InputItem,
-  ModuleType, RollupPreRenderedAsset,
+  EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption, HashCharacters, InjectImport,
+  InputItem, ModuleType, RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -109,5 +109,25 @@ impl NormalizedBundlerOptions {
     rollup_pre_rendered_asset: &RollupPreRenderedAsset,
   ) -> anyhow::Result<FilenameTemplate> {
     Ok(FilenameTemplate::new(self.asset_filenames.call(rollup_pre_rendered_asset).await?))
+  }
+
+  pub async fn asset_filename_with_file(
+    &self,
+    file: &EmittedAsset,
+  ) -> anyhow::Result<Option<String>> {
+    if file.file_name.is_some() {
+      return Ok(None);
+    }
+    // TODO avoid clone
+    let rollup_pre_rendered_asset = RollupPreRenderedAsset {
+      source: file.source.clone(),
+      names: file.name.clone().map_or(vec![], |name| vec![name.into()]),
+      original_file_names: file
+        .original_file_name
+        .clone()
+        .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
+    };
+    let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
+    Ok(Some(asset_filename))
   }
 }

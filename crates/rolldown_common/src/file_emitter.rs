@@ -1,6 +1,6 @@
 use crate::{
-  FileNameRenderOptions, ModuleLoaderMsg, NormalizedBundlerOptions, Output, OutputAsset,
-  RollupPreRenderedAsset, StrOrBytes,
+  FileNameRenderOptions, FilenameTemplate, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
+  OutputAsset, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -40,6 +40,7 @@ pub struct FileEmitter {
   files: FxDashMap<ArcStr, OutputAsset>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
+  #[allow(dead_code)]
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
@@ -75,7 +76,11 @@ impl FileEmitter {
     Ok(reference_id)
   }
 
-  pub async fn emit_file(&self, mut file: EmittedAsset) -> anyhow::Result<ArcStr> {
+  pub fn emit_file(
+    &self,
+    mut file: EmittedAsset,
+    asset_filename_template: Option<FilenameTemplate>,
+  ) -> ArcStr {
     let hash: ArcStr = xxhash_base64_url(file.source.as_bytes()).into();
     // Deduplicate assets if an explicit fileName is not provided
     if file.file_name.is_none() {
@@ -88,7 +93,7 @@ impl FileEmitter {
             entry.original_file_names.push(original_file_name);
           }
         });
-        return Ok(reference_id.value().clone());
+        return reference_id.value().clone();
       }
     }
 
@@ -97,7 +102,7 @@ impl FileEmitter {
       self.source_hash_to_reference_id.insert(hash.clone(), reference_id.clone());
     }
 
-    self.generate_file_name(&mut file, &hash).await?;
+    self.generate_file_name(&mut file, &hash, asset_filename_template);
     self.files.insert(
       reference_id.clone(),
       OutputAsset {
@@ -108,7 +113,7 @@ impl FileEmitter {
           .map_or(vec![], |original_file_name| vec![original_file_name]),
       },
     );
-    Ok(reference_id)
+    reference_id
   }
 
   pub fn try_get_file_name(&self, reference_id: &str) -> Result<ArcStr, String> {
@@ -139,30 +144,22 @@ impl FileEmitter {
     .into()
   }
 
-  pub async fn generate_file_name(
+  pub fn generate_file_name(
     &self,
     file: &mut EmittedAsset,
     hash: &ArcStr,
-  ) -> anyhow::Result<()> {
+    asset_filename_template: Option<FilenameTemplate>,
+  ) {
     if file.file_name.is_none() {
       let path = file.name.as_deref().map(Path::new);
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
       let name = path
         .and_then(|x| x.file_stem().and_then(OsStr::to_str))
         .map(|x| sanitize_file_name(x.into()));
-      let asset_filename = self
-        .options
-        .asset_filename_template(&RollupPreRenderedAsset {
-          source: file.source.clone(),
-          names: file.name.clone().map_or(vec![], |name| vec![name.into()]),
-          original_file_names: file
-            .original_file_name
-            .clone()
-            .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
-        })
-        .await?;
-      let extract_hash_pattern = extract_hash_pattern(asset_filename.template());
-      let mut file_name: ArcStr = asset_filename
+      let asset_filename_template =
+        asset_filename_template.expect("should has filename template without filename");
+      let extract_hash_pattern = extract_hash_pattern(asset_filename_template.template());
+      let mut file_name: ArcStr = asset_filename_template
         .render(&FileNameRenderOptions {
           name: name.as_deref(),
           hash: extract_hash_pattern
@@ -185,7 +182,6 @@ impl FileEmitter {
 
       file.file_name = Some(file_name);
     }
-    Ok(())
   }
 
   pub fn add_additional_files(&self, bundle: &mut Vec<Output>) {

@@ -43,6 +43,7 @@ pub struct FileEmitter {
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
+  chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
   #[allow(dead_code)]
   options: Arc<NormalizedBundlerOptions>,
@@ -58,6 +59,7 @@ impl FileEmitter {
       source_hash_to_reference_id: DashMap::default(),
       names: DashMap::default(),
       files: DashMap::default(),
+      chunks: DashMap::default(),
       emitted_chunks: DashMap::default(),
       base_reference_id: AtomicUsize::new(0),
       options,
@@ -71,7 +73,7 @@ impl FileEmitter {
     }
   }
 
-  pub async fn emit_chunk(&self, chunk: EmittedChunk) -> anyhow::Result<ArcStr> {
+  pub async fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
     let reference_id = self.assign_reference_id(chunk.name.clone());
     self
     .tx
@@ -81,8 +83,9 @@ impl FileEmitter {
     .context(
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
-    .send(ModuleLoaderMsg::AddEntryModule(AddEntryModuleMsg { chunk, reference_id: reference_id.clone() }))
+    .send(ModuleLoaderMsg::AddEntryModule(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() }))
     .await?;
+    self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
   }
 
@@ -130,8 +133,16 @@ impl FileEmitter {
     if let Some(file) = self.files.get(reference_id) {
       return Ok(file.filename.clone());
     }
-    if let Some(filename) = self.emitted_chunks.get(reference_id) {
-      return Ok(filename.clone());
+    if let Some(chunk) = self.chunks.get(reference_id) {
+      if let Some(filename) = chunk.file_name.as_ref() {
+        return Ok(filename.clone());
+      }
+      if let Some(filename) = self.emitted_chunks.get(reference_id) {
+        return Ok(filename.clone());
+      }
+      return Err(
+        anyhow::anyhow!("Unable to get file name for emitted chunk: {reference_id}.You can only get file names once chunks have been generated after the 'renderStart' hook."),
+      );
     }
     Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
@@ -220,6 +231,7 @@ impl FileEmitter {
   }
 
   pub fn clear(&self) {
+    self.chunks.clear();
     self.files.clear();
     self.names.clear();
     self.source_hash_to_reference_id.clear();

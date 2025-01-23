@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use rolldown_error::BuildDiagnostic;
 use runtime_task_result::RuntimeModuleTaskResult;
@@ -18,6 +20,6 @@ pub enum ModuleLoaderMsg {
 }
 
 pub struct AddEntryModuleMsg {
-  pub chunk: EmittedChunk,
+  pub chunk: Arc<EmittedChunk>,
   pub reference_id: ArcStr,
 }

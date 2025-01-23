@@ -378,10 +378,10 @@ impl ModuleLoader {
             }
           };
           extra_entry_points.push(EntryPoint {
-            name: data.name,
+            name: data.name.clone(),
             id: self.try_spawn_new_task(resolved_id, None, true, None),
             kind: EntryPointKind::UserDefined,
-            file_name: data.file_name,
+            file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),
           });
         }

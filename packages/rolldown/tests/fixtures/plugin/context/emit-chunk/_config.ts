@@ -28,6 +28,9 @@ export default defineTest({
             fileName: 'main-with-fileName.js',
             id: './main.js',
           })
+          expect(this.getFileName(mainWithFileNameChunkReferenceId)).toBe(
+            'main-with-fileName.js',
+          )
         },
         renderChunk() {
           if (runOnceRenderChunk) {
